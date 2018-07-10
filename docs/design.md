@@ -62,8 +62,8 @@ Implementation policies
     satisfies given constraints.
 
 * CKE should periodically check the cluster status and compare it with
-    the given configuration.  If anything is different, `cke` will updates
-    the cluster.
+    the given configuration.  
+    If anything is different, `cke` will updates the cluster.
 
 * Assets are compiled into Docker images.
 
