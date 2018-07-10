@@ -94,12 +94,13 @@ it updates Kubernetes cluster as follows.
 
 1. If the instance has been elected as a leader, go forward.  Otherwise, do nothing.
 2. Prepare a single operation for k8s to resolve a difference, and record it on etcd.
-3. Update the operation record with the command to be executed.
-4. Execute a single command for the operation.
-5. Update the operation record with the result of the command.
-6. Repeat 3, 4, 5 until the operation completes.
-7. Update the operation record to mark as completed.
-8. If there are no more differences, done.  Otherwise, go to 1.
+3. Clean up garbage of previous failed operations, if any.
+4. Update the operation record with the command to be executed.
+5. Execute a single command for the operation.
+6. Update the operation record with the result of the command.
+7. Repeat 4, 5, 6 until the operation completes.
+8. Update the operation record to mark as completed.
+9. If there are no more differences, done.  Otherwise, go to 1.
 
 For example, if the current Kubernetes cluster has the following differences from
 the desired configuration:
@@ -114,6 +115,12 @@ Note that each operation may invoke several commands.
 2. Remove an extra worker node.
 3. Remove another extra worker node.
 
+Operation records
+-----------------
+
+Each operation has a unique numeric ID and is recorded as a key-value object in etcd.
+The ID will be incremented for each new operation.
+
 Handling failures
 -----------------
 
@@ -126,8 +133,8 @@ The new leader first checks that the last operation has completed by examining
 the last operation record.  It the last operation has been completed, the new
 leader works normally.
 
-If the last operation has *not* been completed, the new leader need to kill
-the last command, then update the operation record as canceled.
+If the last operation has *not* been completed, the new leader need to mark
+the operation as canceled.
 
 ### Command failure
 
@@ -154,7 +161,9 @@ racks of other control plane nodes.
 ### Node labels
 
 Generated cluster configuration will automatically label nodes with
-[properties of sabakan machine struct][machine]
+[properties of sabakan machine struct][machine].
+
+Other labels or taints may be automatically added.
 
 ### Health check
 

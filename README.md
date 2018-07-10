@@ -59,7 +59,7 @@ Programs
 This repository contains these programs:
 
 * `cke`: the service.
-* `ckectl`: CLI tool for `cke`.
+* `ckecli`: CLI tool for `cke`.
 
 To see their usage, run them with `-h` option.
 
