@@ -25,6 +25,8 @@ Planned Features
     CKE can bootstrap a Kubernetes and [etcd][] cluster from scratch.
     CKE can also add or remove nodes to/from the Kubernetes and etcd cluster.
 
+* Automatic backup for etcd data.
+
 * Cluster features:
 
     * HA control plane.
