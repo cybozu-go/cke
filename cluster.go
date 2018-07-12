@@ -1,5 +1,10 @@
 package cke
 
+import (
+	"errors"
+	"net"
+)
+
 // Node represents a node in Kubernetes.
 type Node struct {
 	Address      string            `json:"address"       yaml:"address"`
@@ -46,5 +51,34 @@ type Cluster struct {
 
 // Validate validates the cluster definition.
 func (c *Cluster) Validate() error {
+	if len(c.Name) == 0 {
+		return errors.New("cluster name is empty")
+	}
+
+	_, _, err := net.ParseCIDR(c.ServiceSubnet)
+	if err != nil {
+		return err
+	}
+
+	for _, n := range c.Nodes {
+		err := c.validateNode(n)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Cluster) validateNode(n *Node) error {
+	if net.ParseIP(n.Address) == nil {
+		return errors.New("invalid IP address: " + n.Address)
+	}
+	if len(n.User) == 0 {
+		return errors.New("user name is empty")
+	}
+	if len(c.SSHKey) == 0 && len(n.SSHKey) == 0 {
+		return errors.New("no SSH private key")
+	}
 	return nil
 }
