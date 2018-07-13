@@ -56,7 +56,7 @@ type KubeletStatus struct {
 }
 
 // GetClusterStatus consults the whole cluster and constructs *ClusterStatus.
-func GetClusterStatus(ctx context.Context) (*ClusterStatus, error) {
+func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, error) {
 	// TODO
 	return new(ClusterStatus), nil
 }

@@ -20,7 +20,14 @@ The default prefix is `/cke/`.
 
 `constraints` key stores JSON formatted [Constraints](constraints.md) data.
 
-`records/`
+`records`
 ----------
 
-TBD
+the next ID of the record
+
+`records/<16-digit HEX string>`
+-------------------------------
+
+Each entry of audit log is stored with this type of key.
+
+The value is JSON defined in [Record](record.md).

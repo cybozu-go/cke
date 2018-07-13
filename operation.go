@@ -19,7 +19,7 @@ type Operator interface {
 	// NextCommand returns the next command or nil if completed
 	NextCommand() Commander
 	// NewRecord returns a new record for this operation
-	NewRecord() *Record
+	NewRecord(id int64) *Record
 	// Cleanup clean up garbage of previous failed operations, if any
 	Cleanup(ctx context.Context) error
 }
