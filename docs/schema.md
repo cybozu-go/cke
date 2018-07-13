@@ -23,7 +23,7 @@ The default prefix is `/cke/`.
 `records`
 ----------
 
-the next ID of the record
+The next ID of the record formatted as a decimal string.
 
 `records/<16-digit HEX string>`
 -------------------------------

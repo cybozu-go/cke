@@ -42,7 +42,6 @@ Name              | Required | Type            | Description
 `kube-scheduler`  | false    | `ServiceParams` | Extra arguments for scheduler.
 `kube-proxy`      | false    | `ServiceParams` | Extra arguments for kube-proxy.
 `kubelet`         | false    | `KubeletParams` | Extra arguments for kubelet.
-`coredns`         | false    | `ServiceParams` | Extra arguments for [CoreDNS][].
 
 ### ServiceParams
 

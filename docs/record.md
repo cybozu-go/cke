@@ -1,7 +1,8 @@
 Operation Record
 ================
 
-CKE stores operation records in etcd.
+CKE stores the most recent operations in etcd up to 1,000 records.
+
 A record is an object with these fields:
 
 | Name        | Type      | Description                                       |
@@ -21,4 +22,3 @@ A record is an object with these fields:
 | `name`   | string  | The name of the command   |
 | `target` | string  | The target of the command |
 | `detail` | string  | The detail of the command |
-
