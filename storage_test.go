@@ -120,6 +120,9 @@ func testStorageRecord(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(got) != 1 {
+		t.Fatal("record was not registered")
+	}
 
 	if !reflect.DeepEqual(r, got[0]) {
 		t.Fatalf("got invalid record: %#v, %#v", r, got[0])
