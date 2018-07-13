@@ -24,9 +24,9 @@ type ServiceParams struct {
 
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
-	ServiceParams
-	Domain    string `json:"cluster_domain" yaml:"cluster_domain"`
-	AllowSwap bool   `json:"allow_swap"     yaml:"allow_swap"`
+	ServiceParams `yaml:",inline"`
+	Domain        string `json:"domain"      yaml:"domain"`
+	AllowSwap     bool   `json:"allow_swap"  yaml:"allow_swap"`
 }
 
 // Options is a set of optional parameters for k8s components.
