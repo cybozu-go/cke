@@ -122,7 +122,7 @@ func testStorageRecord(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(r, got[0]) {
-		t.Fatalf("got invalid record: %v", got[0])
+		t.Fatalf("got invalid record: %#v, %#v", r, got[0])
 	}
 
 	nextID, err := storage.NextRecordID(ctx)
