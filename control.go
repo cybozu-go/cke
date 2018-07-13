@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
+	"github.com/cybozu-go/log"
 )
 
 // Controller manage operations
@@ -108,7 +109,12 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 
 		record.SetError(err)
 		storage.UpdateRecord(ctx, leaderKey, record)
-		return err
+		log.Error("command failed", map[string]interface{}{
+			log.FnError: err,
+			"op":        op.Name(),
+			"command":   commander.Command().String(),
+		})
+		return nil
 	}
 
 	record.Complete()
