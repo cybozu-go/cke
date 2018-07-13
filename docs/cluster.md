@@ -1,13 +1,19 @@
-Cluster definition specifications
-=================================
+Cluster configuration
+=====================
 
-Unchangeable behavior
----------------------
+CKE deploys and maintains a Kubernetes cluster and an etcd cluster solely for
+the Kubernetes cluster.  The configurations of the clusters can be defined by
+a YAML or JSON object with these fields:
 
-* [CoreDNS][] is installed.
-* [PodSecurity][] is enabled.
-* `kube-proxy` runs in IPVS mode.
-* CNI is enabled.
+Name            | Required | Type      | Description
+--------------- | -------- | --------- | -----------
+`name`          | true     | string    | The k8s cluster name.
+`nodes`         | true     | array     | `Node` list.
+`ssh_key`       | false    | string    | Cluster wide SSH private key.
+`service_subnet`| true     | string    | CIDR subnet for k8s `Service`.
+`dns_servers`   | false    | array     | List of upstream DNS server IP addresses.
+`options`       | false    | `Options` | See options.
+`rbac`          | false    | bool      | true to enable [RBAC][].
 
 Node
 ----
@@ -36,6 +42,7 @@ Name              | Required | Type            | Description
 `kube-scheduler`  | false    | `ServiceParams` | Extra arguments for scheduler.
 `kube-proxy`      | false    | `ServiceParams` | Extra arguments for kube-proxy.
 `kubelet`         | false    | `KubeletParams` | Extra arguments for kubelet.
+`coredns`         | false    | `ServiceParams` | Extra arguments for [CoreDNS][].
 
 ### ServiceParams
 
@@ -55,21 +62,5 @@ Name              | Required | Type   | Description
 `extra_binds`     | false    | object | Extra bind mounts.
 `extra_env`       | false    | object | Extra environment variables.
 
-Cluster
--------
-
-Cluster has these fields:
-
-Name            | Required | Type      | Description
---------------- | -------- | --------- | -----------
-`name`          | true     | string    | The k8s cluster name.
-`nodes`         | true     | array     | List of `Node`.
-`ssh_key`       | false    | string    | Cluster wide SSH private key.
-`service_subnet`| true     | string    | CIDR subnet for k8s `Service`.
-`options`       | false    | `Options` | See options.
-`rbac`          | false    | bool      | true to enable [RBAC][].
-
-
 [CoreDNS]: https://github.com/coredns/coredns
-[PodSecurity]: https://kubernetes.io/docs/concepts/policy/pod-security-policy/
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/

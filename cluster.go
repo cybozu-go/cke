@@ -41,12 +41,13 @@ type Options struct {
 
 // Cluster is a set of configurations for a etcd/Kubernetes cluster.
 type Cluster struct {
-	Name          string  `json:"name"           yaml:"name"`
-	Nodes         []*Node `json:"nodes"          yaml:"nodes"`
-	SSHKey        string  `json:"ssh_key"        yaml:"ssh_key"`
-	ServiceSubnet string  `json:"service_subnet" yaml:"service_subnet"`
-	Options       Options `json:"options"        yaml:"options"`
-	RBAC          bool    `json:"rbac"           yaml:"rbac"`
+	Name          string   `json:"name"           yaml:"name"`
+	Nodes         []*Node  `json:"nodes"          yaml:"nodes"`
+	SSHKey        string   `json:"ssh_key"        yaml:"ssh_key"`
+	ServiceSubnet string   `json:"service_subnet" yaml:"service_subnet"`
+	DNSServers    []string `json:"dns_servers"    yaml:"dns_servers"`
+	Options       Options  `json:"options"        yaml:"options"`
+	RBAC          bool     `json:"rbac"           yaml:"rbac"`
 }
 
 // Validate validates the cluster definition.
@@ -64,6 +65,12 @@ func (c *Cluster) Validate() error {
 		err := c.validateNode(n)
 		if err != nil {
 			return err
+		}
+	}
+
+	for _, a := range c.DNSServers {
+		if net.ParseIP(a) == nil {
+			return errors.New("invalid IP address: " + a)
 		}
 	}
 

@@ -3,6 +3,8 @@ package cke
 import "testing"
 
 func testClusterValidate(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		cluster Cluster
@@ -21,6 +23,15 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "",
+			},
+			true,
+		},
+		{
+			"invalid DNS server address",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				DNSServers:    []string{"a.b.c.d"},
 			},
 			true,
 		},
