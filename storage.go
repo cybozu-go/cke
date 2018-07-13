@@ -26,6 +26,8 @@ const (
 	KeyLeader      = "leader/"
 )
 
+const maxRecords = 1000
+
 var (
 	// ErrNotFound may be returned by Storage methods when a key is not found.
 	ErrNotFound = errors.New("not found")
@@ -148,7 +150,8 @@ func (s Storage) RegisterRecord(ctx context.Context, leaderKey string, r *Record
 	if !resp.Succeeded {
 		return ErrNoLeader
 	}
-	return nil
+
+	return s.maintRecords(ctx, leaderKey, maxRecords)
 }
 
 // UpdateRecord updates existing record
@@ -185,4 +188,31 @@ func (s Storage) NextRecordID(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 	return id, nil
+}
+
+func (s Storage) maintRecords(ctx context.Context, leaderKey string, max int64) error {
+	resp, err := s.Get(ctx, KeyRecords,
+		clientv3.WithPrefix(),
+		clientv3.WithKeysOnly(),
+		clientv3.WithSort(clientv3.SortByKey, clientv3.SortAscend),
+	)
+	if err != nil {
+		return err
+	}
+
+	if resp.Count <= max {
+		return nil
+	}
+
+	startKey := string(resp.Kvs[0].Key)
+	endKey := string(resp.Kvs[resp.Count-max].Key)
+
+	tresp, err := s.Txn(ctx).
+		If(clientv3util.KeyExists(leaderKey)).
+		Then(clientv3.OpDelete(startKey, clientv3.WithRange(endKey))).
+		Commit()
+	if !tresp.Succeeded {
+		return ErrNoLeader
+	}
+	return err
 }

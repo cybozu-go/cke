@@ -9,15 +9,14 @@ import (
 )
 
 func testStorageCluster(t *testing.T) {
-	client, err := newEtcdClient(t.Name() + "/")
-	if err != nil {
-		t.Fatal(err)
-	}
+	t.Parallel()
+
+	client := newEtcdClient(t)
 	defer client.Close()
 	storage := Storage{client}
 	ctx := context.Background()
 
-	_, err = storage.GetCluster(ctx)
+	_, err := storage.GetCluster(ctx)
 	if err != ErrNotFound {
 		t.Fatal("cluster found.")
 	}
@@ -52,15 +51,14 @@ func testStorageCluster(t *testing.T) {
 }
 
 func testStorageConstraints(t *testing.T) {
-	client, err := newEtcdClient(t.Name() + "/")
-	if err != nil {
-		t.Fatal(err)
-	}
+	t.Parallel()
+
+	client := newEtcdClient(t)
 	defer client.Close()
 	storage := Storage{client}
 	ctx := context.Background()
 
-	_, err = storage.GetConstraints(ctx)
+	_, err := storage.GetConstraints(ctx)
 	if err != ErrNotFound {
 		t.Fatal("constraints found.")
 	}
@@ -85,10 +83,9 @@ func testStorageConstraints(t *testing.T) {
 }
 
 func testStorageRecord(t *testing.T) {
-	client, err := newEtcdClient(t.Name() + "/")
-	if err != nil {
-		t.Fatal(err)
-	}
+	t.Parallel()
+
+	client := newEtcdClient(t)
 	defer client.Close()
 	storage := Storage{client}
 	ctx := context.Background()
@@ -114,7 +111,7 @@ func testStorageRecord(t *testing.T) {
 
 	leaderKey := e.Key()
 	r := NewRecord(1, "my-operation")
-	err = storage.RegisterRecord(ctx, leaderKey, &r)
+	err = storage.RegisterRecord(ctx, leaderKey, r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,9 +133,9 @@ func testStorageRecord(t *testing.T) {
 		t.Fatalf("nextID was not incremented: %d", nextID)
 	}
 
-	newR := r
+	newR := *r
 	newR.Complete()
-	err = storage.UpdateRecord(ctx, leaderKey, &r)
+	err = storage.UpdateRecord(ctx, leaderKey, r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +154,7 @@ func testStorageRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = storage.RegisterRecord(ctx, leaderKey, &r)
+	err = storage.RegisterRecord(ctx, leaderKey, r)
 	if err != ErrNoLeader {
 		t.Fatal("leader did not resign")
 	}
@@ -168,8 +165,70 @@ func testStorageRecord(t *testing.T) {
 	}
 }
 
+func testStorageMaint(t *testing.T) {
+	t.Parallel()
+
+	client := newEtcdClient(t)
+	defer client.Close()
+	storage := Storage{client}
+	ctx := context.Background()
+
+	s, err := concurrency.NewSession(client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	e := concurrency.NewElection(s, KeyLeader)
+	err = e.Campaign(ctx, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	leaderKey := e.Key()
+	for i := int64(1); i < 11; i++ {
+		r := NewRecord(i, "my-operation")
+		err = storage.RegisterRecord(ctx, leaderKey, r)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	err = storage.maintRecords(ctx, leaderKey, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	records, err := storage.GetRecords(ctx, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(records) != 10 {
+		t.Error(`len(records) != 10`)
+	}
+
+	err = storage.maintRecords(ctx, leaderKey, 8)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	records, err = storage.GetRecords(ctx, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(records) != 8 {
+		t.Fatal(`len(records) != 8`)
+	}
+
+	if records[7].ID != 3 {
+		t.Error(`records[7].ID != 3`)
+	}
+}
+
 func TestStorage(t *testing.T) {
 	t.Run("Cluster", testStorageCluster)
 	t.Run("Constraints", testStorageConstraints)
 	t.Run("Record", testStorageRecord)
+	t.Run("Maint", testStorageMaint)
 }

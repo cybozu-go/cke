@@ -55,7 +55,9 @@ func TestMain(m *testing.M) {
 	os.Exit(testMain(m))
 }
 
-func newEtcdClient(prefix string) (*clientv3.Client, error) {
+func newEtcdClient(t *testing.T) *clientv3.Client {
+	prefix := t.Name() + "/"
+
 	var clientURL string
 	circleci := os.Getenv("CIRCLECI") == "true"
 	if circleci {
@@ -68,10 +70,10 @@ func newEtcdClient(prefix string) (*clientv3.Client, error) {
 		DialTimeout: 2 * time.Second,
 	})
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
 	c.KV = namespace.NewKV(c.KV, prefix)
 	c.Watcher = namespace.NewWatcher(c.Watcher, prefix)
 	c.Lease = namespace.NewLease(c.Lease, prefix)
-	return c, nil
+	return c
 }

@@ -40,8 +40,8 @@ type Record struct {
 }
 
 // NewRecord creates new `Record`
-func NewRecord(id int64, op string) Record {
-	return Record{
+func NewRecord(id int64, op string) *Record {
+	return &Record{
 		ID:        id,
 		Status:    StatusNew,
 		Operation: op,
