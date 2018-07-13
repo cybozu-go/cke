@@ -17,17 +17,20 @@ type Storage struct {
 	*clientv3.Client
 }
 
+// etcd keys and prefixes
 const (
-	keyRecords     = "records/"
-	keyRecordID    = "records"
-	keyCluster     = "cluster"
-	keyConstraints = "constraints"
-	keyLeader      = "leader/"
+	KeyRecords     = "records/"
+	KeyRecordID    = "records"
+	KeyCluster     = "cluster"
+	KeyConstraints = "constraints"
+	KeyLeader      = "leader/"
 )
 
 var (
 	// ErrNotFound may be returned by Storage methods when a key is not found.
 	ErrNotFound = errors.New("not found")
+	// ErrNoLeader is returned when the session lost leadership.
+	ErrNoLeader = errors.New("lost leadership")
 )
 
 // PutCluster stores *Cluster into etcd.
@@ -37,14 +40,14 @@ func (s Storage) PutCluster(ctx context.Context, c *Cluster) error {
 		return err
 	}
 
-	_, err = s.Put(ctx, keyCluster, string(data))
+	_, err = s.Put(ctx, KeyCluster, string(data))
 	return err
 }
 
 // GetCluster loads *Cluster from etcd.
 // If cluster configuration has not been stored, this returns ErrNotFound.
 func (s Storage) GetCluster(ctx context.Context) (*Cluster, error) {
-	resp, err := s.Get(ctx, keyCluster)
+	resp, err := s.Get(ctx, KeyCluster)
 	if err != nil {
 		return nil, err
 	}
@@ -69,14 +72,14 @@ func (s Storage) PutConstraints(ctx context.Context, c *Constraints) error {
 		return err
 	}
 
-	_, err = s.Put(ctx, keyConstraints, string(data))
+	_, err = s.Put(ctx, KeyConstraints, string(data))
 	return err
 }
 
 // GetConstraints loads *Constraints from etcd.
 // If constraints have not been stored, this returns ErrNotFound.
 func (s Storage) GetConstraints(ctx context.Context) (*Constraints, error) {
-	resp, err := s.Get(ctx, keyConstraints)
+	resp, err := s.Get(ctx, KeyConstraints)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +98,35 @@ func (s Storage) GetConstraints(ctx context.Context) (*Constraints, error) {
 }
 
 func recordKey(r *Record) string {
-	return fmt.Sprintf("%s%016x", keyRecords, r.ID)
+	return fmt.Sprintf("%s%016x", KeyRecords, r.ID)
+}
+
+// GetRecords loads list of *Record from etcd.
+func (s Storage) GetRecords(ctx context.Context, count int64) ([]*Record, error) {
+	opts := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+		clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend),
+	}
+	if count > 0 {
+		opts = append(opts, clientv3.WithLimit(count))
+	}
+	resp, err := s.Get(ctx, KeyRecords, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	records := make([]*Record, resp.Count)
+
+	for i, kv := range resp.Kvs {
+		r := new(Record)
+		err = json.Unmarshal(kv.Value, r)
+		if err != nil {
+			return nil, err
+		}
+		records[i] = r
+	}
+
+	return records, nil
 }
 
 // RegisterRecord stores *Record if the leaderKey exists
@@ -109,20 +140,39 @@ func (s Storage) RegisterRecord(ctx context.Context, leaderKey string, r *Record
 		If(clientv3util.KeyExists(leaderKey)).
 		Then(
 			clientv3.OpPut(recordKey(r), string(data)),
-			clientv3.OpPut(keyRecordID, nextID)).
+			clientv3.OpPut(KeyRecordID, nextID)).
 		Commit()
 	if err != nil {
 		return err
 	}
 	if !resp.Succeeded {
-		return errors.New("lose leadership")
+		return ErrNoLeader
+	}
+	return nil
+}
+
+// UpdateRecord updates existing record
+func (s Storage) UpdateRecord(ctx context.Context, leaderKey string, r *Record) error {
+	data, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+	resp, err := s.Txn(ctx).
+		If(clientv3util.KeyExists(leaderKey)).
+		Then(clientv3.OpPut(recordKey(r), string(data))).
+		Commit()
+	if err != nil {
+		return err
+	}
+	if !resp.Succeeded {
+		return ErrNoLeader
 	}
 	return nil
 }
 
 // NextRecordID get the next record ID from etcd
 func (s Storage) NextRecordID(ctx context.Context) (int64, error) {
-	resp, err := s.Get(ctx, keyRecordID)
+	resp, err := s.Get(ctx, KeyRecordID)
 	if err != nil {
 		return 0, err
 	}
