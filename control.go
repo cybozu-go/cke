@@ -3,7 +3,6 @@ package cke
 import (
 	"context"
 	"os"
-
 	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
