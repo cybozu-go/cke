@@ -14,7 +14,7 @@ type ClusterStatus struct {
 	RBAC          bool // true if RBAC is enabled
 
 	// TODO:
-	// CoreDNS will be deploed as k8s Pods.
+	// CoreDNS will be deployed as k8s Pods.
 	// We probably need to use k8s API to query CoreDNS service status.
 }
 
