@@ -121,7 +121,7 @@ func testStorageRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(&r, got[0]) {
+	if !reflect.DeepEqual(r, got[0]) {
 		t.Fatalf("got invalid record: %v", got[0])
 	}
 
@@ -145,7 +145,7 @@ func testStorageRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(&r, got[0]) {
+	if !reflect.DeepEqual(r, got[0]) {
 		t.Fatalf("got invalid record: %v", got[0])
 	}
 
