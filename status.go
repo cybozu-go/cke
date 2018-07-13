@@ -1,6 +1,7 @@
 package cke
 
 import (
+	"context"
 	"net"
 )
 
@@ -52,4 +53,10 @@ type KubeletStatus struct {
 	ServiceStatus
 	Domain    string
 	AllowSwap bool
+}
+
+// GetClusterStatus consults the whole cluster and constructs *ClusterStatus.
+func GetClusterStatus(ctx context.Context) (*ClusterStatus, error) {
+	// TODO
+	return new(ClusterStatus), nil
 }
