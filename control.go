@@ -16,6 +16,11 @@ type Controller struct {
 	interval time.Duration
 }
 
+// NewController construct controller instance
+func NewController(s *concurrency.Session, interval time.Duration) Controller {
+	return Controller{s, interval}
+}
+
 // Run execute procedures with leader elections
 func (c Controller) Run(ctx context.Context) error {
 	hostname, err := os.Hostname()
