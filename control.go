@@ -44,6 +44,11 @@ RETRY:
 }
 
 func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
+	err := c.checkLastOp(ctx, leaderKey)
+	if err != nil {
+		return err
+	}
+
 	ticker := time.NewTicker(c.interval)
 	defer ticker.Stop()
 
@@ -53,6 +58,29 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 			return err
 		}
 	}
+}
+
+func (c Controller) checkLastOp(ctx context.Context, leaderKey string) error {
+	storage := Storage{c.session.Client()}
+	records, err := storage.GetRecords(ctx, 1)
+	if err != nil {
+		return err
+	}
+	if len(records) == 0 {
+		return nil
+	}
+
+	r := records[0]
+	if r.Status == StatusCancelled || r.Status == StatusCompleted {
+		return nil
+	}
+
+	log.Warn("cancel the last operation", map[string]interface{}{
+		"id": r.ID,
+		"op": r.Operation,
+	})
+	r.Cancel()
+	return storage.UpdateRecord(ctx, leaderKey, r)
 }
 
 func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan time.Time) error {

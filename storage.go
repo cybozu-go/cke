@@ -104,6 +104,7 @@ func recordKey(r *Record) string {
 }
 
 // GetRecords loads list of *Record from etcd.
+// The returned records are sorted by record ID in decreasing order.
 func (s Storage) GetRecords(ctx context.Context, count int64) ([]*Record, error) {
 	opts := []clientv3.OpOption{
 		clientv3.WithPrefix(),
@@ -115,6 +116,10 @@ func (s Storage) GetRecords(ctx context.Context, count int64) ([]*Record, error)
 	resp, err := s.Get(ctx, KeyRecords, opts...)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.Count == 0 {
+		return nil, nil
 	}
 
 	records := make([]*Record, resp.Count)
