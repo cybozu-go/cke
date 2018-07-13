@@ -103,9 +103,10 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	if op == nil {
 		select {
 		case <-ctx.Done():
+			return ctx.Err()
 		case <-tick:
+			return nil
 		}
-		return nil
 	}
 
 	// register operation record
