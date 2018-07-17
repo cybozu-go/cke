@@ -43,7 +43,7 @@ type ServiceStatus struct {
 	Running        bool
 	Image          string
 	ExtraArguments []string
-	ExtraBinds     map[string]string
+	ExtraBinds     []Mount
 	ExtraEnvvar    map[string]string
 }
 

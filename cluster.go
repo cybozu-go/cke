@@ -19,10 +19,17 @@ type Node struct {
 	signer ssh.Signer
 }
 
+// Mount is volume mount information
+type Mount struct {
+	Source      string `json:"source"      yaml:"source"`
+	Destination string `json:"destination" yaml:"destination"`
+	ReadOnly    bool   `json:"read_only"   yaml:"read_only"`
+}
+
 // ServiceParams is a common set of extra parameters for k8s components.
 type ServiceParams struct {
 	ExtraArguments []string          `json:"extra_args"  yaml:"extra_args"`
-	ExtraBinds     map[string]string `json:"extra_binds" yaml:"extra_binds"`
+	ExtraBinds     []Mount           `json:"extra_binds" yaml:"extra_binds"`
 	ExtraEnvvar    map[string]string `json:"extra_env"   yaml:"extra_env"`
 }
 
