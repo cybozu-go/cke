@@ -13,7 +13,7 @@ type ClusterStatus struct {
 	NodeStatuses  map[string]*NodeStatus // keys are IP address strings.
 	ServiceSubnet *net.IPNet
 	RBAC          bool // true if RBAC is enabled
-
+	Agents        map[string]Agent
 	// TODO:
 	// CoreDNS will be deployed as k8s Pods.
 	// We probably need to use k8s API to query CoreDNS service status.
@@ -75,10 +75,7 @@ func getNodeStatus(agent Agent, cluster *Cluster) (*NodeStatus, error) {
 		return status, nil
 	}
 
-	dataDir := cluster.Options.Etcd.DataDir
-	if len(dataDir) == 0 {
-		dataDir = defaultEtcdDataDir
-	}
+	dataDir := etcdDataDir(cluster)
 	_, _, err = agent.Run("test -d " + filepath.Join(dataDir, "default.etcd"))
 	status.Etcd = EtcdStatus{*ss, err == nil}
 
