@@ -41,11 +41,12 @@ func (ns *NodeStatus) IsControlPlane() bool {
 // If Running is false, the service is not running on the node.
 // ExtraXX are extra parameters of the running service, if any.
 type ServiceStatus struct {
-	Configured     bool
-	Running        bool
-	ExtraArguments map[string]string
-	ExtraBinds     map[string]string
-	ExtraEnvvar    map[string]string
+	Configured       bool
+	Running          bool
+	ContainerVersion string
+	ExtraArguments   map[string]string
+	ExtraBinds       map[string]string
+	ExtraEnvvar      map[string]string
 }
 
 // KubeletStatus is the status of kubelet.
