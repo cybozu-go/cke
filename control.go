@@ -2,6 +2,7 @@ package cke
 
 import (
 	"context"
+	"errors"
 	"os"
 	"time"
 
@@ -30,14 +31,25 @@ func (c Controller) Run(ctx context.Context) error {
 	e := concurrency.NewElection(c.session, KeyLeader)
 
 RETRY:
+	select {
+	case <-c.session.Done():
+		return errors.New("session has been orphaned")
+	default:
+	}
+
 	err = e.Campaign(ctx, hostname)
 	if err != nil {
 		return err
 	}
+
 	leaderKey := e.Key()
+	log.Info("I am the leader", map[string]interface{}{
+		"session": c.session.Lease(),
+	})
 
 	err = c.runLoop(ctx, leaderKey)
 	if err == ErrNoLeader {
+		log.Warn("lost the leadership", nil)
 		err2 := e.Resign(ctx)
 		if err2 != nil {
 			return err2
@@ -57,6 +69,11 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 	defer ticker.Stop()
 
 	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
 		err := c.runOnce(ctx, leaderKey, ticker.C)
 		if err != nil {
 			return err
@@ -79,7 +96,7 @@ func (c Controller) checkLastOp(ctx context.Context, leaderKey string) error {
 		return nil
 	}
 
-	log.Warn("cancel the last operation", map[string]interface{}{
+	log.Warn("cancel the orphaned operation", map[string]interface{}{
 		"id": r.ID,
 		"op": r.Operation,
 	})
@@ -119,6 +136,9 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	if err != nil {
 		return err
 	}
+	log.Info("begin new operation", map[string]interface{}{
+		"op": op.Name(),
+	})
 
 	err = op.Cleanup(ctx)
 	if err != nil {
@@ -130,26 +150,58 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		if commander == nil {
 			break
 		}
+
+		// check the context before proceed
+		select {
+		case <-ctx.Done():
+			record.Cancel()
+			err = storage.UpdateRecord(ctx, leaderKey, record)
+			if err != nil {
+				return err
+			}
+			log.Info("interrupt the operation due to cancellation", map[string]interface{}{
+				"op": op.Name(),
+			})
+			return nil
+		default:
+		}
+
 		record.SetCommand(commander.Command())
 		err = storage.UpdateRecord(ctx, leaderKey, record)
 		if err != nil {
 			return err
 		}
+		log.Info("execute a command", map[string]interface{}{
+			"op":      op.Name(),
+			"command": commander.Command().String(),
+		})
 		err = commander.Run(ctx)
 		if err == nil {
 			continue
 		}
 
-		record.SetError(err)
-		storage.UpdateRecord(ctx, leaderKey, record)
 		log.Error("command failed", map[string]interface{}{
 			log.FnError: err,
 			"op":        op.Name(),
 			"command":   commander.Command().String(),
 		})
+		record.SetError(err)
+		err2 := storage.UpdateRecord(ctx, leaderKey, record)
+		if err2 != nil {
+			return err2
+		}
+
+		// return nil instead of err as command failure is handled gracefully.
 		return nil
 	}
 
 	record.Complete()
-	return storage.UpdateRecord(ctx, leaderKey, record)
+	err = storage.UpdateRecord(ctx, leaderKey, record)
+	if err != nil {
+		return err
+	}
+	log.Info("operation completed", map[string]interface{}{
+		"op": op.Name(),
+	})
+	return nil
 }
