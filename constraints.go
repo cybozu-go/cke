@@ -6,7 +6,7 @@ import "errors"
 type Constraints struct {
 	ControlPlaneCount int `json:"control-plane-count"`
 	MinimumWorkers    int `json:"minimum-workers"`
-	MaximumWorkers    int `json:maximum-workers`
+	MaximumWorkers    int `json:"maximum-workers"`
 }
 
 // Check checks the cluster satisfies the constraints
