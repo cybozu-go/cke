@@ -10,14 +10,22 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
-const paramsDir = "/run/cke"
+const (
+	paramsDir = "/run/cke"
+)
 
 type container struct {
 	name  string
 	agent Agent
 }
 
-func (c container) run(image string, opts []string, params, extra ServiceParams) error {
+// runSystem run container as a system service.
+func (c container) runSystem(image string, opts []string, params, extra ServiceParams) error {
+	err := os.MkdirAll(paramsDir, 0755)
+	if err != nil {
+		return err
+	}
+
 	id, err := c.getID()
 	if err != nil {
 		return err
@@ -75,12 +83,12 @@ func (c container) run(image string, opts []string, params, extra ServiceParams)
 }
 
 func (c container) getID() (string, error) {
-	id, _, err := c.agent.Run(fmt.Sprintf("docker ps -a --filter name=%s --format {{.ID}}", c.name))
+	dockerPS := "docker ps -a --filter name=%s --format {{.ID}}"
+	data, _, err := c.agent.Run(fmt.Sprintf(dockerPS, c.name))
 	if err != nil {
 		return "", err
 	}
-	id = strings.TrimSpace(id)
-	return id, nil
+	return strings.TrimSpace(string(data)), nil
 }
 
 func (c container) inspect() (*ServiceStatus, error) {
@@ -98,7 +106,7 @@ func (c container) inspect() (*ServiceStatus, error) {
 	}
 
 	dj := new(types.ContainerJSON)
-	err = json.Unmarshal([]byte(data), dj)
+	err = json.Unmarshal(data, dj)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +118,7 @@ func (c container) inspect() (*ServiceStatus, error) {
 			return nil, err
 		}
 
-		err = json.Unmarshal([]byte(data), params)
+		err = json.Unmarshal(data, params)
 		if err != nil {
 			return nil, err
 		}

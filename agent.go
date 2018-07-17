@@ -18,7 +18,7 @@ type Agent interface {
 	Close() error
 
 	// Run command on the node.
-	Run(command string) (string, string, error)
+	Run(command string) (stdout, stderr []byte, err error)
 }
 
 // SSHAgent is an Agent using SSH for node connection.
@@ -68,13 +68,13 @@ func (a SSHAgent) Close() error {
 }
 
 // Run implements Agent interface.
-func (a SSHAgent) Run(command string) (string, string, error) {
+func (a SSHAgent) Run(command string) (stdout, stderr []byte, e error) {
 	session, err := a.client.NewSession()
 	if err != nil {
 		log.Error("failed to create session: ", map[string]interface{}{
 			log.FnError: err,
 		})
-		return "", "", err
+		return nil, nil, err
 	}
 	defer session.Close()
 
@@ -87,7 +87,7 @@ func (a SSHAgent) Run(command string) (string, string, error) {
 			log.FnError: err,
 			"command":   command,
 		})
-		return "", "", err
+		return nil, nil, err
 	}
-	return stdoutBuff.String(), stderrBuff.String(), nil
+	return stdoutBuff.Bytes(), stderrBuff.Bytes(), nil
 }

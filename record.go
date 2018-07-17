@@ -1,7 +1,6 @@
 package cke
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -15,18 +14,6 @@ const (
 	StatusCancelled = RecordStatus("cancelled")
 	StatusCompleted = RecordStatus("completed")
 )
-
-// Command represents some command
-type Command struct {
-	Name   string `json:"name"`
-	Target string `json:"target"`
-	Detail string `json:"detail"`
-}
-
-// String implements fmt.Stringer
-func (c Command) String() string {
-	return fmt.Sprintf("%s@%s: %s", c.Name, c.Target, c.Detail)
-}
 
 // Record represents a record of an operation
 type Record struct {

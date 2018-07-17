@@ -115,6 +115,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	if err != nil {
 		return err
 	}
+	defer status.Destroy()
 
 	op := DecideToDo(cluster, status)
 	if op == nil {

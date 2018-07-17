@@ -2,8 +2,8 @@ package cke
 
 import "github.com/cybozu-go/log"
 
-// DecideToDo return next operation to do.
-// This returns nil if nothing to do.
+// DecideToDo returns the next operation to do.
+// This returns nil when no operation need to be done.
 func DecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	var cpNodes []*Node
 	for _, n := range c.Nodes {
@@ -22,10 +22,9 @@ func DecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	}
 
 	if allTrue(func(n *Node) bool { return !cs.NodeStatuses[n.Address].Etcd.HasData }, cpNodes) {
-		return NewEtcdBootOperator(cpNodes, cs.Agents, etcdDataDir(c))
+		return newEtcdBootOperator(cpNodes, cs.Agents, etcdDataDir(c))
 	}
 
-	// TODO
 	return nil
 }
 

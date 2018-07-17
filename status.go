@@ -11,12 +11,20 @@ import (
 type ClusterStatus struct {
 	Name          string
 	NodeStatuses  map[string]*NodeStatus // keys are IP address strings.
+	Agents        map[string]Agent       // ditto.
 	ServiceSubnet *net.IPNet
 	RBAC          bool // true if RBAC is enabled
-	Agents        map[string]Agent
 	// TODO:
 	// CoreDNS will be deployed as k8s Pods.
 	// We probably need to use k8s API to query CoreDNS service status.
+}
+
+// Destroy calls Close for all agents.
+func (cs *ClusterStatus) Destroy() {
+	for _, a := range cs.Agents {
+		a.Close()
+	}
+	cs.Agents = nil
 }
 
 // NodeStatus status of a node.
