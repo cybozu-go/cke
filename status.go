@@ -2,8 +2,13 @@ package cke
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"path/filepath"
+	"strings"
+	"sync"
+
+	"github.com/cybozu-go/cmd"
 )
 
 // ClusterStatus represents the working cluster status.
@@ -70,8 +75,49 @@ type KubeletStatus struct {
 
 // GetClusterStatus consults the whole cluster and constructs *ClusterStatus.
 func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, error) {
-	// TODO
-	return new(ClusterStatus), nil
+	var mu sync.Mutex
+	statuses := make(map[string]*NodeStatus)
+	agents := make(map[string]Agent)
+	defer func() {
+		for _, a := range agents {
+			a.Close()
+		}
+	}()
+
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range cluster.Nodes {
+		n := n
+		cmd.Go(func(ctx context.Context) error {
+			a, err := NewSSHAgent(n)
+			if err != nil {
+				return err
+			}
+			ns, err := getNodeStatus(a, cluster)
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			statuses[n.Address] = ns
+			agents[n.Address] = a
+			mu.Unlock()
+			return nil
+		})
+	}
+	env.Stop()
+	err := env.Wait()
+	if err != nil {
+		return nil, err
+	}
+
+	cs := new(ClusterStatus)
+	cs.NodeStatuses = statuses
+
+	// TODO: fill other fields for k8s in ClusterStatus.
+
+	// These assignments should be placed last.
+	cs.Agents = agents
+	agents = nil
+	return cs, nil
 }
 
 func getNodeStatus(agent Agent, cluster *Cluster) (*NodeStatus, error) {
@@ -80,12 +126,16 @@ func getNodeStatus(agent Agent, cluster *Cluster) (*NodeStatus, error) {
 	etcd := container{"etcd", agent}
 	ss, err := etcd.inspect()
 	if err != nil {
-		return status, nil
+		return nil, err
 	}
 
 	dataDir := etcdDataDir(cluster)
-	_, _, err = agent.Run("test -d " + filepath.Join(dataDir, "default.etcd"))
-	status.Etcd = EtcdStatus{*ss, err == nil}
+	command := "if [ -d %s ]; then echo ok; fi"
+	data, _, err := agent.Run(fmt.Sprintf(command, filepath.Join(dataDir, "default.etcd")))
+	if err != nil {
+		return nil, err
+	}
 
+	status.Etcd = EtcdStatus{*ss, strings.HasPrefix(string(data), "ok")}
 	return status, nil
 }
