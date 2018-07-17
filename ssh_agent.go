@@ -10,6 +10,10 @@ import (
 
 	"github.com/cybozu-go/log"
 	"golang.org/x/crypto/ssh"
+	"github.com/docker/docker/api/types"
+	"fmt"
+	"strings"
+	"encoding/json"
 )
 
 const (
@@ -85,7 +89,28 @@ func (a *SSHAgent) GetNodeStatus(cluster *Cluster) (*NodeStatus, error) {
 	return status, nil
 }
 
+func (a *SSHAgent) getContainer(name string) (*types.ContainerJSON, error) {
+	id, _, err := a.Run(fmt.Sprintf("docker ps --filter name=%s --format {{.ID}}", name))
+	if err != nil {
+		return nil, err
+	}
+	id = strings.TrimSpace(id)
+
+	out, _, err := a.Run("docker container inspect " + id)
+	if err != nil {
+		return nil, err
+	}
+
+	c := new(types.ContainerJSON)
+	err = json.Unmarshal([]byte(out), c)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
 func (a *SSHAgent) getEtcdStatus(params EtcdParams) (ServiceStatus, error) {
+	containerName := "etcd"
 	var status ServiceStatus
 	dataDir := params.DataDir
 	if len(dataDir) == 0 {
@@ -97,10 +122,28 @@ func (a *SSHAgent) getEtcdStatus(params EtcdParams) (ServiceStatus, error) {
 	}
 	status.Configured = true
 
-	_, _, err = a.Run("test -d " + filepath.Join(dataDir, "default.etcd"))
+	c, err := a.getContainer(containerName)
 	if err != nil {
-		return status, err
+		return status, nil
 	}
 
+	status.ExtraArguments = c.Args
+	status.ExtraBinds = make(map[string]string)
+	for _, m := range c.Mounts {
+		if m.Type != "bind" {
+			continue
+		}
+		status.ExtraBinds[m.Source] = m.Destination
+	}
+	status.ExtraEnvvar = make(map[string]string)
+	status.Running = c.State.Running
+
+
 	return status, nil
+}
+
+func etcdBuiltinArgs() []string {
+	return []string{
+		"aaa", "bbb",
+	}
 }

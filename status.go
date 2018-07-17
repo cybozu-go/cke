@@ -44,7 +44,7 @@ type ServiceStatus struct {
 	Configured       bool
 	Running          bool
 	ContainerVersion string
-	ExtraArguments   map[string]string
+	ExtraArguments   []string
 	ExtraBinds       map[string]string
 	ExtraEnvvar      map[string]string
 }
