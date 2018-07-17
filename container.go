@@ -36,6 +36,7 @@ func (c container) run(image string, opts []string, params, extra ServiceParams)
 		"--name=" + c.name,
 		"--network=host",
 		"--uts=host",
+		"--restart=unless-stopped",
 	}
 	args = append(args, opts...)
 
