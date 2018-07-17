@@ -59,11 +59,14 @@ func (c clusterSet) Execute(ctx context.Context, f *flag.FlagSet) subcommands.Ex
 	}
 
 	constraints, err := storage.GetConstraints(ctx)
-	if err != nil {
-		return handleError(err)
-	}
-	err = constraints.Check(cfg)
-	if err != nil {
+	switch err {
+	case cke.ErrNotFound:
+	case nil:
+		err = constraints.Check(cfg)
+		if err != nil {
+			return handleError(err)
+		}
+	default:
 		return handleError(err)
 	}
 
