@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	defaultTimeout = 10 * time.Minute
+	defaultTimeout = 30 * time.Second
 )
 
 // Agent is the interface to run commands on a node.
@@ -21,13 +21,12 @@ type Agent interface {
 	Run(command string) (stdout, stderr []byte, err error)
 }
 
-// SSHAgent is an Agent using SSH for node connection.
-type SSHAgent struct {
+type sshAgent struct {
 	node   *Node
 	client *ssh.Client
 }
 
-// NewSSHAgent creates an SSHAgent
+// NewSSHAgent creates an Agent that communicates over SSH.
 // It returns non-nil error when connection could not be established.
 func NewSSHAgent(node *Node) (Agent, error) {
 	config := &ssh.ClientConfig{
@@ -48,7 +47,7 @@ func NewSSHAgent(node *Node) (Agent, error) {
 		return nil, err
 	}
 
-	a := SSHAgent{
+	a := sshAgent{
 		node:   node,
 		client: client,
 	}
@@ -60,15 +59,13 @@ func NewSSHAgent(node *Node) (Agent, error) {
 	return a, nil
 }
 
-// Close implements Agent interface.
-func (a SSHAgent) Close() error {
+func (a sshAgent) Close() error {
 	err := a.client.Close()
 	a.client = nil
 	return err
 }
 
-// Run implements Agent interface.
-func (a SSHAgent) Run(command string) (stdout, stderr []byte, e error) {
+func (a sshAgent) Run(command string) (stdout, stderr []byte, e error) {
 	session, err := a.client.NewSession()
 	if err != nil {
 		log.Error("failed to create session: ", map[string]interface{}{
