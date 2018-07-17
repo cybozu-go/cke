@@ -39,6 +39,7 @@ func main() {
 	subcommands.Register(subcommands.FlagsCommand(), "misc")
 	subcommands.Register(subcommands.CommandsCommand(), "misc")
 	subcommands.Register(cli.ClusterCommand(), "")
+	subcommands.Register(cli.ConstraintsCommand(), "")
 
 	flag.Parse()
 	cmd.LogConfig{}.Apply()
