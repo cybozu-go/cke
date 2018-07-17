@@ -33,7 +33,6 @@ Planned Features
     * Self-hosting (except for etcd, which is managed by CKE).
     * CoreDNS add-on.
     * Node-local DNS cache services.
-    * Custom manifests to deploy custom add-ons.
 
 * Sabakan integration
 
