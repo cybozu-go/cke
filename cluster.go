@@ -21,9 +21,15 @@ type Node struct {
 
 // ServiceParams is a common set of extra parameters for k8s components.
 type ServiceParams struct {
-	ExtraArguments map[string]string `json:"extra_args"  yaml:"extra_args"`
+	ExtraArguments []string          `json:"extra_args"  yaml:"extra_args"`
 	ExtraBinds     map[string]string `json:"extra_binds" yaml:"extra_binds"`
 	ExtraEnvvar    map[string]string `json:"extra_env"   yaml:"extra_env"`
+}
+
+// EtcdParams is a set of extra parameters for etcd.
+type EtcdParams struct {
+	ServiceParams `yaml:",inline"`
+	DataDir       string `json:"data_dir" yaml:"data_dir"`
 }
 
 // KubeletParams is a set of extra parameters for kubelet.
@@ -31,11 +37,6 @@ type KubeletParams struct {
 	ServiceParams `yaml:",inline"`
 	Domain        string `json:"domain"      yaml:"domain"`
 	AllowSwap     bool   `json:"allow_swap"  yaml:"allow_swap"`
-}
-
-type EtcdParams struct {
-	ServiceParams `yaml:",inline"`
-	DataDir       string `json:"data_dir" yaml:"data_dir"`
 }
 
 // Options is a set of optional parameters for k8s components.

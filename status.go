@@ -3,6 +3,7 @@ package cke
 import (
 	"context"
 	"net"
+	"path/filepath"
 )
 
 // ClusterStatus represents the working cluster status.
@@ -20,8 +21,7 @@ type ClusterStatus struct {
 
 // NodeStatus status of a node.
 type NodeStatus struct {
-	Address    net.IP
-	Etcd       ServiceStatus
+	Etcd       EtcdStatus
 	APIServer  ServiceStatus
 	Controller ServiceStatus
 	Scheduler  ServiceStatus
@@ -32,21 +32,25 @@ type NodeStatus struct {
 
 // IsControlPlane returns true if the node has been configured as a control plane.
 func (ns *NodeStatus) IsControlPlane() bool {
-	return ns.Etcd.Configured
+	return ns.Etcd.HasData
 }
 
 // ServiceStatus represents statuses of a service.
 //
-// If Configured is false, the service is not yet configured on the node.
 // If Running is false, the service is not running on the node.
 // ExtraXX are extra parameters of the running service, if any.
 type ServiceStatus struct {
-	Configured       bool
-	Running          bool
-	ContainerVersion string
-	ExtraArguments   []string
-	ExtraBinds       map[string]string
-	ExtraEnvvar      map[string]string
+	Running        bool
+	Image          string
+	ExtraArguments []string
+	ExtraBinds     map[string]string
+	ExtraEnvvar    map[string]string
+}
+
+// EtcdStatus is the status of kubelet.
+type EtcdStatus struct {
+	ServiceStatus
+	HasData bool
 }
 
 // KubeletStatus is the status of kubelet.
@@ -60,4 +64,23 @@ type KubeletStatus struct {
 func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, error) {
 	// TODO
 	return new(ClusterStatus), nil
+}
+
+func getNodeStatus(agent Agent, cluster *Cluster) (*NodeStatus, error) {
+	status := &NodeStatus{}
+
+	etcd := container{"etcd", agent}
+	ss, err := etcd.inspect()
+	if err != nil {
+		return status, nil
+	}
+
+	dataDir := cluster.Options.Etcd.DataDir
+	if len(dataDir) == 0 {
+		dataDir = defaultEtcdDataDir
+	}
+	_, _, err = agent.Run("test -d " + filepath.Join(dataDir, "default.etcd"))
+	status.Etcd = EtcdStatus{*ss, err == nil}
+
+	return status, nil
 }
