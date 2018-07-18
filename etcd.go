@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	defaultEtcdDataDir = "/var/lib/etcd"
+	defaultEtcdDataDir = "/var/lib/etcd-cke"
 )
 
 func etcdDataDir(c *Cluster) string {
