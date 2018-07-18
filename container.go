@@ -20,6 +20,8 @@ type Container interface {
 	PullImage() error
 	// RunSystem run container as a system service.
 	RunSystem(opts []string, params, extra ServiceParams) error
+	// Run runs a container.
+	Run(binds []Mount, command string) error
 	// Inspect returns ServiceStatus for the container.
 	Inspect() (*ServiceStatus, error)
 }
@@ -48,6 +50,28 @@ func (c docker) PullImage() error {
 	}
 
 	_, _, err = c.agent.Run("docker image pull " + img)
+	return err
+}
+
+func (c docker) Run(binds []Mount, command string) error {
+	args := []string{
+		"docker",
+		"run",
+		"-d",
+		"--rm",
+		"--network=host",
+		"--uts=host",
+	}
+	for _, m := range binds {
+		o := "rw"
+		if m.ReadOnly {
+			o = "ro"
+		}
+		args = append(args, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
+	}
+	args = append(args, Image(c.name), command)
+
+	_, _, err := c.agent.Run(strings.Join(args, " "))
 	return err
 }
 

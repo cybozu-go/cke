@@ -3,6 +3,7 @@ package cke
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/cybozu-go/cmd"
 )
@@ -35,11 +36,15 @@ type makeDirCommand struct {
 
 func (c makeDirCommand) Run(ctx context.Context) error {
 	env := cmd.NewEnvironment(ctx)
+	binds := []Mount{{
+		Source:      filepath.Dir(c.targetDir),
+		Destination: filepath.Join("/mnt", filepath.Dir(c.targetDir)),
+	}}
+	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", c.targetDir)
 	for _, n := range c.nodes {
-		a := c.agents[n.Address]
+		ctr := Docker("tools", c.agents[n.Address])
 		env.Go(func(ctx context.Context) error {
-			_, _, err := a.Run("mkdir -p " + c.targetDir)
-			return err
+			return ctr.Run(binds, mkdirCommand)
 		})
 	}
 	env.Stop()

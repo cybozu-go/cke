@@ -64,7 +64,7 @@ Name              | Required | Type   | Description
 
 Name              | Required | Type   | Description
 ----------------- | -------- | ------ | -----------
-`data_dir`        | false    | string | Data directory for etcd.  Default: `/var/lib/etcd`.
+`data_dir`        | false    | string | Data directory for etcd.  Default: `/var/lib/etcd-cke`.
 `extra_args`      | false    | array  | Extra command-line arguments.  List of strings.
 `extra_binds`     | false    | array  | Extra bind mounts.  List of `Mount`.
 `extra_env`       | false    | object | Extra environment variables.
