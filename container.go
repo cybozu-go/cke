@@ -14,19 +14,23 @@ import (
 )
 
 const (
-	paramsDir = "/run/cke"
+	ckeLabelName = "com.cybozu.cke"
 )
 
 // Container is the interface to manage a container and the image for it.
 type Container interface {
 	// PullImage pulls the image for the container.
 	PullImage() error
-	// RunSystem run container as a system service.
-	RunSystem(opts []string, params, extra ServiceParams) error
-	// Run runs a container.
+	// Run runs the container as a foreground process.
 	Run(binds []Mount, command string) error
+	// RunSystem runs the container as a system service.
+	RunSystem(opts []string, params, extra ServiceParams) error
 	// Inspect returns ServiceStatus for the container.
 	Inspect() (*ServiceStatus, error)
+	// VolumeCreate creates a local volume.
+	VolumeCreate(name string) error
+	// VolumeExists returns true if the named volume exists.
+	VolumeExists(name string) (bool, error)
 }
 
 // Docker is an implementation of Container using Docker.
@@ -94,6 +98,7 @@ func (c docker) RunSystem(opts []string, params, extra ServiceParams) error {
 		"run",
 		"-d",
 		"--name=" + c.name,
+		"--read-only",
 		"--network=host",
 		"--uts=host",
 		"--restart=unless-stopped",
@@ -117,7 +122,7 @@ func (c docker) RunSystem(opts []string, params, extra ServiceParams) error {
 	if err != nil {
 		return err
 	}
-	labelFile, err := c.putData("com.cybozu.cke=" + string(data))
+	labelFile, err := c.putData(ckeLabelName + "=" + string(data))
 	if err != nil {
 		return err
 	}
@@ -180,7 +185,7 @@ func (c docker) Inspect() (*ServiceStatus, error) {
 	dj := djs[0]
 
 	params := new(ServiceParams)
-	label := dj.Config.Labels["com.cybozu.cke"]
+	label := dj.Config.Labels[ckeLabelName]
 
 	err = json.Unmarshal([]byte(label), params)
 	if err != nil {
@@ -194,4 +199,23 @@ func (c docker) Inspect() (*ServiceStatus, error) {
 		ExtraBinds:     params.ExtraBinds,
 		ExtraEnvvar:    params.ExtraEnvvar,
 	}, nil
+}
+
+func (c docker) VolumeCreate(name string) error {
+	_, _, err := c.agent.Run("docker volume create " + name)
+	return err
+}
+
+func (c docker) VolumeExists(name string) (bool, error) {
+	data, _, err := c.agent.Run("docker volume list -q")
+	if err != nil {
+		return false, err
+	}
+
+	for _, n := range strings.Split(string(data), "\n") {
+		if n == name {
+			return true, nil
+		}
+	}
+	return false, nil
 }
