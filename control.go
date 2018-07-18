@@ -105,6 +105,17 @@ func (c Controller) checkLastOp(ctx context.Context, leaderKey string) error {
 }
 
 func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan time.Time) error {
+	wait := false
+	defer func() {
+		if !wait {
+			return
+		}
+		select {
+		case <-ctx.Done():
+		case <-tick:
+		}
+	}()
+
 	storage := Storage{c.session.Client()}
 	cluster, err := storage.GetCluster(ctx)
 	if err != nil {
@@ -113,17 +124,18 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 
 	status, err := GetClusterStatus(ctx, cluster)
 	if err != nil {
-		return err
+		wait = true
+		log.Warn("failed to get cluster status", map[string]interface{}{
+			log.FnError: err,
+		})
+		return nil
 	}
+	defer status.Destroy()
 
 	op := DecideToDo(cluster, status)
 	if op == nil {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-tick:
-			return nil
-		}
+		wait = true
+		return nil
 	}
 
 	// register operation record
@@ -131,7 +143,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	if err != nil {
 		return err
 	}
-	record := op.NewRecord(id)
+	record := NewRecord(id, op.Name())
 	err = storage.RegisterRecord(ctx, leaderKey, record)
 	if err != nil {
 		return err
@@ -142,7 +154,12 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 
 	err = op.Cleanup(ctx)
 	if err != nil {
-		return err
+		wait = true
+		log.Warn("failed to cleanup", map[string]interface{}{
+			log.FnError: err,
+			"op":        op.Name(),
+		})
+		return nil
 	}
 
 	for {
@@ -192,6 +209,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		}
 
 		// return nil instead of err as command failure is handled gracefully.
+		wait = true
 		return nil
 	}
 

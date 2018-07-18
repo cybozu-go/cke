@@ -3,6 +3,7 @@ package cke
 import (
 	"errors"
 	"net"
+	"path/filepath"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -19,10 +20,17 @@ type Node struct {
 	signer ssh.Signer
 }
 
+// Mount is volume mount information
+type Mount struct {
+	Source      string `json:"source"      yaml:"source"`
+	Destination string `json:"destination" yaml:"destination"`
+	ReadOnly    bool   `json:"read_only"   yaml:"read_only"`
+}
+
 // ServiceParams is a common set of extra parameters for k8s components.
 type ServiceParams struct {
 	ExtraArguments []string          `json:"extra_args"  yaml:"extra_args"`
-	ExtraBinds     map[string]string `json:"extra_binds" yaml:"extra_binds"`
+	ExtraBinds     []Mount           `json:"extra_binds" yaml:"extra_binds"`
 	ExtraEnvvar    map[string]string `json:"extra_env"   yaml:"extra_env"`
 }
 
@@ -84,6 +92,11 @@ func (c *Cluster) Validate() error {
 		}
 	}
 
+	err = validateOptions(c.Options)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -107,5 +120,51 @@ func (c *Cluster) validateNode(n *Node) error {
 		return err
 	}
 	n.signer = signer
+	return nil
+}
+
+func validateOptions(opts Options) error {
+	v := func(binds []Mount) error {
+		for _, m := range binds {
+			if !filepath.IsAbs(m.Source) {
+				return errors.New("source path must be absolute: " + m.Source)
+			}
+			if !filepath.IsAbs(m.Destination) {
+				return errors.New("destination path must be absolute: " + m.Destination)
+			}
+		}
+		return nil
+	}
+
+	dataDir := opts.Etcd.DataDir
+	if len(dataDir) > 0 && !filepath.IsAbs(dataDir) {
+		return errors.New("etcd data_dir must be absolute: " + dataDir)
+	}
+
+	err := v(opts.Etcd.ExtraBinds)
+	if err != nil {
+		return err
+	}
+	err = v(opts.APIServer.ExtraBinds)
+	if err != nil {
+		return err
+	}
+	err = v(opts.Controller.ExtraBinds)
+	if err != nil {
+		return err
+	}
+	err = v(opts.Scheduler.ExtraBinds)
+	if err != nil {
+		return err
+	}
+	err = v(opts.Proxy.ExtraBinds)
+	if err != nil {
+		return err
+	}
+	err = v(opts.Kubelet.ExtraBinds)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

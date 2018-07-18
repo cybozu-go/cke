@@ -30,7 +30,9 @@ options:
       - arg2
   kube-api:
     extra_binds:
-      src1: target1
+      - source: src1
+        destination: target1
+        read_only: true
   kube-controller:
     extra_env:
       env1: val1
@@ -93,8 +95,8 @@ rbac: true
 	if !reflect.DeepEqual(c.Options.Etcd.ExtraArguments, []string{"arg1", "arg2"}) {
 		t.Error(`!reflect.DeepEqual(c.Options.Etcd.ExtraArguments, []string{"arg1", "arg2"})`)
 	}
-	if c.Options.APIServer.ExtraBinds["src1"] != "target1" {
-		t.Error(`c.Options.APIServer.ExtraBinds["src1"] != "target1"`)
+	if !reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true}}) {
+		t.Error(`!reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true}})`)
 	}
 	if c.Options.Controller.ExtraEnvvar["env1"] != "val1" {
 		t.Error(`c.Options.Controller.ExtraEnvvar["env1"] != "val1"`)

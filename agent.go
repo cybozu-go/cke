@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	defaultTimeout = 10 * time.Minute
+	defaultTimeout = 30 * time.Second
 )
 
 // Agent is the interface to run commands on a node.
@@ -18,18 +18,17 @@ type Agent interface {
 	Close() error
 
 	// Run command on the node.
-	Run(command string) (string, string, error)
+	Run(command string) (stdout, stderr []byte, err error)
 }
 
-// SSHAgent is an Agent using SSH for node connection.
-type SSHAgent struct {
+type sshAgent struct {
 	node   *Node
 	client *ssh.Client
 }
 
-// NewSSHAgent creates an SSHAgent
+// SSHAgent creates an Agent that communicates over SSH.
 // It returns non-nil error when connection could not be established.
-func NewSSHAgent(node *Node) (Agent, error) {
+func SSHAgent(node *Node) (Agent, error) {
 	config := &ssh.ClientConfig{
 		User: node.User,
 		Auth: []ssh.AuthMethod{
@@ -48,7 +47,7 @@ func NewSSHAgent(node *Node) (Agent, error) {
 		return nil, err
 	}
 
-	a := SSHAgent{
+	a := sshAgent{
 		node:   node,
 		client: client,
 	}
@@ -60,21 +59,19 @@ func NewSSHAgent(node *Node) (Agent, error) {
 	return a, nil
 }
 
-// Close implements Agent interface.
-func (a SSHAgent) Close() error {
+func (a sshAgent) Close() error {
 	err := a.client.Close()
 	a.client = nil
 	return err
 }
 
-// Run implements Agent interface.
-func (a SSHAgent) Run(command string) (string, string, error) {
+func (a sshAgent) Run(command string) (stdout, stderr []byte, e error) {
 	session, err := a.client.NewSession()
 	if err != nil {
 		log.Error("failed to create session: ", map[string]interface{}{
 			log.FnError: err,
 		})
-		return "", "", err
+		return nil, nil, err
 	}
 	defer session.Close()
 
@@ -87,7 +84,7 @@ func (a SSHAgent) Run(command string) (string, string, error) {
 			log.FnError: err,
 			"command":   command,
 		})
-		return "", "", err
+		return nil, nil, err
 	}
-	return stdoutBuff.String(), stderrBuff.String(), nil
+	return stdoutBuff.Bytes(), stderrBuff.Bytes(), nil
 }

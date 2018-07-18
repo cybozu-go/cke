@@ -2,8 +2,14 @@ package cke
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"path/filepath"
+	"strings"
+	"sync"
+
+	"github.com/cybozu-go/cmd"
+	"github.com/pkg/errors"
 )
 
 // ClusterStatus represents the working cluster status.
@@ -11,12 +17,20 @@ import (
 type ClusterStatus struct {
 	Name          string
 	NodeStatuses  map[string]*NodeStatus // keys are IP address strings.
+	Agents        map[string]Agent       // ditto.
 	ServiceSubnet *net.IPNet
 	RBAC          bool // true if RBAC is enabled
-
 	// TODO:
 	// CoreDNS will be deployed as k8s Pods.
 	// We probably need to use k8s API to query CoreDNS service status.
+}
+
+// Destroy calls Close for all agents.
+func (cs *ClusterStatus) Destroy() {
+	for _, a := range cs.Agents {
+		a.Close()
+	}
+	cs.Agents = nil
 }
 
 // NodeStatus status of a node.
@@ -43,7 +57,7 @@ type ServiceStatus struct {
 	Running        bool
 	Image          string
 	ExtraArguments []string
-	ExtraBinds     map[string]string
+	ExtraBinds     []Mount
 	ExtraEnvvar    map[string]string
 }
 
@@ -62,25 +76,67 @@ type KubeletStatus struct {
 
 // GetClusterStatus consults the whole cluster and constructs *ClusterStatus.
 func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, error) {
-	// TODO
-	return new(ClusterStatus), nil
+	var mu sync.Mutex
+	statuses := make(map[string]*NodeStatus)
+	agents := make(map[string]Agent)
+	defer func() {
+		for _, a := range agents {
+			a.Close()
+		}
+	}()
+
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range cluster.Nodes {
+		n := n
+		cmd.Go(func(ctx context.Context) error {
+			a, err := SSHAgent(n)
+			if err != nil {
+				return errors.Wrap(err, n.Address)
+			}
+			ns, err := getNodeStatus(a, cluster)
+			if err != nil {
+				return errors.Wrap(err, n.Address)
+			}
+			mu.Lock()
+			statuses[n.Address] = ns
+			agents[n.Address] = a
+			mu.Unlock()
+			return nil
+		})
+	}
+	env.Stop()
+	err := env.Wait()
+	if err != nil {
+		return nil, err
+	}
+
+	cs := new(ClusterStatus)
+	cs.NodeStatuses = statuses
+
+	// TODO: fill other fields for k8s in ClusterStatus.
+
+	// These assignments should be placed last.
+	cs.Agents = agents
+	agents = nil
+	return cs, nil
 }
 
 func getNodeStatus(agent Agent, cluster *Cluster) (*NodeStatus, error) {
 	status := &NodeStatus{}
 
-	etcd := container{"etcd", agent}
-	ss, err := etcd.inspect()
+	etcd := Docker("etcd", agent)
+	ss, err := etcd.Inspect()
 	if err != nil {
-		return status, nil
+		return nil, err
 	}
 
-	dataDir := cluster.Options.Etcd.DataDir
-	if len(dataDir) == 0 {
-		dataDir = defaultEtcdDataDir
+	dataDir := etcdDataDir(cluster)
+	command := "if [ -d %s ]; then echo ok; fi"
+	data, _, err := agent.Run(fmt.Sprintf(command, filepath.Join(dataDir, "member")))
+	if err != nil {
+		return nil, err
 	}
-	_, _, err = agent.Run("test -d " + filepath.Join(dataDir, "default.etcd"))
-	status.Etcd = EtcdStatus{*ss, err == nil}
 
+	status.Etcd = EtcdStatus{*ss, strings.HasPrefix(string(data), "ok")}
 	return status, nil
 }

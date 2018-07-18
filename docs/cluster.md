@@ -36,7 +36,7 @@ Options
 
 Name              | Required | Type            | Description
 ----------------- | -------- | --------------- | -----------
-`etcd`            | false    | `ServiceParams` | Extra arguments for etcd.
+`etcd`            | false    | `EtcdParams`    | Extra arguments for etcd.
 `kube-api`        | false    | `ServiceParams` | Extra arguments for API server.
 `kube-controller` | false    | `ServiceParams` | Extra arguments for controller manager.
 `kube-scheduler`  | false    | `ServiceParams` | Extra arguments for scheduler.
@@ -47,9 +47,18 @@ Name              | Required | Type            | Description
 
 Name              | Required | Type   | Description
 ----------------- | -------- | ------ | -----------
-`extra_args`      | false    | object | Extra command-line arguments.
-`extra_binds`     | false    | object | Extra bind mounts.
+`extra_args`      | false    | array  | Extra command-line arguments.  List of strings.
+`extra_binds`     | false    | array  | Extra bind mounts.  List of `Mount`.
 `extra_env`       | false    | object | Extra environment variables.
+
+### Mount
+
+Name              | Required | Type   | Description
+----------------- | -------- | ------ | -----------
+`source`          | true     | string | Path in a host to a directory or a file.
+`destination`     | true     | string | Path in the container filesystem.
+`read_only`       | false    | bool   | True to mount the directory or file as read-only.
+
 
 ### KubeletParams
 
