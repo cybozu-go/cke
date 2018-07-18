@@ -60,7 +60,6 @@ func (c docker) Run(binds []Mount, command string) error {
 	args := []string{
 		"docker",
 		"run",
-		"-d",
 		"--rm",
 		"--network=host",
 		"--uts=host",
