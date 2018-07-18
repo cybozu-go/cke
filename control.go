@@ -118,8 +118,22 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 
 	storage := Storage{c.session.Client()}
 	cluster, err := storage.GetCluster(ctx)
-	if err != nil {
+	switch err {
+	case ErrNotFound:
+		wait = true
+		return nil
+	case nil:
+	default:
 		return err
+	}
+
+	err = cluster.Validate()
+	if err != nil {
+		log.Error("invalid cluster configuration", map[string]interface{}{
+			log.FnError: err,
+		})
+		wait = true
+		return nil
 	}
 
 	status, err := GetClusterStatus(ctx, cluster)
