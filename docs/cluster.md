@@ -60,14 +60,23 @@ Name              | Required | Type   | Description
 `read_only`       | false    | bool   | True to mount the directory or file as read-only.
 
 
+### EtcdParams
+
+Name              | Required | Type   | Description
+----------------- | -------- | ------ | -----------
+`data_dir`        | false    | string | Data directory for etcd.  Default: `/var/lib/etcd`.
+`extra_args`      | false    | array  | Extra command-line arguments.  List of strings.
+`extra_binds`     | false    | array  | Extra bind mounts.  List of `Mount`.
+`extra_env`       | false    | object | Extra environment variables.
+
 ### KubeletParams
 
 Name              | Required | Type   | Description
 ----------------- | -------- | ------ | -----------
 `domain`          | false    | string | The base domain for the cluster.  Default: `cluster.local`.
 `allow_swap`      | false    | bool   | Do not fail even when swap is on.
-`extra_args`      | false    | object | Extra command-line arguments.
-`extra_binds`     | false    | object | Extra bind mounts.
+`extra_args`      | false    | array  | Extra command-line arguments.  List of strings.
+`extra_binds`     | false    | array  | Extra bind mounts.  List of `Mount`.
 `extra_env`       | false    | object | Extra environment variables.
 
 [CoreDNS]: https://github.com/coredns/coredns
