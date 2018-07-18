@@ -84,6 +84,32 @@ func (c imagePullCommand) Command() Command {
 	}
 }
 
+type volumeCreateCommand struct {
+	nodes   []*Node
+	agents  map[string]Agent
+	name    string
+	volname string
+}
+
+func (c volumeCreateCommand) Run(ctx context.Context) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		ctr := Docker(c.name, c.agents[n.Address])
+		env.Go(func(ctx context.Context) error {
+			return ctr.VolumeCreate(c.volname)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c volumeCreateCommand) Command() Command {
+	return Command{
+		Name:   "volume-create",
+		Target: c.volname,
+	}
+}
+
 type runContainersCommand struct {
 	nodes  []*Node
 	agents map[string]Agent

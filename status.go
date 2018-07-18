@@ -2,10 +2,7 @@ package cke
 
 import (
 	"context"
-	"fmt"
 	"net"
-	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/cybozu-go/cmd"
@@ -113,7 +110,9 @@ func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, er
 	cs := new(ClusterStatus)
 	cs.NodeStatuses = statuses
 
-	// TODO: fill other fields for k8s in ClusterStatus.
+	// TODO: query etcd cluster status and store it to ClusterStatus.
+
+	// TODO: query k8s cluster status and store it to ClusterStatus.
 
 	// These assignments should be placed last.
 	cs.Agents = agents
@@ -124,19 +123,19 @@ func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, er
 func getNodeStatus(agent Agent, cluster *Cluster) (*NodeStatus, error) {
 	status := &NodeStatus{}
 
+	// etcd status
 	etcd := Docker("etcd", agent)
 	ss, err := etcd.Inspect()
 	if err != nil {
 		return nil, err
 	}
-
-	dataDir := etcdDataDir(cluster)
-	command := "if [ -d %s ]; then echo ok; fi"
-	data, _, err := agent.Run(fmt.Sprintf(command, filepath.Join(dataDir, "member")))
+	ok, err := etcd.VolumeExists(etcdVolumeName(cluster))
 	if err != nil {
 		return nil, err
 	}
+	status.Etcd = EtcdStatus{*ss, ok}
 
-	status.Etcd = EtcdStatus{*ss, strings.HasPrefix(string(data), "ok")}
+	// TODO: get statuses of other services.
+
 	return status, nil
 }

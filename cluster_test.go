@@ -25,6 +25,7 @@ service_subnet: 12.34.56.00/24
 dns_servers: ["1.1.1.1", "8.8.8.8"]
 options:
   etcd:
+    volume_name: myetcd
     extra_args:
       - arg1
       - arg2
@@ -92,6 +93,9 @@ rbac: true
 		t.Error(`!reflect.DeepEqual(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"})`)
 	}
 
+	if c.Options.Etcd.VolumeName != "myetcd" {
+		t.Error(`c.Options.Etcd.VolumeName != "myetcd"`)
+	}
 	if !reflect.DeepEqual(c.Options.Etcd.ExtraArguments, []string{"arg1", "arg2"}) {
 		t.Error(`!reflect.DeepEqual(c.Options.Etcd.ExtraArguments, []string{"arg1", "arg2"})`)
 	}

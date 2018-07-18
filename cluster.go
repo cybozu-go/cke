@@ -37,7 +37,7 @@ type ServiceParams struct {
 // EtcdParams is a set of extra parameters for etcd.
 type EtcdParams struct {
 	ServiceParams `yaml:",inline"`
-	DataDir       string `json:"data_dir" yaml:"data_dir"`
+	VolumeName    string `json:"volume_name" yaml:"volume_name"`
 }
 
 // KubeletParams is a set of extra parameters for kubelet.
@@ -134,11 +134,6 @@ func validateOptions(opts Options) error {
 			}
 		}
 		return nil
-	}
-
-	dataDir := opts.Etcd.DataDir
-	if len(dataDir) > 0 && !filepath.IsAbs(dataDir) {
-		return errors.New("etcd data_dir must be absolute: " + dataDir)
 	}
 
 	err := v(opts.Etcd.ExtraBinds)
