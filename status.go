@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/cybozu-go/cmd"
+	"github.com/pkg/errors"
 )
 
 // ClusterStatus represents the working cluster status.
@@ -90,11 +91,11 @@ func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, er
 		cmd.Go(func(ctx context.Context) error {
 			a, err := SSHAgent(n)
 			if err != nil {
-				return err
+				return errors.Wrap(err, n.Address)
 			}
 			ns, err := getNodeStatus(a, cluster)
 			if err != nil {
-				return err
+				return errors.Wrap(err, n.Address)
 			}
 			mu.Lock()
 			statuses[n.Address] = ns
