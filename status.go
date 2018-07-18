@@ -88,7 +88,7 @@ func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, er
 	env := cmd.NewEnvironment(ctx)
 	for _, n := range cluster.Nodes {
 		n := n
-		cmd.Go(func(ctx context.Context) error {
+		env.Go(func(ctx context.Context) error {
 			a, err := SSHAgent(n)
 			if err != nil {
 				return errors.Wrap(err, n.Address)
