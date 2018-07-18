@@ -132,7 +132,7 @@ func getNodeStatus(agent Agent, cluster *Cluster) (*NodeStatus, error) {
 
 	dataDir := etcdDataDir(cluster)
 	command := "if [ -d %s ]; then echo ok; fi"
-	data, _, err := agent.Run(fmt.Sprintf(command, filepath.Join(dataDir, "default.etcd")))
+	data, _, err := agent.Run(fmt.Sprintf(command, filepath.Join(dataDir, "member")))
 	if err != nil {
 		return nil, err
 	}

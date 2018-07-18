@@ -50,7 +50,6 @@ func (c makeDirCommand) Command() Command {
 	return Command{
 		Name:   "mkdir",
 		Target: c.targetDir,
-		Detail: "",
 	}
 }
 
@@ -77,5 +76,54 @@ func (c imagePullCommand) Command() Command {
 		Name:   "image-pull",
 		Target: c.name,
 		Detail: Image(c.name),
+	}
+}
+
+type runContainersCommand struct {
+	nodes  []*Node
+	agents map[string]Agent
+	name   string
+	opts   []string
+	params ServiceParams
+	extra  ServiceParams
+}
+
+func (c runContainersCommand) Run(ctx context.Context) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		ctr := Docker(c.name, c.agents[n.Address])
+		env.Go(func(ctx context.Context) error {
+			return ctr.RunSystem(c.opts, c.params, c.extra)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c runContainersCommand) Command() Command {
+	return Command{
+		Name:   "run-containers",
+		Target: c.name,
+	}
+}
+
+type runContainerCommand struct {
+	node   *Node
+	agent  Agent
+	name   string
+	opts   []string
+	params ServiceParams
+	extra  ServiceParams
+}
+
+func (c runContainerCommand) Run(ctx context.Context) error {
+	ctr := Docker(c.name, c.agent)
+	return ctr.RunSystem(c.opts, c.params, c.extra)
+}
+
+func (c runContainerCommand) Command() Command {
+	return Command{
+		Name:   "run-container",
+		Target: c.name,
 	}
 }
