@@ -48,7 +48,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 		return imagePullCommand{o.nodes, o.agents, "etcd"}
 	case 1:
 		o.step++
-		return volumeCreateCommand{o.nodes, o.agents, "etcd", o.volname}
+		return volumeCreateCommand{o.nodes, o.agents, o.volname}
 	case 2:
 		node := o.nodes[o.bootIndex]
 		agent := o.agents[node.Address]

@@ -17,7 +17,10 @@ type Command struct {
 
 // String implements fmt.Stringer
 func (c Command) String() string {
-	return fmt.Sprintf("%s@%s: %s", c.Name, c.Target, c.Detail)
+	if len(c.Detail) > 0 {
+		return fmt.Sprintf("%s %s: %s", c.Name, c.Target, c.Detail)
+	}
+	return fmt.Sprintf("%s %s", c.Name, c.Target)
 }
 
 // Commander is a single step to proceed an operation
@@ -42,9 +45,9 @@ func (c makeDirCommand) Run(ctx context.Context) error {
 	}}
 	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", c.targetDir)
 	for _, n := range c.nodes {
-		ctr := Docker("tools", c.agents[n.Address])
+		ce := Docker(c.agents[n.Address])
 		env.Go(func(ctx context.Context) error {
-			return ctr.Run(binds, mkdirCommand)
+			return ce.Run("tools", binds, mkdirCommand)
 		})
 	}
 	env.Stop()
@@ -67,9 +70,9 @@ type imagePullCommand struct {
 func (c imagePullCommand) Run(ctx context.Context) error {
 	env := cmd.NewEnvironment(ctx)
 	for _, n := range c.nodes {
-		ctr := Docker(c.name, c.agents[n.Address])
+		ce := Docker(c.agents[n.Address])
 		env.Go(func(ctx context.Context) error {
-			return ctr.PullImage()
+			return ce.PullImage(c.name)
 		})
 	}
 	env.Stop()
@@ -87,16 +90,15 @@ func (c imagePullCommand) Command() Command {
 type volumeCreateCommand struct {
 	nodes   []*Node
 	agents  map[string]Agent
-	name    string
 	volname string
 }
 
 func (c volumeCreateCommand) Run(ctx context.Context) error {
 	env := cmd.NewEnvironment(ctx)
 	for _, n := range c.nodes {
-		ctr := Docker(c.name, c.agents[n.Address])
+		ce := Docker(c.agents[n.Address])
 		env.Go(func(ctx context.Context) error {
-			return ctr.VolumeCreate(c.volname)
+			return ce.VolumeCreate(c.volname)
 		})
 	}
 	env.Stop()
@@ -110,34 +112,6 @@ func (c volumeCreateCommand) Command() Command {
 	}
 }
 
-type runContainersCommand struct {
-	nodes  []*Node
-	agents map[string]Agent
-	name   string
-	opts   []string
-	params ServiceParams
-	extra  ServiceParams
-}
-
-func (c runContainersCommand) Run(ctx context.Context) error {
-	env := cmd.NewEnvironment(ctx)
-	for _, n := range c.nodes {
-		ctr := Docker(c.name, c.agents[n.Address])
-		env.Go(func(ctx context.Context) error {
-			return ctr.RunSystem(c.opts, c.params, c.extra)
-		})
-	}
-	env.Stop()
-	return env.Wait()
-}
-
-func (c runContainersCommand) Command() Command {
-	return Command{
-		Name:   "run-containers",
-		Target: c.name,
-	}
-}
-
 type runContainerCommand struct {
 	node   *Node
 	agent  Agent
@@ -148,8 +122,8 @@ type runContainerCommand struct {
 }
 
 func (c runContainerCommand) Run(ctx context.Context) error {
-	ctr := Docker(c.name, c.agent)
-	return ctr.RunSystem(c.opts, c.params, c.extra)
+	ce := Docker(c.agent)
+	return ce.RunSystem(c.name, c.opts, c.params, c.extra)
 }
 
 func (c runContainerCommand) Command() Command {
