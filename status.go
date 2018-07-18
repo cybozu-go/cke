@@ -88,7 +88,7 @@ func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, er
 	for _, n := range cluster.Nodes {
 		n := n
 		cmd.Go(func(ctx context.Context) error {
-			a, err := NewSSHAgent(n)
+			a, err := SSHAgent(n)
 			if err != nil {
 				return err
 			}

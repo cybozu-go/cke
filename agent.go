@@ -26,9 +26,9 @@ type sshAgent struct {
 	client *ssh.Client
 }
 
-// NewSSHAgent creates an Agent that communicates over SSH.
+// SSHAgent creates an Agent that communicates over SSH.
 // It returns non-nil error when connection could not be established.
-func NewSSHAgent(node *Node) (Agent, error) {
+func SSHAgent(node *Node) (Agent, error) {
 	config := &ssh.ClientConfig{
 		User: node.User,
 		Auth: []ssh.AuthMethod{
