@@ -3,11 +3,14 @@ package cke
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
+	"crypto/rand"
+	"encoding/hex"
+
 	"github.com/docker/docker/api/types"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -76,11 +79,6 @@ func (c docker) Run(binds []Mount, command string) error {
 }
 
 func (c docker) RunSystem(opts []string, params, extra ServiceParams) error {
-	err := os.MkdirAll(paramsDir, 0755)
-	if err != nil {
-		return err
-	}
-
 	id, err := c.getID()
 	if err != nil {
 		return err
@@ -116,6 +114,15 @@ func (c docker) RunSystem(opts []string, params, extra ServiceParams) error {
 	for k, v := range extra.ExtraEnvvar {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
+	data, err := json.Marshal(extra)
+	if err != nil {
+		return err
+	}
+	labelFile, err := c.putData("com.cybozu.cke=" + string(data))
+	if err != nil {
+		return err
+	}
+	args = append(args, "--label-file="+labelFile)
 
 	args = append(args, Image(c.name))
 
@@ -123,18 +130,21 @@ func (c docker) RunSystem(opts []string, params, extra ServiceParams) error {
 	args = append(args, extra.ExtraArguments...)
 
 	_, _, err = c.agent.Run(strings.Join(args, " "))
-	if err != nil {
-		return err
-	}
+	return err
+}
 
-	f, err := os.OpenFile(filepath.Join(paramsDir, c.name),
-		os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+func (c docker) putData(data string) (string, error) {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
 	if err != nil {
-		return err
+		return "", err
 	}
-	defer f.Close()
-
-	return json.NewEncoder(f).Encode(extra)
+	fileName := filepath.Join("/tmp", hex.EncodeToString(b))
+	err = c.agent.RunWithInput("tee "+fileName, data)
+	if err != nil {
+		return "", err
+	}
+	return fileName, nil
 }
 
 func (c docker) getID() (string, error) {
@@ -160,23 +170,22 @@ func (c docker) Inspect() (*ServiceStatus, error) {
 		return nil, err
 	}
 
-	dj := new(types.ContainerJSON)
-	err = json.Unmarshal(data, dj)
+	var djs []types.ContainerJSON
+	err = json.Unmarshal(data, &djs)
 	if err != nil {
 		return nil, err
 	}
+	if len(djs) != 1 {
+		return nil, errors.New("unexpected docker inspect result")
+	}
+	dj := djs[0]
 
 	params := new(ServiceParams)
-	if dj.State.Running {
-		data, _, err := c.agent.Run("cat " + filepath.Join(paramsDir, c.name))
-		if err != nil {
-			return nil, err
-		}
+	label := dj.Config.Labels["com.cybozu.cke"]
 
-		err = json.Unmarshal(data, params)
-		if err != nil {
-			return nil, err
-		}
+	err = json.Unmarshal([]byte(label), params)
+	if err != nil {
+		return nil, err
 	}
 
 	return &ServiceStatus{
