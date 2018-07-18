@@ -123,8 +123,8 @@ func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, er
 func getNodeStatus(agent Agent, cluster *Cluster) (*NodeStatus, error) {
 	status := &NodeStatus{}
 
-	etcd := container{"etcd", agent}
-	ss, err := etcd.inspect()
+	etcd := Docker("etcd", agent)
+	ss, err := etcd.Inspect()
 	if err != nil {
 		return nil, err
 	}

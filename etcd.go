@@ -40,6 +40,9 @@ func (o *etcdBootOperator) NextCommand() Commander {
 	case 0:
 		o.step++
 		return makeDirCommand{o.nodes, o.agents, o.dataDir}
+	case 1:
+		o.step++
+		return imagePullCommand{o.nodes, o.agents, "etcd"}
 	default:
 		return nil
 	}

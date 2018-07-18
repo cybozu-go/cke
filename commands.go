@@ -53,3 +53,29 @@ func (c makeDirCommand) Command() Command {
 		Detail: "",
 	}
 }
+
+type imagePullCommand struct {
+	nodes  []*Node
+	agents map[string]Agent
+	name   string
+}
+
+func (c imagePullCommand) Run(ctx context.Context) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		ctr := Docker(c.name, c.agents[n.Address])
+		env.Go(func(ctx context.Context) error {
+			return ctr.PullImage()
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c imagePullCommand) Command() Command {
+	return Command{
+		Name:   "image-pull",
+		Target: c.name,
+		Detail: Image(c.name),
+	}
+}

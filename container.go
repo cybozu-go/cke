@@ -14,13 +14,44 @@ const (
 	paramsDir = "/run/cke"
 )
 
-type container struct {
+// Container is the interface to manage a container and the image for it.
+type Container interface {
+	// PullImage pulls the image for the container.
+	PullImage() error
+	// RunSystem run container as a system service.
+	RunSystem(opts []string, params, extra ServiceParams) error
+	// Inspect returns ServiceStatus for the container.
+	Inspect() (*ServiceStatus, error)
+}
+
+// Docker is an implementation of Container using Docker.
+func Docker(name string, agent Agent) Container {
+	return docker{name, agent}
+}
+
+type docker struct {
 	name  string
 	agent Agent
 }
 
-// runSystem run container as a system service.
-func (c container) runSystem(image string, opts []string, params, extra ServiceParams) error {
+func (c docker) PullImage() error {
+	img := Image(c.name)
+	data, _, err := c.agent.Run("docker image list --format '{{.Repository}}:{{.Tag}}'")
+	if err != nil {
+		return err
+	}
+
+	for _, i := range strings.Split(string(data), "\n") {
+		if img == i {
+			return nil
+		}
+	}
+
+	_, _, err = c.agent.Run("docker image pull " + img)
+	return err
+}
+
+func (c docker) RunSystem(opts []string, params, extra ServiceParams) error {
 	err := os.MkdirAll(paramsDir, 0755)
 	if err != nil {
 		return err
@@ -62,7 +93,7 @@ func (c container) runSystem(image string, opts []string, params, extra ServiceP
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
 
-	args = append(args, image)
+	args = append(args, Image(c.name))
 
 	args = append(args, params.ExtraArguments...)
 	args = append(args, extra.ExtraArguments...)
@@ -82,7 +113,7 @@ func (c container) runSystem(image string, opts []string, params, extra ServiceP
 	return json.NewEncoder(f).Encode(extra)
 }
 
-func (c container) getID() (string, error) {
+func (c docker) getID() (string, error) {
 	dockerPS := "docker ps -a --filter name=%s --format {{.ID}}"
 	data, _, err := c.agent.Run(fmt.Sprintf(dockerPS, c.name))
 	if err != nil {
@@ -91,7 +122,7 @@ func (c container) getID() (string, error) {
 	return strings.TrimSpace(string(data)), nil
 }
 
-func (c container) inspect() (*ServiceStatus, error) {
+func (c docker) Inspect() (*ServiceStatus, error) {
 	id, err := c.getID()
 	if err != nil {
 		return nil, err
