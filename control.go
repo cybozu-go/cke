@@ -48,12 +48,12 @@ RETRY:
 	})
 
 	err = c.runLoop(ctx, leaderKey)
+	err2 := e.Resign(context.Background())
+	if err2 != nil {
+		return err2
+	}
 	if err == ErrNoLeader {
 		log.Warn("lost the leadership", nil)
-		err2 := e.Resign(ctx)
-		if err2 != nil {
-			return err2
-		}
 		goto RETRY
 	}
 	return err
@@ -146,7 +146,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	}
 	defer status.Destroy()
 
-	op := DecideToDo(cluster, status)
+	op := DecideToDo(ctx, cluster, status)
 	if op == nil {
 		wait = true
 		return nil

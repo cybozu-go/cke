@@ -1,31 +1,11 @@
 package cke
 
-import "github.com/cybozu-go/log"
+import "context"
 
 // DecideToDo returns the next operation to do.
 // This returns nil when no operation need to be done.
-func DecideToDo(c *Cluster, cs *ClusterStatus) Operator {
-	var cpNodes []*Node
-	for _, n := range c.Nodes {
-		if n.ControlPlane {
-			cpNodes = append(cpNodes, n)
-		}
-	}
-
-	for _, n := range cpNodes {
-		if _, ok := cs.NodeStatuses[n.Address]; !ok {
-			log.Warn("node status is not available", map[string]interface{}{
-				"node": n.Address,
-			})
-			return nil
-		}
-	}
-
-	if allTrue(func(n *Node) bool { return !cs.NodeStatuses[n.Address].Etcd.HasData }, cpNodes) {
-		return EtcdBootOp(cpNodes, cs.Agents, etcdVolumeName(c), c.Options.Etcd.ServiceParams)
-	}
-
-	return nil
+func DecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator {
+	return etcdDecideToDo(ctx, c, cs)
 }
 
 func allTrue(cond func(node *Node) bool, nodes []*Node) bool {
