@@ -2,6 +2,7 @@ package cke
 
 import (
 	"bytes"
+	"strings"
 	"time"
 
 	"github.com/cybozu-go/log"
@@ -19,6 +20,8 @@ type Agent interface {
 
 	// Run command on the node.
 	Run(command string) (stdout, stderr []byte, err error)
+
+	RunWithInput(command, input string) error
 }
 
 type sshAgent struct {
@@ -87,4 +90,26 @@ func (a sshAgent) Run(command string) (stdout, stderr []byte, e error) {
 		return nil, nil, err
 	}
 	return stdoutBuff.Bytes(), stderrBuff.Bytes(), nil
+}
+
+func (a sshAgent) RunWithInput(command, input string) error {
+	session, err := a.client.NewSession()
+	if err != nil {
+		log.Error("failed to create session: ", map[string]interface{}{
+			log.FnError: err,
+		})
+		return err
+	}
+	defer session.Close()
+
+	session.Stdin = strings.NewReader(input)
+
+	if err := session.Run(command); err != nil {
+		log.Error("failed to run command: ", map[string]interface{}{
+			log.FnError: err,
+			"command":   command,
+		})
+		return err
+	}
+	return nil
 }

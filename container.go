@@ -3,41 +3,47 @@ package cke
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
+	"crypto/rand"
+	"encoding/hex"
+
 	"github.com/docker/docker/api/types"
+	"github.com/pkg/errors"
 )
 
 const (
-	paramsDir = "/run/cke"
+	ckeLabelName = "com.cybozu.cke"
 )
 
-// Container is the interface to manage a container and the image for it.
-type Container interface {
-	// PullImage pulls the image for the container.
-	PullImage() error
-	// RunSystem run container as a system service.
-	RunSystem(opts []string, params, extra ServiceParams) error
-	// Run runs a container.
-	Run(binds []Mount, command string) error
-	// Inspect returns ServiceStatus for the container.
-	Inspect() (*ServiceStatus, error)
+// ContainerEngine defines interfaces for a container engine.
+type ContainerEngine interface {
+	// PullImage pulls the image for the named container.
+	PullImage(name string) error
+	// Run runs the named container as a foreground process.
+	Run(name string, binds []Mount, command string) error
+	// RunSystem runs the named container as a system service.
+	RunSystem(name string, opts []string, params, extra ServiceParams) error
+	// Inspect returns ServiceStatus for the named container.
+	Inspect(name string) (*ServiceStatus, error)
+	// VolumeCreate creates a local volume.
+	VolumeCreate(name string) error
+	// VolumeExists returns true if the named volume exists.
+	VolumeExists(name string) (bool, error)
 }
 
-// Docker is an implementation of Container using Docker.
-func Docker(name string, agent Agent) Container {
-	return docker{name, agent}
+// Docker is an implementation of ContainerEngine.
+func Docker(agent Agent) ContainerEngine {
+	return docker{agent}
 }
 
 type docker struct {
-	name  string
 	agent Agent
 }
 
-func (c docker) PullImage() error {
-	img := Image(c.name)
+func (c docker) PullImage(name string) error {
+	img := Image(name)
 	data, _, err := c.agent.Run("docker image list --format '{{.Repository}}:{{.Tag}}'")
 	if err != nil {
 		return err
@@ -53,11 +59,10 @@ func (c docker) PullImage() error {
 	return err
 }
 
-func (c docker) Run(binds []Mount, command string) error {
+func (c docker) Run(name string, binds []Mount, command string) error {
 	args := []string{
 		"docker",
 		"run",
-		"-d",
 		"--rm",
 		"--network=host",
 		"--uts=host",
@@ -69,24 +74,19 @@ func (c docker) Run(binds []Mount, command string) error {
 		}
 		args = append(args, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	args = append(args, Image(c.name), command)
+	args = append(args, Image(name), command)
 
 	_, _, err := c.agent.Run(strings.Join(args, " "))
 	return err
 }
 
-func (c docker) RunSystem(opts []string, params, extra ServiceParams) error {
-	err := os.MkdirAll(paramsDir, 0755)
-	if err != nil {
-		return err
-	}
-
-	id, err := c.getID()
+func (c docker) RunSystem(name string, opts []string, params, extra ServiceParams) error {
+	id, err := c.getID(name)
 	if err != nil {
 		return err
 	}
 	if len(id) != 0 {
-		_, _, err := c.agent.Run("docker rm " + c.name)
+		_, _, err := c.agent.Run("docker rm " + name)
 		if err != nil {
 			return err
 		}
@@ -96,7 +96,8 @@ func (c docker) RunSystem(opts []string, params, extra ServiceParams) error {
 		"docker",
 		"run",
 		"-d",
-		"--name=" + c.name,
+		"--name=" + name,
+		"--read-only",
 		"--network=host",
 		"--uts=host",
 		"--restart=unless-stopped",
@@ -116,38 +117,50 @@ func (c docker) RunSystem(opts []string, params, extra ServiceParams) error {
 	for k, v := range extra.ExtraEnvvar {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
+	data, err := json.Marshal(extra)
+	if err != nil {
+		return err
+	}
+	labelFile, err := c.putData(ckeLabelName + "=" + string(data))
+	if err != nil {
+		return err
+	}
+	args = append(args, "--label-file="+labelFile)
 
-	args = append(args, Image(c.name))
+	args = append(args, Image(name))
 
 	args = append(args, params.ExtraArguments...)
 	args = append(args, extra.ExtraArguments...)
 
 	_, _, err = c.agent.Run(strings.Join(args, " "))
-	if err != nil {
-		return err
-	}
-
-	f, err := os.OpenFile(filepath.Join(paramsDir, c.name),
-		os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	return json.NewEncoder(f).Encode(extra)
+	return err
 }
 
-func (c docker) getID() (string, error) {
+func (c docker) putData(data string) (string, error) {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	fileName := filepath.Join("/tmp", hex.EncodeToString(b))
+	err = c.agent.RunWithInput("tee "+fileName, data)
+	if err != nil {
+		return "", err
+	}
+	return fileName, nil
+}
+
+func (c docker) getID(name string) (string, error) {
 	dockerPS := "docker ps -a --filter name=%s --format {{.ID}}"
-	data, _, err := c.agent.Run(fmt.Sprintf(dockerPS, c.name))
+	data, _, err := c.agent.Run(fmt.Sprintf(dockerPS, name))
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(string(data)), nil
 }
 
-func (c docker) Inspect() (*ServiceStatus, error) {
-	id, err := c.getID()
+func (c docker) Inspect(name string) (*ServiceStatus, error) {
+	id, err := c.getID(name)
 	if err != nil {
 		return nil, err
 	}
@@ -160,23 +173,22 @@ func (c docker) Inspect() (*ServiceStatus, error) {
 		return nil, err
 	}
 
-	dj := new(types.ContainerJSON)
-	err = json.Unmarshal(data, dj)
+	var djs []types.ContainerJSON
+	err = json.Unmarshal(data, &djs)
 	if err != nil {
 		return nil, err
 	}
+	if len(djs) != 1 {
+		return nil, errors.New("unexpected docker inspect result")
+	}
+	dj := djs[0]
 
 	params := new(ServiceParams)
-	if dj.State.Running {
-		data, _, err := c.agent.Run("cat " + filepath.Join(paramsDir, c.name))
-		if err != nil {
-			return nil, err
-		}
+	label := dj.Config.Labels[ckeLabelName]
 
-		err = json.Unmarshal(data, params)
-		if err != nil {
-			return nil, err
-		}
+	err = json.Unmarshal([]byte(label), params)
+	if err != nil {
+		return nil, err
 	}
 
 	return &ServiceStatus{
@@ -186,4 +198,23 @@ func (c docker) Inspect() (*ServiceStatus, error) {
 		ExtraBinds:     params.ExtraBinds,
 		ExtraEnvvar:    params.ExtraEnvvar,
 	}, nil
+}
+
+func (c docker) VolumeCreate(name string) error {
+	_, _, err := c.agent.Run("docker volume create " + name)
+	return err
+}
+
+func (c docker) VolumeExists(name string) (bool, error) {
+	data, _, err := c.agent.Run("docker volume list -q")
+	if err != nil {
+		return false, err
+	}
+
+	for _, n := range strings.Split(string(data), "\n") {
+		if n == name {
+			return true, nil
+		}
+	}
+	return false, nil
 }

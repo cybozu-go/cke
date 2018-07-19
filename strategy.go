@@ -22,7 +22,7 @@ func DecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	}
 
 	if allTrue(func(n *Node) bool { return !cs.NodeStatuses[n.Address].Etcd.HasData }, cpNodes) {
-		return newEtcdBootOperator(cpNodes, cs.Agents, etcdDataDir(c), c.Options.Etcd.ServiceParams)
+		return EtcdBootOp(cpNodes, cs.Agents, etcdVolumeName(c), c.Options.Etcd.ServiceParams)
 	}
 
 	return nil
