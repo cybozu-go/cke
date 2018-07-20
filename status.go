@@ -13,6 +13,7 @@ import (
 	"github.com/coreos/etcd/etcdserver/api/etcdhttp"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cmd"
+	"github.com/cybozu-go/log"
 	"github.com/pkg/errors"
 )
 
@@ -26,9 +27,37 @@ const (
 	EtcdNodeUnhealthy
 )
 
-// EtcdCluster is the status of the etcd cluster.
-type EtcdCluster struct {
-	Members map[string]*etcdserverpb.Member
+// EtcdClusterStatus is the status of the etcd cluster.
+type EtcdClusterStatus struct {
+	Members      map[string]*etcdserverpb.Member
+	MemberHealth map[string]EtcdNodeHealth
+}
+
+func (s EtcdClusterStatus) minHealthyNodes() int {
+	return len(s.Members)/2 + 1
+}
+
+func (s EtcdClusterStatus) numHealthy() int {
+	numHealthy := 0
+	for _, h := range s.MemberHealth {
+		if h == EtcdNodeHealthy {
+			numHealthy++
+		}
+	}
+	return numHealthy
+}
+
+func (s EtcdClusterStatus) removableNodeCount() int {
+	diff := s.numHealthy() - s.minHealthyNodes()
+	if diff <= 0 {
+		return 0
+	}
+	return diff
+}
+
+func (s EtcdClusterStatus) addable() bool {
+	newMinHealthy := (len(s.Members)+1)/2 + 1
+	return s.numHealthy() >= newMinHealthy
 }
 
 // ClusterStatus represents the working cluster status.
@@ -40,7 +69,7 @@ type ClusterStatus struct {
 	ServiceSubnet *net.IPNet
 	RBAC          bool // true if RBAC is enabled
 
-	EtcdCluster EtcdCluster
+	Etcd EtcdClusterStatus
 	// TODO:
 	// CoreDNS will be deployed as k8s Pods.
 	// We probably need to use k8s API to query CoreDNS service status.
@@ -86,7 +115,6 @@ type ServiceStatus struct {
 type EtcdStatus struct {
 	ServiceStatus
 	HasData bool
-	Health  EtcdNodeHealth
 }
 
 // KubeletStatus is the status of kubelet.
@@ -97,7 +125,7 @@ type KubeletStatus struct {
 }
 
 // GetClusterStatus consults the whole cluster and constructs *ClusterStatus.
-func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, error) {
+func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, error) {
 	var mu sync.Mutex
 	statuses := make(map[string]*NodeStatus)
 	agents := make(map[string]Agent)
@@ -115,7 +143,7 @@ func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, er
 			if err != nil {
 				return errors.Wrap(err, n.Address)
 			}
-			ns, err := getNodeStatus(ctx, n, a, cluster)
+			ns, err := c.getNodeStatus(ctx, n, a, cluster)
 			if err != nil {
 				return errors.Wrap(err, n.Address)
 			}
@@ -135,8 +163,14 @@ func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, er
 	cs := new(ClusterStatus)
 	cs.NodeStatuses = statuses
 
-	cs.EtcdCluster.Members, _ = getEtcdMembers(ctx, cluster.Nodes)
-	// Ignore err since the cluster may be on bootstrap
+	cs.Etcd.Members, err = c.getEtcdMembers(ctx, cluster.Nodes)
+	if err != nil {
+		// Ignore err since the cluster may be on bootstrap
+		log.Warn("failed to get etcd members", map[string]interface{}{
+			log.FnError: err,
+		})
+	}
+	cs.Etcd.MemberHealth = c.getEtcdMemberHealth(ctx, cs.Etcd.Members)
 
 	// TODO: query k8s cluster status and store it to ClusterStatus.
 
@@ -146,7 +180,7 @@ func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, er
 	return cs, nil
 }
 
-func getNodeStatus(ctx context.Context, node *Node, agent Agent, cluster *Cluster) (*NodeStatus, error) {
+func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, cluster *Cluster) (*NodeStatus, error) {
 	status := &NodeStatus{}
 	ce := Docker(agent)
 
@@ -160,19 +194,14 @@ func getNodeStatus(ctx context.Context, node *Node, agent Agent, cluster *Cluste
 		return nil, err
 	}
 
-	var health EtcdNodeHealth
-	if ss.Running {
-		health = getEtcdHealth(ctx, node)
-	}
-
-	status.Etcd = EtcdStatus{*ss, ok, health}
+	status.Etcd = EtcdStatus{*ss, ok}
 
 	// TODO: get statuses of other services.
 
 	return status, nil
 }
 
-func getEtcdMembers(ctx context.Context, nodes []*Node) (map[string]*etcdserverpb.Member, error) {
+func (c Controller) getEtcdMembers(ctx context.Context, nodes []*Node) (map[string]*etcdserverpb.Member, error) {
 	var endpoints []string
 	for _, n := range nodes {
 		if n.ControlPlane {
@@ -199,20 +228,27 @@ func getEtcdMembers(ctx context.Context, nodes []*Node) (map[string]*etcdserverp
 	return members, nil
 }
 
-func getEtcdHealth(ctx context.Context, node *Node) EtcdNodeHealth {
-	endpoint := "http://" + node.Address + ":2379/health"
-	client := &cmd.HTTPClient{
-		Client: &http.Client{},
+func (c Controller) getEtcdMemberHealth(ctx context.Context, members map[string]*etcdserverpb.Member) map[string]EtcdNodeHealth {
+	memberHealth := make(map[string]EtcdNodeHealth)
+	for name := range members {
+		memberHealth[name] = c.getEtcdHealth(ctx, name)
 	}
+	return memberHealth
+}
+
+func (c Controller) getEtcdHealth(ctx context.Context, address string) EtcdNodeHealth {
+	endpoint := "http://" + address + ":2379/health"
 	req, _ := http.NewRequest("GET", endpoint, nil)
 	req = req.WithContext(ctx)
-	resp, err := client.Do(req)
+
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return EtcdNodeUnreachable
 	}
+	defer resp.Body.Close()
+
 	health := new(etcdhttp.Health)
 	err = json.NewDecoder(resp.Body).Decode(health)
-	resp.Body.Close()
 	if err != nil {
 		return EtcdNodeUnhealthy
 	}

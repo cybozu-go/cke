@@ -66,17 +66,17 @@ func (o *etcdBootOp) NextCommand() Commander {
 			"--mount",
 			"type=volume,src=" + o.volname + ",dst=/var/lib/etcd",
 		}
-		return runContainerCommand{node, agent, "etcd", opts, etcdParams(o.nodes, node, "new"), o.extra}
+		var initialCluster []string
+		for _, n := range o.nodes {
+			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
+		}
+		return runContainerCommand{node, agent, "etcd", opts, etcdParams(node, initialCluster, "new"), o.extra}
 	default:
 		return nil
 	}
 }
 
-func etcdParams(cpNodes []*Node, node *Node, state string) ServiceParams {
-	var initialCluster []string
-	for _, n := range cpNodes {
-		initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
-	}
+func etcdParams(node *Node, initialCluster []string, state string) ServiceParams {
 	args := []string{
 		"--name=" + node.Address,
 		"--listen-peer-urls=http://0.0.0.0:2380",
@@ -103,11 +103,11 @@ func (o *etcdBootOp) Cleanup(ctx context.Context) error {
 }
 
 // EtcdAddMemberOp returns an Operator to add member to etcd cluster.
-func EtcdAddMemberOp(cpNodes []*Node, targetNodes []*Node, endpoints []string, agents map[string]Agent, volname string, extra ServiceParams) Operator {
+func EtcdAddMemberOp(cpNodes []*Node, targetNodes []*Node, members []*etcdserverpb.Member, agents map[string]Agent, volname string, extra ServiceParams) Operator {
 	return &etcdAddMemberOp{
 		cpNodes:     cpNodes,
 		targetNodes: targetNodes,
-		endpoints:   endpoints,
+		members:     members,
 		agents:      agents,
 		volname:     volname,
 		extra:       extra,
@@ -119,7 +119,7 @@ func EtcdAddMemberOp(cpNodes []*Node, targetNodes []*Node, endpoints []string, a
 type etcdAddMemberOp struct {
 	cpNodes     []*Node
 	targetNodes []*Node
-	endpoints   []string
+	members     []*etcdserverpb.Member
 	agents      map[string]Agent
 	volname     string
 	extra       ServiceParams
@@ -132,6 +132,11 @@ func (o *etcdAddMemberOp) Name() string {
 }
 
 func (o *etcdAddMemberOp) NextCommand() Commander {
+	var endpoints []string
+	for name := range o.members {
+		endpoints = append(endpoints, fmt.Sprintf("http://%s:2379", name))
+	}
+
 	switch o.step {
 	case 0:
 		o.step++
@@ -141,7 +146,7 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		return volumeCreateCommand{o.targetNodes, o.agents, o.volname}
 	case 2:
 		o.step++
-		return addEtcdMemberCommand{o.targetNodes, o.endpoints}
+		return addEtcdMemberCommand{o.targetNodes, endpoints}
 	case 3:
 		node := o.targetNodes[o.nodeIndex]
 		agent := o.agents[node.Address]
@@ -154,7 +159,9 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 			"--mount",
 			"type=volume,src=" + o.volname + ",dst=/var/lib/etcd",
 		}
-		return runContainerCommand{node, agent, "etcd", opts, etcdParams(o.cpNodes, node, "existing"), o.extra}
+		var initialCluster []string
+		// TODO
+		return runContainerCommand{node, agent, "etcd", opts, etcdParams(node, initialCluster, "existing"), o.extra}
 	default:
 		return nil
 	}

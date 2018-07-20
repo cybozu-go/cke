@@ -3,10 +3,12 @@ package cke
 import (
 	"context"
 	"errors"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
+	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
 )
 
@@ -14,11 +16,15 @@ import (
 type Controller struct {
 	session  *concurrency.Session
 	interval time.Duration
+	client   *cmd.HTTPClient
 }
 
 // NewController construct controller instance
 func NewController(s *concurrency.Session, interval time.Duration) Controller {
-	return Controller{s, interval}
+	client := &cmd.HTTPClient{
+		Client: &http.Client{},
+	}
+	return Controller{s, interval, client}
 }
 
 // Run execute procedures with leader elections
@@ -136,7 +142,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return nil
 	}
 
-	status, err := GetClusterStatus(ctx, cluster)
+	status, err := c.GetClusterStatus(ctx, cluster)
 	if err != nil {
 		wait = true
 		log.Warn("failed to get cluster status", map[string]interface{}{
