@@ -3,6 +3,8 @@ package cke
 import (
 	"context"
 
+	"fmt"
+
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/log"
 )
@@ -43,9 +45,14 @@ func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator
 		return nil
 	}
 
+	var endpoints []string
+	for name := range cs.EtcdCluster.Members {
+		endpoints = append(endpoints, fmt.Sprintf("http://%s:2379", name))
+	}
+
 	mem := addedMembers(cpNodes, cs.EtcdCluster.Members, cs.NodeStatuses)
 	if len(mem) > 0 {
-		return EtcdAddMemberOp(mem, cs.Agents, etcdVolumeName(c), c.Options.Etcd.ServiceParams)
+		return EtcdAddMemberOp(cpNodes, mem, endpoints, cs.Agents, etcdVolumeName(c), c.Options.Etcd.ServiceParams)
 	}
 
 	removed := removedMembers(c.Nodes, cs.EtcdCluster.Members, cs.NodeStatuses)
