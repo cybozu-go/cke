@@ -96,3 +96,51 @@ func (o *etcdBootOp) params(node *Node) ServiceParams {
 func (o *etcdBootOp) Cleanup(ctx context.Context) error {
 	return nil
 }
+
+func EtcdAddMemberOp(nodes []*Node, agents map[string]Agent, volname string, extra ServiceParams) Operator {
+	return &etcdAddMemberOp{
+		nodes:     nodes,
+		agents:    agents,
+		volname:   volname,
+		extra:     extra,
+		step:      0,
+		bootIndex: 0,
+	}
+}
+
+type etcdAddMemberOp struct {
+	nodes     []*Node
+	agents    map[string]Agent
+	volname   string
+	extra     ServiceParams
+	step      int
+	bootIndex int
+}
+
+func (o *etcdAddMemberOp) Name() string {
+	return "etcd-add-member"
+}
+
+func (o *etcdAddMemberOp) NextCommand() Commander {
+	// TODO return next command
+	return nil
+}
+
+func (o *etcdAddMemberOp) Cleanup(ctx context.Context) error {
+	return nil
+}
+
+type etcdRemoveMemberOp struct {
+}
+
+func (o *etcdRemoveMemberOp) Name() string {
+	return "etcd-remove-member"
+}
+
+func (o *etcdRemoveMemberOp) NextCommand() Commander {
+	// TODO return next command
+	return nil
+}
+func (o *etcdRemoveMemberOp) Cleanup(ctx context.Context) error {
+	return nil
+}

@@ -2,21 +2,15 @@ package cke
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"time"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/etcdserver/api/etcdhttp"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
-	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
 )
 
 type status string
 
 func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator {
+	bootstrap := true
 	var cpNodes []*Node
 	for _, n := range c.Nodes {
 		if n.ControlPlane {
@@ -24,107 +18,43 @@ func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator
 		}
 	}
 
-	for _, n := range cpNodes {
-		if _, ok := cs.NodeStatuses[n.Address]; !ok {
-			log.Warn("node status is not available", map[string]interface{}{
-				"node": n.Address,
-			})
-			return nil
+	for _, n := range c.Nodes {
+		st, ok := cs.NodeStatuses[n.Address]
+		if cs.NodeStatuses[n.Address].Etcd.HasData {
+			bootstrap = false
 		}
 	}
-
-	if allTrue(func(n *Node) bool { return !cs.NodeStatuses[n.Address].Etcd.HasData }, cpNodes) {
+	if bootstrap {
 		return EtcdBootOp(cpNodes, cs.Agents, etcdVolumeName(c), c.Options.Etcd.ServiceParams)
 	}
 
-	members, err := getEtcdMembers(ctx, cpNodes)
-	if err != nil {
-		hostnames := make([]string, len(cpNodes))
-		for i, n := range cpNodes {
-			hostnames[i] = n.Hostname
-		}
-		log.Warn("failed to get etcd members", map[string]interface{}{
-			"hosts":     hostnames,
-			log.FnError: err,
-		})
+	if len(cs.EtcdCluster.Members) == 0 {
+		log.Warn("No members of etcd cluster", nil)
 		return nil
 	}
 
-	membersStatus := getEtcdMembersStatus(ctx, members)
-
-	numHealthy := 0
-	for _, member := range members {
-		if membersStatus[member.Name] == "healthy" && containsMember(cpNodes, member) {
-			numHealthy++
+	clusterHealth := false
+	for _, n := range cpNodes {
+		if cs.NodeStatuses[n.Address].Etcd.Health == EtcdNodeHealthy {
+			clusterHealth = true
 		}
 	}
-
-	if numHealthy < len(cpNodes)/2+1 {
-		log.Warn("too few etcd members", map[string]interface{}{
-			"num_healthy": numHealthy,
-			log.FnError:   err,
-		})
+	if !clusterHealth {
+		log.Warn("No health nodes in the cluster", nil)
 		return nil
 	}
 
+	mem := addedMembers(cpNodes, cs.EtcdCluster.Members, cs.NodeStatuses)
+	if len(mem) > 0 {
+		return EtcdAddMemberOp(mem)
+	}
+
+	removed := removedMembers(c.Nodes, cs.EtcdCluster.Members, cs.NodeStatuses)
+	unknown := unknownMembers(c.Nodes, cs.EtcdCluster.Members)
+	if len(mem) > 0 || len(unknown) > 0 {
+		return EtcdRemoveMemberOp(removed, unknown)
+	}
 	return nil
-}
-
-func getEtcdMembers(ctx context.Context, nodes []*Node) ([]*etcdserverpb.Member, error) {
-	endpoints := make([]string, len(nodes))
-	for i, n := range nodes {
-		endpoints[i] = fmt.Sprintf("http://%s:2379", n.Address)
-	}
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: 2 * time.Second,
-	})
-	if err != nil {
-		return nil, err
-	}
-	defer cli.Close()
-
-	resp, err := cli.MemberList(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return resp.Members, nil
-}
-
-func getEtcdMembersStatus(ctx context.Context, members []*etcdserverpb.Member) map[string]status {
-	memberStatus := make(map[string]status)
-	for _, member := range members {
-		if len(member.ClientURLs) == 0 {
-			memberStatus[member.Name] = "notstarted"
-			continue
-		}
-		endpoint := member.ClientURLs[0] + "/health"
-		client := &cmd.HTTPClient{
-			Client: &http.Client{},
-		}
-		req, _ := http.NewRequest("GET", endpoint, nil)
-		req = req.WithContext(ctx)
-		resp, err := client.Do(req)
-		if err != nil {
-			memberStatus[member.Name] = "dead"
-			continue
-		}
-		health := new(etcdhttp.Health)
-		err = json.NewDecoder(resp.Body).Decode(health)
-		resp.Body.Close()
-		if err != nil {
-			memberStatus[member.Name] = "unhealthy"
-			continue
-		}
-		switch health.Health {
-		case "true":
-			memberStatus[member.Name] = "healthy"
-		default:
-			memberStatus[member.Name] = "unhealthy"
-		}
-	}
-
-	return memberStatus
 }
 
 func containsMember(cpNodes []*Node, member *etcdserverpb.Member) bool {
@@ -134,4 +64,40 @@ func containsMember(cpNodes []*Node, member *etcdserverpb.Member) bool {
 		}
 	}
 	return false
+}
+
+// addedMember := cluster - (member & healthy)
+func addedMembers(cpNodes []*Node, members map[string]*etcdserverpb.Member, statuses map[string]*NodeStatus) []*Node {
+	var member []*Node
+	for _, n := range cpNodes {
+		_, inMember := members[n.Address]
+		health := statuses[n.Address].Etcd.Health
+		if health != EtcdNodeHealthy || !inMember {
+			member = append(member, n)
+		}
+	}
+	return member
+}
+
+func removedMembers(allNodes []*Node, members map[string]*etcdserverpb.Member, statuses map[string]*NodeStatus) []*Node {
+	var member []*Node
+	for _, n := range allNodes {
+		if n.ControlPlane {
+			continue
+		}
+		_, inMember := members[n.Address]
+		health := statuses[n.Address].Etcd.Health
+		if health != EtcdNodeUnreachable || inMember {
+			member = append(member, n)
+		}
+	}
+	return member
+}
+
+func unknownMembers(cluster []*Node, members map[string]*etcdserverpb.Member) []*etcdserverpb.Member {
+	mem := copy(members)
+	for _, n := range cluster {
+		delete(mem, n.Address)
+	}
+	return mem
 }
