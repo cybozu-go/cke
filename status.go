@@ -58,6 +58,11 @@ type ServiceStatus struct {
 	ExtraEnvvar    map[string]string
 }
 
+// EtcdStatus is the status of kubelet.
+type EtcdStatus struct {
+	ServiceStatus
+	HasData bool
+}
 
 // KubeletStatus is the status of kubelet.
 type KubeletStatus struct {
@@ -67,17 +72,14 @@ type KubeletStatus struct {
 }
 
 // GetClusterStatus consults the whole cluster and constructs *ClusterStatus.
-func GetAgents(ctx context.Context, cluster *Cluster) (map[string]Agent, error) {
+func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, error) {
 	var mu sync.Mutex
-	needClose := true
+	statuses := make(map[string]*NodeStatus)
 	agents := make(map[string]Agent)
 	defer func() {
-		if !needClose {
-			return
+		for _, a := range agents {
+			a.Close()
 		}
-			for _, a := range agents {
-				a.Close()
-			}
 	}()
 
 	env := cmd.NewEnvironment(ctx)
@@ -88,7 +90,12 @@ func GetAgents(ctx context.Context, cluster *Cluster) (map[string]Agent, error) 
 			if err != nil {
 				return errors.Wrap(err, n.Address)
 			}
+			ns, err := getNodeStatus(a, cluster)
+			if err != nil {
+				return errors.Wrap(err, n.Address)
+			}
 			mu.Lock()
+			statuses[n.Address] = ns
 			agents[n.Address] = a
 			mu.Unlock()
 			return nil
@@ -100,7 +107,35 @@ func GetAgents(ctx context.Context, cluster *Cluster) (map[string]Agent, error) 
 		return nil, err
 	}
 
-	needClose = false
-	return agents, nil
+	cs := new(ClusterStatus)
+	cs.NodeStatuses = statuses
+
+	// TODO: query etcd cluster status and store it to ClusterStatus.
+
+	// TODO: query k8s cluster status and store it to ClusterStatus.
+
+	// These assignments should be placed last.
+	cs.Agents = agents
+	agents = nil
+	return cs, nil
 }
 
+func getNodeStatus(agent Agent, cluster *Cluster) (*NodeStatus, error) {
+	status := &NodeStatus{}
+	ce := Docker(agent)
+
+	// etcd status
+	ss, err := ce.Inspect("etcd")
+	if err != nil {
+		return nil, err
+	}
+	ok, err := ce.VolumeExists(etcdVolumeName(cluster))
+	if err != nil {
+		return nil, err
+	}
+	status.Etcd = EtcdStatus{*ss, ok}
+
+	// TODO: get statuses of other services.
+
+	return status, nil
+}
