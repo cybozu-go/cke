@@ -3,6 +3,8 @@ package cke
 import (
 	"context"
 	"strings"
+
+	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 )
 
 const (
@@ -17,23 +19,23 @@ func etcdVolumeName(c *Cluster) string {
 }
 
 type etcdBootOp struct {
-	nodes     []*Node
-	agents    map[string]Agent
-	volname   string
-	extra     ServiceParams
-	step      int
-	bootIndex int
+	nodes   []*Node
+	agents  map[string]Agent
+	volname string
+	extra   ServiceParams
+	step    int
+	cpIndex int
 }
 
 // EtcdBootOp returns an Operator to bootstrap etcd cluster.
 func EtcdBootOp(nodes []*Node, agents map[string]Agent, volname string, extra ServiceParams) Operator {
 	return &etcdBootOp{
-		nodes:     nodes,
-		agents:    agents,
-		volname:   volname,
-		extra:     extra,
-		step:      0,
-		bootIndex: 0,
+		nodes:   nodes,
+		agents:  agents,
+		volname: volname,
+		extra:   extra,
+		step:    0,
+		cpIndex: 0,
 	}
 }
 
@@ -50,11 +52,11 @@ func (o *etcdBootOp) NextCommand() Commander {
 		o.step++
 		return volumeCreateCommand{o.nodes, o.agents, o.volname}
 	case 2:
-		node := o.nodes[o.bootIndex]
+		node := o.nodes[o.cpIndex]
 		agent := o.agents[node.Address]
 
-		o.bootIndex++
-		if o.bootIndex == len(o.nodes) {
+		o.cpIndex++
+		if o.cpIndex == len(o.nodes) {
 			o.step++
 		}
 		opts := []string{
@@ -97,24 +99,23 @@ func (o *etcdBootOp) Cleanup(ctx context.Context) error {
 	return nil
 }
 
+// EtcdAddMemberOp returns an Operator to add member to etcd cluster.
 func EtcdAddMemberOp(nodes []*Node, agents map[string]Agent, volname string, extra ServiceParams) Operator {
 	return &etcdAddMemberOp{
-		nodes:     nodes,
-		agents:    agents,
-		volname:   volname,
-		extra:     extra,
-		step:      0,
-		bootIndex: 0,
+		nodes:   nodes,
+		agents:  agents,
+		volname: volname,
+		extra:   extra,
+		step:    0,
 	}
 }
 
 type etcdAddMemberOp struct {
-	nodes     []*Node
-	agents    map[string]Agent
-	volname   string
-	extra     ServiceParams
-	step      int
-	bootIndex int
+	nodes   []*Node
+	agents  map[string]Agent
+	volname string
+	extra   ServiceParams
+	step    int
 }
 
 func (o *etcdAddMemberOp) Name() string {
@@ -130,7 +131,25 @@ func (o *etcdAddMemberOp) Cleanup(ctx context.Context) error {
 	return nil
 }
 
+// EtcdRemoveMemberOp returns an Operator to remove member from etcd cluster.
+func EtcdRemoveMemberOp(nodes []*Node, unknown map[string]*etcdserverpb.Member, agents map[string]Agent, volname string, extra ServiceParams) Operator {
+	return &etcdRemoveMemberOp{
+		nodes:         nodes,
+		unknownMember: unknown,
+		agents:        agents,
+		volname:       volname,
+		extra:         extra,
+		step:          0,
+	}
+}
+
 type etcdRemoveMemberOp struct {
+	nodes         []*Node
+	unknownMember map[string]*etcdserverpb.Member
+	agents        map[string]Agent
+	volname       string
+	extra         ServiceParams
+	step          int
 }
 
 func (o *etcdRemoveMemberOp) Name() string {

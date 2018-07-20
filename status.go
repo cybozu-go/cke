@@ -16,14 +16,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+// EtcdNodeHealth represents the health status of a node in etcd cluster.
 type EtcdNodeHealth int
 
+// health statuses of a etcd node.
 const (
 	EtcdNodeUnreachable EtcdNodeHealth = iota
 	EtcdNodeHealthy
 	EtcdNodeUnhealthy
 )
 
+// EtcdCluster is the status of the etcd cluster.
 type EtcdCluster struct {
 	Members map[string]*etcdserverpb.Member
 }
@@ -112,7 +115,7 @@ func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, er
 			if err != nil {
 				return errors.Wrap(err, n.Address)
 			}
-			ns, err := getNodeStatus(a, cluster)
+			ns, err := getNodeStatus(ctx, n, a, cluster)
 			if err != nil {
 				return errors.Wrap(err, n.Address)
 			}
@@ -132,7 +135,7 @@ func GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, er
 	cs := new(ClusterStatus)
 	cs.NodeStatuses = statuses
 
-	cs.EtcdCluster.Members, _ = getEtcdMembers(ctx, cpNodes)
+	cs.EtcdCluster.Members, _ = getEtcdMembers(ctx, cluster.Nodes)
 	// Ignore err since the cluster may be on bootstrap
 
 	// TODO: query k8s cluster status and store it to ClusterStatus.
@@ -159,7 +162,7 @@ func getNodeStatus(ctx context.Context, node *Node, agent Agent, cluster *Cluste
 
 	var health EtcdNodeHealth
 	if ss.Running {
-		health := getEtcdHealth(ctx, node)
+		health = getEtcdHealth(ctx, node)
 	}
 
 	status.Etcd = EtcdStatus{*ss, ok, health}
@@ -170,9 +173,11 @@ func getNodeStatus(ctx context.Context, node *Node, agent Agent, cluster *Cluste
 }
 
 func getEtcdMembers(ctx context.Context, nodes []*Node) (map[string]*etcdserverpb.Member, error) {
-	endpoints := make([]string, len(nodes))
-	for i, n := range nodes {
-		endpoints[i] = fmt.Sprintf("http://%s:2379", n.Address)
+	var endpoints []string
+	for _, n := range nodes {
+		if n.ControlPlane {
+			endpoints = append(endpoints, fmt.Sprintf("http://%s:2379", n.Address))
+		}
 	}
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
@@ -187,7 +192,7 @@ func getEtcdMembers(ctx context.Context, nodes []*Node) (map[string]*etcdserverp
 	if err != nil {
 		return nil, err
 	}
-	members = make(map[string]*etcdserverpb.Member)
+	members := make(map[string]*etcdserverpb.Member)
 	for _, m := range resp.Members {
 		members[m.Name] = m
 	}
@@ -195,7 +200,7 @@ func getEtcdMembers(ctx context.Context, nodes []*Node) (map[string]*etcdserverp
 }
 
 func getEtcdHealth(ctx context.Context, node *Node) EtcdNodeHealth {
-	endpoint = "http://" + node.Address + ":2379/health"
+	endpoint := "http://" + node.Address + ":2379/health"
 	client := &cmd.HTTPClient{
 		Client: &http.Client{},
 	}

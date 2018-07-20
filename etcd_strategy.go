@@ -10,7 +10,6 @@ import (
 type status string
 
 func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator {
-	bootstrap := true
 	var cpNodes []*Node
 	for _, n := range c.Nodes {
 		if n.ControlPlane {
@@ -18,8 +17,8 @@ func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator
 		}
 	}
 
+	bootstrap := true
 	for _, n := range c.Nodes {
-		st, ok := cs.NodeStatuses[n.Address]
 		if cs.NodeStatuses[n.Address].Etcd.HasData {
 			bootstrap = false
 		}
@@ -46,24 +45,15 @@ func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator
 
 	mem := addedMembers(cpNodes, cs.EtcdCluster.Members, cs.NodeStatuses)
 	if len(mem) > 0 {
-		return EtcdAddMemberOp(mem)
+		return EtcdAddMemberOp(mem, cs.Agents, etcdVolumeName(c), c.Options.Etcd.ServiceParams)
 	}
 
 	removed := removedMembers(c.Nodes, cs.EtcdCluster.Members, cs.NodeStatuses)
 	unknown := unknownMembers(c.Nodes, cs.EtcdCluster.Members)
 	if len(mem) > 0 || len(unknown) > 0 {
-		return EtcdRemoveMemberOp(removed, unknown)
+		return EtcdRemoveMemberOp(removed, unknown, cs.Agents, etcdVolumeName(c), c.Options.Etcd.ServiceParams)
 	}
 	return nil
-}
-
-func containsMember(cpNodes []*Node, member *etcdserverpb.Member) bool {
-	for _, n := range cpNodes {
-		if n.Address == member.Name {
-			return true
-		}
-	}
-	return false
 }
 
 // addedMember := cluster - (member & healthy)
@@ -94,8 +84,11 @@ func removedMembers(allNodes []*Node, members map[string]*etcdserverpb.Member, s
 	return member
 }
 
-func unknownMembers(cluster []*Node, members map[string]*etcdserverpb.Member) []*etcdserverpb.Member {
-	mem := copy(members)
+func unknownMembers(cluster []*Node, members map[string]*etcdserverpb.Member) map[string]*etcdserverpb.Member {
+	var mem map[string]*etcdserverpb.Member
+	for k, v := range members {
+		mem[k] = v
+	}
 	for _, n := range cluster {
 		delete(mem, n.Address)
 	}
