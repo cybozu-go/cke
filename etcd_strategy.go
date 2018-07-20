@@ -14,30 +14,103 @@ import (
 	"github.com/cybozu-go/log"
 )
 
-type status string
+type EtcdMemberHealth string
+// EtcdStatus is the status of kubelet.
+type EtcdStatus struct {
+	ServiceStatus
+	HasData bool
+	IsControlPlane bool
+	health EtcdMemberHealth
+}
 
-func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator {
+type EtcdClusterStatus struct {
+	statuses map[string]*EtcdStatus
+	members []*etcdserverpb.Member
+	numControlPlane int
+}
+
+func (s EtcdClusterStatus) IsInitialized() bool {
+	for _, status := range s.statuses {
+		if status.HasData {
+			return true
+		}
+	}
+	return false
+}
+
+func (s EtcdClusterStatus) NumberOfHealthy() int {
+	numHealthy := 0
+	for _, member := range s.members {
+		if s.statuses[member.Name].health == "healthy" && s.statuses[member.Name].IsControlPlane {
+			numHealthy++
+		}
+	}
+	return numHealthy
+}
+
+func (s EtcdClusterStatus) AvailableCluster() bool{
+	return s.NumberOfHealthy() > (s.numControlPlane / 2)
+}
+
+
+type EtcdStrategy struct {
+	status EtcdClusterStatus
+	cpNodes []*Node
+	cluster *Cluster
+	agents map[string]Agent
+}
+
+
+func getEtcdNodeStatus(agent Agent, cluster *Cluster) (*EtcdStatus, error) {
+	ce := Docker(agent)
+
+	// etcd status
+	ss, err := ce.Inspect("etcd")
+	if err != nil {
+		return nil, err
+	}
+	ok, err := ce.VolumeExists(etcdVolumeName(cluster))
+	if err != nil {
+		return nil, err
+	}
+	return  &EtcdStatus{*ss, ok, true, ""} , nil
+}
+
+func (s EtcdStrategy) FetchStatus(ctx context.Context, c *Cluster, agents map[string]Agent) error {
+
+
 	var cpNodes []*Node
 	for _, n := range c.Nodes {
 		if n.ControlPlane {
 			cpNodes = append(cpNodes, n)
 		}
 	}
+	s.cluster = c
+	s.agents = agents
+	s.cpNodes = cpNodes
+	s.status.numControlPlane = len (cpNodes)
 
+	bootstrap := true
 	for _, n := range cpNodes {
-		if _, ok := cs.NodeStatuses[n.Address]; !ok {
+		status,err := getEtcdNodeStatus(agents[n.Address],c)
+		if err !=nil {
 			log.Warn("node status is not available", map[string]interface{}{
 				"node": n.Address,
 			})
-			return nil
+			return err
+		}
+		s.status.statuses[n.Address] = status
+		if status.HasData {
+			bootstrap = false
 		}
 	}
-
-	if allTrue(func(n *Node) bool { return !cs.NodeStatuses[n.Address].Etcd.HasData }, cpNodes) {
-		return EtcdBootOp(cpNodes, cs.Agents, etcdVolumeName(c), c.Options.Etcd.ServiceParams)
+	if bootstrap {
+		return nil
 	}
 
+
 	members, err := getEtcdMembers(ctx, cpNodes)
+
 	if err != nil {
 		hostnames := make([]string, len(cpNodes))
 		for i, n := range cpNodes {
@@ -47,22 +120,37 @@ func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator
 			"hosts":     hostnames,
 			log.FnError: err,
 		})
-		return nil
+		return err
 	}
 
-	membersStatus := getEtcdMembersStatus(ctx, members)
-
-	numHealthy := 0
 	for _, member := range members {
-		if membersStatus[member.Name] == "healthy" && containsMember(cpNodes, member) {
-			numHealthy++
+		health:= getEtcdMemberHealth(ctx, member)
+		if _, ok := s.status.statuses[member.Name]; ok {
+			s.status.statuses[member.Name].health = health
+		} else {
+			status,err := getEtcdNodeStatus(agents[member.Name],c)
+			if err !=nil {
+				log.Warn("node status is not available", map[string]interface{}{
+					"node": member.Name,
+				})
+			}
+			status.IsControlPlane = false
+			status.health = health
+			s.status.statuses[member.Name] = status
 		}
 	}
 
-	if numHealthy < len(cpNodes)/2+1 {
+	return nil
+}
+
+func (s EtcdStrategy) DecideToDo() Operator {
+	if !s.status.IsInitialized() {
+		return EtcdBootOp(s.cpNodes, s.agents, etcdVolumeName(s.cluster), s.cluster.Options.Etcd.ServiceParams)
+	}
+
+	if !s.status.AvailableCluster() {
 		log.Warn("too few etcd members", map[string]interface{}{
-			"num_healthy": numHealthy,
-			log.FnError:   err,
+			"num_healthy": s.status.NumberOfHealthy(),
 		})
 		return nil
 	}
@@ -91,12 +179,9 @@ func getEtcdMembers(ctx context.Context, nodes []*Node) ([]*etcdserverpb.Member,
 	return resp.Members, nil
 }
 
-func getEtcdMembersStatus(ctx context.Context, members []*etcdserverpb.Member) map[string]status {
-	memberStatus := make(map[string]status)
-	for _, member := range members {
+func getEtcdMemberHealth(ctx context.Context, member *etcdserverpb.Member) EtcdMemberHealth {
 		if len(member.ClientURLs) == 0 {
-			memberStatus[member.Name] = "notstarted"
-			continue
+			return  "notstarted"
 		}
 		endpoint := member.ClientURLs[0] + "/health"
 		client := &cmd.HTTPClient{
@@ -106,32 +191,19 @@ func getEtcdMembersStatus(ctx context.Context, members []*etcdserverpb.Member) m
 		req = req.WithContext(ctx)
 		resp, err := client.Do(req)
 		if err != nil {
-			memberStatus[member.Name] = "dead"
-			continue
+			return "dead"
 		}
 		health := new(etcdhttp.Health)
 		err = json.NewDecoder(resp.Body).Decode(health)
 		resp.Body.Close()
 		if err != nil {
-			memberStatus[member.Name] = "unhealthy"
-			continue
+			return "unhealthy"
 		}
 		switch health.Health {
 		case "true":
-			memberStatus[member.Name] = "healthy"
+			return "healthy"
 		default:
-			memberStatus[member.Name] = "unhealthy"
+			return "unhealthy"
 		}
-	}
-
-	return memberStatus
 }
 
-func containsMember(cpNodes []*Node, member *etcdserverpb.Member) bool {
-	for _, n := range cpNodes {
-		if n.Address == member.Name {
-			return true
-		}
-	}
-	return false
-}

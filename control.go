@@ -14,11 +14,12 @@ import (
 type Controller struct {
 	session  *concurrency.Session
 	interval time.Duration
+	strategies []Strategy
 }
 
 // NewController construct controller instance
 func NewController(s *concurrency.Session, interval time.Duration) Controller {
-	return Controller{s, interval}
+	return Controller{s, interval, []Strategy{EtcdStrategy{}}}
 }
 
 // Run execute procedures with leader elections
@@ -136,17 +137,35 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return nil
 	}
 
-	status, err := GetClusterStatus(ctx, cluster)
+	agents,err := GetAgents(ctx,cluster)
 	if err != nil {
 		wait = true
-		log.Warn("failed to get cluster status", map[string]interface{}{
+		log.Warn("failed to dial node", map[string]interface{}{
 			log.FnError: err,
 		})
 		return nil
 	}
-	defer status.Destroy()
+	defer func() {
+		for _, a := range agents{
+			a.Close()
+		}
+	}()
 
-	op := DecideToDo(ctx, cluster, status)
+	var op Operator
+	for _, strategy := range  c.strategies {
+		err := strategy.FetchStatus(ctx, cluster, agents)
+		if err != nil {
+			wait = true
+			log.Warn("failed to fetch node status", map[string]interface{}{
+				log.FnError: err,
+			})
+			return nil
+		}
+		op = strategy.DecideToDo()
+		if op != nil {
+			break
+		}
+	}
 	if op == nil {
 		wait = true
 		return nil
