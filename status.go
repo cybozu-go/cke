@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -237,8 +238,10 @@ func (c Controller) getEtcdMemberHealth(ctx context.Context, members map[string]
 }
 
 func (c Controller) getEtcdHealth(ctx context.Context, address string) EtcdNodeHealth {
-	endpoint := "http://" + address + ":2379/health"
-	req, _ := http.NewRequest("GET", endpoint, nil)
+	req := &http.Request{
+		Method: http.MethodGet,
+		URL:    &url.URL{Scheme: "http", Host: adress + ":2379", Path: "/health"},
+	}
 	req = req.WithContext(ctx)
 
 	resp, err := c.client.Do(req)
