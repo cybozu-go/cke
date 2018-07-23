@@ -3,6 +3,7 @@ package cke
 import (
 	"context"
 
+	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/log"
 )
 
@@ -23,12 +24,38 @@ func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator
 		}
 	}
 	if bootstrap {
-		return EtcdBootOp(cpNodes, cs.Agents, etcdVolumeName(c), c.Options.Etcd.ServiceParams)
+		return EtcdBootOp(cpNodes, cs.Agents, c.Options.Etcd)
 	}
 
 	if len(cs.Etcd.Members) == 0 {
 		log.Warn("No members of etcd cluster", nil)
 		return nil
+	}
+
+	endpoints := make([]string, len(cpNodes))
+	for i, n := range cpNodes {
+		endpoints[i] = "http://" + n.Address + ":2379"
+	}
+
+	members := unhealthyNonClusterMember(c.Nodes, cs.Etcd)
+	if len(members) > 0 {
+		return EtcdRemoveMemberOp(endpoints, members)
+	}
+	nodes := unhealthyNonControlPlaneMember(c.Nodes, cs.Etcd)
+	if len(nodes) > 0 {
+		return EtcdDestroyMemberOp(endpoints, nodes, cs.Agents, cs.Etcd.Members)
+	}
+	nodes = newMemberControlPlane(cpNodes, cs.Etcd)
+	if len(nodes) > 0 {
+		return EtcdAddMemberOp(endpoints, nodes, cs.Agents, c.Options.Etcd)
+	}
+	members = healthyNonClusterMember(c.Nodes, cs.Etcd)
+	if len(members) > 0 {
+		return EtcdRemoveMemberOp(endpoints, members)
+	}
+	nodes = healthyNonControlPlaneMember(c.Nodes, cs.Etcd)
+	if len(nodes) > 0 {
+		return EtcdDestroyMemberOp(endpoints, nodes, cs.Agents, cs.Etcd.Members)
 	}
 
 	// Remove an unhealthy/unreachable member who is either
@@ -44,55 +71,80 @@ func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator
 	//   (1) not in the defined cluster, or
 	//   (2) not a control plane node,
 	// only when it is safe to remove in point of node count.
-
-	// mem := addedMembers(cpNodes, cs.EtcdCluster.Members, cs.NodeStatuses)
-	// if len(mem) > 0 {
-	// 	return EtcdAddMemberOp(cpNodes, mem[0], cs.EtcdCluster.Members, cs.Agents, etcdVolumeName(c), c.Options.Etcd.ServiceParams)
-	// }
-
-	// removed := removedMembers(c.Nodes, cs.EtcdCluster.Members, cs.NodeStatuses)
-	// unknown := unknownMembers(c.Nodes, cs.EtcdCluster.Members)
-	// if len(mem) > 0 || len(unknown) > 0 {
-	// 	return EtcdRemoveMemberOp(removed, unknown, cs.Agents, etcdVolumeName(c), c.Options.Etcd.ServiceParams)
-	// }
 	return nil
 }
 
-// addedMember := cluster - (member & healthy)
-// func addedMembers(cpNodes []*Node, members map[string]*etcdserverpb.Member, statuses map[string]*NodeStatus) []*Node {
-// 	var member []*Node
-// 	for _, n := range cpNodes {
-// 		_, inMember := members[n.Address]
-// 		health := statuses[n.Address].Etcd.Health
-// 		if health != EtcdNodeHealthy || !inMember {
-// 			member = append(member, n)
-// 		}
-// 	}
-// 	return member
-// }
+func unhealthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[string]*etcdserverpb.Member {
+	var mem map[string]*etcdserverpb.Member
+	for k, v := range cs.Members {
+		mem[k] = v
+	}
+	for _, n := range allNodes {
+		delete(mem, n.Address)
+	}
+	for k := range mem {
+		if cs.MemberHealth[k] == EtcdNodeHealthy {
+			delete(mem, k)
+		}
+	}
+	return mem
+}
 
-// func removedMembers(allNodes []*Node, members map[string]*etcdserverpb.Member, statuses map[string]*NodeStatus) []*Node {
-// 	var member []*Node
-// 	for _, n := range allNodes {
-// 		if n.ControlPlane {
-// 			continue
-// 		}
-// 		_, inMember := members[n.Address]
-// 		health := statuses[n.Address].Etcd.Health
-// 		if health != EtcdNodeUnreachable || inMember {
-// 			member = append(member, n)
-// 		}
-// 	}
-// 	return member
-// }
+func unhealthyNonControlPlaneMember(nodes []*Node, cs EtcdClusterStatus) []*Node {
+	var targets []*Node
+	for _, n := range nodes {
+		if n.ControlPlane {
+			continue
+		}
+		_, inMember := cs.Members[n.Address]
+		health := cs.MemberHealth[n.Address]
+		if health != EtcdNodeHealthy && inMember {
+			targets = append(targets, n)
+		}
 
-// func unknownMembers(cluster []*Node, members map[string]*etcdserverpb.Member) map[string]*etcdserverpb.Member {
-// 	var mem map[string]*etcdserverpb.Member
-// 	for k, v := range members {
-// 		mem[k] = v
-// 	}
-// 	for _, n := range cluster {
-// 		delete(mem, n.Address)
-// 	}
-// 	return mem
-// }
+	}
+	return targets
+}
+
+func newMemberControlPlane(cpNodes []*Node, cs EtcdClusterStatus) []*Node {
+	var targets []*Node
+	for _, n := range cpNodes {
+		_, inMember := cs.Members[n.Address]
+		if !inMember {
+			targets = append(targets, n)
+		}
+	}
+	return targets
+}
+
+func healthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[string]*etcdserverpb.Member {
+	var mem map[string]*etcdserverpb.Member
+	for k, v := range cs.Members {
+		mem[k] = v
+	}
+	for _, n := range allNodes {
+		delete(mem, n.Address)
+	}
+	for k := range mem {
+		if cs.MemberHealth[k] != EtcdNodeHealthy {
+			delete(mem, k)
+		}
+	}
+	return mem
+}
+
+func healthyNonControlPlaneMember(allNodes []*Node, cs EtcdClusterStatus) []*Node {
+	var targets []*Node
+	for _, n := range allNodes {
+		if n.ControlPlane {
+			continue
+		}
+		_, inMember := cs.Members[n.Address]
+		health := cs.MemberHealth[n.Address]
+		if health == EtcdNodeHealthy && inMember {
+			targets = append(targets, n)
+		}
+
+	}
+	return targets
+}

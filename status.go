@@ -190,7 +190,7 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 	if err != nil {
 		return nil, err
 	}
-	ok, err := ce.VolumeExists(etcdVolumeName(cluster))
+	ok, err := ce.VolumeExists(etcdVolumeName(cluster.Options.Etcd))
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func (c Controller) getEtcdMemberHealth(ctx context.Context, members map[string]
 func (c Controller) getEtcdHealth(ctx context.Context, address string) EtcdNodeHealth {
 	req := &http.Request{
 		Method: http.MethodGet,
-		URL:    &url.URL{Scheme: "http", Host: adress + ":2379", Path: "/health"},
+		URL:    &url.URL{Scheme: "http", Host: address + ":2379", Path: "/health"},
 	}
 	req = req.WithContext(ctx)
 

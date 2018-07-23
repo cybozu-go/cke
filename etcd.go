@@ -3,6 +3,7 @@ package cke
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,29 +15,27 @@ const (
 	defaultEtcdVolumeName = "etcd-cke"
 )
 
-func etcdVolumeName(c *Cluster) string {
-	if len(c.Options.Etcd.VolumeName) == 0 {
+func etcdVolumeName(e EtcdParams) string {
+	if len(e.VolumeName) == 0 {
 		return defaultEtcdVolumeName
 	}
-	return c.Options.Etcd.VolumeName
+	return e.VolumeName
 }
 
 type etcdBootOp struct {
 	nodes   []*Node
 	agents  map[string]Agent
-	volname string
-	extra   ServiceParams
+	params  EtcdParams
 	step    int
 	cpIndex int
 }
 
 // EtcdBootOp returns an Operator to bootstrap etcd cluster.
-func EtcdBootOp(nodes []*Node, agents map[string]Agent, volname string, extra ServiceParams) Operator {
+func EtcdBootOp(nodes []*Node, agents map[string]Agent, params EtcdParams) Operator {
 	return &etcdBootOp{
 		nodes:   nodes,
 		agents:  agents,
-		volname: volname,
-		extra:   extra,
+		params:  params,
 		step:    0,
 		cpIndex: 0,
 	}
@@ -47,13 +46,16 @@ func (o *etcdBootOp) Name() string {
 }
 
 func (o *etcdBootOp) NextCommand() Commander {
+	volname := etcdVolumeName(o.params)
+	extra := o.params.ServiceParams
+
 	switch o.step {
 	case 0:
 		o.step++
 		return imagePullCommand{o.nodes, o.agents, "etcd"}
 	case 1:
 		o.step++
-		return volumeCreateCommand{o.nodes, o.agents, o.volname}
+		return volumeCreateCommand{o.nodes, o.agents, volname}
 	case 2:
 		node := o.nodes[o.cpIndex]
 		agent := o.agents[node.Address]
@@ -64,13 +66,13 @@ func (o *etcdBootOp) NextCommand() Commander {
 		}
 		opts := []string{
 			"--mount",
-			"type=volume,src=" + o.volname + ",dst=/var/lib/etcd",
+			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
 		}
 		var initialCluster []string
 		for _, n := range o.nodes {
 			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
 		}
-		return runContainerCommand{node, agent, "etcd", opts, etcdParams(node, initialCluster, "new"), o.extra}
+		return runContainerCommand{node, agent, "etcd", opts, etcdParams(node, initialCluster, "new"), extra}
 	default:
 		return nil
 	}
@@ -103,26 +105,22 @@ func (o *etcdBootOp) Cleanup(ctx context.Context) error {
 }
 
 // EtcdAddMemberOp returns an Operator to add member to etcd cluster.
-func EtcdAddMemberOp(cpNodes []*Node, targetNodes []*Node, members []*etcdserverpb.Member, agents map[string]Agent, volname string, extra ServiceParams) Operator {
+func EtcdAddMemberOp(endpoints []string, targetNodes []*Node, agents map[string]Agent, params EtcdParams) Operator {
 	return &etcdAddMemberOp{
-		cpNodes:     cpNodes,
+		endpoints:   endpoints,
 		targetNodes: targetNodes,
-		members:     members,
 		agents:      agents,
-		volname:     volname,
-		extra:       extra,
+		params:      params,
 		step:        0,
 		nodeIndex:   0,
 	}
 }
 
 type etcdAddMemberOp struct {
-	cpNodes     []*Node
+	endpoints   []string
 	targetNodes []*Node
-	members     []*etcdserverpb.Member
 	agents      map[string]Agent
-	volname     string
-	extra       ServiceParams
+	params      EtcdParams
 	step        int
 	nodeIndex   int
 }
@@ -132,10 +130,8 @@ func (o *etcdAddMemberOp) Name() string {
 }
 
 func (o *etcdAddMemberOp) NextCommand() Commander {
-	var endpoints []string
-	for name := range o.members {
-		endpoints = append(endpoints, fmt.Sprintf("http://%s:2379", name))
-	}
+	volname := etcdVolumeName(o.params)
+	extra := o.params.ServiceParams
 
 	switch o.step {
 	case 0:
@@ -143,10 +139,10 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		return imagePullCommand{o.targetNodes, o.agents, "etcd"}
 	case 1:
 		o.step++
-		return volumeCreateCommand{o.targetNodes, o.agents, o.volname}
+		return volumeCreateCommand{o.targetNodes, o.agents, volname}
 	case 2:
 		o.step++
-		return addEtcdMemberCommand{o.targetNodes, endpoints}
+		return addEtcdMemberCommand{o.targetNodes, o.endpoints}
 	case 3:
 		node := o.targetNodes[o.nodeIndex]
 		agent := o.agents[node.Address]
@@ -157,11 +153,11 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		}
 		opts := []string{
 			"--mount",
-			"type=volume,src=" + o.volname + ",dst=/var/lib/etcd",
+			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
 		}
 		var initialCluster []string
 		// TODO
-		return runContainerCommand{node, agent, "etcd", opts, etcdParams(node, initialCluster, "existing"), o.extra}
+		return runContainerCommand{node, agent, "etcd", opts, etcdParams(node, initialCluster, "existing"), extra}
 	default:
 		return nil
 	}
@@ -200,6 +196,40 @@ func (c addEtcdMemberCommand) Command() Command {
 	}
 }
 
+type removeEtcdMemberCommand struct {
+	endpoints []string
+	ids       []uint64
+}
+
+func (c removeEtcdMemberCommand) Run(ctx context.Context) error {
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   c.endpoints,
+		DialTimeout: 2 * time.Second,
+	})
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	for _, id := range c.ids {
+		_, err := cli.MemberRemove(ctx, id)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c removeEtcdMemberCommand) Command() Command {
+	idStrs := make([]string, len(c.ids))
+	for i, id := range c.ids {
+		idStrs[i] = strconv.FormatUint(id, 10)
+	}
+	return Command{
+		Name:   "remove-etcd-member",
+		Target: strings.Join(idStrs, ","),
+	}
+}
 func (o *etcdAddMemberOp) Cleanup(ctx context.Context) error {
 	// TODO: remove member from etcd cluster
 	// TODO: stop etcd container
@@ -210,24 +240,17 @@ func (o *etcdAddMemberOp) Cleanup(ctx context.Context) error {
 }
 
 // EtcdRemoveMemberOp returns an Operator to remove member from etcd cluster.
-func EtcdRemoveMemberOp(nodes []*Node, unknown map[string]*etcdserverpb.Member, agents map[string]Agent, volname string, extra ServiceParams) Operator {
+func EtcdRemoveMemberOp(endpoints []string, targets map[string]*etcdserverpb.Member) Operator {
 	return &etcdRemoveMemberOp{
-		nodes:         nodes,
-		unknownMember: unknown,
-		agents:        agents,
-		volname:       volname,
-		extra:         extra,
-		step:          0,
+		endpoints: endpoints,
+		targets:   targets,
 	}
 }
 
 type etcdRemoveMemberOp struct {
-	nodes         []*Node
-	unknownMember map[string]*etcdserverpb.Member
-	agents        map[string]Agent
-	volname       string
-	extra         ServiceParams
-	step          int
+	endpoints []string
+	targets   map[string]*etcdserverpb.Member
+	executed  bool
 }
 
 func (o *etcdRemoveMemberOp) Name() string {
@@ -235,9 +258,47 @@ func (o *etcdRemoveMemberOp) Name() string {
 }
 
 func (o *etcdRemoveMemberOp) NextCommand() Commander {
-	// TODO return next command
-	return nil
+	if o.executed {
+		return nil
+	}
+	o.executed = true
+
+	var ids []uint64
+	for _, v := range o.targets {
+		ids = append(ids, v.ID)
+	}
+	return removeEtcdMemberCommand{o.endpoints, ids}
 }
 func (o *etcdRemoveMemberOp) Cleanup(ctx context.Context) error {
+	return nil
+}
+
+// EtcdDestroyMemberOp create new etcdDestroyMemberOp instance
+func EtcdDestroyMemberOp(endpoints []string, targets []*Node, agents map[string]Agent, members map[string]*etcdserverpb.Member) Operator {
+	return &etcdDestroyMemberOp{
+		endpoints: endpoints,
+		targets:   targets,
+		agents:    agents,
+		members:   members,
+	}
+	return nil
+}
+
+type etcdDestroyMemberOp struct {
+	endpoints []string
+	targets   []*Node
+	agents    map[string]Agent
+	members   map[string]*etcdserverpb.Member
+}
+
+func (o *etcdDestroyMemberOp) Name() string {
+	return "etcd-destroy-member"
+}
+
+func (o *etcdDestroyMemberOp) NextCommand() Commander {
+	// TODO destroy member from etcd cluster
+	return nil
+}
+func (o *etcdDestroyMemberOp) Cleanup(ctx context.Context) error {
 	return nil
 }
