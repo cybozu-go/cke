@@ -133,40 +133,40 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 	volname := etcdVolumeName(o.params)
 	extra := o.params.ServiceParams
 
+	if o.nodeIndex >= len(o.targetNodes) {
+		return nil
+	}
+
+	node := o.targetNodes[o.nodeIndex]
+
 	switch o.step {
 	case 0:
 		o.step++
-		return imagePullCommand{o.targetNodes, o.agents, "etcd"}
+		return imagePullCommand{[]*Node{node}, o.agents, "etcd"}
 	case 1:
 		o.step++
-		return volumeCreateCommand{o.targetNodes, o.agents, volname}
+		return volumeCreateCommand{[]*Node{node}, o.agents, volname}
 	case 2:
 		o.step++
-		return addEtcdMemberCommand{o.targetNodes, o.endpoints}
-	case 3:
-		node := o.targetNodes[o.nodeIndex]
-		agent := o.agents[node.Address]
-
-		o.nodeIndex++
-		if o.nodeIndex == len(o.targetNodes) {
-			o.step++
-		}
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
 		}
-		var initialCluster []string
-		// TODO
-		return runContainerCommand{node, agent, "etcd", opts, etcdParams(node, initialCluster, "existing"), extra}
-	default:
-		return nil
+		return addEtcdMemberCommand{o.endpoints, node, o.agents[node.Address], opts, extra}
+	case 3:
+		o.step = 0
+		o.nodeIndex++
+		return waitEtcdSyncCommand{node}
 	}
 	return nil
 }
 
 type addEtcdMemberCommand struct {
-	nodes     []*Node
 	endpoints []string
+	node      *Node
+	agent     Agent
+	opts      []string
+	extra     ServiceParams
 }
 
 func (c addEtcdMemberCommand) Run(ctx context.Context) error {
@@ -180,19 +180,51 @@ func (c addEtcdMemberCommand) Run(ctx context.Context) error {
 
 	defer cli.Close()
 
-	for _, n := range c.nodes {
-		_, err := cli.MemberAdd(ctx, []string{fmt.Sprintf("http://%s:2380", n.Address)})
-		if err != nil {
-			return err
-		}
+	resp, err := cli.MemberAdd(ctx, []string{fmt.Sprintf("http://%s:2380", c.node.Address)})
+	if err != nil {
+		return err
+	}
+	var initialCluster []string
+	for _, m := range resp.Members {
+		initialCluster = append(initialCluster, m.Name+"="+strings.Join(m.PeerURLs, ","))
 	}
 
-	return nil
+	ce := Docker(c.agent)
+	return ce.RunSystem("etcd", c.opts, etcdParams(c.node, initialCluster, "existing"), c.extra)
 }
 
 func (c addEtcdMemberCommand) Command() Command {
 	return Command{
 		Name: "add-etcd-member",
+	}
+}
+
+type waitEtcdSyncCommand struct {
+	node *Node
+}
+
+func (c waitEtcdSyncCommand) Run(ctx context.Context) error {
+	endpoints := []string{
+		"http://" + c.node.Address + ":2379",
+	}
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   endpoints,
+		DialTimeout: 60 * time.Second,
+	})
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	err = cli.Sync(timeoutCtx)
+	cancel()
+	return err
+}
+
+func (c waitEtcdSyncCommand) Command() Command {
+	return Command{
+		Name: "wait-etcd-sync",
 	}
 }
 
