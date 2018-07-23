@@ -100,10 +100,6 @@ func etcdParams(node *Node, initialCluster []string, state string) ServiceParams
 	return params
 }
 
-func (o *etcdBootOp) Cleanup(ctx context.Context) error {
-	return nil
-}
-
 // EtcdAddMemberOp returns an Operator to add member to etcd cluster.
 func EtcdAddMemberOp(endpoints []string, targetNodes []*Node, agents map[string]Agent, params EtcdParams) Operator {
 	return &etcdAddMemberOp{
@@ -186,7 +182,15 @@ func (c addEtcdMemberCommand) Run(ctx context.Context) error {
 	}
 	var initialCluster []string
 	for _, m := range resp.Members {
-		initialCluster = append(initialCluster, m.Name+"="+strings.Join(m.PeerURLs, ","))
+		if resp.Member.ID == m.ID {
+			for _, u := range resp.Member.PeerURLs {
+				initialCluster = append(initialCluster, c.node.Address+"="+u)
+			}
+		} else {
+			for _, u := range m.PeerURLs {
+				initialCluster = append(initialCluster, m.Name+"="+u)
+			}
+		}
 	}
 
 	ce := Docker(c.agent)
@@ -262,14 +266,6 @@ func (c removeEtcdMemberCommand) Command() Command {
 		Target: strings.Join(idStrs, ","),
 	}
 }
-func (o *etcdAddMemberOp) Cleanup(ctx context.Context) error {
-	// TODO: remove member from etcd cluster
-	// TODO: stop etcd container
-	// TODO: remove etcd data volume
-	// TODO: remove etcd container image
-
-	return nil
-}
 
 // EtcdRemoveMemberOp returns an Operator to remove member from etcd cluster.
 func EtcdRemoveMemberOp(endpoints []string, targets map[string]*etcdserverpb.Member) Operator {
@@ -301,9 +297,6 @@ func (o *etcdRemoveMemberOp) NextCommand() Commander {
 	}
 	return removeEtcdMemberCommand{o.endpoints, ids}
 }
-func (o *etcdRemoveMemberOp) Cleanup(ctx context.Context) error {
-	return nil
-}
 
 // EtcdDestroyMemberOp create new etcdDestroyMemberOp instance
 func EtcdDestroyMemberOp(endpoints []string, targets []*Node, agents map[string]Agent, members map[string]*etcdserverpb.Member) Operator {
@@ -329,8 +322,5 @@ func (o *etcdDestroyMemberOp) Name() string {
 
 func (o *etcdDestroyMemberOp) NextCommand() Commander {
 	// TODO destroy member from etcd cluster
-	return nil
-}
-func (o *etcdDestroyMemberOp) Cleanup(ctx context.Context) error {
 	return nil
 }

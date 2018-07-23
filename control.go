@@ -172,16 +172,6 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		"op": op.Name(),
 	})
 
-	err = op.Cleanup(ctx)
-	if err != nil {
-		wait = true
-		log.Warn("failed to cleanup", map[string]interface{}{
-			log.FnError: err,
-			"op":        op.Name(),
-		})
-		return nil
-	}
-
 	for {
 		commander := op.NextCommand()
 		if commander == nil {
