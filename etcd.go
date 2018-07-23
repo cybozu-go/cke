@@ -2,7 +2,9 @@ package cke
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -15,11 +17,31 @@ const (
 	defaultEtcdVolumeName = "etcd-cke"
 )
 
+var (
+	etcdPeerURLPattern = regexp.MustCompile("^http://(.*):2379$")
+)
+
 func etcdVolumeName(e EtcdParams) string {
 	if len(e.VolumeName) == 0 {
 		return defaultEtcdVolumeName
 	}
 	return e.VolumeName
+}
+
+func etcdGuessMemberName(m *etcdserverpb.Member) (string, error) {
+	if len(m.Name) > 0 {
+		return m.Name, nil
+	}
+
+	if len(m.PeerURLs) == 0 {
+		return "", errors.New("empty PeerURLs")
+	}
+
+	url := m.PeerURLs[0]
+	if !etcdPeerURLPattern.MatchString(url) {
+		return "", errors.New("invalid PeerURL: " + url)
+	}
+	return etcdPeerURLPattern.ReplaceAllString(url, "${1}"), nil
 }
 
 type etcdBootOp struct {

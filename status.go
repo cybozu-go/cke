@@ -224,8 +224,15 @@ func (c Controller) getEtcdMembers(ctx context.Context, nodes []*Node) (map[stri
 	}
 	members := make(map[string]*etcdserverpb.Member)
 	for _, m := range resp.Members {
-		//TODO: use m.ID as key
-		members[m.Name] = m
+		name, err := etcdGuessMemberName(m)
+		if err != nil {
+			log.Warn("failed to guess etcd member name", map[string]interface{}{
+				"member_id": m.ID,
+				log.FnError: err,
+			})
+			continue
+		}
+		members[name] = m
 	}
 	return members, nil
 }
