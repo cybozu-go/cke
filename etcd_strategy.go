@@ -6,6 +6,8 @@ import (
 )
 
 func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
+	// See docs/etcd.md
+
 	var cpNodes []*Node
 	for _, n := range c.Nodes {
 		if n.ControlPlane {
@@ -58,19 +60,6 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return EtcdDestroyMemberOp(endpoints, nodes, cs.Agents, cs.Etcd.Members)
 	}
 
-	// Remove an unhealthy/unreachable member who is either
-	//   (1) not in the defined cluster, or
-	//   (2) not a control plane node.
-	// Note that unhealthy control plane node will not be removed
-	// because it may be a temporary status.
-
-	// Add a non-member control plane node
-	// only when it is safe.
-
-	// Remove a healthy member who is either
-	//   (1) not in the defined cluster, or
-	//   (2) not a control plane node,
-	// only when it is safe to remove in point of node count.
 	return nil
 }
 
