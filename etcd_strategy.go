@@ -158,7 +158,6 @@ func runningNonControlPlaneMember(allNodes []*Node, statuses map[string]*NodeSta
 		if st.Etcd.Running {
 			targets = append(targets, n)
 		}
-
 	}
 	return targets
 }

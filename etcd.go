@@ -400,7 +400,11 @@ func (o *etcdDestroyMemberOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return removeEtcdMemberCommand{o.endpoints, []uint64{o.members[node.Address].ID}}
+		var ids []uint64
+		if m, ok := o.members[node.Address]; ok {
+			ids = []uint64{m.ID}
+		}
+		return removeEtcdMemberCommand{o.endpoints, ids}
 	case 1:
 		o.step++
 		return stopContainerCommand{node, o.agents[node.Address], etcdContainerName}
