@@ -182,15 +182,18 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		return imagePullCommand{[]*Node{node}, o.agents, "etcd"}
 	case 1:
 		o.step++
-		return volumeCreateCommand{[]*Node{node}, o.agents, volname}
+		return volumeRemoveCommand{[]*Node{node}, o.agents, volname}
 	case 2:
+		o.step++
+		return volumeCreateCommand{[]*Node{node}, o.agents, volname}
+	case 3:
 		o.step++
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
 		}
 		return addEtcdMemberCommand{o.endpoints, node, o.agents[node.Address], opts, extra}
-	case 3:
+	case 4:
 		o.step = 0
 		o.nodeIndex++
 		endpoints := []string{"http://" + node.Address + ":2379"}
@@ -268,7 +271,8 @@ func (c addEtcdMemberCommand) Run(ctx context.Context) error {
 
 func (c addEtcdMemberCommand) Command() Command {
 	return Command{
-		Name: "add-etcd-member",
+		Name:   "add-etcd-member",
+		Target: c.node.Address,
 	}
 }
 
@@ -294,7 +298,8 @@ func (c waitEtcdSyncCommand) Run(ctx context.Context) error {
 
 func (c waitEtcdSyncCommand) Command() Command {
 	return Command{
-		Name: "wait-etcd-sync",
+		Name:   "wait-etcd-sync",
+		Target: strings.Join(c.endpoints, ","),
 	}
 }
 
