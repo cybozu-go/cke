@@ -53,7 +53,7 @@ func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator
 	if len(members) > 0 {
 		return EtcdRemoveMemberOp(endpoints, members)
 	}
-	nodes = healthyNonControlPlaneMember(c.Nodes, cs.Etcd)
+	nodes = runningNonControlPlaneMember(c.Nodes, cs.NodeStatuses)
 	if len(nodes) > 0 {
 		return EtcdDestroyMemberOp(endpoints, nodes, cs.Agents, cs.Etcd.Members)
 	}
@@ -133,15 +133,14 @@ func healthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[string]
 	return mem
 }
 
-func healthyNonControlPlaneMember(allNodes []*Node, cs EtcdClusterStatus) []*Node {
+func runningNonControlPlaneMember(allNodes []*Node, statuses map[string]*NodeStatus) []*Node {
 	var targets []*Node
 	for _, n := range allNodes {
 		if n.ControlPlane {
 			continue
 		}
-		_, inMember := cs.Members[n.Address]
-		health := cs.MemberHealth[n.Address]
-		if health == EtcdNodeHealthy && inMember {
+		st := statuses[n.Address]
+		if st.Etcd.Running {
 			targets = append(targets, n)
 		}
 
