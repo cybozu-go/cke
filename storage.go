@@ -221,3 +221,19 @@ func (s Storage) maintRecords(ctx context.Context, leaderKey string, max int64) 
 	}
 	return err
 }
+
+// GetLeaderHostname returns the current leader's host name.
+// It returns non-nil error when there is no leader.
+func (s Storage) GetLeaderHostname(ctx context.Context) (string, error) {
+	opts := []clientv3.OpOption{clientv3.WithPrefix()}
+	opts = append(opts, clientv3.WithFirstCreate()...)
+	resp, err := s.Get(ctx, KeyLeader, opts...)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.Count == 0 {
+		return "", errors.New("no leader")
+	}
+	return string(resp.Kvs[0].Value), nil
+}

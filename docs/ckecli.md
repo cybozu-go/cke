@@ -33,7 +33,12 @@ Set a constraint on the cluster configuration.
 `ckecli constraints show`
 -------------------------
 
-Show all constraints on cluster
+Show all constraints on the cluster.
+
+`ckecli leader`
+-------------------------
+
+Show the host name of the current leader.
 
 `ckecli history [-n COUNT]`
 ---------------------------
