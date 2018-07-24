@@ -15,6 +15,7 @@ import (
 
 const (
 	defaultEtcdVolumeName = "etcd-cke"
+	etcdContainerName     = "etcd"
 )
 
 var (
@@ -94,7 +95,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 		for _, n := range o.nodes {
 			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
 		}
-		return runContainerCommand{node, agent, "etcd", opts, etcdParams(node, initialCluster, "new"), extra}
+		return runContainerCommand{node, agent, etcdContainerName, opts, etcdParams(node, initialCluster, "new"), extra}
 	default:
 		return nil
 	}
@@ -336,6 +337,9 @@ type etcdDestroyMemberOp struct {
 	targets   []*Node
 	agents    map[string]Agent
 	members   map[string]*etcdserverpb.Member
+	params    EtcdParams
+	step      int
+	nodeIndex int
 }
 
 func (o *etcdDestroyMemberOp) Name() string {
@@ -343,6 +347,27 @@ func (o *etcdDestroyMemberOp) Name() string {
 }
 
 func (o *etcdDestroyMemberOp) NextCommand() Commander {
-	// TODO destroy member from etcd cluster
+	if o.nodeIndex >= len(o.targets) {
+		return nil
+	}
+
+	node := o.targets[o.nodeIndex]
+	volname := etcdVolumeName(o.params)
+
+	switch o.step {
+	case 0:
+		o.step++
+		return removeEtcdMemberCommand{o.endpoints, []uint64{o.members[node.Address].ID}}
+	case 1:
+		o.step++
+		return stopContainerCommand{node, o.agents[node.Address], etcdContainerName}
+	case 2:
+		o.step++
+		return volumeRemoveCommand{[]*Node{node}, o.agents, volname}
+	case 3:
+		o.step = 0
+		o.nodeIndex++
+		return waitEtcdSyncCommand{node}
+	}
 	return nil
 }

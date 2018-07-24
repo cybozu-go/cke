@@ -112,6 +112,31 @@ func (c volumeCreateCommand) Command() Command {
 	}
 }
 
+type volumeRemoveCommand struct {
+	nodes   []*Node
+	agents  map[string]Agent
+	volname string
+}
+
+func (c volumeRemoveCommand) Run(ctx context.Context) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		ce := Docker(c.agents[n.Address])
+		env.Go(func(ctx context.Context) error {
+			return ce.VolumeRemove(c.volname)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c volumeRemoveCommand) Command() Command {
+	return Command{
+		Name:   "volume-remove",
+		Target: c.volname,
+	}
+}
+
 type runContainerCommand struct {
 	node   *Node
 	agent  Agent
@@ -129,6 +154,24 @@ func (c runContainerCommand) Run(ctx context.Context) error {
 func (c runContainerCommand) Command() Command {
 	return Command{
 		Name:   "run-container",
+		Target: c.name,
+	}
+}
+
+type stopContainerCommand struct {
+	node  *Node
+	agent Agent
+	name  string
+}
+
+func (c stopContainerCommand) Run(ctx context.Context) error {
+	ce := Docker(c.agent)
+	return ce.Stop(c.name)
+}
+
+func (c stopContainerCommand) Command() Command {
+	return Command{
+		Name:   "stop-container",
 		Target: c.name,
 	}
 }

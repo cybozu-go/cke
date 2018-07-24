@@ -25,10 +25,14 @@ type ContainerEngine interface {
 	Run(name string, binds []Mount, command string) error
 	// RunSystem runs the named container as a system service.
 	RunSystem(name string, opts []string, params, extra ServiceParams) error
+	// Stop stops the named contains.
+	Stop(name string) error
 	// Inspect returns ServiceStatus for the named container.
 	Inspect(name string) (*ServiceStatus, error)
 	// VolumeCreate creates a local volume.
 	VolumeCreate(name string) error
+	// VolumeRemove creates a local volume.
+	VolumeRemove(name string) error
 	// VolumeExists returns true if the named volume exists.
 	VolumeExists(name string) (bool, error)
 }
@@ -136,6 +140,11 @@ func (c docker) RunSystem(name string, opts []string, params, extra ServiceParam
 	return err
 }
 
+func (c docker) Stop(name string) error {
+	_, _, err := c.agent.Run("docker stop " + name)
+	return err
+}
+
 func (c docker) putData(data string) (string, error) {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
@@ -202,6 +211,11 @@ func (c docker) Inspect(name string) (*ServiceStatus, error) {
 
 func (c docker) VolumeCreate(name string) error {
 	_, _, err := c.agent.Run("docker volume create " + name)
+	return err
+}
+
+func (c docker) VolumeRemove(name string) error {
+	_, _, err := c.agent.Run("docker volume remove " + name)
 	return err
 }
 
