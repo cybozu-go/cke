@@ -1,15 +1,11 @@
 package cke
 
 import (
-	"context"
-
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/log"
 )
 
-type status string
-
-func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator {
+func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	var cpNodes []*Node
 	for _, n := range c.Nodes {
 		if n.ControlPlane {

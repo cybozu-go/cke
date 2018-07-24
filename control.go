@@ -152,7 +152,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	}
 	defer status.Destroy()
 
-	op := DecideToDo(ctx, cluster, status)
+	op := DecideToDo(cluster, status)
 	if op == nil {
 		wait = true
 		return nil
