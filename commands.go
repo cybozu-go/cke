@@ -166,7 +166,11 @@ type stopContainerCommand struct {
 
 func (c stopContainerCommand) Run(ctx context.Context) error {
 	ce := Docker(c.agent)
-	return ce.Stop(c.name)
+	err := ce.Stop(c.name)
+	if err != nil {
+		return err
+	}
+	return ce.Remove(c.name)
 }
 
 func (c stopContainerCommand) Command() Command {

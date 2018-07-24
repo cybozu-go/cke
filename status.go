@@ -95,11 +95,6 @@ type NodeStatus struct {
 	Labels     map[string]string // are labels for k8s Node resource.
 }
 
-// IsControlPlane returns true if the node has been configured as a control plane.
-func (ns *NodeStatus) IsControlPlane() bool {
-	return ns.Etcd.HasData
-}
-
 // ServiceStatus represents statuses of a service.
 //
 // If Running is false, the service is not running on the node.

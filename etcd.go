@@ -407,14 +407,14 @@ func (o *etcdDestroyMemberOp) NextCommand() Commander {
 		return removeEtcdMemberCommand{o.endpoints, ids}
 	case 1:
 		o.step++
-		return stopContainerCommand{node, o.agents[node.Address], etcdContainerName}
+		return waitEtcdSyncCommand{o.endpoints}
 	case 2:
 		o.step++
-		return volumeRemoveCommand{[]*Node{node}, o.agents, volname}
+		return stopContainerCommand{node, o.agents[node.Address], etcdContainerName}
 	case 3:
 		o.step = 0
 		o.nodeIndex++
-		return waitEtcdSyncCommand{o.endpoints}
+		return volumeRemoveCommand{[]*Node{node}, o.agents, volname}
 	}
 	return nil
 }

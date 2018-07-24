@@ -79,7 +79,7 @@ func etcdDecideToDo(ctx context.Context, c *Cluster, cs *ClusterStatus) Operator
 }
 
 func unhealthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[string]*etcdserverpb.Member {
-	var mem map[string]*etcdserverpb.Member
+	mem := make(map[string]*etcdserverpb.Member)
 	for k, v := range cs.Members {
 		mem[k] = v
 	}
@@ -133,7 +133,7 @@ func newMemberControlPlane(cpNodes []*Node, cs EtcdClusterStatus) []*Node {
 }
 
 func healthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[string]*etcdserverpb.Member {
-	var mem map[string]*etcdserverpb.Member
+	mem := make(map[string]*etcdserverpb.Member)
 	for k, v := range cs.Members {
 		mem[k] = v
 	}
