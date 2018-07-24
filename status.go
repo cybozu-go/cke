@@ -2,16 +2,12 @@ package cke
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
-	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/etcdserver/api/etcdhttp"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
@@ -241,24 +237,22 @@ func (c Controller) getEtcdMemberHealth(ctx context.Context, members map[string]
 }
 
 func (c Controller) getEtcdHealth(ctx context.Context, address string) EtcdNodeHealth {
-	req := &http.Request{
-		Method: http.MethodGet,
-		URL:    &url.URL{Scheme: "http", Host: address + ":2379", Path: "/health"},
-	}
-	req = req.WithContext(ctx)
-
-	resp, err := c.client.Do(req)
+	endpoints := []string{fmt.Sprintf("http://%s:2379", address)}
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   endpoints,
+		DialTimeout: 2 * time.Second,
+	})
 	if err != nil {
 		return EtcdNodeUnreachable
 	}
-	defer resp.Body.Close()
+	defer cli.Close()
 
-	health := new(etcdhttp.Health)
-	err = json.NewDecoder(resp.Body).Decode(health)
+	status, err := cli.Status(ctx, endpoints[0])
 	if err != nil {
-		return EtcdNodeUnhealthy
+		return EtcdNodeUnreachable
 	}
-	if health.Health == "true" {
+
+	if len(status.Errors) == 0 {
 		return EtcdNodeHealthy
 	}
 	return EtcdNodeUnhealthy
