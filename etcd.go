@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
+	"net"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -18,15 +19,28 @@ const (
 	etcdContainerName     = "etcd"
 )
 
-var (
-	etcdPeerURLPattern = regexp.MustCompile("^http://(.*):2379$")
-)
-
 func etcdVolumeName(e EtcdParams) string {
 	if len(e.VolumeName) == 0 {
 		return defaultEtcdVolumeName
 	}
 	return e.VolumeName
+}
+
+func addressInURLs(address string, urls []string) (bool, error) {
+	for _, urlStr := range urls {
+		u, err := url.Parse(urlStr)
+		if err != nil {
+			return false, err
+		}
+		h, _, err := net.SplitHostPort(u.Host)
+		if err != nil {
+			return false, err
+		}
+		if h == address {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func etcdGuessMemberName(m *etcdserverpb.Member) (string, error) {
@@ -38,11 +52,15 @@ func etcdGuessMemberName(m *etcdserverpb.Member) (string, error) {
 		return "", errors.New("empty PeerURLs")
 	}
 
-	url := m.PeerURLs[0]
-	if !etcdPeerURLPattern.MatchString(url) {
-		return "", errors.New("invalid PeerURL: " + url)
+	u, err := url.Parse(m.PeerURLs[0])
+	if err != nil {
+		return "", err
 	}
-	return etcdPeerURLPattern.ReplaceAllString(url, "${1}"), nil
+	h, _, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		return "", err
+	}
+	return h, nil
 }
 
 type etcdBootOp struct {
@@ -175,7 +193,8 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 	case 3:
 		o.step = 0
 		o.nodeIndex++
-		return waitEtcdSyncCommand{node}
+		endpoints := []string{"http://" + node.Address + ":2379"}
+		return waitEtcdSyncCommand{endpoints}
 	}
 	return nil
 }
@@ -199,25 +218,52 @@ func (c addEtcdMemberCommand) Run(ctx context.Context) error {
 
 	defer cli.Close()
 
-	resp, err := cli.MemberAdd(ctx, []string{fmt.Sprintf("http://%s:2380", c.node.Address)})
+	resp, err := cli.MemberList(ctx)
 	if err != nil {
 		return err
 	}
+	members := resp.Members
+
+	inMember := false
+	for _, m := range members {
+		inMember, err = addressInURLs(c.node.Address, m.PeerURLs)
+		if err != nil {
+			return err
+		}
+		if inMember {
+			break
+		}
+	}
+
+	if !inMember {
+		resp, err := cli.MemberAdd(ctx, []string{fmt.Sprintf("http://%s:2380", c.node.Address)})
+		if err != nil {
+			return err
+		}
+		members = resp.Members
+	}
+
+	ce := Docker(c.agent)
+	ss, err := ce.Inspect(etcdContainerName)
+	if err != nil {
+		return err
+	}
+	if ss.Running {
+		return nil
+	}
+
 	var initialCluster []string
-	for _, m := range resp.Members {
-		if resp.Member.ID == m.ID {
-			for _, u := range resp.Member.PeerURLs {
+	for _, m := range members {
+		for _, u := range m.PeerURLs {
+			if len(m.Name) == 0 {
 				initialCluster = append(initialCluster, c.node.Address+"="+u)
-			}
-		} else {
-			for _, u := range m.PeerURLs {
+			} else {
 				initialCluster = append(initialCluster, m.Name+"="+u)
 			}
 		}
 	}
 
-	ce := Docker(c.agent)
-	return ce.RunSystem("etcd", c.opts, etcdParams(c.node, initialCluster, "existing"), c.extra)
+	return ce.RunSystem(etcdContainerName, c.opts, etcdParams(c.node, initialCluster, "existing"), c.extra)
 }
 
 func (c addEtcdMemberCommand) Command() Command {
@@ -227,15 +273,12 @@ func (c addEtcdMemberCommand) Command() Command {
 }
 
 type waitEtcdSyncCommand struct {
-	node *Node
+	endpoints []string
 }
 
 func (c waitEtcdSyncCommand) Run(ctx context.Context) error {
-	endpoints := []string{
-		"http://" + c.node.Address + ":2379",
-	}
 	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
+		Endpoints:   c.endpoints,
 		DialTimeout: 60 * time.Second,
 	})
 	if err != nil {
@@ -367,7 +410,7 @@ func (o *etcdDestroyMemberOp) NextCommand() Commander {
 	case 3:
 		o.step = 0
 		o.nodeIndex++
-		return waitEtcdSyncCommand{node}
+		return waitEtcdSyncCommand{o.endpoints}
 	}
 	return nil
 }
