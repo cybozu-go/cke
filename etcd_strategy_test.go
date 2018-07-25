@@ -6,6 +6,22 @@ import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 )
 
+func etcdDecideToDoCommands(c *Cluster, cs *ClusterStatus) []Command {
+	op := etcdDecideToDo(c, cs)
+	if op == nil {
+		return nil
+	}
+	var commands []Command
+	for {
+		commander := op.NextCommand()
+		if commander == nil {
+			break
+		}
+		commands = append(commands, commander.Command())
+	}
+	return commands
+}
+
 func testEtcdDecideToDoBootstrap(t *testing.T) {
 	cases := []struct {
 		Nodes        []*Node
@@ -49,20 +65,9 @@ func testEtcdDecideToDoBootstrap(t *testing.T) {
 			NodeStatuses: c.NodeStatuses,
 			Etcd:         c.Etcd,
 		}
-		op := etcdDecideToDo(cluster, clusterStatus)
-		if op == nil {
-			t.Fatal("operator is nil")
-		}
-		var result []Command
-		for {
-			commander := op.NextCommand()
-			if commander == nil {
-				break
-			}
-			result = append(result, commander.Command())
-		}
+		result := etcdDecideToDoCommands(cluster, clusterStatus)
 		if len(c.Commands) != len(result) {
-			t.Fatal("commands length mismatch")
+			t.Fatal("results length mismatch")
 		}
 		for i, res := range result {
 			com := c.Commands[i]
@@ -122,21 +127,7 @@ func testRemoveUnhealthyNonCluster(t *testing.T) {
 			NodeStatuses: c.NodeStatuses,
 			Etcd:         c.Etcd,
 		}
-		op := etcdDecideToDo(cluster, clusterStatus)
-		if op == nil {
-			t.Fatal("operator is nil")
-		}
-		var result []Command
-		for {
-			commander := op.NextCommand()
-			if commander == nil {
-				break
-			}
-			result = append(result, commander.Command())
-		}
-		if len(c.Commands) != len(result) {
-			t.Fatal("commands length mismatch")
-		}
+		result := etcdDecideToDoCommands(cluster, clusterStatus)
 		for i, res := range result {
 			com := c.Commands[i]
 			if com.Name != res.Name {
@@ -205,18 +196,7 @@ func testRemoveUnhealthyNonControlPlane(t *testing.T) {
 			NodeStatuses: c.NodeStatuses,
 			Etcd:         c.Etcd,
 		}
-		op := etcdDecideToDo(cluster, clusterStatus)
-		if op == nil {
-			t.Fatal("operator is nil")
-		}
-		var result []Command
-		for {
-			commander := op.NextCommand()
-			if commander == nil {
-				break
-			}
-			result = append(result, commander.Command())
-		}
+		result := etcdDecideToDoCommands(cluster, clusterStatus)
 		if len(c.Commands) != len(result) {
 			t.Error("commands length mismatch: ", len(result))
 			continue
@@ -278,18 +258,7 @@ func testStartUnstartedNode(t *testing.T) {
 			NodeStatuses: c.NodeStatuses,
 			Etcd:         c.Etcd,
 		}
-		op := etcdDecideToDo(cluster, clusterStatus)
-		if op == nil {
-			t.Fatal("operator is nil")
-		}
-		var result []Command
-		for {
-			commander := op.NextCommand()
-			if commander == nil {
-				break
-			}
-			result = append(result, commander.Command())
-		}
+		result := etcdDecideToDoCommands(cluster, clusterStatus)
 		if len(c.Commands) != len(result) {
 			t.Error("commands length mismatch: ", len(result))
 			continue
@@ -350,18 +319,7 @@ func testAddNewControlPlane(t *testing.T) {
 			NodeStatuses: c.NodeStatuses,
 			Etcd:         c.Etcd,
 		}
-		op := etcdDecideToDo(cluster, clusterStatus)
-		if op == nil {
-			t.Fatal("operator is nil")
-		}
-		var result []Command
-		for {
-			commander := op.NextCommand()
-			if commander == nil {
-				break
-			}
-			result = append(result, commander.Command())
-		}
+		result := etcdDecideToDoCommands(cluster, clusterStatus)
 		if len(c.Commands) != len(result) {
 			t.Error("commands length mismatch: ", len(result))
 			continue
@@ -416,18 +374,7 @@ func testRemoveHealthyNonCluster(t *testing.T) {
 			NodeStatuses: c.NodeStatuses,
 			Etcd:         c.Etcd,
 		}
-		op := etcdDecideToDo(cluster, clusterStatus)
-		if op == nil {
-			t.Fatal("operator is nil")
-		}
-		var result []Command
-		for {
-			commander := op.NextCommand()
-			if commander == nil {
-				break
-			}
-			result = append(result, commander.Command())
-		}
+		result := etcdDecideToDoCommands(cluster, clusterStatus)
 		if len(c.Commands) != len(result) {
 			t.Error("commands length mismatch: ", len(result))
 			continue
@@ -488,18 +435,7 @@ func testRemoveNonControlPlane(t *testing.T) {
 			NodeStatuses: c.NodeStatuses,
 			Etcd:         c.Etcd,
 		}
-		op := etcdDecideToDo(cluster, clusterStatus)
-		if op == nil {
-			t.Fatal("operator is nil")
-		}
-		var result []Command
-		for {
-			commander := op.NextCommand()
-			if commander == nil {
-				break
-			}
-			result = append(result, commander.Command())
-		}
+		result := etcdDecideToDoCommands(cluster, clusterStatus)
 		if len(c.Commands) != len(result) {
 			t.Error("commands length mismatch: ", len(result))
 			continue
