@@ -2,9 +2,11 @@ package cke
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -12,7 +14,9 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/etcdserver/api/etcdhttp"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
+	"github.com/cybozu-go/cmd"
 )
 
 const (
@@ -143,11 +147,12 @@ func etcdParams(node *Node, initialCluster []string, state string) ServiceParams
 }
 
 // EtcdAddMemberOp returns an Operator to add member to etcd cluster.
-func EtcdAddMemberOp(endpoints []string, targetNodes []*Node, agents map[string]Agent, params EtcdParams) Operator {
+func EtcdAddMemberOp(endpoints []string, targetNodes []*Node, agents map[string]Agent, client *cmd.HTTPClient, params EtcdParams) Operator {
 	return &etcdAddMemberOp{
 		endpoints:   endpoints,
 		targetNodes: targetNodes,
 		agents:      agents,
+		client:      client,
 		params:      params,
 		step:        0,
 		nodeIndex:   0,
@@ -158,6 +163,7 @@ type etcdAddMemberOp struct {
 	endpoints   []string
 	targetNodes []*Node
 	agents      map[string]Agent
+	client      *cmd.HTTPClient
 	params      EtcdParams
 	step        int
 	nodeIndex   int
@@ -198,7 +204,7 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		o.step = 0
 		o.nodeIndex++
 		endpoints := []string{"http://" + node.Address + ":2379"}
-		return waitEtcdSyncCommand{endpoints}
+		return waitEtcdSyncCommand{endpoints, o.client}
 	}
 	return nil
 }
@@ -246,7 +252,7 @@ func (c addEtcdMemberCommand) Run(ctx context.Context) error {
 		}
 		members = resp.Members
 	}
-
+	// gofail: var etcdAfterMemberAdd struct{}
 	ce := Docker(c.agent)
 	ss, err := ce.Inspect(etcdContainerName)
 	if err != nil {
@@ -279,22 +285,36 @@ func (c addEtcdMemberCommand) Command() Command {
 
 type waitEtcdSyncCommand struct {
 	endpoints []string
+	client    *cmd.HTTPClient
 }
 
 func (c waitEtcdSyncCommand) Run(ctx context.Context) error {
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   c.endpoints,
-		DialTimeout: 60 * time.Second,
-	})
-	if err != nil {
-		return err
+	for i := 0; i < 3; i++ {
+		for _, ep := range c.endpoints {
+			u := ep + "/health"
+			req, _ := http.NewRequest("GET", u, nil)
+			req = req.WithContext(ctx)
+			resp, err := c.client.Do(req)
+			if err != nil {
+				continue
+			}
+			health := new(etcdhttp.Health)
+			err = json.NewDecoder(resp.Body).Decode(health)
+			resp.Body.Close()
+			if err != nil {
+				continue
+			}
+			if health.Health == "true" {
+				return nil
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(5 * time.Second):
+		}
 	}
-	defer cli.Close()
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
-	err = cli.Sync(timeoutCtx)
-	cancel()
-	return err
+	return errors.New("etcd sync timeout")
 }
 
 func (c waitEtcdSyncCommand) Command() Command {
@@ -372,11 +392,12 @@ func (o *etcdRemoveMemberOp) NextCommand() Commander {
 }
 
 // EtcdDestroyMemberOp create new etcdDestroyMemberOp instance
-func EtcdDestroyMemberOp(endpoints []string, targets []*Node, agents map[string]Agent, members map[string]*etcdserverpb.Member) Operator {
+func EtcdDestroyMemberOp(endpoints []string, targets []*Node, agents map[string]Agent, client *cmd.HTTPClient, members map[string]*etcdserverpb.Member) Operator {
 	return &etcdDestroyMemberOp{
 		endpoints: endpoints,
 		targets:   targets,
 		agents:    agents,
+		client:    client,
 		members:   members,
 	}
 }
@@ -385,6 +406,7 @@ type etcdDestroyMemberOp struct {
 	endpoints []string
 	targets   []*Node
 	agents    map[string]Agent
+	client    *cmd.HTTPClient
 	members   map[string]*etcdserverpb.Member
 	params    EtcdParams
 	step      int
@@ -413,7 +435,7 @@ func (o *etcdDestroyMemberOp) NextCommand() Commander {
 		return removeEtcdMemberCommand{o.endpoints, ids}
 	case 1:
 		o.step++
-		return waitEtcdSyncCommand{o.endpoints}
+		return waitEtcdSyncCommand{o.endpoints, o.client}
 	case 2:
 		o.step++
 		return stopContainerCommand{node, o.agents[node.Address], etcdContainerName}

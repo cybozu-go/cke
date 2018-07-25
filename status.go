@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"sync"
 	"time"
 
@@ -38,6 +39,7 @@ type ClusterStatus struct {
 	Agents        map[string]Agent       // ditto.
 	ServiceSubnet *net.IPNet
 	RBAC          bool // true if RBAC is enabled
+	Client        *cmd.HTTPClient
 
 	Etcd EtcdClusterStatus
 	// TODO:
@@ -127,6 +129,9 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster) (*Cl
 
 	cs := new(ClusterStatus)
 	cs.NodeStatuses = statuses
+	cs.Client = &cmd.HTTPClient{
+		Client: &http.Client{},
+	}
 
 	cs.Etcd.Members, err = c.getEtcdMembers(ctx, cluster.Nodes)
 	if err != nil {

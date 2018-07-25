@@ -3,12 +3,10 @@ package cke
 import (
 	"context"
 	"errors"
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
-	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
 )
 
@@ -16,15 +14,11 @@ import (
 type Controller struct {
 	session  *concurrency.Session
 	interval time.Duration
-	client   *cmd.HTTPClient
 }
 
 // NewController construct controller instance
 func NewController(s *concurrency.Session, interval time.Duration) Controller {
-	client := &cmd.HTTPClient{
-		Client: &http.Client{},
-	}
-	return Controller{s, interval, client}
+	return Controller{s, interval}
 }
 
 // Run execute procedures with leader elections
