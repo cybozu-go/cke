@@ -65,10 +65,10 @@ func UnhealthyNonCluster() EtcdTestCluster {
 		Etcd: EtcdClusterStatus{
 			Members: map[string]*etcdserverpb.Member{
 				"10.0.0.11": {ID: 0, Name: "10.0.0.11"},
-				"10.0.1.11": {ID: 11, Name: "10.0.0.11"},
-				"10.0.1.12": {ID: 12, Name: "10.0.0.12"},
-				"10.0.1.13": {ID: 13, Name: "10.0.0.13"},
-				"10.0.1.14": {ID: 14, Name: "10.0.0.14"},
+				"10.0.1.11": {ID: 11, Name: "10.0.1.11"},
+				"10.0.1.12": {ID: 12, Name: "10.0.1.12"},
+				"10.0.1.13": {ID: 13, Name: "10.0.1.13"},
+				"10.0.1.14": {ID: 14, Name: "10.0.1.14"},
 			},
 			MemberHealth: map[string]EtcdNodeHealth{
 				"10.0.0.11": EtcdNodeHealthy,
@@ -132,6 +132,12 @@ func UnstartedMembers() EtcdTestCluster {
 				"10.0.0.12": {ID: 1, Name: "10.0.0.12"},
 				"10.0.0.13": {ID: 2, Name: ""},
 			},
+			MemberHealth: map[string]EtcdNodeHealth{
+				"10.0.0.11": EtcdNodeHealthy,
+				"10.0.0.12": EtcdNodeHealthy,
+				"10.0.0.13": EtcdNodeUnreachable,
+				"10.0.0.14": EtcdNodeUnreachable,
+			},
 		},
 	}
 }
@@ -154,6 +160,12 @@ func NewlyControlPlane() EtcdTestCluster {
 			Members: map[string]*etcdserverpb.Member{
 				"10.0.0.11": {ID: 0, Name: "10.0.0.11"},
 				"10.0.0.12": {ID: 1, Name: "10.0.0.12"},
+			},
+			MemberHealth: map[string]EtcdNodeHealth{
+				"10.0.0.11": EtcdNodeHealthy,
+				"10.0.0.12": EtcdNodeHealthy,
+				"10.0.0.13": EtcdNodeUnreachable,
+				"10.0.0.14": EtcdNodeUnreachable,
 			},
 		},
 	}
@@ -205,6 +217,12 @@ func HealthyNonControlPlane() EtcdTestCluster {
 				"10.0.0.12": {ID: 2, Name: "10.0.0.12"},
 				"10.0.0.13": {ID: 3, Name: "10.0.0.13"},
 			},
+			MemberHealth: map[string]EtcdNodeHealth{
+				"10.0.0.11": EtcdNodeHealthy,
+				"10.0.0.12": EtcdNodeHealthy,
+				"10.0.0.13": EtcdNodeHealthy,
+				"10.0.0.14": EtcdNodeUnreachable,
+			},
 		},
 	}
 }
@@ -239,15 +257,15 @@ func RemoveMemberCommands(ids ...uint64) []Command {
 	return []Command{{Name: "remove-etcd-member", Target: strings.Join(ss, ",")}}
 }
 
-func DestroyMemberCommands(cps []string, addrs []string, ids map[string]uint64) []Command {
+func DestroyMemberCommands(cps []string, addrs []string, ids []uint64) []Command {
 	var endpoints []string
 	for _, cp := range cps {
 		endpoints = append(endpoints, "http://"+cp+":2379")
 	}
 	var commands []Command
-	for _, addr := range addrs {
+	for i, addr := range addrs {
 		commands = append(commands,
-			Command{Name: "remove-etcd-member", Target: strconv.FormatUint(ids[addr], 10)},
+			Command{Name: "remove-etcd-member", Target: strconv.FormatUint(ids[i], 10)},
 			Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")},
 			Command{Name: "stop-container", Target: addr},
 			Command{Name: "volume-remove", Target: addr},
@@ -278,7 +296,7 @@ func testEtcdDecideToDo(t *testing.T) {
 			ExpectedCommands: DestroyMemberCommands(
 				[]string{"10.0.0.11", "10.0.0.12"},
 				[]string{"10.0.1.11", "10.0.1.12"},
-				map[string]uint64{"10.0.1.11": 2, "10.0.1.12": 3}),
+				[]uint64{2, 3}),
 		},
 		{
 			Name:             "StartUnstartedMember",
@@ -301,7 +319,7 @@ func testEtcdDecideToDo(t *testing.T) {
 			ExpectedCommands: DestroyMemberCommands(
 				[]string{"10.0.0.11", "10.0.0.12"},
 				[]string{"10.0.0.13"},
-				map[string]uint64{"10.0.0.13": 3}),
+				[]uint64{3}),
 		},
 	}
 
