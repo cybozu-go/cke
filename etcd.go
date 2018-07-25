@@ -377,7 +377,6 @@ func EtcdDestroyMemberOp(endpoints []string, targets []*Node, agents map[string]
 		agents:    agents,
 		members:   members,
 	}
-	return nil
 }
 
 type etcdDestroyMemberOp struct {

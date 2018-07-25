@@ -30,33 +30,6 @@ type EtcdClusterStatus struct {
 	MemberHealth map[string]EtcdNodeHealth
 }
 
-func (s EtcdClusterStatus) minHealthyNodes() int {
-	return len(s.Members)/2 + 1
-}
-
-func (s EtcdClusterStatus) numHealthy() int {
-	numHealthy := 0
-	for _, h := range s.MemberHealth {
-		if h == EtcdNodeHealthy {
-			numHealthy++
-		}
-	}
-	return numHealthy
-}
-
-func (s EtcdClusterStatus) removableNodeCount() int {
-	diff := s.numHealthy() - s.minHealthyNodes()
-	if diff <= 0 {
-		return 0
-	}
-	return diff
-}
-
-func (s EtcdClusterStatus) addable() bool {
-	newMinHealthy := (len(s.Members)+1)/2 + 1
-	return s.numHealthy() >= newMinHealthy
-}
-
 // ClusterStatus represents the working cluster status.
 // The structure reflects Cluster, of course.
 type ClusterStatus struct {
