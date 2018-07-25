@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -366,6 +367,7 @@ func (o *etcdRemoveMemberOp) NextCommand() Commander {
 	for _, v := range o.targets {
 		ids = append(ids, v.ID)
 	}
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
 	return removeEtcdMemberCommand{o.endpoints, ids}
 }
 
