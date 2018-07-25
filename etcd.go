@@ -292,7 +292,10 @@ func (c waitEtcdSyncCommand) Run(ctx context.Context) error {
 	for i := 0; i < 3; i++ {
 		for _, ep := range c.endpoints {
 			u := ep + "/health"
-			req, _ := http.NewRequest("GET", u, nil)
+			req, err := http.NewRequest("GET", u, nil)
+			if err != nil {
+				continue
+			}
 			req = req.WithContext(ctx)
 			resp, err := c.client.Do(req)
 			if err != nil {
