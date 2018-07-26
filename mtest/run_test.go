@@ -67,7 +67,7 @@ func prepareSSHClients(addresses ...string) error {
 		}
 		client, err := sshTo(a, sshKey)
 		if err != nil {
-			time.Sleep(time.Second)
+			time.Sleep(5 * time.Second)
 			goto RETRY
 		}
 		sshClients[a] = client
@@ -184,12 +184,13 @@ func getCluster() *cke.Cluster {
 	return &cluster
 }
 
-func getClusterStatus() *cke.ClusterStatus {
+func getClusterStatus() (*cke.ClusterStatus, error) {
 	controller := cke.NewController(nil, 0)
 	cluster := getCluster()
-	status, err := controller.GetClusterStatus(context.Background(), cluster)
-	Expect(err).NotTo(HaveOccurred())
-	return status
+	for _, n := range cluster.Nodes {
+		n.ControlPlane = true
+	}
+	return controller.GetClusterStatus(context.Background(), cluster)
 }
 
 func ckecliClusterSet(cluster *cke.Cluster) error {

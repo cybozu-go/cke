@@ -20,7 +20,7 @@ func TestMtest(t *testing.T) {
 var _ = BeforeSuite(func() {
 	fmt.Println("Preparing...")
 
-	SetDefaultEventuallyPollingInterval(time.Second)
+	SetDefaultEventuallyPollingInterval(5 * time.Second)
 	SetDefaultEventuallyTimeout(3 * time.Minute)
 
 	err := prepareSSHClients(host1, host2, node1, node2, node3, node4, node5, node6)
@@ -58,7 +58,10 @@ var _ = BeforeSuite(func() {
 	Eventually(func() bool {
 		controlPlanes := []string{node1, node2, node3}
 		workers := []string{node4, node5, node6}
-		status := getClusterStatus()
+		status, err := getClusterStatus()
+		if err != nil {
+			return false
+		}
 		return checkEtcdClusterStatus(status, controlPlanes, workers)
 	}).Should(BeTrue())
 
