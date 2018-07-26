@@ -170,20 +170,75 @@ func ckecli(args ...string) []byte {
 	return stdout.Bytes()
 }
 
-func getClusterStatus() (*cke.ClusterStatus, error) {
-	controller := cke.NewController(nil, 0)
-
+func getCluster() *cke.Cluster {
 	f, err := os.Open(ckeClusterPath)
-	if err != nil {
-		return nil, err
-	}
+	Expect(err).NotTo(HaveOccurred())
 	defer f.Close()
 
 	var cluster cke.Cluster
 	err = yaml.NewDecoder(f).Decode(&cluster)
+	Expect(err).NotTo(HaveOccurred())
+	err = cluster.Validate()
+	Expect(err).NotTo(HaveOccurred())
+
+	return &cluster
+}
+
+func getClusterStatus() *cke.ClusterStatus {
+	controller := cke.NewController(nil, 0)
+	cluster := getCluster()
+	status, err := controller.GetClusterStatus(context.Background(), cluster)
+	Expect(err).NotTo(HaveOccurred())
+	return status
+}
+
+func ckecliClusterSet(cluster *cke.Cluster) error {
+	y, err := yaml.Marshal(cluster)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return controller.GetClusterStatus(context.Background(), &cluster)
+	f := localTempFile(string(y))
+	ckecli("cluster", "set", f.Name())
+	return nil
+}
+
+func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []string) bool {
+	for _, host := range controlPlanes {
+		if !status.NodeStatuses[host].Etcd.Running {
+			return false
+		}
+		if !status.NodeStatuses[host].Etcd.HasData {
+			return false
+		}
+	}
+	for _, host := range workers {
+		if status.NodeStatuses[host].Etcd.Running {
+			return false
+		}
+		if status.NodeStatuses[host].Etcd.HasData {
+			return false
+		}
+	}
+	if len(controlPlanes) != len(status.Etcd.Members) {
+		return false
+	}
+	for _, host := range controlPlanes {
+		member, ok := status.Etcd.Members[host]
+		if !ok {
+			return false
+		}
+		if member.Name == "" {
+			return false
+		}
+
+		health, ok := status.Etcd.MemberHealth[host]
+		if !ok {
+			return false
+		}
+		if health != cke.EtcdNodeHealthy {
+			return false
+		}
+	}
+	return true
 }

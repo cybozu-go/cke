@@ -21,7 +21,7 @@ var _ = BeforeSuite(func() {
 	fmt.Println("Preparing...")
 
 	SetDefaultEventuallyPollingInterval(time.Second)
-	SetDefaultEventuallyTimeout(time.Minute)
+	SetDefaultEventuallyTimeout(3 * time.Minute)
 
 	err := prepareSSHClients(host1, host2, node1, node2, node3, node4, node5, node6)
 	Expect(err).NotTo(HaveOccurred())
@@ -48,6 +48,19 @@ var _ = BeforeSuite(func() {
 		_, _, err := execAt(host1, "/data/ckecli", "history")
 		return err
 	}).Should(Succeed())
+
+	ckecli("constraints", "set", "control-plane-count", "3")
+	cluster := getCluster()
+	for i := 0; i < 3; i++ {
+		cluster.Nodes[i].ControlPlane = true
+	}
+	ckecliClusterSet(cluster)
+	Eventually(func() bool {
+		controlPlanes := []string{node1, node2, node3}
+		workers := []string{node4, node5, node6}
+		status := getClusterStatus()
+		return checkEtcdClusterStatus(status, controlPlanes, workers)
+	}).Should(BeTrue())
 
 	time.Sleep(time.Second)
 	fmt.Println("Begin tests...")
