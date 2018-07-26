@@ -1,0 +1,20 @@
+#cloud-config
+users:
+  - name: cybozu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    primary-group: cybozu
+    groups: users, admin
+    lock_passwd: false
+    shell: /bin/bash
+    # password = "cybozu"
+    passwd: "$6$rounds=4096$m3AVOWeB$EPystoHozf.eJNCm4tWyRHpJzgTDymYuGOONWxRN8uk4amLvxwB4Pc7.tEkZdeXewoVEBEX5ujUon9wSpEf1N."
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCoYNNrwXDSpa5D/vG+xN0V8/SiqCldTGXwWk4VaklZNQz1mEk2J0F+CVucABDXj/sl+9NQcBCBDtfSKHwgnZnpUMYZn2SvU3jaI3n/XvIwJnCAaBFvC2+P79fiUVRrTNUd792cvGQFDJXaE6+Us78Tt9R5XLvQy3/U12Vm0jXmXUlf/6kklVJb5hovtAXhfhphp349JBTmNFAHkox+FNJrK4AwMlz8UJhwCuqEe8L96HqVvK5DLdaiQjWn5dpFvWCLJt8VbfnKZ9VPcSwYFmOSmyBkYIx+dDkf7Gv0mIi28sTvIB2cFl6/HkPIqasL3m2+MqIMZJQt3yPgiIC+WwAv mtest
+mounts:
+  - [ /dev/vdc1, /data, "vfat", "ro" ]
+write_files:
+  - content: |
+      servers:
+        - http://@HOST1@:2379
+    path: /etc/cke.yml
+    permissions: '0644'

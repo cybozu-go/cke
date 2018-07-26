@@ -1,0 +1,142 @@
+# placemat config file
+kind: Network
+name: ext-net
+type: external
+use-nat: true
+address: @BRIDGE_ADDRESS@/24
+---
+kind: DataFolder
+name: data
+files:
+  - name: cke
+    file: cke
+  - name: ckecli
+    file: ckecli
+  - name: etcd
+    file: etcd
+  - name: etcdctl
+    file: etcdctl
+---
+kind: Image
+name: ubuntu
+file: ../@UBUNTU_IMAGE@
+---
+kind: Image
+name: coreos
+file: ../@COREOS_IMAGE@
+---
+kind: Node
+name: host1
+interfaces:
+  - ext-net
+cpu: 1
+memory: 1G
+volumes:
+  - kind: image
+    name: root
+    image: ubuntu
+    copy-on-write: true
+  - kind: localds
+    name: seed
+    user-data: user-data.yml
+    network-config: network1.yml
+  - kind: vvfat
+    name: data
+    folder: data
+---
+kind: Node
+name: host2
+interfaces:
+  - ext-net
+cpu: 1
+memory: 1G
+volumes:
+  - kind: image
+    name: root
+    image: ubuntu
+    copy-on-write: true
+  - kind: localds
+    name: seed
+    user-data: user-data.yml
+    network-config: network2.yml
+  - kind: vvfat
+    name: data
+    folder: data
+---
+kind: Node
+name: node1
+interfaces:
+  - ext-net
+cpu: 1
+memory: 2G
+ignition: node1.ign
+volumes:
+  - kind: image
+    name: root
+    image: coreos
+    copy-on-write: true
+---
+kind: Node
+name: node2
+interfaces:
+  - ext-net
+cpu: 1
+memory: 2G
+ignition: node2.ign
+volumes:
+  - kind: image
+    name: root
+    image: coreos
+    copy-on-write: true
+---
+kind: Node
+name: node3
+interfaces:
+  - ext-net
+cpu: 1
+memory: 2G
+ignition: node3.ign
+volumes:
+  - kind: image
+    name: root
+    image: coreos
+    copy-on-write: true
+---
+kind: Node
+name: node4
+interfaces:
+  - ext-net
+cpu: 1
+memory: 2G
+ignition: node4.ign
+volumes:
+  - kind: image
+    name: root
+    image: coreos
+    copy-on-write: true
+---
+kind: Node
+name: node5
+interfaces:
+  - ext-net
+cpu: 1
+memory: 2G
+ignition: node5.ign
+volumes:
+  - kind: image
+    name: root
+    image: coreos
+    copy-on-write: true
+---
+kind: Node
+name: node6
+interfaces:
+  - ext-net
+cpu: 1
+memory: 2G
+ignition: node6.ign
+volumes:
+  - kind: image
+    name: root
+    image: coreos
+    copy-on-write: true
