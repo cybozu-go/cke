@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cmd"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -23,6 +25,7 @@ const sshTimeout = 3 * time.Minute
 
 var (
 	sshClients = make(map[string]*ssh.Client)
+	httpClient = &cmd.HTTPClient{Client: &http.Client{}}
 )
 
 func sshTo(address string, sshKey ssh.Signer) (*ssh.Client, error) {
@@ -270,4 +273,23 @@ func initializeControlPlane() {
 		}
 		return checkEtcdClusterStatus(status, controlPlanes, workers)
 	}).Should(BeTrue())
+}
+
+func setFailurePoint(failurePoint, code string) {
+	leader := ckecli("leader")
+	Expect(leader).NotTo(BeEmpty())
+	u := fmt.Sprintf("http://%s:1234/github.com/cybozu-go/cke/%s", leader, failurePoint)
+	req, _ := http.NewRequest(http.MethodPut, u, strings.NewReader(code))
+	resp, err := httpClient.Do(req)
+	Expect(err).NotTo(HaveOccurred())
+	defer resp.Body.Close()
+	Expect(resp.StatusCode / 100).To(Equal(2))
+}
+
+func injectFailure(failurePoint string) {
+	setFailurePoint(failurePoint, "panic(\"cke-mtest\")")
+}
+
+func deleteFailure(failurePoint string) {
+	setFailurePoint(failurePoint, "")
 }
