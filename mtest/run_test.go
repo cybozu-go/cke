@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -207,39 +208,66 @@ func ckecliClusterSet(cluster *cke.Cluster) error {
 func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []string) bool {
 	for _, host := range controlPlanes {
 		if !status.NodeStatuses[host].Etcd.Running {
+			fmt.Printf("%s is not running\n", host)
 			return false
 		}
 		if !status.NodeStatuses[host].Etcd.HasData {
+			fmt.Printf("%s does not have data\n", host)
 			return false
 		}
 	}
 	for _, host := range workers {
 		if status.NodeStatuses[host].Etcd.Running {
+			fmt.Printf("%s is running\n", host)
 			return false
 		}
-		if status.NodeStatuses[host].Etcd.HasData {
-			return false
-		}
+		// if status.NodeStatuses[host].Etcd.HasData {
+		// 	fmt.Printf("%s has data\n", host)
+		// 	return false
+		// }
 	}
 	if len(controlPlanes) != len(status.Etcd.Members) {
+		fmt.Printf("len(controlPlanes) != len(status.Etcd.Members), %d != %d\n", len(controlPlanes), len(status.Etcd.Members))
 		return false
 	}
 	for _, host := range controlPlanes {
 		member, ok := status.Etcd.Members[host]
 		if !ok {
+			fmt.Printf("%s is not member\n", host)
 			return false
 		}
 		if member.Name == "" {
+			fmt.Printf("%s is unstarted\n", host)
 			return false
 		}
 
 		health, ok := status.Etcd.MemberHealth[host]
 		if !ok {
+			fmt.Printf("%s's health is unknown\n", host)
 			return false
 		}
 		if health != cke.EtcdNodeHealthy {
+			fmt.Printf("%s is not healthy\n", host)
 			return false
 		}
 	}
 	return true
+}
+
+func initializeControlPlane() {
+	ckecli("constraints", "set", "control-plane-count", "3")
+	cluster := getCluster()
+	for i := 0; i < 3; i++ {
+		cluster.Nodes[i].ControlPlane = true
+	}
+	ckecliClusterSet(cluster)
+	Eventually(func() bool {
+		controlPlanes := []string{node1, node2, node3}
+		workers := []string{node4, node5, node6}
+		status, err := getClusterStatus()
+		if err != nil {
+			return false
+		}
+		return checkEtcdClusterStatus(status, controlPlanes, workers)
+	}).Should(BeTrue())
 }

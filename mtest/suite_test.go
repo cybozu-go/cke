@@ -49,22 +49,7 @@ var _ = BeforeSuite(func() {
 		return err
 	}).Should(Succeed())
 
-	ckecli("constraints", "set", "control-plane-count", "3")
-	cluster := getCluster()
-	for i := 0; i < 3; i++ {
-		cluster.Nodes[i].ControlPlane = true
-	}
-	ckecliClusterSet(cluster)
-	Eventually(func() bool {
-		controlPlanes := []string{node1, node2, node3}
-		workers := []string{node4, node5, node6}
-		status, err := getClusterStatus()
-		if err != nil {
-			return false
-		}
-		return checkEtcdClusterStatus(status, controlPlanes, workers)
-	}).Should(BeTrue())
+	initializeControlPlane()
 
-	time.Sleep(time.Second)
 	fmt.Println("Begin tests...")
 })
