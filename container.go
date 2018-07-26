@@ -25,10 +25,16 @@ type ContainerEngine interface {
 	Run(name string, binds []Mount, command string) error
 	// RunSystem runs the named container as a system service.
 	RunSystem(name string, opts []string, params, extra ServiceParams) error
+	// Stop stops the named container.
+	Stop(name string) error
+	// Remove removes the named container.
+	Remove(name string) error
 	// Inspect returns ServiceStatus for the named container.
 	Inspect(name string) (*ServiceStatus, error)
 	// VolumeCreate creates a local volume.
 	VolumeCreate(name string) error
+	// VolumeRemove creates a local volume.
+	VolumeRemove(name string) error
 	// VolumeExists returns true if the named volume exists.
 	VolumeExists(name string) (bool, error)
 }
@@ -132,8 +138,27 @@ func (c docker) RunSystem(name string, opts []string, params, extra ServiceParam
 	args = append(args, params.ExtraArguments...)
 	args = append(args, extra.ExtraArguments...)
 
-	_, _, err = c.agent.Run(strings.Join(args, " "))
-	return err
+	stdout, stderr, err := c.agent.Run(strings.Join(args, " "))
+	if err != nil {
+		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+	}
+	return nil
+}
+
+func (c docker) Stop(name string) error {
+	stdout, stderr, err := c.agent.Run("docker container stop " + name)
+	if err != nil {
+		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+	}
+	return nil
+}
+
+func (c docker) Remove(name string) error {
+	stdout, stderr, err := c.agent.Run("docker container rm " + name)
+	if err != nil {
+		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+	}
+	return nil
 }
 
 func (c docker) putData(data string) (string, error) {
@@ -201,8 +226,19 @@ func (c docker) Inspect(name string) (*ServiceStatus, error) {
 }
 
 func (c docker) VolumeCreate(name string) error {
-	_, _, err := c.agent.Run("docker volume create " + name)
-	return err
+	stdout, stderr, err := c.agent.Run("docker volume create " + name)
+	if err != nil {
+		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+	}
+	return nil
+}
+
+func (c docker) VolumeRemove(name string) error {
+	stdout, stderr, err := c.agent.Run("docker volume remove " + name)
+	if err != nil {
+		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+	}
+	return nil
 }
 
 func (c docker) VolumeExists(name string) (bool, error) {

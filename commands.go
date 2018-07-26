@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/cybozu-go/cmd"
 )
@@ -106,9 +107,51 @@ func (c volumeCreateCommand) Run(ctx context.Context) error {
 }
 
 func (c volumeCreateCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
 	return Command{
 		Name:   "volume-create",
-		Target: c.volname,
+		Target: strings.Join(targets, ","),
+		Detail: c.volname,
+	}
+}
+
+type volumeRemoveCommand struct {
+	nodes   []*Node
+	agents  map[string]Agent
+	volname string
+}
+
+func (c volumeRemoveCommand) Run(ctx context.Context) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		ce := Docker(c.agents[n.Address])
+		env.Go(func(ctx context.Context) error {
+			exists, err := ce.VolumeExists(c.volname)
+			if err != nil {
+				return err
+			}
+			if exists {
+				return ce.VolumeRemove(c.volname)
+			}
+			return nil
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c volumeRemoveCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "volume-remove",
+		Target: strings.Join(targets, ","),
+		Detail: c.volname,
 	}
 }
 
@@ -129,6 +172,30 @@ func (c runContainerCommand) Run(ctx context.Context) error {
 func (c runContainerCommand) Command() Command {
 	return Command{
 		Name:   "run-container",
-		Target: c.name,
+		Target: c.node.Address,
+		Detail: c.name,
+	}
+}
+
+type stopContainerCommand struct {
+	node  *Node
+	agent Agent
+	name  string
+}
+
+func (c stopContainerCommand) Run(ctx context.Context) error {
+	ce := Docker(c.agent)
+	err := ce.Stop(c.name)
+	if err != nil {
+		return err
+	}
+	return ce.Remove(c.name)
+}
+
+func (c stopContainerCommand) Command() Command {
+	return Command{
+		Name:   "stop-container",
+		Target: c.node.Address,
+		Detail: c.name,
 	}
 }

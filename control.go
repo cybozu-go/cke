@@ -48,12 +48,12 @@ RETRY:
 	})
 
 	err = c.runLoop(ctx, leaderKey)
+	err2 := e.Resign(context.Background())
+	if err2 != nil {
+		return err2
+	}
 	if err == ErrNoLeader {
 		log.Warn("lost the leadership", nil)
-		err2 := e.Resign(ctx)
-		if err2 != nil {
-			return err2
-		}
 		goto RETRY
 	}
 	return err
@@ -136,7 +136,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return nil
 	}
 
-	status, err := GetClusterStatus(ctx, cluster)
+	status, err := c.GetClusterStatus(ctx, cluster)
 	if err != nil {
 		wait = true
 		log.Warn("failed to get cluster status", map[string]interface{}{
@@ -165,16 +165,6 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	log.Info("begin new operation", map[string]interface{}{
 		"op": op.Name(),
 	})
-
-	err = op.Cleanup(ctx)
-	if err != nil {
-		wait = true
-		log.Warn("failed to cleanup", map[string]interface{}{
-			log.FnError: err,
-			"op":        op.Name(),
-		})
-		return nil
-	}
 
 	for {
 		commander := op.NextCommand()
