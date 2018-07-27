@@ -242,6 +242,7 @@ func BootstrapCommands(targets ...string) []Command {
 func AddMemberCommands(addr string) []Command {
 	return []Command{
 		{Name: "image-pull", Target: "etcd"},
+		{Name: "stop-container", Target: addr},
 		{Name: "volume-remove", Target: addr},
 		{Name: "volume-create", Target: addr},
 		{Name: "add-etcd-member", Target: addr},
