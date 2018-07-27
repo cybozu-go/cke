@@ -1,4 +1,5 @@
 #cloud-config
+hostname: @HOST_NAME@
 users:
   - name: cybozu
     sudo: ALL=(ALL) NOPASSWD:ALL

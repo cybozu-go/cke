@@ -35,7 +35,8 @@ export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG
 GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/cke $(OUTPUT)/ckecli \
 	$(OUTPUT)/cluster.yml \
-	$(OUTPUT)/user-data.yml \
+	$(OUTPUT)/user-data_host1.yml \
+	$(OUTPUT)/user-data_host2.yml \
 	$(OUTPUT)/network1.yml \
 	$(OUTPUT)/network2.yml \
 	$(OUTPUT)/node1.ign \
@@ -76,9 +77,15 @@ $(OUTPUT)/cluster.yml: cluster.yml
 		-e 's/@UBUNTU_IMAGE@/$(UBUNTU_IMAGE)/' \
 		-e 's/@COREOS_IMAGE@/$(COREOS_IMAGE)/' $< > $@
 
-$(OUTPUT)/user-data.yml: user-data.yml
+$(OUTPUT)/user-data_host1.yml: user-data.yml
 	mkdir -p $(OUTPUT)
-	sed -e 's/@HOST1@/$(HOST1)/' $< > $@
+	sed -e 's/@HOST1@/$(HOST1)/' \
+		-e 's/@HOST_NAME@/host1/' $< > $@
+
+$(OUTPUT)/user-data_host2.yml: user-data.yml
+	mkdir -p $(OUTPUT)
+	sed -e 's/@HOST1@/$(HOST1)/' \
+		-e 's/@HOST_NAME@/host2/' $< > $@
 
 $(OUTPUT)/network1.yml: network.yml
 	mkdir -p $(OUTPUT)
