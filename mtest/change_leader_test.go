@@ -81,7 +81,7 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 		Expect(newLeader).NotTo(Equal(firstLeader))
 	})
 
-	It("should exchange node1 and node4", func() {
+	It("should remove and recover node1", func() {
 		By("Checking current leader")
 		firstLeader := strings.TrimSpace(string(ckecli("leader")))
 		Expect(firstLeader).To(Or(Equal("host1"), Equal("host2")))
@@ -89,7 +89,7 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 		By("Crashing CKE after stopping docker container")
 		injectFailure("dockerAfterContainerStop")
 
-		By("Changing definition of node1")
+		By("Remove node1 from control plane")
 		ckecli("constraints", "set", "control-plane-count", "2")
 		cluster := getCluster()
 		cluster.Nodes[0].ControlPlane = false
@@ -109,15 +109,15 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 
-		By("Changing definition of node4")
+		By("Add node1 as control plane")
 		ckecli("constraints", "set", "control-plane-count", "3")
-		cluster.Nodes[3].ControlPlane = true
+		cluster.Nodes[0].ControlPlane = true
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
 		Eventually(func() bool {
-			controlPlanes := []string{node2, node3, node4}
-			workers := []string{node1, node5, node6}
+			controlPlanes := []string{node1, node2, node3}
+			workers := []string{node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
 				return false
