@@ -125,7 +125,7 @@ func runCke() error {
 			return err
 		}
 
-		err = sess.Run("sudo systemd-run --unit=cke.service --setenv=GOFAIL_HTTP=0.0.0.0:1234 /data/cke -config /etc/cke.yml -interval 10s")
+		err = sess.Run("sudo systemd-run --unit=cke.service --setenv=GOFAIL_HTTP=0.0.0.0:1234 /data/cke -config /etc/cke.yml -interval 10s -session-ttl 5s")
 		sess.Close()
 		if err != nil {
 			return err
