@@ -271,6 +271,7 @@ func initializeControlPlane() {
 		if err != nil {
 			return false
 		}
+		defer status.Destroy()
 		return checkEtcdClusterStatus(status, controlPlanes, workers)
 	}).Should(BeTrue())
 }
