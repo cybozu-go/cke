@@ -69,7 +69,7 @@ $(OUTPUT)/etcd $(OUTPUT)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
 
 $(OUTPUT)/cke $(OUTPUT)/ckecli:
 	mkdir -p $(OUTPUT)
-	cd ..; gofail enable; GOBIN=$(realpath $(OUTPUT)) go install ./cmd/$(notdir $@) || gofail disable; gofail disable
+	cd ..; go get ./... && gofail enable; GOBIN=$(realpath $(OUTPUT)) go install ./cmd/$(notdir $@) || gofail disable; gofail disable
 
 $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)
@@ -177,10 +177,10 @@ clean:
 
 setup:
 	go get -t -d ./...
-	cd $$GOPATH/src/github.com/coreos/etcd; git checkout ab19dee5cef9fdc203fcbd93d0cf3c588338b8cc
+	cd $$GOPATH/src/github.com/coreos/etcd; git checkout -qf ab19dee5cef9fdc203fcbd93d0cf3c588338b8cc
 	go get -u github.com/onsi/ginkgo/ginkgo
 	go get -u github.com/onsi/gomega/...
-	go get -u github.com/cybozu-go/placemat
+	go get -u github.com/cybozu-go/placemat/...
 	go get -u github.com/coreos/gofail/...
 
 .PHONY:	all clean setup test
