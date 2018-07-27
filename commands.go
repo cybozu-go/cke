@@ -185,10 +185,18 @@ type stopContainerCommand struct {
 
 func (c stopContainerCommand) Run(ctx context.Context) error {
 	ce := Docker(c.agent)
-	err := ce.Stop(c.name)
+	exists, err := ce.Exists(c.name)
 	if err != nil {
 		return err
 	}
+	if !exists {
+		return nil
+	}
+	err = ce.Stop(c.name)
+	if err != nil {
+		return err
+	}
+	// gofail: var dockerAfterContainerStop struct{}
 	return ce.Remove(c.name)
 }
 

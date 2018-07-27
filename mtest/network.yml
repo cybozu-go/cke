@@ -1,0 +1,14 @@
+version: 1
+config:
+- type: physical
+  name: ens3
+  subnets:
+  - type: static
+    address: @HOST@
+    netmask: 255.255.255.0
+    routes:
+    - network: 0.0.0.0
+      netmask: 0.0.0.0
+      gateway: @BRIDGE_ADDRESS@
+- type: nameserver
+  address: [8.8.8.8, 1.1.1.1]

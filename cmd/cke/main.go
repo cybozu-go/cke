@@ -15,6 +15,7 @@ import (
 var (
 	flgConfigPath = flag.String("config", "/etc/cke.yml", "configuration file path")
 	flgInterval   = flag.String("interval", "10m", "check interval")
+	flgSessionTTL = flag.String("session-ttl", "60s", "leader session's TTL")
 )
 
 func loadConfig(p string) (*cke.EtcdConfig, error) {
@@ -42,6 +43,11 @@ func main() {
 		log.ErrorExit(err)
 	}
 
+	ttl, err := time.ParseDuration(*flgSessionTTL)
+	if err != nil {
+		log.ErrorExit(err)
+	}
+
 	cfg, err := loadConfig(*flgConfigPath)
 	if err != nil {
 		log.ErrorExit(err)
@@ -53,7 +59,7 @@ func main() {
 	}
 	defer etcd.Close()
 
-	session, err := concurrency.NewSession(etcd)
+	session, err := concurrency.NewSession(etcd, concurrency.WithTTL(int(ttl.Seconds())))
 	if err != nil {
 		log.ErrorExit(err)
 	}

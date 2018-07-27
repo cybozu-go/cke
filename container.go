@@ -25,6 +25,8 @@ type ContainerEngine interface {
 	Run(name string, binds []Mount, command string) error
 	// RunSystem runs the named container as a system service.
 	RunSystem(name string, opts []string, params, extra ServiceParams) error
+	// Exists returns if named container exists.
+	Exists(name string) (bool, error)
 	// Stop stops the named container.
 	Stop(name string) error
 	// Remove removes the named container.
@@ -176,12 +178,20 @@ func (c docker) putData(data string) (string, error) {
 }
 
 func (c docker) getID(name string) (string, error) {
-	dockerPS := "docker ps -a --filter name=%s --format {{.ID}}"
+	dockerPS := "docker ps -a --no-trunc --filter name=^/%s$ --format {{.ID}}"
 	data, _, err := c.agent.Run(fmt.Sprintf(dockerPS, name))
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(string(data)), nil
+}
+
+func (c docker) Exists(name string) (bool, error) {
+	id, err := c.getID(name)
+	if err != nil {
+		return false, err
+	}
+	return len(id) != 0, nil
 }
 
 func (c docker) Inspect(name string) (*ServiceStatus, error) {
