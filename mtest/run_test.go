@@ -276,9 +276,16 @@ func initializeControlPlane() {
 }
 
 func setFailurePoint(failurePoint, code string) {
-	leader := ckecli("leader")
-	Expect(leader).NotTo(BeEmpty())
-	u := fmt.Sprintf("http://%s:1234/github.com/cybozu-go/cke/%s", leader, failurePoint)
+	leader := strings.TrimSpace(string(ckecli("leader")))
+	Expect(leader).To(Or(Equal("host1"), Equal("host2")))
+	var leaderAddress string
+	if leader == "host1" {
+		leaderAddress = host1
+	} else {
+		leaderAddress = host2
+	}
+
+	u := fmt.Sprintf("http://%s:1234/github.com/cybozu-go/cke/%s", leaderAddress, failurePoint)
 	req, _ := http.NewRequest(http.MethodPut, u, strings.NewReader(code))
 	resp, err := httpClient.Do(req)
 	Expect(err).NotTo(HaveOccurred())
