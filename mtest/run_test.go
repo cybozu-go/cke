@@ -257,6 +257,19 @@ func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []
 	return true
 }
 
+func setupCKE() {
+	err := stopCke()
+	Expect(err).NotTo(HaveOccurred())
+	err = runCke()
+	Expect(err).NotTo(HaveOccurred())
+
+	// wait cke
+	Eventually(func() error {
+		_, _, err := execAt(host1, "/data/ckecli", "history")
+		return err
+	}).Should(Succeed())
+}
+
 func initializeControlPlane() {
 	ckecli("constraints", "set", "control-plane-count", "3")
 	cluster := getCluster()

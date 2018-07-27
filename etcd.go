@@ -189,18 +189,21 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		return imagePullCommand{[]*Node{node}, o.agents, "etcd"}
 	case 1:
 		o.step++
-		return volumeRemoveCommand{[]*Node{node}, o.agents, volname}
+		return stopContainerCommand{node, o.agents[node.Address], etcdContainerName}
 	case 2:
 		o.step++
-		return volumeCreateCommand{[]*Node{node}, o.agents, volname}
+		return volumeRemoveCommand{[]*Node{node}, o.agents, volname}
 	case 3:
+		o.step++
+		return volumeCreateCommand{[]*Node{node}, o.agents, volname}
+	case 4:
 		o.step++
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
 		}
 		return addEtcdMemberCommand{o.endpoints, node, o.agents[node.Address], opts, extra}
-	case 4:
+	case 5:
 		o.step = 0
 		o.nodeIndex++
 		endpoints := []string{"http://" + node.Address + ":2379"}
@@ -348,6 +351,7 @@ func (c removeEtcdMemberCommand) Run(ctx context.Context) error {
 			return err
 		}
 	}
+	// gofail: var etcdAfterMemberRemove struct{}
 	return nil
 }
 

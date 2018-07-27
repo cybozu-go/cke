@@ -38,16 +38,7 @@ var _ = BeforeSuite(func() {
 
 	time.Sleep(time.Second)
 
-	err = stopCke()
-	Expect(err).NotTo(HaveOccurred())
-	err = runCke()
-	Expect(err).NotTo(HaveOccurred())
-
-	// wait cke
-	Eventually(func() error {
-		_, _, err := execAt(host1, "/data/ckecli", "history")
-		return err
-	}).Should(Succeed())
+	setupCKE()
 
 	initializeControlPlane()
 
