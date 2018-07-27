@@ -152,4 +152,30 @@ var _ = Describe("etcd strategy", func() {
 		defer status.Destroy()
 		Expect(status.NodeStatuses[node2].Etcd.HasData).To(BeFalse())
 	})
+
+	It("should remove unhealthy node1 from etcd cluster and add node4 in appropriate order", func() {
+		By("Stopping etcd in node1 and changing definition of node1/node4 at once")
+		stopCke()
+		execSafeAt(node1, "docker", "stop", "etcd")
+		execSafeAt(node1, "docker", "rm", "etcd")
+		cluster := getCluster()
+		cluster.Nodes[0].ControlPlane = false
+		cluster.Nodes[1].ControlPlane = true
+		cluster.Nodes[2].ControlPlane = true
+		cluster.Nodes[3].ControlPlane = true
+		ckecliClusterSet(cluster)
+		runCke()
+
+		By("Checking cluster status")
+		Eventually(func() bool {
+			controlPlanes := []string{node2, node3, node4}
+			workers := []string{node1, node5, node6}
+			status, err := getClusterStatus()
+			if err != nil {
+				return false
+			}
+			defer status.Destroy()
+			return checkEtcdClusterStatus(status, controlPlanes, workers)
+		}).Should(BeTrue())
+	})
 })
