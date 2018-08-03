@@ -33,7 +33,6 @@ Install kubernetes applications
 After kubernetes bootstrapped, CKE deploys the following applications:
 
 - `kube-proxy` as a DaemonSet
-- CNI plugin as a DaemonSet
 - CoreDNS
 
 Unchangeable features
