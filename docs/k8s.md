@@ -10,7 +10,7 @@ Cluster bootstrap
 After CKE has deployed an [etcd cluster](etcd.md), CKE bootstraps a kubernetes cluster.
 Control plane applications of kubernetes cluster (apiserver, controller-manager and scheduler)
 do not deployed as self-hosted.
-These applications are deployed and maintained by CKE as a simple architecture.
+These applications are deployed and maintained by CKE for simplicity.
 
 In order to construct HA control plane, CKE deploys a [reverse proxy][] daemon to each nodes.
 Reverse proxy is responsible for forwarding to apiservers on the control plane nodes.
