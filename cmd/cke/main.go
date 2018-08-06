@@ -8,6 +8,7 @@ import (
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cmd"
+	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
 	"gopkg.in/yaml.v2"
 )
@@ -18,7 +19,7 @@ var (
 	flgSessionTTL = flag.String("session-ttl", "60s", "leader session's TTL")
 )
 
-func loadConfig(p string) (*cke.EtcdConfig, error) {
+func loadConfig(p string) (*etcdutil.Config, error) {
 	f, err := os.Open(p)
 	if err != nil {
 		return nil, err
@@ -53,7 +54,7 @@ func main() {
 		log.ErrorExit(err)
 	}
 
-	etcd, err := cfg.Client()
+	etcd, err := etcdutil.NewClient(cfg)
 	if err != nil {
 		log.ErrorExit(err)
 	}
