@@ -6,10 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"testing"
-	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/clientv3/namespace"
+	"github.com/cybozu-go/etcdutil"
 )
 
 const (
@@ -56,8 +55,6 @@ func TestMain(m *testing.M) {
 }
 
 func newEtcdClient(t *testing.T) *clientv3.Client {
-	prefix := t.Name() + "/"
-
 	var clientURL string
 	circleci := os.Getenv("CIRCLECI") == "true"
 	if circleci {
@@ -65,15 +62,13 @@ func newEtcdClient(t *testing.T) *clientv3.Client {
 	} else {
 		clientURL = etcdClientURL
 	}
-	c, err := clientv3.New(clientv3.Config{
-		Endpoints:   []string{clientURL},
-		DialTimeout: 2 * time.Second,
-	})
+
+	cfg := etcdutil.NewConfig(t.Name() + "/")
+	cfg.Endpoints = []string{clientURL}
+
+	etcd, err := etcdutil.NewClient(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.KV = namespace.NewKV(c.KV, prefix)
-	c.Watcher = namespace.NewWatcher(c.Watcher, prefix)
-	c.Lease = namespace.NewLease(c.Lease, prefix)
-	return c
+	return etcd
 }
