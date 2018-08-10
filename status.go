@@ -58,6 +58,7 @@ func (cs *ClusterStatus) Destroy() {
 // NodeStatus status of a node.
 type NodeStatus struct {
 	Etcd       EtcdStatus
+	Rivers     ServiceStatus
 	APIServer  ServiceStatus
 	Controller ServiceStatus
 	Scheduler  ServiceStatus
@@ -163,8 +164,14 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 	if err != nil {
 		return nil, err
 	}
-
 	status.Etcd = EtcdStatus{*ss, ok}
+
+	// rivers status
+	ss, err = ce.Inspect("rivers")
+	if err != nil {
+		return nil, err
+	}
+	status.Rivers = *ss
 
 	// TODO: get statuses of other services.
 
