@@ -3,19 +3,21 @@ package cke
 import "strings"
 
 type riversBootOp struct {
-	nodes  []*Node
-	agents map[string]Agent
-	params ServiceParams
-	step   int
+	nodes     []*Node
+	agents    map[string]Agent
+	params    ServiceParams
+	step      int
+	nodeIndex int
 }
 
 // RiversBootOp returns an Operator to bootstrap rivers cluster.
 func RiversBootOp(nodes []*Node, agents map[string]Agent, params ServiceParams) Operator {
 	return &riversBootOp{
-		nodes:  nodes,
-		agents: agents,
-		params: params,
-		step:   0,
+		nodes:     nodes,
+		agents:    agents,
+		params:    params,
+		step:      0,
+		nodeIndex: 0,
 	}
 }
 
@@ -37,12 +39,18 @@ func (o *riversBootOp) NextCommand() Commander {
 		o.step++
 		return makeDirCommand{o.nodes, o.agents, "/var/log/rivers"}
 	case 2:
-		o.step++
+		if o.nodeIndex >= len(o.nodes) {
+			return nil
+		}
+
+		target := o.nodes[o.nodeIndex]
+		o.nodeIndex++
+
 		var upstreams []string
 		for _, n := range o.nodes {
 			upstreams = append(upstreams, n.Address+":8080")
 		}
-		return runContainersCommand{o.nodes, o.agents, "rivers", opts, riversParams(upstreams), extra}
+		return runContainerCommand{target, o.agents[target.Address], "rivers", opts, riversParams(upstreams), extra}
 	default:
 		return nil
 	}
