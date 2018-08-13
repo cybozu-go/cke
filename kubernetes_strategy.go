@@ -30,6 +30,16 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return APIServerBootOp(target, cs.Agents, c.Options.APIServer, c.ServiceSubnet)
 	}
 
-	return nil
+	// (3) Create /etc/kubernetes/kubeconfig-controller-manager
+	target = []*Node{}
+	for _, n := range cpNodes {
+		if !cs.NodeStatuses[n.Address].ControllerManager.Running {
+			target = append(target, n)
+		}
+	}
+	if len(target) > 0 {
+		return ControllerManagerBootOp(target, cs.Agents, c.Options.ControllerManager, c.ServiceSubnet)
+	}
 
+	return nil
 }

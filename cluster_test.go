@@ -34,7 +34,7 @@ options:
       - source: src1
         destination: target1
         read_only: true
-  kube-controller:
+  kube-controller-manager:
     extra_env:
       env1: val1
   kube-scheduler:
@@ -102,8 +102,8 @@ rbac: true
 	if !reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true}}) {
 		t.Error(`!reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true}})`)
 	}
-	if c.Options.Controller.ExtraEnvvar["env1"] != "val1" {
-		t.Error(`c.Options.Controller.ExtraEnvvar["env1"] != "val1"`)
+	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {
+		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
 	}
 	if c.Options.Kubelet.Domain != "my.domain" {
 		t.Error(`c.Options.Kubelet.Domain != "my.domain"`)

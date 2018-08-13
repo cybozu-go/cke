@@ -49,13 +49,13 @@ type KubeletParams struct {
 
 // Options is a set of optional parameters for k8s components.
 type Options struct {
-	Etcd       EtcdParams    `json:"etcd"            yaml:"etcd"`
-	Rivers     ServiceParams `json:"rivers"          yaml:"rivers"`
-	APIServer  ServiceParams `json:"kube-api"        yaml:"kube-api"`
-	Controller ServiceParams `json:"kube-controller" yaml:"kube-controller"`
-	Scheduler  ServiceParams `json:"kube-scheduler"  yaml:"kube-scheduler"`
-	Proxy      ServiceParams `json:"kube-proxy"      yaml:"kube-proxy"`
-	Kubelet    KubeletParams `json:"kubelet"         yaml:"kubelet"`
+	Etcd              EtcdParams    `json:"etcd"                    yaml:"etcd"`
+	Rivers            ServiceParams `json:"rivers"		        yaml:"rivers"`
+	APIServer         ServiceParams `json:"kube-api"                yaml:"kube-api"`
+	ControllerManager ServiceParams `json:"kube-controller-manager" yaml:"kube-controller-manager"`
+	Scheduler         ServiceParams `json:"kube-scheduler"          yaml:"kube-scheduler"`
+	Proxy             ServiceParams `json:"kube-proxy"              yaml:"kube-proxy"`
+	Kubelet           KubeletParams `json:"kubelet"                 yaml:"kubelet"`
 }
 
 // Cluster is a set of configurations for a etcd/Kubernetes cluster.
@@ -145,7 +145,7 @@ func validateOptions(opts Options) error {
 	if err != nil {
 		return err
 	}
-	err = v(opts.Controller.ExtraBinds)
+	err = v(opts.ControllerManager.ExtraBinds)
 	if err != nil {
 		return err
 	}

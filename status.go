@@ -55,14 +55,14 @@ func (cs *ClusterStatus) Destroy() {
 
 // NodeStatus status of a node.
 type NodeStatus struct {
-	Etcd       EtcdStatus
-	Rivers     ServiceStatus
-	APIServer  ServiceStatus
-	Controller ServiceStatus
-	Scheduler  ServiceStatus
-	Proxy      ServiceStatus
-	Kubelet    KubeletStatus
-	Labels     map[string]string // are labels for k8s Node resource.
+	Etcd              EtcdStatus
+	Rivers            ServiceStatus
+	APIServer         ServiceStatus
+	ControllerManager ServiceStatus
+	Scheduler         ServiceStatus
+	Proxy             ServiceStatus
+	Kubelet           KubeletStatus
+	Labels            map[string]string // are labels for k8s Node resource.
 }
 
 // ServiceStatus represents statuses of a service.
@@ -177,6 +177,13 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 		return nil, err
 	}
 	status.APIServer = *ss
+
+	// controller-manager status
+	ss, err = ce.Inspect("kube-controller-manager")
+	if err != nil {
+		return nil, err
+	}
+	status.ControllerManager = *ss
 
 	// TODO: get statuses of other services.
 

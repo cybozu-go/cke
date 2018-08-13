@@ -62,6 +62,43 @@ func (c makeDirCommand) Command() Command {
 	}
 }
 
+type makeFileCommand struct {
+	nodes  []*Node
+	agents map[string]Agent
+	source string
+	target string
+}
+
+func (c makeFileCommand) Run(ctx context.Context) error {
+	env := cmd.NewEnvironment(ctx)
+	targetDir := filepath.Dir(c.target)
+	binds := []Mount{{
+		Source:      targetDir,
+		Destination: filepath.Join("/mnt", targetDir),
+	}}
+	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", targetDir)
+	ddCommand := "dd of=" + filepath.Join("/mnt", c.target)
+	for _, n := range c.nodes {
+		ce := Docker(c.agents[n.Address])
+		env.Go(func(ctx context.Context) error {
+			err := ce.Run("tools", binds, mkdirCommand)
+			if err != nil {
+				return err
+			}
+			return ce.RunWithInput("tools", binds, ddCommand, c.source)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c makeFileCommand) Command() Command {
+	return Command{
+		Name:   "make-file",
+		Target: c.target,
+	}
+}
+
 type imagePullCommand struct {
 	nodes  []*Node
 	agents map[string]Agent
