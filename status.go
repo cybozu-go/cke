@@ -3,12 +3,12 @@ package cke
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
@@ -20,9 +20,8 @@ type EtcdNodeHealth int
 
 // health statuses of a etcd node.
 const (
-	EtcdNodeUnreachable EtcdNodeHealth = iota
+	EtcdNodeUnhealthy EtcdNodeHealth = iota
 	EtcdNodeHealthy
-	EtcdNodeUnhealthy
 )
 
 // EtcdClusterStatus is the status of the etcd cluster.
@@ -34,12 +33,11 @@ type EtcdClusterStatus struct {
 // ClusterStatus represents the working cluster status.
 // The structure reflects Cluster, of course.
 type ClusterStatus struct {
-	Name          string
-	NodeStatuses  map[string]*NodeStatus // keys are IP address strings.
-	Agents        map[string]Agent       // ditto.
-	ServiceSubnet *net.IPNet
-	RBAC          bool // true if RBAC is enabled
-	Client        *cmd.HTTPClient
+	Name         string
+	NodeStatuses map[string]*NodeStatus // keys are IP address strings.
+	Agents       map[string]Agent       // ditto.
+	RBAC         bool                   // true if RBAC is enabled
+	Client       *cmd.HTTPClient
 
 	Etcd EtcdClusterStatus
 	// TODO:
@@ -173,6 +171,13 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 	}
 	status.Rivers = *ss
 
+	// apiserver status
+	ss, err = ce.Inspect("kube-apiserver")
+	if err != nil {
+		return nil, err
+	}
+	status.APIServer = *ss
+
 	// TODO: get statuses of other services.
 
 	return status, nil
@@ -185,6 +190,7 @@ func (c Controller) getEtcdMembers(ctx context.Context, nodes []*Node) (map[stri
 			endpoints = append(endpoints, fmt.Sprintf("http://%s:2379", n.Address))
 		}
 	}
+
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: 2 * time.Second,
@@ -228,17 +234,14 @@ func (c Controller) getEtcdHealth(ctx context.Context, address string) EtcdNodeH
 		DialTimeout: 2 * time.Second,
 	})
 	if err != nil {
-		return EtcdNodeUnreachable
+		return EtcdNodeUnhealthy
 	}
 	defer cli.Close()
 
-	status, err := cli.Status(ctx, endpoints[0])
-	if err != nil {
-		return EtcdNodeUnreachable
-	}
-
-	if len(status.Errors) == 0 {
+	_, err = cli.Get(ctx, "health")
+	if err == nil || err == rpctypes.ErrPermissionDenied {
 		return EtcdNodeHealthy
 	}
+
 	return EtcdNodeUnhealthy
 }

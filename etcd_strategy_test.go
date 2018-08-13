@@ -135,8 +135,8 @@ func UnstartedMembers() EtcdTestCluster {
 			MemberHealth: map[string]EtcdNodeHealth{
 				"10.0.0.11": EtcdNodeHealthy,
 				"10.0.0.12": EtcdNodeHealthy,
-				"10.0.0.13": EtcdNodeUnreachable,
-				"10.0.0.14": EtcdNodeUnreachable,
+				"10.0.0.13": EtcdNodeUnhealthy,
+				"10.0.0.14": EtcdNodeUnhealthy,
 			},
 		},
 	}
@@ -164,8 +164,8 @@ func NewlyControlPlane() EtcdTestCluster {
 			MemberHealth: map[string]EtcdNodeHealth{
 				"10.0.0.11": EtcdNodeHealthy,
 				"10.0.0.12": EtcdNodeHealthy,
-				"10.0.0.13": EtcdNodeUnreachable,
-				"10.0.0.14": EtcdNodeUnreachable,
+				"10.0.0.13": EtcdNodeUnhealthy,
+				"10.0.0.14": EtcdNodeUnhealthy,
 			},
 		},
 	}
@@ -221,7 +221,7 @@ func HealthyNonControlPlane() EtcdTestCluster {
 				"10.0.0.11": EtcdNodeHealthy,
 				"10.0.0.12": EtcdNodeHealthy,
 				"10.0.0.13": EtcdNodeHealthy,
-				"10.0.0.14": EtcdNodeUnreachable,
+				"10.0.0.14": EtcdNodeUnhealthy,
 			},
 		},
 	}
