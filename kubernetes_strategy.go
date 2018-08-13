@@ -19,7 +19,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return RiversBootOp(target, cs.Agents, c.Options.Rivers)
 	}
 
-	// (2) Run APIServers
+	// (2) Run kube-apiserver
 	target = []*Node{}
 	for _, n := range cpNodes {
 		if !cs.NodeStatuses[n.Address].APIServer.Running {
@@ -30,7 +30,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return APIServerBootOp(target, cs.Agents, c.Options.APIServer, c.ServiceSubnet)
 	}
 
-	// (3) Create /etc/kubernetes/kubeconfig-controller-manager
+	// (3) Run kube-controller-manager
 	target = []*Node{}
 	for _, n := range cpNodes {
 		if !cs.NodeStatuses[n.Address].ControllerManager.Running {
@@ -39,6 +39,17 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	}
 	if len(target) > 0 {
 		return ControllerManagerBootOp(target, cs.Agents, c.Options.ControllerManager, c.ServiceSubnet)
+	}
+
+	// (3) Run kube-scheduler
+	target = []*Node{}
+	for _, n := range cpNodes {
+		if !cs.NodeStatuses[n.Address].Scheduler.Running {
+			target = append(target, n)
+		}
+	}
+	if len(target) > 0 {
+		return SchedulerBootOp(target, cs.Agents, c.Options.Scheduler, c.ServiceSubnet)
 	}
 
 	return nil

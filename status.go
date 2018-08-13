@@ -171,19 +171,26 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 	}
 	status.Rivers = *ss
 
-	// apiserver status
+	// kube-apiserver status
 	ss, err = ce.Inspect("kube-apiserver")
 	if err != nil {
 		return nil, err
 	}
 	status.APIServer = *ss
 
-	// controller-manager status
+	// kube-controller-manager status
 	ss, err = ce.Inspect("kube-controller-manager")
 	if err != nil {
 		return nil, err
 	}
 	status.ControllerManager = *ss
+
+	// kuber-scheduler status
+	ss, err = ce.Inspect("kube-scheduler")
+	if err != nil {
+		return nil, err
+	}
+	status.Scheduler = *ss
 
 	// TODO: get statuses of other services.
 

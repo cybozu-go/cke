@@ -29,6 +29,14 @@ type controllerManagerBootOp struct {
 	nodeIndex int
 }
 
+type schedulerBootOp struct {
+	nodes     []*Node
+	agents    map[string]Agent
+	params    ServiceParams
+	step      int
+	nodeIndex int
+}
+
 // RiversBootOp returns an Operator to bootstrap rivers cluster.
 func RiversBootOp(nodes []*Node, agents map[string]Agent, params ServiceParams) Operator {
 	return &riversBootOp{
@@ -117,6 +125,8 @@ func (o *apiServerBootOp) NextCommand() Commander {
 	case 2:
 		opts := []string{
 			"--entrypoint=/usr/local/kubernetes/bin/kube-apiserver",
+
+			// TODO pass keys from CKE
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
 		}
 		if o.nodeIndex >= len(o.nodes) {
@@ -139,8 +149,11 @@ func (o *apiServerBootOp) NextCommand() Commander {
 func (o *apiServerBootOp) apiServerParams(etcdServers []string, addr string) ServiceParams {
 	args := []string{
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
+
+		// TODO use TLS
 		"--insecure-bind-address=0.0.0.0",
 		"--insecure-port=8080",
+
 		"--advertise-address=" + addr,
 		"--service-cluster-ip-range=" + o.serviceSubnet,
 		"--audit-log-path=/var/log/kubernetes/apiserver/audit.log",
@@ -177,7 +190,7 @@ func (o *controllerManagerBootOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return makeFileCommand{o.nodes, o.agents, kubeconfigContent(), "/etc/kubernetes/controller-manager/kubeconfig"}
+		return makeFileCommand{o.nodes, o.agents, controllerManagerKubeconfig(), "/etc/kubernetes/controller-manager/kubeconfig"}
 	case 1:
 		o.step++
 		return imagePullCommand{o.nodes, o.agents, "kube-controller-manager"}
@@ -205,7 +218,7 @@ func (o *controllerManagerBootOp) controllerManagerParams() ServiceParams {
 	args := []string{
 
 		"--kubeconfig=/etc/kubernetes/controller-manager/kubeconfig",
-		"--log-dir=/var/log/kubernetes/controller-manager/etc/hostname",
+		"--log-dir=/var/log/kubernetes/controller-manager",
 	}
 	return ServiceParams{
 		ExtraArguments: args,
@@ -217,17 +230,62 @@ func (o *controllerManagerBootOp) controllerManagerParams() ServiceParams {
 	}
 }
 
-func kubeconfigContent() string {
-	return `apiVersion: v1
-clusters:
-- name: local
-  cluster:
-    server: http://localhost:18080
-users:
-- name: controller-manager
-contexts:
-- context:
-    cluster: local
-    user: controller-manager
-`
+// SchedulerBootOp returns an Operator to bootstrap Scheduler cluster.
+func SchedulerBootOp(nodes []*Node, agents map[string]Agent, params ServiceParams, serviceSubnet string) Operator {
+	return &schedulerBootOp{
+		nodes:     nodes,
+		agents:    agents,
+		params:    params,
+		step:      0,
+		nodeIndex: 0,
+	}
+}
+
+func (o *schedulerBootOp) Name() string {
+	return "scheduler-bootstrap"
+}
+
+func (o *schedulerBootOp) NextCommand() Commander {
+	extra := o.params
+
+	switch o.step {
+	case 0:
+		o.step++
+		return makeFileCommand{o.nodes, o.agents, schedulerKubeconfig(), "/etc/kubernetes/scheduler/kubeconfig"}
+	case 1:
+		o.step++
+		return imagePullCommand{o.nodes, o.agents, "kube-scheduler"}
+	case 2:
+		o.step++
+		return makeDirCommand{o.nodes, o.agents, "/var/log/kubernetes/scheduler"}
+	case 3:
+		opts := []string{
+			"--entrypoint=/usr/local/kubernetes/bin/kube-scheduler",
+		}
+		if o.nodeIndex >= len(o.nodes) {
+			return nil
+		}
+
+		target := o.nodes[o.nodeIndex]
+		o.nodeIndex++
+
+		return runContainerCommand{target, o.agents[target.Address], "kube-scheduler", opts, o.schedulerParams(), extra}
+	default:
+		return nil
+	}
+}
+
+func (o *schedulerBootOp) schedulerParams() ServiceParams {
+	args := []string{
+		"--kubeconfig=/etc/kubernetes/scheduler/kubeconfig",
+		"--log-dir=/var/log/kubernetes/scheduler",
+	}
+	return ServiceParams{
+		ExtraArguments: args,
+		ExtraBinds: []Mount{
+			{"/etc/hostname", "/etc/machine-id", true},
+			{"/etc/kubernetes/scheduler", "/etc/kubernetes/scheduler", true},
+			{"/var/log/kubernetes/scheduler", "/var/log/kubernetes/scheduler", false},
+		},
+	}
 }
