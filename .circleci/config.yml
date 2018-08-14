@@ -21,10 +21,7 @@ jobs:
           command: |
             echo $GCLOUD_SERVICE_ACCOUNT > account.json
             gcloud auth activate-service-account --key-file=account.json
-      - run:
-          name: Run multi-hosts test
-          command: ./bin/run-mtest.sh
-          no_output_timeout: 20m
+      - run: ./bin/run-mtest.sh
 
 workflows:
   version: 2
