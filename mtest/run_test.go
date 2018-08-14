@@ -3,6 +3,7 @@ package mtest
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -19,6 +20,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 	"golang.org/x/crypto/ssh"
 	yaml "gopkg.in/yaml.v2"
+	"k8s.io/kubernetes/pkg/apis/core"
 )
 
 const sshTimeout = 3 * time.Minute
@@ -300,6 +302,26 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 			}
 			if string(stdout) != "ok" {
 				return false
+			}
+		}
+
+		stdout, _, err := execAt(host, "curl", "localhost:18080/api/v1/componentstatuses")
+		if err != nil {
+			fmt.Println(err)
+			return false
+		}
+		var csl core.ComponentStatusList
+		err = json.NewDecoder(bytes.NewReader(stdout)).Decode(&csl)
+		if err != nil {
+			fmt.Println(err)
+			return false
+		}
+		for _, item := range csl.Items {
+			for _, condition := range item.Conditions {
+				if condition.Type != core.ComponentHealthy {
+					fmt.Printf("%s is unhealthy on %s\n", item.Name, host)
+					return false
+				}
 			}
 		}
 	}
