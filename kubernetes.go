@@ -337,7 +337,7 @@ func (o *riversStopOp) NextCommand() Commander {
 	node := o.nodes[o.nodeIndex]
 	o.nodeIndex++
 
-	return stopContainerCommand{node, o.agents[node.Address], "kube-apiserver"}
+	return stopContainerCommand{node, o.agents[node.Address], "rivers"}
 }
 
 // APIServerStopOp returns an Operator to bootstrap Scheduler cluster.
