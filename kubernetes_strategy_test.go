@@ -14,11 +14,6 @@ type KubernetesTestConfiguration struct {
 	Schedulers         []string
 }
 
-type CommandInfo struct {
-	Name   string
-	Target string
-}
-
 func (c *KubernetesTestConfiguration) Cluster() *Cluster {
 	var nodes = make([]*Node, len(c.CpNodes)+len(c.NonCpNodes))
 	for i, n := range c.CpNodes {
@@ -58,19 +53,19 @@ func testKubernetesDecideToDo(t *testing.T) {
 	cases := []struct {
 		Name     string
 		Input    KubernetesTestConfiguration
-		Commands []CommandInfo
+		Commands []Command
 	}{
 		{
 			Name: "Bootstrap Rivers",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 			},
-			Commands: []CommandInfo{
-				{"image-pull", "rivers"},
-				{"mkdir", "/var/log/rivers"},
-				{"run-container", "10.0.0.11"},
-				{"run-container", "10.0.0.12"},
-				{"run-container", "10.0.0.13"},
+			Commands: []Command{
+				{"image-pull", "rivers", ""},
+				{"mkdir", "/var/log/rivers", ""},
+				{"run-container", "10.0.0.11", ""},
+				{"run-container", "10.0.0.12", ""},
+				{"run-container", "10.0.0.13", ""},
 			},
 		},
 		{
@@ -79,12 +74,12 @@ func testKubernetesDecideToDo(t *testing.T) {
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers: cpNodes,
 			},
-			Commands: []CommandInfo{
-				{"image-pull", "kube-apiserver"},
-				{"mkdir", "/var/log/kubernetes/apiserver"},
-				{"run-container", "10.0.0.11"},
-				{"run-container", "10.0.0.12"},
-				{"run-container", "10.0.0.13"},
+			Commands: []Command{
+				{"image-pull", "kube-apiserver", ""},
+				{"mkdir", "/var/log/kubernetes/apiserver", ""},
+				{"run-container", "10.0.0.11", ""},
+				{"run-container", "10.0.0.12", ""},
+				{"run-container", "10.0.0.13", ""},
 			},
 		},
 		{
@@ -93,13 +88,13 @@ func testKubernetesDecideToDo(t *testing.T) {
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers: cpNodes, APIServers: cpNodes,
 			},
-			Commands: []CommandInfo{
-				{"make-file", "/etc/kubernetes/controller-manager/kubeconfig"},
-				{"image-pull", "kube-controller-manager"},
-				{"mkdir", "/var/log/kubernetes/controller-manager"},
-				{"run-container", "10.0.0.11"},
-				{"run-container", "10.0.0.12"},
-				{"run-container", "10.0.0.13"},
+			Commands: []Command{
+				{"make-file", "/etc/kubernetes/controller-manager/kubeconfig", ""},
+				{"image-pull", "kube-controller-manager", ""},
+				{"mkdir", "/var/log/kubernetes/controller-manager", ""},
+				{"run-container", "10.0.0.11", ""},
+				{"run-container", "10.0.0.12", ""},
+				{"run-container", "10.0.0.13", ""},
 			},
 		},
 		{
@@ -108,13 +103,13 @@ func testKubernetesDecideToDo(t *testing.T) {
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers: cpNodes, APIServers: cpNodes, ControllerManagers: cpNodes,
 			},
-			Commands: []CommandInfo{
-				{"make-file", "/etc/kubernetes/scheduler/kubeconfig"},
-				{"image-pull", "kube-scheduler"},
-				{"mkdir", "/var/log/kubernetes/scheduler"},
-				{"run-container", "10.0.0.11"},
-				{"run-container", "10.0.0.12"},
-				{"run-container", "10.0.0.13"},
+			Commands: []Command{
+				{"make-file", "/etc/kubernetes/scheduler/kubeconfig", ""},
+				{"image-pull", "kube-scheduler", ""},
+				{"mkdir", "/var/log/kubernetes/scheduler", ""},
+				{"run-container", "10.0.0.11", ""},
+				{"run-container", "10.0.0.12", ""},
+				{"run-container", "10.0.0.13", ""},
 			},
 		},
 		{
@@ -123,9 +118,9 @@ func testKubernetesDecideToDo(t *testing.T) {
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
 			},
-			Commands: []CommandInfo{
-				{"stop-container", "10.0.0.14"},
-				{"stop-container", "10.0.0.15"},
+			Commands: []Command{
+				{"stop-container", "10.0.0.14", ""},
+				{"stop-container", "10.0.0.15", ""},
 			},
 		},
 		{
@@ -134,9 +129,9 @@ func testKubernetesDecideToDo(t *testing.T) {
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers: cpNodes, APIServers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
 			},
-			Commands: []CommandInfo{
-				{"stop-container", "10.0.0.14"},
-				{"stop-container", "10.0.0.15"},
+			Commands: []Command{
+				{"stop-container", "10.0.0.14", ""},
+				{"stop-container", "10.0.0.15", ""},
 			},
 		},
 		{
@@ -146,10 +141,10 @@ func testKubernetesDecideToDo(t *testing.T) {
 				Rivers: cpNodes, APIServers: cpNodes,
 				ControllerManagers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
 			},
-			Commands: []CommandInfo{
-				{"rm", "/etc/kubernetes/controller-manager/kubeconfig"},
-				{"stop-container", "10.0.0.14"},
-				{"stop-container", "10.0.0.15"},
+			Commands: []Command{
+				{"rm", "/etc/kubernetes/controller-manager/kubeconfig", ""},
+				{"stop-container", "10.0.0.14", ""},
+				{"stop-container", "10.0.0.15", ""},
 			},
 		},
 		{
@@ -159,10 +154,10 @@ func testKubernetesDecideToDo(t *testing.T) {
 				Rivers: cpNodes, APIServers: cpNodes, ControllerManagers: cpNodes,
 				Schedulers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
 			},
-			Commands: []CommandInfo{
-				{"rm", "/etc/kubernetes/scheduler/kubeconfig"},
-				{"stop-container", "10.0.0.14"},
-				{"stop-container", "10.0.0.15"},
+			Commands: []Command{
+				{"rm", "/etc/kubernetes/scheduler/kubeconfig", ""},
+				{"stop-container", "10.0.0.14", ""},
+				{"stop-container", "10.0.0.15", ""},
 			},
 		},
 	}
