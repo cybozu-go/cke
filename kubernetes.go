@@ -37,6 +37,32 @@ type schedulerBootOp struct {
 	nodeIndex int
 }
 
+type riversStopOp struct {
+	nodes     []*Node
+	agents    map[string]Agent
+	nodeIndex int
+}
+
+type apiServerStopOp struct {
+	nodes     []*Node
+	agents    map[string]Agent
+	nodeIndex int
+}
+
+type controllerManagerStopOp struct {
+	nodes     []*Node
+	agents    map[string]Agent
+	step      int
+	nodeIndex int
+}
+
+type schedulerStopOp struct {
+	nodes     []*Node
+	agents    map[string]Agent
+	step      int
+	nodeIndex int
+}
+
 // RiversBootOp returns an Operator to bootstrap rivers cluster.
 func RiversBootOp(nodes []*Node, agents map[string]Agent, params ServiceParams) Operator {
 	return &riversBootOp{
@@ -287,5 +313,119 @@ func (o *schedulerBootOp) schedulerParams() ServiceParams {
 			{"/etc/kubernetes/scheduler", "/etc/kubernetes/scheduler", true},
 			{"/var/log/kubernetes/scheduler", "/var/log/kubernetes/scheduler", false},
 		},
+	}
+}
+
+// RiversStopOp returns an Operator to bootstrap Scheduler cluster.
+func RiversStopOp(nodes []*Node, agents map[string]Agent) Operator {
+	return &riversStopOp{
+		nodes:     nodes,
+		agents:    agents,
+		nodeIndex: 0,
+	}
+}
+
+func (o *riversStopOp) Name() string {
+	return "rivers-stop"
+}
+
+func (o *riversStopOp) NextCommand() Commander {
+	if o.nodeIndex >= len(o.nodes) {
+		return nil
+	}
+
+	node := o.nodes[o.nodeIndex]
+	o.nodeIndex++
+
+	return stopContainerCommand{node, o.agents[node.Address], "kube-apiserver"}
+}
+
+// APIServerStopOp returns an Operator to bootstrap Scheduler cluster.
+func APIServerStopOp(nodes []*Node, agents map[string]Agent) Operator {
+	return &apiServerStopOp{
+		nodes:     nodes,
+		agents:    agents,
+		nodeIndex: 0,
+	}
+}
+
+func (o *apiServerStopOp) Name() string {
+	return "apiserver-stop"
+}
+
+func (o *apiServerStopOp) NextCommand() Commander {
+	if o.nodeIndex >= len(o.nodes) {
+		return nil
+	}
+
+	node := o.nodes[o.nodeIndex]
+	o.nodeIndex++
+
+	return stopContainerCommand{node, o.agents[node.Address], "kube-apiserver"}
+}
+
+// ControllerManagerStopOp returns an Operator to bootstrap Scheduler cluster.
+func ControllerManagerStopOp(nodes []*Node, agents map[string]Agent) Operator {
+	return &controllerManagerStopOp{
+		nodes:     nodes,
+		agents:    agents,
+		step:      0,
+		nodeIndex: 0,
+	}
+}
+
+func (o *controllerManagerStopOp) Name() string {
+	return "controller-manager-stop"
+}
+
+func (o *controllerManagerStopOp) NextCommand() Commander {
+	switch o.step {
+	case 0:
+		o.step++
+		return removeFileCommand{o.nodes, o.agents, "/etc/kubernetes/controller-manager/kubeconfig"}
+	case 1:
+		if o.nodeIndex >= len(o.nodes) {
+			return nil
+		}
+
+		node := o.nodes[o.nodeIndex]
+		o.nodeIndex++
+
+		return stopContainerCommand{node, o.agents[node.Address], "kube-controller-manager"}
+	default:
+		return nil
+	}
+}
+
+// SchedulerStopOp returns an Operator to bootstrap Scheduler cluster.
+func SchedulerStopOp(nodes []*Node, agents map[string]Agent) Operator {
+	return &schedulerStopOp{
+		nodes:     nodes,
+		agents:    agents,
+		step:      0,
+		nodeIndex: 0,
+	}
+}
+
+func (o *schedulerStopOp) Name() string {
+	return "scheduler-stop"
+}
+
+func (o *schedulerStopOp) NextCommand() Commander {
+	switch o.step {
+	case 0:
+		o.step++
+		return removeFileCommand{o.nodes, o.agents, "/etc/kubernetes/scheduler/kubeconfig"}
+	case 1:
+		if o.nodeIndex >= len(o.nodes) {
+			return nil
+		}
+
+		node := o.nodes[o.nodeIndex]
+		o.nodeIndex++
+
+		return stopContainerCommand{node, o.agents[node.Address], "kube-scheduler"}
+	default:
+		return nil
 	}
 }

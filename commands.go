@@ -99,6 +99,37 @@ func (c makeFileCommand) Command() Command {
 	}
 }
 
+type removeFileCommand struct {
+	nodes  []*Node
+	agents map[string]Agent
+	target string
+}
+
+func (c removeFileCommand) Run(ctx context.Context) error {
+	env := cmd.NewEnvironment(ctx)
+	dir := filepath.Dir(c.target)
+	binds := []Mount{{
+		Source:      dir,
+		Destination: filepath.Join("/mnt", dir),
+	}}
+	mkdirCommand := "rm " + filepath.Join("/mnt", c.target)
+	for _, n := range c.nodes {
+		ce := Docker(c.agents[n.Address])
+		env.Go(func(ctx context.Context) error {
+			return ce.Run("tools", binds, mkdirCommand)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c removeFileCommand) Command() Command {
+	return Command{
+		Name:   "rm",
+		Target: c.target,
+	}
+}
+
 type imagePullCommand struct {
 	nodes  []*Node
 	agents map[string]Agent
