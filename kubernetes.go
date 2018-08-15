@@ -79,10 +79,8 @@ func (o *riversBootOp) Name() string {
 }
 
 func (o *riversBootOp) NextCommand() Commander {
-	opts := []string{
-		"--entrypoint", "/usr/local/cke-tools/bin/rivers",
-	}
 	extra := o.params
+	opts := []string{}
 
 	switch o.step {
 	case 0:
@@ -111,6 +109,7 @@ func (o *riversBootOp) NextCommand() Commander {
 
 func riversParams(upstreams []string) ServiceParams {
 	args := []string{
+		"rivers",
 		"--upstreams=" + strings.Join(upstreams, ","),
 		"--listen=" + "127.0.0.1:18080",
 	}
@@ -150,8 +149,6 @@ func (o *apiServerBootOp) NextCommand() Commander {
 		return makeDirCommand{o.nodes, o.agents, "/var/log/kubernetes/apiserver"}
 	case 2:
 		opts := []string{
-			"--entrypoint=/usr/local/kubernetes/bin/kube-apiserver",
-
 			// TODO pass keys from CKE
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
 		}
@@ -174,6 +171,7 @@ func (o *apiServerBootOp) NextCommand() Commander {
 
 func (o *apiServerBootOp) apiServerParams(etcdServers []string, addr string) ServiceParams {
 	args := []string{
+		"apiserver",
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
 
 		// TODO use TLS
@@ -212,6 +210,7 @@ func (o *controllerManagerBootOp) Name() string {
 
 func (o *controllerManagerBootOp) NextCommand() Commander {
 	extra := o.params
+	opts := []string{}
 
 	switch o.step {
 	case 0:
@@ -224,9 +223,6 @@ func (o *controllerManagerBootOp) NextCommand() Commander {
 		o.step++
 		return makeDirCommand{o.nodes, o.agents, "/var/log/kubernetes/controller-manager"}
 	case 3:
-		opts := []string{
-			"--entrypoint=/usr/local/kubernetes/bin/kube-controller-manager",
-		}
 		if o.nodeIndex >= len(o.nodes) {
 			return nil
 		}
@@ -242,7 +238,7 @@ func (o *controllerManagerBootOp) NextCommand() Commander {
 
 func (o *controllerManagerBootOp) controllerManagerParams() ServiceParams {
 	args := []string{
-
+		"controller-manager",
 		"--kubeconfig=/etc/kubernetes/controller-manager/kubeconfig",
 		"--log-dir=/var/log/kubernetes/controller-manager",
 	}
@@ -303,6 +299,7 @@ func (o *schedulerBootOp) NextCommand() Commander {
 
 func (o *schedulerBootOp) schedulerParams() ServiceParams {
 	args := []string{
+		"scheduler",
 		"--kubeconfig=/etc/kubernetes/scheduler/kubeconfig",
 		"--log-dir=/var/log/kubernetes/scheduler",
 	}
