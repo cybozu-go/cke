@@ -1,6 +1,11 @@
 package mtest
 
 import (
+	"fmt"
+	"os"
+	"path"
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -8,7 +13,7 @@ import (
 var _ = Describe("kubernetes strategy", func() {
 	AfterEach(initializeControlPlane)
 
-	It("should deploy healthy control plane", func() {
+	It("should deploy HA control plane", func() {
 		By("Checking cluster status")
 		Eventually(func() bool {
 			controlPlanes := []string{node1, node2, node3}
@@ -21,6 +26,40 @@ var _ = Describe("kubernetes strategy", func() {
 
 			return checkKubernetesClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
+
+		By("Killing the active service")
+		leader := make(map[string]string)
+		for _, service := range []string{"kube-controller-manager", "kube-scheduler"} {
+			stdout, _, err := execAt(node1, getLeaderCommands(service)...)
+			Ω(err).ShouldNot(HaveOccurred())
+			Ω(len(stdout)).ShouldNot(BeZero())
+
+			holderIdentity := string(stdout)
+			fmt.Printf("current active %s is %s\n", service, holderIdentity)
+
+			leader[service] = strings.SplitN(string(stdout), "_", 2)[0]
+
+			stdout, _, err = execAt(os.Getenv(strings.ToUpper(leader[service])), "docker", "kill", service)
+			Ω(err).ShouldNot(HaveOccurred())
+		}
+
+		By("Switching another one")
+		for _, service := range []string{"kube-controller-manager", "kube-scheduler"} {
+			Eventually(func() bool {
+				stdout, _, err := execAt(node1, getLeaderCommands(service)...)
+				if err != nil {
+					return false
+				}
+				if string(stdout) == leader[service] {
+					fmt.Printf("active %s has not switched yet\n", service)
+					return false
+				}
+				return true
+			}).Should(BeTrue())
+		}
+
+		By("Checking component statuses are healthy")
+		Ω(checkComponentStatuses(node1)).Should(BeTrue())
 	})
 
 	It("should update node4 as control plane", func() {
@@ -68,3 +107,10 @@ var _ = Describe("kubernetes strategy", func() {
 		}).Should(BeTrue())
 	})
 })
+
+func getLeaderCommands(service string) []string {
+	return []string{
+		"curl", "-s", path.Join("localhost:18080/api/v1/namespaces/kube-system/endpoints/", service), "|",
+		"jq", "-r", `.metadata.annotations'."control-plane.alpha.kubernetes.io/leader"'`, "|",
+		"jq", "-r", ".holderIdentity"}
+}

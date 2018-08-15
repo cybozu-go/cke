@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"golang.org/x/crypto/ssh"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	"k8s.io/kubernetes/pkg/apis/core"
 )
 
@@ -293,7 +293,7 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 	}
 
 	for _, host := range controlPlanes {
-		// 18080: rivers(to apiserver), 10252: controller-manager, scheduler: 10251
+		// 18080: rivers(to apiserver), 10252: controller-manager, 10251: scheduler
 		for _, port := range []string{"18080", "10252", "10251"} {
 			stdout, _, err := execAt(host, "curl", fmt.Sprintf("localhost:%s/healthz", port))
 			if err != nil {
@@ -304,24 +304,30 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 				return false
 			}
 		}
+		if !checkComponentStatuses(host) {
+			return false
+		}
+	}
+	return true
+}
 
-		stdout, _, err := execAt(host, "curl", "localhost:18080/api/v1/componentstatuses")
-		if err != nil {
-			fmt.Println(err)
-			return false
-		}
-		var csl core.ComponentStatusList
-		err = json.NewDecoder(bytes.NewReader(stdout)).Decode(&csl)
-		if err != nil {
-			fmt.Println(err)
-			return false
-		}
-		for _, item := range csl.Items {
-			for _, condition := range item.Conditions {
-				if condition.Type != core.ComponentHealthy {
-					fmt.Printf("%s is unhealthy on %s\n", item.Name, host)
-					return false
-				}
+func checkComponentStatuses(host string) bool {
+	stdout, _, err := execAt(host, "curl", "localhost:18080/api/v1/componentstatuses")
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	var csl core.ComponentStatusList
+	err = json.NewDecoder(bytes.NewReader(stdout)).Decode(&csl)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	for _, item := range csl.Items {
+		for _, condition := range item.Conditions {
+			if condition.Type != core.ComponentHealthy {
+				fmt.Printf("%s is unhealthy on %s\n", item.Name, host)
+				return false
 			}
 		}
 	}
