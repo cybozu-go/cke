@@ -37,6 +37,7 @@ Options
 Name              | Required | Type            | Description
 ----------------- | -------- | --------------- | -----------
 `etcd`            | false    | `EtcdParams`    | Extra arguments for etcd.
+`rivers`          | false    | `ServiceParams` | Extra arguments for Rivers.
 `kube-api`        | false    | `ServiceParams` | Extra arguments for API server.
 `kube-controller` | false    | `ServiceParams` | Extra arguments for controller manager.
 `kube-scheduler`  | false    | `ServiceParams` | Extra arguments for scheduler.

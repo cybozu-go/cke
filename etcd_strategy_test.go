@@ -14,11 +14,7 @@ type EtcdTestCluster struct {
 	Etcd         EtcdClusterStatus
 }
 
-func etcdDecideToDoCommands(c *Cluster, cs *ClusterStatus) []Command {
-	op := etcdDecideToDo(c, cs)
-	if op == nil {
-		return nil
-	}
+func opCommands(op Operator) []Command {
 	var commands []Command
 	for {
 		commander := op.NextCommand()
@@ -135,8 +131,8 @@ func UnstartedMembers() EtcdTestCluster {
 			MemberHealth: map[string]EtcdNodeHealth{
 				"10.0.0.11": EtcdNodeHealthy,
 				"10.0.0.12": EtcdNodeHealthy,
-				"10.0.0.13": EtcdNodeUnreachable,
-				"10.0.0.14": EtcdNodeUnreachable,
+				"10.0.0.13": EtcdNodeUnhealthy,
+				"10.0.0.14": EtcdNodeUnhealthy,
 			},
 		},
 	}
@@ -164,8 +160,8 @@ func NewlyControlPlane() EtcdTestCluster {
 			MemberHealth: map[string]EtcdNodeHealth{
 				"10.0.0.11": EtcdNodeHealthy,
 				"10.0.0.12": EtcdNodeHealthy,
-				"10.0.0.13": EtcdNodeUnreachable,
-				"10.0.0.14": EtcdNodeUnreachable,
+				"10.0.0.13": EtcdNodeUnhealthy,
+				"10.0.0.14": EtcdNodeUnhealthy,
 			},
 		},
 	}
@@ -221,7 +217,7 @@ func HealthyNonControlPlane() EtcdTestCluster {
 				"10.0.0.11": EtcdNodeHealthy,
 				"10.0.0.12": EtcdNodeHealthy,
 				"10.0.0.13": EtcdNodeHealthy,
-				"10.0.0.14": EtcdNodeUnreachable,
+				"10.0.0.14": EtcdNodeUnhealthy,
 			},
 		},
 	}
@@ -332,12 +328,17 @@ func testEtcdDecideToDo(t *testing.T) {
 			NodeStatuses: c.Input.NodeStatuses,
 			Etcd:         c.Input.Etcd,
 		}
-		result := etcdDecideToDoCommands(cluster, clusterStatus)
-		if len(c.ExpectedCommands) != len(result) {
-			t.Errorf("[%s] commands length mismatch: %d", c.Name, len(result))
+
+		op := etcdDecideToDo(cluster, clusterStatus)
+		if op == nil {
+			t.Fatal("op == nil")
+		}
+		cmds := opCommands(op)
+		if len(c.ExpectedCommands) != len(cmds) {
+			t.Errorf("[%s] commands length mismatch: %d", c.Name, len(cmds))
 			continue
 		}
-		for i, res := range result {
+		for i, res := range cmds {
 			com := c.ExpectedCommands[i]
 			if com.Name != res.Name {
 				t.Errorf("[%s] command name mismatch: %s != %s", c.Name, com.Name, res.Name)

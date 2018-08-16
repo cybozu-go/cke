@@ -23,6 +23,8 @@ type ContainerEngine interface {
 	PullImage(name string) error
 	// Run runs the named container as a foreground process.
 	Run(name string, binds []Mount, command string) error
+	// RunWithInput runs the named container as a foreground process with stdin as a string.
+	RunWithInput(name string, binds []Mount, command, input string) error
 	// RunSystem runs the named container as a system service.
 	RunSystem(name string, opts []string, params, extra ServiceParams) error
 	// Exists returns if named container exists.
@@ -86,6 +88,27 @@ func (c docker) Run(name string, binds []Mount, command string) error {
 
 	_, _, err := c.agent.Run(strings.Join(args, " "))
 	return err
+}
+
+func (c docker) RunWithInput(name string, binds []Mount, command, input string) error {
+	args := []string{
+		"docker",
+		"run",
+		"--rm",
+		"-i",
+		"--network=host",
+		"--uts=host",
+	}
+	for _, m := range binds {
+		o := "rw"
+		if m.ReadOnly {
+			o = "ro"
+		}
+		args = append(args, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
+	}
+	args = append(args, Image(name), command)
+
+	return c.agent.RunWithInput(strings.Join(args, " "), input)
 }
 
 func (c docker) RunSystem(name string, opts []string, params, extra ServiceParams) error {

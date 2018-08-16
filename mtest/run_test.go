@@ -3,6 +3,7 @@ package mtest
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -18,7 +19,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"golang.org/x/crypto/ssh"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
+	"k8s.io/kubernetes/pkg/apis/core"
 )
 
 const sshTimeout = 3 * time.Minute
@@ -252,6 +254,81 @@ func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []
 		if health != cke.EtcdNodeHealthy {
 			fmt.Printf("%s is not healthy\n", host)
 			return false
+		}
+	}
+	return true
+}
+
+func isRunningControlPlaneComponents(status *cke.ClusterStatus, host string) bool {
+	if !status.NodeStatuses[host].Rivers.Running {
+		fmt.Printf("rivers is not running on %s\n", host)
+		return false
+	}
+	if !status.NodeStatuses[host].APIServer.Running {
+		fmt.Printf("kube-apiserver is not running on %s\n", host)
+		return false
+	}
+	if !status.NodeStatuses[host].ControllerManager.Running {
+		fmt.Printf("kube-controller-manager is not running on %s\n", host)
+		return false
+	}
+	if !status.NodeStatuses[host].Scheduler.Running {
+		fmt.Printf("kube-scheduler is not running on %s\n", host)
+		return false
+	}
+	return true
+}
+
+func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []string) bool {
+	for _, host := range controlPlanes {
+		if !isRunningControlPlaneComponents(status, host) {
+			return false
+		}
+	}
+
+	for _, host := range workers {
+		if isRunningControlPlaneComponents(status, host) {
+			return false
+		}
+	}
+
+	for _, host := range controlPlanes {
+		// 18080: rivers(to apiserver), 10252: controller-manager, 10251: scheduler
+		for _, port := range []string{"18080", "10252", "10251"} {
+			stdout, _, err := execAt(host, "curl", fmt.Sprintf("localhost:%s/healthz", port))
+			if err != nil {
+				fmt.Println(err)
+				return false
+			}
+			if string(stdout) != "ok" {
+				return false
+			}
+		}
+		if !checkComponentStatuses(host) {
+			return false
+		}
+	}
+	return true
+}
+
+func checkComponentStatuses(host string) bool {
+	stdout, _, err := execAt(host, "curl", "localhost:18080/api/v1/componentstatuses")
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	var csl core.ComponentStatusList
+	err = json.NewDecoder(bytes.NewReader(stdout)).Decode(&csl)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	for _, item := range csl.Items {
+		for _, condition := range item.Conditions {
+			if condition.Type != core.ComponentHealthy {
+				fmt.Printf("%s is unhealthy on %s\n", item.Name, host)
+				return false
+			}
 		}
 	}
 	return true
