@@ -31,8 +31,8 @@ var _ = Describe("kubernetes strategy", func() {
 		leader := make(map[string]string)
 		for _, service := range []string{"kube-controller-manager", "kube-scheduler"} {
 			stdout, _, err := execAt(node1, getLeaderCommands(service)...)
-			Ω(err).ShouldNot(HaveOccurred())
-			Ω(len(stdout)).ShouldNot(BeZero())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(stdout)).ToNot(BeZero())
 
 			holderIdentity := string(stdout)
 			fmt.Printf("current active %s is %s\n", service, holderIdentity)
@@ -40,7 +40,7 @@ var _ = Describe("kubernetes strategy", func() {
 			leader[service] = strings.SplitN(string(stdout), "_", 2)[0]
 
 			stdout, _, err = execAt(os.Getenv(strings.ToUpper(leader[service])), "docker", "kill", service)
-			Ω(err).ShouldNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 		}
 
 		By("Switching another one")
@@ -59,7 +59,7 @@ var _ = Describe("kubernetes strategy", func() {
 		}
 
 		By("Checking component statuses are healthy")
-		Ω(checkComponentStatuses(node1)).Should(BeTrue())
+		Expect(checkComponentStatuses(node1)).To(BeTrue())
 	})
 
 	It("should update node4 as control plane", func() {
