@@ -12,19 +12,11 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	}
 
 	// Run Rivers on control-plane nodes
-	target := filterNodes(cpNodes, func(n *Node) bool {
+	target := filterNodes(c.Nodes, func(n *Node) bool {
 		return !cs.NodeStatuses[n.Address].Rivers.Running
 	})
 	if len(target) > 0 {
 		return RiversBootOp(target, cs.Agents, c.Options.Rivers)
-	}
-
-	// Stop Rivers on non-control-plane nodes
-	target = filterNodes(nonCpNodes, func(n *Node) bool {
-		return cs.NodeStatuses[n.Address].Rivers.Running
-	})
-	if len(target) > 0 {
-		return RiversStopOp(target, cs.Agents)
 	}
 
 	// Run kube-apiserver on control-plane nodes
