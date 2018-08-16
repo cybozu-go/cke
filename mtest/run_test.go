@@ -105,7 +105,7 @@ func runManagementEtcd(client *ssh.Client) error {
 	return sess.Run(command)
 }
 
-func stopCke() error {
+func stopCKE() error {
 	for _, host := range []string{host1, host2} {
 		c := sshClients[host]
 		sess, err := c.NewSession()
@@ -119,7 +119,7 @@ func stopCke() error {
 	return nil
 }
 
-func runCke() error {
+func runCKE() error {
 	for _, host := range []string{host1, host2} {
 		c := sshClients[host]
 		sess, err := c.NewSession()
@@ -335,9 +335,9 @@ func checkComponentStatuses(host string) bool {
 }
 
 func setupCKE() {
-	err := stopCke()
+	err := stopCKE()
 	Expect(err).NotTo(HaveOccurred())
-	err = runCke()
+	err = runCKE()
 	Expect(err).NotTo(HaveOccurred())
 
 	// wait cke

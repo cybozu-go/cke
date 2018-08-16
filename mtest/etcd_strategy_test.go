@@ -155,7 +155,7 @@ var _ = Describe("etcd strategy", func() {
 
 	It("should remove unhealthy node1 from etcd cluster and add node4 in appropriate order", func() {
 		By("Stopping etcd in node1 and changing definition of node1/node4 at once")
-		stopCke()
+		stopCKE()
 		execSafeAt(node1, "docker", "stop", "etcd")
 		execSafeAt(node1, "docker", "rm", "etcd")
 		cluster := getCluster()
@@ -164,7 +164,7 @@ var _ = Describe("etcd strategy", func() {
 		cluster.Nodes[2].ControlPlane = true
 		cluster.Nodes[3].ControlPlane = true
 		ckecliClusterSet(cluster)
-		runCke()
+		runCKE()
 
 		By("Checking cluster status")
 		Eventually(func() bool {

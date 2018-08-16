@@ -67,6 +67,15 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return SchedulerStopOp(target, cs.Agents)
 	}
 
+	// Run kubelet on all nodes
+	target = filterNodes(c.Nodes, func(n *Node) bool {
+		return !cs.NodeStatuses[n.Address].Kubelet.Running
+	})
+	if len(target) > 0 {
+		return KubeletBootOp(target, cs.Agents, c.Options.Kubelet)
+	}
+
+
 	return nil
 }
 
