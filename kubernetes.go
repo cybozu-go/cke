@@ -174,6 +174,7 @@ func (o *apiServerBootOp) NextCommand() Commander {
 func (o *apiServerBootOp) apiServerParams(etcdServers []string, addr string) ServiceParams {
 	args := []string{
 		"apiserver",
+		"--allow-privileged",
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
 
 		// TODO use TLS
@@ -354,18 +355,19 @@ func (o *kubeletBootOp) NextCommand() Commander {
 		target := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		return runContainerCommand{target, o.agents[target.Address], "kubelet", opts, o.serviceParams(), o.extraParams()}
+		return runContainerCommand{target, o.agents[target.Address], "kubelet", opts, o.serviceParams(target.Address), o.extraParams()}
 	default:
 		return nil
 	}
 }
 
-func (o *kubeletBootOp) serviceParams() ServiceParams {
+func (o *kubeletBootOp) serviceParams(targetAddress string) ServiceParams {
 	args := []string{
 		"kubelet",
 		"--allow-privileged=true",
 		"--container-runtime-endpoint=/var/tmp/dockershim/dockershim.sock",
 		"--experimental-dockershim=false",
+		"--hostname-override=" + targetAddress,
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--log-dir=/var/log/kubernetes/kubelet",
 	}

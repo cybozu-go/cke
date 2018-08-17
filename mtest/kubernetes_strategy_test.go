@@ -123,18 +123,20 @@ var _ = Describe("kubernetes strategy", func() {
 
 func currentLeader(service string) (string, error) {
 	stdout := kubectl("get", "endpoints", "--namespace=kube-system", "-o", "json", service)
+
 	var endpoint core.Endpoints
 	err := json.NewDecoder(bytes.NewReader(stdout)).Decode(&endpoint)
 	if err != nil {
 		return "", err
 	}
-	Expect(err).ToNot(HaveOccurred())
-	var holder struct {
+
+	var record struct {
 		HolderIdentity string `json:"holderIdentity"`
 	}
-	err = json.NewDecoder(strings.NewReader(endpoint.ObjectMeta.Annotations["control-plane.alpha.kubernetes.io/leader"])).Decode(holder)
+	recordString := endpoint.ObjectMeta.Annotations["control-plane.alpha.kubernetes.io/leader"]
+	err = json.NewDecoder(strings.NewReader(recordString)).Decode(&record)
 	if err != nil {
 		return "", err
 	}
-	return holder.HolderIdentity, nil
+	return record.HolderIdentity, nil
 }
