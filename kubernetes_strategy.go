@@ -75,7 +75,6 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return KubeletBootOp(target, cs.Agents, c.Options.Kubelet)
 	}
 
-
 	return nil
 }
 

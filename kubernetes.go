@@ -365,9 +365,9 @@ func (o *kubeletBootOp) serviceParams() ServiceParams {
 		"kubelet",
 		"--allow-privileged=true",
 		"--container-runtime-endpoint=/var/tmp/dockershim/dockershim.sock",
-		"--log-dir=/var/log/kubernetes/kubelet",
-		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--experimental-dockershim=false",
+		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
+		"--log-dir=/var/log/kubernetes/kubelet",
 	}
 	return ServiceParams{
 		ExtraArguments: args,

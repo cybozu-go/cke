@@ -26,14 +26,18 @@ OUTPUT := ./output
 UBUNTU_IMAGE := ubuntu-18.04-server-cloudimg-amd64.img
 COREOS_IMAGE := coreos_production_qemu_image.img
 CKECLI := $(OUTPUT)/ckecli
+KUBECTL := $(OUTPUT)/kubectl
+KUBECONFIG := $(OUTPUT)/kubeconfig.yml
 CKECLUSTER := $(OUTPUT)/cke-cluster.yml
 CKECONFIG := $(OUTPUT)/cke.yml
 
-export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG
+export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG KUBECTL KUBECONFIG
 
 
 GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/cke $(OUTPUT)/ckecli \
+	$(OUTPUT)/kubectl \
+	$(OUTPUT)/kubeconfig.yml \
 	$(OUTPUT)/cluster.yml \
 	$(OUTPUT)/user-data_host1.yml \
 	$(OUTPUT)/user-data_host2.yml \
@@ -70,6 +74,15 @@ $(OUTPUT)/etcd $(OUTPUT)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
 $(OUTPUT)/cke $(OUTPUT)/ckecli:
 	mkdir -p $(OUTPUT)
 	cd ..; go get ./... && gofail enable; GOBIN=$(realpath $(OUTPUT)) go install ./cmd/$(notdir $@) || gofail disable; gofail disable
+
+$(OUTPUT)/kubectl:
+	mkdir -p $(OUTPUT)
+	curl -o $@ -LO https://storage.googleapis.com/kubernetes-release/release/v1.11.1/bin/linux/amd64/kubectl
+	chmod a+x $@
+
+$(OUTPUT)/kubeconfig.yml:
+	mkdir -p $(OUTPUT)
+	cp ./kubeconfig.yml $@
 
 $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)

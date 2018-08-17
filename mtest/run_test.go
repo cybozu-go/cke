@@ -176,6 +176,16 @@ func ckecli(args ...string) []byte {
 	return stdout.Bytes()
 }
 
+func kubectl(args ...string) []byte {
+	args = append([]string{"--kubeconfig", kubeconfigPath}, args...)
+	command := exec.Command(kubectlPath, args...)
+	stdout := new(bytes.Buffer)
+	session, err := gexec.Start(command, stdout, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(session).Should(gexec.Exit(0))
+	return stdout.Bytes()
+}
+
 func getCluster() *cke.Cluster {
 	f, err := os.Open(ckeClusterPath)
 	Expect(err).NotTo(HaveOccurred())

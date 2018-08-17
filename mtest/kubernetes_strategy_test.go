@@ -60,6 +60,12 @@ var _ = Describe("kubernetes strategy", func() {
 
 		By("Checking component statuses are healthy")
 		Expect(checkComponentStatuses(node1)).To(BeTrue())
+
+		By("Checking all nodes status are ready")
+		countReadyNodes := []string{"get", "nodes", "-o", "json", "|",
+			"jq", `'[.items[].status.conditions[] | select( .type | contains("Ready") ) | select( .status | contains("True") )] | length'`}
+		stdout := kubectl(countReadyNodes...)
+		Expect(string(stdout)).To(Equal("6"))
 	})
 
 	It("should update node4 as control plane", func() {
