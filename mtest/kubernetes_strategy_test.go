@@ -1,13 +1,15 @@
 package mtest
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
-	"path"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/kubernetes/pkg/apis/core"
 )
 
 var _ = Describe("kubernetes strategy", func() {
@@ -30,27 +32,22 @@ var _ = Describe("kubernetes strategy", func() {
 		By("Killing the active service")
 		leader := make(map[string]string)
 		for _, service := range []string{"kube-controller-manager", "kube-scheduler"} {
-			stdout, _, err := execAt(node1, getLeaderCommands(service)...)
+			current, err := currentLeader(service)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(stdout)).ToNot(BeZero())
-
-			holderIdentity := string(stdout)
-			fmt.Printf("current active %s is %s\n", service, holderIdentity)
-
-			leader[service] = strings.SplitN(string(stdout), "_", 2)[0]
-
-			stdout, _, err = execAt(os.Getenv(strings.ToUpper(leader[service])), "docker", "kill", service)
+			fmt.Printf("current active %s is %s\n", service, current)
+			leader[service] = strings.SplitN(current, "_", 2)[0]
+			_, _, err = execAt(os.Getenv(strings.ToUpper(leader[service])), "docker", "kill", service)
 			Expect(err).ToNot(HaveOccurred())
 		}
 
 		By("Switching another one")
 		for _, service := range []string{"kube-controller-manager", "kube-scheduler"} {
 			Eventually(func() bool {
-				stdout, _, err := execAt(node1, getLeaderCommands(service)...)
+				current, err := currentLeader(service)
 				if err != nil {
 					return false
 				}
-				if string(stdout) == leader[service] {
+				if current == leader[service] {
 					fmt.Printf("active %s has not switched yet\n", service)
 					return false
 				}
@@ -62,10 +59,20 @@ var _ = Describe("kubernetes strategy", func() {
 		Expect(checkComponentStatuses(node1)).To(BeTrue())
 
 		By("Checking all nodes status are ready")
-		countReadyNodes := []string{"get", "nodes", "-o", "json", "|",
-			"jq", `'[.items[].status.conditions[] | select( .type | contains("Ready") ) | select( .status | contains("True") )] | length'`}
-		stdout := kubectl(countReadyNodes...)
-		Expect(string(stdout)).To(Equal("6"))
+		stdout := kubectl("get", "nodes", "-o", "json")
+		var nodeList core.NodeList
+		err := json.NewDecoder(bytes.NewReader(stdout)).Decode(&nodeList)
+		Expect(err).ToNot(HaveOccurred())
+		Eventually(func() bool {
+			for _, item := range nodeList.Items {
+				for _, st := range item.Status.Conditions {
+					if st.Type == core.NodeReady && st.Status != core.ConditionTrue {
+						return false
+					}
+				}
+			}
+			return true
+		}).Should(BeTrue())
 	})
 
 	It("should update node4 as control plane", func() {
@@ -114,9 +121,20 @@ var _ = Describe("kubernetes strategy", func() {
 	})
 })
 
-func getLeaderCommands(service string) []string {
-	return []string{
-		"curl", "-s", path.Join("localhost:18080/api/v1/namespaces/kube-system/endpoints/", service), "|",
-		"jq", "-r", `.metadata.annotations'."control-plane.alpha.kubernetes.io/leader"'`, "|",
-		"jq", "-r", ".holderIdentity"}
+func currentLeader(service string) (string, error) {
+	stdout := kubectl("get", "endpoints", "--namespace=kube-system", "-o", "json", service)
+	var endpoint core.Endpoints
+	err := json.NewDecoder(bytes.NewReader(stdout)).Decode(&endpoint)
+	if err != nil {
+		return "", err
+	}
+	Expect(err).ToNot(HaveOccurred())
+	var holder struct {
+		HolderIdentity string `json:"holderIdentity"`
+	}
+	err = json.NewDecoder(strings.NewReader(endpoint.ObjectMeta.Annotations["control-plane.alpha.kubernetes.io/leader"])).Decode(holder)
+	if err != nil {
+		return "", err
+	}
+	return holder.HolderIdentity, nil
 }
