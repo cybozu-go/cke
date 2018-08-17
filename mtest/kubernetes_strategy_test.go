@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/kubernetes/pkg/apis/core"
 )
 
 var _ = Describe("kubernetes strategy", func() {
@@ -33,11 +33,11 @@ var _ = Describe("kubernetes strategy", func() {
 		leader := make(map[string]string)
 		for _, service := range []string{"kube-controller-manager", "kube-scheduler"} {
 			current, err := currentLeader(service)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			fmt.Printf("current active %s is %s\n", service, current)
 			leader[service] = strings.SplitN(current, "_", 2)[0]
 			_, _, err = execAt(os.Getenv(strings.ToUpper(leader[service])), "docker", "kill", service)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 		}
 
 		By("Switching another one")
@@ -60,13 +60,26 @@ var _ = Describe("kubernetes strategy", func() {
 
 		By("Checking all nodes status are ready")
 		stdout := kubectl("get", "nodes", "-o", "json")
-		var nodeList core.NodeList
+		var nodeList struct {
+			Items []struct {
+				Status struct {
+					Conditions []struct {
+						LastHeartbeatTime  time.Time `json:"lastHeartbeatTime"`
+						LastTransitionTime time.Time `json:"lastTransitionTime"`
+						Message            string    `json:"message"`
+						Reason             string    `json:"reason"`
+						Status             string    `json:"status"`
+						Type               string    `json:"type"`
+					} `json:"conditions"`
+				} `json:"status"`
+			} `json:"items"`
+		}
 		err := json.NewDecoder(bytes.NewReader(stdout)).Decode(&nodeList)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() bool {
 			for _, item := range nodeList.Items {
 				for _, st := range item.Status.Conditions {
-					if st.Type == core.NodeReady && st.Status != core.ConditionTrue {
+					if st.Type == "Ready" && st.Status != "True" {
 						return false
 					}
 				}
@@ -124,7 +137,13 @@ var _ = Describe("kubernetes strategy", func() {
 func currentLeader(service string) (string, error) {
 	stdout := kubectl("get", "endpoints", "--namespace=kube-system", "-o", "json", service)
 
-	var endpoint core.Endpoints
+	var endpoint struct {
+		Metadata struct {
+			Annotations struct {
+				ControlPlaneAlphaKubernetesIoLeader string `json:"control-plane.alpha.kubernetes.io/leader"`
+			} `json:"annotations"`
+		} `json:"metadata"`
+	}
 	err := json.NewDecoder(bytes.NewReader(stdout)).Decode(&endpoint)
 	if err != nil {
 		return "", err
@@ -133,10 +152,10 @@ func currentLeader(service string) (string, error) {
 	var record struct {
 		HolderIdentity string `json:"holderIdentity"`
 	}
-	recordString := endpoint.ObjectMeta.Annotations["control-plane.alpha.kubernetes.io/leader"]
-	err = json.NewDecoder(strings.NewReader(recordString)).Decode(&record)
+	err = json.NewDecoder(strings.NewReader(endpoint.Metadata.Annotations.ControlPlaneAlphaKubernetesIoLeader)).Decode(&record)
 	if err != nil {
 		return "", err
 	}
+
 	return record.HolderIdentity, nil
 }

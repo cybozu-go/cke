@@ -182,7 +182,7 @@ func kubectl(args ...string) []byte {
 	stdout := new(bytes.Buffer)
 	session, err := gexec.Start(command, stdout, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gexec.Exit(0))
+	Eventually(session, time.Minute*3, time.Second*10).Should(gexec.Exit(0))
 	return stdout.Bytes()
 }
 
@@ -330,7 +330,6 @@ func checkComponentStatuses(host string) bool {
 	var csl core.ComponentStatusList
 	err = json.NewDecoder(bytes.NewReader(stdout)).Decode(&csl)
 	if err != nil {
-		fmt.Println(err)
 		return false
 	}
 	for _, item := range csl.Items {
