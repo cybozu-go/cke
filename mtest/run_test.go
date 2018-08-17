@@ -182,7 +182,7 @@ func kubectl(args ...string) []byte {
 	stdout := new(bytes.Buffer)
 	session, err := gexec.Start(command, stdout, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(session, time.Minute*3, time.Second*10).Should(gexec.Exit(0))
+	Eventually(session, time.Minute*5, time.Second*10).Should(gexec.Exit(0))
 	return stdout.Bytes()
 }
 
