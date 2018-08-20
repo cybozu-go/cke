@@ -177,11 +177,12 @@ func localTempFile(body string) *os.File {
 
 func ckecli(args ...string) []byte {
 	args = append([]string{"-config", ckeConfigPath}, args...)
+	var stdout bytes.Buffer
 	command := exec.Command(ckecliPath, args...)
-	stdout := new(bytes.Buffer)
-	session, err := gexec.Start(command, stdout, GinkgoWriter)
+	command.Stdout = &stdout
+	command.Stderr = GinkgoWriter
+	err := command.Run()
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gexec.Exit(0))
 	return stdout.Bytes()
 }
 
