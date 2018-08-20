@@ -16,14 +16,13 @@ In order to construct HA control plane, CKE deploys a [reverse proxy][] daemon t
 Reverse proxy is responsible for forwarding to apiservers on the control plane nodes.
 The controller-manager, schedulers, and kubelets refers localhost's reverse proxy.
 
-CKE does the following steps to bootstrap kubertenes cluster cluster.
+CKE does the following steps to bootstrap kubernetes cluster.
 
-1. Launch reverse proxy on each control plane node.
+1. Launch reverse proxy on all nodes.
 1. Launch apiservers on each control plane node.
 1. Launch controller-manager on each control plane node.
 1. Launch scheduler on each control plane node.
-1. Launch reverse proxy on each worker nodes.
-1. Launch kubelet on each worker nodes.
+1. Launch kubelet on all nodes.
 
 Install kubernetes applications
 -------------------------------

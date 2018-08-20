@@ -299,7 +299,7 @@ func (o *schedulerBootOp) NextCommand() Commander {
 
 func (o *schedulerBootOp) schedulerParams() ServiceParams {
 	args := []string{
-		"kube-scheduler",
+		"scheduler",
 		"--kubeconfig=/etc/kubernetes/scheduler/kubeconfig",
 		"--log-dir=/var/log/kubernetes/scheduler",
 	}
@@ -366,7 +366,6 @@ func (o *kubeletBootOp) serviceParams(targetAddress string) ServiceParams {
 		"kubelet",
 		"--allow-privileged=true",
 		"--container-runtime-endpoint=/var/tmp/dockershim/dockershim.sock",
-		"--experimental-dockershim=false",
 		"--hostname-override=" + targetAddress,
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--log-dir=/var/log/kubernetes/kubelet",
