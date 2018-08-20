@@ -42,3 +42,10 @@ ssh_key: |-
   -----END RSA PRIVATE KEY-----
 service_subnet: 12.34.56.0/24
 dns_servers: ["8.8.8.8", "1.1.1.1"]
+options:
+  kube-api:
+    extra_args:
+    - --disable-admission-plugins=ServiceAccount
+  kubelet:
+    domain: neco
+    allow_swap: true

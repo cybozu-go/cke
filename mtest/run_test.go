@@ -105,7 +105,7 @@ func runManagementEtcd(client *ssh.Client) error {
 	return sess.Run(command)
 }
 
-func stopCke() error {
+func stopCKE() error {
 	for _, host := range []string{host1, host2} {
 		c := sshClients[host]
 		sess, err := c.NewSession()
@@ -119,7 +119,7 @@ func stopCke() error {
 	return nil
 }
 
-func runCke() error {
+func runCKE() error {
 	for _, host := range []string{host1, host2} {
 		c := sshClients[host]
 		sess, err := c.NewSession()
@@ -173,6 +173,20 @@ func ckecli(args ...string) []byte {
 	session, err := gexec.Start(command, stdout, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(session).Should(gexec.Exit(0))
+	return stdout.Bytes()
+}
+
+func kubectl(args ...string) []byte {
+	args = append([]string{"--kubeconfig", kubeconfigPath}, args...)
+	command := exec.Command(kubectlPath, args...)
+	stdout := new(bytes.Buffer)
+	session, err := gexec.Start(command, stdout, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+
+	// extend interval to solve timeout error
+	timeoutInterval := time.Minute * 5
+	pollingInterval := time.Second * 10
+	Eventually(session, timeoutInterval, pollingInterval).Should(gexec.Exit(0))
 	return stdout.Bytes()
 }
 
@@ -320,7 +334,6 @@ func checkComponentStatuses(host string) bool {
 	var csl core.ComponentStatusList
 	err = json.NewDecoder(bytes.NewReader(stdout)).Decode(&csl)
 	if err != nil {
-		fmt.Println(err)
 		return false
 	}
 	for _, item := range csl.Items {
@@ -335,9 +348,9 @@ func checkComponentStatuses(host string) bool {
 }
 
 func setupCKE() {
-	err := stopCke()
+	err := stopCKE()
 	Expect(err).NotTo(HaveOccurred())
-	err = runCke()
+	err = runCKE()
 	Expect(err).NotTo(HaveOccurred())
 
 	// wait cke

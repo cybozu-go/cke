@@ -37,9 +37,11 @@ type schedulerBootOp struct {
 	nodeIndex int
 }
 
-type riversStopOp struct {
+type kubeletBootOp struct {
 	nodes     []*Node
 	agents    map[string]Agent
+	params    KubeletParams
+	step      int
 	nodeIndex int
 }
 
@@ -172,6 +174,7 @@ func (o *apiServerBootOp) NextCommand() Commander {
 func (o *apiServerBootOp) apiServerParams(etcdServers []string, addr string) ServiceParams {
 	args := []string{
 		"apiserver",
+		"--allow-privileged",
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
 
 		// TODO use TLS
@@ -281,9 +284,6 @@ func (o *schedulerBootOp) NextCommand() Commander {
 		o.step++
 		return makeDirCommand{o.nodes, o.agents, "/var/log/kubernetes/scheduler"}
 	case 3:
-		opts := []string{
-			"--entrypoint=/usr/local/kubernetes/bin/kube-scheduler",
-		}
 		if o.nodeIndex >= len(o.nodes) {
 			return nil
 		}
@@ -291,7 +291,7 @@ func (o *schedulerBootOp) NextCommand() Commander {
 		target := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		return runContainerCommand{target, o.agents[target.Address], "kube-scheduler", opts, o.schedulerParams(), extra}
+		return runContainerCommand{target, o.agents[target.Address], "kube-scheduler", nil, o.schedulerParams(), extra}
 	default:
 		return nil
 	}
@@ -313,28 +313,91 @@ func (o *schedulerBootOp) schedulerParams() ServiceParams {
 	}
 }
 
-// RiversStopOp returns an Operator to bootstrap Scheduler cluster.
-func RiversStopOp(nodes []*Node, agents map[string]Agent) Operator {
-	return &riversStopOp{
+// KubeletBootOp returns an Operator to bootstrap Kubelet.
+func KubeletBootOp(nodes []*Node, agents map[string]Agent, params KubeletParams) Operator {
+	return &kubeletBootOp{
 		nodes:     nodes,
 		agents:    agents,
+		params:    params,
+		step:      0,
 		nodeIndex: 0,
 	}
 }
 
-func (o *riversStopOp) Name() string {
-	return "rivers-stop"
+func (o *kubeletBootOp) Name() string {
+	return "kubelet-bootstrap"
 }
 
-func (o *riversStopOp) NextCommand() Commander {
-	if o.nodeIndex >= len(o.nodes) {
+func (o *kubeletBootOp) NextCommand() Commander {
+	volName := "dockershim"
+	opts := []string{
+		"--tmpfs=/var/tmp/dockershim",
+		"--privileged",
+	}
+	switch o.step {
+	case 0:
+		o.step++
+		return makeFileCommand{o.nodes, o.agents, kubeletKubeConfig(), "/etc/kubernetes/kubelet/kubeconfig"}
+	case 1:
+		o.step++
+		return imagePullCommand{o.nodes, o.agents, "kubelet"}
+	case 2:
+		o.step++
+		return makeDirCommand{o.nodes, o.agents, "/var/log/kubernetes/kubelet"}
+	case 3:
+		o.step++
+		return volumeCreateCommand{o.nodes, o.agents, volName}
+	case 4:
+		if o.nodeIndex >= len(o.nodes) {
+			return nil
+		}
+
+		target := o.nodes[o.nodeIndex]
+		o.nodeIndex++
+
+		return runContainerCommand{target, o.agents[target.Address], "kubelet", opts, o.serviceParams(target.Address), o.extraParams()}
+	default:
 		return nil
 	}
+}
 
-	node := o.nodes[o.nodeIndex]
-	o.nodeIndex++
+func (o *kubeletBootOp) serviceParams(targetAddress string) ServiceParams {
+	args := []string{
+		"kubelet",
+		"--allow-privileged=true",
+		"--container-runtime-endpoint=/var/tmp/dockershim/dockershim.sock",
+		"--hostname-override=" + targetAddress,
+		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
+		"--log-dir=/var/log/kubernetes/kubelet",
+	}
+	return ServiceParams{
+		ExtraArguments: args,
+		ExtraBinds: []Mount{
+			{"/etc/hostname", "/etc/machine-id", true},
+			{"/etc/kubernetes/kubelet", "/etc/kubernetes/kubelet", true},
+			{"/var/lib/kubelet", "/var/lib/kubelet", false},
+			{"/var/lib/docker", "/var/lib/docker", false},
+			{"/var/lib/dockershim", "/var/lib/dockershim", false},
+			{"/var/log/pods", "/var/log/pods", false},
+			{"/var/log/kubernetes/kubelet", "/var/log/kubernetes/kubelet", false},
+			{"/var/run/docker.sock", "/var/run/docker.sock", false},
+		},
+	}
+}
 
-	return stopContainerCommand{node, o.agents[node.Address], "rivers"}
+func (o *kubeletBootOp) extraParams() ServiceParams {
+	extraArgs := o.params.ExtraArguments
+	if len(o.params.Domain) > 0 {
+		extraArgs = append(extraArgs, "--cluster-domain="+o.params.Domain)
+	}
+	if o.params.AllowSwap {
+		extraArgs = append(extraArgs, "--fail-swap-on=false")
+	}
+	return ServiceParams{
+		ExtraArguments: extraArgs,
+		ExtraBinds:     o.params.ExtraBinds,
+		ExtraEnvvar:    o.params.ExtraEnvvar,
+	}
 }
 
 // APIServerStopOp returns an Operator to bootstrap Scheduler cluster.

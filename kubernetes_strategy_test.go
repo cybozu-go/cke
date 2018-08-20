@@ -1,6 +1,8 @@
 package cke
 
-import "testing"
+import (
+	"testing"
+)
 
 type KubernetesTestConfiguration struct {
 	// Cluster
@@ -49,6 +51,7 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 func testKubernetesDecideToDo(t *testing.T) {
 	cpNodes := []string{"10.0.0.11", "10.0.0.12", "10.0.0.13"}
 	nonCpNodes := []string{"10.0.0.14", "10.0.0.15", "10.0.0.16"}
+	allNodes := append(cpNodes, nonCpNodes...)
 
 	cases := []struct {
 		Name     string
@@ -66,13 +69,16 @@ func testKubernetesDecideToDo(t *testing.T) {
 				{"run-container", "10.0.0.11", ""},
 				{"run-container", "10.0.0.12", ""},
 				{"run-container", "10.0.0.13", ""},
+				{"run-container", "10.0.0.14", ""},
+				{"run-container", "10.0.0.15", ""},
+				{"run-container", "10.0.0.16", ""},
 			},
 		},
 		{
 			Name: "Bootstrap APIServers",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: cpNodes,
+				Rivers: allNodes,
 			},
 			Commands: []Command{
 				{"image-pull", "kube-apiserver", ""},
@@ -86,7 +92,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 			Name: "Bootstrap ControllerManagers",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: cpNodes, APIServers: cpNodes,
+				Rivers: allNodes, APIServers: cpNodes,
 			},
 			Commands: []Command{
 				{"make-file", "/etc/kubernetes/controller-manager/kubeconfig", ""},
@@ -101,7 +107,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 			Name: "Bootstrap Scheduler",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: cpNodes, APIServers: cpNodes, ControllerManagers: cpNodes,
+				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes,
 			},
 			Commands: []Command{
 				{"make-file", "/etc/kubernetes/scheduler/kubeconfig", ""},
@@ -113,21 +119,29 @@ func testKubernetesDecideToDo(t *testing.T) {
 			},
 		},
 		{
-			Name: "Stop Rivers",
+			Name: "Bootstrap Kubelet",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
+				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes,
 			},
 			Commands: []Command{
-				{"stop-container", "10.0.0.14", ""},
-				{"stop-container", "10.0.0.15", ""},
+				{"make-file", "/etc/kubernetes/kubelet/kubeconfig", ""},
+				{"image-pull", "kubelet", ""},
+				{"mkdir", "/var/log/kubernetes/kubelet", ""},
+				{"volume-create", "10.0.0.11,10.0.0.12,10.0.0.13,10.0.0.14,10.0.0.15,10.0.0.16", ""},
+				{"run-container", "10.0.0.11", ""},
+				{"run-container", "10.0.0.12", ""},
+				{"run-container", "10.0.0.13", ""},
+				{"run-container", "10.0.0.14", ""},
+				{"run-container", "10.0.0.15", ""},
+				{"run-container", "10.0.0.16", ""},
 			},
 		},
 		{
 			Name: "Stop APIServers",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: cpNodes, APIServers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
+				Rivers: allNodes, APIServers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
 			},
 			Commands: []Command{
 				{"stop-container", "10.0.0.14", ""},
@@ -138,7 +152,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 			Name: "Stop Controller Managers",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: cpNodes, APIServers: cpNodes,
+				Rivers: allNodes, APIServers: cpNodes,
 				ControllerManagers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
 			},
 			Commands: []Command{
@@ -151,7 +165,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 			Name: "Stop Schedulers",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: cpNodes, APIServers: cpNodes, ControllerManagers: cpNodes,
+				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes,
 				Schedulers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
 			},
 			Commands: []Command{
@@ -169,7 +183,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 		}
 		cmds := opCommands(op)
 		if len(c.Commands) != len(cmds) {
-			t.Errorf("[%s] commands length mismatch: %d", c.Name, len(cmds))
+			t.Errorf("[%s] commands length mismatch. expected length: %d, actual: %d", c.Name, len(c.Commands), len(cmds))
 			continue
 		}
 		for i, res := range cmds {

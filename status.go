@@ -61,7 +61,7 @@ type NodeStatus struct {
 	ControllerManager ServiceStatus
 	Scheduler         ServiceStatus
 	Proxy             ServiceStatus
-	Kubelet           KubeletStatus
+	Kubelet           ServiceStatus
 	Labels            map[string]string // are labels for k8s Node resource.
 }
 
@@ -185,12 +185,19 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 	}
 	status.ControllerManager = *ss
 
-	// kuber-scheduler status
+	// kube-scheduler status
 	ss, err = ce.Inspect("kube-scheduler")
 	if err != nil {
 		return nil, err
 	}
 	status.Scheduler = *ss
+
+	// kubelet status
+	ss, err = ce.Inspect("kubelet")
+	if err != nil {
+		return nil, err
+	}
+	status.Kubelet = *ss
 
 	// TODO: get statuses of other services.
 

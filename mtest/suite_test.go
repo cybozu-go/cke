@@ -20,7 +20,7 @@ func TestMtest(t *testing.T) {
 var _ = BeforeSuite(func() {
 	fmt.Println("Preparing...")
 
-	SetDefaultEventuallyPollingInterval(5 * time.Second)
+	SetDefaultEventuallyPollingInterval(10 * time.Second)
 	SetDefaultEventuallyTimeout(3 * time.Minute)
 
 	err := prepareSSHClients(host1, host2, node1, node2, node3, node4, node5, node6)
