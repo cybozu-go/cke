@@ -11,7 +11,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 	}
 
-	// Run Rivers on control-plane nodes
+	// Run Rivers on all nodes
 	target := filterNodes(c.Nodes, func(n *Node) bool {
 		return !cs.NodeStatuses[n.Address].Rivers.Running
 	})

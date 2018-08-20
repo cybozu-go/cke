@@ -140,7 +140,7 @@ func currentLeader(service string) (string, error) {
 	var endpoint struct {
 		Metadata struct {
 			Annotations struct {
-				ControlPlaneAlphaKubernetesIoLeader string `json:"control-plane.alpha.kubernetes.io/leader"`
+				Leader string `json:"control-plane.alpha.kubernetes.io/leader"`
 			} `json:"annotations"`
 		} `json:"metadata"`
 	}
@@ -152,7 +152,7 @@ func currentLeader(service string) (string, error) {
 	var record struct {
 		HolderIdentity string `json:"holderIdentity"`
 	}
-	err = json.NewDecoder(strings.NewReader(endpoint.Metadata.Annotations.ControlPlaneAlphaKubernetesIoLeader)).Decode(&record)
+	err = json.NewDecoder(strings.NewReader(endpoint.Metadata.Annotations.Leader)).Decode(&record)
 	if err != nil {
 		return "", err
 	}

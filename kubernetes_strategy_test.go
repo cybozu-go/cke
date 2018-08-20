@@ -1,7 +1,6 @@
 package cke
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -184,12 +183,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 		}
 		cmds := opCommands(op)
 		if len(c.Commands) != len(cmds) {
-			fmt.Println("-------------")
-			fmt.Printf("[%s] commands length mismatch: %d\n", c.Name, len(cmds))
-			fmt.Printf("cmds %v\n", cmds)
-			fmt.Printf("c.Commands %v\n", c.Commands)
-			fmt.Println("-------------")
-			t.Errorf("[%s] commands length mismatch: %d", c.Name, len(cmds))
+			t.Errorf("[%s] commands length mismatch. expected length: %d, actual: %d", c.Name, len(c.Commands), len(cmds))
 			continue
 		}
 		for i, res := range cmds {

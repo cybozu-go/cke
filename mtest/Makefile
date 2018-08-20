@@ -80,9 +80,9 @@ $(OUTPUT)/kubectl:
 	curl -o $@ -LO https://storage.googleapis.com/kubernetes-release/release/v1.11.1/bin/linux/amd64/kubectl
 	chmod a+x $@
 
-$(OUTPUT)/kubeconfig.yml:
+$(OUTPUT)/kubeconfig.yml: kubeconfig.yml
 	mkdir -p $(OUTPUT)
-	cp ./kubeconfig.yml $@
+	sed -e 's/@NODE1@/$(NODE1)/' $< > $@
 
 $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)
