@@ -101,7 +101,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return RiversStopOp([]*Node{target[0]}, cs.Agents)
 	}
 
-	// Check diff of kube-apiservers options
+	// Check diff of kube-apiserver options
 	target = filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].APIServer
 		if !reflect.DeepEqual(apiServerParams(cpNodes, n.Address, c.ServiceSubnet), status.BuiltInParams) {
@@ -116,6 +116,58 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		// Stop just one of targets and go to next iteration, in which
 		// the stopped target will be started
 		return APIServerStopOp([]*Node{target[0]}, cs.Agents)
+	}
+
+	// Check diff of kube-controller-manager options
+	target = filterNodes(cpNodes, func(n *Node) bool {
+		status := cs.NodeStatuses[n.Address].ControllerManager
+		if !reflect.DeepEqual(controllerManagerParams(), status.BuiltInParams) {
+			return true
+		}
+		if !reflect.DeepEqual(c.Options.ControllerManager, status.ExtraParams) {
+			return true
+		}
+		return false
+	})
+	if len(target) > 0 {
+		// Stop just one of targets and go to next iteration, in which
+		// the stopped target will be started
+		return ControllerManagerStopOp([]*Node{target[0]}, cs.Agents)
+	}
+
+	// Check diff of kube-scheduler options
+	target = filterNodes(cpNodes, func(n *Node) bool {
+		status := cs.NodeStatuses[n.Address].Scheduler
+		if !reflect.DeepEqual(schedulerParams(), status.BuiltInParams) {
+			return true
+		}
+		if !reflect.DeepEqual(c.Options.Scheduler, status.ExtraParams) {
+			return true
+		}
+		return false
+	})
+	if len(target) > 0 {
+		// Stop just one of targets and go to next iteration, in which
+		// the stopped target will be started
+		return SchedulerStopOp([]*Node{target[0]}, cs.Agents)
+	}
+
+	// Check diff of kubelet options
+	target = filterNodes(c.Nodes, func(n *Node) bool {
+		bootOp := KubeletBootOp([]*Node{n}, cs.Agents, c.Options.Kubelet).(*kubeletBootOp)
+		status := cs.NodeStatuses[n.Address].Kubelet
+		if !reflect.DeepEqual(bootOp.serviceParams(n.Address), status.BuiltInParams) {
+			return true
+		}
+		if !reflect.DeepEqual(bootOp.extraParams(), status.ExtraParams) {
+			return true
+		}
+		return false
+	})
+	if len(target) > 0 {
+		// Stop just one of targets and go to next iteration, in which
+		// the stopped target will be started
+		return KubeletStopOp([]*Node{target[0]}, cs.Agents)
 	}
 
 	return nil
