@@ -15,6 +15,7 @@ type riversBootOp struct {
 
 type apiServerBootOp struct {
 	nodes         []*Node
+	controlPlanes []*Node
 	agents        map[string]Agent
 	params        ServiceParams
 	step          int
@@ -132,9 +133,10 @@ func riversParams(upstreams []*Node) ServiceParams {
 }
 
 // APIServerBootOp returns an Operator to bootstrap APIServer cluster.
-func APIServerBootOp(nodes []*Node, agents map[string]Agent, params ServiceParams, serviceSubnet string) Operator {
+func APIServerBootOp(nodes, controlPlanes []*Node, agents map[string]Agent, params ServiceParams, serviceSubnet string) Operator {
 	return &apiServerBootOp{
 		nodes:         nodes,
+		controlPlanes: controlPlanes,
 		agents:        agents,
 		params:        params,
 		step:          0,
@@ -169,17 +171,17 @@ func (o *apiServerBootOp) NextCommand() Commander {
 		target := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		var etcdServers []string
-		for _, n := range o.nodes {
-			etcdServers = append(etcdServers, "http://"+n.Address+":2379")
-		}
-		return runContainerCommand{target, o.agents[target.Address], "kube-apiserver", opts, o.apiServerParams(etcdServers, target.Address), extra}
+		return runContainerCommand{target, o.agents[target.Address], "kube-apiserver", opts, apiServerParams(o.controlPlanes, target.Address, o.serviceSubnet), extra}
 	default:
 		return nil
 	}
 }
 
-func (o *apiServerBootOp) apiServerParams(etcdServers []string, addr string) ServiceParams {
+func apiServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubnet string) ServiceParams {
+	var etcdServers []string
+	for _, n := range controlPlanes {
+		etcdServers = append(etcdServers, "http://"+n.Address+":2379")
+	}
 	args := []string{
 		"apiserver",
 		"--allow-privileged",
@@ -189,8 +191,8 @@ func (o *apiServerBootOp) apiServerParams(etcdServers []string, addr string) Ser
 		"--insecure-bind-address=0.0.0.0",
 		"--insecure-port=8080",
 
-		"--advertise-address=" + addr,
-		"--service-cluster-ip-range=" + o.serviceSubnet,
+		"--advertise-address=" + advertiseAddress,
+		"--service-cluster-ip-range=" + serviceSubnet,
 		"--audit-log-path=/var/log/kubernetes/apiserver/audit.log",
 		"--log-dir=/var/log/kubernetes/apiserver/",
 		"--machine-id-file=/etc/machine-id",

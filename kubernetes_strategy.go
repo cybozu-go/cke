@@ -18,7 +18,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].Rivers.Running
 	})
 	if len(target) > 0 {
-		return RiversBootOp(target, controlPlanes(c.Nodes), cs.Agents, c.Options.Rivers)
+		return RiversBootOp(target, cpNodes, cs.Agents, c.Options.Rivers)
 	}
 
 	// Run kube-apiserver on control-plane nodes
@@ -26,7 +26,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].APIServer.Running
 	})
 	if len(target) > 0 {
-		return APIServerBootOp(target, cs.Agents, c.Options.APIServer, c.ServiceSubnet)
+		return APIServerBootOp(target, cpNodes, cs.Agents, c.Options.APIServer, c.ServiceSubnet)
 	}
 
 	// Stop kube-apiserver on non-control-plane nodes
@@ -82,11 +82,12 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 }
 
 func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
+	cpNodes := controlPlanes(c.Nodes)
 
 	// Check diff of rivers options
 	target := filterNodes(c.Nodes, func(n *Node) bool {
 		riversStatus := cs.NodeStatuses[n.Address].Rivers
-		if !reflect.DeepEqual(riversParams(controlPlanes(c.Nodes)), riversStatus.BuiltInParams) {
+		if !reflect.DeepEqual(riversParams(cpNodes), riversStatus.BuiltInParams) {
 			return true
 		}
 		if !reflect.DeepEqual(c.Options.Rivers, riversStatus.ExtraParams) {
@@ -98,6 +99,23 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		// Stop just one of targets and go to next iteration, in which
 		// the stopped target will be started
 		return RiversStopOp([]*Node{target[0]}, cs.Agents)
+	}
+
+	// Check diff of kube-apiservers options
+	target = filterNodes(cpNodes, func(n *Node) bool {
+		status := cs.NodeStatuses[n.Address].APIServer
+		if !reflect.DeepEqual(apiServerParams(cpNodes, n.Address, c.ServiceSubnet), status.BuiltInParams) {
+			return true
+		}
+		if !reflect.DeepEqual(c.Options.APIServer, status.ExtraParams) {
+			return true
+		}
+		return false
+	})
+	if len(target) > 0 {
+		// Stop just one of targets and go to next iteration, in which
+		// the stopped target will be started
+		return APIServerStopOp([]*Node{target[0]}, cs.Agents)
 	}
 
 	return nil
