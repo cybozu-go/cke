@@ -1,5 +1,7 @@
 package cke
 
+import "reflect"
+
 func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	var cpNodes []*Node
 	var nonCpNodes []*Node
@@ -16,7 +18,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].Rivers.Running
 	})
 	if len(target) > 0 {
-		return RiversBootOp(target, cs.Agents, c.Options.Rivers)
+		return RiversBootOp(target, controlPlanes(c.Nodes), cs.Agents, c.Options.Rivers)
 	}
 
 	// Run kube-apiserver on control-plane nodes
@@ -75,7 +77,36 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return KubeletBootOp(target, cs.Agents, c.Options.Kubelet)
 	}
 
+	// Check diff of command options
+	return kubernetesOptionsDecideToDo(c, cs)
+}
+
+func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
+
+	// Check diff of rivers options
+	target := filterNodes(c.Nodes, func(n *Node) bool {
+		riversStatus := cs.NodeStatuses[n.Address].Rivers
+		if !reflect.DeepEqual(riversParams(controlPlanes(c.Nodes)), riversStatus.BuiltInParams) {
+			return true
+		}
+		if !reflect.DeepEqual(c.Options.Rivers, riversStatus.ExtraParams) {
+			return true
+		}
+		return false
+	})
+	if len(target) > 0 {
+		// Stop just one of targets and go to next iteration, in which
+		// the stopped target will be started
+		return RiversStopOp([]*Node{target[0]}, cs.Agents)
+	}
+
 	return nil
+}
+
+func controlPlanes(nodes []*Node) []*Node {
+	return filterNodes(nodes, func(n *Node) bool {
+		return n.ControlPlane
+	})
 }
 
 func filterNodes(nodes []*Node, f func(n *Node) bool) []*Node {

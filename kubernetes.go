@@ -6,6 +6,7 @@ import (
 
 type riversBootOp struct {
 	nodes     []*Node
+	upstreams []*Node
 	agents    map[string]Agent
 	params    ServiceParams
 	step      int
@@ -45,6 +46,12 @@ type kubeletBootOp struct {
 	nodeIndex int
 }
 
+type riversStopOp struct {
+	nodes     []*Node
+	agents    map[string]Agent
+	nodeIndex int
+}
+
 type apiServerStopOp struct {
 	nodes     []*Node
 	agents    map[string]Agent
@@ -66,9 +73,10 @@ type schedulerStopOp struct {
 }
 
 // RiversBootOp returns an Operator to bootstrap rivers cluster.
-func RiversBootOp(nodes []*Node, agents map[string]Agent, params ServiceParams) Operator {
+func RiversBootOp(nodes []*Node, upstreams []*Node, agents map[string]Agent, params ServiceParams) Operator {
 	return &riversBootOp{
 		nodes:     nodes,
+		upstreams: upstreams,
 		agents:    agents,
 		params:    params,
 		step:      0,
@@ -99,20 +107,20 @@ func (o *riversBootOp) NextCommand() Commander {
 		target := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		var upstreams []string
-		for _, n := range o.nodes {
-			upstreams = append(upstreams, n.Address+":8080")
-		}
-		return runContainerCommand{target, o.agents[target.Address], "rivers", opts, riversParams(upstreams), extra}
+		return runContainerCommand{target, o.agents[target.Address], "rivers", opts, riversParams(o.upstreams), extra}
 	default:
 		return nil
 	}
 }
 
-func riversParams(upstreams []string) ServiceParams {
+func riversParams(upstreams []*Node) ServiceParams {
+	var ups []string
+	for _, n := range upstreams {
+		ups = append(ups, n.Address+":8080")
+	}
 	args := []string{
 		"rivers",
-		"--upstreams=" + strings.Join(upstreams, ","),
+		"--upstreams=" + strings.Join(ups, ","),
 		"--listen=" + "127.0.0.1:18080",
 	}
 	return ServiceParams{
@@ -398,6 +406,30 @@ func (o *kubeletBootOp) extraParams() ServiceParams {
 		ExtraBinds:     o.params.ExtraBinds,
 		ExtraEnvvar:    o.params.ExtraEnvvar,
 	}
+}
+
+// RiversStopOp returns an Operator to bootstrap Scheduler cluster.
+func RiversStopOp(nodes []*Node, agents map[string]Agent) Operator {
+	return &riversStopOp{
+		nodes:     nodes,
+		agents:    agents,
+		nodeIndex: 0,
+	}
+}
+
+func (o *riversStopOp) Name() string {
+	return "rivers-stop"
+}
+
+func (o *riversStopOp) NextCommand() Commander {
+	if o.nodeIndex >= len(o.nodes) {
+		return nil
+	}
+
+	node := o.nodes[o.nodeIndex]
+	o.nodeIndex++
+
+	return stopContainerCommand{node, o.agents[node.Address], "rivers"}
 }
 
 // APIServerStopOp returns an Operator to bootstrap Scheduler cluster.
