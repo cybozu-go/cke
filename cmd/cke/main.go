@@ -66,11 +66,16 @@ func main() {
 	if err != nil {
 		log.ErrorExit(err)
 	}
-	controller := cke.NewController(session, interval)
+	timeout, err := time.ParseDuration(cfg.Timeout)
+	if err != nil {
+		log.ErrorExit(err)
+	}
+	controller := cke.NewController(session, interval, timeout)
 
 	cmd.Go(controller.Run)
 	server := cke.Server{
 		EtcdClient: etcd,
+		Timeout:    timeout,
 	}
 	s := &cmd.HTTPServer{
 		Server: &http.Server{
