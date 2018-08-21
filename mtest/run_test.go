@@ -17,7 +17,6 @@ import (
 	"github.com/cybozu-go/cmd"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v2"
 	"k8s.io/kubernetes/pkg/apis/core"
@@ -106,34 +105,43 @@ func runManagementEtcd(client *ssh.Client) error {
 }
 
 func stopCKE() error {
+	env := cmd.NewEnvironment(context.Background())
 	for _, host := range []string{host1, host2} {
-		c := sshClients[host]
-		sess, err := c.NewSession()
-		if err != nil {
-			return err
-		}
+		host2 := host
+		env.Go(func(ctx context.Context) error {
+			c := sshClients[host2]
+			sess, err := c.NewSession()
+			if err != nil {
+				return err
+			}
+			defer sess.Close()
 
-		sess.Run("sudo systemctl reset-failed cke.service; sudo systemctl stop cke.service")
-		sess.Close()
+			sess.Run("sudo systemctl reset-failed cke.service; sudo systemctl stop cke.service")
+
+			return nil // Ignore error if cke was not running
+		})
 	}
-	return nil
+	env.Stop()
+	return env.Wait()
 }
 
 func runCKE() error {
+	env := cmd.NewEnvironment(context.Background())
 	for _, host := range []string{host1, host2} {
-		c := sshClients[host]
-		sess, err := c.NewSession()
-		if err != nil {
-			return err
-		}
+		host2 := host
+		env.Go(func(ctx context.Context) error {
+			c := sshClients[host2]
+			sess, err := c.NewSession()
+			if err != nil {
+				return err
+			}
+			defer sess.Close()
 
-		err = sess.Run("sudo systemd-run --unit=cke.service --setenv=GOFAIL_HTTP=0.0.0.0:1234 /data/cke -config /etc/cke.yml -interval 10s -session-ttl 5s")
-		sess.Close()
-		if err != nil {
-			return err
-		}
+			return sess.Run("sudo systemd-run --unit=cke.service --setenv=GOFAIL_HTTP=0.0.0.0:1234 /data/cke -config /etc/cke.yml -interval 1ms -session-ttl 5s")
+		})
 	}
-	return nil
+	env.Stop()
+	return env.Wait()
 }
 
 func execAt(host string, args ...string) (stdout, stderr []byte, e error) {
@@ -168,25 +176,23 @@ func localTempFile(body string) *os.File {
 
 func ckecli(args ...string) []byte {
 	args = append([]string{"-config", ckeConfigPath}, args...)
+	var stdout bytes.Buffer
 	command := exec.Command(ckecliPath, args...)
-	stdout := new(bytes.Buffer)
-	session, err := gexec.Start(command, stdout, GinkgoWriter)
+	command.Stdout = &stdout
+	command.Stderr = GinkgoWriter
+	err := command.Run()
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gexec.Exit(0))
 	return stdout.Bytes()
 }
 
 func kubectl(args ...string) []byte {
 	args = append([]string{"--kubeconfig", kubeconfigPath}, args...)
+	var stdout bytes.Buffer
 	command := exec.Command(kubectlPath, args...)
-	stdout := new(bytes.Buffer)
-	session, err := gexec.Start(command, stdout, GinkgoWriter)
+	command.Stdout = &stdout
+	command.Stderr = GinkgoWriter
+	err := command.Run()
 	Expect(err).NotTo(HaveOccurred())
-
-	// extend interval to solve timeout error
-	timeoutInterval := time.Minute * 5
-	pollingInterval := time.Second * 10
-	Eventually(session, timeoutInterval, pollingInterval).Should(gexec.Exit(0))
 	return stdout.Bytes()
 }
 
