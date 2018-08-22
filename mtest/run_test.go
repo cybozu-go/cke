@@ -205,7 +205,7 @@ func getCluster() *cke.Cluster {
 }
 
 func getClusterStatus() (*cke.ClusterStatus, error) {
-	controller := cke.NewController(nil, 0)
+	controller := cke.NewController(nil, 0, time.Second*2)
 	cluster := getCluster()
 	for _, n := range cluster.Nodes {
 		n.ControlPlane = true

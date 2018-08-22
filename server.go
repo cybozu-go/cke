@@ -24,9 +24,9 @@ type health struct {
 }
 
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/version" {
+	if r.Method == http.MethodGet && r.URL.Path == "/version" {
 		s.handleVersion(w, r)
-	} else if r.URL.Path == "/health" {
+	} else if r.Method == http.MethodGet && r.URL.Path == "/health" {
 		s.handleHealth(w, r)
 	} else {
 		renderError(r.Context(), w, APIErrNotFound)

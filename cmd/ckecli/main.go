@@ -50,7 +50,7 @@ func main() {
 	cmd.LogConfig{}.Apply()
 
 	if *flgVersion {
-		fmt.Println(cke.VERSION)
+		fmt.Println(cke.Version)
 		os.Exit(0)
 	}
 
