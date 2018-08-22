@@ -132,6 +132,53 @@ var _ = Describe("kubernetes strategy", func() {
 			return checkKubernetesClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 	})
+
+	It("should adjust command arguments", func() {
+		By("Updating container options")
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		arg := "--concurrent-deployment-syncs=5"
+		cluster.Options.ControllerManager.ExtraArguments = []string{arg}
+		ckecliClusterSet(cluster)
+
+		By("Checking that controller managers restarted with new arguments")
+		Eventually(func() bool {
+			controlPlanes := []string{node1, node2, node3}
+			workers := []string{node4, node5, node6}
+			status, err := getClusterStatus()
+			if err != nil {
+				return false
+			}
+			defer status.Destroy()
+
+			for _, node := range controlPlanes {
+				stdout, _, err := execAt(node, "docker", "inspect", "kube-controller-manager", "--format='{{json .Config.Cmd}}'")
+				if err != nil {
+					return false
+				}
+				var cmds = []string{}
+				err = json.NewDecoder(bytes.NewReader(stdout)).Decode(&cmds)
+				if err != nil {
+					return false
+				}
+
+				ok := false
+				for _, val := range cmds {
+					if val == arg {
+						ok = true
+					}
+				}
+				if !ok {
+					return false
+				}
+			}
+
+			return checkKubernetesClusterStatus(status, controlPlanes, workers)
+		}).Should(BeTrue())
+
+	})
 })
 
 func currentLeader(service string) (string, error) {
