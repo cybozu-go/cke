@@ -5,9 +5,10 @@ ckecli
 $ ckecli [--config FILE] <subcommand> args...
 ```
 
-Option     | Default value  | Description
----------- | -------------- | -----------
-`--config` | `/etc/cke.yml` | config file path
+Option      | Default value  | Description
+----------  | -------------- | -----------
+`--config`  | `/etc/cke.yml` | config file path
+`--version` |                | show ckecli version
 
 `ckecli cluster set FILE`
 -------------------------
