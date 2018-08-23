@@ -53,6 +53,14 @@ type riversStopOp struct {
 	nodeIndex int
 }
 
+type proxyBootOp struct {
+	nodes     []*Node
+	agents    map[string]Agent
+	params    ServiceParams
+	step      int
+	nodeIndex int
+}
+
 type apiServerStopOp struct {
 	nodes     []*Node
 	agents    map[string]Agent
@@ -426,6 +434,16 @@ func RiversStopOp(nodes []*Node, agents map[string]Agent) Operator {
 	}
 }
 
+func ProxyBootOp(nodes []*Node, agents map[string]Agent, params ServiceParams) Operator {
+	return &proxyBootOp{
+		nodes:     nodes,
+		agents:    agents,
+		params:    params,
+		step:      0,
+		nodeIndex: 0,
+	}
+}
+
 func (o *riversStopOp) Name() string {
 	return "rivers-stop"
 }
@@ -441,7 +459,57 @@ func (o *riversStopOp) NextCommand() Commander {
 	return stopContainerCommand{node, o.agents[node.Address], "rivers"}
 }
 
-// APIServerStopOp returns an Operator to stop APIServer.
+func (o *proxyBootOp) Name() string {
+	return "proxy-bootstrap"
+}
+
+func (o *proxyBootOp) NextCommand() Commander {
+	extra := o.params
+	opts := []string{
+		"--privileged",
+	}
+
+	switch o.step {
+	case 0:
+		o.step++
+		return makeFileCommand{o.nodes, o.agents, proxyKubeConfig(), "/etc/kubernetes/proxy/config"}
+	case 1:
+		o.step++
+		return imagePullCommand{o.nodes, o.agents, "kube-proxy"}
+	case 2:
+		o.step++
+		return makeDirCommand{o.nodes, o.agents, "/var/log/kubernetes/proxy"}
+	case 3:
+		if o.nodeIndex >= len(o.nodes) {
+			return nil
+		}
+		target := o.nodes[o.nodeIndex]
+		o.nodeIndex++
+
+		return runContainerCommand{target, o.agents[target.Address], "kube-proxy", opts, o.serviceParams(target.Address), extra}
+	default:
+		return nil
+	}
+}
+
+func (o *proxyBootOp) serviceParams(targetAddress string) ServiceParams {
+	args := []string{
+		"proxy",
+		"--proxy-mode ipvs",
+		"--kubeconfig=/etc/kubernetes/proxy/kubeconfig",
+		"--log-dir=/var/log/kubernetes/proxy",
+	}
+	return ServiceParams{
+		ExtraArguments: args,
+		ExtraBinds: []Mount{
+			{"/etc/hostname", "/etc/macine-id", true},
+			{"/etc/kubernetes/kubelet", "/etc/kubernetes/proxy", true},
+			{"/var/log/kubernetes/proxy", "/var/log/kubernetes/proxy", false},
+		},
+	}
+}
+
+// APIServerStopOp returns an Operator to bootstrap Scheduler cluster.
 func APIServerStopOp(nodes []*Node, agents map[string]Agent) Operator {
 	return &apiServerStopOp{
 		nodes:     nodes,

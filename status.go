@@ -198,6 +198,13 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 	}
 	status.Kubelet = *ss
 
+	// kube-proxy status
+	ss, err = ce.Inspect("kube-proxy")
+	if err != nil {
+		return nil, err
+	}
+	status.Scheduler = *ss
+
 	// TODO: get statuses of other services.
 
 	return status, nil
