@@ -434,6 +434,7 @@ func RiversStopOp(nodes []*Node, agents map[string]Agent) Operator {
 	}
 }
 
+// ProxyBootOp returns an Operator to bootstrap Proxy
 func ProxyBootOp(nodes []*Node, agents map[string]Agent, params ServiceParams) Operator {
 	return &proxyBootOp{
 		nodes:     nodes,
