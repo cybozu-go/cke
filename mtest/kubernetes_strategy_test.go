@@ -149,6 +149,7 @@ var _ = Describe("kubernetes strategy", func() {
 			workers := []string{node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
+				fmt.Println("failed to get cluster status", err)
 				return false
 			}
 			defer status.Destroy()
@@ -156,11 +157,13 @@ var _ = Describe("kubernetes strategy", func() {
 			for _, node := range controlPlanes {
 				stdout, _, err := execAt(node, "docker", "inspect", "kube-controller-manager", "--format='{{json .Config.Cmd}}'")
 				if err != nil {
+					fmt.Println("failed to exec docker inspect", err)
 					return false
 				}
 				var cmds = []string{}
 				err = json.NewDecoder(bytes.NewReader(stdout)).Decode(&cmds)
 				if err != nil {
+					fmt.Println("failed to parse json", err)
 					return false
 				}
 
