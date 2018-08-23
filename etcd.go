@@ -366,6 +366,33 @@ func (c removeEtcdMemberCommand) Command() Command {
 	}
 }
 
+// EtcdWaitMemberOp returns an Operator to wait until etcd cluster becomes healthy
+func EtcdWaitMemberOp(endpoints []string, client *cmd.HTTPClient) Operator {
+	return &etcdWaitMemberOp{
+		endpoints: endpoints,
+		client:    client,
+	}
+}
+
+type etcdWaitMemberOp struct {
+	endpoints []string
+	client    *cmd.HTTPClient
+	executed  bool
+}
+
+func (o *etcdWaitMemberOp) Name() string {
+	return "etcd-wait-member"
+}
+
+func (o *etcdWaitMemberOp) NextCommand() Commander {
+	if o.executed {
+		return nil
+	}
+	o.executed = true
+
+	return waitEtcdSyncCommand{o.endpoints, o.client}
+}
+
 // EtcdRemoveMemberOp returns an Operator to remove member from etcd cluster.
 func EtcdRemoveMemberOp(endpoints []string, targets map[string]*etcdserverpb.Member) Operator {
 	return &etcdRemoveMemberOp{

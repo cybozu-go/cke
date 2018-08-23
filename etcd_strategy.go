@@ -2,7 +2,6 @@ package cke
 
 import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
-	"github.com/cybozu-go/log"
 )
 
 func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
@@ -26,7 +25,6 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	}
 
 	if len(cs.Etcd.Members) == 0 {
-		log.Warn("No members of etcd cluster", nil)
 		return nil
 	}
 
@@ -50,6 +48,10 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	nodes = newMemberControlPlane(cpNodes, cs.Etcd)
 	if len(nodes) > 0 {
 		return EtcdAddMemberOp(endpoints, nodes, cs.Agents, cs.Client, c.Options.Etcd)
+	}
+	nodes = unhealthyControlPlaneMember(cpNodes, cs.Etcd)
+	if len(nodes) > 0 {
+		return EtcdWaitMemberOp(endpoints, cs.Client)
 	}
 	members = healthyNonClusterMember(c.Nodes, cs.Etcd)
 	if len(members) > 0 {
@@ -117,6 +119,22 @@ func newMemberControlPlane(cpNodes []*Node, cs EtcdClusterStatus) []*Node {
 		if !inMember {
 			targets = append(targets, n)
 		}
+	}
+	return targets
+}
+
+func unhealthyControlPlaneMember(cpNodes []*Node, cs EtcdClusterStatus) []*Node {
+	var targets []*Node
+	for _, n := range cpNodes {
+		if !n.ControlPlane {
+			continue
+		}
+		_, inMember := cs.Members[n.Address]
+		health := cs.MemberHealth[n.Address]
+		if health != EtcdNodeHealthy && inMember {
+			targets = append(targets, n)
+		}
+
 	}
 	return targets
 }
