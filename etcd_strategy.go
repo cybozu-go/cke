@@ -154,9 +154,6 @@ func runningNonControlPlaneMember(allNodes []*Node, statuses map[string]*NodeSta
 func outdatedControlPlaneMember(allNodes []*Node, statuses map[string]*NodeStatus) []*Node {
 	var targets []*Node
 	for _, n := range allNodes {
-		if !n.ControlPlane {
-			continue
-		}
 		if EtcdImage != statuses[n.Address].Etcd.Image {
 			targets = append(targets, n)
 		}
