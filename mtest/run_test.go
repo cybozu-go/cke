@@ -17,7 +17,6 @@ import (
 	"github.com/cybozu-go/cmd"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v2"
 	"k8s.io/kubernetes/pkg/apis/core"
@@ -188,14 +187,11 @@ func ckecli(args ...string) []byte {
 
 func kubectl(args ...string) []byte {
 	args = append([]string{"--kubeconfig", kubeconfigPath}, args...)
+	var stdout bytes.Buffer
 	command := exec.Command(kubectlPath, args...)
-	stdout := new(bytes.Buffer)
-	session, err := gexec.Start(command, stdout, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-
-	timeoutInterval := time.Minute * 3
-	pollingInterval := time.Second * 10
-	Eventually(session, timeoutInterval, pollingInterval).Should(gexec.Exit(0))
+	command.Stdout = &stdout
+	command.Stderr = GinkgoWriter
+	err := command.Run()
 	Expect(err).NotTo(HaveOccurred())
 	return stdout.Bytes()
 }
@@ -385,7 +381,10 @@ func initializeControlPlane() {
 			return false
 		}
 		defer status.Destroy()
-		return checkEtcdClusterStatus(status, controlPlanes, workers)
+		if !checkEtcdClusterStatus(status, controlPlanes, workers) {
+			return false
+		}
+		return checkKubernetesClusterStatus(status, controlPlanes, workers)
 	}).Should(BeTrue())
 }
 
