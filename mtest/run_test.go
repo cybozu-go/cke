@@ -313,8 +313,8 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 	}
 
 	for _, host := range controlPlanes {
-		// 18080: rivers(to apiserver), 10252: controller-manager, 10251: scheduler
-		for _, port := range []string{"18080", "10252", "10251"} {
+		// 8080: apiserver, 18080: rivers (to apiserver), 10252: controller-manager, 10251: scheduler
+		for _, port := range []string{"8080", "18080", "10252", "10251"} {
 			stdout, _, err := execAt(host, "curl", fmt.Sprintf("localhost:%s/healthz", port))
 			if err != nil {
 				fmt.Println(err)
@@ -381,7 +381,10 @@ func initializeControlPlane() {
 			return false
 		}
 		defer status.Destroy()
-		return checkEtcdClusterStatus(status, controlPlanes, workers)
+		if !checkEtcdClusterStatus(status, controlPlanes, workers) {
+			return false
+		}
+		return checkKubernetesClusterStatus(status, controlPlanes, workers)
 	}).Should(BeTrue())
 }
 

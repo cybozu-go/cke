@@ -70,11 +70,10 @@ type NodeStatus struct {
 // If Running is false, the service is not running on the node.
 // ExtraXX are extra parameters of the running service, if any.
 type ServiceStatus struct {
-	Running        bool
-	Image          string
-	ExtraArguments []string
-	ExtraBinds     []Mount
-	ExtraEnvvar    map[string]string
+	Running       bool
+	Image         string
+	BuiltInParams ServiceParams
+	ExtraParams   ServiceParams
 }
 
 // EtcdStatus is the status of kubelet.

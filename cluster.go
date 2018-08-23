@@ -50,7 +50,7 @@ type KubeletParams struct {
 // Options is a set of optional parameters for k8s components.
 type Options struct {
 	Etcd              EtcdParams    `json:"etcd"                    yaml:"etcd"`
-	Rivers            ServiceParams `json:"rivers"		        yaml:"rivers"`
+	Rivers            ServiceParams `json:"rivers"                  yaml:"rivers"`
 	APIServer         ServiceParams `json:"kube-api"                yaml:"kube-api"`
 	ControllerManager ServiceParams `json:"kube-controller-manager" yaml:"kube-controller-manager"`
 	Scheduler         ServiceParams `json:"kube-scheduler"          yaml:"kube-scheduler"`

@@ -1,13 +1,12 @@
 package cke
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
-
-	"crypto/rand"
-	"encoding/hex"
 
 	"github.com/docker/docker/api/types"
 	"github.com/pkg/errors"
@@ -41,6 +40,11 @@ type ContainerEngine interface {
 	VolumeRemove(name string) error
 	// VolumeExists returns true if the named volume exists.
 	VolumeExists(name string) (bool, error)
+}
+
+type ckeLabel struct {
+	BuiltInParams ServiceParams `json:"builtin"`
+	ExtraParams   ServiceParams `json:"extra"`
 }
 
 // Docker is an implementation of ContainerEngine.
@@ -148,7 +152,12 @@ func (c docker) RunSystem(name string, opts []string, params, extra ServiceParam
 	for k, v := range extra.ExtraEnvvar {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
-	data, err := json.Marshal(extra)
+
+	label := ckeLabel{
+		BuiltInParams: params,
+		ExtraParams:   extra,
+	}
+	data, err := json.Marshal(label)
 	if err != nil {
 		return err
 	}
@@ -241,7 +250,7 @@ func (c docker) Inspect(name string) (*ServiceStatus, error) {
 	}
 	dj := djs[0]
 
-	params := new(ServiceParams)
+	params := new(ckeLabel)
 	label := dj.Config.Labels[ckeLabelName]
 
 	err = json.Unmarshal([]byte(label), params)
@@ -250,11 +259,10 @@ func (c docker) Inspect(name string) (*ServiceStatus, error) {
 	}
 
 	return &ServiceStatus{
-		Running:        dj.State.Running,
-		Image:          dj.Image,
-		ExtraArguments: params.ExtraArguments,
-		ExtraBinds:     params.ExtraBinds,
-		ExtraEnvvar:    params.ExtraEnvvar,
+		Running:       dj.State.Running,
+		Image:         dj.Image,
+		BuiltInParams: params.BuiltInParams,
+		ExtraParams:   params.ExtraParams,
 	}, nil
 }
 
