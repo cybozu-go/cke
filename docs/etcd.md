@@ -36,6 +36,7 @@ CKE does the following steps on each iteration:
 4. Add new control-plane into etcd cluster member. Then CKE starts etcd container on the nodes.
 5. Remove healthy and non-cluster member from etcd cluster members.
 6. Remove non-control-plane member from etcd cluster members. Then CKE stops etcd container.
+7. Update control-plane which has outdated etcd container.
 
 CKE processes nodes if applicable nodes are exists on each step, then re-evaluate the cluster from step 1.
 

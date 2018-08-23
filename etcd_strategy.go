@@ -1,8 +1,6 @@
 package cke
 
 import (
-	"strings"
-
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/log"
 )
@@ -61,9 +59,9 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(nodes) > 0 {
 		return EtcdDestroyMemberOp(endpoints, nodes, cs.Agents, cs.Client, cs.Etcd.Members)
 	}
-	nodes = outdatedControlPlaneMember(c.Nodes, cs.NodeStatuses)
+	nodes = outdatedControlPlaneMember(cpNodes, cs.NodeStatuses)
 	if len(nodes) > 0 {
-		return EtcdUpdateVersionOp(endpoints, cs.Client, nodes, cs.Agents, c.Options.Etcd)
+		return EtcdUpdateVersionOp(endpoints, cs.Client, nodes, cpNodes, cs.Agents, c.Options.Etcd)
 	}
 
 	return nil
@@ -155,17 +153,11 @@ func runningNonControlPlaneMember(allNodes []*Node, statuses map[string]*NodeSta
 
 func outdatedControlPlaneMember(allNodes []*Node, statuses map[string]*NodeStatus) []*Node {
 	var targets []*Node
-	requestedEtcd := strings.Split(EtcdImage, ":")
-	desiredVersion := requestedEtcd[len(requestedEtcd)-1]
-
 	for _, n := range allNodes {
 		if !n.ControlPlane {
 			continue
 		}
-
-		currentEtcd := strings.Split(statuses[n.Address].Etcd.Image, ":")
-		currentVersion := currentEtcd[len(currentEtcd)-1]
-		if desiredVersion != currentVersion {
+		if EtcdImage != statuses[n.Address].Etcd.Image {
 			targets = append(targets, n)
 		}
 	}

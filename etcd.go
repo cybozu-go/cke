@@ -455,11 +455,12 @@ func (o *etcdDestroyMemberOp) NextCommand() Commander {
 }
 
 // EtcdUpdateVersionOp create new etcdUpdateVersionOp instance
-func EtcdUpdateVersionOp(endpoints []string, client *cmd.HTTPClient, targets []*Node, agents map[string]Agent, params EtcdParams) Operator {
+func EtcdUpdateVersionOp(endpoints []string, client *cmd.HTTPClient, targets []*Node, cpNodes []*Node, agents map[string]Agent, params EtcdParams) Operator {
 	return &etcdUpdateVersionOp{
 		endpoints: endpoints,
 		client:    client,
 		targets:   targets,
+		cpNodes:   cpNodes,
 		agents:    agents,
 		params:    params,
 	}
@@ -469,6 +470,7 @@ type etcdUpdateVersionOp struct {
 	endpoints []string
 	client    *cmd.HTTPClient
 	targets   []*Node
+	cpNodes   []*Node
 	agents    map[string]Agent
 	params    EtcdParams
 	step      int
@@ -506,7 +508,7 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
 		}
 		var initialCluster []string
-		for _, n := range o.targets {
+		for _, n := range o.cpNodes {
 			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
 		}
 		o.nodeIndex++
