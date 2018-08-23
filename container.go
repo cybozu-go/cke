@@ -251,7 +251,7 @@ func (c docker) Inspect(name string) (*ServiceStatus, error) {
 
 	return &ServiceStatus{
 		Running:        dj.State.Running,
-		Image:          dj.Image,
+		Image:          dj.Config.Image,
 		ExtraArguments: params.ExtraArguments,
 		ExtraBinds:     params.ExtraBinds,
 		ExtraEnvvar:    params.ExtraEnvvar,
