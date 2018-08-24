@@ -112,11 +112,11 @@ func (c removeFileCommand) Run(ctx context.Context) error {
 		Source:      dir,
 		Destination: filepath.Join("/mnt", dir),
 	}}
-	mkdirCommand := "rm " + filepath.Join("/mnt", c.target)
+	command := "rm -f " + filepath.Join("/mnt", c.target)
 	for _, n := range c.nodes {
 		ce := Docker(c.agents[n.Address])
 		env.Go(func(ctx context.Context) error {
-			return ce.Run("tools", binds, mkdirCommand)
+			return ce.Run("tools", binds, command)
 		})
 	}
 	env.Stop()

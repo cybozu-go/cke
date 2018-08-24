@@ -14,6 +14,7 @@ type KubernetesTestConfiguration struct {
 	APIServers         []string
 	ControllerManagers []string
 	Schedulers         []string
+	Kubelets           []string
 }
 
 func (c *KubernetesTestConfiguration) Cluster() *Cluster {
@@ -43,6 +44,9 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 	}
 	for _, addr := range c.Schedulers {
 		nodeStatus[addr].Scheduler.Running = true
+	}
+	for _, addr := range c.Kubelets {
+		nodeStatus[addr].Kubelet.Running = true
 	}
 
 	return &ClusterStatus{NodeStatuses: nodeStatus}
@@ -172,6 +176,16 @@ func testKubernetesDecideToDo(t *testing.T) {
 				{"rm", "/etc/kubernetes/scheduler/kubeconfig", ""},
 				{"stop-container", "10.0.0.14", ""},
 				{"stop-container", "10.0.0.15", ""},
+			},
+		},
+		{
+			Name: "Stop the container because its command arguments are different from expected ones",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes, Kubelets: allNodes,
+			},
+			Commands: []Command{
+				{"stop-container", "10.0.0.11", ""},
 			},
 		},
 	}

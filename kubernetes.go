@@ -6,6 +6,7 @@ import (
 
 type riversBootOp struct {
 	nodes     []*Node
+	upstreams []*Node
 	agents    map[string]Agent
 	params    ServiceParams
 	step      int
@@ -14,6 +15,7 @@ type riversBootOp struct {
 
 type apiServerBootOp struct {
 	nodes         []*Node
+	controlPlanes []*Node
 	agents        map[string]Agent
 	params        ServiceParams
 	step          int
@@ -45,6 +47,12 @@ type kubeletBootOp struct {
 	nodeIndex int
 }
 
+type riversStopOp struct {
+	nodes     []*Node
+	agents    map[string]Agent
+	nodeIndex int
+}
+
 type apiServerStopOp struct {
 	nodes     []*Node
 	agents    map[string]Agent
@@ -65,10 +73,18 @@ type schedulerStopOp struct {
 	nodeIndex int
 }
 
+type kubeletStopOp struct {
+	nodes     []*Node
+	agents    map[string]Agent
+	step      int
+	nodeIndex int
+}
+
 // RiversBootOp returns an Operator to bootstrap rivers cluster.
-func RiversBootOp(nodes []*Node, agents map[string]Agent, params ServiceParams) Operator {
+func RiversBootOp(nodes []*Node, upstreams []*Node, agents map[string]Agent, params ServiceParams) Operator {
 	return &riversBootOp{
 		nodes:     nodes,
+		upstreams: upstreams,
 		agents:    agents,
 		params:    params,
 		step:      0,
@@ -99,20 +115,20 @@ func (o *riversBootOp) NextCommand() Commander {
 		target := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		var upstreams []string
-		for _, n := range o.nodes {
-			upstreams = append(upstreams, n.Address+":8080")
-		}
-		return runContainerCommand{target, o.agents[target.Address], "rivers", opts, riversParams(upstreams), extra}
+		return runContainerCommand{target, o.agents[target.Address], "rivers", opts, riversParams(o.upstreams), extra}
 	default:
 		return nil
 	}
 }
 
-func riversParams(upstreams []string) ServiceParams {
+func riversParams(upstreams []*Node) ServiceParams {
+	var ups []string
+	for _, n := range upstreams {
+		ups = append(ups, n.Address+":8080")
+	}
 	args := []string{
 		"rivers",
-		"--upstreams=" + strings.Join(upstreams, ","),
+		"--upstreams=" + strings.Join(ups, ","),
 		"--listen=" + "127.0.0.1:18080",
 	}
 	return ServiceParams{
@@ -124,9 +140,10 @@ func riversParams(upstreams []string) ServiceParams {
 }
 
 // APIServerBootOp returns an Operator to bootstrap APIServer cluster.
-func APIServerBootOp(nodes []*Node, agents map[string]Agent, params ServiceParams, serviceSubnet string) Operator {
+func APIServerBootOp(nodes, controlPlanes []*Node, agents map[string]Agent, params ServiceParams, serviceSubnet string) Operator {
 	return &apiServerBootOp{
 		nodes:         nodes,
+		controlPlanes: controlPlanes,
 		agents:        agents,
 		params:        params,
 		step:          0,
@@ -161,17 +178,17 @@ func (o *apiServerBootOp) NextCommand() Commander {
 		target := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		var etcdServers []string
-		for _, n := range o.nodes {
-			etcdServers = append(etcdServers, "http://"+n.Address+":2379")
-		}
-		return runContainerCommand{target, o.agents[target.Address], "kube-apiserver", opts, o.apiServerParams(etcdServers, target.Address), extra}
+		return runContainerCommand{target, o.agents[target.Address], "kube-apiserver", opts, apiServerParams(o.controlPlanes, target.Address, o.serviceSubnet), extra}
 	default:
 		return nil
 	}
 }
 
-func (o *apiServerBootOp) apiServerParams(etcdServers []string, addr string) ServiceParams {
+func apiServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubnet string) ServiceParams {
+	var etcdServers []string
+	for _, n := range controlPlanes {
+		etcdServers = append(etcdServers, "http://"+n.Address+":2379")
+	}
 	args := []string{
 		"apiserver",
 		"--allow-privileged",
@@ -181,8 +198,8 @@ func (o *apiServerBootOp) apiServerParams(etcdServers []string, addr string) Ser
 		"--insecure-bind-address=0.0.0.0",
 		"--insecure-port=8080",
 
-		"--advertise-address=" + addr,
-		"--service-cluster-ip-range=" + o.serviceSubnet,
+		"--advertise-address=" + advertiseAddress,
+		"--service-cluster-ip-range=" + serviceSubnet,
 		"--audit-log-path=/var/log/kubernetes/apiserver/audit.log",
 		"--log-dir=/var/log/kubernetes/apiserver/",
 		"--machine-id-file=/etc/machine-id",
@@ -233,13 +250,13 @@ func (o *controllerManagerBootOp) NextCommand() Commander {
 		target := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		return runContainerCommand{target, o.agents[target.Address], "kube-controller-manager", opts, o.controllerManagerParams(), extra}
+		return runContainerCommand{target, o.agents[target.Address], "kube-controller-manager", opts, controllerManagerParams(), extra}
 	default:
 		return nil
 	}
 }
 
-func (o *controllerManagerBootOp) controllerManagerParams() ServiceParams {
+func controllerManagerParams() ServiceParams {
 	args := []string{
 		"controller-manager",
 		"--kubeconfig=/etc/kubernetes/controller-manager/kubeconfig",
@@ -291,13 +308,13 @@ func (o *schedulerBootOp) NextCommand() Commander {
 		target := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		return runContainerCommand{target, o.agents[target.Address], "kube-scheduler", nil, o.schedulerParams(), extra}
+		return runContainerCommand{target, o.agents[target.Address], "kube-scheduler", nil, schedulerParams(), extra}
 	default:
 		return nil
 	}
 }
 
-func (o *schedulerBootOp) schedulerParams() ServiceParams {
+func schedulerParams() ServiceParams {
 	args := []string{
 		"scheduler",
 		"--kubeconfig=/etc/kubernetes/scheduler/kubeconfig",
@@ -400,7 +417,31 @@ func (o *kubeletBootOp) extraParams() ServiceParams {
 	}
 }
 
-// APIServerStopOp returns an Operator to bootstrap Scheduler cluster.
+// RiversStopOp returns an Operator to stop Rivers.
+func RiversStopOp(nodes []*Node, agents map[string]Agent) Operator {
+	return &riversStopOp{
+		nodes:     nodes,
+		agents:    agents,
+		nodeIndex: 0,
+	}
+}
+
+func (o *riversStopOp) Name() string {
+	return "rivers-stop"
+}
+
+func (o *riversStopOp) NextCommand() Commander {
+	if o.nodeIndex >= len(o.nodes) {
+		return nil
+	}
+
+	node := o.nodes[o.nodeIndex]
+	o.nodeIndex++
+
+	return stopContainerCommand{node, o.agents[node.Address], "rivers"}
+}
+
+// APIServerStopOp returns an Operator to stop APIServer.
 func APIServerStopOp(nodes []*Node, agents map[string]Agent) Operator {
 	return &apiServerStopOp{
 		nodes:     nodes,
@@ -424,7 +465,7 @@ func (o *apiServerStopOp) NextCommand() Commander {
 	return stopContainerCommand{node, o.agents[node.Address], "kube-apiserver"}
 }
 
-// ControllerManagerStopOp returns an Operator to bootstrap Scheduler cluster.
+// ControllerManagerStopOp returns an Operator to stop ControllerManager.
 func ControllerManagerStopOp(nodes []*Node, agents map[string]Agent) Operator {
 	return &controllerManagerStopOp{
 		nodes:     nodes,
@@ -457,7 +498,7 @@ func (o *controllerManagerStopOp) NextCommand() Commander {
 	}
 }
 
-// SchedulerStopOp returns an Operator to bootstrap Scheduler cluster.
+// SchedulerStopOp returns an Operator to stop Scheduler.
 func SchedulerStopOp(nodes []*Node, agents map[string]Agent) Operator {
 	return &schedulerStopOp{
 		nodes:     nodes,
@@ -485,6 +526,39 @@ func (o *schedulerStopOp) NextCommand() Commander {
 		o.nodeIndex++
 
 		return stopContainerCommand{node, o.agents[node.Address], "kube-scheduler"}
+	default:
+		return nil
+	}
+}
+
+// KubeletStopOp returns an Operator to stop Kubelet.
+func KubeletStopOp(nodes []*Node, agents map[string]Agent) Operator {
+	return &kubeletStopOp{
+		nodes:     nodes,
+		agents:    agents,
+		step:      0,
+		nodeIndex: 0,
+	}
+}
+
+func (o *kubeletStopOp) Name() string {
+	return "kubelet-stop"
+}
+
+func (o *kubeletStopOp) NextCommand() Commander {
+	switch o.step {
+	case 0:
+		o.step++
+		return removeFileCommand{o.nodes, o.agents, "/etc/kubernetes/kubelet/kubeconfig"}
+	case 1:
+		if o.nodeIndex >= len(o.nodes) {
+			return nil
+		}
+
+		node := o.nodes[o.nodeIndex]
+		o.nodeIndex++
+
+		return stopContainerCommand{node, o.agents[node.Address], "kubelet"}
 	default:
 		return nil
 	}

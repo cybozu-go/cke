@@ -35,8 +35,9 @@ Bump version
 
 1. Determine a new version number.  Let it write `$VERSION`.
 2. Checkout `master` branch.
-3. Edit `CHANGELOG.md` for the new version ([example][]).
-4. Commit the change and add a git tag, then push them.
+3. Update `version.go`.
+4. Edit `CHANGELOG.md` for the new version ([example][]).
+5. Commit the change and add a git tag, then push them.
 
     ```console
     $ git commit -a -m "Bump version to $VERSION"

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"net/http"
 	"os"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 )
 
 var (
+	flgHTTP       = flag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
 	flgConfigPath = flag.String("config", "/etc/cke.yml", "configuration file path")
 	flgInterval   = flag.String("interval", "10m", "check interval")
 	flgSessionTTL = flag.String("session-ttl", "60s", "leader session's TTL")
@@ -64,9 +66,25 @@ func main() {
 	if err != nil {
 		log.ErrorExit(err)
 	}
-	controller := cke.NewController(session, interval)
+	timeout, err := time.ParseDuration(cfg.Timeout)
+	if err != nil {
+		log.ErrorExit(err)
+	}
+	controller := cke.NewController(session, interval, timeout)
 
 	cmd.Go(controller.Run)
+	server := cke.Server{
+		EtcdClient: etcd,
+		Timeout:    timeout,
+	}
+	s := &cmd.HTTPServer{
+		Server: &http.Server{
+			Addr:    *flgHTTP,
+			Handler: server,
+		},
+		ShutdownTimeout: 3 * time.Minute,
+	}
+	s.ListenAndServe()
 	err = cmd.Wait()
 	if err != nil && !cmd.IsSignaled(err) {
 		log.ErrorExit(err)

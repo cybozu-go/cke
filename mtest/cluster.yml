@@ -30,7 +30,7 @@ name: host1
 interfaces:
   - ext-net
 cpu: 1
-memory: 1G
+memory: 3G
 volumes:
   - kind: image
     name: root
@@ -49,7 +49,7 @@ name: host2
 interfaces:
   - ext-net
 cpu: 1
-memory: 1G
+memory: 3G
 volumes:
   - kind: image
     name: root
@@ -68,7 +68,7 @@ name: node1
 interfaces:
   - ext-net
 cpu: 1
-memory: 2G
+memory: 3G
 ignition: node1.ign
 volumes:
   - kind: image
@@ -81,7 +81,7 @@ name: node2
 interfaces:
   - ext-net
 cpu: 1
-memory: 2G
+memory: 3G
 ignition: node2.ign
 volumes:
   - kind: image
@@ -94,7 +94,7 @@ name: node3
 interfaces:
   - ext-net
 cpu: 1
-memory: 2G
+memory: 3G
 ignition: node3.ign
 volumes:
   - kind: image
@@ -107,7 +107,7 @@ name: node4
 interfaces:
   - ext-net
 cpu: 1
-memory: 2G
+memory: 3G
 ignition: node4.ign
 volumes:
   - kind: image
@@ -120,7 +120,7 @@ name: node5
 interfaces:
   - ext-net
 cpu: 1
-memory: 2G
+memory: 3G
 ignition: node5.ign
 volumes:
   - kind: image
@@ -133,7 +133,7 @@ name: node6
 interfaces:
   - ext-net
 cpu: 1
-memory: 2G
+memory: 3G
 ignition: node6.ign
 volumes:
   - kind: image
