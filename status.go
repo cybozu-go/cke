@@ -203,7 +203,7 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 	if err != nil {
 		return nil, err
 	}
-	status.Scheduler = *ss
+	status.Proxy = *ss
 
 	// TODO: get statuses of other services.
 

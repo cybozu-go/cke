@@ -467,13 +467,14 @@ func (o *proxyBootOp) Name() string {
 func (o *proxyBootOp) NextCommand() Commander {
 	extra := o.params
 	opts := []string{
+		"--tmpfs=/run",
 		"--privileged",
 	}
 
 	switch o.step {
 	case 0:
 		o.step++
-		return makeFileCommand{o.nodes, o.agents, proxyKubeConfig(), "/etc/kubernetes/proxy/config"}
+		return makeFileCommand{o.nodes, o.agents, proxyKubeConfig(), "/etc/kubernetes/proxy/kubeconfig"}
 	case 1:
 		o.step++
 		return imagePullCommand{o.nodes, o.agents, "kube-proxy"}
@@ -496,7 +497,7 @@ func (o *proxyBootOp) NextCommand() Commander {
 func (o *proxyBootOp) serviceParams(targetAddress string) ServiceParams {
 	args := []string{
 		"proxy",
-		"--proxy-mode ipvs",
+		"--proxy-mode=ipvs",
 		"--kubeconfig=/etc/kubernetes/proxy/kubeconfig",
 		"--log-dir=/var/log/kubernetes/proxy",
 	}
@@ -504,7 +505,7 @@ func (o *proxyBootOp) serviceParams(targetAddress string) ServiceParams {
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
-			{"/etc/kubernetes/kubelet", "/etc/kubernetes/proxy", true},
+			{"/etc/kubernetes/proxy", "/etc/kubernetes/proxy", true},
 			{"/var/log/kubernetes/proxy", "/var/log/kubernetes/proxy", false},
 		},
 	}
