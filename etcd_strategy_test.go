@@ -223,6 +223,29 @@ func HealthyNonControlPlane() EtcdTestCluster {
 	}
 }
 
+func UnhealthyControlPlane() EtcdTestCluster {
+	return EtcdTestCluster{
+		Nodes: []*Node{
+			{Address: "10.0.0.11", ControlPlane: true},
+			{Address: "10.0.0.12", ControlPlane: true},
+		},
+		NodeStatuses: map[string]*NodeStatus{
+			"10.0.0.11": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true}, HasData: true}},
+			"10.0.0.12": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true}, HasData: true}},
+		},
+		Etcd: EtcdClusterStatus{
+			Members: map[string]*etcdserverpb.Member{
+				"10.0.0.11": {ID: 1, Name: "10.0.0.11"},
+				"10.0.0.12": {ID: 1, Name: "10.0.0.12"},
+			},
+			MemberHealth: map[string]EtcdNodeHealth{
+				"10.0.0.11": EtcdNodeUnhealthy,
+				"10.0.0.12": EtcdNodeUnhealthy,
+			},
+		},
+	}
+}
+
 func OutdatedControlPlane() EtcdTestCluster {
 	oldEtcd := "quay.io/cybozu/etcd:3.2.18-2"
 	return EtcdTestCluster{
@@ -312,6 +335,16 @@ func UpdateMemberCommands(cps []string) []Command {
 	return commands
 }
 
+func WaitMemberCommands(cps []string) []Command {
+	var endpoints []string
+	for _, cp := range cps {
+		endpoints = append(endpoints, "http://"+cp+":2379")
+	}
+	return []Command{
+		Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")},
+	}
+}
+
 func testEtcdDecideToDo(t *testing.T) {
 	cases := []struct {
 		Name             string
@@ -358,6 +391,11 @@ func testEtcdDecideToDo(t *testing.T) {
 				[]string{"10.0.0.11", "10.0.0.12"},
 				[]string{"10.0.0.13"},
 				[]uint64{3}),
+		},
+		{
+			Name:             "WaitUnhealthyControlPlane",
+			Input:            UnhealthyControlPlane(),
+			ExpectedCommands: WaitMemberCommands([]string{"10.0.0.11", "10.0.0.12"}),
 		},
 		{
 			Name:             "UpdateOutdatedControlPlane",
