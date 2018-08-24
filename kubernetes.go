@@ -506,6 +506,7 @@ func (o *proxyBootOp) serviceParams(targetAddress string) ServiceParams {
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
 			{"/etc/kubernetes/proxy", "/etc/kubernetes/proxy", true},
+			{"/lib/modules", "/lib/modules", true},
 			{"/var/log/kubernetes/proxy", "/var/log/kubernetes/proxy", false},
 		},
 	}
