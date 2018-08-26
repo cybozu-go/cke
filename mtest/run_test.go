@@ -314,8 +314,8 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 
 	for _, host := range controlPlanes {
 		// 8080: apiserver, 18080: rivers (to apiserver), 10252: controller-manager, 10251: scheduler
-		for _, port := range []string{"8080", "18080", "10252", "10251"} {
-			stdout, _, err := execAt(host, "curl", fmt.Sprintf("localhost:%s/healthz", port))
+		for _, port := range []uint16{8080, 18080, 10252, 10251} {
+			stdout, _, err := execAt(host, "curl", fmt.Sprintf("localhost:%d/healthz", port))
 			if err != nil {
 				fmt.Println(err)
 				return false
