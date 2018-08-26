@@ -59,6 +59,10 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(nodes) > 0 {
 		return EtcdDestroyMemberOp(endpoints, nodes, cs.Agents, cs.Client, cs.Etcd.Members)
 	}
+	nodes = outdatedControlPlaneMember(cpNodes, cs.NodeStatuses)
+	if len(nodes) > 0 {
+		return EtcdUpdateVersionOp(endpoints, cs.Client, nodes, cpNodes, cs.Agents, c.Options.Etcd)
+	}
 
 	return nil
 }
@@ -141,6 +145,16 @@ func runningNonControlPlaneMember(allNodes []*Node, statuses map[string]*NodeSta
 		}
 		st := statuses[n.Address]
 		if st.Etcd.Running {
+			targets = append(targets, n)
+		}
+	}
+	return targets
+}
+
+func outdatedControlPlaneMember(allNodes []*Node, statuses map[string]*NodeStatus) []*Node {
+	var targets []*Node
+	for _, n := range allNodes {
+		if EtcdImage != statuses[n.Address].Etcd.Image {
 			targets = append(targets, n)
 		}
 	}

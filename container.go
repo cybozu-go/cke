@@ -260,7 +260,7 @@ func (c docker) Inspect(name string) (*ServiceStatus, error) {
 
 	return &ServiceStatus{
 		Running:       dj.State.Running,
-		Image:         dj.Image,
+		Image:         dj.Config.Image,
 		BuiltInParams: params.BuiltInParams,
 		ExtraParams:   params.ExtraParams,
 	}, nil

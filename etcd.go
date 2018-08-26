@@ -453,3 +453,66 @@ func (o *etcdDestroyMemberOp) NextCommand() Commander {
 	}
 	return nil
 }
+
+// EtcdUpdateVersionOp create new etcdUpdateVersionOp instance
+func EtcdUpdateVersionOp(endpoints []string, client *cmd.HTTPClient, targets []*Node, cpNodes []*Node, agents map[string]Agent, params EtcdParams) Operator {
+	return &etcdUpdateVersionOp{
+		endpoints: endpoints,
+		client:    client,
+		targets:   targets,
+		cpNodes:   cpNodes,
+		agents:    agents,
+		params:    params,
+	}
+}
+
+type etcdUpdateVersionOp struct {
+	endpoints []string
+	client    *cmd.HTTPClient
+	targets   []*Node
+	cpNodes   []*Node
+	agents    map[string]Agent
+	params    EtcdParams
+	step      int
+	nodeIndex int
+}
+
+func (o *etcdUpdateVersionOp) Name() string {
+	return "etcd-update-version"
+}
+
+func (o *etcdUpdateVersionOp) NextCommand() Commander {
+	if o.nodeIndex >= len(o.targets) {
+		return nil
+	}
+
+	volname := etcdVolumeName(o.params)
+	extra := o.params.ServiceParams
+
+	switch o.step {
+	case 0:
+		o.step++
+		return waitEtcdSyncCommand{[]string{o.endpoints[o.nodeIndex]}, o.client}
+	case 1:
+		o.step++
+		return imagePullCommand{[]*Node{o.targets[o.nodeIndex]}, o.agents, "etcd"}
+	case 2:
+		o.step++
+		target := o.targets[o.nodeIndex]
+		return stopContainerCommand{target, o.agents[target.Address], etcdContainerName}
+	case 3:
+		o.step = 0
+		target := o.targets[o.nodeIndex]
+		opts := []string{
+			"--mount",
+			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
+		}
+		var initialCluster []string
+		for _, n := range o.cpNodes {
+			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
+		}
+		o.nodeIndex++
+		return runContainerCommand{target, o.agents[target.Address], etcdContainerName, opts, etcdParams(target, initialCluster, "new"), extra}
+	}
+	return nil
+}
