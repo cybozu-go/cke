@@ -149,14 +149,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	}
 	defer status.Destroy()
 
-	op, err := DecideToDo(cluster, status)
-	if err != nil {
-		log.Warn("failed to decide to do", map[string]interface{}{
-			log.FnError: err,
-		})
-		wait = true
-		return nil
-	}
+	op := DecideToDo(cluster, status)
 	if op == nil {
 		wait = true
 		return nil

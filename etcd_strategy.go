@@ -1,12 +1,10 @@
 package cke
 
 import (
-	"errors"
-
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 )
 
-func etcdDecideToDo(c *Cluster, cs *ClusterStatus) (Operator, error) {
+func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	// See docs/etcd.md
 
 	var cpNodes []*Node
@@ -14,6 +12,10 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) (Operator, error) {
 		if n.ControlPlane {
 			cpNodes = append(cpNodes, n)
 		}
+	}
+	endpoints := make([]string, len(cpNodes))
+	for i, n := range cpNodes {
+		endpoints[i] = "http://" + n.Address + ":2379"
 	}
 
 	bootstrap := true
@@ -23,52 +25,43 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) (Operator, error) {
 		}
 	}
 	if bootstrap {
-		return EtcdBootOp(cpNodes, cs.Agents, c.Options.Etcd), nil
-	}
-
-	if len(cs.Etcd.Members) == 0 {
-		return nil, errors.New("no members of etcd cluster")
-	}
-
-	endpoints := make([]string, len(cpNodes))
-	for i, n := range cpNodes {
-		endpoints[i] = "http://" + n.Address + ":2379"
+		return EtcdBootOp(endpoints, cpNodes, cs.Agents, cs.Client, c.Options.Etcd)
 	}
 
 	members := unhealthyNonClusterMember(c.Nodes, cs.Etcd)
 	if len(members) > 0 {
-		return EtcdRemoveMemberOp(endpoints, members), nil
+		return EtcdRemoveMemberOp(endpoints, members)
 	}
 	nodes := unhealthyNonControlPlaneMember(c.Nodes, cs.Etcd)
 	if len(nodes) > 0 {
-		return EtcdDestroyMemberOp(endpoints, nodes, cs.Agents, cs.Client, cs.Etcd.Members), nil
+		return EtcdDestroyMemberOp(endpoints, nodes, cs.Agents, cs.Client, cs.Etcd.Members)
 	}
 	nodes = unstartedMemberControlPlane(cpNodes, cs.Etcd)
 	if len(nodes) > 0 {
-		return EtcdAddMemberOp(endpoints, nodes, cs.Agents, cs.Client, c.Options.Etcd), nil
+		return EtcdAddMemberOp(endpoints, nodes, cs.Agents, cs.Client, c.Options.Etcd)
 	}
 	nodes = newMemberControlPlane(cpNodes, cs.Etcd)
 	if len(nodes) > 0 {
-		return EtcdAddMemberOp(endpoints, nodes, cs.Agents, cs.Client, c.Options.Etcd), nil
+		return EtcdAddMemberOp(endpoints, nodes, cs.Agents, cs.Client, c.Options.Etcd)
 	}
 	nodes = unhealthyControlPlaneMember(cpNodes, cs.Etcd)
 	if len(nodes) > 0 {
-		return EtcdWaitMemberOp(endpoints, cs.Client), nil
+		return EtcdWaitMemberOp(endpoints, cs.Client)
 	}
 	members = healthyNonClusterMember(c.Nodes, cs.Etcd)
 	if len(members) > 0 {
-		return EtcdRemoveMemberOp(endpoints, members), nil
+		return EtcdRemoveMemberOp(endpoints, members)
 	}
 	nodes = runningNonControlPlaneMember(c.Nodes, cs.NodeStatuses)
 	if len(nodes) > 0 {
-		return EtcdDestroyMemberOp(endpoints, nodes, cs.Agents, cs.Client, cs.Etcd.Members), nil
+		return EtcdDestroyMemberOp(endpoints, nodes, cs.Agents, cs.Client, cs.Etcd.Members)
 	}
 	nodes = outdatedControlPlaneMember(cpNodes, cs.NodeStatuses)
 	if len(nodes) > 0 {
-		return EtcdUpdateVersionOp(endpoints, cs.Client, nodes, cpNodes, cs.Agents, c.Options.Etcd), nil
+		return EtcdUpdateVersionOp(endpoints, cs.Client, nodes, cpNodes, cs.Agents, c.Options.Etcd)
 	}
 
-	return nil, nil
+	return nil
 }
 
 func unhealthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[string]*etcdserverpb.Member {

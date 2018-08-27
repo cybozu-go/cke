@@ -69,21 +69,25 @@ func etcdGuessMemberName(m *etcdserverpb.Member) (string, error) {
 }
 
 type etcdBootOp struct {
-	nodes   []*Node
-	agents  map[string]Agent
-	params  EtcdParams
-	step    int
-	cpIndex int
+	endpoints []string
+	nodes     []*Node
+	agents    map[string]Agent
+	client    *cmd.HTTPClient
+	params    EtcdParams
+	step      int
+	cpIndex   int
 }
 
 // EtcdBootOp returns an Operator to bootstrap etcd cluster.
-func EtcdBootOp(nodes []*Node, agents map[string]Agent, params EtcdParams) Operator {
+func EtcdBootOp(endpoints []string, nodes []*Node, agents map[string]Agent, client *cmd.HTTPClient, params EtcdParams) Operator {
 	return &etcdBootOp{
-		nodes:   nodes,
-		agents:  agents,
-		params:  params,
-		step:    0,
-		cpIndex: 0,
+		endpoints: endpoints,
+		nodes:     nodes,
+		agents:    agents,
+		client:    client,
+		params:    params,
+		step:      0,
+		cpIndex:   0,
 	}
 }
 
@@ -119,6 +123,9 @@ func (o *etcdBootOp) NextCommand() Commander {
 			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
 		}
 		return runContainerCommand{node, agent, etcdContainerName, opts, etcdParams(node, initialCluster, "new"), extra}
+	case 3:
+		o.step++
+		return waitEtcdSyncCommand{o.endpoints, o.client}
 	default:
 		return nil
 	}

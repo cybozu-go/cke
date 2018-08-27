@@ -300,6 +300,11 @@ func BootstrapCommands(targets ...string) []Command {
 	for _, addr := range targets {
 		commands = append(commands, Command{Name: "run-container", Target: addr})
 	}
+	var endpoints []string
+	for _, target := range targets {
+		endpoints = append(endpoints, "http://"+target+":2379")
+	}
+	commands = append(commands, Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")})
 	return commands
 }
 
@@ -430,10 +435,7 @@ func testEtcdDecideToDo(t *testing.T) {
 			Etcd:         c.Input.Etcd,
 		}
 
-		op, err := etcdDecideToDo(cluster, clusterStatus)
-		if err != nil {
-			t.Fatal(err)
-		}
+		op := etcdDecideToDo(cluster, clusterStatus)
 		if op == nil {
 			t.Fatal("op == nil")
 		}
@@ -454,22 +456,6 @@ func testEtcdDecideToDo(t *testing.T) {
 	}
 }
 
-func testEtcdDecideToDoFailure(t *testing.T) {
-	c := NotInMemberControlPlane()
-	cluster := &Cluster{
-		Nodes: c.Nodes,
-	}
-	clusterStatus := &ClusterStatus{
-		NodeStatuses: c.NodeStatuses,
-		Etcd:         c.Etcd,
-	}
-	_, err := etcdDecideToDo(cluster, clusterStatus)
-	if err == nil {
-		t.Fatal("etcdDecideToDo should return an error.")
-	}
-}
-
 func TestEtcdStrategy(t *testing.T) {
 	t.Run("EtcdDecideToDo", testEtcdDecideToDo)
-	t.Run("EtcdDecideToDoFailure", testEtcdDecideToDoFailure)
 }
