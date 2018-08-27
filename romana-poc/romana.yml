@@ -1,0 +1,167 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: romana-network-config
+  namespace: kube-system
+data:
+  network.json: |
+    {
+     "networks": [
+      {
+       "name": "romana-network",
+       "cidr": "192.168.0.0/16"
+      }
+     ],
+     "topologies": [
+      {
+       "networks": [
+        "romana-network"
+       ],
+       "map": [
+        { "name": "host-group-01", "groups": [] },
+        { "name": "host-group-02", "groups": [] },
+        { "name": "host-group-03", "groups": [] },
+        { "name": "host-group-04", "groups": [] },
+        { "name": "host-group-05", "groups": [] },
+        { "name": "host-group-06", "groups": [] },
+        { "name": "host-group-07", "groups": [] },
+        { "name": "host-group-08", "groups": [] }
+       ]
+      }
+     ]
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: romana
+  namespace: kube-system
+spec:
+  ports:
+  - name: daemon
+    port: 9600
+    protocol: TCP
+    targetPort: 9600
+  selector:
+    romana-app: daemon
+  sessionAffinity: None
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: romana-daemon
+  namespace: kube-system
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        romana-app: daemon
+    spec:
+      hostNetwork: true
+      containers:
+      - name: romana-daemon
+        image: quay.io/romana/daemon:v2.0.2
+        imagePullPolicy: Always
+        args:
+        - --etcd-endpoints=10.0.0.11:2379
+        - --initial-network=/mnt/etc/network.json
+        volumeMounts:
+        - name: config-volume
+          mountPath: /mnt/etc
+      volumes:
+      - name: config-volume
+        configMap:
+          name: romana-network-config
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: romana-listener
+  namespace: kube-system
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        romana-app: listener
+    spec:
+      hostNetwork: true
+      containers:
+      - name: romana-listener
+        image: quay.io/romana/listener:v2.0.2
+        imagePullPolicy: Always
+        args:
+        - --etcd-endpoints=10.0.0.11:2379
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: 10.0.0.11
+        - name: KUBERNETES_SERVICE_PORT
+          value: "443"
+---
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: romana-agent
+  namespace: kube-system
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        romana-app: agent
+    spec:
+      hostNetwork: true
+      containers:
+      - name: romana-agent
+        image: quay.io/romana/agent:v2.0.2
+        imagePullPolicy: Always
+        args:
+        - --etcd-endpoints=10.0.0.11:2379
+        - --service-cluster-ip-range=172.16.0.0/16
+        env:
+        - name: NODENAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NODEIP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: KUBERNETES_SERVICE_HOST
+          value: 10.0.0.11
+        - name: KUBERNETES_SERVICE_PORT
+          value: "443"
+        volumeMounts:
+        - name: host-usr-local-bin
+          mountPath: /host/usr/local/bin
+        - name: host-etc-romana
+          mountPath: /host/etc/romana
+        - name: host-cni-bin
+          mountPath: /host/opt/cni/bin
+        - name: host-cni-net-d
+          mountPath: /host/etc/cni/net.d
+        - name: run-path
+          mountPath: /var/run/romana
+        - name: host-etc-rlog
+          mountPath: /host/etc/rlog
+      volumes:
+      - name: host-usr-local-bin
+        hostPath:
+          path: /usr/local/bin
+      - name: host-etc-romana
+        hostPath:
+          path: /etc/romana
+      - name: host-cni-bin
+        hostPath:
+          path: /opt/cni/bin
+      - name: host-cni-net-d
+        hostPath:
+          path: /etc/cni/net.d
+      - name: run-path
+        hostPath:
+          path: /var/run/romana
+      - name: host-etc-rlog
+        hostPath:
+          path: /etc/rlog

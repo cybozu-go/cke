@@ -129,7 +129,7 @@ func etcdParams(node *Node, initialCluster []string, state string) ServiceParams
 		"--initial-cluster=" + strings.Join(initialCluster, ","),
 		"--initial-cluster-token=cke",
 		"--initial-cluster-state=" + state,
-		"--enable-v2=false",
+		"--enable-v2=true",
 		"--enable-pprof=true",
 		"--auto-compaction-mode=periodic",
 		"--auto-compaction-retention=24",

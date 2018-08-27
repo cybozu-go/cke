@@ -120,7 +120,7 @@ func (o *riversBootOp) NextCommand() Commander {
 func riversParams(upstreams []*Node) ServiceParams {
 	var ups []string
 	for _, n := range upstreams {
-		ups = append(ups, n.Address+":8080")
+		ups = append(ups, n.Address+":443")
 	}
 	args := []string{
 		"rivers",
@@ -185,7 +185,7 @@ func apiServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 		etcdServers = append(etcdServers, "http://"+n.Address+":2379")
 	}
 	args := []string{
-		"apiserver",
+		"/apiserver",
 		"--allow-privileged",
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
 
@@ -252,7 +252,7 @@ func (o *controllerManagerBootOp) NextCommand() Commander {
 
 func controllerManagerParams() ServiceParams {
 	args := []string{
-		"controller-manager",
+		"/controller-manager",
 		"--kubeconfig=/etc/kubernetes/controller-manager/kubeconfig",
 		"--log-dir=/var/log/kubernetes/controller-manager",
 	}
@@ -309,7 +309,7 @@ func (o *schedulerBootOp) NextCommand() Commander {
 
 func schedulerParams() ServiceParams {
 	args := []string{
-		"scheduler",
+		"/scheduler",
 		"--kubeconfig=/etc/kubernetes/scheduler/kubeconfig",
 		"--log-dir=/var/log/kubernetes/scheduler",
 	}
@@ -342,6 +342,8 @@ func (o *kubeletBootOp) NextCommand() Commander {
 	opts := []string{
 		"--tmpfs=/var/tmp/dockershim",
 		"--privileged",
+		"--volume=/var/lib/kubelet:/var/lib/kubelet:shared,z",
+		"--pid=host",
 	}
 	switch o.step {
 	case 0:
@@ -372,7 +374,7 @@ func (o *kubeletBootOp) NextCommand() Commander {
 
 func (o *kubeletBootOp) serviceParams(targetAddress string) ServiceParams {
 	args := []string{
-		"kubelet",
+		"/kubelet",
 		"--allow-privileged=true",
 		"--container-runtime-endpoint=/var/tmp/dockershim/dockershim.sock",
 		"--hostname-override=" + targetAddress,
@@ -384,7 +386,6 @@ func (o *kubeletBootOp) serviceParams(targetAddress string) ServiceParams {
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
 			{"/etc/kubernetes/kubelet", "/etc/kubernetes/kubelet", true},
-			{"/var/lib/kubelet", "/var/lib/kubelet", false},
 			{"/var/lib/docker", "/var/lib/docker", false},
 			{"/var/lib/dockershim", "/var/lib/dockershim", false},
 			{"/var/log/pods", "/var/log/pods", false},
