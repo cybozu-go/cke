@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"fmt"
+
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 )
 
@@ -234,14 +236,8 @@ func UnhealthyControlPlane() EtcdTestCluster {
 			"10.0.0.12": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true}, HasData: true}},
 		},
 		Etcd: EtcdClusterStatus{
-			Members: map[string]*etcdserverpb.Member{
-				"10.0.0.11": {ID: 1, Name: "10.0.0.11"},
-				"10.0.0.12": {ID: 1, Name: "10.0.0.12"},
-			},
-			MemberHealth: map[string]EtcdNodeHealth{
-				"10.0.0.11": EtcdNodeUnhealthy,
-				"10.0.0.12": EtcdNodeUnhealthy,
-			},
+			Members:      map[string]*etcdserverpb.Member{},
+			MemberHealth: map[string]EtcdNodeHealth{},
 		},
 	}
 }
@@ -270,23 +266,6 @@ func OutdatedControlPlane() EtcdTestCluster {
 				"10.0.0.12": EtcdNodeHealthy,
 				"10.0.0.13": EtcdNodeHealthy,
 			},
-		},
-	}
-}
-
-func NotInMemberControlPlane() EtcdTestCluster {
-	return EtcdTestCluster{
-		Nodes: []*Node{
-			{Address: "10.0.0.11", ControlPlane: true},
-			{Address: "10.0.0.12", ControlPlane: true},
-		},
-		NodeStatuses: map[string]*NodeStatus{
-			"10.0.0.11": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true}, HasData: true}},
-			"10.0.0.12": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true}, HasData: true}},
-		},
-		Etcd: EtcdClusterStatus{
-			Members:      map[string]*etcdserverpb.Member{},
-			MemberHealth: map[string]EtcdNodeHealth{},
 		},
 	}
 }
@@ -441,6 +420,7 @@ func testEtcdDecideToDo(t *testing.T) {
 		}
 		cmds := opCommands(op)
 		if len(c.ExpectedCommands) != len(cmds) {
+			fmt.Printf("%#v\n", cmds)
 			t.Errorf("[%s] commands length mismatch: %d", c.Name, len(cmds))
 			continue
 		}
