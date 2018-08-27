@@ -86,12 +86,6 @@ var _ = Describe("kubernetes strategy", func() {
 			}
 			return true
 		}).Should(BeTrue())
-
-		By("Checking kube-proxy is ready on all nodes")
-		for _, host := range []string{node1, node2, node3, node4, node5, node6} {
-			_, _, err := execAt(host, "curl", "-f", fmt.Sprintf("localhost:%d/healthz", 10256))
-			Expect(err).ToNot(HaveOccurred())
-		}
 	})
 
 	It("should update node4 as control plane", func() {

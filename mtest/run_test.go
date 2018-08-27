@@ -315,7 +315,7 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 	for _, host := range controlPlanes {
 		// 8080: apiserver, 18080: rivers (to apiserver), 10252: controller-manager, 10251: scheduler
 		for _, port := range []uint16{8080, 18080, 10252, 10251} {
-			stdout, _, err := execAt(host, "curl", fmt.Sprintf("localhost:%d/healthz", port))
+			stdout, _, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
 			if err != nil {
 				fmt.Println(err)
 				return false
@@ -325,6 +325,25 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 			}
 		}
 		if !checkComponentStatuses(host) {
+			return false
+		}
+	}
+	for _, host := range workers {
+		// 10248: kubelet
+		stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", 10248))
+		if err != nil {
+			fmt.Println(err, string(stderr))
+			return false
+		}
+		if string(stdout) != "ok" {
+			return false
+		}
+	}
+	for _, host := range workers {
+		// 10256: kube-proxy
+		_, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", 10256))
+		if err != nil {
+			fmt.Println(err, string(stderr))
 			return false
 		}
 	}
