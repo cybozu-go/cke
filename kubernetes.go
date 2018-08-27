@@ -178,7 +178,7 @@ func (o *apiServerBootOp) NextCommand() Commander {
 		target := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		return runContainerCommand{target, o.agents[target.Address], "kube-apiserver", opts, apiServerParams(o.controlPlanes, target.Address, o.serviceSubnet), extra}
+		return runContainerCommand{target, o.agents[target.Address], "/kube-apiserver", opts, apiServerParams(o.controlPlanes, target.Address, o.serviceSubnet), extra}
 	default:
 		return nil
 	}
@@ -190,7 +190,7 @@ func apiServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 		etcdServers = append(etcdServers, "http://"+n.Address+":2379")
 	}
 	args := []string{
-		"apiserver",
+		"/apiserver",
 		"--allow-privileged",
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
 
@@ -258,7 +258,7 @@ func (o *controllerManagerBootOp) NextCommand() Commander {
 
 func controllerManagerParams() ServiceParams {
 	args := []string{
-		"controller-manager",
+		"/controller-manager",
 		"--kubeconfig=/etc/kubernetes/controller-manager/kubeconfig",
 		"--log-dir=/var/log/kubernetes/controller-manager",
 	}
@@ -316,7 +316,7 @@ func (o *schedulerBootOp) NextCommand() Commander {
 
 func schedulerParams() ServiceParams {
 	args := []string{
-		"scheduler",
+		"/scheduler",
 		"--kubeconfig=/etc/kubernetes/scheduler/kubeconfig",
 		"--log-dir=/var/log/kubernetes/scheduler",
 	}
@@ -382,7 +382,7 @@ func (o *kubeletBootOp) NextCommand() Commander {
 
 func (o *kubeletBootOp) serviceParams(targetAddress string) ServiceParams {
 	args := []string{
-		"kubelet",
+		"/kubelet",
 		"--allow-privileged=true",
 		"--container-runtime-endpoint=/var/tmp/dockershim/dockershim.sock",
 		"--hostname-override=" + targetAddress,

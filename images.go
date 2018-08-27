@@ -5,7 +5,7 @@ const (
 	EtcdImage      = "quay.io/cybozu/etcd:3.3.5-1"
 	CKETools       = "quay.io/cybozu/cke-tools:0.1-2"
 	ToolsImage     = "quay.io/cybozu/ubuntu:18.04"
-	HyperkubeImage = "quay.io/cybozu/hyperkube:1.11.1-2"
+	HyperkubeImage = "gcr.io/googole_containers/hyperkube:1.11.1"
 )
 
 // Image returns the image name for a given container.
