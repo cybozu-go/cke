@@ -213,10 +213,16 @@ func getCluster() *cke.Cluster {
 func getClusterStatus() (*cke.ClusterStatus, error) {
 	controller := cke.NewController(nil, 0, time.Second*2)
 	cluster := getCluster()
+	inf, err := cke.NewInfrastructure(cluster)
+	if err != nil {
+		return nil, err
+	}
+	defer inf.Close()
+
 	for _, n := range cluster.Nodes {
 		n.ControlPlane = true
 	}
-	return controller.GetClusterStatus(context.Background(), cluster)
+	return controller.GetClusterStatus(context.Background(), cluster, inf)
 }
 
 func ckecliClusterSet(cluster *cke.Cluster) error {
@@ -400,7 +406,6 @@ func initializeControlPlane() {
 		if err != nil {
 			return false
 		}
-		defer status.Destroy()
 		if !checkEtcdClusterStatus(status, controlPlanes, workers) {
 			return false
 		}

@@ -139,7 +139,17 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return nil
 	}
 
-	status, err := c.GetClusterStatus(ctx, cluster)
+	inf, err := NewInfrastructure(cluster)
+	if err != nil {
+		wait = true
+		log.Error("failed to initialize infrastructure", map[string]interface{}{
+			log.FnError: err,
+		})
+		return nil
+	}
+	defer inf.Close()
+
+	status, err := c.GetClusterStatus(ctx, cluster, inf)
 	if err != nil {
 		wait = true
 		log.Warn("failed to get cluster status", map[string]interface{}{
@@ -147,7 +157,6 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		})
 		return nil
 	}
-	defer status.Destroy()
 
 	op := DecideToDo(cluster, status)
 	if op == nil {
@@ -199,7 +208,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 			"op":      op.Name(),
 			"command": commander.Command().String(),
 		})
-		err = commander.Run(ctx)
+		err = commander.Run(ctx, inf)
 		if err == nil {
 			continue
 		}

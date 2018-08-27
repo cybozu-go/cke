@@ -22,7 +22,7 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 	}
 	if bootstrap {
-		return EtcdBootOp(cpNodes, cs.Agents, c.Options.Etcd)
+		return EtcdBootOp(cpNodes, c.Options.Etcd)
 	}
 
 	if len(cs.Etcd.Members) == 0 {
@@ -41,15 +41,15 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	}
 	nodes := unhealthyNonControlPlaneMember(c.Nodes, cs.Etcd)
 	if len(nodes) > 0 {
-		return EtcdDestroyMemberOp(endpoints, nodes, cs.Agents, cs.Client, cs.Etcd.Members)
+		return EtcdDestroyMemberOp(endpoints, nodes, cs.Client, cs.Etcd.Members)
 	}
 	nodes = unstartedMemberControlPlane(cpNodes, cs.Etcd)
 	if len(nodes) > 0 {
-		return EtcdAddMemberOp(endpoints, nodes, cs.Agents, cs.Client, c.Options.Etcd)
+		return EtcdAddMemberOp(endpoints, nodes, cs.Client, c.Options.Etcd)
 	}
 	nodes = newMemberControlPlane(cpNodes, cs.Etcd)
 	if len(nodes) > 0 {
-		return EtcdAddMemberOp(endpoints, nodes, cs.Agents, cs.Client, c.Options.Etcd)
+		return EtcdAddMemberOp(endpoints, nodes, cs.Client, c.Options.Etcd)
 	}
 	members = healthyNonClusterMember(c.Nodes, cs.Etcd)
 	if len(members) > 0 {
@@ -57,11 +57,11 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	}
 	nodes = runningNonControlPlaneMember(c.Nodes, cs.NodeStatuses)
 	if len(nodes) > 0 {
-		return EtcdDestroyMemberOp(endpoints, nodes, cs.Agents, cs.Client, cs.Etcd.Members)
+		return EtcdDestroyMemberOp(endpoints, nodes, cs.Client, cs.Etcd.Members)
 	}
 	nodes = outdatedControlPlaneMember(cpNodes, cs.NodeStatuses)
 	if len(nodes) > 0 {
-		return EtcdUpdateVersionOp(endpoints, cs.Client, nodes, cpNodes, cs.Agents, c.Options.Etcd)
+		return EtcdUpdateVersionOp(endpoints, cs.Client, nodes, cpNodes, c.Options.Etcd)
 	}
 
 	return nil

@@ -27,18 +27,17 @@ func (c Command) String() string {
 // Commander is a single step to proceed an operation
 type Commander interface {
 	// Run executes the command
-	Run(ctx context.Context) error
+	Run(ctx context.Context, inf Infrastructure) error
 	// Command returns the command information
 	Command() Command
 }
 
 type makeDirCommand struct {
 	nodes     []*Node
-	agents    map[string]Agent
 	targetDir string
 }
 
-func (c makeDirCommand) Run(ctx context.Context) error {
+func (c makeDirCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	binds := []Mount{{
 		Source:      filepath.Dir(c.targetDir),
@@ -46,7 +45,7 @@ func (c makeDirCommand) Run(ctx context.Context) error {
 	}}
 	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", c.targetDir)
 	for _, n := range c.nodes {
-		ce := Docker(c.agents[n.Address])
+		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
 			return ce.Run("tools", binds, mkdirCommand)
 		})
@@ -64,12 +63,11 @@ func (c makeDirCommand) Command() Command {
 
 type makeFileCommand struct {
 	nodes  []*Node
-	agents map[string]Agent
 	source string
 	target string
 }
 
-func (c makeFileCommand) Run(ctx context.Context) error {
+func (c makeFileCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	targetDir := filepath.Dir(c.target)
 	binds := []Mount{{
@@ -79,7 +77,7 @@ func (c makeFileCommand) Run(ctx context.Context) error {
 	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", targetDir)
 	ddCommand := "dd of=" + filepath.Join("/mnt", c.target)
 	for _, n := range c.nodes {
-		ce := Docker(c.agents[n.Address])
+		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
 			err := ce.Run("tools", binds, mkdirCommand)
 			if err != nil {
@@ -101,11 +99,10 @@ func (c makeFileCommand) Command() Command {
 
 type removeFileCommand struct {
 	nodes  []*Node
-	agents map[string]Agent
 	target string
 }
 
-func (c removeFileCommand) Run(ctx context.Context) error {
+func (c removeFileCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	dir := filepath.Dir(c.target)
 	binds := []Mount{{
@@ -114,7 +111,7 @@ func (c removeFileCommand) Run(ctx context.Context) error {
 	}}
 	command := "rm -f " + filepath.Join("/mnt", c.target)
 	for _, n := range c.nodes {
-		ce := Docker(c.agents[n.Address])
+		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
 			return ce.Run("tools", binds, command)
 		})
@@ -131,15 +128,14 @@ func (c removeFileCommand) Command() Command {
 }
 
 type imagePullCommand struct {
-	nodes  []*Node
-	agents map[string]Agent
-	name   string
+	nodes []*Node
+	name  string
 }
 
-func (c imagePullCommand) Run(ctx context.Context) error {
+func (c imagePullCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	for _, n := range c.nodes {
-		ce := Docker(c.agents[n.Address])
+		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
 			return ce.PullImage(c.name)
 		})
@@ -158,14 +154,13 @@ func (c imagePullCommand) Command() Command {
 
 type volumeCreateCommand struct {
 	nodes   []*Node
-	agents  map[string]Agent
 	volname string
 }
 
-func (c volumeCreateCommand) Run(ctx context.Context) error {
+func (c volumeCreateCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	for _, n := range c.nodes {
-		ce := Docker(c.agents[n.Address])
+		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
 			return ce.VolumeCreate(c.volname)
 		})
@@ -188,14 +183,13 @@ func (c volumeCreateCommand) Command() Command {
 
 type volumeRemoveCommand struct {
 	nodes   []*Node
-	agents  map[string]Agent
 	volname string
 }
 
-func (c volumeRemoveCommand) Run(ctx context.Context) error {
+func (c volumeRemoveCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	for _, n := range c.nodes {
-		ce := Docker(c.agents[n.Address])
+		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
 			exists, err := ce.VolumeExists(c.volname)
 			if err != nil {
@@ -225,15 +219,14 @@ func (c volumeRemoveCommand) Command() Command {
 
 type runContainerCommand struct {
 	node   *Node
-	agent  Agent
 	name   string
 	opts   []string
 	params ServiceParams
 	extra  ServiceParams
 }
 
-func (c runContainerCommand) Run(ctx context.Context) error {
-	ce := Docker(c.agent)
+func (c runContainerCommand) Run(ctx context.Context, inf Infrastructure) error {
+	ce := Docker(inf.Agent(c.node.Address))
 	return ce.RunSystem(c.name, c.opts, c.params, c.extra)
 }
 
@@ -246,13 +239,12 @@ func (c runContainerCommand) Command() Command {
 }
 
 type stopContainerCommand struct {
-	node  *Node
-	agent Agent
-	name  string
+	node *Node
+	name string
 }
 
-func (c stopContainerCommand) Run(ctx context.Context) error {
-	ce := Docker(c.agent)
+func (c stopContainerCommand) Run(ctx context.Context, inf Infrastructure) error {
+	ce := Docker(inf.Agent(c.node.Address))
 	exists, err := ce.Exists(c.name)
 	if err != nil {
 		return err
