@@ -328,7 +328,8 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 			return false
 		}
 	}
-	for _, host := range workers {
+	nodes := append(controlPlanes, workers...)
+	for _, host := range nodes {
 		// 10248: kubelet
 		stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", 10248))
 		if err != nil {
@@ -339,7 +340,7 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 			return false
 		}
 	}
-	for _, host := range workers {
+	for _, host := range nodes {
 		// 10256: kube-proxy
 		_, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", 10256))
 		if err != nil {
