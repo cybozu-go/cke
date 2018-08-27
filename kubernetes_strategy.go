@@ -2,7 +2,7 @@ package cke
 
 import "reflect"
 
-func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
+func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) (Operator, error) {
 	var cpNodes []*Node
 	var nonCpNodes []*Node
 	for _, n := range c.Nodes {
@@ -18,7 +18,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].Rivers.Running
 	})
 	if len(target) > 0 {
-		return RiversBootOp(target, cpNodes, cs.Agents, c.Options.Rivers)
+		return RiversBootOp(target, cpNodes, cs.Agents, c.Options.Rivers), nil
 	}
 
 	// Run kube-apiserver on control-plane nodes
@@ -26,7 +26,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].APIServer.Running
 	})
 	if len(target) > 0 {
-		return APIServerBootOp(target, cpNodes, cs.Agents, c.Options.APIServer, c.ServiceSubnet)
+		return APIServerBootOp(target, cpNodes, cs.Agents, c.Options.APIServer, c.ServiceSubnet), nil
 	}
 
 	// Stop kube-apiserver on non-control-plane nodes
@@ -34,7 +34,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return cs.NodeStatuses[n.Address].APIServer.Running
 	})
 	if len(target) > 0 {
-		return APIServerStopOp(target, cs.Agents)
+		return APIServerStopOp(target, cs.Agents), nil
 	}
 
 	// Run kube-controller-manager on control-plane nodes
@@ -42,7 +42,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].ControllerManager.Running
 	})
 	if len(target) > 0 {
-		return ControllerManagerBootOp(target, cs.Agents, c.Options.ControllerManager, c.ServiceSubnet)
+		return ControllerManagerBootOp(target, cs.Agents, c.Options.ControllerManager, c.ServiceSubnet), nil
 	}
 
 	// Stop kube-controller-manager on non-control-plane nodes
@@ -50,7 +50,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return cs.NodeStatuses[n.Address].ControllerManager.Running
 	})
 	if len(target) > 0 {
-		return ControllerManagerStopOp(target, cs.Agents)
+		return ControllerManagerStopOp(target, cs.Agents), nil
 	}
 
 	// Run kube-scheduler on control-plane nodes
@@ -58,7 +58,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].Scheduler.Running
 	})
 	if len(target) > 0 {
-		return SchedulerBootOp(target, cs.Agents, c.Options.Scheduler, c.ServiceSubnet)
+		return SchedulerBootOp(target, cs.Agents, c.Options.Scheduler, c.ServiceSubnet), nil
 	}
 
 	// Stop kube-scheduler on non-control-plane nodes
@@ -66,7 +66,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return cs.NodeStatuses[n.Address].Scheduler.Running
 	})
 	if len(target) > 0 {
-		return SchedulerStopOp(target, cs.Agents)
+		return SchedulerStopOp(target, cs.Agents), nil
 	}
 
 	// Run kubelet on all nodes
@@ -74,14 +74,14 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].Kubelet.Running
 	})
 	if len(target) > 0 {
-		return KubeletBootOp(target, cs.Agents, c.Options.Kubelet)
+		return KubeletBootOp(target, cs.Agents, c.Options.Kubelet), nil
 	}
 
 	// Check diff of command options
 	return kubernetesOptionsDecideToDo(c, cs)
 }
 
-func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
+func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) (Operator, error) {
 	cpNodes := controlPlanes(c.Nodes)
 
 	// Check diff of rivers options
@@ -98,7 +98,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(target) > 0 {
 		// Stop just one of targets and go to next iteration, in which
 		// the stopped target will be started
-		return RiversStopOp([]*Node{target[0]}, cs.Agents)
+		return RiversStopOp([]*Node{target[0]}, cs.Agents), nil
 	}
 
 	// Check diff of kube-apiserver options
@@ -115,7 +115,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(target) > 0 {
 		// Stop just one of targets and go to next iteration, in which
 		// the stopped target will be started
-		return APIServerStopOp([]*Node{target[0]}, cs.Agents)
+		return APIServerStopOp([]*Node{target[0]}, cs.Agents), nil
 	}
 
 	// Check diff of kube-controller-manager options
@@ -132,7 +132,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(target) > 0 {
 		// Stop just one of targets and go to next iteration, in which
 		// the stopped target will be started
-		return ControllerManagerStopOp([]*Node{target[0]}, cs.Agents)
+		return ControllerManagerStopOp([]*Node{target[0]}, cs.Agents), nil
 	}
 
 	// Check diff of kube-scheduler options
@@ -149,7 +149,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(target) > 0 {
 		// Stop just one of targets and go to next iteration, in which
 		// the stopped target will be started
-		return SchedulerStopOp([]*Node{target[0]}, cs.Agents)
+		return SchedulerStopOp([]*Node{target[0]}, cs.Agents), nil
 	}
 
 	// Check diff of kubelet options
@@ -167,10 +167,10 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(target) > 0 {
 		// Stop just one of targets and go to next iteration, in which
 		// the stopped target will be started
-		return KubeletStopOp([]*Node{target[0]}, cs.Agents)
+		return KubeletStopOp([]*Node{target[0]}, cs.Agents), nil
 	}
 
-	return nil
+	return nil, nil
 }
 
 func controlPlanes(nodes []*Node) []*Node {

@@ -274,6 +274,23 @@ func OutdatedControlPlane() EtcdTestCluster {
 	}
 }
 
+func NotInMemberControlPlane() EtcdTestCluster {
+	return EtcdTestCluster{
+		Nodes: []*Node{
+			{Address: "10.0.0.11", ControlPlane: true},
+			{Address: "10.0.0.12", ControlPlane: true},
+		},
+		NodeStatuses: map[string]*NodeStatus{
+			"10.0.0.11": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true}, HasData: true}},
+			"10.0.0.12": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true}, HasData: true}},
+		},
+		Etcd: EtcdClusterStatus{
+			Members:      map[string]*etcdserverpb.Member{},
+			MemberHealth: map[string]EtcdNodeHealth{},
+		},
+	}
+}
+
 func BootstrapCommands(targets ...string) []Command {
 	hosts := strings.Join(targets, ",")
 	commands := []Command{
@@ -341,7 +358,7 @@ func WaitMemberCommands(cps []string) []Command {
 		endpoints = append(endpoints, "http://"+cp+":2379")
 	}
 	return []Command{
-		Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")},
+		{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")},
 	}
 }
 
@@ -413,7 +430,10 @@ func testEtcdDecideToDo(t *testing.T) {
 			Etcd:         c.Input.Etcd,
 		}
 
-		op := etcdDecideToDo(cluster, clusterStatus)
+		op, err := etcdDecideToDo(cluster, clusterStatus)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if op == nil {
 			t.Fatal("op == nil")
 		}
@@ -434,6 +454,22 @@ func testEtcdDecideToDo(t *testing.T) {
 	}
 }
 
+func testEtcdDecideToDoFailure(t *testing.T) {
+	c := NotInMemberControlPlane()
+	cluster := &Cluster{
+		Nodes: c.Nodes,
+	}
+	clusterStatus := &ClusterStatus{
+		NodeStatuses: c.NodeStatuses,
+		Etcd:         c.Etcd,
+	}
+	_, err := etcdDecideToDo(cluster, clusterStatus)
+	if err == nil {
+		t.Fatal("etcdDecideToDo should return an error.")
+	}
+}
+
 func TestEtcdStrategy(t *testing.T) {
 	t.Run("EtcdDecideToDo", testEtcdDecideToDo)
+	t.Run("EtcdDecideToDoFailure", testEtcdDecideToDoFailure)
 }

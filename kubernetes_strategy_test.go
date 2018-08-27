@@ -191,7 +191,10 @@ func testKubernetesDecideToDo(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		op := kubernetesDecideToDo(c.Input.Cluster(), c.Input.ClusterState())
+		op, err := kubernetesDecideToDo(c.Input.Cluster(), c.Input.ClusterState())
+		if err != nil {
+			t.Fatal(err)
+		}
 		if op == nil {
 			t.Fatal("op == nil")
 		}
