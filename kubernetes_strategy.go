@@ -82,7 +82,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].Proxy.Running
 	})
 	if len(target) > 0 {
-		return ProxyBootOp(target, cs.Agents, c.Options.Proxy)
+		return ProxyBootOp(target, c.Options.Proxy)
 	}
 
 	// Check diff of command options

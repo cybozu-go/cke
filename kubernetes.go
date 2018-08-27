@@ -49,7 +49,6 @@ type riversStopOp struct {
 
 type proxyBootOp struct {
 	nodes     []*Node
-	agents    map[string]Agent
 	params    ServiceParams
 	step      int
 	nodeIndex int
@@ -419,10 +418,9 @@ func RiversStopOp(nodes []*Node) Operator {
 }
 
 // ProxyBootOp returns an Operator to bootstrap Proxy
-func ProxyBootOp(nodes []*Node, agents map[string]Agent, params ServiceParams) Operator {
+func ProxyBootOp(nodes []*Node, params ServiceParams) Operator {
 	return &proxyBootOp{
 		nodes:     nodes,
-		agents:    agents,
 		params:    params,
 		step:      0,
 		nodeIndex: 0,
@@ -458,13 +456,13 @@ func (o *proxyBootOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return makeFileCommand{o.nodes, o.agents, proxyKubeConfig(), "/etc/kubernetes/proxy/kubeconfig"}
+		return makeFileCommand{o.nodes, proxyKubeConfig(), "/etc/kubernetes/proxy/kubeconfig"}
 	case 1:
 		o.step++
-		return imagePullCommand{o.nodes, o.agents, "kube-proxy"}
+		return imagePullCommand{o.nodes, "kube-proxy"}
 	case 2:
 		o.step++
-		return makeDirCommand{o.nodes, o.agents, "/var/log/kubernetes/proxy"}
+		return makeDirCommand{o.nodes, "/var/log/kubernetes/proxy"}
 	case 3:
 		if o.nodeIndex >= len(o.nodes) {
 			return nil
@@ -472,7 +470,7 @@ func (o *proxyBootOp) NextCommand() Commander {
 		target := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		return runContainerCommand{target, o.agents[target.Address], "kube-proxy", opts, o.serviceParams(target.Address), extra}
+		return runContainerCommand{target, "kube-proxy", opts, o.serviceParams(target.Address), extra}
 	default:
 		return nil
 	}

@@ -1,6 +1,11 @@
 package cke
 
 import (
+	"net/http"
+	"time"
+
+	"github.com/coreos/etcd/clientv3"
+	"github.com/cybozu-go/cmd"
 	"github.com/pkg/errors"
 )
 
@@ -8,6 +13,9 @@ import (
 type Infrastructure interface {
 	Close()
 	Agent(addr string) Agent
+
+	NewEtcdClient(endpoints []string) (*clientv3.Client, error)
+	NewHTTPClient() *cmd.HTTPClient
 }
 
 // NewInfrastructure creates a new Infrastructure instance
@@ -48,4 +56,19 @@ func (i ckeInfrastructure) Close() {
 		a.Close()
 	}
 	i.agents = nil
+}
+
+func (i ckeInfrastructure) NewEtcdClient(endpoints []string) (*clientv3.Client, error) {
+	// TODO support TLS
+	return clientv3.New(clientv3.Config{
+		Endpoints:   endpoints,
+		DialTimeout: 2 * time.Second,
+	})
+}
+
+func (i ckeInfrastructure) NewHTTPClient() *cmd.HTTPClient {
+	// TODO support TLS
+	return &cmd.HTTPClient{
+		Client: &http.Client{},
+	}
 }
