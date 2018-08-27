@@ -213,10 +213,16 @@ func getCluster() *cke.Cluster {
 func getClusterStatus() (*cke.ClusterStatus, error) {
 	controller := cke.NewController(nil, 0, time.Second*2)
 	cluster := getCluster()
+	inf, err := cke.NewInfrastructure(context.Background(), cluster)
+	if err != nil {
+		return nil, err
+	}
+	defer inf.Close()
+
 	for _, n := range cluster.Nodes {
 		n.ControlPlane = true
 	}
-	return controller.GetClusterStatus(context.Background(), cluster)
+	return controller.GetClusterStatus(context.Background(), cluster, inf)
 }
 
 func ckecliClusterSet(cluster *cke.Cluster) error {
@@ -314,8 +320,8 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 
 	for _, host := range controlPlanes {
 		// 8080: apiserver, 18080: rivers (to apiserver), 10252: controller-manager, 10251: scheduler
-		for _, port := range []string{"8080", "18080", "10252", "10251"} {
-			stdout, _, err := execAt(host, "curl", fmt.Sprintf("localhost:%s/healthz", port))
+		for _, port := range []uint16{8080, 18080, 10252, 10251} {
+			stdout, _, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
 			if err != nil {
 				fmt.Println(err)
 				return false
@@ -325,6 +331,26 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 			}
 		}
 		if !checkComponentStatuses(host) {
+			return false
+		}
+	}
+	nodes := append(controlPlanes, workers...)
+	for _, host := range nodes {
+		// 10248: kubelet
+		stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", 10248))
+		if err != nil {
+			fmt.Println(err, string(stderr))
+			return false
+		}
+		if string(stdout) != "ok" {
+			return false
+		}
+	}
+	for _, host := range nodes {
+		// 10256: kube-proxy
+		_, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", 10256))
+		if err != nil {
+			fmt.Println(err, string(stderr))
 			return false
 		}
 	}
@@ -380,12 +406,11 @@ func initializeControlPlane() {
 		if err != nil {
 			return false
 		}
-		defer status.Destroy()
 		if !checkEtcdClusterStatus(status, controlPlanes, workers) {
 			return false
 		}
 		return checkKubernetesClusterStatus(status, controlPlanes, workers)
-	}).Should(BeTrue())
+	}, 5*time.Minute).Should(BeTrue())
 }
 
 func setFailurePoint(failurePoint, code string) {

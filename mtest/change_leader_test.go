@@ -37,7 +37,6 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 
@@ -71,7 +70,6 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 
@@ -105,7 +103,6 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 
@@ -122,7 +119,6 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 

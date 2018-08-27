@@ -30,14 +30,12 @@ var _ = Describe("etcd strategy", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 
 		By("Checking that CKE did not remove non-cluster node's data")
 		status, err := getClusterStatus()
 		Expect(err).NotTo(HaveOccurred())
-		defer status.Destroy()
 		Expect(status.NodeStatuses[node1].Etcd.HasData).To(BeTrue())
 	})
 
@@ -61,14 +59,12 @@ var _ = Describe("etcd strategy", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 
 		By("Checking that CKE removed worker node's data")
 		status, err := getClusterStatus()
 		Expect(err).NotTo(HaveOccurred())
-		defer status.Destroy()
 		Expect(status.NodeStatuses[node2].Etcd.HasData).To(BeFalse())
 	})
 
@@ -92,7 +88,6 @@ var _ = Describe("etcd strategy", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 	})
@@ -115,14 +110,12 @@ var _ = Describe("etcd strategy", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 
 		By("Checking that CKE did not remove non-cluster node's data")
 		status, err := getClusterStatus()
 		Expect(err).NotTo(HaveOccurred())
-		defer status.Destroy()
 		Expect(status.NodeStatuses[node1].Etcd.HasData).To(BeTrue())
 	})
 
@@ -142,14 +135,12 @@ var _ = Describe("etcd strategy", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 
 		By("Checking that CKE removed worker node's data")
 		status, err := getClusterStatus()
 		Expect(err).NotTo(HaveOccurred())
-		defer status.Destroy()
 		Expect(status.NodeStatuses[node2].Etcd.HasData).To(BeFalse())
 	})
 
@@ -174,7 +165,6 @@ var _ = Describe("etcd strategy", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 	})
