@@ -35,7 +35,6 @@ type EtcdClusterStatus struct {
 type ClusterStatus struct {
 	Name         string
 	NodeStatuses map[string]*NodeStatus // keys are IP address strings.
-	Agents       map[string]Agent       // ditto.
 	RBAC         bool                   // true if RBAC is enabled
 	Client       *cmd.HTTPClient
 
@@ -43,14 +42,6 @@ type ClusterStatus struct {
 	// TODO:
 	// CoreDNS will be deployed as k8s Pods.
 	// We probably need to use k8s API to query CoreDNS service status.
-}
-
-// Destroy calls Close for all agents.
-func (cs *ClusterStatus) Destroy() {
-	for _, a := range cs.Agents {
-		a.Close()
-	}
-	cs.Agents = nil
 }
 
 // NodeStatus status of a node.
@@ -90,31 +81,21 @@ type KubeletStatus struct {
 }
 
 // GetClusterStatus consults the whole cluster and constructs *ClusterStatus.
-func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster) (*ClusterStatus, error) {
+func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf Infrastructure) (*ClusterStatus, error) {
 	var mu sync.Mutex
 	statuses := make(map[string]*NodeStatus)
-	agents := make(map[string]Agent)
-	defer func() {
-		for _, a := range agents {
-			a.Close()
-		}
-	}()
 
 	env := cmd.NewEnvironment(ctx)
 	for _, n := range cluster.Nodes {
 		n := n
 		env.Go(func(ctx context.Context) error {
-			a, err := SSHAgent(n)
-			if err != nil {
-				return errors.Wrap(err, n.Address)
-			}
+			a := inf.Agent(n.Address)
 			ns, err := c.getNodeStatus(ctx, n, a, cluster)
 			if err != nil {
 				return errors.Wrap(err, n.Address)
 			}
 			mu.Lock()
 			statuses[n.Address] = ns
-			agents[n.Address] = a
 			mu.Unlock()
 			return nil
 		})
@@ -142,9 +123,6 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster) (*Cl
 
 	// TODO: query k8s cluster status and store it to ClusterStatus.
 
-	// These assignments should be placed last.
-	cs.Agents = agents
-	agents = nil
 	return cs, nil
 }
 

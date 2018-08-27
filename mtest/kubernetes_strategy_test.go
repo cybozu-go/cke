@@ -24,8 +24,6 @@ var _ = Describe("kubernetes strategy", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
-
 			return checkKubernetesClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 
@@ -105,7 +103,6 @@ var _ = Describe("kubernetes strategy", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
 			return checkKubernetesClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 	})
@@ -128,7 +125,6 @@ var _ = Describe("kubernetes strategy", func() {
 			if err != nil {
 				return false
 			}
-			defer status.Destroy()
 			return checkKubernetesClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 	})
@@ -152,7 +148,6 @@ var _ = Describe("kubernetes strategy", func() {
 				fmt.Println("failed to get cluster status", err)
 				return false
 			}
-			defer status.Destroy()
 
 			for _, node := range controlPlanes {
 				stdout, _, err := execAt(node, "docker", "inspect", "kube-controller-manager", "--format='{{json .Config.Cmd}}'")
