@@ -5,8 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"fmt"
-
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 )
 
@@ -420,7 +418,6 @@ func testEtcdDecideToDo(t *testing.T) {
 		}
 		cmds := opCommands(op)
 		if len(c.ExpectedCommands) != len(cmds) {
-			fmt.Printf("%#v\n", cmds)
 			t.Errorf("[%s] commands length mismatch: %d", c.Name, len(cmds))
 			continue
 		}
