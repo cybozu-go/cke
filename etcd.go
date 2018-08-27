@@ -67,19 +67,21 @@ func etcdGuessMemberName(m *etcdserverpb.Member) (string, error) {
 }
 
 type etcdBootOp struct {
-	nodes   []*Node
-	params  EtcdParams
-	step    int
-	cpIndex int
+	endpoints []string
+	nodes     []*Node
+	params    EtcdParams
+	step      int
+	cpIndex   int
 }
 
 // EtcdBootOp returns an Operator to bootstrap etcd cluster.
-func EtcdBootOp(nodes []*Node, params EtcdParams) Operator {
+func EtcdBootOp(endpoints []string, nodes []*Node, params EtcdParams) Operator {
 	return &etcdBootOp{
-		nodes:   nodes,
-		params:  params,
-		step:    0,
-		cpIndex: 0,
+		endpoints: endpoints,
+		nodes:     nodes,
+		params:    params,
+		step:      0,
+		cpIndex:   0,
 	}
 }
 
@@ -116,7 +118,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 		return runContainerCommand{node, etcdContainerName, opts, etcdParams(node, initialCluster, "new"), extra}
 	case 3:
 		o.step++
-		return waitEtcdSyncCommand{o.endpoints, o.client}
+		return waitEtcdSyncCommand{o.endpoints}
 	default:
 		return nil
 	}
@@ -352,16 +354,14 @@ func (c removeEtcdMemberCommand) Command() Command {
 }
 
 // EtcdWaitMemberOp returns an Operator to wait until etcd cluster becomes healthy
-func EtcdWaitMemberOp(endpoints []string, client *cmd.HTTPClient) Operator {
+func EtcdWaitMemberOp(endpoints []string) Operator {
 	return &etcdWaitMemberOp{
 		endpoints: endpoints,
-		client:    client,
 	}
 }
 
 type etcdWaitMemberOp struct {
 	endpoints []string
-	client    *cmd.HTTPClient
 	executed  bool
 }
 
@@ -375,7 +375,7 @@ func (o *etcdWaitMemberOp) NextCommand() Commander {
 	}
 	o.executed = true
 
-	return waitEtcdSyncCommand{o.endpoints, o.client}
+	return waitEtcdSyncCommand{o.endpoints}
 }
 
 // EtcdRemoveMemberOp returns an Operator to remove member from etcd cluster.

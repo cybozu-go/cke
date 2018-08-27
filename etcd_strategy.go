@@ -41,7 +41,7 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return EtcdAddMemberOp(endpoints, nodes, c.Options.Etcd)
 	}
 	if len(cs.Etcd.Members) == 0 {
-		return EtcdWaitMemberOp(endpoints, cs.Client)
+		return EtcdWaitMemberOp(endpoints)
 	}
 	nodes = newMemberControlPlane(cpNodes, cs.Etcd)
 	if len(nodes) > 0 {
