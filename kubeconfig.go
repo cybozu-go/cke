@@ -5,13 +5,18 @@ func controllerManagerKubeconfig() string {
 clusters:
 - name: local
   cluster:
-    server: http://localhost:18080
+    certificate-authority: /etc/kubernetes/pki/ca.crt
+    server: https://localhost:18080
 users:
 - name: controller-manager
+- name: admin
+  user:
+    client-certificate: /etc/kubernetes/pki/admin.crt
+    client-key: /etc/kubernetes/pki/admin.key
 contexts:
 - context:
     cluster: local
-    user: controller-manager
+    user: admin
 `
 }
 
@@ -20,13 +25,18 @@ func schedulerKubeconfig() string {
 clusters:
 - name: local
   cluster:
-    server: http://localhost:18080
+    server: https://localhost:18080
+    certificate-authority: /etc/kubernetes/pki/ca.crt
 users:
 - name: controller-manager
+- name: admin
+  user:
+    client-certificate: /etc/kubernetes/pki/admin.crt
+    client-key: /etc/kubernetes/pki/admin.key
 contexts:
 - context:
     cluster: local
-    user: controller-manager
+    user: admin
 `
 }
 
@@ -35,12 +45,17 @@ func kubeletKubeConfig() string {
 clusters:
 - name: local
   cluster:
-    server: http://localhost:18080
+    server: https://localhost:18080
+    certificate-authority: /etc/kubernetes/pki/ca.crt
 users:
 - name: kubelet
+- name: admin
+  user:
+    client-certificate: /etc/kubernetes/pki/admin.crt
+    client-key: /etc/kubernetes/pki/admin.key
 contexts:
 - context:
     cluster: local
-    user: kubelet
+    user: admin
 `
 }
