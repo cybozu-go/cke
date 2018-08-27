@@ -1,13 +1,19 @@
 package cke
 
 import (
+	"context"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cmd"
 	"github.com/pkg/errors"
 )
+
+var httpClient *cmd.HTTPClient = &cmd.HTTPClient{
+	Client: &http.Client{},
+}
 
 // Infrastructure presents an interface for infrastructure on CKE
 type Infrastructure interface {
@@ -19,7 +25,7 @@ type Infrastructure interface {
 }
 
 // NewInfrastructure creates a new Infrastructure instance
-func NewInfrastructure(c *Cluster) (Infrastructure, error) {
+func NewInfrastructure(ctx context.Context, c *Cluster) (Infrastructure, error) {
 	agents := make(map[string]Agent)
 	defer func() {
 		for _, a := range agents {
@@ -27,16 +33,31 @@ func NewInfrastructure(c *Cluster) (Infrastructure, error) {
 		}
 	}()
 
+	mu := new(sync.Mutex)
+
+	env := cmd.NewEnvironment(ctx)
 	for _, n := range c.Nodes {
-		a, err := SSHAgent(n)
-		if err != nil {
-			return nil, errors.Wrap(err, n.Address)
-		}
-		agents[n.Address] = a
+		node := n
+		env.Go(func(ctx context.Context) error {
+			a, err := SSHAgent(node)
+			if err != nil {
+				return errors.Wrap(err, node.Address)
+			}
+
+			mu.Lock()
+			agents[node.Address] = a
+			mu.Unlock()
+			return nil
+		})
+
+	}
+	env.Stop()
+	err := env.Wait()
+	if err != nil {
+		return nil, err
 	}
 
-	// These assignments should be placed last.
-
+	// These assignments of the `agent` should be placed last.
 	inf := &ckeInfrastructure{agents: agents}
 	agents = nil
 	return inf, nil
@@ -68,7 +89,5 @@ func (i ckeInfrastructure) NewEtcdClient(endpoints []string) (*clientv3.Client, 
 
 func (i ckeInfrastructure) NewHTTPClient() *cmd.HTTPClient {
 	// TODO support TLS
-	return &cmd.HTTPClient{
-		Client: &http.Client{},
-	}
+	return httpClient
 }

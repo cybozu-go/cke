@@ -139,7 +139,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return nil
 	}
 
-	inf, err := NewInfrastructure(cluster)
+	inf, err := NewInfrastructure(ctx, cluster)
 	if err != nil {
 		wait = true
 		log.Error("failed to initialize infrastructure", map[string]interface{}{

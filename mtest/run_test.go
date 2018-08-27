@@ -213,7 +213,7 @@ func getCluster() *cke.Cluster {
 func getClusterStatus() (*cke.ClusterStatus, error) {
 	controller := cke.NewController(nil, 0, time.Second*2)
 	cluster := getCluster()
-	inf, err := cke.NewInfrastructure(cluster)
+	inf, err := cke.NewInfrastructure(context.Background(), cluster)
 	if err != nil {
 		return nil, err
 	}
