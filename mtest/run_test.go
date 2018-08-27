@@ -404,7 +404,7 @@ func initializeControlPlane() {
 			return false
 		}
 		return checkKubernetesClusterStatus(status, controlPlanes, workers)
-	}).Should(BeTrue())
+	}, 5*time.Minute).Should(BeTrue())
 }
 
 func setFailurePoint(failurePoint, code string) {
