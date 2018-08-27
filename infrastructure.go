@@ -39,7 +39,7 @@ func NewInfrastructure(c *Cluster) (Infrastructure, error) {
 	for _, n := range c.Nodes {
 		a, err := SSHAgent(n)
 		if err != nil {
-			errors.Wrap(err, n.Address)
+			return nil, errors.Wrap(err, n.Address)
 		}
 		agents[n.Address] = a
 	}
