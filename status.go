@@ -3,6 +3,7 @@ package cke
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
@@ -35,6 +36,7 @@ type ClusterStatus struct {
 	Name         string
 	NodeStatuses map[string]*NodeStatus // keys are IP address strings.
 	RBAC         bool                   // true if RBAC is enabled
+	Client       *cmd.HTTPClient
 
 	Etcd EtcdClusterStatus
 	// TODO:
@@ -106,8 +108,11 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 
 	cs := new(ClusterStatus)
 	cs.NodeStatuses = statuses
+	cs.Client = &cmd.HTTPClient{
+		Client: &http.Client{},
+	}
 
-	cs.Etcd.Members, err = c.getEtcdMembers(ctx, cluster.Nodes, inf)
+	cs.Etcd.Members, err = c.getEtcdMembers(ctx, cluster.Nodes)
 	if err != nil {
 		// Ignore err since the cluster may be on bootstrap
 		log.Warn("failed to get etcd members", map[string]interface{}{
@@ -183,14 +188,29 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 	return status, nil
 }
 
-func (c Controller) getEtcdMembers(ctx context.Context, nodes []*Node, inf Infrastructure) (map[string]*etcdserverpb.Member, error) {
-	members, err := inf.EtcdGetMembers(ctx)
+func (c Controller) getEtcdMembers(ctx context.Context, nodes []*Node) (map[string]*etcdserverpb.Member, error) {
+	var endpoints []string
+	for _, n := range nodes {
+		if n.ControlPlane {
+			endpoints = append(endpoints, fmt.Sprintf("http://%s:2379", n.Address))
+		}
+	}
+
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   endpoints,
+		DialTimeout: 2 * time.Second,
+	})
 	if err != nil {
 		return nil, err
 	}
+	defer cli.Close()
 
-	memberMap := make(map[string]*etcdserverpb.Member)
-	for _, m := range members {
+	resp, err := cli.MemberList(ctx)
+	if err != nil {
+		return nil, err
+	}
+	members := make(map[string]*etcdserverpb.Member)
+	for _, m := range resp.Members {
 		name, err := etcdGuessMemberName(m)
 		if err != nil {
 			log.Warn("failed to guess etcd member name", map[string]interface{}{
@@ -199,9 +219,9 @@ func (c Controller) getEtcdMembers(ctx context.Context, nodes []*Node, inf Infra
 			})
 			continue
 		}
-		memberMap[name] = m
+		members[name] = m
 	}
-	return memberMap, nil
+	return members, nil
 }
 
 func (c Controller) getEtcdMemberHealth(ctx context.Context, members map[string]*etcdserverpb.Member) map[string]EtcdNodeHealth {

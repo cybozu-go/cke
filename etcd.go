@@ -2,15 +2,21 @@ package cke
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/etcdserver/api/etcdhttp"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
+	"github.com/cybozu-go/cmd"
 )
 
 const (
@@ -138,10 +144,11 @@ func etcdParams(node *Node, initialCluster []string, state string) ServiceParams
 }
 
 // EtcdAddMemberOp returns an Operator to add member to etcd cluster.
-func EtcdAddMemberOp(endpoints []string, targetNodes []*Node, params EtcdParams) Operator {
+func EtcdAddMemberOp(endpoints []string, targetNodes []*Node, client *cmd.HTTPClient, params EtcdParams) Operator {
 	return &etcdAddMemberOp{
 		endpoints:   endpoints,
 		targetNodes: targetNodes,
+		client:      client,
 		params:      params,
 		step:        0,
 		nodeIndex:   0,
@@ -151,6 +158,7 @@ func EtcdAddMemberOp(endpoints []string, targetNodes []*Node, params EtcdParams)
 type etcdAddMemberOp struct {
 	endpoints   []string
 	targetNodes []*Node
+	client      *cmd.HTTPClient
 	params      EtcdParams
 	step        int
 	nodeIndex   int
@@ -194,7 +202,7 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		o.step = 0
 		o.nodeIndex++
 		endpoints := []string{"http://" + node.Address + ":2379"}
-		return waitEtcdSyncCommand{endpoints}
+		return waitEtcdSyncCommand{endpoints, o.client}
 	}
 	return nil
 }
@@ -207,7 +215,21 @@ type addEtcdMemberCommand struct {
 }
 
 func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error {
-	members, err := inf.EtcdGetMembers(ctx)
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   c.endpoints,
+		DialTimeout: 2 * time.Second,
+	})
+	if err != nil {
+		return err
+	}
+
+	defer cli.Close()
+
+	resp, err := cli.MemberList(ctx)
+	if err != nil {
+		return err
+	}
+	members := resp.Members
 
 	inMember := false
 	for _, m := range members {
@@ -221,10 +243,11 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error
 	}
 
 	if !inMember {
-		members, err = inf.EtcdAddMember(ctx, c.node.Address)
+		resp, err := cli.MemberAdd(ctx, []string{fmt.Sprintf("http://%s:2380", c.node.Address)})
 		if err != nil {
 			return err
 		}
+		members = resp.Members
 	}
 	// gofail: var etcdAfterMemberAdd struct{}
 	ce := Docker(inf.Agent(c.node.Address))
@@ -259,12 +282,25 @@ func (c addEtcdMemberCommand) Command() Command {
 
 type waitEtcdSyncCommand struct {
 	endpoints []string
+	client    *cmd.HTTPClient
 }
 
 func (c waitEtcdSyncCommand) Run(ctx context.Context, inf Infrastructure) error {
 	for i := 0; i < 3; i++ {
 		for _, ep := range c.endpoints {
-			health, err := inf.EtcdGetHealth(ctx, ep)
+			u := ep + "/health"
+			req, err := http.NewRequest("GET", u, nil)
+			if err != nil {
+				continue
+			}
+			req = req.WithContext(ctx)
+			resp, err := c.client.Do(req)
+			if err != nil {
+				continue
+			}
+			health := new(etcdhttp.Health)
+			err = json.NewDecoder(resp.Body).Decode(health)
+			resp.Body.Close()
 			if err != nil {
 				continue
 			}
@@ -294,8 +330,17 @@ type removeEtcdMemberCommand struct {
 }
 
 func (c removeEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error {
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   c.endpoints,
+		DialTimeout: 2 * time.Second,
+	})
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
 	for _, id := range c.ids {
-		err := inf.EtcdRemoveMember(ctx, id)
+		_, err := cli.MemberRemove(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -348,10 +393,11 @@ func (o *etcdRemoveMemberOp) NextCommand() Commander {
 }
 
 // EtcdDestroyMemberOp create new etcdDestroyMemberOp instance
-func EtcdDestroyMemberOp(endpoints []string, targets []*Node, members map[string]*etcdserverpb.Member) Operator {
+func EtcdDestroyMemberOp(endpoints []string, targets []*Node, client *cmd.HTTPClient, members map[string]*etcdserverpb.Member) Operator {
 	return &etcdDestroyMemberOp{
 		endpoints: endpoints,
 		targets:   targets,
+		client:    client,
 		members:   members,
 	}
 }
@@ -359,6 +405,7 @@ func EtcdDestroyMemberOp(endpoints []string, targets []*Node, members map[string
 type etcdDestroyMemberOp struct {
 	endpoints []string
 	targets   []*Node
+	client    *cmd.HTTPClient
 	members   map[string]*etcdserverpb.Member
 	params    EtcdParams
 	step      int
@@ -387,7 +434,7 @@ func (o *etcdDestroyMemberOp) NextCommand() Commander {
 		return removeEtcdMemberCommand{o.endpoints, ids}
 	case 1:
 		o.step++
-		return waitEtcdSyncCommand{o.endpoints}
+		return waitEtcdSyncCommand{o.endpoints, o.client}
 	case 2:
 		o.step++
 		return stopContainerCommand{node, etcdContainerName}
@@ -400,9 +447,10 @@ func (o *etcdDestroyMemberOp) NextCommand() Commander {
 }
 
 // EtcdUpdateVersionOp create new etcdUpdateVersionOp instance
-func EtcdUpdateVersionOp(endpoints []string, targets []*Node, cpNodes []*Node, params EtcdParams) Operator {
+func EtcdUpdateVersionOp(endpoints []string, client *cmd.HTTPClient, targets []*Node, cpNodes []*Node, params EtcdParams) Operator {
 	return &etcdUpdateVersionOp{
 		endpoints: endpoints,
+		client:    client,
 		targets:   targets,
 		cpNodes:   cpNodes,
 		params:    params,
@@ -411,6 +459,7 @@ func EtcdUpdateVersionOp(endpoints []string, targets []*Node, cpNodes []*Node, p
 
 type etcdUpdateVersionOp struct {
 	endpoints []string
+	client    *cmd.HTTPClient
 	targets   []*Node
 	cpNodes   []*Node
 	params    EtcdParams
@@ -433,7 +482,7 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return waitEtcdSyncCommand{[]string{o.endpoints[o.nodeIndex]}}
+		return waitEtcdSyncCommand{[]string{o.endpoints[o.nodeIndex]}, o.client}
 	case 1:
 		o.step++
 		return imagePullCommand{[]*Node{o.targets[o.nodeIndex]}, "etcd"}
