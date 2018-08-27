@@ -77,6 +77,14 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return KubeletBootOp(target, cs.Agents, c.Options.Kubelet)
 	}
 
+	// Run kube-proxy on all nodes
+	target = filterNodes(c.Nodes, func(n *Node) bool {
+		return !cs.NodeStatuses[n.Address].Proxy.Running
+	})
+	if len(target) > 0 {
+		return ProxyBootOp(target, cs.Agents, c.Options.Proxy)
+	}
+
 	// Check diff of command options
 	return kubernetesOptionsDecideToDo(c, cs)
 }

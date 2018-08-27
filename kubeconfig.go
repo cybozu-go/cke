@@ -44,3 +44,18 @@ contexts:
     user: kubelet
 `
 }
+
+func proxyKubeConfig() string {
+	return `apiVersion: v1
+clusters:
+- name: local
+  cluster:
+    server: http://localhost:18080
+users:
+- name: kube-proxy
+contexts:
+- context:
+    cluster: local
+    user: kube-proxy
+`
+}
