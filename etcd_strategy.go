@@ -44,8 +44,7 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(nodes) > 0 {
 		return EtcdAddMemberOp(endpoints, nodes, cs.Agents, cs.Client, c.Options.Etcd)
 	}
-	nodes = unhealthyControlPlaneMember(cpNodes, cs.Etcd)
-	if len(nodes) > 0 {
+	if len(cs.Etcd.Members) == 0 {
 		return EtcdWaitMemberOp(endpoints, cs.Client)
 	}
 	members = healthyNonClusterMember(c.Nodes, cs.Etcd)
@@ -112,17 +111,6 @@ func newMemberControlPlane(cpNodes []*Node, cs EtcdClusterStatus) []*Node {
 	for _, n := range cpNodes {
 		_, inMember := cs.Members[n.Address]
 		if !inMember {
-			targets = append(targets, n)
-		}
-	}
-	return targets
-}
-
-func unhealthyControlPlaneMember(cpNodes []*Node, cs EtcdClusterStatus) []*Node {
-	var targets []*Node
-	for _, n := range cpNodes {
-		health, ok := cs.MemberHealth[n.Address]
-		if !ok || health != EtcdNodeHealthy {
 			targets = append(targets, n)
 		}
 	}
