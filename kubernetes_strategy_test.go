@@ -135,6 +135,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 			Commands: []Command{
 				{"make-file", "/etc/kubernetes/kubelet/kubeconfig", ""},
 				{"image-pull", "kubelet", ""},
+				{"image-pull", "pause", ""},
 				{"mkdir", "/var/log/kubernetes/kubelet", ""},
 				{"volume-create", "10.0.0.11,10.0.0.12,10.0.0.13,10.0.0.14,10.0.0.15,10.0.0.16", ""},
 				{"run-container", "10.0.0.11", ""},

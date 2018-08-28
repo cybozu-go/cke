@@ -352,11 +352,14 @@ func (o *kubeletBootOp) NextCommand() Commander {
 		return imagePullCommand{o.nodes, "kubelet"}
 	case 2:
 		o.step++
-		return makeDirCommand{o.nodes, "/var/log/kubernetes/kubelet"}
+		return imagePullCommand{o.nodes, "pause"}
 	case 3:
 		o.step++
-		return volumeCreateCommand{o.nodes, volName}
+		return makeDirCommand{o.nodes, "/var/log/kubernetes/kubelet"}
 	case 4:
+		o.step++
+		return volumeCreateCommand{o.nodes, volName}
+	case 5:
 		if o.nodeIndex >= len(o.nodes) {
 			return nil
 		}
@@ -375,6 +378,7 @@ func (o *kubeletBootOp) serviceParams(targetAddress string) ServiceParams {
 		"kubelet",
 		"--allow-privileged=true",
 		"--container-runtime-endpoint=/var/tmp/dockershim/dockershim.sock",
+		"--pod-infra-container-image=" + Image("pause"),
 		"--hostname-override=" + targetAddress,
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--log-dir=/var/log/kubernetes/kubelet",
