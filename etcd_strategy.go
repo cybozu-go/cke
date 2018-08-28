@@ -2,7 +2,6 @@ package cke
 
 import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
-	"github.com/cybozu-go/log"
 )
 
 func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
@@ -14,6 +13,10 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 			cpNodes = append(cpNodes, n)
 		}
 	}
+	endpoints := make([]string, len(cpNodes))
+	for i, n := range cpNodes {
+		endpoints[i] = "http://" + n.Address + ":2379"
+	}
 
 	bootstrap := true
 	for _, n := range c.Nodes {
@@ -22,17 +25,7 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 	}
 	if bootstrap {
-		return EtcdBootOp(cpNodes, c.Options.Etcd)
-	}
-
-	if len(cs.Etcd.Members) == 0 {
-		log.Warn("No members of etcd cluster", nil)
-		return nil
-	}
-
-	endpoints := make([]string, len(cpNodes))
-	for i, n := range cpNodes {
-		endpoints[i] = "http://" + n.Address + ":2379"
+		return EtcdBootOp(endpoints, cpNodes, c.Options.Etcd)
 	}
 
 	members := unhealthyNonClusterMember(c.Nodes, cs.Etcd)
@@ -46,6 +39,9 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	nodes = unstartedMemberControlPlane(cpNodes, cs.Etcd)
 	if len(nodes) > 0 {
 		return EtcdAddMemberOp(endpoints, nodes, c.Options.Etcd)
+	}
+	if !etcdClusterIsHealthy(cs.Etcd) {
+		return EtcdWaitMemberOp(endpoints)
 	}
 	nodes = newMemberControlPlane(cpNodes, cs.Etcd)
 	if len(nodes) > 0 {
@@ -149,6 +145,15 @@ func runningNonControlPlaneMember(allNodes []*Node, statuses map[string]*NodeSta
 		}
 	}
 	return targets
+}
+
+func etcdClusterIsHealthy(cs EtcdClusterStatus) bool {
+	for _, s := range cs.MemberHealth {
+		if s == EtcdNodeHealthy {
+			return true
+		}
+	}
+	return false
 }
 
 func outdatedControlPlaneMember(allNodes []*Node, statuses map[string]*NodeStatus) []*Node {
