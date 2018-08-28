@@ -7,12 +7,7 @@ import (
 func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	// See docs/etcd.md
 
-	var cpNodes []*Node
-	for _, n := range c.Nodes {
-		if n.ControlPlane {
-			cpNodes = append(cpNodes, n)
-		}
-	}
+	cpNodes := controlPlanes(c.Nodes)
 	endpoints := make([]string, len(cpNodes))
 	for i, n := range cpNodes {
 		endpoints[i] = "http://" + n.Address + ":2379"
@@ -80,41 +75,28 @@ func unhealthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[strin
 }
 
 func unhealthyNonControlPlaneMember(nodes []*Node, cs EtcdClusterStatus) []*Node {
-	var targets []*Node
-	for _, n := range nodes {
+	return filterNodes(nodes, func(n *Node) bool {
 		if n.ControlPlane {
-			continue
+			return false
 		}
 		_, inMember := cs.Members[n.Address]
 		health := cs.MemberHealth[n.Address]
-		if health != EtcdNodeHealthy && inMember {
-			targets = append(targets, n)
-		}
-
-	}
-	return targets
+		return health != EtcdNodeHealthy && inMember
+	})
 }
 
 func unstartedMemberControlPlane(cpNodes []*Node, cs EtcdClusterStatus) []*Node {
-	var targets []*Node
-	for _, n := range cpNodes {
+	return filterNodes(cpNodes, func(n *Node) bool {
 		m, inMember := cs.Members[n.Address]
-		if inMember && len(m.Name) == 0 {
-			targets = append(targets, n)
-		}
-	}
-	return targets
+		return inMember && len(m.Name) == 0
+	})
 }
 
 func newMemberControlPlane(cpNodes []*Node, cs EtcdClusterStatus) []*Node {
-	var targets []*Node
-	for _, n := range cpNodes {
+	return filterNodes(cpNodes, func(n *Node) bool {
 		_, inMember := cs.Members[n.Address]
-		if !inMember {
-			targets = append(targets, n)
-		}
-	}
-	return targets
+		return !inMember
+	})
 }
 
 func healthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[string]*etcdserverpb.Member {
@@ -134,17 +116,9 @@ func healthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[string]
 }
 
 func runningNonControlPlaneMember(allNodes []*Node, statuses map[string]*NodeStatus) []*Node {
-	var targets []*Node
-	for _, n := range allNodes {
-		if n.ControlPlane {
-			continue
-		}
-		st := statuses[n.Address]
-		if st.Etcd.Running {
-			targets = append(targets, n)
-		}
-	}
-	return targets
+	return filterNodes(allNodes, func(n *Node) bool {
+		return !n.ControlPlane && statuses[n.Address].Etcd.Running
+	})
 }
 
 func etcdClusterIsHealthy(cs EtcdClusterStatus) bool {
@@ -156,12 +130,8 @@ func etcdClusterIsHealthy(cs EtcdClusterStatus) bool {
 	return false
 }
 
-func outdatedControlPlaneMember(allNodes []*Node, statuses map[string]*NodeStatus) []*Node {
-	var targets []*Node
-	for _, n := range allNodes {
-		if EtcdImage != statuses[n.Address].Etcd.Image {
-			targets = append(targets, n)
-		}
-	}
-	return targets
+func outdatedControlPlaneMember(nodes []*Node, statuses map[string]*NodeStatus) []*Node {
+	return filterNodes(nodes, func(n *Node) bool {
+		return EtcdImage != statuses[n.Address].Etcd.Image
+	})
 }

@@ -124,6 +124,22 @@ func (c *Cluster) validateNode(n *Node) error {
 	return nil
 }
 
+func controlPlanes(nodes []*Node) []*Node {
+	return filterNodes(nodes, func(n *Node) bool {
+		return n.ControlPlane
+	})
+}
+
+func filterNodes(nodes []*Node, f func(n *Node) bool) []*Node {
+	var filtered []*Node
+	for _, n := range nodes {
+		if f(n) {
+			filtered = append(filtered, n)
+		}
+	}
+	return filtered
+}
+
 func validateOptions(opts Options) error {
 	v := func(binds []Mount) error {
 		for _, m := range binds {
