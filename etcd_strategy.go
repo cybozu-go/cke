@@ -1,7 +1,7 @@
 package cke
 
 import (
-	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
@@ -151,31 +151,73 @@ func outdatedEtcdParamsMember(nodes []*Node, extra ServiceParams, statuses map[s
 		currentBuiltin := statuses[n.Address].Etcd.BuiltInParams
 		currentExtra := statuses[n.Address].Etcd.ExtraParams
 
+		eqStringMap := func(m1, m2 map[string]string) bool {
+			if len(m1) != len(m2) {
+				return false
+			}
+			for k, v := range m1 {
+				if v2, ok := m2[k]; !ok || v != v2 {
+					return false
+				}
+			}
+			return true
+		}
+		eqStringSlice := func(s1, s2 []string) bool {
+			if len(s1) != len(s2) {
+				return false
+			}
+			for i := range s1 {
+				if s1[i] != s2[i] {
+					return false
+				}
+			}
+			return true
+		}
+
+		eqMountSlice := func(s1, s2 []Mount) bool {
+			if len(s1) != len(s2) {
+				return false
+			}
+
+			for i := range s1 {
+				if s1[i].Source != s2[i].Source || s1[i].Destination != s2[i].Destination || s1[i].ReadOnly != s2[i].ReadOnly {
+					return false
+				}
+			}
+			return true
+		}
+
 		// NOTE ignore parameters starting with "--initial-" prefix.
 		// There options are used only on starting etcd process at first time.
 		eqArgs := func(s1, s2 []string) bool {
-			m := make(map[string]struct{})
+			var sorted1, sorted2 []string
 			for _, s := range s1 {
 				if !strings.HasPrefix(s, "--initial-") {
-					m[s] = struct{}{}
+					sorted1 = append(sorted1, s)
 				}
 			}
 			for _, s := range s2 {
-				delete(m, s)
+				if !strings.HasPrefix(s, "--initial-") {
+					sorted2 = append(sorted2, s)
+				}
 			}
-			return len(m) == 0
+
+			sort.Strings(sorted1)
+			sort.Strings(sorted2)
+			return eqStringSlice(sorted1, sorted2)
 		}
 
 		if !eqArgs(newBuiltIn.ExtraArguments, currentBuiltin.ExtraArguments) ||
 			!eqArgs(newExtra.ExtraArguments, currentExtra.ExtraArguments) {
 			return true
 		}
-		if !reflect.DeepEqual(newBuiltIn.ExtraBinds, currentBuiltin.ExtraBinds) ||
-			!reflect.DeepEqual(newExtra.ExtraBinds, currentBuiltin.ExtraBinds) ||
-			!reflect.DeepEqual(newBuiltIn.ExtraEnvvar, currentBuiltin.ExtraEnvvar) ||
-			!reflect.DeepEqual(newExtra.ExtraEnvvar, currentBuiltin.ExtraEnvvar) {
+		if !eqMountSlice(newBuiltIn.ExtraBinds, currentBuiltin.ExtraBinds) ||
+			!eqMountSlice(newExtra.ExtraBinds, currentBuiltin.ExtraBinds) ||
+			!eqStringMap(newBuiltIn.ExtraEnvvar, currentBuiltin.ExtraEnvvar) ||
+			!eqStringMap(newExtra.ExtraEnvvar, currentBuiltin.ExtraEnvvar) {
 			return true
 		}
+
 		return false
 	})
 }
