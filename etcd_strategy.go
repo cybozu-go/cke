@@ -40,7 +40,7 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(nodes) > 0 {
 		return EtcdAddMemberOp(endpoints, nodes, c.Options.Etcd)
 	}
-	if len(cs.Etcd.Members) == 0 {
+	if !etcdClusterIsHealthy(cs.Etcd) {
 		return EtcdWaitMemberOp(endpoints)
 	}
 	nodes = newMemberControlPlane(cpNodes, cs.Etcd)
@@ -145,6 +145,15 @@ func runningNonControlPlaneMember(allNodes []*Node, statuses map[string]*NodeSta
 		}
 	}
 	return targets
+}
+
+func etcdClusterIsHealthy(cs EtcdClusterStatus) bool {
+	for _, s := range cs.MemberHealth {
+		if s == EtcdNodeHealthy {
+			return true
+		}
+	}
+	return false
 }
 
 func outdatedControlPlaneMember(allNodes []*Node, statuses map[string]*NodeStatus) []*Node {
