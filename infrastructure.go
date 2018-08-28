@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var httpClient *cmd.HTTPClient = &cmd.HTTPClient{
+var httpClient = &cmd.HTTPClient{
 	Client: &http.Client{},
 }
 
