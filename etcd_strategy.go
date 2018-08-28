@@ -151,42 +151,6 @@ func outdatedEtcdParamsMember(nodes []*Node, extra ServiceParams, statuses map[s
 		currentBuiltin := statuses[n.Address].Etcd.BuiltInParams
 		currentExtra := statuses[n.Address].Etcd.ExtraParams
 
-		eqStringMap := func(m1, m2 map[string]string) bool {
-			if len(m1) != len(m2) {
-				return false
-			}
-			for k, v := range m1 {
-				if v2, ok := m2[k]; !ok || v != v2 {
-					return false
-				}
-			}
-			return true
-		}
-		eqStringSlice := func(s1, s2 []string) bool {
-			if len(s1) != len(s2) {
-				return false
-			}
-			for i := range s1 {
-				if s1[i] != s2[i] {
-					return false
-				}
-			}
-			return true
-		}
-
-		eqMountSlice := func(s1, s2 []Mount) bool {
-			if len(s1) != len(s2) {
-				return false
-			}
-
-			for i := range s1 {
-				if s1[i].Source != s2[i].Source || s1[i].Destination != s2[i].Destination || s1[i].ReadOnly != s2[i].ReadOnly {
-					return false
-				}
-			}
-			return true
-		}
-
 		// NOTE ignore parameters starting with "--initial-" prefix.
 		// There options are used only on starting etcd process at first time.
 		eqArgs := func(s1, s2 []string) bool {
@@ -204,17 +168,17 @@ func outdatedEtcdParamsMember(nodes []*Node, extra ServiceParams, statuses map[s
 
 			sort.Strings(sorted1)
 			sort.Strings(sorted2)
-			return eqStringSlice(sorted1, sorted2)
+			return compareStrings(sorted1, sorted2)
 		}
 
 		if !eqArgs(newBuiltIn.ExtraArguments, currentBuiltin.ExtraArguments) ||
 			!eqArgs(newExtra.ExtraArguments, currentExtra.ExtraArguments) {
 			return true
 		}
-		if !eqMountSlice(newBuiltIn.ExtraBinds, currentBuiltin.ExtraBinds) ||
-			!eqMountSlice(newExtra.ExtraBinds, currentBuiltin.ExtraBinds) ||
-			!eqStringMap(newBuiltIn.ExtraEnvvar, currentBuiltin.ExtraEnvvar) ||
-			!eqStringMap(newExtra.ExtraEnvvar, currentBuiltin.ExtraEnvvar) {
+		if !compareMounts(newBuiltIn.ExtraBinds, currentBuiltin.ExtraBinds) ||
+			!compareMounts(newExtra.ExtraBinds, currentBuiltin.ExtraBinds) ||
+			!compareStringMap(newBuiltIn.ExtraEnvvar, currentBuiltin.ExtraEnvvar) ||
+			!compareStringMap(newExtra.ExtraEnvvar, currentBuiltin.ExtraEnvvar) {
 			return true
 		}
 
