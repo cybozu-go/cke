@@ -240,7 +240,7 @@ func UnhealthyControlPlane() EtcdTestCluster {
 	}
 }
 
-func OutdatedControlPlane() EtcdTestCluster {
+func OutdatedImageControlPlane() EtcdTestCluster {
 	oldEtcd := "quay.io/cybozu/etcd:3.2.18-2"
 	return EtcdTestCluster{
 		Nodes: []*Node{
@@ -252,6 +252,34 @@ func OutdatedControlPlane() EtcdTestCluster {
 			"10.0.0.11": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true, Image: oldEtcd}, HasData: true}},
 			"10.0.0.12": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true, Image: oldEtcd}, HasData: true}},
 			"10.0.0.13": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true, Image: oldEtcd}, HasData: true}},
+		},
+		Etcd: EtcdClusterStatus{
+			Members: map[string]*etcdserverpb.Member{
+				"10.0.0.11": {ID: 1, Name: "10.0.0.11"},
+				"10.0.0.12": {ID: 2, Name: "10.0.0.12"},
+				"10.0.0.13": {ID: 3, Name: "10.0.0.13"},
+			},
+			MemberHealth: map[string]EtcdNodeHealth{
+				"10.0.0.11": EtcdNodeHealthy,
+				"10.0.0.12": EtcdNodeHealthy,
+				"10.0.0.13": EtcdNodeHealthy,
+			},
+		},
+	}
+}
+
+func OutdatedParamsControlPlane() EtcdTestCluster {
+	oldParams := ServiceParams{ExtraArguments: []string{"--experimental-enable-v2v3"}}
+	return EtcdTestCluster{
+		Nodes: []*Node{
+			{Address: "10.0.0.11", ControlPlane: true},
+			{Address: "10.0.0.12", ControlPlane: true},
+			{Address: "10.0.0.13", ControlPlane: true},
+		},
+		NodeStatuses: map[string]*NodeStatus{
+			"10.0.0.11": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{ExtraParams: oldParams, Image: EtcdImage, Running: true}, HasData: true}},
+			"10.0.0.12": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{ExtraParams: oldParams, Image: EtcdImage, Running: true}, HasData: true}},
+			"10.0.0.13": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{ExtraParams: oldParams, Image: EtcdImage, Running: true}, HasData: true}},
 		},
 		Etcd: EtcdClusterStatus{
 			Members: map[string]*etcdserverpb.Member{
@@ -321,12 +349,24 @@ func DestroyMemberCommands(cps []string, addrs []string, ids []uint64) []Command
 	return commands
 }
 
-func UpdateMemberCommands(cps []string) []Command {
+func UpdateImageMemberCommands(cps []string) []Command {
 	var commands []Command
 	for _, cp := range cps {
 		commands = append(commands,
 			Command{Name: "wait-etcd-sync", Target: "http://" + cp + ":2379"},
 			Command{Name: "image-pull", Target: "etcd"},
+			Command{Name: "stop-container", Target: cp},
+			Command{Name: "run-container", Target: cp},
+		)
+	}
+	return commands
+}
+
+func RestartCommands(cps []string) []Command {
+	var commands []Command
+	for _, cp := range cps {
+		commands = append(commands,
+			Command{Name: "wait-etcd-sync", Target: "http://" + cp + ":2379"},
 			Command{Name: "stop-container", Target: cp},
 			Command{Name: "run-container", Target: cp},
 		)
@@ -397,9 +437,14 @@ func testEtcdDecideToDo(t *testing.T) {
 			ExpectedCommands: WaitMemberCommands([]string{"10.0.0.11", "10.0.0.12"}),
 		},
 		{
-			Name:             "UpdateOutdatedControlPlane",
-			Input:            OutdatedControlPlane(),
-			ExpectedCommands: UpdateMemberCommands([]string{"10.0.0.11", "10.0.0.12", "10.0.0.13"}),
+			Name:             "UpdateOutdatedImage",
+			Input:            OutdatedImageControlPlane(),
+			ExpectedCommands: UpdateImageMemberCommands([]string{"10.0.0.11", "10.0.0.12", "10.0.0.13"}),
+		},
+		{
+			Name:             "UpdateOutdatedParams",
+			Input:            OutdatedParamsControlPlane(),
+			ExpectedCommands: RestartCommands([]string{"10.0.0.11", "10.0.0.12", "10.0.0.13"}),
 		},
 	}
 

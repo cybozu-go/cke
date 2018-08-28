@@ -115,7 +115,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 		for _, n := range o.nodes {
 			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
 		}
-		return runContainerCommand{node, etcdContainerName, opts, etcdParams(node, initialCluster, "new"), extra}
+		return runContainerCommand{node, etcdContainerName, opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
 	case 3:
 		o.step++
 		return waitEtcdSyncCommand{o.endpoints}
@@ -124,7 +124,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 	}
 }
 
-func etcdParams(node *Node, initialCluster []string, state string) ServiceParams {
+func etcdBuiltInParams(node *Node, initialCluster []string, state string) ServiceParams {
 	args := []string{
 		"--name=" + node.Address,
 		"--listen-peer-urls=http://0.0.0.0:2380",
@@ -267,7 +267,7 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error
 		}
 	}
 
-	return ce.RunSystem(etcdContainerName, c.opts, etcdParams(c.node, initialCluster, "existing"), c.extra)
+	return ce.RunSystem(etcdContainerName, c.opts, etcdBuiltInParams(c.node, initialCluster, "existing"), c.extra)
 }
 
 func (c addEtcdMemberCommand) Command() Command {
@@ -516,7 +516,63 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
 		}
 		o.nodeIndex++
-		return runContainerCommand{target, etcdContainerName, opts, etcdParams(target, initialCluster, "new"), extra}
+		return runContainerCommand{target, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
+	}
+	return nil
+}
+
+// EtcdRestartOp create new etcdRestartOp instance
+func EtcdRestartOp(endpoints []string, targets []*Node, cpNodes []*Node, params EtcdParams) Operator {
+	return &etcdRestartOp{
+		endpoints: endpoints,
+		targets:   targets,
+		cpNodes:   cpNodes,
+		params:    params,
+	}
+}
+
+type etcdRestartOp struct {
+	endpoints []string
+	targets   []*Node
+	cpNodes   []*Node
+	params    EtcdParams
+	step      int
+	nodeIndex int
+}
+
+func (o *etcdRestartOp) Name() string {
+	return "etcd-restart"
+}
+
+func (o *etcdRestartOp) NextCommand() Commander {
+	if o.nodeIndex >= len(o.targets) {
+		return nil
+	}
+
+	volname := etcdVolumeName(o.params)
+	extra := o.params.ServiceParams
+
+	switch o.step {
+	case 0:
+		o.step++
+		return waitEtcdSyncCommand{[]string{o.endpoints[o.nodeIndex]}}
+	case 1:
+		o.step++
+		target := o.targets[o.nodeIndex]
+		return stopContainerCommand{target, etcdContainerName}
+	case 2:
+		o.step = 0
+		target := o.targets[o.nodeIndex]
+		opts := []string{
+			"--mount",
+			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
+		}
+		var initialCluster []string
+		for _, n := range o.cpNodes {
+			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
+		}
+		o.nodeIndex++
+		return runContainerCommand{target, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
 	}
 	return nil
 }

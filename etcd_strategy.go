@@ -1,6 +1,9 @@
 package cke
 
 import (
+	"reflect"
+	"strings"
+
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 )
 
@@ -50,9 +53,13 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(nodes) > 0 {
 		return EtcdDestroyMemberOp(endpoints, nodes, cs.Etcd.Members)
 	}
-	nodes = outdatedControlPlaneMember(cpNodes, cs.NodeStatuses)
+	nodes = outdatedEtcdImageMember(cpNodes, cs.NodeStatuses)
 	if len(nodes) > 0 {
 		return EtcdUpdateVersionOp(endpoints, nodes, cpNodes, c.Options.Etcd)
+	}
+	nodes = outdatedEtcdParamsMember(cpNodes, c.Options.Etcd.ServiceParams, cs.NodeStatuses)
+	if len(nodes) > 0 {
+		return EtcdRestartOp(endpoints, nodes, cpNodes, c.Options.Etcd)
 	}
 
 	return nil
@@ -130,8 +137,45 @@ func etcdClusterIsHealthy(cs EtcdClusterStatus) bool {
 	return false
 }
 
-func outdatedControlPlaneMember(nodes []*Node, statuses map[string]*NodeStatus) []*Node {
+func outdatedEtcdImageMember(nodes []*Node, statuses map[string]*NodeStatus) []*Node {
 	return filterNodes(nodes, func(n *Node) bool {
 		return EtcdImage != statuses[n.Address].Etcd.Image
+	})
+}
+
+func outdatedEtcdParamsMember(nodes []*Node, extra ServiceParams, statuses map[string]*NodeStatus) []*Node {
+	return filterNodes(nodes, func(n *Node) bool {
+		newBuiltIn := etcdBuiltInParams(n, []string{}, "new")
+		newExtra := extra
+
+		currentBuiltin := statuses[n.Address].Etcd.BuiltInParams
+		currentExtra := statuses[n.Address].Etcd.ExtraParams
+
+		// NOTE ignore parameters starting with "--initial-" prefix.
+		// There options are used only on starting etcd process at first time.
+		eqArgs := func(s1, s2 []string) bool {
+			m := make(map[string]struct{})
+			for _, s := range s1 {
+				if !strings.HasPrefix(s, "--initial-") {
+					m[s] = struct{}{}
+				}
+			}
+			for _, s := range s2 {
+				delete(m, s)
+			}
+			return len(m) == 0
+		}
+
+		if !eqArgs(newBuiltIn.ExtraArguments, currentBuiltin.ExtraArguments) ||
+			!eqArgs(newExtra.ExtraArguments, currentExtra.ExtraArguments) {
+			return true
+		}
+		if !reflect.DeepEqual(newBuiltIn.ExtraBinds, currentBuiltin.ExtraBinds) ||
+			!reflect.DeepEqual(newExtra.ExtraBinds, currentBuiltin.ExtraBinds) ||
+			!reflect.DeepEqual(newBuiltIn.ExtraEnvvar, currentBuiltin.ExtraEnvvar) ||
+			!reflect.DeepEqual(newExtra.ExtraEnvvar, currentBuiltin.ExtraEnvvar) {
+			return true
+		}
+		return false
 	})
 }
