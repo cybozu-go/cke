@@ -118,7 +118,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 		return runContainerCommand{node, etcdContainerName, opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
 	case 3:
 		o.step++
-		return waitEtcdSyncCommand{o.endpoints}
+		return waitEtcdSyncCommand{o.endpoints, 0}
 	default:
 		return nil
 	}
@@ -203,7 +203,7 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		o.step = 0
 		o.nodeIndex++
 		endpoints := []string{"http://" + node.Address + ":2379"}
-		return waitEtcdSyncCommand{endpoints}
+		return waitEtcdSyncCommand{endpoints, 0}
 	}
 	return nil
 }
@@ -278,11 +278,13 @@ func (c addEtcdMemberCommand) Command() Command {
 }
 
 type waitEtcdSyncCommand struct {
-	endpoints []string
+	endpoints  []string
+	redundancy int
 }
 
 func (c waitEtcdSyncCommand) Run(ctx context.Context, inf Infrastructure) error {
 	for i := 0; i < 3; i++ {
+		count := 0
 		for _, ep := range c.endpoints {
 			u := ep + "/health"
 			req, err := http.NewRequest("GET", u, nil)
@@ -297,13 +299,15 @@ func (c waitEtcdSyncCommand) Run(ctx context.Context, inf Infrastructure) error 
 			health := new(etcdhttp.Health)
 			err = json.NewDecoder(resp.Body).Decode(health)
 			resp.Body.Close()
-			if err != nil {
+			if err != nil || health.Health != "true" {
 				continue
 			}
-			if health.Health == "true" {
-				return nil
-			}
+			count++
 		}
+		if count >= int(len(c.endpoints)/2)+1+c.redundancy {
+			return nil
+		}
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -353,29 +357,29 @@ func (c removeEtcdMemberCommand) Command() Command {
 	}
 }
 
-// EtcdWaitMemberOp returns an Operator to wait until etcd cluster becomes healthy
-func EtcdWaitMemberOp(endpoints []string) Operator {
-	return &etcdWaitMemberOp{
+// EtcdWaitClusterOp returns an Operator to wait until etcd cluster becomes healthy
+func EtcdWaitClusterOp(endpoints []string) Operator {
+	return &etcdWaitClusterOp{
 		endpoints: endpoints,
 	}
 }
 
-type etcdWaitMemberOp struct {
+type etcdWaitClusterOp struct {
 	endpoints []string
 	executed  bool
 }
 
-func (o *etcdWaitMemberOp) Name() string {
+func (o *etcdWaitClusterOp) Name() string {
 	return "etcd-wait-member"
 }
 
-func (o *etcdWaitMemberOp) NextCommand() Commander {
+func (o *etcdWaitClusterOp) NextCommand() Commander {
 	if o.executed {
 		return nil
 	}
 	o.executed = true
 
-	return waitEtcdSyncCommand{o.endpoints}
+	return waitEtcdSyncCommand{o.endpoints, 0}
 }
 
 // EtcdRemoveMemberOp returns an Operator to remove member from etcd cluster.
@@ -450,7 +454,7 @@ func (o *etcdDestroyMemberOp) NextCommand() Commander {
 		return removeEtcdMemberCommand{o.endpoints, ids}
 	case 1:
 		o.step++
-		return waitEtcdSyncCommand{o.endpoints}
+		return waitEtcdSyncCommand{o.endpoints, 0}
 	case 2:
 		o.step++
 		return stopContainerCommand{node, etcdContainerName}
@@ -496,7 +500,7 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return waitEtcdSyncCommand{[]string{o.endpoints[o.nodeIndex]}}
+		return waitEtcdSyncCommand{[]string{o.endpoints[o.nodeIndex]}, 1}
 	case 1:
 		o.step++
 		return imagePullCommand{[]*Node{o.targets[o.nodeIndex]}, "etcd"}
@@ -555,7 +559,7 @@ func (o *etcdRestartOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return waitEtcdSyncCommand{[]string{o.endpoints[o.nodeIndex]}}
+		return waitEtcdSyncCommand{[]string{o.endpoints[o.nodeIndex]}, 1}
 	case 1:
 		o.step++
 		target := o.targets[o.nodeIndex]
