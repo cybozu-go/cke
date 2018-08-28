@@ -1,6 +1,10 @@
 package mtest
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -165,6 +169,55 @@ var _ = Describe("etcd strategy", func() {
 			if err != nil {
 				return false
 			}
+			return checkEtcdClusterStatus(status, controlPlanes, workers)
+		}).Should(BeTrue())
+	})
+
+	It("should adjust command arguments", func() {
+		By("Updating container options")
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		cluster.Options.ControllerManager.ExtraArguments = []string{
+			"--experimental-enable-v2v3",
+		}
+		ckecliClusterSet(cluster)
+
+		By("Checking that controller managers restarted with new arguments")
+		Eventually(func() bool {
+			controlPlanes := []string{node1, node2, node3}
+			workers := []string{node4, node5, node6}
+			status, err := getClusterStatus()
+			if err != nil {
+				fmt.Println("failed to get cluster status", err)
+				return false
+			}
+
+			for _, node := range controlPlanes {
+				stdout, _, err := execAt(node, "docker", "inspect", "kube-controller-manager", "--format='{{json .Config.Cmd}}'")
+				if err != nil {
+					fmt.Println("failed to exec docker inspect", err)
+					return false
+				}
+				var cmds = []string{}
+				err = json.NewDecoder(bytes.NewReader(stdout)).Decode(&cmds)
+				if err != nil {
+					fmt.Println("failed to parse json", err)
+					return false
+				}
+
+				ok := false
+				for _, val := range cmds {
+					if val == "--experimental-enable_v2v3" {
+						ok = true
+					}
+				}
+				if !ok {
+					return false
+				}
+			}
+
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 	})
