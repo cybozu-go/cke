@@ -16,7 +16,7 @@ import (
 
 var (
 	flgHTTP       = flag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
-	flgConfigPath = flag.String("config", "/etc/cke.yml", "configuration file path")
+	flgConfigPath = flag.String("config", "/etc/cke/config.yml", "configuration file path")
 	flgInterval   = flag.String("interval", "10m", "check interval")
 	flgSessionTTL = flag.String("session-ttl", "60s", "leader session's TTL")
 )

@@ -5,10 +5,10 @@ ckecli
 $ ckecli [--config FILE] <subcommand> args...
 ```
 
-Option      | Default value  | Description
-----------  | -------------- | -----------
-`--config`  | `/etc/cke.yml` | config file path
-`--version` |                | show ckecli version
+Option      | Default value         | Description
+----------  | --------------------- | -----------
+`--config`  | `/etc/cke/config.yml` | config file path
+`--version` |                       | show ckecli version
 
 `ckecli cluster set FILE`
 -------------------------
@@ -35,6 +35,23 @@ Set a constraint on the cluster configuration.
 -------------------------
 
 Show all constraints on the cluster.
+
+`ckecli vault config JSON`
+--------------------------
+
+`JSON` is a filename whose body is a JSON object described in [schema.md](schema.md#vault).
+
+`ckecli ca set NAME PEM`
+------------------------
+
+`NAME` is one of `server`, `etcd-peer`, `etcd-client`.
+
+`PEM` is a filename of a x509 certificate.
+
+`ckecli ca get NAME`
+--------------------
+
+`NAME` is one of `server`, `etcd-peer`, `etcd-client`.
 
 `ckecli leader`
 -------------------------

@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	flgConfigPath = flag.String("config", "/etc/cke.yml", "configuration file path")
+	flgConfigPath = flag.String("config", "/etc/cke/config.yml", "configuration file path")
 	flgVersion    = flag.Bool("version", false, "show ckecli version")
 )
 
