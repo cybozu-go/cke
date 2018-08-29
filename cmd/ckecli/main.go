@@ -43,6 +43,7 @@ func main() {
 	subcommands.Register(cli.ClusterCommand(), "")
 	subcommands.Register(cli.ConstraintsCommand(), "")
 	subcommands.Register(cli.VaultCommand(), "")
+	subcommands.Register(cli.CACommand(), "")
 	subcommands.Register(cli.LeaderCommand(), "")
 	subcommands.Register(cli.HistoryCommand(), "")
 

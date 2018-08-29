@@ -24,6 +24,7 @@ const (
 	KeyCluster     = "cluster"
 	KeyConstraints = "constraints"
 	KeyVault       = "vault"
+	KeyCA          = "ca/"
 	KeyLeader      = "leader/"
 )
 
@@ -100,7 +101,7 @@ func (s Storage) GetConstraints(ctx context.Context) (*Constraints, error) {
 	return c, nil
 }
 
-// PutVaultConfig stores *VaultConfig into etcd
+// PutVaultConfig stores *VaultConfig into etcd.
 func (s Storage) PutVaultConfig(ctx context.Context, c *VaultConfig) error {
 	data, err := json.Marshal(c)
 	if err != nil {
@@ -108,6 +109,25 @@ func (s Storage) PutVaultConfig(ctx context.Context, c *VaultConfig) error {
 	}
 
 	_, err = s.Put(ctx, KeyVault, string(data))
+	return err
+}
+
+// GetCACertificate loads CA certificate from etcd.
+func (s Storage) GetCACertificate(ctx context.Context, name string) (string, error) {
+	resp, err := s.Get(ctx, KeyCA+name)
+	if err != nil {
+		return "", err
+	}
+	if resp.Count == 0 {
+		return "", ErrNotFound
+	}
+
+	return string(resp.Kvs[0].Value), nil
+}
+
+// PutCACertificate stores CA certificate into etcd.
+func (s Storage) PutCACertificate(ctx context.Context, name, pem string) error {
+	_, err := s.Put(ctx, KeyCA+name, pem)
 	return err
 }
 
