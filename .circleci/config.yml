@@ -7,9 +7,6 @@ jobs:
     working_directory: /go/src/github.com/cybozu-go/cke
     steps:
       - checkout
-      # TODO use go mod
-      - run: go get -v -t -d ./...
-      - run: (cd /go/src/github.com/coreos/etcd; git checkout v3.3.9)
       - run: go get -v -t -d ./...
       - run: test -z "$(goimports -d . | tee /dev/stderr)"
       - run: golint -set_exit_status ./...

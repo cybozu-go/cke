@@ -252,9 +252,6 @@ clean:
 
 setup:
 	go get -t -d ./...
-	cd $$GOPATH/src/github.com/coreos/etcd; \
-		git fetch origin && \
-		git checkout v3.3.9
 	go get -u github.com/onsi/ginkgo/ginkgo \
 		github.com/cybozu-go/placemat/... \
 		github.com/coreos/gofail
