@@ -350,10 +350,14 @@ func DestroyMemberCommands(cps []string, addrs []string, ids []uint64) []Command
 }
 
 func UpdateImageMemberCommands(cps []string) []Command {
+	var endpoints []string
+	for _, cp := range cps {
+		endpoints = append(endpoints, "http://"+cp+":2379")
+	}
 	var commands []Command
 	for _, cp := range cps {
 		commands = append(commands,
-			Command{Name: "wait-etcd-sync", Target: "http://" + cp + ":2379"},
+			Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")},
 			Command{Name: "image-pull", Target: "etcd"},
 			Command{Name: "stop-container", Target: cp},
 			Command{Name: "run-container", Target: cp},
@@ -363,10 +367,14 @@ func UpdateImageMemberCommands(cps []string) []Command {
 }
 
 func RestartCommands(cps []string) []Command {
+	var endpoints []string
+	for _, cp := range cps {
+		endpoints = append(endpoints, "http://"+cp+":2379")
+	}
 	var commands []Command
 	for _, cp := range cps {
 		commands = append(commands,
-			Command{Name: "wait-etcd-sync", Target: "http://" + cp + ":2379"},
+			Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")},
 			Command{Name: "stop-container", Target: cp},
 			Command{Name: "run-container", Target: cp},
 		)

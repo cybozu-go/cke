@@ -500,7 +500,7 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return waitEtcdSyncCommand{[]string{o.endpoints[o.nodeIndex]}, 1}
+		return waitEtcdSyncCommand{o.endpoints, 1}
 	case 1:
 		o.step++
 		return imagePullCommand{[]*Node{o.targets[o.nodeIndex]}, "etcd"}
@@ -559,7 +559,7 @@ func (o *etcdRestartOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return waitEtcdSyncCommand{[]string{o.endpoints[o.nodeIndex]}, 1}
+		return waitEtcdSyncCommand{o.endpoints, 1}
 	case 1:
 		o.step++
 		target := o.targets[o.nodeIndex]
