@@ -1,11 +1,10 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
-
-	"context"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/cli"
@@ -17,7 +16,7 @@ import (
 )
 
 var (
-	flgConfigPath = flag.String("config", "/etc/cke.yml", "configuration file path")
+	flgConfigPath = flag.String("config", "/etc/cke/config.yml", "configuration file path")
 	flgVersion    = flag.Bool("version", false, "show ckecli version")
 )
 
@@ -43,6 +42,8 @@ func main() {
 	subcommands.Register(subcommands.CommandsCommand(), "misc")
 	subcommands.Register(cli.ClusterCommand(), "")
 	subcommands.Register(cli.ConstraintsCommand(), "")
+	subcommands.Register(cli.VaultCommand(), "")
+	subcommands.Register(cli.CACommand(), "")
 	subcommands.Register(cli.LeaderCommand(), "")
 	subcommands.Register(cli.HistoryCommand(), "")
 

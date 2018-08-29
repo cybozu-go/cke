@@ -17,5 +17,5 @@ write_files:
   - content: |
       endpoints:
         - http://@HOST1@:2379
-    path: /etc/cke.yml
+    path: /etc/cke/config.yml
     permissions: '0644'
