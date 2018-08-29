@@ -3,16 +3,17 @@ package cli
 import (
 	"context"
 	"flag"
-	"fmt"
+	"io/ioutil"
+	"os"
 
 	"github.com/google/subcommands"
 )
 
 type ca struct{}
 
-func (v ca) SetFlags(f *flag.FlagSet) {}
+func (c ca) SetFlags(f *flag.FlagSet) {}
 
-func (v ca) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
+func (c ca) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
 	newc := NewCommander(f, "ca")
 	newc.Register(caSetCommand(), "")
 	newc.Register(caGetCommand(), "")
@@ -25,7 +26,7 @@ func CACommand() subcommands.Command {
 		ca{},
 		"ca",
 		"set the ca configuration",
-		"ca config JSON",
+		"ca set/get ARGS...",
 	}
 }
 
@@ -50,8 +51,20 @@ func (c caSet) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitSta
 		f.Usage()
 		return subcommands.ExitUsageError
 	}
-	pem := f.Arg(1)
-	err := storage.PutCACertificate(ctx, name, pem)
+
+	pemfile := f.Arg(1)
+	g, err := os.Open(pemfile)
+	if err != nil {
+		return handleError(err)
+	}
+	defer g.Close()
+
+	pem, err := ioutil.ReadAll(g)
+	if err != nil {
+		return handleError(err)
+	}
+
+	err = storage.PutCACertificate(ctx, name, string(pem))
 
 	return handleError(err)
 }
@@ -61,7 +74,7 @@ func caSetCommand() subcommands.Command {
 		caSet{},
 		"set",
 		"set CA certificate",
-		`ca set NAME PEM
+		`ca set NAME PEMFILE
 
 NAME is one of:
 		- server
@@ -91,8 +104,8 @@ func (c caGet) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitSta
 		return handleError(err)
 	}
 
-	fmt.Println(pem)
-	return handleError(nil)
+	_, err = os.Stdout.WriteString(pem)
+	return handleError(err)
 }
 
 func caGetCommand() subcommands.Command {

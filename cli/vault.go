@@ -63,8 +63,8 @@ func (c vaultConfig) Execute(ctx context.Context, f *flag.FlagSet) subcommands.E
 func vaultConfigCommand() subcommands.Command {
 	return subcmd{
 		vaultConfig{},
-		"show",
-		"show constraints",
-		"constraints show",
+		"config",
+		"set vault connection settings",
+		"vault config JSON",
 	}
 }

@@ -3,9 +3,11 @@ package cke
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	vault "github.com/hashicorp/vault/api"
@@ -30,6 +32,20 @@ type VaultConfig struct {
 func (c *VaultConfig) Validate() error {
 	if len(c.Endpoint) == 0 {
 		return errors.New("endpoint is empty")
+	}
+	_, err := url.Parse(c.Endpoint)
+	if err != nil {
+		return err
+	}
+	if len(c.CACert) > 0 {
+		block, _ := pem.Decode([]byte(c.CACert))
+		if block == nil {
+			return errors.New("invalid PEM data")
+		}
+		_, err = x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return errors.New("invalid certificate")
+		}
 	}
 	if len(c.RoleID) == 0 {
 		return errors.New("role-id is empty")
