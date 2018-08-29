@@ -38,6 +38,7 @@ func TestCompareStringMap(t *testing.T) {
 
 		{map[string]string{"hello": ""}, map[string]string{}, false},
 		{map[string]string{"hello": "world"}, map[string]string{"good": "morning"}, false},
+		{map[string]string{"hello": "world"}, map[string]string{"hello": "ola"}, false},
 	}
 	for _, c := range cases {
 		if compareStringMap(c.m1, c.m2) != c.ok {
