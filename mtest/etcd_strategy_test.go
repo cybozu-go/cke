@@ -179,7 +179,7 @@ var _ = Describe("etcd strategy", func() {
 		for i := 0; i < 3; i++ {
 			cluster.Nodes[i].ControlPlane = true
 		}
-		cluster.Options.ControllerManager.ExtraArguments = []string{
+		cluster.Options.Etcd.ExtraArguments = []string{
 			"--experimental-enable-v2v3",
 		}
 		ckecliClusterSet(cluster)
