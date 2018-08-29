@@ -2,9 +2,8 @@ version: 2
 jobs:
   build:
     docker:
-      - image: quay.io/cybozu/golang:1.10-bionic
+      - image: quay.io/cybozu/golang:1.11-bionic
       - image: quay.io/coreos/etcd:v3.3
-    working_directory: /go/src/github.com/cybozu-go/cke
     steps:
       - checkout
       - run: go get -v -t -d ./...
