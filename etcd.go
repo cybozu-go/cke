@@ -125,6 +125,8 @@ func (o *etcdBootOp) NextCommand() Commander {
 }
 
 func etcdBuiltInParams(node *Node, initialCluster []string, state string) ServiceParams {
+	// NOTE: "--initial-*" flags and its value must be joined with '=' to
+	// compare paramter on detecting outdated parameters to restart it.
 	args := []string{
 		"--name=" + node.Address,
 		"--listen-peer-urls=http://0.0.0.0:2380",

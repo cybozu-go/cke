@@ -1,7 +1,6 @@
 package cke
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
@@ -154,21 +153,18 @@ func outdatedEtcdParamsMember(nodes []*Node, extra ServiceParams, statuses map[s
 		// NOTE ignore parameters starting with "--initial-" prefix.
 		// There options are used only on starting etcd process at first time.
 		eqArgs := func(s1, s2 []string) bool {
-			var sorted1, sorted2 []string
+			var filtered1, filtered2 []string
 			for _, s := range s1 {
 				if !strings.HasPrefix(s, "--initial-") {
-					sorted1 = append(sorted1, s)
+					filtered1 = append(filtered1, s)
 				}
 			}
 			for _, s := range s2 {
 				if !strings.HasPrefix(s, "--initial-") {
-					sorted2 = append(sorted2, s)
+					filtered2 = append(filtered2, s)
 				}
 			}
-
-			sort.Strings(sorted1)
-			sort.Strings(sorted2)
-			return compareStrings(sorted1, sorted2)
+			return compareStrings(filtered1, filtered2)
 		}
 
 		if !eqArgs(newBuiltIn.ExtraArguments, currentBuiltin.ExtraArguments) ||
@@ -176,9 +172,9 @@ func outdatedEtcdParamsMember(nodes []*Node, extra ServiceParams, statuses map[s
 			return true
 		}
 		if !compareMounts(newBuiltIn.ExtraBinds, currentBuiltin.ExtraBinds) ||
-			!compareMounts(newExtra.ExtraBinds, currentBuiltin.ExtraBinds) ||
+			!compareMounts(newExtra.ExtraBinds, currentExtra.ExtraBinds) ||
 			!compareStringMap(newBuiltIn.ExtraEnvvar, currentBuiltin.ExtraEnvvar) ||
-			!compareStringMap(newExtra.ExtraEnvvar, currentBuiltin.ExtraEnvvar) {
+			!compareStringMap(newExtra.ExtraEnvvar, currentExtra.ExtraEnvvar) {
 			return true
 		}
 
