@@ -370,7 +370,7 @@ type etcdWaitClusterOp struct {
 }
 
 func (o *etcdWaitClusterOp) Name() string {
-	return "etcd-wait-member"
+	return "etcd-wait-cluster"
 }
 
 func (o *etcdWaitClusterOp) NextCommand() Commander {
