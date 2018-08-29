@@ -195,7 +195,7 @@ var _ = Describe("etcd strategy", func() {
 			}
 
 			for _, node := range controlPlanes {
-				stdout, _, err := execAt(node, "docker", "inspect", "kube-controller-manager", "--format='{{json .Config.Cmd}}'")
+				stdout, _, err := execAt(node, "docker", "inspect", "etcd", "--format='{{json .Config.Cmd}}'")
 				if err != nil {
 					fmt.Println("failed to exec docker inspect", err)
 					return false
@@ -209,7 +209,7 @@ var _ = Describe("etcd strategy", func() {
 
 				ok := false
 				for _, val := range cmds {
-					if val == "--experimental-enable_v2v3" {
+					if val == "--experimental-enable-v2v3=/v2/" {
 						ok = true
 					}
 				}
