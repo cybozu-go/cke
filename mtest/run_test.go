@@ -137,7 +137,7 @@ func runCKE() error {
 			}
 			defer sess.Close()
 
-			return sess.Run("sudo systemd-run --unit=cke.service --setenv=GOFAIL_HTTP=0.0.0.0:1234 /data/cke -config /etc/cke.yml -interval 1ms -session-ttl 5s")
+			return sess.Run("sudo systemd-run --unit=cke.service --setenv=GOFAIL_HTTP=0.0.0.0:1234 /data/cke -interval 1ms -session-ttl 5s")
 		})
 	}
 	env.Stop()
