@@ -26,6 +26,20 @@ type VaultConfig struct {
 	SecretID string `json:"secret-id"`
 }
 
+// Validate validates the vault configuration
+func (c *VaultConfig) Validate() error {
+	if len(c.Endpoint) == 0 {
+		return errors.New("endpoint is empty")
+	}
+	if len(c.RoleID) == 0 {
+		return errors.New("role-id is empty")
+	}
+	if len(c.SecretID) == 0 {
+		return errors.New("secret-id is empty")
+	}
+	return nil
+}
+
 // ConnectVault creates vault client
 func ConnectVault(c *VaultConfig) (*vault.Client, error) {
 	transport := &http.Transport{

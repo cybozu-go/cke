@@ -23,6 +23,7 @@ const (
 	KeyRecordID    = "records"
 	KeyCluster     = "cluster"
 	KeyConstraints = "constraints"
+	KeyVault       = "vault"
 	KeyLeader      = "leader/"
 )
 
@@ -97,6 +98,17 @@ func (s Storage) GetConstraints(ctx context.Context) (*Constraints, error) {
 	}
 
 	return c, nil
+}
+
+// PutVaultConfig stores *VaultConfig into etcd
+func (s Storage) PutVaultConfig(ctx context.Context, c *VaultConfig) error {
+	data, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.Put(ctx, KeyVault, string(data))
+	return err
 }
 
 func recordKey(r *Record) string {

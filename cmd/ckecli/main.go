@@ -1,11 +1,10 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
-
-	"context"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/cli"
@@ -43,6 +42,7 @@ func main() {
 	subcommands.Register(subcommands.CommandsCommand(), "misc")
 	subcommands.Register(cli.ClusterCommand(), "")
 	subcommands.Register(cli.ConstraintsCommand(), "")
+	subcommands.Register(cli.VaultCommand(), "")
 	subcommands.Register(cli.LeaderCommand(), "")
 	subcommands.Register(cli.HistoryCommand(), "")
 
