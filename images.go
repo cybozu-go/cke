@@ -6,6 +6,7 @@ const (
 	CKETools       = "quay.io/cybozu/cke-tools:0.1-2"
 	ToolsImage     = "quay.io/cybozu/ubuntu:18.04"
 	HyperkubeImage = "quay.io/cybozu/hyperkube:1.11.1-2"
+	PauseImage     = "quay.io/cybozu/pause:3.1-1"
 )
 
 // Image returns the image name for a given container.
@@ -19,6 +20,8 @@ func Image(name string) string {
 		return ToolsImage
 	case "kube-apiserver", "kube-controller-manager", "kube-scheduler", "kubelet", "kube-proxy":
 		return HyperkubeImage
+	case "pause":
+		return PauseImage
 	}
 
 	panic("no such image: " + name)
