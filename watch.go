@@ -137,7 +137,10 @@ func startWatcher(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{}
 			key := string(ev.Kv.Key)
 			switch key {
 			case KeyCluster:
-				//TODO
+				select {
+				case ch <- struct{}{}:
+				default:
+				}
 			case KeyVault:
 				err = connectVault(ctx, ev.Kv.Value)
 				if err != nil {

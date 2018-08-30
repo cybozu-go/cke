@@ -69,13 +69,13 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 		return err
 	}
 
-	ch := make(chan struct{})
+	watchChan := make(chan struct{})
 	env := cmd.NewEnvironment(ctx)
 	env.Go(func(ctx context.Context) error {
-		return startWatcher(ctx, c.session.Client(), ch)
+		return startWatcher(ctx, c.session.Client(), watchChan)
 	})
 	env.Stop()
-	<-ch
+	<-watchChan
 	defer func() {
 		env.Cancel(nil)
 		env.Wait()
@@ -90,7 +90,7 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 			return nil
 		default:
 		}
-		err := c.runOnce(ctx, leaderKey, ticker.C)
+		err := c.runOnce(ctx, leaderKey, ticker.C, watchChan)
 		if err != nil {
 			return err
 		}
@@ -120,13 +120,14 @@ func (c Controller) checkLastOp(ctx context.Context, leaderKey string) error {
 	return storage.UpdateRecord(ctx, leaderKey, r)
 }
 
-func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan time.Time) error {
+func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan time.Time, watchChan <-chan struct{}) error {
 	wait := false
 	defer func() {
 		if !wait {
 			return
 		}
 		select {
+		case <-watchChan:
 		case <-ctx.Done():
 		case <-tick:
 		}
