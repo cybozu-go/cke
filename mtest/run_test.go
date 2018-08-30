@@ -280,10 +280,6 @@ func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []
 			fmt.Printf("%s is running\n", host)
 			return false
 		}
-		// if status.NodeStatuses[host].Etcd.HasData {
-		// 	fmt.Printf("%s has data\n", host)
-		// 	return false
-		// }
 	}
 	if len(controlPlanes) != len(status.Etcd.Members) {
 		fmt.Printf("len(controlPlanes) != len(status.Etcd.Members), %d != %d\n", len(controlPlanes), len(status.Etcd.Members))
