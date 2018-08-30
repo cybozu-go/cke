@@ -41,9 +41,16 @@ var _ = BeforeSuite(func() {
 		return err
 	}).Should(Succeed())
 
+	err = stopManagementEtcd(sshClients[host1])
+	Expect(err).NotTo(HaveOccurred())
+	err = stopVault(sshClients[host1])
+	Expect(err).NotTo(HaveOccurred())
+
 	for _, h := range []string{host1, host2} {
 		execSafeAt(h, "/data/setup-cke.sh")
 	}
+
+	setupCKE()
 
 	initializeControlPlane()
 

@@ -352,6 +352,28 @@ func checkComponentStatuses(host string) bool {
 	return true
 }
 
+func stopManagementEtcd(client *ssh.Client) error {
+	command := "sudo systemctl stop my-etcd.service; sudo rm -rf /home/cybozu/default.etcd"
+	sess, err := client.NewSession()
+	if err != nil {
+		return err
+	}
+	defer sess.Close()
+	sess.Run(command)
+	return nil
+}
+
+func stopVault(client *ssh.Client) error {
+	command := "sudo systemctl stop my-vault.service"
+	sess, err := client.NewSession()
+	if err != nil {
+		return err
+	}
+	defer sess.Close()
+	sess.Run(command)
+	return nil
+}
+
 func setupCKE() {
 	err := stopCKE()
 	Expect(err).NotTo(HaveOccurred())
