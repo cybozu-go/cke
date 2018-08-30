@@ -31,19 +31,19 @@ var _ = BeforeSuite(func() {
 		execSafeAt(h, "sync")
 	}
 
-	err = stopManagementEtcd(sshClients[host1])
-	Expect(err).NotTo(HaveOccurred())
-	err = runManagementEtcd(sshClients[host1])
-	Expect(err).NotTo(HaveOccurred())
+	// wait cke
+	Eventually(func() error {
+		_, _, err := execAt(host1, "test", "-f", "/usr/bin/jq")
+		if err != nil {
+			return err
+		}
+		_, _, err = execAt(host2, "test", "-f", "/usr/bin/jq")
+		return err
+	}).Should(Succeed())
 
-	err = stopVault(sshClients[host1])
-	Expect(err).NotTo(HaveOccurred())
-	err = runVault(sshClients[host1])
-	Expect(err).NotTo(HaveOccurred())
-
-	time.Sleep(time.Second)
-
-	setupCKE()
+	for _, h := range []string{host1, host2} {
+		execSafeAt(h, "/data/setup-cke.sh")
+	}
 
 	initializeControlPlane()
 
