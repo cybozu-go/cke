@@ -313,11 +313,7 @@ func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []
 	return true
 }
 
-func isRunningControlPlaneComponents(status *cke.ClusterStatus, host string) bool {
-	if !status.NodeStatuses[host].Rivers.Running {
-		fmt.Printf("rivers is not running on %s\n", host)
-		return false
-	}
+func isRunningAllControlPlaneComponents(status *cke.ClusterStatus, host string) bool {
 	if !status.NodeStatuses[host].APIServer.Running {
 		fmt.Printf("kube-apiserver is not running on %s\n", host)
 		return false
@@ -333,25 +329,63 @@ func isRunningControlPlaneComponents(status *cke.ClusterStatus, host string) boo
 	return true
 }
 
+func isRunningAnyControlPlaneComponents(status *cke.ClusterStatus, host string) bool {
+	if status.NodeStatuses[host].APIServer.Running {
+		fmt.Printf("kube-apiserver is running on %s\n", host)
+		return true
+	}
+	if status.NodeStatuses[host].ControllerManager.Running {
+		fmt.Printf("kube-controller-manager is running on %s\n", host)
+		return true
+	}
+	if status.NodeStatuses[host].Scheduler.Running {
+		fmt.Printf("kube-scheduler is running on %s\n", host)
+		return true
+	}
+	return false
+}
+
+func isRunningAllCommonComponents(status *cke.ClusterStatus, host string) bool {
+	if !status.NodeStatuses[host].Rivers.Running {
+		fmt.Printf("rivers is not running on %s\n", host)
+		return false
+	}
+	if !status.NodeStatuses[host].Proxy.Running {
+		fmt.Printf("kube-proxy is not running on %s\n", host)
+		return false
+	}
+	if !status.NodeStatuses[host].Kubelet.Running {
+		fmt.Printf("kubelet is not running on %s\n", host)
+		return false
+	}
+	return true
+}
+
 func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []string) bool {
+	nodes := append(controlPlanes, workers...)
+
 	for _, host := range controlPlanes {
-		if !isRunningControlPlaneComponents(status, host) {
+		if !isRunningAllControlPlaneComponents(status, host) {
 			return false
 		}
 	}
-
 	for _, host := range workers {
-		if isRunningControlPlaneComponents(status, host) {
+		if isRunningAnyControlPlaneComponents(status, host) {
+			return false
+		}
+	}
+	for _, host := range nodes {
+		if !isRunningAllCommonComponents(status, host) {
 			return false
 		}
 	}
 
 	for _, host := range controlPlanes {
-		// 8080: apiserver, 18080: rivers (to apiserver), 10252: controller-manager, 10251: scheduler
-		for _, port := range []uint16{8080, 18080, 10252, 10251} {
-			stdout, _, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
+		// 8080: apiserver, 10252: controller-manager, 10251: scheduler
+		for _, port := range []uint16{8080, 10252, 10251} {
+			stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
 			if err != nil {
-				fmt.Println(err)
+				fmt.Println(err, string(stderr))
 				return false
 			}
 			if string(stdout) != "ok" {
@@ -362,26 +396,21 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 			return false
 		}
 	}
-	nodes := append(controlPlanes, workers...)
+
 	for _, host := range nodes {
-		// 10248: kubelet
-		stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", 10248))
-		if err != nil {
-			fmt.Println(err, string(stderr))
-			return false
-		}
-		if string(stdout) != "ok" {
-			return false
+		// 10248: kubelet, 10256: kube-proxy, 18080: rivers (to apiserver)
+		for _, port := range []uint16{10248, 10256, 18080} {
+			stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
+			if err != nil {
+				fmt.Println(err, string(stderr))
+				return false
+			}
+			if string(stdout) != "ok" && port != 10256 { // kube-proxy does not return "ok"
+				return false
+			}
 		}
 	}
-	for _, host := range nodes {
-		// 10256: kube-proxy
-		_, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", 10256))
-		if err != nil {
-			fmt.Println(err, string(stderr))
-			return false
-		}
-	}
+
 	return true
 }
 
