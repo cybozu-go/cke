@@ -40,7 +40,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].ControllerManager.Running
 	})
 	if len(target) > 0 {
-		return ControllerManagerBootOp(target, c.Options.ControllerManager, c.ServiceSubnet)
+		return ControllerManagerBootOp(target, c.Options.ControllerManager)
 	}
 
 	// Stop kube-controller-manager on non-control-plane nodes
@@ -56,7 +56,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].Scheduler.Running
 	})
 	if len(target) > 0 {
-		return SchedulerBootOp(target, c.Options.Scheduler, c.ServiceSubnet)
+		return SchedulerBootOp(target, c.Options.Scheduler)
 	}
 
 	// Stop kube-scheduler on non-control-plane nodes
@@ -162,7 +162,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	target = filterNodes(c.Nodes, func(n *Node) bool {
 		bootOp := KubeletBootOp([]*Node{n}, c.Options.Kubelet).(*kubeletBootOp)
 		status := cs.NodeStatuses[n.Address].Kubelet
-		if !bootOp.serviceParams(n.Address).Equal(status.BuiltInParams) {
+		if !bootOp.serviceParams().Equal(status.BuiltInParams) {
 			return true
 		}
 		if !bootOp.extraParams().Equal(status.ExtraParams) {

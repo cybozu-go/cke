@@ -9,7 +9,6 @@ type riversBootOp struct {
 	upstreams []*Node
 	params    ServiceParams
 	step      int
-	nodeIndex int
 }
 
 type apiServerBootOp struct {
@@ -22,24 +21,21 @@ type apiServerBootOp struct {
 }
 
 type controllerManagerBootOp struct {
-	nodes     []*Node
-	params    ServiceParams
-	step      int
-	nodeIndex int
+	nodes  []*Node
+	params ServiceParams
+	step   int
 }
 
 type schedulerBootOp struct {
-	nodes     []*Node
-	params    ServiceParams
-	step      int
-	nodeIndex int
+	nodes  []*Node
+	params ServiceParams
+	step   int
 }
 
 type kubeletBootOp struct {
-	nodes     []*Node
-	params    KubeletParams
-	step      int
-	nodeIndex int
+	nodes  []*Node
+	params KubeletParams
+	step   int
 }
 
 type riversStopOp struct {
@@ -48,10 +44,9 @@ type riversStopOp struct {
 }
 
 type proxyBootOp struct {
-	nodes     []*Node
-	params    ServiceParams
-	step      int
-	nodeIndex int
+	nodes  []*Node
+	params ServiceParams
+	step   int
 }
 
 type apiServerStopOp struct {
@@ -84,7 +79,6 @@ func RiversBootOp(nodes []*Node, upstreams []*Node, params ServiceParams) Operat
 		upstreams: upstreams,
 		params:    params,
 		step:      0,
-		nodeIndex: 0,
 	}
 }
 
@@ -94,7 +88,7 @@ func (o *riversBootOp) Name() string {
 
 func (o *riversBootOp) NextCommand() Commander {
 	extra := o.params
-	opts := []string{}
+	var opts []string
 
 	switch o.step {
 	case 0:
@@ -104,14 +98,8 @@ func (o *riversBootOp) NextCommand() Commander {
 		o.step++
 		return makeDirCommand{o.nodes, "/var/log/rivers"}
 	case 2:
-		if o.nodeIndex >= len(o.nodes) {
-			return nil
-		}
-
-		target := o.nodes[o.nodeIndex]
-		o.nodeIndex++
-
-		return runContainerCommand{target, "rivers", opts, riversParams(o.upstreams), extra}
+		o.step++
+		return runContainerCommand{o.nodes, "rivers", opts, riversParams(o.upstreams), extra}
 	default:
 		return nil
 	}
@@ -173,7 +161,7 @@ func (o *apiServerBootOp) NextCommand() Commander {
 		target := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		return runContainerCommand{target, "kube-apiserver", opts, apiServerParams(o.controlPlanes, target.Address, o.serviceSubnet), extra}
+		return runContainerCommand{[]*Node{target}, "kube-apiserver", opts, apiServerParams(o.controlPlanes, target.Address, o.serviceSubnet), extra}
 	default:
 		return nil
 	}
@@ -209,12 +197,11 @@ func apiServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 }
 
 // ControllerManagerBootOp returns an Operator to bootstrap ControllerManager cluster.
-func ControllerManagerBootOp(nodes []*Node, params ServiceParams, serviceSubnet string) Operator {
+func ControllerManagerBootOp(nodes []*Node, params ServiceParams) Operator {
 	return &controllerManagerBootOp{
-		nodes:     nodes,
-		params:    params,
-		step:      0,
-		nodeIndex: 0,
+		nodes:  nodes,
+		params: params,
+		step:   0,
 	}
 }
 
@@ -224,7 +211,7 @@ func (o *controllerManagerBootOp) Name() string {
 
 func (o *controllerManagerBootOp) NextCommand() Commander {
 	extra := o.params
-	opts := []string{}
+	var opts []string
 
 	switch o.step {
 	case 0:
@@ -237,14 +224,8 @@ func (o *controllerManagerBootOp) NextCommand() Commander {
 		o.step++
 		return makeDirCommand{o.nodes, "/var/log/kubernetes/controller-manager"}
 	case 3:
-		if o.nodeIndex >= len(o.nodes) {
-			return nil
-		}
-
-		target := o.nodes[o.nodeIndex]
-		o.nodeIndex++
-
-		return runContainerCommand{target, "kube-controller-manager", opts, controllerManagerParams(), extra}
+		o.step++
+		return runContainerCommand{o.nodes, "kube-controller-manager", opts, controllerManagerParams(), extra}
 	default:
 		return nil
 	}
@@ -267,12 +248,11 @@ func controllerManagerParams() ServiceParams {
 }
 
 // SchedulerBootOp returns an Operator to bootstrap Scheduler cluster.
-func SchedulerBootOp(nodes []*Node, params ServiceParams, serviceSubnet string) Operator {
+func SchedulerBootOp(nodes []*Node, params ServiceParams) Operator {
 	return &schedulerBootOp{
-		nodes:     nodes,
-		params:    params,
-		step:      0,
-		nodeIndex: 0,
+		nodes:  nodes,
+		params: params,
+		step:   0,
 	}
 }
 
@@ -294,14 +274,8 @@ func (o *schedulerBootOp) NextCommand() Commander {
 		o.step++
 		return makeDirCommand{o.nodes, "/var/log/kubernetes/scheduler"}
 	case 3:
-		if o.nodeIndex >= len(o.nodes) {
-			return nil
-		}
-
-		target := o.nodes[o.nodeIndex]
-		o.nodeIndex++
-
-		return runContainerCommand{target, "kube-scheduler", nil, schedulerParams(), extra}
+		o.step++
+		return runContainerCommand{o.nodes, "kube-scheduler", nil, schedulerParams(), extra}
 	default:
 		return nil
 	}
@@ -326,10 +300,9 @@ func schedulerParams() ServiceParams {
 // KubeletBootOp returns an Operator to bootstrap Kubelet.
 func KubeletBootOp(nodes []*Node, params KubeletParams) Operator {
 	return &kubeletBootOp{
-		nodes:     nodes,
-		params:    params,
-		step:      0,
-		nodeIndex: 0,
+		nodes:  nodes,
+		params: params,
+		step:   0,
 	}
 }
 
@@ -360,26 +333,20 @@ func (o *kubeletBootOp) NextCommand() Commander {
 		o.step++
 		return volumeCreateCommand{o.nodes, volName}
 	case 5:
-		if o.nodeIndex >= len(o.nodes) {
-			return nil
-		}
-
-		target := o.nodes[o.nodeIndex]
-		o.nodeIndex++
-
-		return runContainerCommand{target, "kubelet", opts, o.serviceParams(target.Address), o.extraParams()}
+		o.step++
+		return runContainerCommand{o.nodes, "kubelet", opts, o.serviceParams(), o.extraParams()}
 	default:
 		return nil
 	}
 }
 
-func (o *kubeletBootOp) serviceParams(targetAddress string) ServiceParams {
+func (o *kubeletBootOp) serviceParams() ServiceParams {
 	args := []string{
 		"kubelet",
 		"--allow-privileged=true",
 		"--container-runtime-endpoint=/var/tmp/dockershim/dockershim.sock",
 		"--pod-infra-container-image=" + Image("pause"),
-		"--hostname-override=" + targetAddress,
+		//"--hostname-override=" + targetAddress,
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--log-dir=/var/log/kubernetes/kubelet",
 	}
@@ -424,10 +391,9 @@ func RiversStopOp(nodes []*Node) Operator {
 // ProxyBootOp returns an Operator to bootstrap Proxy
 func ProxyBootOp(nodes []*Node, params ServiceParams) Operator {
 	return &proxyBootOp{
-		nodes:     nodes,
-		params:    params,
-		step:      0,
-		nodeIndex: 0,
+		nodes:  nodes,
+		params: params,
+		step:   0,
 	}
 }
 
@@ -468,19 +434,14 @@ func (o *proxyBootOp) NextCommand() Commander {
 		o.step++
 		return makeDirCommand{o.nodes, "/var/log/kubernetes/proxy"}
 	case 3:
-		if o.nodeIndex >= len(o.nodes) {
-			return nil
-		}
-		target := o.nodes[o.nodeIndex]
-		o.nodeIndex++
-
-		return runContainerCommand{target, "kube-proxy", opts, o.serviceParams(target.Address), extra}
+		o.step++
+		return runContainerCommand{o.nodes, "kube-proxy", opts, o.serviceParams(), extra}
 	default:
 		return nil
 	}
 }
 
-func (o *proxyBootOp) serviceParams(targetAddress string) ServiceParams {
+func (o *proxyBootOp) serviceParams() ServiceParams {
 	args := []string{
 		"proxy",
 		"--proxy-mode=ipvs",
