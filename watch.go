@@ -66,13 +66,13 @@ func connectVault(data []byte) error {
 	return nil
 }
 
-func (s Storage) initStateless(ctx context.Context, ch chan<- struct{}) (int64, error) {
+func initStateless(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{}) (int64, error) {
 	defer func() {
 		// notify the caller of the readiness
 		ch <- struct{}{}
 	}()
 
-	resp, err := s.Client.Get(ctx, "/vault")
+	resp, err := etcd.Get(ctx, "/vault")
 	if err != nil {
 		return 0, err
 	}
@@ -88,13 +88,13 @@ func (s Storage) initStateless(ctx context.Context, ch chan<- struct{}) (int64, 
 	return rev, nil
 }
 
-func (s Storage) startWatcher(ctx context.Context, ch chan<- struct{}) error {
-	rev, err := s.initStateless(ctx, ch)
+func startWatcher(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{}) error {
+	rev, err := initStateless(ctx, etcd, ch)
 	if err != nil {
 		return err
 	}
 
-	wch := s.Client.Watch(ctx, "", clientv3.WithPrefix(), clientv3.WithRev(rev+1))
+	wch := etcd.Watch(ctx, "", clientv3.WithPrefix(), clientv3.WithRev(rev+1))
 	for resp := range wch {
 		for _, ev := range resp.Events {
 			if ev.Type != clientv3.EventTypePut {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
+	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
 )
 
@@ -67,6 +68,18 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 	if err != nil {
 		return err
 	}
+
+	ch := make(chan struct{})
+	env := cmd.NewEnvironment(ctx)
+	env.Go(func(ctx context.Context) error {
+		return startWatcher(ctx, c.session.Client(), ch)
+	})
+	env.Stop()
+	<-ch
+	defer func() {
+		env.Cancel(nil)
+		env.Wait()
+	}()
 
 	ticker := time.NewTicker(c.interval)
 	defer ticker.Stop()
