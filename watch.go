@@ -16,8 +16,10 @@ import (
 	vault "github.com/hashicorp/vault/api"
 )
 
+type anyMap = map[string]interface{}
+
 // connectVault creates vault client
-func connectVault(data []byte) error {
+func connectVault(ctx context.Context, data []byte) error {
 	c := new(VaultConfig)
 	err := json.Unmarshal(data, c)
 	if err != nil {
@@ -32,6 +34,7 @@ func connectVault(data []byte) error {
 			KeepAlive: 30 * time.Second,
 			DualStack: true,
 		}).DialContext,
+		MaxIdleConnsPerHost:   -1,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
@@ -55,12 +58,42 @@ func connectVault(data []byte) error {
 		},
 	})
 	if err != nil {
-		log.Error("failed to connect to vault", map[string]interface{}{
+		log.Error("failed to connect to vault", anyMap{
 			log.FnError: err,
 			"endpoint":  c.Endpoint,
 		})
 		return err
 	}
+
+	secret, err := client.Logical().Write("auth/approle/login", anyMap{
+		"role_id":   c.RoleID,
+		"secret_id": c.SecretID,
+	})
+	if err != nil {
+		log.Error("failed to login to vault", anyMap{
+			log.FnError: err,
+			"endpoint":  c.Endpoint,
+		})
+		return err
+	}
+	client.SetToken(secret.Auth.ClientToken)
+
+	renewer, err := client.NewRenewer(&vault.RenewerInput{
+		Secret: secret,
+	})
+	if err != nil {
+		log.Error("failed to create vault renewer", anyMap{
+			log.FnError: err,
+			"endpoint":  c.Endpoint,
+		})
+		return err
+	}
+
+	go renewer.Renew()
+	go func() {
+		<-ctx.Done()
+		renewer.Stop()
+	}()
 
 	setVaultClient(client)
 	return nil
@@ -79,7 +112,7 @@ func initStateless(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{
 	rev := resp.Header.Revision
 
 	if resp.Count == 1 {
-		err = connectVault(resp.Kvs[0].Value)
+		err = connectVault(ctx, resp.Kvs[0].Value)
 		if err != nil {
 			return 0, err
 		}
@@ -106,7 +139,7 @@ func startWatcher(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{}
 			case KeyCluster:
 				//TODO
 			case KeyVault:
-				err = connectVault(ev.Kv.Value)
+				err = connectVault(ctx, ev.Kv.Value)
 				if err != nil {
 					return err
 				}
