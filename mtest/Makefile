@@ -124,36 +124,72 @@ $(OUTPUT)/node1.ign: node.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
 		-e 's/@NODE_NAME@/node1/' \
+		-e 's/@NODE1@/$(NODE1)/' \
+		-e 's/@NODE2@/$(NODE2)/' \
+		-e 's/@NODE3@/$(NODE3)/' \
+		-e 's/@NODE4@/$(NODE4)/' \
+		-e 's/@NODE5@/$(NODE5)/' \
+		-e 's/@NODE6@/$(NODE6)/' \
 		-e 's/@NODE_ADDRESS@/$(NODE1)/' $< > $@
 
 $(OUTPUT)/node2.ign: node.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
 		-e 's/@NODE_NAME@/node2/' \
+		-e 's/@NODE1@/$(NODE1)/' \
+		-e 's/@NODE2@/$(NODE2)/' \
+		-e 's/@NODE3@/$(NODE3)/' \
+		-e 's/@NODE4@/$(NODE4)/' \
+		-e 's/@NODE5@/$(NODE5)/' \
+		-e 's/@NODE6@/$(NODE6)/' \
 		-e 's/@NODE_ADDRESS@/$(NODE2)/' $< > $@
 
 $(OUTPUT)/node3.ign: node.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
 		-e 's/@NODE_NAME@/node3/' \
+		-e 's/@NODE1@/$(NODE1)/' \
+		-e 's/@NODE2@/$(NODE2)/' \
+		-e 's/@NODE3@/$(NODE3)/' \
+		-e 's/@NODE4@/$(NODE4)/' \
+		-e 's/@NODE5@/$(NODE5)/' \
+		-e 's/@NODE6@/$(NODE6)/' \
 		-e 's/@NODE_ADDRESS@/$(NODE3)/' $< > $@
 
 $(OUTPUT)/node4.ign: node.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
 		-e 's/@NODE_NAME@/node4/' \
+		-e 's/@NODE1@/$(NODE1)/' \
+		-e 's/@NODE2@/$(NODE2)/' \
+		-e 's/@NODE3@/$(NODE3)/' \
+		-e 's/@NODE4@/$(NODE4)/' \
+		-e 's/@NODE5@/$(NODE5)/' \
+		-e 's/@NODE6@/$(NODE6)/' \
 		-e 's/@NODE_ADDRESS@/$(NODE4)/' $< > $@
 
 $(OUTPUT)/node5.ign: node.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
 		-e 's/@NODE_NAME@/node5/' \
+		-e 's/@NODE1@/$(NODE1)/' \
+		-e 's/@NODE2@/$(NODE2)/' \
+		-e 's/@NODE3@/$(NODE3)/' \
+		-e 's/@NODE4@/$(NODE4)/' \
+		-e 's/@NODE5@/$(NODE5)/' \
+		-e 's/@NODE6@/$(NODE6)/' \
 		-e 's/@NODE_ADDRESS@/$(NODE5)/' $< > $@
 
 $(OUTPUT)/node6.ign: node.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
 		-e 's/@NODE_NAME@/node6/' \
+		-e 's/@NODE1@/$(NODE1)/' \
+		-e 's/@NODE2@/$(NODE2)/' \
+		-e 's/@NODE3@/$(NODE3)/' \
+		-e 's/@NODE4@/$(NODE4)/' \
+		-e 's/@NODE5@/$(NODE5)/' \
+		-e 's/@NODE6@/$(NODE6)/' \
 		-e 's/@NODE_ADDRESS@/$(NODE6)/' $< > $@
 
 $(OUTPUT)/cke-cluster.yml: cke-cluster.yml
@@ -201,9 +237,8 @@ clean:
 setup:
 	go get -t -d ./...
 	cd $$GOPATH/src/github.com/coreos/etcd; git checkout -qf ab19dee5cef9fdc203fcbd93d0cf3c588338b8cc
-	go get -u github.com/onsi/ginkgo/ginkgo
-	go get -u github.com/onsi/gomega/...
-	go get -u github.com/cybozu-go/placemat/...
-	go get -u github.com/coreos/gofail/...
+	go get -u github.com/onsi/ginkgo/ginkgo \
+		github.com/cybozu-go/placemat/... \
+		github.com/coreos/gofail
 
 .PHONY:	all clean setup test

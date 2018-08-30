@@ -115,7 +115,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 		for _, n := range o.nodes {
 			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
 		}
-		return runContainerCommand{node, etcdContainerName, opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
+		return runContainerCommand{[]*Node{node}, etcdContainerName, opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
 	case 3:
 		o.step++
 		return waitEtcdSyncCommand{o.endpoints, 0}
@@ -522,7 +522,7 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
 		}
 		o.nodeIndex++
-		return runContainerCommand{target, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
+		return runContainerCommand{[]*Node{target}, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
 	}
 	return nil
 }
@@ -578,7 +578,7 @@ func (o *etcdRestartOp) NextCommand() Commander {
 			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
 		}
 		o.nodeIndex++
-		return runContainerCommand{target, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
+		return runContainerCommand{[]*Node{target}, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
 	}
 	return nil
 }

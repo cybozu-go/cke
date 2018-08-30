@@ -218,7 +218,7 @@ func (c volumeRemoveCommand) Command() Command {
 }
 
 type runContainerCommand struct {
-	node   *Node
+	nodes  []*Node
 	name   string
 	opts   []string
 	params ServiceParams
@@ -226,14 +226,25 @@ type runContainerCommand struct {
 }
 
 func (c runContainerCommand) Run(ctx context.Context, inf Infrastructure) error {
-	ce := Docker(inf.Agent(c.node.Address))
-	return ce.RunSystem(c.name, c.opts, c.params, c.extra)
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		ce := Docker(inf.Agent(n.Address))
+		env.Go(func(ctx context.Context) error {
+			return ce.RunSystem(c.name, c.opts, c.params, c.extra)
+		})
+	}
+	env.Stop()
+	return env.Wait()
 }
 
 func (c runContainerCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
 	return Command{
 		Name:   "run-container",
-		Target: c.node.Address,
+		Target: strings.Join(targets, ","),
 		Detail: c.name,
 	}
 }
