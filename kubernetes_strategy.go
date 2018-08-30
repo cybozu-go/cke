@@ -1,7 +1,5 @@
 package cke
 
-import "reflect"
-
 func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	var cpNodes []*Node
 	var nonCpNodes []*Node
@@ -95,10 +93,10 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	// Check diff of rivers options
 	target := filterNodes(c.Nodes, func(n *Node) bool {
 		riversStatus := cs.NodeStatuses[n.Address].Rivers
-		if !reflect.DeepEqual(riversParams(cpNodes), riversStatus.BuiltInParams) {
+		if !riversParams(cpNodes).Equal(riversStatus.BuiltInParams) {
 			return true
 		}
-		if !reflect.DeepEqual(c.Options.Rivers, riversStatus.ExtraParams) {
+		if !c.Options.Rivers.Equal(riversStatus.ExtraParams) {
 			return true
 		}
 		return false
@@ -112,10 +110,10 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	// Check diff of kube-apiserver options
 	target = filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].APIServer
-		if !reflect.DeepEqual(apiServerParams(cpNodes, n.Address, c.ServiceSubnet), status.BuiltInParams) {
+		if !apiServerParams(cpNodes, n.Address, c.ServiceSubnet).Equal(status.BuiltInParams) {
 			return true
 		}
-		if !reflect.DeepEqual(c.Options.APIServer, status.ExtraParams) {
+		if !c.Options.APIServer.Equal(status.ExtraParams) {
 			return true
 		}
 		return false
@@ -129,10 +127,10 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	// Check diff of kube-controller-manager options
 	target = filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].ControllerManager
-		if !reflect.DeepEqual(controllerManagerParams(), status.BuiltInParams) {
+		if !controllerManagerParams().Equal(status.BuiltInParams) {
 			return true
 		}
-		if !reflect.DeepEqual(c.Options.ControllerManager, status.ExtraParams) {
+		if !c.Options.ControllerManager.Equal(status.ExtraParams) {
 			return true
 		}
 		return false
@@ -146,10 +144,10 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	// Check diff of kube-scheduler options
 	target = filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].Scheduler
-		if !reflect.DeepEqual(schedulerParams(), status.BuiltInParams) {
+		if !schedulerParams().Equal(status.BuiltInParams) {
 			return true
 		}
-		if !reflect.DeepEqual(c.Options.Scheduler, status.ExtraParams) {
+		if !c.Options.Scheduler.Equal(status.ExtraParams) {
 			return true
 		}
 		return false
@@ -164,10 +162,10 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	target = filterNodes(c.Nodes, func(n *Node) bool {
 		bootOp := KubeletBootOp([]*Node{n}, c.Options.Kubelet).(*kubeletBootOp)
 		status := cs.NodeStatuses[n.Address].Kubelet
-		if !reflect.DeepEqual(bootOp.serviceParams(n.Address), status.BuiltInParams) {
+		if !bootOp.serviceParams(n.Address).Equal(status.BuiltInParams) {
 			return true
 		}
-		if !reflect.DeepEqual(bootOp.extraParams(), status.ExtraParams) {
+		if !bootOp.extraParams().Equal(status.ExtraParams) {
 			return true
 		}
 		return false
@@ -179,20 +177,4 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	}
 
 	return nil
-}
-
-func controlPlanes(nodes []*Node) []*Node {
-	return filterNodes(nodes, func(n *Node) bool {
-		return n.ControlPlane
-	})
-}
-
-func filterNodes(nodes []*Node, f func(n *Node) bool) []*Node {
-	var filtered []*Node
-	for _, n := range nodes {
-		if f(n) {
-			filtered = append(filtered, n)
-		}
-	}
-	return filtered
 }

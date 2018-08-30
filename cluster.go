@@ -27,11 +27,23 @@ type Mount struct {
 	ReadOnly    bool   `json:"read_only"   yaml:"read_only"`
 }
 
+// Equal returns true if the mount is equals to other one, otherwise return false
+func (m Mount) Equal(o Mount) bool {
+	return m.Source == o.Source && m.Destination == o.Destination && m.ReadOnly == o.ReadOnly
+}
+
 // ServiceParams is a common set of extra parameters for k8s components.
 type ServiceParams struct {
 	ExtraArguments []string          `json:"extra_args"  yaml:"extra_args"`
 	ExtraBinds     []Mount           `json:"extra_binds" yaml:"extra_binds"`
 	ExtraEnvvar    map[string]string `json:"extra_env"   yaml:"extra_env"`
+}
+
+// Equal returns true if the services params is equals to other one, otherwise return false
+func (s ServiceParams) Equal(o ServiceParams) bool {
+	return compareStrings(s.ExtraArguments, o.ExtraArguments) &&
+		compareMounts(s.ExtraBinds, o.ExtraBinds) &&
+		compareStringMap(s.ExtraEnvvar, o.ExtraEnvvar)
 }
 
 // EtcdParams is a set of extra parameters for etcd.
@@ -122,6 +134,22 @@ func (c *Cluster) validateNode(n *Node) error {
 	}
 	n.signer = signer
 	return nil
+}
+
+func controlPlanes(nodes []*Node) []*Node {
+	return filterNodes(nodes, func(n *Node) bool {
+		return n.ControlPlane
+	})
+}
+
+func filterNodes(nodes []*Node, f func(n *Node) bool) []*Node {
+	var filtered []*Node
+	for _, n := range nodes {
+		if f(n) {
+			filtered = append(filtered, n)
+		}
+	}
+	return filtered
 }
 
 func validateOptions(opts Options) error {
