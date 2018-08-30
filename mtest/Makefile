@@ -15,12 +15,14 @@ NODE6 = 10.0.0.106
 PLACEMAT = $(GOPATH)/bin/placemat
 GINKGO = $(GOPATH)/bin/ginkgo
 MANAGEMENT_ETCD_VERSION = 3.3.9
+VAULT_VERSION = 0.11.0
 PLACEMAT_DATADIR = /var/scratch/placemat
 
 export BRIDGE_ADDRESS HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO
 
 # non-configuration variables
 MANAGEMENT_ETCD_ARCHIVE := etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
+VAULT_ARCHIVE := vault_$(VAULT_VERSION)_linux_amd64.zip
 SSH_PRIVKEY := ./mtest_key
 OUTPUT := ./output
 UBUNTU_IMAGE := ubuntu-18.04-server-cloudimg-amd64.img
@@ -35,6 +37,7 @@ export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG KUBECTL KUBECONFIG
 
 
 GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
+	$(OUTPUT)/vault \
 	$(OUTPUT)/cke $(OUTPUT)/ckecli \
 	$(OUTPUT)/kubectl \
 	$(OUTPUT)/kubeconfig.yml \
@@ -59,6 +62,9 @@ all: test
 $(MANAGEMENT_ETCD_ARCHIVE):
 	curl -sSLf -o $@ https://github.com/coreos/etcd/releases/download/v$(MANAGEMENT_ETCD_VERSION)/etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
 
+$(VAULT_ARCHIVE):
+	curl -sSLf -o $@ https://releases.hashicorp.com/vault/$(VAULT_VERSION)/$(VAULT_ARCHIVE)
+
 $(UBUNTU_IMAGE):
 	curl -sSLf -o $@ https://cloud-images.ubuntu.com/releases/18.04/release/$@
 
@@ -70,6 +76,10 @@ $(OUTPUT)/etcd $(OUTPUT)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
 	mkdir -p $(OUTPUT)
 	tar -C $(OUTPUT) -x -z --wildcards --strip-components 1 -f $< '*/$(notdir $@)'
 	touch $@
+
+$(OUTPUT)/vault: $(VAULT_ARCHIVE)
+	mkdir -p $(OUTPUT)
+	unzip $< -d $(OUTPUT)
 
 $(OUTPUT)/cke $(OUTPUT)/ckecli:
 	mkdir -p $(OUTPUT)
