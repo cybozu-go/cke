@@ -80,6 +80,7 @@ $(OUTPUT)/etcd $(OUTPUT)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
 $(OUTPUT)/vault: $(VAULT_ARCHIVE)
 	mkdir -p $(OUTPUT)
 	unzip $< -d $(OUTPUT)
+	touch $@
 
 $(OUTPUT)/cke $(OUTPUT)/ckecli:
 	mkdir -p $(OUTPUT)
