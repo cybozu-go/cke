@@ -60,7 +60,7 @@ EOF
 
 install_configs() {
   sudo tee /etc/cke/config.yml >/dev/null <<EOF
-servers: ["http://10.0.0.11:2379"]
+endpoints: ["http://10.0.0.11:2379"]
 EOF
 
   mkdir -p $HOME/.kube
