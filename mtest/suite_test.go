@@ -36,6 +36,11 @@ var _ = BeforeSuite(func() {
 	err = runManagementEtcd(sshClients[host1])
 	Expect(err).NotTo(HaveOccurred())
 
+	err = stopVault(sshClients[host1])
+	Expect(err).NotTo(HaveOccurred())
+	err = runVault(sshClients[host1])
+	Expect(err).NotTo(HaveOccurred())
+
 	time.Sleep(time.Second)
 
 	setupCKE()

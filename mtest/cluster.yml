@@ -16,6 +16,8 @@ files:
     file: etcd
   - name: etcdctl
     file: etcdctl
+  - name: vault
+    file: vault
 ---
 kind: Image
 name: ubuntu

@@ -104,6 +104,34 @@ func runManagementEtcd(client *ssh.Client) error {
 	return sess.Run(command)
 }
 
+func runVault(client *ssh.Client) error {
+	command := "sudo systemd-run --unit=my-vault.service /data/vault server -dev"
+	sess, err := client.NewSession()
+	if err != nil {
+		return err
+	}
+	defer sess.Close()
+
+	return sess.Run(command)
+}
+
+func stopVault(client *ssh.Client) error {
+	command := "sudo systemctl stop my-vault.service"
+	sess, err := client.NewSession()
+	if err != nil {
+		return err
+	}
+	defer sess.Close()
+
+	sess.Run(command)
+	return nil
+}
+
+func vaultClient(host string, args ...string) string {
+	args = append([]string{"VAULT_ADDR=http://127.0.0.1:8200", "/data/vault"}, args...)
+	return execSafeAt(host, args...)
+}
+
 func stopCKE() error {
 	env := cmd.NewEnvironment(context.Background())
 	for _, host := range []string{host1, host2} {
