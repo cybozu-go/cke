@@ -8,7 +8,7 @@ jobs:
       - checkout
       - restore_cache:
           key: go-{{ checksum "go.sum" }}
-      - run: go get -v -t -d ./...
+      - run: go mod download
       - save_cache:
           key: go-{{ checksum "go.sum" }}
           paths:
