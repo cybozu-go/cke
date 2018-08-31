@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -59,6 +60,7 @@ var _ = Describe("cluster", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
+		timeout := 5 * time.Minute
 		Eventually(func() bool {
 			controlPlanes := []string{node1, node2, node3, node4}
 			workers := []string{node5, node6}
@@ -75,9 +77,8 @@ var _ = Describe("cluster", func() {
 				fmt.Println("checkKubernetesClusterStatus returned false")
 				return false
 			}
-
 			return true
-		}).Should(BeTrue())
+		}, timeout).Should(BeTrue())
 	})
 
 	It("should adjust command arguments", func() {
