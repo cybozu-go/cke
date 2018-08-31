@@ -3,16 +3,18 @@ package cke
 import (
 	"context"
 	"net/http"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cmd"
-	"github.com/pkg/errors"
-
+	"github.com/cybozu-go/etcdutil"
 	vault "github.com/hashicorp/vault/api"
+	"github.com/pkg/errors"
 )
+
+const ckePkiDir = "/etc/cke/pki"
 
 var httpClient = &cmd.HTTPClient{
 	Client: &http.Client{},
@@ -71,6 +73,12 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	// These assignments of the `agent` should be placed last.
 	inf := &ckeInfrastructure{agents: agents, storage: s}
 	agents = nil
+
+	err = issueEtcdClientCertificates(ctx, inf, ckePkiDir)
+	if err != nil {
+		return nil, err
+	}
+
 	return inf, nil
 
 }
@@ -104,11 +112,14 @@ func (i ckeInfrastructure) Close() {
 }
 
 func (i ckeInfrastructure) NewEtcdClient(endpoints []string) (*clientv3.Client, error) {
-	// TODO support TLS
-	return clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: 2 * time.Second,
-	})
+	cfg := &etcdutil.Config{
+		Endpoints: endpoints,
+		Timeout:   etcdutil.DefaultTimeout,
+		TLSCA:     filepath.Join(ckePkiDir, "ca-server.crt"),
+		TLSCert:   filepath.Join(ckePkiDir, "cke.crt"),
+		TLSKey:    filepath.Join(ckePkiDir, "cke.key"),
+	}
+	return etcdutil.NewClient(cfg)
 }
 
 func (i ckeInfrastructure) HTTPClient() *cmd.HTTPClient {

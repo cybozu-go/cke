@@ -2,7 +2,6 @@ package cke
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -282,95 +281,6 @@ func (c stopContainerCommand) Command() Command {
 
 type issueEtcdCertificatesCommand struct {
 	nodes []*Node
-}
-
-// CA Keys in Vault
-const (
-	CAServer     = "cke/ca-server"
-	CAEtcdPeer   = "cke/ca-etcd-peer"
-	CAEtcdClient = "cke/ca-etcd-client"
-)
-
-func writeFile(inf Infrastructure, node *Node, target string, source string) error {
-	targetDir := filepath.Dir(target)
-	binds := []Mount{{
-		Source:      targetDir,
-		Destination: filepath.Join("/mnt", targetDir),
-	}}
-	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", targetDir)
-	ddCommand := "dd of=" + filepath.Join("/mnt", target)
-	ce := Docker(inf.Agent(node.Address))
-	err := ce.Run("tools", binds, mkdirCommand)
-	if err != nil {
-		return err
-	}
-	return ce.RunWithInput("tools", binds, ddCommand, source)
-}
-
-func issueCertificate(inf Infrastructure, node *Node, ca, name string, opts map[string]interface{}) error {
-	hostname := node.Hostname
-	if len(hostname) == 0 {
-		hostname = node.Address
-	}
-	data := map[string]interface{}{
-		"common_name": hostname,
-		"ip_sans":     "127.0.0.1," + node.Address,
-	}
-	for k, v := range opts {
-		data[k] = v
-	}
-	client := inf.Vault()
-	if client == nil {
-		return errors.New("can not connect to vault")
-	}
-	secret, err := client.Logical().Write(ca+"/issue/system", data)
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, "/etc/etcd/pki/"+name+".crt", secret.Data["certificate"].(string))
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, "/etc/etcd/pki/"+name+".key", secret.Data["private_key"].(string))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func issueEtcdCertificates(ctx context.Context, inf Infrastructure, node *Node) error {
-	err := issueCertificate(inf, node, CAServer, "server", map[string]interface{}{
-		"alt_names": "localhost",
-	})
-	if err != nil {
-		return err
-	}
-	err = issueCertificate(inf, node, CAEtcdPeer, "peer", map[string]interface{}{
-		"exclude_cn_from_sans": "true",
-	})
-	if err != nil {
-		return err
-	}
-	err = issueCertificate(inf, node, CAEtcdClient, "etcdctl", map[string]interface{}{
-		"exclude_cn_from_sans": "true",
-	})
-	if err != nil {
-		return err
-	}
-
-	ca, err := inf.Storage().GetCACertificate(ctx, "etcd-peer")
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, "/etc/etcd/pki/ca-peer.crt", ca)
-	if err != nil {
-		return err
-	}
-	ca, err = inf.Storage().GetCACertificate(ctx, "etcd-client")
-	if err != nil {
-		return err
-	}
-	return writeFile(inf, node, "/etc/etcd/pki/ca-client.crt", ca)
 }
 
 func (c issueEtcdCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
