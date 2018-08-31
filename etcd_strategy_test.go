@@ -301,6 +301,7 @@ func BootstrapCommands(targets ...string) []Command {
 	commands := []Command{
 		{Name: "image-pull", Target: "etcd"},
 		{Name: "volume-create", Target: hosts},
+		{Name: "issue-etcd-certificates", Target: hosts},
 	}
 	for _, addr := range targets {
 		commands = append(commands, Command{Name: "run-container", Target: addr})
@@ -335,7 +336,7 @@ func RemoveMemberCommands(ids ...uint64) []Command {
 func DestroyMemberCommands(cps []string, addrs []string, ids []uint64) []Command {
 	var endpoints []string
 	for _, cp := range cps {
-		endpoints = append(endpoints, "https//"+cp+":2379")
+		endpoints = append(endpoints, "https://"+cp+":2379")
 	}
 	var commands []Command
 	for i, addr := range addrs {

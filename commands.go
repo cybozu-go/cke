@@ -301,7 +301,7 @@ func (c issueEtcdCertificatesCommand) Command() Command {
 		targets[i] = n.Address
 	}
 	return Command{
-		Name:   "issue-etcd-certificate",
+		Name:   "issue-etcd-certificates",
 		Target: strings.Join(targets, ","),
 	}
 }
@@ -328,7 +328,7 @@ func (c issueAPIServerCertificatesCommand) Command() Command {
 		targets[i] = n.Address
 	}
 	return Command{
-		Name:   "issue-api-server-certificate",
+		Name:   "issue-apiserver-certificates",
 		Target: strings.Join(targets, ","),
 	}
 }

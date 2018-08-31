@@ -87,6 +87,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 			Commands: []Command{
 				{"image-pull", "kube-apiserver", ""},
 				{"mkdir", "/var/log/kubernetes/apiserver", ""},
+				{"issue-apiserver-certificates", "10.0.0.11,10.0.0.12,10.0.0.13", ""},
 				{"run-container", "10.0.0.11", ""},
 				{"run-container", "10.0.0.12", ""},
 				{"run-container", "10.0.0.13", ""},
