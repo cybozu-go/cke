@@ -150,6 +150,9 @@ func (o *apiServerBootOp) NextCommand() Commander {
 		o.step++
 		return makeDirCommand{o.nodes, "/var/log/kubernetes/apiserver"}
 	case 2:
+		o.step++
+		return issueAPIServerCertificatesCommand{o.nodes}
+	case 3:
 		opts := []string{
 			// TODO pass keys from CKE
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
@@ -176,6 +179,9 @@ func apiServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 		"apiserver",
 		"--allow-privileged",
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
+		"--etcd-cafile=/etc/kubernetes/apiserver/ca-server.crt",
+		"--etcd-certfile=/etc/kubernetes/apiserver/apiserver.crt",
+		"--etcd-keyfile=/etc/kubernetes/apiserver/apiserver.key",
 
 		// TODO use TLS
 		"--insecure-bind-address=0.0.0.0",
@@ -192,6 +198,7 @@ func apiServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
 			{"/var/log/kubernetes/apiserver", "/var/log/kubernetes/apiserver", false},
+			{"/etc/kubernetes/apiserver", "/etc/kubernetes/apiserver", true},
 		},
 	}
 }
