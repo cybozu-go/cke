@@ -60,8 +60,6 @@ github.com/coreos/etcd/pkg/srv
 github.com/coreos/go-semver/semver
 # github.com/coreos/go-systemd v0.0.0-20180828140353-eee3db372b31
 github.com/coreos/go-systemd/journal
-# github.com/coreos/gofail v0.0.0-20180808172546-51ce9a71510a
-github.com/coreos/gofail
 # github.com/coreos/pkg v0.0.0-20180108230652-97fdf19511ea
 github.com/coreos/pkg/capnslog
 # github.com/cybozu-go/cmd v1.5.0
@@ -94,6 +92,8 @@ github.com/docker/go-connections/nat
 # github.com/docker/go-units v0.3.3
 github.com/docker/go-units
 # github.com/etcd-io/gofail v0.0.0-20180808172546-51ce9a71510a
+github.com/etcd-io/gofail
+github.com/etcd-io/gofail/runtime
 github.com/etcd-io/gofail/code
 # github.com/fatih/color v1.7.0
 github.com/fatih/color

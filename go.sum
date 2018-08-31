@@ -46,8 +46,6 @@ github.com/coreos/go-semver v0.2.0 h1:3Jm3tLmsgAYcjC+4Up7hJrFBPr+n7rAqYeSw/SZazu
 github.com/coreos/go-semver v0.2.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
 github.com/coreos/go-systemd v0.0.0-20180828140353-eee3db372b31 h1:wRzCUSYhBIk1KvRIlx+nvScCRIxX0iIhSU5h9xj7MUU=
 github.com/coreos/go-systemd v0.0.0-20180828140353-eee3db372b31/go.mod h1:F5haX7vjVVG0kc13fIWeqUViNPyEJxv/OmvnBo0Yme4=
-github.com/coreos/gofail v0.0.0-20180808172546-51ce9a71510a h1:xbhP6u+mn5T0YSamRfkXlR3Zd13GB2opDCWecwdGMCA=
-github.com/coreos/gofail v0.0.0-20180808172546-51ce9a71510a/go.mod h1:htUmRWQbNHbwqL+iFK6XEzmUHeAydwxobJq0KZCrYBE=
 github.com/coreos/pkg v0.0.0-20180108230652-97fdf19511ea h1:n2Ltr3SrfQlf/9nOna1DoGKxLx3qTSI8Ttl6Xrqp6mw=
 github.com/coreos/pkg v0.0.0-20180108230652-97fdf19511ea/go.mod h1:E3G3o1h8I7cfcXa63jLwjI0eiQQMgzzUDFVpN/nH/eA=
 github.com/cybozu-go/cmd v1.5.0 h1:ootYtwvAikKShkE6NRwAVGID7x1BrQwVH7IDeqFe8zM=

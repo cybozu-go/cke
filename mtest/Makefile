@@ -87,8 +87,7 @@ $(OUTPUT)/vault: $(VAULT_ARCHIVE)
 
 $(OUTPUT)/cke $(OUTPUT)/ckecli:
 	mkdir -p $(OUTPUT)
-	cd ..; go get -d ./... && \
-		gofail enable && \
+	cd ..; gofail enable && \
 		if GOBIN=$(realpath $(OUTPUT)) go install ./cmd/$(notdir $@); then \
 			gofail disable; \
 		else \
@@ -255,6 +254,6 @@ setup:
 	cd ../vendor/github.com/onsi/ginkgo/ginkgo && go install
 	cd ../vendor/github.com/cybozu-go/placemat/cmd/placemat && go install
 	cd ../vendor/github.com/cybozu-go/placemat/cmd/placemat-connect && go install
-	cd ../vendor/github.com/coreos/gofail && go install
+	cd ../vendor/github.com/etcd-io/gofail && go install
 
 .PHONY:	all clean setup test
