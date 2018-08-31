@@ -3,7 +3,6 @@ package cke
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"path/filepath"
 )
 
@@ -114,34 +113,25 @@ func issueAPIServerCertificates(ctx context.Context, inf Infrastructure, node *N
 	return writeFile(inf, node, "/etc/kubernetes/apiserver/ca-server.crt", ca)
 }
 
-func issueEtcdClientCertificates(ctx context.Context, inf Infrastructure, dir string) error {
+func issueEtcdClientCertificates(ctx context.Context, inf Infrastructure) (ca, cert, key string, err error) {
 	client := inf.Vault()
 	if client == nil {
-		return errors.New("can not connect to vault")
+		err = errors.New("not connected to vault")
+		return
 	}
 
+	ca, err = inf.Storage().GetCACertificate(ctx, "server")
+	if err != nil {
+		return
+	}
 	secret, err := client.Logical().Write(CAEtcdClient+"/issue/system", map[string]interface{}{
 		"common_name":          "cke",
 		"exclude_cn_from_sans": "true",
 	})
 	if err != nil {
-		return err
+		return
 	}
-	err = ioutil.WriteFile(filepath.Join(dir, "cke.crt"), []byte(secret.Data["certificate"].(string)), 0644)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(filepath.Join(dir, "cke.key"), []byte(secret.Data["private_key"].(string)), 0644)
-	if err != nil {
-		return err
-	}
-	ca, err := inf.Storage().GetCACertificate(ctx, "server")
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(filepath.Join(dir, "ca-server.crt"), []byte(ca), 0644)
-	if err != nil {
-		return err
-	}
-	return nil
+	cert = secret.Data["certificate"].(string)
+	key = secret.Data["private_key"].(string)
+	return
 }

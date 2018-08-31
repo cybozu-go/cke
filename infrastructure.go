@@ -3,7 +3,6 @@ package cke
 import (
 	"context"
 	"net/http"
-	"path/filepath"
 	"sync"
 	"sync/atomic"
 
@@ -13,8 +12,6 @@ import (
 	vault "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
 )
-
-const ckePkiDir = "/etc/cke/pki"
 
 var httpClient = &cmd.HTTPClient{
 	Client: &http.Client{},
@@ -74,18 +71,24 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	inf := &ckeInfrastructure{agents: agents, storage: s}
 	agents = nil
 
-	err = issueEtcdClientCertificates(ctx, inf, ckePkiDir)
+	ca, cert, key, err := issueEtcdClientCertificates(ctx, inf)
 	if err != nil {
 		return nil, err
 	}
+	inf.serverCA = ca
+	inf.etcdCert = cert
+	inf.etcdKey = key
 
 	return inf, nil
 
 }
 
 type ckeInfrastructure struct {
-	agents  map[string]Agent
-	storage Storage
+	agents   map[string]Agent
+	storage  Storage
+	serverCA string
+	etcdCert string
+	etcdKey  string
 }
 
 func (i ckeInfrastructure) Agent(addr string) Agent {
@@ -115,9 +118,9 @@ func (i ckeInfrastructure) NewEtcdClient(endpoints []string) (*clientv3.Client, 
 	cfg := &etcdutil.Config{
 		Endpoints: endpoints,
 		Timeout:   etcdutil.DefaultTimeout,
-		TLSCA:     filepath.Join(ckePkiDir, "ca-server.crt"),
-		TLSCert:   filepath.Join(ckePkiDir, "cke.crt"),
-		TLSKey:    filepath.Join(ckePkiDir, "cke.key"),
+		TLSCA:     i.serverCA,
+		TLSCert:   i.etcdCert,
+		TLSKey:    i.etcdKey,
 	}
 	return etcdutil.NewClient(cfg)
 }
