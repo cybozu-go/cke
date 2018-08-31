@@ -170,7 +170,7 @@ func (o *apiServerBootOp) NextCommand() Commander {
 func apiServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubnet string) ServiceParams {
 	var etcdServers []string
 	for _, n := range controlPlanes {
-		etcdServers = append(etcdServers, "http://"+n.Address+":2379")
+		etcdServers = append(etcdServers, "https://"+n.Address+":2379")
 	}
 	args := []string{
 		"apiserver",

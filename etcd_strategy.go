@@ -12,7 +12,7 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	cpNodes := controlPlanes(c.Nodes)
 	endpoints := make([]string, len(cpNodes))
 	for i, n := range cpNodes {
-		endpoints[i] = "http://" + n.Address + ":2379"
+		endpoints[i] = "https://" + n.Address + ":2379"
 	}
 
 	bootstrap := true

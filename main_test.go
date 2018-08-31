@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	etcdClientURL = "http://localhost:12379"
-	etcdPeerURL   = "http://localhost:12380"
+	etcdClientURL = "https://localhost:12379"
+	etcdPeerURL   = "https://localhost:12380"
 )
 
 func testMain(m *testing.M) int {

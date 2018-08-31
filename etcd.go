@@ -113,10 +113,11 @@ func (o *etcdBootOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
+			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		var initialCluster []string
 		for _, n := range o.nodes {
-			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
+			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
 		return runContainerCommand{[]*Node{node}, etcdContainerName, opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
 	case 4:
@@ -132,10 +133,18 @@ func etcdBuiltInParams(node *Node, initialCluster []string, state string) Servic
 	// compare paramter on detecting outdated parameters to restart it.
 	args := []string{
 		"--name=" + node.Address,
-		"--listen-peer-urls=http://0.0.0.0:2380",
-		"--listen-client-urls=http://0.0.0.0:2379",
-		"--initial-advertise-peer-urls=http://" + node.Address + ":2380",
-		"--advertise-client-urls=http://" + node.Address + ":2379",
+		"--listen-peer-urls=https://0.0.0.0:2380",
+		"--listen-client-urls=https://0.0.0.0:2379",
+		"--initial-advertise-peer-urls=https://" + node.Address + ":2380",
+		"--advertise-client-urls=https://" + node.Address + ":2379",
+		"--cert-file=/etc/etcd/pki/server.crt",
+		"--key-file=/etc/etcd/pki/server.key",
+		"--client-cert-auth=true",
+		"--trusted-ca-file=/etc/etcd/pki/ca-client.crt",
+		"--peer-cert-file=/etc/etcd/pki/peer.crt",
+		"--peer-key-file=/etc/etcd/pki/peer.key",
+		"--peer-client-cert-auth=true",
+		"--peer-trusted-ca-file=/etc/etcd/pki/ca-peer.crt",
 		"--initial-cluster=" + strings.Join(initialCluster, ","),
 		"--initial-cluster-token=cke",
 		"--initial-cluster-state=" + state,
@@ -202,12 +211,13 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
+			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		return addEtcdMemberCommand{o.endpoints, node, opts, extra}
 	case 5:
 		o.step = 0
 		o.nodeIndex++
-		endpoints := []string{"http://" + node.Address + ":2379"}
+		endpoints := []string{"https://" + node.Address + ":2379"}
 		return waitEtcdSyncCommand{endpoints, 0}
 	}
 	return nil
@@ -245,7 +255,7 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error
 	}
 
 	if !inMember {
-		resp, err := cli.MemberAdd(ctx, []string{fmt.Sprintf("http://%s:2380", c.node.Address)})
+		resp, err := cli.MemberAdd(ctx, []string{fmt.Sprintf("https://%s:2380", c.node.Address)})
 		if err != nil {
 			return err
 		}
@@ -519,10 +529,11 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
+			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		var initialCluster []string
 		for _, n := range o.cpNodes {
-			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
+			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
 		o.nodeIndex++
 		return runContainerCommand{[]*Node{target}, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
@@ -575,10 +586,11 @@ func (o *etcdRestartOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
+			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		var initialCluster []string
 		for _, n := range o.cpNodes {
-			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
+			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
 		o.nodeIndex++
 		return runContainerCommand{[]*Node{target}, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}

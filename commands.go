@@ -319,7 +319,6 @@ func issueCertificate(inf Infrastructure, node *Node, ca, name string, opts map[
 	for k, v := range opts {
 		data[k] = v
 	}
-	fmt.Println(data)
 	client := inf.Vault()
 	if client == nil {
 		return errors.New("can not connect to vault")
@@ -363,7 +362,7 @@ func issueEtcdCertificates(ctx context.Context, inf Infrastructure, node *Node) 
 	if err != nil {
 		return err
 	}
-	err = writeFile(inf, node, "/etc/etcd/pki/peer.crt", ca)
+	err = writeFile(inf, node, "/etc/etcd/pki/ca-peer.crt", ca)
 	if err != nil {
 		return err
 	}
@@ -371,14 +370,15 @@ func issueEtcdCertificates(ctx context.Context, inf Infrastructure, node *Node) 
 	if err != nil {
 		return err
 	}
-	return writeFile(inf, node, "/etc/etcd/pki/client.crt", ca)
+	return writeFile(inf, node, "/etc/etcd/pki/ca-client.crt", ca)
 }
 
 func (c issueEtcdCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	for _, node := range c.nodes {
+		n := node
 		env.Go(func(ctx context.Context) error {
-			return issueEtcdCertificates(ctx, inf, node)
+			return issueEtcdCertificates(ctx, inf, n)
 		})
 	}
 	env.Stop()

@@ -192,7 +192,7 @@ func (c Controller) getEtcdMembers(ctx context.Context, nodes []*Node) (map[stri
 	var endpoints []string
 	for _, n := range nodes {
 		if n.ControlPlane {
-			endpoints = append(endpoints, fmt.Sprintf("http://%s:2379", n.Address))
+			endpoints = append(endpoints, fmt.Sprintf("https://%s:2379", n.Address))
 		}
 	}
 
@@ -233,7 +233,7 @@ func (c Controller) getEtcdMemberHealth(ctx context.Context, members map[string]
 }
 
 func (c Controller) getEtcdHealth(ctx context.Context, address string) EtcdNodeHealth {
-	endpoints := []string{fmt.Sprintf("http://%s:2379", address)}
+	endpoints := []string{fmt.Sprintf("https://%s:2379", address)}
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: 2 * time.Second,
