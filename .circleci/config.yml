@@ -4,16 +4,10 @@ jobs:
     docker:
       - image: quay.io/cybozu/golang:1.11-bionic
       - image: quay.io/coreos/etcd:v3.3
+    working_directory: /go/src/github.com/cybozu-go/cke
     steps:
       - checkout
-      - restore_cache:
-          key: go-{{ checksum "go.sum" }}
-      - run: go mod download
-      - save_cache:
-          key: go-{{ checksum "go.sum" }}
-          paths:
-            - "/go"
-
+      - run: go get -v -t -d ./...
       - run: test -z "$(goimports -d . | tee /dev/stderr)"
       - run: golint -set_exit_status ./...
       - run: go test -race -v ./...
