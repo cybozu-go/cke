@@ -320,6 +320,7 @@ func AddMemberCommands(addr string) []Command {
 		{Name: "stop-container", Target: addr},
 		{Name: "volume-remove", Target: addr},
 		{Name: "volume-create", Target: addr},
+		{Name: "issue-etcd-certificates", Target: addr},
 		{Name: "add-etcd-member", Target: addr},
 		{Name: "wait-etcd-sync", Target: "https://" + addr + ":2379"},
 	}

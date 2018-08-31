@@ -208,13 +208,16 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		return volumeCreateCommand{[]*Node{node}, volname}
 	case 4:
 		o.step++
+		return issueEtcdCertificatesCommand{[]*Node{node}}
+	case 5:
+		o.step++
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
 			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		return addEtcdMemberCommand{o.endpoints, node, opts, extra}
-	case 5:
+	case 6:
 		o.step = 0
 		o.nodeIndex++
 		endpoints := []string{"https://" + node.Address + ":2379"}
