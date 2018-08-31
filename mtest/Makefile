@@ -16,6 +16,7 @@ PLACEMAT = $(GOPATH)/bin/placemat
 GINKGO = $(GOPATH)/bin/ginkgo
 MANAGEMENT_ETCD_VERSION = 3.3.9
 VAULT_VERSION = 0.11.0
+K8S_VERSION = 1.11.2
 PLACEMAT_DATADIR = /var/scratch/placemat
 
 export BRIDGE_ADDRESS HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO
@@ -23,6 +24,7 @@ export BRIDGE_ADDRESS HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT G
 # non-configuration variables
 MANAGEMENT_ETCD_ARCHIVE := etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
 VAULT_ARCHIVE := vault_$(VAULT_VERSION)_linux_amd64.zip
+KUBECTL_URL := https://storage.googleapis.com/kubernetes-release/release/v$(K8S_VERSION)/bin/linux/amd64/kubectl
 SSH_PRIVKEY := ./mtest_key
 OUTPUT := ./output
 UBUNTU_IMAGE := ubuntu-18.04-server-cloudimg-amd64.img
@@ -54,6 +56,7 @@ GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/node6.ign \
 	$(OUTPUT)/cke-cluster.yml \
 	$(OUTPUT)/cke.yml \
+	$(OUTPUT)/setup-cke.sh \
 	$(UBUNTU_IMAGE) \
 	$(COREOS_IMAGE)
 
@@ -80,14 +83,27 @@ $(OUTPUT)/etcd $(OUTPUT)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
 $(OUTPUT)/vault: $(VAULT_ARCHIVE)
 	mkdir -p $(OUTPUT)
 	unzip $< -d $(OUTPUT)
+	touch $@
 
 $(OUTPUT)/cke $(OUTPUT)/ckecli:
 	mkdir -p $(OUTPUT)
-	cd ..; go get ./... && gofail enable; GOBIN=$(realpath $(OUTPUT)) go install ./cmd/$(notdir $@) || gofail disable; gofail disable
+	cd ..; go get -d ./... && \
+		gofail enable && \
+		if GOBIN=$(realpath $(OUTPUT)) go install ./cmd/$(notdir $@); then \
+			gofail disable; \
+		else \
+			gofail disable; \
+			exit 1; \
+		fi
 
 $(OUTPUT)/kubectl:
 	mkdir -p $(OUTPUT)
-	curl -o $@ -LO https://storage.googleapis.com/kubernetes-release/release/v1.11.1/bin/linux/amd64/kubectl
+	curl -o $@ -Lf $(KUBECTL_URL)
+	chmod a+x $@
+
+$(OUTPUT)/setup-cke.sh: setup-cke.sh
+	mkdir -p $(OUTPUT)
+	cp $< $@
 	chmod a+x $@
 
 $(OUTPUT)/kubeconfig.yml: kubeconfig.yml
@@ -236,7 +252,9 @@ clean:
 
 setup:
 	go get -t -d ./...
-	cd $$GOPATH/src/github.com/coreos/etcd; git checkout -qf ab19dee5cef9fdc203fcbd93d0cf3c588338b8cc
+	cd $$GOPATH/src/github.com/coreos/etcd; \
+		git fetch origin && \
+		git checkout v3.3.9
 	go get -u github.com/onsi/ginkgo/ginkgo \
 		github.com/cybozu-go/placemat/... \
 		github.com/coreos/gofail

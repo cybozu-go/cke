@@ -294,7 +294,7 @@ func (c waitEtcdSyncCommand) Run(ctx context.Context, inf Infrastructure) error 
 				continue
 			}
 			req = req.WithContext(ctx)
-			resp, err := inf.NewHTTPClient().Do(req)
+			resp, err := inf.HTTPClient().Do(req)
 			if err != nil {
 				continue
 			}

@@ -1,8 +1,10 @@
 package cke
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"net"
@@ -10,8 +12,11 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cybozu-go/log"
 	vault "github.com/hashicorp/vault/api"
 )
+
+type anyMap = map[string]interface{}
 
 // VaultConfig is data to store in etcd
 type VaultConfig struct {
@@ -56,17 +61,23 @@ func (c *VaultConfig) Validate() error {
 	return nil
 }
 
-// ConnectVault creates vault client
-func ConnectVault(c *VaultConfig) (*vault.Client, error) {
+// connectVault creates vault client
+func connectVault(ctx context.Context, data []byte) error {
+	c := new(VaultConfig)
+	err := json.Unmarshal(data, c)
+	if err != nil {
+		return err
+	}
+
 	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
+		Proxy:             http.ProxyFromEnvironment,
+		DisableKeepAlives: true,
 		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second,
 			KeepAlive: 30 * time.Second,
 			DualStack: true,
 		}).DialContext,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
+		MaxIdleConnsPerHost:   -1,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
@@ -74,7 +85,7 @@ func ConnectVault(c *VaultConfig) (*vault.Client, error) {
 	if len(c.CACert) > 0 {
 		cp := x509.NewCertPool()
 		if !cp.AppendCertsFromPEM([]byte(c.CACert)) {
-			return nil, errors.New("invalid CA cert")
+			return errors.New("invalid CA cert")
 		}
 
 		transport.TLSClientConfig = &tls.Config{
@@ -83,10 +94,53 @@ func ConnectVault(c *VaultConfig) (*vault.Client, error) {
 		}
 	}
 
-	return vault.NewClient(&vault.Config{
+	client, err := vault.NewClient(&vault.Config{
 		Address: c.Endpoint,
 		HttpClient: &http.Client{
 			Transport: transport,
 		},
 	})
+	if err != nil {
+		log.Error("failed to connect to vault", anyMap{
+			log.FnError: err,
+			"endpoint":  c.Endpoint,
+		})
+		return err
+	}
+
+	secret, err := client.Logical().Write("auth/approle/login", anyMap{
+		"role_id":   c.RoleID,
+		"secret_id": c.SecretID,
+	})
+	if err != nil {
+		log.Error("failed to login to vault", anyMap{
+			log.FnError: err,
+			"endpoint":  c.Endpoint,
+		})
+		return err
+	}
+	client.SetToken(secret.Auth.ClientToken)
+
+	renewer, err := client.NewRenewer(&vault.RenewerInput{
+		Secret: secret,
+	})
+	if err != nil {
+		log.Error("failed to create vault renewer", anyMap{
+			log.FnError: err,
+			"endpoint":  c.Endpoint,
+		})
+		return err
+	}
+
+	go renewer.Renew()
+	go func() {
+		<-ctx.Done()
+		renewer.Stop()
+	}()
+
+	setVaultClient(client)
+	log.Info("connected to vault", anyMap{
+		"endpoint": c.Endpoint,
+	})
+	return nil
 }

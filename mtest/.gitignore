@@ -1,3 +1,4 @@
 /etcd-*-linux-amd64.tar.gz
 /output
 *.img
+/vault_*.zip
