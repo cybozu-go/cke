@@ -25,11 +25,13 @@ require (
 	github.com/coreos/etcd v3.3.9+incompatible
 	github.com/coreos/go-semver v0.2.0 // indirect
 	github.com/coreos/go-systemd v0.0.0-20180828140353-eee3db372b31 // indirect
+	github.com/coreos/gofail v0.0.0-20180808172546-51ce9a71510a
 	github.com/coreos/pkg v0.0.0-20180108230652-97fdf19511ea // indirect
 	github.com/cybozu-go/cmd v1.5.0
 	github.com/cybozu-go/etcdutil v0.0.0-20180806015312-4d7b9c205270
 	github.com/cybozu-go/log v1.4.2
 	github.com/cybozu-go/netutil v1.1.0 // indirect
+	github.com/cybozu-go/placemat v0.0.0-20180813111706-b13b74189c7f
 	github.com/denisenkom/go-mssqldb v0.0.0-20180824013952-8fac8b954edb // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/docker/docker v1.13.1
@@ -37,6 +39,8 @@ require (
 	github.com/docker/go-units v0.3.3 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20180315112207-d0530c80e49a // indirect
 	github.com/elazarl/go-bindata-assetfs v1.0.0 // indirect
+	github.com/etcd-io/gofail v0.0.0-20180808172546-51ce9a71510a // indirect
+	github.com/fatih/color v1.7.0 // indirect
 	github.com/fatih/structs v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
@@ -54,6 +58,8 @@ require (
 	github.com/google/go-querystring v0.0.0-20170111101155-53e6ce116135 // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/google/subcommands v0.0.0-20180618214453-5bae204cdfb2
+	github.com/gorilla/context v1.1.1 // indirect
+	github.com/gorilla/mux v1.6.2 // indirect
 	github.com/gorilla/websocket v1.3.0 // indirect
 	github.com/gotestyourself/gotestyourself v2.1.0+incompatible // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
@@ -79,12 +85,16 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.0.0-20180825215324-5a464a61f7de // indirect
 	github.com/hashicorp/yamux v0.0.0-20180826203732-cc6d2ea263b2 // indirect
 	github.com/hpcloud/tail v1.0.0 // indirect
+	github.com/htruong/go-md2 v0.0.0-20170914203617-c69905b63f6f // indirect
 	github.com/jefferai/jsonx v0.0.0-20160721235117-9cc31c3135ee // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/keybase/go-crypto v0.0.0-20180807163025-c84d7cbef16b // indirect
 	github.com/kr/pretty v0.1.0 // indirect
+	github.com/kubernetes/apimachinery v0.0.0-20180828123425-c6b66c9c507a // indirect
 	github.com/lib/pq v1.0.0 // indirect
+	github.com/mattn/go-colorable v0.0.9 // indirect
+	github.com/mattn/go-isatty v0.0.4 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/miekg/dns v1.0.8 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
@@ -107,6 +117,8 @@ require (
 	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910 // indirect
 	github.com/prometheus/common v0.0.0-20180801064454-c7de2306084e // indirect
 	github.com/prometheus/procfs v0.0.0-20180725123919-05ee40e3a273 // indirect
+	github.com/rmxymh/go-virtualbox v0.0.0-20160520145709-e1ed85288c0a // indirect
+	github.com/rmxymh/infra-ecosphere v0.0.0-20160601082221-353d14945925 // indirect
 	github.com/ryanuber/go-glob v0.0.0-20170128012129-256dc444b735 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	github.com/sirupsen/logrus v1.0.6 // indirect

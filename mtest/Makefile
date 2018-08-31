@@ -245,15 +245,16 @@ placemat: $(GENERATED_FILES)
 	@echo 'Placemat is running.  To kill it, do "sudo pkill placemat".'
 
 test-light:
-	$(GINKGO) -focus="${TARGET}"
+	# $(GINKGO) -focus="${TARGET}"
+	go test
 
 clean:
 	rm -rf $(OUTPUT)
 
 setup:
-	go get -t -d ./...
-	go get -u github.com/onsi/ginkgo/ginkgo \
-		github.com/cybozu-go/placemat/... \
-		github.com/coreos/gofail
+	cd ../vendor/github.com/onsi/ginkgo/ginkgo && go install
+	cd ../vendor/github.com/cybozu-go/placemat/cmd/placemat && go install
+	cd ../vendor/github.com/cybozu-go/placemat/cmd/placemat-connect && go install
+	cd ../vendor/github.com/coreos/gofail && go install
 
 .PHONY:	all clean setup test
