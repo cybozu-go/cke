@@ -12,7 +12,7 @@ func initStateless(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{
 		ch <- struct{}{}
 	}()
 
-	resp, err := etcd.Get(ctx, "/vault")
+	resp, err := etcd.Get(ctx, KeyVault)
 	if err != nil {
 		return 0, err
 	}

@@ -101,6 +101,9 @@ func (o *etcdBootOp) NextCommand() Commander {
 		o.step++
 		return volumeCreateCommand{o.nodes, volname}
 	case 2:
+		o.step++
+		return issueEtcdCertificatesCommand{o.nodes}
+	case 3:
 		node := o.nodes[o.cpIndex]
 
 		o.cpIndex++
@@ -116,7 +119,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
 		}
 		return runContainerCommand{[]*Node{node}, etcdContainerName, opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
-	case 3:
+	case 4:
 		o.step++
 		return waitEtcdSyncCommand{o.endpoints, 0}
 	default:
