@@ -15,6 +15,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cmd"
+	"github.com/cybozu-go/etcdutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"golang.org/x/crypto/ssh"
@@ -190,7 +191,16 @@ func getCluster() *cke.Cluster {
 func getClusterStatus() (*cke.ClusterStatus, error) {
 	controller := cke.NewController(nil, 0, time.Second*2)
 	cluster := getCluster()
-	inf, err := cke.NewInfrastructure(context.Background(), cluster, cke.Storage{})
+
+	etcdConfig := cke.NewEtcdConfig()
+	etcdConfig.Endpoints = []string{"http://" + host1 + ":2379"}
+	etcd, err := etcdutil.NewClient(etcdConfig)
+	if err != nil {
+		return nil, err
+	}
+	defer etcd.Close()
+
+	inf, err := cke.NewInfrastructure(context.Background(), cluster, cke.Storage{etcd})
 	if err != nil {
 		return nil, err
 	}

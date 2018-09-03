@@ -53,7 +53,7 @@ var _ = BeforeSuite(func() {
 		execSafeAt(h, "/data/setup-cke.sh")
 	}
 
-	etcdConfig := etcdutil.NewConfig("/cke/")
+	etcdConfig := cke.NewEtcdConfig()
 	etcdConfig.Endpoints = []string{"http://" + host1 + ":2379"}
 	etcd, err := etcdutil.NewClient(etcdConfig)
 	Expect(err).NotTo(HaveOccurred())
