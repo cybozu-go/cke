@@ -137,60 +137,31 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 	status := &NodeStatus{}
 	ce := Docker(agent)
 
-	// etcd status
-	ss, err := ce.Inspect("etcd")
+	ss, err := ce.Inspect([]string{
+		"etcd",
+		"rivers",
+		"kube-apiserver",
+		"kube-controller-manager",
+		"kube-scheduler",
+		"kubelet",
+		"kube-proxy",
+	})
 	if err != nil {
 		return nil, err
 	}
-	ok, err := ce.VolumeExists(etcdVolumeName(cluster.Options.Etcd))
-	if err != nil {
-		return nil, err
-	}
-	status.Etcd = EtcdStatus{*ss, ok}
 
-	// rivers status
-	ss, err = ce.Inspect("rivers")
+	etcdVolumeExists, err := ce.VolumeExists(etcdVolumeName(cluster.Options.Etcd))
 	if err != nil {
 		return nil, err
 	}
-	status.Rivers = *ss
 
-	// kube-apiserver status
-	ss, err = ce.Inspect("kube-apiserver")
-	if err != nil {
-		return nil, err
-	}
-	status.APIServer = *ss
-
-	// kube-controller-manager status
-	ss, err = ce.Inspect("kube-controller-manager")
-	if err != nil {
-		return nil, err
-	}
-	status.ControllerManager = *ss
-
-	// kube-scheduler status
-	ss, err = ce.Inspect("kube-scheduler")
-	if err != nil {
-		return nil, err
-	}
-	status.Scheduler = *ss
-
-	// kubelet status
-	ss, err = ce.Inspect("kubelet")
-	if err != nil {
-		return nil, err
-	}
-	status.Kubelet = *ss
-
-	// kube-proxy status
-	ss, err = ce.Inspect("kube-proxy")
-	if err != nil {
-		return nil, err
-	}
-	status.Proxy = *ss
-
-	// TODO: get statuses of other services.
+	status.Etcd = EtcdStatus{ss["etcd"], etcdVolumeExists}
+	status.Rivers = ss["rivers"]
+	status.APIServer = ss["kube-apiserver"]
+	status.ControllerManager = ss["kube-controller-manager"]
+	status.Scheduler = ss["kube-scheduler"]
+	status.Kubelet = ss["kubelet"]
+	status.Proxy = ss["kube-proxy"]
 
 	return status, nil
 }

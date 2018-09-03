@@ -1,6 +1,8 @@
 package cke
 
 import (
+	"bufio"
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -33,7 +35,7 @@ type ContainerEngine interface {
 	// Remove removes the named container.
 	Remove(name string) error
 	// Inspect returns ServiceStatus for the named container.
-	Inspect(name string) (*ServiceStatus, error)
+	Inspect(name []string) (map[string]ServiceStatus, error)
 	// VolumeCreate creates a local volume.
 	VolumeCreate(name string) error
 	// VolumeRemove creates a local volume.
@@ -218,6 +220,26 @@ func (c docker) getID(name string) (string, error) {
 	return strings.TrimSpace(string(data)), nil
 }
 
+func (c docker) getIDs(names []string) (map[string]string, error) {
+	filters := make([]string, len(names))
+	for i, name := range names {
+		filters[i] = "--filter name=^/" + name + "$"
+	}
+	cmdline := "docker ps -a --no-trunc " + strings.Join(filters, " ") + " --format {{.Names}}:{{.ID}}"
+	data, _, err := c.agent.Run(cmdline)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make(map[string]string)
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+	for scanner.Scan() {
+		nameID := strings.Split(scanner.Text(), ":")
+		ids[nameID[0]] = nameID[1]
+	}
+	return ids, nil
+}
+
 func (c docker) Exists(name string) (bool, error) {
 	id, err := c.getID(name)
 	if err != nil {
@@ -226,16 +248,21 @@ func (c docker) Exists(name string) (bool, error) {
 	return len(id) != 0, nil
 }
 
-func (c docker) Inspect(name string) (*ServiceStatus, error) {
-	id, err := c.getID(name)
+func (c docker) Inspect(names []string) (map[string]ServiceStatus, error) {
+	nameIds, err := c.getIDs(names)
 	if err != nil {
 		return nil, err
 	}
-	if len(id) == 0 {
-		return &ServiceStatus{}, nil
+
+	var ids []string
+	for _, id := range nameIds {
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		return nil, nil
 	}
 
-	data, _, err := c.agent.Run("docker container inspect " + id)
+	data, _, err := c.agent.Run("docker container inspect " + strings.Join(ids, " "))
 	if err != nil {
 		return nil, err
 	}
@@ -245,25 +272,27 @@ func (c docker) Inspect(name string) (*ServiceStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(djs) != 1 {
-		return nil, errors.New("unexpected docker inspect result")
+
+	statuses := make(map[string]ServiceStatus)
+	for _, dj := range djs {
+		name := strings.TrimPrefix(dj.Name, "/")
+
+		var params ckeLabel
+		label := dj.Config.Labels[ckeLabelName]
+
+		err = json.Unmarshal([]byte(label), &params)
+		if err != nil {
+			return nil, err
+		}
+		statuses[name] = ServiceStatus{
+			Running:       dj.State.Running,
+			Image:         dj.Config.Image,
+			BuiltInParams: params.BuiltInParams,
+			ExtraParams:   params.ExtraParams,
+		}
 	}
-	dj := djs[0]
 
-	params := new(ckeLabel)
-	label := dj.Config.Labels[ckeLabelName]
-
-	err = json.Unmarshal([]byte(label), params)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ServiceStatus{
-		Running:       dj.State.Running,
-		Image:         dj.Config.Image,
-		BuiltInParams: params.BuiltInParams,
-		ExtraParams:   params.ExtraParams,
-	}, nil
+	return statuses, nil
 }
 
 func (c docker) VolumeCreate(name string) error {
