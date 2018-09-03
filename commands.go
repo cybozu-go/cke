@@ -332,3 +332,33 @@ func (c issueAPIServerCertificatesCommand) Command() Command {
 		Target: strings.Join(targets, ","),
 	}
 }
+
+type killContainerCommand struct {
+	node *Node
+	name string
+}
+
+func (c killContainerCommand) Run(ctx context.Context, inf Infrastructure) error {
+	ce := Docker(inf.Agent(c.node.Address))
+	exists, err := ce.Exists(c.name)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	err = ce.Kill(c.name)
+	if err != nil {
+		return err
+	}
+	// gofail: var dockerAfterContainerKill struct{}
+	return ce.Remove(c.name)
+}
+
+func (c killContainerCommand) Command() Command {
+	return Command{
+		Name:   "kill-container",
+		Target: c.node.Address,
+		Detail: c.name,
+	}
+}

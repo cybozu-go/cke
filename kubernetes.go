@@ -415,7 +415,7 @@ func (o *riversStopOp) NextCommand() Commander {
 	node := o.nodes[o.nodeIndex]
 	o.nodeIndex++
 
-	return stopContainerCommand{node, "rivers"}
+	return killContainerCommand{node, "rivers"}
 }
 
 func (o *proxyBootOp) Name() string {

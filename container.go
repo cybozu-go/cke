@@ -32,6 +32,8 @@ type ContainerEngine interface {
 	Exists(name string) (bool, error)
 	// Stop stops the named container.
 	Stop(name string) error
+	// Kill kills the named container.
+	Kill(name string) error
 	// Remove removes the named container.
 	Remove(name string) error
 	// Inspect returns ServiceStatus for the named container.
@@ -183,6 +185,14 @@ func (c docker) RunSystem(name string, opts []string, params, extra ServiceParam
 
 func (c docker) Stop(name string) error {
 	stdout, stderr, err := c.agent.Run("docker container stop " + name)
+	if err != nil {
+		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+	}
+	return nil
+}
+
+func (c docker) Kill(name string) error {
+	stdout, stderr, err := c.agent.Run("docker container kill " + name)
 	if err != nil {
 		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
 	}
