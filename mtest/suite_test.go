@@ -1,10 +1,13 @@
 package mtest
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/etcdutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -49,6 +52,18 @@ var _ = BeforeSuite(func() {
 	for _, h := range []string{host1, host2} {
 		execSafeAt(h, "/data/setup-cke.sh")
 	}
+
+	etcd, err := etcdutil.NewClient(&etcdutil.Config{
+		Endpoints: []string{"http://" + host1 + ":2379"},
+	})
+	Expect(err).NotTo(HaveOccurred())
+	defer etcd.Close()
+
+	resp, err := etcd.Get(context.Background(), "/cke/vault")
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.Count).NotTo(BeZero())
+	err = cke.ConnectVault(context.Background(), resp.Kvs[0].Value)
+	Expect(err).NotTo(HaveOccurred())
 
 	setupCKE()
 

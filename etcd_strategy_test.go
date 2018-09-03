@@ -300,8 +300,8 @@ func BootstrapCommands(targets ...string) []Command {
 	hosts := strings.Join(targets, ",")
 	commands := []Command{
 		{Name: "image-pull", Target: "etcd"},
-		{Name: "volume-create", Target: hosts},
 		{Name: "issue-etcd-certificates", Target: hosts},
+		{Name: "volume-create", Target: hosts},
 	}
 	for _, addr := range targets {
 		commands = append(commands, Command{Name: "run-container", Target: addr})

@@ -19,7 +19,7 @@ func initStateless(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{
 	rev := resp.Header.Revision
 
 	if resp.Count == 1 {
-		err = connectVault(ctx, resp.Kvs[0].Value)
+		err = ConnectVault(ctx, resp.Kvs[0].Value)
 		if err != nil {
 			return 0, err
 		}
@@ -49,7 +49,7 @@ func startWatcher(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{}
 				default:
 				}
 			case KeyVault:
-				err = connectVault(ctx, ev.Kv.Value)
+				err = ConnectVault(ctx, ev.Kv.Value)
 				if err != nil {
 					return err
 				}
