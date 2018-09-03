@@ -99,10 +99,10 @@ func (o *etcdBootOp) NextCommand() Commander {
 		return imagePullCommand{o.nodes, "etcd"}
 	case 1:
 		o.step++
-		return volumeCreateCommand{o.nodes, volname}
+		return issueEtcdCertificatesCommand{o.nodes}
 	case 2:
 		o.step++
-		return issueEtcdCertificatesCommand{o.nodes}
+		return volumeCreateCommand{o.nodes, volname}
 	case 3:
 		node := o.nodes[o.cpIndex]
 
