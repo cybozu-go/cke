@@ -53,13 +53,13 @@ var _ = BeforeSuite(func() {
 		execSafeAt(h, "/data/setup-cke.sh")
 	}
 
-	etcdConfig := etcdutil.NewConfig("/cke")
+	etcdConfig := etcdutil.NewConfig("/cke/")
 	etcdConfig.Endpoints = []string{"http://" + host1 + ":2379"}
 	etcd, err := etcdutil.NewClient(etcdConfig)
 	Expect(err).NotTo(HaveOccurred())
 	defer etcd.Close()
 
-	resp, err := etcd.Get(context.Background(), "/cke/vault")
+	resp, err := etcd.Get(context.Background(), "vault")
 	Expect(err).NotTo(HaveOccurred())
 	Expect(int(resp.Count)).NotTo(BeZero())
 	err = cke.ConnectVault(context.Background(), resp.Kvs[0].Value)
