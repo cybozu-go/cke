@@ -29,7 +29,7 @@ func writeFile(inf Infrastructure, node *Node, target string, source string) err
 	return ce.RunWithInput("tools", binds, ddCommand, source)
 }
 
-func issueCertificate(inf Infrastructure, node *Node, ca, dir, name string, opts map[string]interface{}) error {
+func issueCertificate(inf Infrastructure, node *Node, ca, file string, opts map[string]interface{}) error {
 	client := inf.Vault()
 	if client == nil {
 		return errors.New("can not connect to vault")
@@ -38,11 +38,11 @@ func issueCertificate(inf Infrastructure, node *Node, ca, dir, name string, opts
 	if err != nil {
 		return err
 	}
-	err = writeFile(inf, node, filepath.Join(dir, name+".crt"), secret.Data["certificate"].(string))
+	err = writeFile(inf, node, filepath.Join(file+".crt"), secret.Data["certificate"].(string))
 	if err != nil {
 		return err
 	}
-	err = writeFile(inf, node, filepath.Join(dir, name+".key"), secret.Data["private_key"].(string))
+	err = writeFile(inf, node, filepath.Join(file+".key"), secret.Data["private_key"].(string))
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func issueEtcdCertificates(ctx context.Context, inf Infrastructure, node *Node) 
 	if len(hostname) == 0 {
 		hostname = node.Address
 	}
-	err := issueCertificate(inf, node, CAServer, "/etc/etcd/pki", "server", map[string]interface{}{
+	err := issueCertificate(inf, node, CAServer, "/etc/etcd/pki/server", map[string]interface{}{
 		"common_name": hostname,
 		"alt_names":   "localhost",
 		"ip_sans":     "127.0.0.1," + node.Address,
@@ -62,7 +62,7 @@ func issueEtcdCertificates(ctx context.Context, inf Infrastructure, node *Node) 
 	if err != nil {
 		return err
 	}
-	err = issueCertificate(inf, node, CAEtcdPeer, "/etc/etcd/pki", "peer", map[string]interface{}{
+	err = issueCertificate(inf, node, CAEtcdPeer, "/etc/etcd/pki/peer", map[string]interface{}{
 		"common_name":          hostname,
 		"ip_sans":              "127.0.0.1," + node.Address,
 		"exclude_cn_from_sans": "true",
@@ -70,7 +70,7 @@ func issueEtcdCertificates(ctx context.Context, inf Infrastructure, node *Node) 
 	if err != nil {
 		return err
 	}
-	err = issueCertificate(inf, node, CAEtcdClient, "/etc/etcd/pki", "etcdctl", map[string]interface{}{
+	err = issueCertificate(inf, node, CAEtcdClient, "/etc/etcd/pki/etcdctl", map[string]interface{}{
 		"common_name":          "etcdctl",
 		"exclude_cn_from_sans": "true",
 	})
@@ -98,7 +98,7 @@ func issueAPIServerCertificates(ctx context.Context, inf Infrastructure, node *N
 	if len(hostname) == 0 {
 		hostname = node.Address
 	}
-	err := issueCertificate(inf, node, CAEtcdClient, "/etc/kubernetes/apiserver", "apiserver", map[string]interface{}{
+	err := issueCertificate(inf, node, CAEtcdClient, "/etc/kubernetes/apiserver/apiserver", map[string]interface{}{
 		"common_name":          "kube-apiserver",
 		"exclude_cn_from_sans": "true",
 	})

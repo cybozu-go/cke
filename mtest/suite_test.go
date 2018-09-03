@@ -61,7 +61,7 @@ var _ = BeforeSuite(func() {
 
 	resp, err := etcd.Get(context.Background(), "/cke/vault")
 	Expect(err).NotTo(HaveOccurred())
-	Expect(resp.Count).NotTo(BeZero())
+	Expect(int(resp.Count)).NotTo(BeZero())
 	err = cke.ConnectVault(context.Background(), resp.Kvs[0].Value)
 	Expect(err).NotTo(HaveOccurred())
 
