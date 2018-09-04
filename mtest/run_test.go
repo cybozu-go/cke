@@ -394,12 +394,6 @@ func setupCKE() {
 	Expect(err).NotTo(HaveOccurred())
 	err = runCKE()
 	Expect(err).NotTo(HaveOccurred())
-
-	// wait cke
-	Eventually(func() error {
-		_, _, err := execAt(host1, "/data/ckecli", "history")
-		return err
-	}).Should(Succeed())
 }
 
 func initializeControlPlane() {

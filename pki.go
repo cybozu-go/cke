@@ -115,24 +115,25 @@ func issueAPIServerCertificates(ctx context.Context, inf Infrastructure, node *N
 }
 
 func issueEtcdClientCertificates(ctx context.Context, inf Infrastructure) (ca, cert, key string, err error) {
-	client, e := inf.Vault()
-	if e != nil {
-		err = e
-		return
+	client, err := inf.Vault()
+	if err != nil {
+		return "", "", "", err
 	}
 
-	ca, err = inf.Storage().GetCACertificate(ctx, "server")
+	ca, err := inf.Storage().GetCACertificate(ctx, "server")
 	if err != nil {
-		return
+		return "", "", "", err
 	}
+
 	secret, err := client.Logical().Write(CAEtcdClient+"/issue/system", map[string]interface{}{
 		"common_name":          "root",
 		"exclude_cn_from_sans": "true",
 	})
 	if err != nil {
-		return
+		return "", "", "", err
 	}
+
 	cert = secret.Data["certificate"].(string)
 	key = secret.Data["private_key"].(string)
-	return
+	return ca, cert, key, nil
 }
