@@ -1,57 +1,75 @@
 PKI management by HashiCorp [Vault][]
 ===================================
 
+CKE requires [Vault][] for issuing certificates with configuration as follows.
+
 This document describes how CKE enables TLS connection for etcd/k8s cluster.
 All certificates are issued by [Vault][].
 
-Vault configuration
--------------------
+## Secret engine `pki`
 
-CKE requires [Vault][] for issuing certificates with configuration as follows.
+Create following `pki` secret engines.
 
-### Secret engine `pki`
-
-#### path `cke/ca-server`
+### path `cke/ca-server`
 
 Issue certificates for etcd server.
 
-- policy: `cke`
-- role: `system`
-- CA common name: `server`
+Create `system` role with these options:
 
-#### path `cke/ca-etcd-peer`
+- `allow_any_name=true`
+- `client_flag=false`
+
+### path `cke/ca-etcd-peer`
 
 Issue certificates for peer connection of the etcd cluster.
 
-- policy: `cke`
-- role: `system`
-- CA common name: `etcd-peer`
+Create `system` role with these options:
 
-#### path `cke/ca-etcd-client`
+- `allow_any_name=true`
+
+### path `cke/ca-etcd-client`
 
 Issue certificates for etcd clients such as kube-apiserver.
 
-- policy: `cke`
-- role: `system`
-- CA common name: `etcd-client`
+Create `system` role with these options:
 
-### approle `cke`
+- `allow_any_name=true`
+- `server_flag=false`
 
-CKE logins to the Vault by approle `cke`. See [ckecli.md][] and [schema.md#vault][].
+## policy `cke`
 
-- policy: `cke`
+Create `cke` policy as follows to allow CKE to issue certificates:
 
-### policy `cke`
-
-It allows to any operation for path `cke/*`.
-
-```hci
+```hcl
 path "cke/*"
 {
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 ```
 
-- See more details about PKI secret engine in https://www.vaultproject.io/docs/secrets/pki/index.html
+## approle `cke`
+
+Create `cke` AppRole to login to Vault.
+
+```console
+$ vault auth enable approle
+$ vault write auth/approle/role/cke policies=cke period=1h
+```
+
+Read `role-id` and `secret-id` of the `cke` role and configure CKE as follows:
+
+```console
+$ VAULT_URL=https://aa.bb.cc.dd:8200
+$ role_id=$(vault read -format=json auth/approle/role/cke/role-id | jq -r .data.role_id)
+$ secret_id=$(vault write -f -format=json auth/approle/role/cke/secret-id | jq -r .data.secret_id)
+
+$ ckecli vault config - <<EOF
+{
+    "endpoint": "$VAULT_URL",
+    "role-id": "$role_id",
+    "secret-id": "$secret_id"
+}
+EOF
+```
 
 [Vault]: https://www.vaultproject.io/
