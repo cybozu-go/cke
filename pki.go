@@ -120,7 +120,7 @@ func issueEtcdClientCertificates(ctx context.Context, inf Infrastructure) (ca, c
 		return "", "", "", err
 	}
 
-	ca, err := inf.Storage().GetCACertificate(ctx, "server")
+	ca, err = inf.Storage().GetCACertificate(ctx, "server")
 	if err != nil {
 		return "", "", "", err
 	}
