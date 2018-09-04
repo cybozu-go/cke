@@ -1,4 +1,4 @@
-PKI management by HashiCorp [Vault]
+PKI management by HashiCorp [Vault][]
 ===================================
 
 This document describes how CKE enables TLS connection for etcd/k8s cluster.
@@ -11,7 +11,7 @@ CKE requires [Vault][] for issuing certificates with configuration as follows.
 
 ### Secret engine `pki`
 
-#### path: `cke/ca-server`
+#### path `cke/ca-server`
 
 Issue certificates for etcd server.
 
@@ -19,7 +19,7 @@ Issue certificates for etcd server.
 - role: `system`
 - CA common name: `server`
 
-#### path: `cke/ca-etcd-peer`
+#### path `cke/ca-etcd-peer`
 
 Issue certificates for peer connection of the etcd cluster.
 
@@ -27,7 +27,7 @@ Issue certificates for peer connection of the etcd cluster.
 - role: `system`
 - CA common name: `etcd-peer`
 
-#### path: `cke/ca-etcd-client`
+#### path `cke/ca-etcd-client`
 
 Issue certificates for etcd clients such as kube-apiserver.
 
@@ -37,7 +37,7 @@ Issue certificates for etcd clients such as kube-apiserver.
 
 ### approle `cke`
 
-CKE logins to the Vault by approle `cke`. See [ckecli.md] and [schema.md#vault]
+CKE logins to the Vault by approle `cke`. See [ckecli.md][] and [schema.md#vault][].
 
 - policy: `cke`
 
