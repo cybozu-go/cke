@@ -87,8 +87,7 @@ $(OUTPUT)/vault: $(VAULT_ARCHIVE)
 
 $(OUTPUT)/cke $(OUTPUT)/ckecli:
 	mkdir -p $(OUTPUT)
-	cd ..; go get -d ./... && \
-		gofail enable && \
+	cd ..; gofail enable && \
 		if GOBIN=$(realpath $(OUTPUT)) go install ./cmd/$(notdir $@); then \
 			gofail disable; \
 		else \
@@ -245,18 +244,16 @@ placemat: $(GENERATED_FILES)
 	@echo 'Placemat is running.  To kill it, do "sudo pkill placemat".'
 
 test-light:
-	$(GINKGO) -focus="${TARGET}"
+	# $(GINKGO) -focus="${TARGET}"
+	go test
 
 clean:
 	rm -rf $(OUTPUT)
 
 setup:
-	go get -t -d ./...
-	cd $$GOPATH/src/github.com/coreos/etcd; \
-		git fetch origin && \
-		git checkout v3.3.9
-	go get -u github.com/onsi/ginkgo/ginkgo \
-		github.com/cybozu-go/placemat/... \
-		github.com/coreos/gofail
+	cd ../vendor/github.com/onsi/ginkgo/ginkgo && go install
+	cd ../vendor/github.com/cybozu-go/placemat/cmd/placemat && go install
+	cd ../vendor/github.com/cybozu-go/placemat/cmd/placemat-connect && go install
+	cd ../vendor/github.com/etcd-io/gofail && go install
 
 .PHONY:	all clean setup test
