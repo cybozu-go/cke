@@ -18,7 +18,7 @@ fin() {
 }
 trap fin INT TERM HUP 0
 
-$GINKGO
+$GINKGO -v
 RET=$?
 
 exit $RET

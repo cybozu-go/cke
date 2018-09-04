@@ -245,7 +245,7 @@ placemat: $(GENERATED_FILES)
 	@echo 'Placemat is running.  To kill it, do "sudo pkill placemat".'
 
 test-light:
-	$(GINKGO) -focus="${TARGET}"
+	$(GINKGO) -v -focus="${TARGET}"
 
 clean:
 	rm -rf $(OUTPUT)
