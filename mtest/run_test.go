@@ -13,8 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cmd"
+	"github.com/cybozu-go/etcdutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"golang.org/x/crypto/ssh"
@@ -187,10 +189,23 @@ func getCluster() *cke.Cluster {
 	return &cluster
 }
 
+func connectEtcd() (*clientv3.Client, error) {
+	etcdConfig := cke.NewEtcdConfig()
+	etcdConfig.Endpoints = []string{"http://" + host1 + ":2379"}
+	return etcdutil.NewClient(etcdConfig)
+}
+
 func getClusterStatus() (*cke.ClusterStatus, error) {
 	controller := cke.NewController(nil, 0, time.Second*2)
 	cluster := getCluster()
-	inf, err := cke.NewInfrastructure(context.Background(), cluster)
+
+	etcd, err := connectEtcd()
+	if err != nil {
+		return nil, err
+	}
+	defer etcd.Close()
+
+	inf, err := cke.NewInfrastructure(context.Background(), cluster, cke.Storage{etcd})
 	if err != nil {
 		return nil, err
 	}
@@ -379,12 +394,6 @@ func setupCKE() {
 	Expect(err).NotTo(HaveOccurred())
 	err = runCKE()
 	Expect(err).NotTo(HaveOccurred())
-
-	// wait cke
-	Eventually(func() error {
-		_, _, err := execAt(host1, "/data/ckecli", "history")
-		return err
-	}).Should(Succeed())
 }
 
 func initializeControlPlane() {

@@ -61,8 +61,8 @@ func (c *VaultConfig) Validate() error {
 	return nil
 }
 
-// connectVault creates vault client
-func connectVault(ctx context.Context, data []byte) error {
+// ConnectVault creates vault client
+func ConnectVault(ctx context.Context, data []byte) error {
 	c := new(VaultConfig)
 	err := json.Unmarshal(data, c)
 	if err != nil {

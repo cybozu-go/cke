@@ -107,19 +107,19 @@ var _ = Describe("kubernetes strategy", func() {
 		}).Should(BeTrue())
 	})
 
-	It("should remove not-in-cluster node1 from cluster", func() {
-		By("Removing definition of node1")
+	It("should remove not-in-cluster node2 from cluster", func() {
+		By("Removing definition of node2")
 		ckecli("constraints", "set", "control-plane-count", "2")
 		cluster := getCluster()
 		for i := 0; i < 3; i++ {
 			cluster.Nodes[i].ControlPlane = true
 		}
-		cluster.Nodes = cluster.Nodes[1:]
+		cluster.Nodes = append(cluster.Nodes[:1], cluster.Nodes[2:]...)
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
 		Eventually(func() bool {
-			controlPlanes := []string{node2, node3}
+			controlPlanes := []string{node1, node3}
 			workers := []string{node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {

@@ -56,6 +56,10 @@ EOF
     create_ca cke/ca-server "server CA" server
     create_ca cke/ca-etcd-peer "etcd peer CA" etcd-peer
     create_ca cke/ca-etcd-client "etcd client CA" etcd-client
+
+    $VAULT write cke/ca-server/roles/system ttl=87600h max_ttl=87600h client_flag=false allow_any_name=true
+    $VAULT write cke/ca-etcd-peer/roles/system ttl=87600h max_ttl=87600h allow_any_name=true
+    $VAULT write cke/ca-etcd-client/roles/system ttl=87600h max_ttl=87600h server_flag=false allow_any_name=true
 }
 
 install_configs() {

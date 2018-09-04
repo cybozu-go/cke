@@ -278,3 +278,57 @@ func (c stopContainerCommand) Command() Command {
 		Detail: c.name,
 	}
 }
+
+type issueEtcdCertificatesCommand struct {
+	nodes []*Node
+}
+
+func (c issueEtcdCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, node := range c.nodes {
+		n := node
+		env.Go(func(ctx context.Context) error {
+			return issueEtcdCertificates(ctx, inf, n)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c issueEtcdCertificatesCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "issue-etcd-certificates",
+		Target: strings.Join(targets, ","),
+	}
+}
+
+type issueAPIServerCertificatesCommand struct {
+	nodes []*Node
+}
+
+func (c issueAPIServerCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, node := range c.nodes {
+		n := node
+		env.Go(func(ctx context.Context) error {
+			return issueAPIServerCertificates(ctx, inf, n)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c issueAPIServerCertificatesCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "issue-apiserver-certificates",
+		Target: strings.Join(targets, ","),
+	}
+}
