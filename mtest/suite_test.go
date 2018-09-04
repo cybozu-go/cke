@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/etcdutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -53,9 +52,7 @@ var _ = BeforeSuite(func() {
 		execSafeAt(h, "/data/setup-cke.sh")
 	}
 
-	etcdConfig := cke.NewEtcdConfig()
-	etcdConfig.Endpoints = []string{"http://" + host1 + ":2379"}
-	etcd, err := etcdutil.NewClient(etcdConfig)
+	etcd, err := connectEtcd()
 	Expect(err).NotTo(HaveOccurred())
 	defer etcd.Close()
 
