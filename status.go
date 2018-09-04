@@ -110,12 +110,21 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 		Client: &http.Client{},
 	}
 
+	for _, n := range controlPlanes(cluster.Nodes) {
+		ns := statuses[n.Address]
+		if ns.Etcd.HasData {
+			goto CHECK_ETCD
+		}
+	}
+	return cs, nil
+
+CHECK_ETCD:
 	cs.Etcd.Members, err = c.getEtcdMembers(ctx, inf, cluster.Nodes)
 	if err != nil {
-		// Ignore err since the cluster may be on bootstrap
-		log.Warn("failed to get etcd members", map[string]interface{}{
+		log.Error("failed to get etcd members", map[string]interface{}{
 			log.FnError: err,
 		})
+		return nil, err
 	}
 	cs.Etcd.MemberHealth = c.getEtcdMemberHealth(ctx, inf, cs.Etcd.Members)
 
