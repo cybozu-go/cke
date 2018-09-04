@@ -2,7 +2,6 @@ package cke
 
 import (
 	"context"
-	"errors"
 	"path/filepath"
 )
 
@@ -32,9 +31,9 @@ func writeFile(inf Infrastructure, node *Node, target string, source string) err
 }
 
 func issueCertificate(inf Infrastructure, node *Node, ca, file string, opts map[string]interface{}) error {
-	client := inf.Vault()
-	if client == nil {
-		return errors.New("can not connect to vault")
+	client, err := inf.Vault()
+	if err != nil {
+		return err
 	}
 	secret, err := client.Logical().Write(ca+"/issue/system", opts)
 	if err != nil {
@@ -116,9 +115,9 @@ func issueAPIServerCertificates(ctx context.Context, inf Infrastructure, node *N
 }
 
 func issueEtcdClientCertificates(ctx context.Context, inf Infrastructure) (ca, cert, key string, err error) {
-	client := inf.Vault()
-	if client == nil {
-		err = errors.New("not connected to vault")
+	client, e := inf.Vault()
+	if e != nil {
+		err = e
 		return
 	}
 
@@ -127,7 +126,7 @@ func issueEtcdClientCertificates(ctx context.Context, inf Infrastructure) (ca, c
 		return
 	}
 	secret, err := client.Logical().Write(CAEtcdClient+"/issue/system", map[string]interface{}{
-		"common_name":          "cke",
+		"common_name":          "root",
 		"exclude_cn_from_sans": "true",
 	})
 	if err != nil {

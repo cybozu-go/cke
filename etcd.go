@@ -2,18 +2,15 @@ package cke
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/coreos/etcd/etcdserver/api/etcdhttp"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 )
 
@@ -301,37 +298,24 @@ type waitEtcdSyncCommand struct {
 }
 
 func (c waitEtcdSyncCommand) Run(ctx context.Context, inf Infrastructure) error {
+	cli, err := inf.NewEtcdClient(c.endpoints)
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
 	for i := 0; i < 3; i++ {
-		count := 0
-		for _, ep := range c.endpoints {
-			u := ep + "/health"
-			req, err := http.NewRequest("GET", u, nil)
-			if err != nil {
-				continue
-			}
-			req = req.WithContext(ctx)
-			resp, err := inf.HTTPClient().Do(req)
-			if err != nil {
-				continue
-			}
-			health := new(etcdhttp.Health)
-			err = json.NewDecoder(resp.Body).Decode(health)
-			resp.Body.Close()
-			if err != nil || health.Health != "true" {
-				continue
-			}
-			count++
-		}
-		if count >= int(len(c.endpoints)/2)+1+c.redundancy {
+		_, err = cli.MemberList(ctx)
+		if err == nil {
 			return nil
 		}
-
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(5 * time.Second):
 		}
 	}
+
 	return errors.New("etcd sync timeout")
 }
 

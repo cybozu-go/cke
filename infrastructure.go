@@ -27,7 +27,7 @@ func setVaultClient(client *vault.Client) {
 type Infrastructure interface {
 	Close()
 	Agent(addr string) Agent
-	Vault() *vault.Client
+	Vault() (*vault.Client, error)
 	Storage() Storage
 
 	NewEtcdClient(endpoints []string) (*clientv3.Client, error)
@@ -95,12 +95,12 @@ func (i ckeInfrastructure) Agent(addr string) Agent {
 	return i.agents[addr]
 }
 
-func (i ckeInfrastructure) Vault() *vault.Client {
+func (i ckeInfrastructure) Vault() (*vault.Client, error) {
 	v := vaultClient.Load()
 	if v == nil {
-		return nil
+		return nil, errors.New("vault is not connected")
 	}
-	return v.(*vault.Client)
+	return v.(*vault.Client), nil
 }
 
 func (i ckeInfrastructure) Storage() Storage {
