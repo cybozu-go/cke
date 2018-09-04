@@ -11,11 +11,19 @@ Cybozu Kubernetes Engine
 
 **Project Status**: Initial development.
 
-Node OS Requirements
---------------------
+Requirements
+------------
+
+### CKE requirements
+
+* [etcd](http://etcd.io/)
+* [Vault](http://vaultproject.io)
+
+### Node OS Requirements
 
 * Docker
 * A user who belongs to `docker` group
+* SSH server for the user
 
 Planned Features
 ----------------
@@ -30,7 +38,6 @@ Planned Features
 * Cluster features:
 
     * HA control plane.
-    * Self-hosting (except for etcd, which is managed by CKE).
     * CoreDNS add-on.
     * Node-local DNS cache services.
 
