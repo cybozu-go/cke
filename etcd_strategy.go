@@ -113,7 +113,7 @@ func healthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[string]
 		delete(mem, n.Address)
 	}
 	for k := range mem {
-		if cs.InSyncMembers[k] {
+		if !cs.InSyncMembers[k] {
 			delete(mem, k)
 		}
 	}
