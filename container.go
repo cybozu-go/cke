@@ -128,9 +128,10 @@ func (c docker) RunSystem(name string, opts []string, params, extra ServiceParam
 		return err
 	}
 	if len(id) != 0 {
-		stderr, stdout, err := c.agent.Run("docker rm " + name)
+		cmdline := "docker rm " + name
+		stderr, stdout, err := c.agent.Run(cmdline)
 		if err != nil {
-			return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+			return errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
 		}
 	}
 
