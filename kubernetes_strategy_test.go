@@ -191,7 +191,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes, Kubelets: allNodes, Proxies: allNodes,
 			},
 			Commands: []Command{
-				{"stop-container", "10.0.0.11", ""},
+				{"kill-container", "10.0.0.11", ""},
 			},
 		},
 	}

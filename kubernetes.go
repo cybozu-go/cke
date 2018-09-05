@@ -4,6 +4,16 @@ import (
 	"strings"
 )
 
+const (
+	kubeAPIServerContainerName         = "kube-apiserver"
+	kubeControllerManagerContainerName = "kube-controller-manager"
+	kubeProxyContainerName             = "kube-proxy"
+	kubeSchedulerContainerName         = "kube-scheduler"
+	kubeletContainerName               = "kubelet"
+	pauseContainerName                 = "pause"
+	riversContainerName                = "rivers"
+)
+
 type riversBootOp struct {
 	nodes     []*Node
 	upstreams []*Node
@@ -145,7 +155,7 @@ func (o *apiServerBootOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return imagePullCommand{o.nodes, "kube-apiserver"}
+		return imagePullCommand{o.nodes, kubeAPIServerContainerName}
 	case 1:
 		o.step++
 		return makeDirCommand{o.nodes, "/var/log/kubernetes/apiserver"}
@@ -164,7 +174,7 @@ func (o *apiServerBootOp) NextCommand() Commander {
 		target := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		return runContainerCommand{[]*Node{target}, "kube-apiserver", opts, apiServerParams(o.controlPlanes, target.Address, o.serviceSubnet), extra}
+		return runContainerCommand{[]*Node{target}, kubeAPIServerContainerName, opts, apiServerParams(o.controlPlanes, target.Address, o.serviceSubnet), extra}
 	default:
 		return nil
 	}
@@ -226,13 +236,13 @@ func (o *controllerManagerBootOp) NextCommand() Commander {
 		return makeFileCommand{o.nodes, controllerManagerKubeconfig(), "/etc/kubernetes/controller-manager/kubeconfig"}
 	case 1:
 		o.step++
-		return imagePullCommand{o.nodes, "kube-controller-manager"}
+		return imagePullCommand{o.nodes, kubeControllerManagerContainerName}
 	case 2:
 		o.step++
 		return makeDirCommand{o.nodes, "/var/log/kubernetes/controller-manager"}
 	case 3:
 		o.step++
-		return runContainerCommand{o.nodes, "kube-controller-manager", opts, controllerManagerParams(), extra}
+		return runContainerCommand{o.nodes, kubeControllerManagerContainerName, opts, controllerManagerParams(), extra}
 	default:
 		return nil
 	}
@@ -276,13 +286,13 @@ func (o *schedulerBootOp) NextCommand() Commander {
 		return makeFileCommand{o.nodes, schedulerKubeconfig(), "/etc/kubernetes/scheduler/kubeconfig"}
 	case 1:
 		o.step++
-		return imagePullCommand{o.nodes, "kube-scheduler"}
+		return imagePullCommand{o.nodes, kubeSchedulerContainerName}
 	case 2:
 		o.step++
 		return makeDirCommand{o.nodes, "/var/log/kubernetes/scheduler"}
 	case 3:
 		o.step++
-		return runContainerCommand{o.nodes, "kube-scheduler", nil, schedulerParams(), extra}
+		return runContainerCommand{o.nodes, kubeSchedulerContainerName, nil, schedulerParams(), extra}
 	default:
 		return nil
 	}
@@ -329,10 +339,10 @@ func (o *kubeletBootOp) NextCommand() Commander {
 		return makeFileCommand{o.nodes, kubeletKubeConfig(), "/etc/kubernetes/kubelet/kubeconfig"}
 	case 1:
 		o.step++
-		return imagePullCommand{o.nodes, "kubelet"}
+		return imagePullCommand{o.nodes, kubeletContainerName}
 	case 2:
 		o.step++
-		return imagePullCommand{o.nodes, "pause"}
+		return imagePullCommand{o.nodes, pauseContainerName}
 	case 3:
 		o.step++
 		return makeDirCommand{o.nodes, "/var/log/kubernetes/kubelet"}
@@ -341,7 +351,7 @@ func (o *kubeletBootOp) NextCommand() Commander {
 		return volumeCreateCommand{o.nodes, volName}
 	case 5:
 		o.step++
-		return runContainerCommand{o.nodes, "kubelet", opts, o.serviceParams(), o.extraParams()}
+		return runContainerCommand{o.nodes, kubeletContainerName, opts, o.serviceParams(), o.extraParams()}
 	default:
 		return nil
 	}
@@ -352,7 +362,7 @@ func (o *kubeletBootOp) serviceParams() ServiceParams {
 		"kubelet",
 		"--allow-privileged=true",
 		"--container-runtime-endpoint=/var/tmp/dockershim/dockershim.sock",
-		"--pod-infra-container-image=" + Image("pause"),
+		"--pod-infra-container-image=" + Image(pauseContainerName),
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--log-dir=/var/log/kubernetes/kubelet",
 	}
@@ -415,7 +425,7 @@ func (o *riversStopOp) NextCommand() Commander {
 	node := o.nodes[o.nodeIndex]
 	o.nodeIndex++
 
-	return stopContainerCommand{node, "rivers"}
+	return killContainerCommand{node, "rivers"}
 }
 
 func (o *proxyBootOp) Name() string {
@@ -435,13 +445,13 @@ func (o *proxyBootOp) NextCommand() Commander {
 		return makeFileCommand{o.nodes, proxyKubeConfig(), "/etc/kubernetes/proxy/kubeconfig"}
 	case 1:
 		o.step++
-		return imagePullCommand{o.nodes, "kube-proxy"}
+		return imagePullCommand{o.nodes, kubeProxyContainerName}
 	case 2:
 		o.step++
 		return makeDirCommand{o.nodes, "/var/log/kubernetes/proxy"}
 	case 3:
 		o.step++
-		return runContainerCommand{o.nodes, "kube-proxy", opts, o.serviceParams(), extra}
+		return runContainerCommand{o.nodes, kubeProxyContainerName, opts, o.serviceParams(), extra}
 	default:
 		return nil
 	}
@@ -485,7 +495,7 @@ func (o *apiServerStopOp) NextCommand() Commander {
 	node := o.nodes[o.nodeIndex]
 	o.nodeIndex++
 
-	return stopContainerCommand{node, "kube-apiserver"}
+	return stopContainerCommand{node, kubeAPIServerContainerName}
 }
 
 // ControllerManagerStopOp returns an Operator to stop ControllerManager.
@@ -514,7 +524,7 @@ func (o *controllerManagerStopOp) NextCommand() Commander {
 		node := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		return stopContainerCommand{node, "kube-controller-manager"}
+		return stopContainerCommand{node, kubeControllerManagerContainerName}
 	default:
 		return nil
 	}
@@ -546,7 +556,7 @@ func (o *schedulerStopOp) NextCommand() Commander {
 		node := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		return stopContainerCommand{node, "kube-scheduler"}
+		return stopContainerCommand{node, kubeSchedulerContainerName}
 	default:
 		return nil
 	}
@@ -578,7 +588,7 @@ func (o *kubeletStopOp) NextCommand() Commander {
 		node := o.nodes[o.nodeIndex]
 		o.nodeIndex++
 
-		return stopContainerCommand{node, "kubelet"}
+		return stopContainerCommand{node, kubeletContainerName}
 	default:
 		return nil
 	}
