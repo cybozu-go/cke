@@ -2,6 +2,8 @@ package cke
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -122,6 +124,9 @@ func (o *etcdBootOp) NextCommand() Commander {
 	case 4:
 		o.step++
 		return waitEtcdSyncCommand{o.endpoints, false}
+	case 5:
+		o.step++
+		return setupEtcdAuthCommand{o.endpoints}
 	default:
 		return nil
 	}
@@ -363,6 +368,75 @@ func (c waitEtcdSyncCommand) Command() Command {
 		Name:   "wait-etcd-sync",
 		Target: strings.Join(c.endpoints, ","),
 	}
+}
+
+type setupEtcdAuthCommand struct {
+	endpoints []string
+}
+
+func (c setupEtcdAuthCommand) Run(ctx context.Context, inf Infrastructure) error {
+	cli, err := inf.NewEtcdClient(c.endpoints)
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+	defer cancel()
+
+	err = addUserRole(ctx, cli, "root", "")
+	if err != nil {
+		return err
+	}
+
+	err = addUserRole(ctx, cli, "kube-apiserver", "/registry/")
+	if err != nil {
+		return err
+	}
+
+	_, err = cli.AuthEnable(ctx)
+	return err
+}
+
+func (c setupEtcdAuthCommand) Command() Command {
+	return Command{
+		Name:   "setup-etcd-auth",
+		Target: strings.Join(c.endpoints, ","),
+	}
+}
+
+func addUserRole(ctx context.Context, cli *clientv3.Client, name, prefix string) error {
+	r := make([]byte, 32)
+	_, err := rand.Read(r)
+	if err != nil {
+		return err
+	}
+
+	_, err = cli.UserAdd(ctx, name, hex.EncodeToString(r))
+	if err != nil {
+		return err
+	}
+
+	if prefix == "" {
+		return nil
+	}
+
+	_, err = cli.RoleAdd(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	_, err = cli.RoleGrantPermission(ctx, name, prefix, clientv3.GetPrefixRangeEnd(prefix), clientv3.PermissionType(clientv3.PermReadWrite))
+	if err != nil {
+		return err
+	}
+
+	_, err = cli.UserGrantRole(ctx, name, name)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type removeEtcdMemberCommand struct {
