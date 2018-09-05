@@ -259,8 +259,7 @@ func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []
 			return false
 		}
 
-		_, ok = status.Etcd.InSyncMembers[host]
-		if !ok {
+		if status.Etcd.InSyncMembers[host] {
 			fmt.Printf("%s is not in sync\n", host)
 			return false
 		}

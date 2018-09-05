@@ -3,7 +3,6 @@ package cke
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"sync"
 
 	"github.com/coreos/etcd/clientv3"
@@ -13,20 +12,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-// EtcdClusterHealth represents the health status of an etcd cluster.
-type EtcdClusterHealth int
-
-// health statuses of a etcd node.
-const (
-	EtcdClusterUnhealthy EtcdClusterHealth = iota
-	EtcdClusterHealthy
-)
-
 // EtcdClusterStatus is the status of the etcd cluster.
 type EtcdClusterStatus struct {
-	ClusterHealth EtcdClusterHealth
+	IsHealthy     bool
 	Members       map[string]*etcdserverpb.Member
-	InSyncMembers map[string]struct{}
+	InSyncMembers map[string]bool
 }
 
 // ClusterStatus represents the working cluster status.
@@ -35,7 +25,6 @@ type ClusterStatus struct {
 	Name         string
 	NodeStatuses map[string]*NodeStatus // keys are IP address strings.
 	RBAC         bool                   // true if RBAC is enabled
-	Client       *cmd.HTTPClient
 
 	Etcd EtcdClusterStatus
 	// TODO:
@@ -107,19 +96,16 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 
 	cs := new(ClusterStatus)
 	cs.NodeStatuses = statuses
-	cs.Client = &cmd.HTTPClient{
-		Client: &http.Client{},
-	}
 
 	for _, n := range controlPlanes(cluster.Nodes) {
 		ns := statuses[n.Address]
 		if ns.Etcd.HasData {
-			goto CheckEtcd
+			goto CHECK_ETCD
 		}
 	}
 	return cs, nil
 
-CheckEtcd:
+CHECK_ETCD:
 	cs.Etcd, err = c.getEtcdClusterStatus(ctx, inf, cluster.Nodes)
 	if err != nil {
 		log.Error("failed to get etcd cluster status", map[string]interface{}{
@@ -177,11 +163,7 @@ func (c Controller) getEtcdMembers(ctx context.Context, inf Infrastructure, cli 
 	for _, m := range resp.Members {
 		name, err := etcdGuessMemberName(m)
 		if err != nil {
-			log.Warn("failed to guess etcd member name", map[string]interface{}{
-				"member_id": m.ID,
-				log.FnError: err,
-			})
-			continue
+			return nil, err
 		}
 		members[name] = m
 	}
@@ -212,17 +194,11 @@ func (c Controller) getEtcdClusterStatus(ctx context.Context, inf Infrastructure
 	ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
 	defer cancel()
 	resp, err := cli.Grant(ct, 10)
-	if err == nil && resp.ID != clientv3.NoLease {
-		clusterStatus.ClusterHealth = EtcdClusterHealthy
-	} else {
-		clusterStatus.ClusterHealth = EtcdClusterUnhealthy
-	}
+	clusterStatus.IsHealthy = err == nil && resp.ID != clientv3.NoLease
 
-	clusterStatus.InSyncMembers = make(map[string]struct{})
+	clusterStatus.InSyncMembers = make(map[string]bool)
 	for name := range clusterStatus.Members {
-		if c.getEtcdMemberInSync(ctx, inf, name, resp.Revision) {
-			clusterStatus.InSyncMembers[name] = struct{}{}
-		}
+		clusterStatus.InSyncMembers[name] = c.getEtcdMemberInSync(ctx, inf, name, resp.Revision)
 	}
 
 	return clusterStatus, nil
