@@ -311,6 +311,7 @@ func BootstrapCommands(targets ...string) []Command {
 		endpoints = append(endpoints, "https://"+target+":2379")
 	}
 	commands = append(commands, Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")})
+	commands = append(commands, Command{Name: "setup-etcd-auth", Target: strings.Join(endpoints, ",")})
 	return commands
 }
 
