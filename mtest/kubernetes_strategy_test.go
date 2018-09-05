@@ -85,12 +85,6 @@ var _ = Describe("kubernetes strategy", func() {
 			return true
 		}).Should(BeTrue())
 	})
-
-	// unified in cluster_test.go: It should update node4 as control plane
-
-	// unified in cluster_test.go: It should remove not-in-cluster node2 from cluster
-
-	// unified in cluster_test.go: It should adjust command arguments
 })
 
 func currentLeader(service string) (string, error) {

@@ -68,13 +68,6 @@ var _ = Describe("etcd strategy", func() {
 		Expect(status.NodeStatuses[node2].Etcd.HasData).To(BeFalse())
 	})
 
-	// unit test of etcd strategy contains a case of "start unstarted member",
-	// but that case is not here, because it is difficult to make "unstarted member"
-
-	// unified in cluster_test.go: It should update node4 as control plane
-
-	// unified in cluster_test.go: It should remove not-in-cluster node2 from etcd cluster
-
 	It("should remove non-control-plane node2 from etcd cluster, and destroy it's etcd", func() {
 		By("Changing definition of node2")
 		ckecli("constraints", "set", "control-plane-count", "2")
