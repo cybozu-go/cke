@@ -11,12 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 )
 
 const (
 	defaultEtcdVolumeName = "etcd-cke"
 	etcdContainerName     = "etcd"
+	defaultEtcdTimeout    = 5 * time.Second
 )
 
 func etcdVolumeName(e EtcdParams) string {
@@ -119,7 +121,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 		return runContainerCommand{[]*Node{node}, etcdContainerName, opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
 	case 4:
 		o.step++
-		return waitEtcdSyncCommand{o.endpoints, 0}
+		return waitEtcdSyncCommand{o.endpoints, false}
 	default:
 		return nil
 	}
@@ -218,7 +220,7 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		o.step = 0
 		o.nodeIndex++
 		endpoints := []string{"https://" + node.Address + ":2379"}
-		return waitEtcdSyncCommand{endpoints, 0}
+		return waitEtcdSyncCommand{endpoints, false}
 	}
 	return nil
 }
@@ -237,7 +239,9 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error
 	}
 	defer cli.Close()
 
-	resp, err := cli.MemberList(ctx)
+	ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
+	resp, err := cli.MemberList(ct)
+	defer cancel()
 	if err != nil {
 		return err
 	}
@@ -255,7 +259,9 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error
 	}
 
 	if !inMember {
-		resp, err := cli.MemberAdd(ctx, []string{fmt.Sprintf("https://%s:2380", c.node.Address)})
+		ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
+		resp, err := cli.MemberAdd(ct, []string{fmt.Sprintf("https://%s:2380", c.node.Address)})
+		defer cancel()
 		if err != nil {
 			return err
 		}
@@ -293,8 +299,8 @@ func (c addEtcdMemberCommand) Command() Command {
 }
 
 type waitEtcdSyncCommand struct {
-	endpoints  []string
-	redundancy int
+	endpoints       []string
+	checkRedundancy bool
 }
 
 func (c waitEtcdSyncCommand) Run(ctx context.Context, inf Infrastructure) error {
@@ -304,19 +310,52 @@ func (c waitEtcdSyncCommand) Run(ctx context.Context, inf Infrastructure) error 
 	}
 	defer cli.Close()
 
-	for i := 0; i < 3; i++ {
-		_, err = cli.MemberList(ctx)
-		if err == nil {
-			return nil
+	retries := 3
+	retryBackoff := 5 * time.Second
+
+	for i := 1; ; i++ {
+		ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
+		resp, err := cli.Grant(ct, 10)
+		cancel()
+		if err == nil && resp.ID != clientv3.NoLease {
+			break
+		}
+		if i >= retries {
+			return errors.New("etcd sync timeout")
 		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(5 * time.Second):
+		case <-time.After(retryBackoff):
 		}
 	}
 
-	return errors.New("etcd sync timeout")
+	if c.checkRedundancy {
+		for i := 1; ; i++ {
+			healthyMemberCount := 0
+			for _, ep := range c.endpoints {
+				ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
+				_, err = cli.Status(ct, ep)
+				cancel()
+				if err == nil {
+					healthyMemberCount++
+				}
+			}
+			if healthyMemberCount > int(len(c.endpoints)+1)/2 {
+				break
+			}
+			if i >= retries {
+				return errors.New("etcd cluster does not have redundancy")
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(retryBackoff):
+			}
+		}
+	}
+
+	return nil
 }
 
 func (c waitEtcdSyncCommand) Command() Command {
@@ -339,7 +378,9 @@ func (c removeEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) er
 	defer cli.Close()
 
 	for _, id := range c.ids {
-		_, err := cli.MemberRemove(ctx, id)
+		ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
+		_, err := cli.MemberRemove(ct, id)
+		cancel()
 		if err != nil {
 			return err
 		}
@@ -381,7 +422,7 @@ func (o *etcdWaitClusterOp) NextCommand() Commander {
 	}
 	o.executed = true
 
-	return waitEtcdSyncCommand{o.endpoints, 0}
+	return waitEtcdSyncCommand{o.endpoints, false}
 }
 
 // EtcdRemoveMemberOp returns an Operator to remove member from etcd cluster.
@@ -456,7 +497,7 @@ func (o *etcdDestroyMemberOp) NextCommand() Commander {
 		return removeEtcdMemberCommand{o.endpoints, ids}
 	case 1:
 		o.step++
-		return waitEtcdSyncCommand{o.endpoints, 0}
+		return waitEtcdSyncCommand{o.endpoints, false}
 	case 2:
 		o.step++
 		return stopContainerCommand{node, etcdContainerName}
@@ -502,7 +543,7 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return waitEtcdSyncCommand{o.endpoints, 1}
+		return waitEtcdSyncCommand{o.endpoints, true}
 	case 1:
 		o.step++
 		return imagePullCommand{[]*Node{o.targets[o.nodeIndex]}, "etcd"}
@@ -562,7 +603,7 @@ func (o *etcdRestartOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return waitEtcdSyncCommand{o.endpoints, 1}
+		return waitEtcdSyncCommand{o.endpoints, true}
 	case 1:
 		o.step++
 		target := o.targets[o.nodeIndex]
