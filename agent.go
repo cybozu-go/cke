@@ -68,7 +68,7 @@ func (a sshAgent) Close() error {
 	return err
 }
 
-func (a sshAgent) Run(command string) (stdout, stderr []byte, e error) {
+func (a sshAgent) Run(command string) ([]byte, []byte, error) {
 	session, err := a.client.NewSession()
 	if err != nil {
 		log.Error("failed to create session: ", map[string]interface{}{
@@ -82,14 +82,17 @@ func (a sshAgent) Run(command string) (stdout, stderr []byte, e error) {
 	var stderrBuff bytes.Buffer
 	session.Stdout = &stdoutBuff
 	session.Stderr = &stderrBuff
-	if err := session.Run(command); err != nil {
+	err = session.Run(command)
+	stdout := stdoutBuff.Bytes()
+	stderr := stderrBuff.Bytes()
+	if err != nil {
 		log.Error("failed to run command: ", map[string]interface{}{
 			log.FnError: err,
 			"command":   command,
 		})
-		return nil, nil, err
+		return stdout, stderr, err
 	}
-	return stdoutBuff.Bytes(), stderrBuff.Bytes(), nil
+	return stdout, stderr, nil
 }
 
 func (a sshAgent) RunWithInput(command, input string) error {

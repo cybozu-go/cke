@@ -1,6 +1,8 @@
 package cke
 
 import (
+	"bufio"
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -30,10 +32,12 @@ type ContainerEngine interface {
 	Exists(name string) (bool, error)
 	// Stop stops the named container.
 	Stop(name string) error
+	// Kill kills the named container.
+	Kill(name string) error
 	// Remove removes the named container.
 	Remove(name string) error
 	// Inspect returns ServiceStatus for the named container.
-	Inspect(name string) (*ServiceStatus, error)
+	Inspect(name []string) (map[string]ServiceStatus, error)
 	// VolumeCreate creates a local volume.
 	VolumeCreate(name string) error
 	// VolumeRemove creates a local volume.
@@ -58,19 +62,22 @@ type docker struct {
 
 func (c docker) PullImage(name string) error {
 	img := Image(name)
-	data, _, err := c.agent.Run("docker image list --format '{{.Repository}}:{{.Tag}}'")
+	stdout, stderr, err := c.agent.Run("docker image list --format '{{.Repository}}:{{.Tag}}'")
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
 	}
 
-	for _, i := range strings.Split(string(data), "\n") {
+	for _, i := range strings.Split(string(stdout), "\n") {
 		if img == i {
 			return nil
 		}
 	}
 
-	_, _, err = c.agent.Run("docker image pull " + img)
-	return err
+	stdout, stderr, err = c.agent.Run("docker image pull " + img)
+	if err != nil {
+		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+	}
+	return nil
 }
 
 func (c docker) Run(name string, binds []Mount, command string) error {
@@ -121,9 +128,10 @@ func (c docker) RunSystem(name string, opts []string, params, extra ServiceParam
 		return err
 	}
 	if len(id) != 0 {
-		_, _, err := c.agent.Run("docker rm " + name)
+		cmdline := "docker rm " + name
+		stderr, stdout, err := c.agent.Run(cmdline)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
 		}
 	}
 
@@ -172,25 +180,37 @@ func (c docker) RunSystem(name string, opts []string, params, extra ServiceParam
 	args = append(args, params.ExtraArguments...)
 	args = append(args, extra.ExtraArguments...)
 
-	stdout, stderr, err := c.agent.Run(strings.Join(args, " "))
+	cmdline := strings.Join(args, " ")
+	stdout, stderr, err := c.agent.Run(cmdline)
 	if err != nil {
-		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+		return errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
 	}
 	return nil
 }
 
 func (c docker) Stop(name string) error {
-	stdout, stderr, err := c.agent.Run("docker container stop " + name)
+	cmdline := "docker container stop " + name
+	stdout, stderr, err := c.agent.Run(cmdline)
 	if err != nil {
-		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+		return errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
+	}
+	return nil
+}
+
+func (c docker) Kill(name string) error {
+	cmdline := "docker container kill " + name
+	stdout, stderr, err := c.agent.Run(cmdline)
+	if err != nil {
+		return errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
 	}
 	return nil
 }
 
 func (c docker) Remove(name string) error {
-	stdout, stderr, err := c.agent.Run("docker container rm " + name)
+	cmdline := "docker container rm " + name
+	stdout, stderr, err := c.agent.Run(cmdline)
 	if err != nil {
-		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+		return errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
 	}
 	return nil
 }
@@ -210,12 +230,32 @@ func (c docker) putData(data string) (string, error) {
 }
 
 func (c docker) getID(name string) (string, error) {
-	dockerPS := "docker ps -a --no-trunc --filter name=^/%s$ --format {{.ID}}"
-	data, _, err := c.agent.Run(fmt.Sprintf(dockerPS, name))
+	cmdline := "docker ps -a --no-trunc --filter name=^/" + name + "$ --format {{.ID}}"
+	stdout, stderr, err := c.agent.Run(cmdline)
 	if err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
 	}
-	return strings.TrimSpace(string(data)), nil
+	return strings.TrimSpace(string(stdout)), nil
+}
+
+func (c docker) getIDs(names []string) (map[string]string, error) {
+	filters := make([]string, len(names))
+	for i, name := range names {
+		filters[i] = "--filter name=^/" + name + "$"
+	}
+	cmdline := "docker ps -a --no-trunc " + strings.Join(filters, " ") + " --format {{.Names}}:{{.ID}}"
+	stdout, stderr, err := c.agent.Run(cmdline)
+	if err != nil {
+		return nil, errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
+	}
+
+	ids := make(map[string]string)
+	scanner := bufio.NewScanner(bytes.NewReader(stdout))
+	for scanner.Scan() {
+		nameID := strings.Split(scanner.Text(), ":")
+		ids[nameID[0]] = nameID[1]
+	}
+	return ids, nil
 }
 
 func (c docker) Exists(name string) (bool, error) {
@@ -226,69 +266,80 @@ func (c docker) Exists(name string) (bool, error) {
 	return len(id) != 0, nil
 }
 
-func (c docker) Inspect(name string) (*ServiceStatus, error) {
-	id, err := c.getID(name)
+func (c docker) Inspect(names []string) (map[string]ServiceStatus, error) {
+	nameIds, err := c.getIDs(names)
 	if err != nil {
 		return nil, err
-	}
-	if len(id) == 0 {
-		return &ServiceStatus{}, nil
 	}
 
-	data, _, err := c.agent.Run("docker container inspect " + id)
+	var ids []string
+	for _, id := range nameIds {
+		ids = append(ids, id)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	cmdline := "docker container inspect " + strings.Join(ids, " ")
+	stdout, stderr, err := c.agent.Run(cmdline)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
 	}
 
 	var djs []types.ContainerJSON
-	err = json.Unmarshal(data, &djs)
-	if err != nil {
-		return nil, err
-	}
-	if len(djs) != 1 {
-		return nil, errors.New("unexpected docker inspect result")
-	}
-	dj := djs[0]
-
-	params := new(ckeLabel)
-	label := dj.Config.Labels[ckeLabelName]
-
-	err = json.Unmarshal([]byte(label), params)
+	err = json.Unmarshal(stdout, &djs)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ServiceStatus{
-		Running:       dj.State.Running,
-		Image:         dj.Config.Image,
-		BuiltInParams: params.BuiltInParams,
-		ExtraParams:   params.ExtraParams,
-	}, nil
+	statuses := make(map[string]ServiceStatus)
+	for _, dj := range djs {
+		name := strings.TrimPrefix(dj.Name, "/")
+
+		var params ckeLabel
+		label := dj.Config.Labels[ckeLabelName]
+
+		err = json.Unmarshal([]byte(label), &params)
+		if err != nil {
+			return nil, err
+		}
+		statuses[name] = ServiceStatus{
+			Running:       dj.State.Running,
+			Image:         dj.Config.Image,
+			BuiltInParams: params.BuiltInParams,
+			ExtraParams:   params.ExtraParams,
+		}
+	}
+
+	return statuses, nil
 }
 
 func (c docker) VolumeCreate(name string) error {
-	stdout, stderr, err := c.agent.Run("docker volume create " + name)
+	cmdline := "docker volume create " + name
+	stdout, stderr, err := c.agent.Run(cmdline)
 	if err != nil {
-		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+		return errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
 	}
 	return nil
 }
 
 func (c docker) VolumeRemove(name string) error {
-	stdout, stderr, err := c.agent.Run("docker volume remove " + name)
+	cmdline := "docker volume remove " + name
+	stdout, stderr, err := c.agent.Run(cmdline)
 	if err != nil {
-		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
+		return errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
 	}
 	return nil
 }
 
 func (c docker) VolumeExists(name string) (bool, error) {
-	data, _, err := c.agent.Run("docker volume list -q")
+	cmdline := "docker volume list -q"
+	stdout, stderr, err := c.agent.Run(cmdline)
 	if err != nil {
-		return false, err
+		return false, errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
 	}
 
-	for _, n := range strings.Split(string(data), "\n") {
+	for _, n := range strings.Split(string(stdout), "\n") {
 		if n == name {
 			return true, nil
 		}

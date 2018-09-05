@@ -95,7 +95,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return imagePullCommand{o.nodes, "etcd"}
+		return imagePullCommand{o.nodes, etcdContainerName}
 	case 1:
 		o.step++
 		return issueEtcdCertificatesCommand{o.nodes}
@@ -269,11 +269,11 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error
 	}
 	// gofail: var etcdAfterMemberAdd struct{}
 	ce := Docker(inf.Agent(c.node.Address))
-	ss, err := ce.Inspect(etcdContainerName)
+	ss, err := ce.Inspect([]string{etcdContainerName})
 	if err != nil {
 		return err
 	}
-	if ss.Running {
+	if ss[etcdContainerName].Running {
 		return nil
 	}
 
