@@ -37,7 +37,7 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(nodes) > 0 {
 		return EtcdAddMemberOp(endpoints, nodes, c.Options.Etcd)
 	}
-	if !etcdClusterIsHealthy(cs.Etcd) {
+	if cs.Etcd.ClusterHealth != EtcdClusterHealthy {
 		return EtcdWaitClusterOp(endpoints)
 	}
 	nodes = newMemberControlPlane(cpNodes, cs.Etcd)
@@ -73,7 +73,7 @@ func unhealthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[strin
 		delete(mem, n.Address)
 	}
 	for k := range mem {
-		if cs.MemberHealth[k] == EtcdNodeHealthy {
+		if _, ok := cs.InSyncMembers[k]; ok {
 			delete(mem, k)
 		}
 	}
@@ -86,8 +86,8 @@ func unhealthyNonControlPlaneMember(nodes []*Node, cs EtcdClusterStatus) []*Node
 			return false
 		}
 		_, inMember := cs.Members[n.Address]
-		health := cs.MemberHealth[n.Address]
-		return health != EtcdNodeHealthy && inMember
+		_, inSync := cs.InSyncMembers[n.Address]
+		return inMember && inSync
 	})
 }
 
@@ -114,7 +114,7 @@ func healthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[string]
 		delete(mem, n.Address)
 	}
 	for k := range mem {
-		if cs.MemberHealth[k] != EtcdNodeHealthy {
+		if _, ok := cs.InSyncMembers[k]; !ok {
 			delete(mem, k)
 		}
 	}
@@ -128,12 +128,7 @@ func runningNonControlPlaneMember(allNodes []*Node, statuses map[string]*NodeSta
 }
 
 func etcdClusterIsHealthy(cs EtcdClusterStatus) bool {
-	for _, s := range cs.MemberHealth {
-		if s == EtcdNodeHealthy {
-			return true
-		}
-	}
-	return false
+	return cs.ClusterHealth == EtcdClusterHealthy
 }
 
 func outdatedEtcdImageMember(nodes []*Node, statuses map[string]*NodeStatus) []*Node {

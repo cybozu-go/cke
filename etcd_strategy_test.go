@@ -44,7 +44,9 @@ func Clean3Nodes() EtcdTestCluster {
 			"10.0.0.15": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: false}, HasData: false}},
 			"10.0.0.16": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: false}, HasData: false}},
 		},
-		Etcd: EtcdClusterStatus{},
+		Etcd: EtcdClusterStatus{
+			ClusterHealth: EtcdClusterUnhealthy,
+		},
 	}
 }
 
@@ -59,6 +61,7 @@ func UnhealthyNonCluster() EtcdTestCluster {
 			"10.0.0.12": {Etcd: EtcdStatus{}},
 		},
 		Etcd: EtcdClusterStatus{
+			ClusterHealth: EtcdClusterHealthy,
 			Members: map[string]*etcdserverpb.Member{
 				"10.0.0.11": {ID: 0, Name: "10.0.0.11"},
 				"10.0.1.11": {ID: 11, Name: "10.0.1.11"},
@@ -66,12 +69,10 @@ func UnhealthyNonCluster() EtcdTestCluster {
 				"10.0.1.13": {ID: 13, Name: "10.0.1.13"},
 				"10.0.1.14": {ID: 14, Name: "10.0.1.14"},
 			},
-			MemberHealth: map[string]EtcdNodeHealth{
-				"10.0.0.11": EtcdNodeHealthy,
-				"10.0.1.11": EtcdNodeHealthy,
-				"10.0.1.12": EtcdNodeUnhealthy,
-				"10.0.1.13": EtcdNodeHealthy,
-				"10.0.1.14": EtcdNodeUnhealthy,
+			InSyncMembers: map[string]struct{}{
+				"10.0.0.11": {},
+				"10.0.1.11": {},
+				"10.0.1.13": {},
 			},
 		},
 	}
@@ -92,17 +93,16 @@ func UnhealthyNonControlPlane() EtcdTestCluster {
 			"10.0.1.12": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true}, HasData: true}},
 		},
 		Etcd: EtcdClusterStatus{
+			ClusterHealth: EtcdClusterHealthy,
 			Members: map[string]*etcdserverpb.Member{
 				"10.0.0.11": {ID: 0, Name: "10.0.0.11"},
 				"10.0.0.12": {ID: 1, Name: "10.0.0.12"},
 				"10.0.1.11": {ID: 2, Name: "10.0.1.11"},
 				"10.0.1.12": {ID: 3, Name: "10.0.1.12"},
 			},
-			MemberHealth: map[string]EtcdNodeHealth{
-				"10.0.0.11": EtcdNodeHealthy,
-				"10.0.0.12": EtcdNodeHealthy,
-				"10.0.1.11": EtcdNodeUnhealthy,
-				"10.0.1.12": EtcdNodeUnhealthy,
+			InSyncMembers: map[string]struct{}{
+				"10.0.0.11": {},
+				"10.0.0.12": {},
 			},
 		},
 	}
@@ -123,16 +123,15 @@ func UnstartedMembers() EtcdTestCluster {
 			"10.0.0.14": {},
 		},
 		Etcd: EtcdClusterStatus{
+			ClusterHealth: EtcdClusterHealthy,
 			Members: map[string]*etcdserverpb.Member{
 				"10.0.0.11": {ID: 0, Name: "10.0.0.11"},
 				"10.0.0.12": {ID: 1, Name: "10.0.0.12"},
 				"10.0.0.13": {ID: 2, Name: ""},
 			},
-			MemberHealth: map[string]EtcdNodeHealth{
-				"10.0.0.11": EtcdNodeHealthy,
-				"10.0.0.12": EtcdNodeHealthy,
-				"10.0.0.13": EtcdNodeUnhealthy,
-				"10.0.0.14": EtcdNodeUnhealthy,
+			InSyncMembers: map[string]struct{}{
+				"10.0.0.11": {},
+				"10.0.0.12": {},
 			},
 		},
 	}
@@ -153,15 +152,14 @@ func NewlyControlPlane() EtcdTestCluster {
 			"10.0.0.14": {},
 		},
 		Etcd: EtcdClusterStatus{
+			ClusterHealth: EtcdClusterHealthy,
 			Members: map[string]*etcdserverpb.Member{
 				"10.0.0.11": {ID: 0, Name: "10.0.0.11"},
 				"10.0.0.12": {ID: 1, Name: "10.0.0.12"},
 			},
-			MemberHealth: map[string]EtcdNodeHealth{
-				"10.0.0.11": EtcdNodeHealthy,
-				"10.0.0.12": EtcdNodeHealthy,
-				"10.0.0.13": EtcdNodeUnhealthy,
-				"10.0.0.14": EtcdNodeUnhealthy,
+			InSyncMembers: map[string]struct{}{
+				"10.0.0.11": {},
+				"10.0.0.12": {},
 			},
 		},
 	}
@@ -179,15 +177,16 @@ func HealthyNonCluster() EtcdTestCluster {
 			"10.0.1.11": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true}, HasData: true}},
 		},
 		Etcd: EtcdClusterStatus{
+			ClusterHealth: EtcdClusterHealthy,
 			Members: map[string]*etcdserverpb.Member{
 				"10.0.0.11": {ID: 1, Name: "10.0.0.11"},
 				"10.0.0.12": {ID: 2, Name: "10.0.0.12"},
 				"10.0.1.11": {ID: 11, Name: "10.0.1.11"},
 			},
-			MemberHealth: map[string]EtcdNodeHealth{
-				"10.0.0.11": EtcdNodeHealthy,
-				"10.0.0.12": EtcdNodeHealthy,
-				"10.0.1.11": EtcdNodeHealthy,
+			InSyncMembers: map[string]struct{}{
+				"10.0.0.11": {},
+				"10.0.0.12": {},
+				"10.0.1.11": {},
 			},
 		},
 	}
@@ -208,16 +207,16 @@ func HealthyNonControlPlane() EtcdTestCluster {
 			"10.0.0.14": {},
 		},
 		Etcd: EtcdClusterStatus{
+			ClusterHealth: EtcdClusterHealthy,
 			Members: map[string]*etcdserverpb.Member{
 				"10.0.0.11": {ID: 1, Name: "10.0.0.11"},
 				"10.0.0.12": {ID: 2, Name: "10.0.0.12"},
 				"10.0.0.13": {ID: 3, Name: "10.0.0.13"},
 			},
-			MemberHealth: map[string]EtcdNodeHealth{
-				"10.0.0.11": EtcdNodeHealthy,
-				"10.0.0.12": EtcdNodeHealthy,
-				"10.0.0.13": EtcdNodeHealthy,
-				"10.0.0.14": EtcdNodeUnhealthy,
+			InSyncMembers: map[string]struct{}{
+				"10.0.0.11": {},
+				"10.0.0.12": {},
+				"10.0.0.13": {},
 			},
 		},
 	}
@@ -234,8 +233,9 @@ func UnhealthyControlPlane() EtcdTestCluster {
 			"10.0.0.12": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true}, HasData: true}},
 		},
 		Etcd: EtcdClusterStatus{
-			Members:      map[string]*etcdserverpb.Member{},
-			MemberHealth: map[string]EtcdNodeHealth{},
+			ClusterHealth: EtcdClusterUnhealthy,
+			Members:       map[string]*etcdserverpb.Member{},
+			InSyncMembers: map[string]struct{}{},
 		},
 	}
 }
@@ -254,15 +254,16 @@ func OutdatedImageControlPlane() EtcdTestCluster {
 			"10.0.0.13": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: true, Image: oldEtcd}, HasData: true}},
 		},
 		Etcd: EtcdClusterStatus{
+			ClusterHealth: EtcdClusterHealthy,
 			Members: map[string]*etcdserverpb.Member{
 				"10.0.0.11": {ID: 1, Name: "10.0.0.11"},
 				"10.0.0.12": {ID: 2, Name: "10.0.0.12"},
 				"10.0.0.13": {ID: 3, Name: "10.0.0.13"},
 			},
-			MemberHealth: map[string]EtcdNodeHealth{
-				"10.0.0.11": EtcdNodeHealthy,
-				"10.0.0.12": EtcdNodeHealthy,
-				"10.0.0.13": EtcdNodeHealthy,
+			InSyncMembers: map[string]struct{}{
+				"10.0.0.11": {},
+				"10.0.0.12": {},
+				"10.0.0.13": {},
 			},
 		},
 	}
@@ -282,15 +283,16 @@ func OutdatedParamsControlPlane() EtcdTestCluster {
 			"10.0.0.13": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{ExtraParams: oldParams, Image: EtcdImage, Running: true}, HasData: true}},
 		},
 		Etcd: EtcdClusterStatus{
+			ClusterHealth: EtcdClusterHealthy,
 			Members: map[string]*etcdserverpb.Member{
 				"10.0.0.11": {ID: 1, Name: "10.0.0.11"},
 				"10.0.0.12": {ID: 2, Name: "10.0.0.12"},
 				"10.0.0.13": {ID: 3, Name: "10.0.0.13"},
 			},
-			MemberHealth: map[string]EtcdNodeHealth{
-				"10.0.0.11": EtcdNodeHealthy,
-				"10.0.0.12": EtcdNodeHealthy,
-				"10.0.0.13": EtcdNodeHealthy,
+			InSyncMembers: map[string]struct{}{
+				"10.0.0.11": {},
+				"10.0.0.12": {},
+				"10.0.0.13": {},
 			},
 		},
 	}

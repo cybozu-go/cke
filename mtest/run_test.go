@@ -259,13 +259,9 @@ func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []
 			return false
 		}
 
-		health, ok := status.Etcd.MemberHealth[host]
+		_, ok = status.Etcd.InSyncMembers[host]
 		if !ok {
-			fmt.Printf("%s's health is unknown\n", host)
-			return false
-		}
-		if health != cke.EtcdNodeHealthy {
-			fmt.Printf("%s is not healthy\n", host)
+			fmt.Printf("%s is not in sync\n", host)
 			return false
 		}
 	}
