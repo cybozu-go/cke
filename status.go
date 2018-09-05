@@ -209,7 +209,9 @@ func (c Controller) getEtcdMembers(ctx context.Context, inf Infrastructure, node
 	}
 	defer cli.Close()
 
-	resp, err := cli.MemberList(ctx)
+	ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
+	resp, err := cli.MemberList(ct)
+	defer cancel()
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +246,9 @@ func (c Controller) getEtcdHealth(ctx context.Context, inf Infrastructure, addre
 	}
 	defer cli.Close()
 
-	_, err = cli.Get(ctx, "health")
+	ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
+	_, err = cli.Get(ct, "health")
+	defer cancel()
 	if err == nil || err == rpctypes.ErrPermissionDenied {
 		return EtcdNodeHealthy
 	}
