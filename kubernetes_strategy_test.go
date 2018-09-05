@@ -185,13 +185,15 @@ func testKubernetesDecideToDo(t *testing.T) {
 			},
 		},
 		{
-			Name: "Stop the container because its command arguments are different from expected ones",
+			Name: "Stop rivers because its command arguments are different from expected ones",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes, Kubelets: allNodes, Proxies: allNodes,
 			},
 			Commands: []Command{
 				{"kill-container", "10.0.0.11", ""},
+				{"kill-container", "10.0.0.12", ""},
+				{"kill-container", "10.0.0.13", ""},
 			},
 		},
 	}

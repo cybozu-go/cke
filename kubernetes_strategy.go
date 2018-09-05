@@ -88,10 +88,18 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 }
 
 func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
-	cpNodes := controlPlanes(c.Nodes)
+	var cpNodes []*Node
+	var nonCpNodes []*Node
+	for _, n := range c.Nodes {
+		if n.ControlPlane {
+			cpNodes = append(cpNodes, n)
+		} else {
+			nonCpNodes = append(nonCpNodes, n)
+		}
+	}
 
-	// Check diff of rivers options
-	target := filterNodes(c.Nodes, func(n *Node) bool {
+	// Check diff of rivers options for control planes
+	target := filterNodes(cpNodes, func(n *Node) bool {
 		riversStatus := cs.NodeStatuses[n.Address].Rivers
 		if !riversParams(cpNodes).Equal(riversStatus.BuiltInParams) {
 			return true
@@ -104,7 +112,24 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(target) > 0 {
 		// Stop just one of targets and go to next iteration, in which
 		// the stopped target will be started
-		return RiversStopOp([]*Node{target[0]})
+		return RiversStopOp(target)
+	}
+
+	// Check diff of rivers options for worker nodes
+	target = filterNodes(nonCpNodes, func(n *Node) bool {
+		riversStatus := cs.NodeStatuses[n.Address].Rivers
+		if !riversParams(cpNodes).Equal(riversStatus.BuiltInParams) {
+			return true
+		}
+		if !c.Options.Rivers.Equal(riversStatus.ExtraParams) {
+			return true
+		}
+		return false
+	})
+	if len(target) > 0 {
+		// Stop just one of targets and go to next iteration, in which
+		// the stopped target will be started
+		return RiversStopOp(target)
 	}
 
 	// Check diff of kube-apiserver options
@@ -173,7 +198,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(target) > 0 {
 		// Stop just one of targets and go to next iteration, in which
 		// the stopped target will be started
-		return KubeletStopOp([]*Node{target[0]})
+		return KubeletStopOp(target)
 	}
 
 	return nil
