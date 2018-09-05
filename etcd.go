@@ -381,6 +381,9 @@ func (c setupEtcdAuthCommand) Run(ctx context.Context, inf Infrastructure) error
 	}
 	defer cli.Close()
 
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+	defer cancel()
+
 	err = addUserRole(ctx, cli, "root", "")
 	if err != nil {
 		return err
@@ -391,9 +394,7 @@ func (c setupEtcdAuthCommand) Run(ctx context.Context, inf Infrastructure) error
 		return err
 	}
 
-	ctx, cancel = context.WithTimeout(ctx, defaultEtcdTimeout)
 	_, err = cli.AuthEnable(ctx)
-	defer cancel()
 	return err
 }
 
@@ -411,31 +412,23 @@ func addUserRole(ctx context.Context, cli *clientv3.Client, name, prefix string)
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
 	_, err = cli.UserAdd(ctx, name, hex.EncodeToString(r))
-	defer cancel()
 	if err != nil {
 		return err
 	}
 
 	if prefix != "" {
-		ctx, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
 		_, err := cli.RoleAdd(ctx, name)
-		defer cancel()
 		if err != nil {
 			return err
 		}
 
-		ctx, cancel = context.WithTimeout(ctx, defaultEtcdTimeout)
 		_, err = cli.RoleGrantPermission(ctx, name, prefix, clientv3.GetPrefixRangeEnd(prefix), clientv3.PermissionType(clientv3.PermReadWrite))
-		defer cancel()
 		if err != nil {
 			return err
 		}
 
-		ctx, cancel = context.WithTimeout(ctx, defaultEtcdTimeout)
 		_, err = cli.UserGrantRole(ctx, name, name)
-		defer cancel()
 		if err != nil {
 			return err
 		}
