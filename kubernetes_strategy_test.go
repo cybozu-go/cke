@@ -1,6 +1,7 @@
 package cke
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -74,12 +75,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 			Commands: []Command{
 				{"image-pull", "rivers", ""},
 				{"mkdir", "/var/log/rivers", ""},
-				{"run-container", "10.0.0.11", ""},
-				{"run-container", "10.0.0.12", ""},
-				{"run-container", "10.0.0.13", ""},
-				{"run-container", "10.0.0.14", ""},
-				{"run-container", "10.0.0.15", ""},
-				{"run-container", "10.0.0.16", ""},
+				{"run-container", strings.Join(allNodes, ","), ""},
 			},
 		},
 		{
@@ -91,6 +87,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 			Commands: []Command{
 				{"image-pull", "kube-apiserver", ""},
 				{"mkdir", "/var/log/kubernetes/apiserver", ""},
+				{"issue-apiserver-certificates", "10.0.0.11,10.0.0.12,10.0.0.13", ""},
 				{"run-container", "10.0.0.11", ""},
 				{"run-container", "10.0.0.12", ""},
 				{"run-container", "10.0.0.13", ""},
@@ -106,9 +103,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				{"make-file", "/etc/kubernetes/controller-manager/kubeconfig", ""},
 				{"image-pull", "kube-controller-manager", ""},
 				{"mkdir", "/var/log/kubernetes/controller-manager", ""},
-				{"run-container", "10.0.0.11", ""},
-				{"run-container", "10.0.0.12", ""},
-				{"run-container", "10.0.0.13", ""},
+				{"run-container", strings.Join(cpNodes, ","), ""},
 			},
 		},
 		{
@@ -121,9 +116,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				{"make-file", "/etc/kubernetes/scheduler/kubeconfig", ""},
 				{"image-pull", "kube-scheduler", ""},
 				{"mkdir", "/var/log/kubernetes/scheduler", ""},
-				{"run-container", "10.0.0.11", ""},
-				{"run-container", "10.0.0.12", ""},
-				{"run-container", "10.0.0.13", ""},
+				{"run-container", strings.Join(cpNodes, ","), ""},
 			},
 		},
 		{
@@ -137,13 +130,8 @@ func testKubernetesDecideToDo(t *testing.T) {
 				{"image-pull", "kubelet", ""},
 				{"image-pull", "pause", ""},
 				{"mkdir", "/var/log/kubernetes/kubelet", ""},
-				{"volume-create", "10.0.0.11,10.0.0.12,10.0.0.13,10.0.0.14,10.0.0.15,10.0.0.16", ""},
-				{"run-container", "10.0.0.11", ""},
-				{"run-container", "10.0.0.12", ""},
-				{"run-container", "10.0.0.13", ""},
-				{"run-container", "10.0.0.14", ""},
-				{"run-container", "10.0.0.15", ""},
-				{"run-container", "10.0.0.16", ""},
+				{"volume-create", strings.Join(allNodes, ","), ""},
+				{"run-container", strings.Join(allNodes, ","), ""},
 			},
 		},
 		{
@@ -156,12 +144,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				{"make-file", "/etc/kubernetes/proxy/kubeconfig", ""},
 				{"image-pull", "kube-proxy", ""},
 				{"mkdir", "/var/log/kubernetes/proxy", ""},
-				{"run-container", "10.0.0.11", ""},
-				{"run-container", "10.0.0.12", ""},
-				{"run-container", "10.0.0.13", ""},
-				{"run-container", "10.0.0.14", ""},
-				{"run-container", "10.0.0.15", ""},
-				{"run-container", "10.0.0.16", ""},
+				{"run-container", strings.Join(allNodes, ","), ""},
 			},
 		},
 		{

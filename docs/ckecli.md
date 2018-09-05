@@ -41,6 +41,8 @@ Show all constraints on the cluster.
 
 `JSON` is a filename whose body is a JSON object described in [schema.md](schema.md#vault).
 
+If `JSON` is "-", `ckecli` reads from stdin.
+
 `ckecli ca set NAME PEM`
 ------------------------
 

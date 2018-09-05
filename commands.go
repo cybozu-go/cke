@@ -218,7 +218,7 @@ func (c volumeRemoveCommand) Command() Command {
 }
 
 type runContainerCommand struct {
-	node   *Node
+	nodes  []*Node
 	name   string
 	opts   []string
 	params ServiceParams
@@ -226,14 +226,25 @@ type runContainerCommand struct {
 }
 
 func (c runContainerCommand) Run(ctx context.Context, inf Infrastructure) error {
-	ce := Docker(inf.Agent(c.node.Address))
-	return ce.RunSystem(c.name, c.opts, c.params, c.extra)
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		ce := Docker(inf.Agent(n.Address))
+		env.Go(func(ctx context.Context) error {
+			return ce.RunSystem(c.name, c.opts, c.params, c.extra)
+		})
+	}
+	env.Stop()
+	return env.Wait()
 }
 
 func (c runContainerCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
 	return Command{
 		Name:   "run-container",
-		Target: c.node.Address,
+		Target: strings.Join(targets, ","),
 		Detail: c.name,
 	}
 }
@@ -265,5 +276,59 @@ func (c stopContainerCommand) Command() Command {
 		Name:   "stop-container",
 		Target: c.node.Address,
 		Detail: c.name,
+	}
+}
+
+type issueEtcdCertificatesCommand struct {
+	nodes []*Node
+}
+
+func (c issueEtcdCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, node := range c.nodes {
+		n := node
+		env.Go(func(ctx context.Context) error {
+			return issueEtcdCertificates(ctx, inf, n)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c issueEtcdCertificatesCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "issue-etcd-certificates",
+		Target: strings.Join(targets, ","),
+	}
+}
+
+type issueAPIServerCertificatesCommand struct {
+	nodes []*Node
+}
+
+func (c issueAPIServerCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, node := range c.nodes {
+		n := node
+		env.Go(func(ctx context.Context) error {
+			return issueAPIServerCertificates(ctx, inf, n)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c issueAPIServerCertificatesCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "issue-apiserver-certificates",
+		Target: strings.Join(targets, ","),
 	}
 }

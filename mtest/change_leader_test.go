@@ -79,7 +79,7 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 		Expect(newLeader).NotTo(Equal(firstLeader))
 	})
 
-	It("should remove and recover node1", func() {
+	It("should remove and recover node2", func() {
 		By("Checking current leader")
 		firstLeader := strings.TrimSpace(string(ckecli("leader")))
 		Expect(firstLeader).To(Or(Equal("host1"), Equal("host2")))
@@ -87,18 +87,18 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 		By("Crashing CKE after stopping docker container")
 		injectFailure("dockerAfterContainerStop")
 
-		By("Remove node1 from control plane")
+		By("Remove node2 from control plane")
 		ckecli("constraints", "set", "control-plane-count", "2")
 		cluster := getCluster()
-		cluster.Nodes[0].ControlPlane = false
-		cluster.Nodes[1].ControlPlane = true
+		cluster.Nodes[0].ControlPlane = true
+		cluster.Nodes[1].ControlPlane = false
 		cluster.Nodes[2].ControlPlane = true
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
 		Eventually(func() bool {
-			controlPlanes := []string{node2, node3}
-			workers := []string{node1, node4, node5, node6}
+			controlPlanes := []string{node1, node3}
+			workers := []string{node2, node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
 				return false
@@ -106,9 +106,9 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
 		}).Should(BeTrue())
 
-		By("Add node1 as control plane")
+		By("Add node2 as control plane")
 		ckecli("constraints", "set", "control-plane-count", "3")
-		cluster.Nodes[0].ControlPlane = true
+		cluster.Nodes[1].ControlPlane = true
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")

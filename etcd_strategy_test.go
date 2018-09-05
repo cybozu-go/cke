@@ -300,6 +300,7 @@ func BootstrapCommands(targets ...string) []Command {
 	hosts := strings.Join(targets, ",")
 	commands := []Command{
 		{Name: "image-pull", Target: "etcd"},
+		{Name: "issue-etcd-certificates", Target: hosts},
 		{Name: "volume-create", Target: hosts},
 	}
 	for _, addr := range targets {
@@ -307,7 +308,7 @@ func BootstrapCommands(targets ...string) []Command {
 	}
 	var endpoints []string
 	for _, target := range targets {
-		endpoints = append(endpoints, "http://"+target+":2379")
+		endpoints = append(endpoints, "https://"+target+":2379")
 	}
 	commands = append(commands, Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")})
 	return commands
@@ -319,8 +320,9 @@ func AddMemberCommands(addr string) []Command {
 		{Name: "stop-container", Target: addr},
 		{Name: "volume-remove", Target: addr},
 		{Name: "volume-create", Target: addr},
+		{Name: "issue-etcd-certificates", Target: addr},
 		{Name: "add-etcd-member", Target: addr},
-		{Name: "wait-etcd-sync", Target: "http://" + addr + ":2379"},
+		{Name: "wait-etcd-sync", Target: "https://" + addr + ":2379"},
 	}
 }
 
@@ -335,7 +337,7 @@ func RemoveMemberCommands(ids ...uint64) []Command {
 func DestroyMemberCommands(cps []string, addrs []string, ids []uint64) []Command {
 	var endpoints []string
 	for _, cp := range cps {
-		endpoints = append(endpoints, "http://"+cp+":2379")
+		endpoints = append(endpoints, "https://"+cp+":2379")
 	}
 	var commands []Command
 	for i, addr := range addrs {
@@ -352,7 +354,7 @@ func DestroyMemberCommands(cps []string, addrs []string, ids []uint64) []Command
 func UpdateImageMemberCommands(cps []string) []Command {
 	var endpoints []string
 	for _, cp := range cps {
-		endpoints = append(endpoints, "http://"+cp+":2379")
+		endpoints = append(endpoints, "https://"+cp+":2379")
 	}
 	var commands []Command
 	for _, cp := range cps {
@@ -369,7 +371,7 @@ func UpdateImageMemberCommands(cps []string) []Command {
 func RestartCommands(cps []string) []Command {
 	var endpoints []string
 	for _, cp := range cps {
-		endpoints = append(endpoints, "http://"+cp+":2379")
+		endpoints = append(endpoints, "https://"+cp+":2379")
 	}
 	var commands []Command
 	for _, cp := range cps {
@@ -385,7 +387,7 @@ func RestartCommands(cps []string) []Command {
 func WaitMemberCommands(cps []string) []Command {
 	var endpoints []string
 	for _, cp := range cps {
-		endpoints = append(endpoints, "http://"+cp+":2379")
+		endpoints = append(endpoints, "https://"+cp+":2379")
 	}
 	return []Command{
 		{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")},

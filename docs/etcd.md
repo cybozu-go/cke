@@ -14,8 +14,9 @@ CKE does not do etcd bootstrap, when at-least one control plane nodes have etcd 
 CKE does the following steps to bootstrap etcd cluster.
 
 1. Pull etcd images on each control plane node.
-2. Create volume on control plane nodes.
-3. Starts etcd container on each node.  The initial cluster consist of the control plane nodes.
+2. Issue certificates by Vault.
+3. Create volume on control plane nodes.
+4. Starts etcd container on each node.  The initial cluster consist of the control plane nodes.
 
 Scale-up and scale-down cluster
 -------------------------------

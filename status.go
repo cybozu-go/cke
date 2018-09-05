@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"time"
 
-	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cmd"
@@ -112,14 +110,23 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 		Client: &http.Client{},
 	}
 
-	cs.Etcd.Members, err = c.getEtcdMembers(ctx, cluster.Nodes)
+	for _, n := range controlPlanes(cluster.Nodes) {
+		ns := statuses[n.Address]
+		if ns.Etcd.HasData {
+			goto CHECK_ETCD
+		}
+	}
+	return cs, nil
+
+CHECK_ETCD:
+	cs.Etcd.Members, err = c.getEtcdMembers(ctx, inf, cluster.Nodes)
 	if err != nil {
-		// Ignore err since the cluster may be on bootstrap
-		log.Warn("failed to get etcd members", map[string]interface{}{
+		log.Error("failed to get etcd members", map[string]interface{}{
 			log.FnError: err,
 		})
+		return nil, err
 	}
-	cs.Etcd.MemberHealth = c.getEtcdMemberHealth(ctx, cs.Etcd.Members)
+	cs.Etcd.MemberHealth = c.getEtcdMemberHealth(ctx, inf, cs.Etcd.Members)
 
 	// TODO: query k8s cluster status and store it to ClusterStatus.
 
@@ -188,18 +195,15 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 	return status, nil
 }
 
-func (c Controller) getEtcdMembers(ctx context.Context, nodes []*Node) (map[string]*etcdserverpb.Member, error) {
+func (c Controller) getEtcdMembers(ctx context.Context, inf Infrastructure, nodes []*Node) (map[string]*etcdserverpb.Member, error) {
 	var endpoints []string
 	for _, n := range nodes {
 		if n.ControlPlane {
-			endpoints = append(endpoints, fmt.Sprintf("http://%s:2379", n.Address))
+			endpoints = append(endpoints, fmt.Sprintf("https://%s:2379", n.Address))
 		}
 	}
 
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: 2 * time.Second,
-	})
+	cli, err := inf.NewEtcdClient(endpoints)
 	if err != nil {
 		return nil, err
 	}
@@ -224,20 +228,17 @@ func (c Controller) getEtcdMembers(ctx context.Context, nodes []*Node) (map[stri
 	return members, nil
 }
 
-func (c Controller) getEtcdMemberHealth(ctx context.Context, members map[string]*etcdserverpb.Member) map[string]EtcdNodeHealth {
+func (c Controller) getEtcdMemberHealth(ctx context.Context, inf Infrastructure, members map[string]*etcdserverpb.Member) map[string]EtcdNodeHealth {
 	memberHealth := make(map[string]EtcdNodeHealth)
 	for name := range members {
-		memberHealth[name] = c.getEtcdHealth(ctx, name)
+		memberHealth[name] = c.getEtcdHealth(ctx, inf, name)
 	}
 	return memberHealth
 }
 
-func (c Controller) getEtcdHealth(ctx context.Context, address string) EtcdNodeHealth {
-	endpoints := []string{fmt.Sprintf("http://%s:2379", address)}
-	cli, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
-		DialTimeout: 2 * time.Second,
-	})
+func (c Controller) getEtcdHealth(ctx context.Context, inf Infrastructure, address string) EtcdNodeHealth {
+	endpoints := []string{fmt.Sprintf("https://%s:2379", address)}
+	cli, err := inf.NewEtcdClient(endpoints)
 	if err != nil {
 		return EtcdNodeUnhealthy
 	}

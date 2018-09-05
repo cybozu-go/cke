@@ -1,10 +1,12 @@
 package mtest
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/cybozu-go/cke"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -31,17 +33,34 @@ var _ = BeforeSuite(func() {
 		execSafeAt(h, "sync")
 	}
 
+	// wait cke
+	Eventually(func() error {
+		_, _, err := execAt(host1, "test", "-f", "/usr/bin/jq")
+		if err != nil {
+			return err
+		}
+		_, _, err = execAt(host2, "test", "-f", "/usr/bin/jq")
+		return err
+	}).Should(Succeed())
+
 	err = stopManagementEtcd(sshClients[host1])
 	Expect(err).NotTo(HaveOccurred())
-	err = runManagementEtcd(sshClients[host1])
-	Expect(err).NotTo(HaveOccurred())
-
 	err = stopVault(sshClients[host1])
 	Expect(err).NotTo(HaveOccurred())
-	err = runVault(sshClients[host1])
-	Expect(err).NotTo(HaveOccurred())
 
-	time.Sleep(time.Second)
+	for _, h := range []string{host1, host2} {
+		execSafeAt(h, "/data/setup-cke.sh")
+	}
+
+	etcd, err := connectEtcd()
+	Expect(err).NotTo(HaveOccurred())
+	defer etcd.Close()
+
+	resp, err := etcd.Get(context.Background(), "vault")
+	Expect(err).NotTo(HaveOccurred())
+	Expect(int(resp.Count)).NotTo(BeZero())
+	err = cke.ConnectVault(context.Background(), resp.Kvs[0].Value)
+	Expect(err).NotTo(HaveOccurred())
 
 	setupCKE()
 

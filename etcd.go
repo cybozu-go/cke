@@ -2,18 +2,15 @@ package cke
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/coreos/etcd/etcdserver/api/etcdhttp"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 )
 
@@ -99,8 +96,11 @@ func (o *etcdBootOp) NextCommand() Commander {
 		return imagePullCommand{o.nodes, "etcd"}
 	case 1:
 		o.step++
-		return volumeCreateCommand{o.nodes, volname}
+		return issueEtcdCertificatesCommand{o.nodes}
 	case 2:
+		o.step++
+		return volumeCreateCommand{o.nodes, volname}
+	case 3:
 		node := o.nodes[o.cpIndex]
 
 		o.cpIndex++
@@ -110,13 +110,14 @@ func (o *etcdBootOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
+			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		var initialCluster []string
 		for _, n := range o.nodes {
-			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
+			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
-		return runContainerCommand{node, etcdContainerName, opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
-	case 3:
+		return runContainerCommand{[]*Node{node}, etcdContainerName, opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
+	case 4:
 		o.step++
 		return waitEtcdSyncCommand{o.endpoints, 0}
 	default:
@@ -129,10 +130,18 @@ func etcdBuiltInParams(node *Node, initialCluster []string, state string) Servic
 	// compare paramter on detecting outdated parameters to restart it.
 	args := []string{
 		"--name=" + node.Address,
-		"--listen-peer-urls=http://0.0.0.0:2380",
-		"--listen-client-urls=http://0.0.0.0:2379",
-		"--initial-advertise-peer-urls=http://" + node.Address + ":2380",
-		"--advertise-client-urls=http://" + node.Address + ":2379",
+		"--listen-peer-urls=https://0.0.0.0:2380",
+		"--listen-client-urls=https://0.0.0.0:2379",
+		"--initial-advertise-peer-urls=https://" + node.Address + ":2380",
+		"--advertise-client-urls=https://" + node.Address + ":2379",
+		"--cert-file=/etc/etcd/pki/server.crt",
+		"--key-file=/etc/etcd/pki/server.key",
+		"--client-cert-auth=true",
+		"--trusted-ca-file=/etc/etcd/pki/ca-client.crt",
+		"--peer-cert-file=/etc/etcd/pki/peer.crt",
+		"--peer-key-file=/etc/etcd/pki/peer.key",
+		"--peer-client-cert-auth=true",
+		"--peer-trusted-ca-file=/etc/etcd/pki/ca-peer.crt",
 		"--initial-cluster=" + strings.Join(initialCluster, ","),
 		"--initial-cluster-token=cke",
 		"--initial-cluster-state=" + state,
@@ -196,15 +205,19 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		return volumeCreateCommand{[]*Node{node}, volname}
 	case 4:
 		o.step++
+		return issueEtcdCertificatesCommand{[]*Node{node}}
+	case 5:
+		o.step++
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
+			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		return addEtcdMemberCommand{o.endpoints, node, opts, extra}
-	case 5:
+	case 6:
 		o.step = 0
 		o.nodeIndex++
-		endpoints := []string{"http://" + node.Address + ":2379"}
+		endpoints := []string{"https://" + node.Address + ":2379"}
 		return waitEtcdSyncCommand{endpoints, 0}
 	}
 	return nil
@@ -242,7 +255,7 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error
 	}
 
 	if !inMember {
-		resp, err := cli.MemberAdd(ctx, []string{fmt.Sprintf("http://%s:2380", c.node.Address)})
+		resp, err := cli.MemberAdd(ctx, []string{fmt.Sprintf("https://%s:2380", c.node.Address)})
 		if err != nil {
 			return err
 		}
@@ -285,37 +298,24 @@ type waitEtcdSyncCommand struct {
 }
 
 func (c waitEtcdSyncCommand) Run(ctx context.Context, inf Infrastructure) error {
+	cli, err := inf.NewEtcdClient(c.endpoints)
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
 	for i := 0; i < 3; i++ {
-		count := 0
-		for _, ep := range c.endpoints {
-			u := ep + "/health"
-			req, err := http.NewRequest("GET", u, nil)
-			if err != nil {
-				continue
-			}
-			req = req.WithContext(ctx)
-			resp, err := inf.NewHTTPClient().Do(req)
-			if err != nil {
-				continue
-			}
-			health := new(etcdhttp.Health)
-			err = json.NewDecoder(resp.Body).Decode(health)
-			resp.Body.Close()
-			if err != nil || health.Health != "true" {
-				continue
-			}
-			count++
-		}
-		if count >= int(len(c.endpoints)/2)+1+c.redundancy {
+		_, err = cli.MemberList(ctx)
+		if err == nil {
 			return nil
 		}
-
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(5 * time.Second):
 		}
 	}
+
 	return errors.New("etcd sync timeout")
 }
 
@@ -516,13 +516,14 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
+			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		var initialCluster []string
 		for _, n := range o.cpNodes {
-			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
+			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
 		o.nodeIndex++
-		return runContainerCommand{target, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
+		return runContainerCommand{[]*Node{target}, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
 	}
 	return nil
 }
@@ -572,13 +573,14 @@ func (o *etcdRestartOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
+			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		var initialCluster []string
 		for _, n := range o.cpNodes {
-			initialCluster = append(initialCluster, n.Address+"=http://"+n.Address+":2380")
+			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
 		o.nodeIndex++
-		return runContainerCommand{target, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
+		return runContainerCommand{[]*Node{target}, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
 	}
 	return nil
 }

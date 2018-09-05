@@ -41,11 +41,15 @@ func (c vaultConfig) Execute(ctx context.Context, f *flag.FlagSet) subcommands.E
 	}
 	fileName := f.Arg(0)
 
-	r, err := os.Open(fileName)
-	if err != nil {
-		return handleError(err)
+	r := os.Stdin
+	var err error
+	if fileName != "-" {
+		r, err = os.Open(fileName)
+		if err != nil {
+			return handleError(err)
+		}
+		defer r.Close()
 	}
-	defer r.Close()
 
 	cfg := new(cke.VaultConfig)
 	err = json.NewDecoder(r).Decode(cfg)

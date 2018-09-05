@@ -13,8 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cmd"
+	"github.com/cybozu-go/etcdutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"golang.org/x/crypto/ssh"
@@ -79,57 +81,6 @@ func prepareSSHClients(addresses ...string) error {
 	}
 
 	return nil
-}
-
-func stopManagementEtcd(client *ssh.Client) error {
-	command := "sudo systemctl stop my-etcd.service; sudo rm -rf /home/cybozu/default.etcd"
-	sess, err := client.NewSession()
-	if err != nil {
-		return err
-	}
-	defer sess.Close()
-
-	sess.Run(command)
-	return nil
-}
-
-func runManagementEtcd(client *ssh.Client) error {
-	command := "sudo systemd-run --unit=my-etcd.service /data/etcd --listen-client-urls=http://0.0.0.0:2379 --advertise-client-urls=http://localhost:2379 --data-dir /home/cybozu/default.etcd"
-	sess, err := client.NewSession()
-	if err != nil {
-		return err
-	}
-	defer sess.Close()
-
-	return sess.Run(command)
-}
-
-func runVault(client *ssh.Client) error {
-	command := "sudo systemd-run --unit=my-vault.service /data/vault server -dev"
-	sess, err := client.NewSession()
-	if err != nil {
-		return err
-	}
-	defer sess.Close()
-
-	return sess.Run(command)
-}
-
-func stopVault(client *ssh.Client) error {
-	command := "sudo systemctl stop my-vault.service"
-	sess, err := client.NewSession()
-	if err != nil {
-		return err
-	}
-	defer sess.Close()
-
-	sess.Run(command)
-	return nil
-}
-
-func vaultClient(host string, args ...string) string {
-	args = append([]string{"VAULT_ADDR=http://127.0.0.1:8200", "/data/vault"}, args...)
-	return execSafeAt(host, args...)
 }
 
 func stopCKE() error {
@@ -238,10 +189,23 @@ func getCluster() *cke.Cluster {
 	return &cluster
 }
 
+func connectEtcd() (*clientv3.Client, error) {
+	etcdConfig := cke.NewEtcdConfig()
+	etcdConfig.Endpoints = []string{"http://" + host1 + ":2379"}
+	return etcdutil.NewClient(etcdConfig)
+}
+
 func getClusterStatus() (*cke.ClusterStatus, error) {
 	controller := cke.NewController(nil, 0, time.Second*2)
 	cluster := getCluster()
-	inf, err := cke.NewInfrastructure(context.Background(), cluster)
+
+	etcd, err := connectEtcd()
+	if err != nil {
+		return nil, err
+	}
+	defer etcd.Close()
+
+	inf, err := cke.NewInfrastructure(context.Background(), cluster, cke.Storage{etcd})
 	if err != nil {
 		return nil, err
 	}
@@ -280,10 +244,6 @@ func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []
 			fmt.Printf("%s is running\n", host)
 			return false
 		}
-		// if status.NodeStatuses[host].Etcd.HasData {
-		// 	fmt.Printf("%s has data\n", host)
-		// 	return false
-		// }
 	}
 	if len(controlPlanes) != len(status.Etcd.Members) {
 		fmt.Printf("len(controlPlanes) != len(status.Etcd.Members), %d != %d\n", len(controlPlanes), len(status.Etcd.Members))
@@ -436,17 +396,33 @@ func checkComponentStatuses(host string) bool {
 	return true
 }
 
+func stopManagementEtcd(client *ssh.Client) error {
+	command := "sudo systemctl stop my-etcd.service; sudo rm -rf /home/cybozu/default.etcd"
+	sess, err := client.NewSession()
+	if err != nil {
+		return err
+	}
+	defer sess.Close()
+	sess.Run(command)
+	return nil
+}
+
+func stopVault(client *ssh.Client) error {
+	command := "sudo systemctl stop my-vault.service"
+	sess, err := client.NewSession()
+	if err != nil {
+		return err
+	}
+	defer sess.Close()
+	sess.Run(command)
+	return nil
+}
+
 func setupCKE() {
 	err := stopCKE()
 	Expect(err).NotTo(HaveOccurred())
 	err = runCKE()
 	Expect(err).NotTo(HaveOccurred())
-
-	// wait cke
-	Eventually(func() error {
-		_, _, err := execAt(host1, "/data/ckecli", "history")
-		return err
-	}).Should(Succeed())
 }
 
 func initializeControlPlane() {

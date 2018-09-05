@@ -12,12 +12,18 @@ files:
     file: cke
   - name: ckecli
     file: ckecli
+  - name: cluster.yml
+    file: cke-cluster.yml
   - name: etcd
     file: etcd
   - name: etcdctl
     file: etcdctl
   - name: vault
     file: vault
+  - name: kubectl
+    file: kubectl
+  - name: setup-cke.sh
+    file: setup-cke.sh
 ---
 kind: Image
 name: ubuntu
