@@ -71,13 +71,6 @@ func issueEtcdCertificates(ctx context.Context, inf Infrastructure, node *Node) 
 	if err != nil {
 		return err
 	}
-	err = issueCertificate(inf, node, CAEtcdClient, filepath.Join(etcdPKIPath, "etcdctl"), map[string]interface{}{
-		"common_name":          "etcdctl",
-		"exclude_cn_from_sans": "true",
-	})
-	if err != nil {
-		return err
-	}
 
 	ca, err := inf.Storage().GetCACertificate(ctx, "etcd-peer")
 	if err != nil {
@@ -128,6 +121,7 @@ func issueEtcdClientCertificates(ctx context.Context, inf Infrastructure) (ca, c
 	secret, err := client.Logical().Write(CAEtcdClient+"/issue/system", map[string]interface{}{
 		"common_name":          "root",
 		"exclude_cn_from_sans": "true",
+		"ttl": "1h",
 	})
 	if err != nil {
 		return "", "", "", err
