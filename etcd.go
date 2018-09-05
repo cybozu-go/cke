@@ -391,7 +391,9 @@ func (c setupEtcdAuthCommand) Run(ctx context.Context, inf Infrastructure) error
 		return err
 	}
 
+	ctx, cancel = context.WithTimeout(ctx, defaultEtcdTimeout)
 	_, err = cli.AuthEnable(ctx)
+	defer cancel()
 	return err
 }
 
