@@ -138,13 +138,13 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 	ce := Docker(agent)
 
 	ss, err := ce.Inspect([]string{
-		"etcd",
-		"rivers",
-		"kube-apiserver",
-		"kube-controller-manager",
-		"kube-scheduler",
-		"kubelet",
-		"kube-proxy",
+		etcdContainerName,
+		riversContainerName,
+		kubeAPIServerContainerName,
+		kubeControllerManagerContainerName,
+		kubeSchedulerContainerName,
+		kubeletContainerName,
+		kubeProxyContainerName,
 	})
 	if err != nil {
 		return nil, err
@@ -155,13 +155,13 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 		return nil, err
 	}
 
-	status.Etcd = EtcdStatus{ss["etcd"], etcdVolumeExists}
-	status.Rivers = ss["rivers"]
-	status.APIServer = ss["kube-apiserver"]
-	status.ControllerManager = ss["kube-controller-manager"]
-	status.Scheduler = ss["kube-scheduler"]
-	status.Kubelet = ss["kubelet"]
-	status.Proxy = ss["kube-proxy"]
+	status.Etcd = EtcdStatus{ss[etcdContainerName], etcdVolumeExists}
+	status.Rivers = ss[riversContainerName]
+	status.APIServer = ss[kubeAPIServerContainerName]
+	status.ControllerManager = ss[kubeControllerManagerContainerName]
+	status.Scheduler = ss[kubeSchedulerContainerName]
+	status.Kubelet = ss[kubeletContainerName]
+	status.Proxy = ss[kubeProxyContainerName]
 
 	return status, nil
 }
