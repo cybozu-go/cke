@@ -417,21 +417,23 @@ func addUserRole(ctx context.Context, cli *clientv3.Client, name, prefix string)
 		return err
 	}
 
-	if prefix != "" {
-		_, err := cli.RoleAdd(ctx, name)
-		if err != nil {
-			return err
-		}
+	if prefix == "" {
+		return nil
+	}
 
-		_, err = cli.RoleGrantPermission(ctx, name, prefix, clientv3.GetPrefixRangeEnd(prefix), clientv3.PermissionType(clientv3.PermReadWrite))
-		if err != nil {
-			return err
-		}
+	_, err = cli.RoleAdd(ctx, name)
+	if err != nil {
+		return err
+	}
 
-		_, err = cli.UserGrantRole(ctx, name, name)
-		if err != nil {
-			return err
-		}
+	_, err = cli.RoleGrantPermission(ctx, name, prefix, clientv3.GetPrefixRangeEnd(prefix), clientv3.PermissionType(clientv3.PermReadWrite))
+	if err != nil {
+		return err
+	}
+
+	_, err = cli.UserGrantRole(ctx, name, name)
+	if err != nil {
+		return err
 	}
 
 	return nil
