@@ -267,6 +267,8 @@ func (c docker) Exists(name string) (bool, error) {
 }
 
 func (c docker) Inspect(names []string) (map[string]ServiceStatus, error) {
+	retryCount := 0
+RETRY:
 	nameIds, err := c.getIDs(names)
 	if err != nil {
 		return nil, err
@@ -283,7 +285,11 @@ func (c docker) Inspect(names []string) (map[string]ServiceStatus, error) {
 	cmdline := "docker container inspect " + strings.Join(ids, " ")
 	stdout, stderr, err := c.agent.Run(cmdline)
 	if err != nil {
-		return nil, errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
+		retryCount++
+		if retryCount >= 3 {
+			return nil, errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
+		}
+		goto RETRY
 	}
 
 	var djs []types.ContainerJSON
