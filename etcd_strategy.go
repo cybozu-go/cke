@@ -86,7 +86,7 @@ func unhealthyNonControlPlaneMember(nodes []*Node, cs EtcdClusterStatus) []*Node
 			return false
 		}
 		_, inMember := cs.Members[n.Address]
-		return inMember && cs.InSyncMembers[n.Address]
+		return inMember && !cs.InSyncMembers[n.Address]
 	})
 }
 
