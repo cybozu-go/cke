@@ -439,6 +439,7 @@ func schedulerParams() ServiceParams {
 	}
 }
 
+// KubeWorkerBootOp returns an Operator to boot kubernetes workers.
 func KubeWorkerBootOp(cps []*Node, kubelets, proxies []*Node, options Options) Operator {
 	return &kubeWorkerBootOp{
 		cps:      cps,
@@ -519,6 +520,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 	return nil
 }
 
+// KubeWorkerRestartOp returns an Operator to restart kubernetes workers
 func KubeWorkerRestartOp(cps []*Node, rivers, kubelets, proxies []*Node, options Options) Operator {
 	return &kubeWorkerRestartOp{
 		cps:      cps,
