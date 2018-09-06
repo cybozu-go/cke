@@ -37,7 +37,7 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(nodes) > 0 {
 		return EtcdAddMemberOp(endpoints, nodes, c.Options.Etcd)
 	}
-	if !etcdClusterIsHealthy(cs.Etcd) {
+	if !cs.Etcd.IsHealthy || !allInSync(cpNodes, cs.Etcd) {
 		return EtcdWaitClusterOp(endpoints)
 	}
 	nodes = newMemberControlPlane(cpNodes, cs.Etcd)
@@ -73,7 +73,7 @@ func unhealthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[strin
 		delete(mem, n.Address)
 	}
 	for k := range mem {
-		if cs.MemberHealth[k] == EtcdNodeHealthy {
+		if cs.InSyncMembers[k] {
 			delete(mem, k)
 		}
 	}
@@ -86,8 +86,7 @@ func unhealthyNonControlPlaneMember(nodes []*Node, cs EtcdClusterStatus) []*Node
 			return false
 		}
 		_, inMember := cs.Members[n.Address]
-		health := cs.MemberHealth[n.Address]
-		return health != EtcdNodeHealthy && inMember
+		return inMember && !cs.InSyncMembers[n.Address]
 	})
 }
 
@@ -96,6 +95,18 @@ func unstartedMemberControlPlane(cpNodes []*Node, cs EtcdClusterStatus) []*Node 
 		m, inMember := cs.Members[n.Address]
 		return inMember && len(m.Name) == 0
 	})
+}
+
+func allInSync(cpNodes []*Node, cs EtcdClusterStatus) bool {
+	for _, n := range cpNodes {
+		if _, ok := cs.Members[n.Address]; !ok {
+			continue
+		}
+		if !cs.InSyncMembers[n.Address] {
+			return false
+		}
+	}
+	return true
 }
 
 func newMemberControlPlane(cpNodes []*Node, cs EtcdClusterStatus) []*Node {
@@ -114,7 +125,7 @@ func healthyNonClusterMember(allNodes []*Node, cs EtcdClusterStatus) map[string]
 		delete(mem, n.Address)
 	}
 	for k := range mem {
-		if cs.MemberHealth[k] != EtcdNodeHealthy {
+		if !cs.InSyncMembers[k] {
 			delete(mem, k)
 		}
 	}
@@ -125,15 +136,6 @@ func runningNonControlPlaneMember(allNodes []*Node, statuses map[string]*NodeSta
 	return filterNodes(allNodes, func(n *Node) bool {
 		return !n.ControlPlane && statuses[n.Address].Etcd.Running
 	})
-}
-
-func etcdClusterIsHealthy(cs EtcdClusterStatus) bool {
-	for _, s := range cs.MemberHealth {
-		if s == EtcdNodeHealthy {
-			return true
-		}
-	}
-	return false
 }
 
 func outdatedEtcdImageMember(nodes []*Node, statuses map[string]*NodeStatus) []*Node {

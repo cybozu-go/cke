@@ -245,8 +245,8 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error
 	defer cli.Close()
 
 	ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
-	resp, err := cli.MemberList(ct)
 	defer cancel()
+	resp, err := cli.MemberList(ct)
 	if err != nil {
 		return err
 	}
@@ -265,8 +265,8 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error
 
 	if !inMember {
 		ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
-		resp, err := cli.MemberAdd(ct, []string{fmt.Sprintf("https://%s:2380", c.node.Address)})
 		defer cancel()
+		resp, err := cli.MemberAdd(ct, []string{fmt.Sprintf("https://%s:2380", c.node.Address)})
 		if err != nil {
 			return err
 		}

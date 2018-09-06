@@ -230,17 +230,17 @@ func ckecliClusterSet(cluster *cke.Cluster) error {
 func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []string) bool {
 	for _, host := range controlPlanes {
 		if !status.NodeStatuses[host].Etcd.Running {
-			fmt.Printf("%s is not running\n", host)
+			fmt.Printf("etcd is not running on %s\n", host)
 			return false
 		}
 		if !status.NodeStatuses[host].Etcd.HasData {
-			fmt.Printf("%s does not have data\n", host)
+			fmt.Printf("%s does not have etcd data\n", host)
 			return false
 		}
 	}
 	for _, host := range workers {
 		if status.NodeStatuses[host].Etcd.Running {
-			fmt.Printf("%s is running\n", host)
+			fmt.Printf("etcd is running on %s\n", host)
 			return false
 		}
 	}
@@ -251,21 +251,16 @@ func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []
 	for _, host := range controlPlanes {
 		member, ok := status.Etcd.Members[host]
 		if !ok {
-			fmt.Printf("%s is not member\n", host)
+			fmt.Printf("%s is not a member of etcd cluster\n", host)
 			return false
 		}
 		if member.Name == "" {
-			fmt.Printf("%s is unstarted\n", host)
+			fmt.Printf("etcd is not started on %s\n", host)
 			return false
 		}
 
-		health, ok := status.Etcd.MemberHealth[host]
-		if !ok {
-			fmt.Printf("%s's health is unknown\n", host)
-			return false
-		}
-		if health != cke.EtcdNodeHealthy {
-			fmt.Printf("%s is not healthy\n", host)
+		if !status.Etcd.InSyncMembers[host] {
+			fmt.Printf("etcd on %s is not in sync\n", host)
 			return false
 		}
 	}
