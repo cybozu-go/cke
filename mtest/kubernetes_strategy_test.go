@@ -54,7 +54,7 @@ var _ = Describe("kubernetes strategy", func() {
 		}
 
 		By("Checking component statuses are healthy")
-		Expect(checkComponentStatuses(node1)).To(BeTrue())
+		Expect(checkComponentStatuses(node1)).To(Succeed())
 
 		By("Checking all nodes status are ready")
 		stdout := kubectl("get", "nodes", "-o", "json")
