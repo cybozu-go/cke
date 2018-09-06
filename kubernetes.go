@@ -156,7 +156,7 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return imagePullCommand{o.cps, kubeAPIServerContainerName}
+		return imagePullCommand{o.cps, "hyperkube"}
 	case 1:
 		o.step++
 		if len(o.apiserver) == 0 {
@@ -287,7 +287,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 		return imagePullCommand{o.cps, riversContainerName}
 	case 1:
 		o.step1++
-		return imagePullCommand{o.cps, kubeAPIServerContainerName}
+		return imagePullCommand{o.cps, "hyperkube"}
 	case 2:
 		if o.nodeIndex >= len(o.rivers) {
 			o.step1++
@@ -468,7 +468,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
-		return imagePullCommand{o.proxies, kubeProxyContainerName}
+		return imagePullCommand{o.proxies, "hyperkube"}
 	case 1:
 		o.step++
 		if len(o.kubelets) == 0 {
@@ -556,7 +556,7 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		if len(o.proxies)+len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return imagePullCommand{o.proxies, kubeProxyContainerName}
+		return imagePullCommand{o.proxies, "hyperkube"}
 	case 2:
 		o.step++
 		if len(o.kubelets) == 0 {

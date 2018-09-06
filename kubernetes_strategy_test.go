@@ -121,7 +121,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes, Rivers: allNodes,
 			},
 			Commands: []Command{
-				{"image-pull", "kube-apiserver", Image("kube-apiserver")},
+				{"image-pull", "hyperkube", Image("hyperkube")},
 				{"mkdir", "/var/log/kubernetes/apiserver", ""},
 				{"mkdir", "/var/log/kubernetes/controller-manager", ""},
 				{"mkdir", "/var/log/kubernetes/scheduler", ""},
@@ -142,7 +142,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes,
 			},
 			Commands: []Command{
-				{"image-pull", "kube-proxy", Image("kube-proxy")},
+				{"image-pull", "hyperkube", Image("hyperkube")},
 				{"mkdir", "/var/log/kubernetes/kubelet", ""},
 				{"mkdir", "/var/log/kubernetes/proxy", ""},
 				{"make-file", "/etc/kubernetes/kubelet/kubeconfig", ""},
@@ -197,7 +197,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 			Commands: func() []Command {
 				cmds := []Command{
 					{"image-pull", "rivers", Image("rivers")},
-					{"image-pull", "kube-apiserver", Image("kube-apiserver")},
+					{"image-pull", "hyperkube", Image("hyperkube")},
 				}
 				for _, n := range cpNodes {
 					cmds = append(cmds,
@@ -230,7 +230,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				KubeletArgs:        []string{"--cpu-cfs-quota=true"},
 			},
 			Commands: []Command{
-				{"image-pull", "kube-proxy", Image("kube-proxy")},
+				{"image-pull", "hyperkube", Image("hyperkube")},
 				{Name: "make-file", Target: "/etc/kubernetes/kubelet/kubeconfig", Detail: ""},
 				{Name: "stop-containers", Target: strings.Join(allNodes, ","), Detail: "kubelet"},
 				{Name: "run-container", Target: strings.Join(allNodes, ","), Detail: "kubelet"},
