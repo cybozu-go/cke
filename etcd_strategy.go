@@ -99,6 +99,9 @@ func unstartedMemberControlPlane(cpNodes []*Node, cs EtcdClusterStatus) []*Node 
 
 func allInSync(cpNodes []*Node, cs EtcdClusterStatus) bool {
 	for _, n := range cpNodes {
+		if _, ok := cs.Members[n.Address]; !ok {
+			continue
+		}
 		if !cs.InSyncMembers[n.Address] {
 			return false
 		}
