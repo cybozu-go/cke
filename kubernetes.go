@@ -291,6 +291,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 	case 2:
 		if o.nodeIndex >= len(o.rivers) {
 			o.step1++
+			o.nodeIndex = 0
 			return o.NextCommand()
 		}
 		node := o.rivers[o.nodeIndex]
