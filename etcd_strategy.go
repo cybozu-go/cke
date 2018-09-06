@@ -52,11 +52,11 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(nodes) > 0 {
 		return EtcdDestroyMemberOp(endpoints, nodes, cs.Etcd.Members)
 	}
-	nodes = outdatedEtcdImageMember(cpNodes, cs.NodeStatuses)
+	nodes = outdatedEtcdImageMember(cpNodes, cs.Etcd, cs.NodeStatuses)
 	if len(nodes) > 0 {
 		return EtcdUpdateVersionOp(endpoints, nodes, cpNodes, c.Options.Etcd)
 	}
-	nodes = outdatedEtcdParamsMember(cpNodes, c.Options.Etcd.ServiceParams, cs.NodeStatuses)
+	nodes = outdatedEtcdParamsMember(cpNodes, cs.Etcd, c.Options.Etcd.ServiceParams, cs.NodeStatuses)
 	if len(nodes) > 0 {
 		return EtcdRestartOp(endpoints, nodes, cpNodes, c.Options.Etcd)
 	}
@@ -126,14 +126,20 @@ func runningNonControlPlaneMember(allNodes []*Node, statuses map[string]*NodeSta
 	})
 }
 
-func outdatedEtcdImageMember(nodes []*Node, statuses map[string]*NodeStatus) []*Node {
+func outdatedEtcdImageMember(nodes []*Node, cs EtcdClusterStatus, statuses map[string]*NodeStatus) []*Node {
 	return filterNodes(nodes, func(n *Node) bool {
+		if !cs.InSyncMembers[n.Address] {
+			return false
+		}
 		return EtcdImage != statuses[n.Address].Etcd.Image
 	})
 }
 
-func outdatedEtcdParamsMember(nodes []*Node, extra ServiceParams, statuses map[string]*NodeStatus) []*Node {
+func outdatedEtcdParamsMember(nodes []*Node, cs EtcdClusterStatus, extra ServiceParams, statuses map[string]*NodeStatus) []*Node {
 	return filterNodes(nodes, func(n *Node) bool {
+		if !cs.InSyncMembers[n.Address] {
+			return false
+		}
 		newBuiltIn := etcdBuiltInParams(n, []string{}, "new")
 		newExtra := extra
 
