@@ -153,5 +153,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return KubeWorkerRestartOp(cpNodes, rivers, kubelets, proxies, c.Options)
 	}
 
+	// TODO check image versions and restart container when image is updated
+
 	return nil
 }

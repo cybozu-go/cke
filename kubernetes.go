@@ -289,7 +289,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 		o.step1++
 		return imagePullCommand{o.cps, kubeAPIServerContainerName}
 	case 2:
-		if o.nodeIndex >= len(o.apiserver) {
+		if o.nodeIndex >= len(o.rivers) {
 			o.step1++
 			return o.NextCommand()
 		}
@@ -310,6 +310,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 	case 3:
 		if o.nodeIndex >= len(o.apiserver) {
 			o.step1++
+			o.nodeIndex = 0
 			return o.NextCommand()
 		}
 		node := o.apiserver[o.nodeIndex]
@@ -333,6 +334,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 	case 4:
 		if o.nodeIndex >= len(o.controllerManager) {
 			o.step1++
+			o.nodeIndex = 0
 			return o.NextCommand()
 		}
 		node := o.controllerManager[o.nodeIndex]
@@ -352,6 +354,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 	case 5:
 		if o.nodeIndex >= len(o.scheduler) {
 			o.step1++
+			o.nodeIndex = 0
 			return o.NextCommand()
 		}
 		node := o.scheduler[o.nodeIndex]
@@ -547,16 +550,16 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		if len(o.rivers) == 0 {
 			return o.NextCommand()
 		}
-		return imagePullCommand{o.proxies, riversContainerName}
+		return imagePullCommand{o.rivers, riversContainerName}
 	case 1:
 		o.step++
-		if len(o.proxies) == 0 {
+		if len(o.proxies)+len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
 		return imagePullCommand{o.proxies, kubeProxyContainerName}
 	case 2:
 		o.step++
-		if len(o.proxies) == 0 {
+		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
 		return makeFileCommand{o.proxies, kubeletKubeConfig(), "/etc/kubernetes/kubelet/kubeconfig"}
@@ -571,8 +574,20 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		if len(o.rivers) == 0 {
 			return o.NextCommand()
 		}
-		return runContainerCommand{o.rivers, riversContainerName, opts, RiversParams(o.cps), o.options.Rivers}
+		return stopContainersCommand{o.rivers, riversContainerName}
 	case 5:
+		o.step++
+		if len(o.rivers) == 0 {
+			return o.NextCommand()
+		}
+		return runContainerCommand{o.rivers, riversContainerName, opts, RiversParams(o.cps), o.options.Rivers}
+	case 6:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return stopContainersCommand{o.kubelets, kubeletContainerName}
+	case 7:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
@@ -582,7 +597,13 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 			"--privileged",
 		}
 		return runContainerCommand{o.kubelets, kubeletContainerName, opts, KubeletServiceParams(), o.options.Kubelet.ToServiceParams()}
-	case 6:
+	case 8:
+		o.step++
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return stopContainersCommand{o.proxies, kubeProxyContainerName}
+	case 9:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()

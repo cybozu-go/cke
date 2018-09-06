@@ -180,6 +180,62 @@ func testKubernetesDecideToDo(t *testing.T) {
 			},
 			Commands: []Command{},
 		},
+		{
+			Name: "Restart kubernetes control planes when params are updated",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+				Rivers:                allNodes,
+				APIServers:            cpNodes,
+				ControllerManagers:    cpNodes,
+				Schedulers:            cpNodes,
+				Kubelets:              allNodes,
+				Proxies:               allNodes,
+				APIServerArgs:         []string{"--apiserver-count=999"},
+				ControllerManagerArgs: []string{"--contention-profiling=0.99"},
+				SchedulerArgs:         []string{"--leader-elect-retry-period duration=2s"},
+			},
+			Commands: func() []Command {
+				cmds := []Command{
+					{"image-pull", "rivers", Image("rivers")},
+					{"image-pull", "kube-apiserver", Image("kube-apiserver")},
+				}
+				for _, n := range cpNodes {
+					cmds = append(cmds,
+						Command{Name: "stop-containers", Target: n, Detail: "kube-apiserver"},
+						Command{Name: "run-container", Target: n, Detail: "kube-apiserver"})
+				}
+				for _, n := range cpNodes {
+					cmds = append(cmds,
+						Command{Name: "stop-containers", Target: n, Detail: "kube-controller-manager"},
+						Command{Name: "run-container", Target: n, Detail: "kube-controller-manager"})
+				}
+				for _, n := range cpNodes {
+					cmds = append(cmds,
+						Command{Name: "stop-containers", Target: n, Detail: "kube-scheduler"},
+						Command{Name: "run-container", Target: n, Detail: "kube-scheduler"})
+				}
+				return cmds
+			}(),
+		},
+		{
+			Name: "Restart kubernetes workers when params are updated",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+				Rivers:             allNodes,
+				APIServers:         cpNodes,
+				ControllerManagers: cpNodes,
+				Schedulers:         cpNodes,
+				Kubelets:           allNodes,
+				Proxies:            allNodes,
+				KubeletArgs:        []string{"--cpu-cfs-quota=true"},
+			},
+			Commands: []Command{
+				{"image-pull", "kube-proxy", Image("kube-proxy")},
+				{Name: "make-file", Target: "/etc/kubernetes/kubelet/kubeconfig", Detail: ""},
+				{Name: "stop-containers", Target: strings.Join(allNodes, ","), Detail: "kubelet"},
+				{Name: "run-container", Target: strings.Join(allNodes, ","), Detail: "kubelet"},
+			},
+		},
 	}
 
 	for _, c := range cases {
