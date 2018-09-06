@@ -21,25 +21,18 @@ type riversBootOp struct {
 	step      int
 }
 
-type apiServerBootOp struct {
-	nodes         []*Node
-	controlPlanes []*Node
-	params        ServiceParams
-	step          int
-	nodeIndex     int
+type kubeCPBootOp struct {
+	cps []*Node
+
+	apiserver         []*Node
+	controllerManager []*Node
+	scheduler         []*Node
+
 	serviceSubnet string
-}
+	options       Options
 
-type controllerManagerBootOp struct {
-	nodes  []*Node
-	params ServiceParams
-	step   int
-}
-
-type schedulerBootOp struct {
-	nodes  []*Node
-	params ServiceParams
-	step   int
+	step      int
+	nodeIndex int
 }
 
 type kubeletBootOp struct {
@@ -133,48 +126,78 @@ func riversParams(upstreams []*Node) ServiceParams {
 	}
 }
 
-// APIServerBootOp returns an Operator to bootstrap APIServer cluster.
-func APIServerBootOp(nodes, controlPlanes []*Node, params ServiceParams, serviceSubnet string) Operator {
-	return &apiServerBootOp{
-		nodes:         nodes,
-		controlPlanes: controlPlanes,
-		params:        params,
-		step:          0,
-		nodeIndex:     0,
-		serviceSubnet: serviceSubnet,
+// KubeCPBootOp returns an Operator to bootstrap kubernetes control planes
+func KubeCPBootOp(cps []*Node, apiserver, controllerManager, scheduler []*Node, serviceSubnet string, options Options) Operator {
+	return &kubeCPBootOp{
+		cps:               cps,
+		apiserver:         apiserver,
+		controllerManager: controllerManager,
+		scheduler:         scheduler,
+		serviceSubnet:     serviceSubnet,
+		options:           options,
 	}
 }
 
-func (o *apiServerBootOp) Name() string {
-	return "apiserver-bootstrap"
+func (o *kubeCPBootOp) Name() string {
+	return "kubernetes-control-plane-bootstrap"
 }
 
-func (o *apiServerBootOp) NextCommand() Commander {
-	extra := o.params
+func (o *kubeCPBootOp) NextCommand() Commander {
+	var opts []string
 
 	switch o.step {
 	case 0:
 		o.step++
-		return imagePullCommand{o.nodes, kubeAPIServerContainerName}
+		return imagePullCommand{o.cps, kubeAPIServerContainerName}
 	case 1:
 		o.step++
-		return makeDirCommand{o.nodes, "/var/log/kubernetes/apiserver"}
+		if len(o.apiserver) == 0 {
+			return o.NextCommand()
+		}
+		return makeDirCommand{o.apiserver, "/var/log/kubernetes/apiserver"}
 	case 2:
 		o.step++
-		return issueAPIServerCertificatesCommand{o.nodes}
+		if len(o.controllerManager) == 0 {
+			return o.NextCommand()
+		}
+		return makeDirCommand{o.controllerManager, "/var/log/kubernetes/controller-manager"}
 	case 3:
+		o.step++
+		if len(o.scheduler) == 0 {
+			return o.NextCommand()
+		}
+		return makeDirCommand{o.scheduler, "/var/log/kubernetes/scheduler"}
+	case 4:
+		o.step++
+		if len(o.apiserver) == 0 {
+			return o.NextCommand()
+		}
+		return issueAPIServerCertificatesCommand{o.apiserver}
+	case 5:
+		if o.nodeIndex >= len(o.apiserver) {
+			o.step++
+			return o.NextCommand()
+		}
+		node := o.apiserver[o.nodeIndex]
+		o.nodeIndex++
+
 		opts := []string{
 			// TODO pass keys from CKE
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
 		}
-		if o.nodeIndex >= len(o.nodes) {
-			return nil
+		return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, opts, apiServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
+	case 6:
+		o.step++
+		if len(o.scheduler) == 0 {
+			return o.NextCommand()
 		}
-
-		target := o.nodes[o.nodeIndex]
-		o.nodeIndex++
-
-		return runContainerCommand{[]*Node{target}, kubeAPIServerContainerName, opts, apiServerParams(o.controlPlanes, target.Address, o.serviceSubnet), extra}
+		return runContainerCommand{o.scheduler, kubeSchedulerContainerName, opts, schedulerParams(), o.options.Scheduler}
+	case 7:
+		o.step++
+		if len(o.controllerManager) == 0 {
+			return o.NextCommand()
+		}
+		return runContainerCommand{o.controllerManager, kubeControllerManagerContainerName, opts, controllerManagerParams(), o.options.ControllerManager}
 	default:
 		return nil
 	}
@@ -213,41 +236,6 @@ func apiServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 	}
 }
 
-// ControllerManagerBootOp returns an Operator to bootstrap ControllerManager cluster.
-func ControllerManagerBootOp(nodes []*Node, params ServiceParams) Operator {
-	return &controllerManagerBootOp{
-		nodes:  nodes,
-		params: params,
-		step:   0,
-	}
-}
-
-func (o *controllerManagerBootOp) Name() string {
-	return "controller-manager-bootstrap"
-}
-
-func (o *controllerManagerBootOp) NextCommand() Commander {
-	extra := o.params
-	var opts []string
-
-	switch o.step {
-	case 0:
-		o.step++
-		return makeFileCommand{o.nodes, controllerManagerKubeconfig(), "/etc/kubernetes/controller-manager/kubeconfig"}
-	case 1:
-		o.step++
-		return imagePullCommand{o.nodes, kubeControllerManagerContainerName}
-	case 2:
-		o.step++
-		return makeDirCommand{o.nodes, "/var/log/kubernetes/controller-manager"}
-	case 3:
-		o.step++
-		return runContainerCommand{o.nodes, kubeControllerManagerContainerName, opts, controllerManagerParams(), extra}
-	default:
-		return nil
-	}
-}
-
 func controllerManagerParams() ServiceParams {
 	args := []string{
 		"controller-manager",
@@ -265,39 +253,6 @@ func controllerManagerParams() ServiceParams {
 }
 
 // SchedulerBootOp returns an Operator to bootstrap Scheduler cluster.
-func SchedulerBootOp(nodes []*Node, params ServiceParams) Operator {
-	return &schedulerBootOp{
-		nodes:  nodes,
-		params: params,
-		step:   0,
-	}
-}
-
-func (o *schedulerBootOp) Name() string {
-	return "scheduler-bootstrap"
-}
-
-func (o *schedulerBootOp) NextCommand() Commander {
-	extra := o.params
-
-	switch o.step {
-	case 0:
-		o.step++
-		return makeFileCommand{o.nodes, schedulerKubeconfig(), "/etc/kubernetes/scheduler/kubeconfig"}
-	case 1:
-		o.step++
-		return imagePullCommand{o.nodes, kubeSchedulerContainerName}
-	case 2:
-		o.step++
-		return makeDirCommand{o.nodes, "/var/log/kubernetes/scheduler"}
-	case 3:
-		o.step++
-		return runContainerCommand{o.nodes, kubeSchedulerContainerName, nil, schedulerParams(), extra}
-	default:
-		return nil
-	}
-}
-
 func schedulerParams() ServiceParams {
 	args := []string{
 		"scheduler",

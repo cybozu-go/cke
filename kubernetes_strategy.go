@@ -19,28 +19,26 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return RiversBootOp(target, cpNodes, c.Options.Rivers)
 	}
 
-	// Run kube-apiserver on control-plane nodes
-	target = filterNodes(cpNodes, func(n *Node) bool {
+	// Run kubernetes control planes on control plane nodes
+	apiservers := filterNodes(cpNodes, func(n *Node) bool {
 		return !cs.NodeStatuses[n.Address].APIServer.Running
 	})
-	if len(target) > 0 {
-		return APIServerBootOp(target, cpNodes, c.Options.APIServer, c.ServiceSubnet)
+	controllerManagers := filterNodes(cpNodes, func(n *Node) bool {
+		return !cs.NodeStatuses[n.Address].ControllerManager.Running
+	})
+	schedulers := filterNodes(cpNodes, func(n *Node) bool {
+		return !cs.NodeStatuses[n.Address].Scheduler.Running
+	})
+	if len(apiservers)+len(controllerManagers)+len(schedulers) > 0 {
+		return KubeCPBootOp(cpNodes, apiservers, controllerManagers, schedulers, c.ServiceSubnet, c.Options)
 	}
 
-	// Stop kube-apiserver on non-control-plane nodes
+	// Stop kubernetes control planes on non-control-plane nodes
 	target = filterNodes(nonCpNodes, func(n *Node) bool {
 		return cs.NodeStatuses[n.Address].APIServer.Running
 	})
 	if len(target) > 0 {
 		return APIServerStopOp(target)
-	}
-
-	// Run kube-controller-manager on control-plane nodes
-	target = filterNodes(cpNodes, func(n *Node) bool {
-		return !cs.NodeStatuses[n.Address].ControllerManager.Running
-	})
-	if len(target) > 0 {
-		return ControllerManagerBootOp(target, c.Options.ControllerManager)
 	}
 
 	// Stop kube-controller-manager on non-control-plane nodes
@@ -49,14 +47,6 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	})
 	if len(target) > 0 {
 		return ControllerManagerStopOp(target)
-	}
-
-	// Run kube-scheduler on control-plane nodes
-	target = filterNodes(cpNodes, func(n *Node) bool {
-		return !cs.NodeStatuses[n.Address].Scheduler.Running
-	})
-	if len(target) > 0 {
-		return SchedulerBootOp(target, c.Options.Scheduler)
 	}
 
 	// Stop kube-scheduler on non-control-plane nodes
