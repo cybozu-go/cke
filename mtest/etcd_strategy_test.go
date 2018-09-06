@@ -23,15 +23,15 @@ var _ = Describe("etcd strategy", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
-		Eventually(func() bool {
+		Eventually(func() error {
 			controlPlanes := []string{node1, node3}
 			workers := []string{node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
-				return false
+				return err
 			}
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
-		}).Should(BeTrue())
+		}).Should(Succeed())
 
 		By("Checking that CKE did not remove non-cluster node's data")
 		status, err := getClusterStatus()
@@ -52,15 +52,15 @@ var _ = Describe("etcd strategy", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
-		Eventually(func() bool {
+		Eventually(func() error {
 			controlPlanes := []string{node1, node3}
 			workers := []string{node2, node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
-				return false
+				return err
 			}
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
-		}).Should(BeTrue())
+		}).Should(Succeed())
 
 		By("Checking that CKE removed worker node's data")
 		status, err := getClusterStatus()
@@ -77,15 +77,15 @@ var _ = Describe("etcd strategy", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
-		Eventually(func() bool {
+		Eventually(func() error {
 			controlPlanes := []string{node1, node3}
 			workers := []string{node2, node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
-				return false
+				return err
 			}
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
-		}).Should(BeTrue())
+		}).Should(Succeed())
 
 		By("Checking that CKE removed worker node's data")
 		status, err := getClusterStatus()
@@ -107,14 +107,14 @@ var _ = Describe("etcd strategy", func() {
 		runCKE()
 
 		By("Checking cluster status")
-		Eventually(func() bool {
+		Eventually(func() error {
 			controlPlanes := []string{node1, node3, node4}
 			workers := []string{node2, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
-				return false
+				return err
 			}
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
-		}).Should(BeTrue())
+		}).Should(Succeed())
 	})
 })

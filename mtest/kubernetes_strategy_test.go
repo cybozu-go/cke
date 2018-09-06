@@ -17,15 +17,15 @@ var _ = Describe("kubernetes strategy", func() {
 
 	It("should deploy HA control plane", func() {
 		By("Checking cluster status")
-		Eventually(func() bool {
+		Eventually(func() error {
 			controlPlanes := []string{node1, node2, node3}
 			workers := []string{node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
-				return false
+				return err
 			}
 			return checkKubernetesClusterStatus(status, controlPlanes, workers)
-		}).Should(BeTrue())
+		}).Should(Succeed())
 
 		By("Killing the active service")
 		leader := make(map[string]string)
@@ -54,7 +54,7 @@ var _ = Describe("kubernetes strategy", func() {
 		}
 
 		By("Checking component statuses are healthy")
-		Expect(checkComponentStatuses(node1)).To(BeTrue())
+		Expect(checkComponentStatuses(node1)).To(Succeed())
 
 		By("Checking all nodes status are ready")
 		stdout := kubectl("get", "nodes", "-o", "json")
