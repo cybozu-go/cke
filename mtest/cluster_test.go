@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 )
 
 var _ = Describe("cluster", func() {
@@ -23,25 +24,19 @@ var _ = Describe("cluster", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
-		Eventually(func() bool {
+		Eventually(func() error {
 			controlPlanes := []string{node1, node3}
 			workers := []string{node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
-				return false
+				return err
 			}
 
-			if !checkEtcdClusterStatus(status, controlPlanes, workers) {
-				fmt.Println("checkEtcdClusterStatus returned false")
-				return false
+			if err := checkEtcdClusterStatus(status, controlPlanes, workers); err != nil {
+				return err
 			}
-			if !checkKubernetesClusterStatus(status, controlPlanes, workers) {
-				fmt.Println("checkKubernetesClusterStatus returned false")
-				return false
-			}
-
-			return true
-		}).Should(BeTrue())
+			return checkKubernetesClusterStatus(status, controlPlanes, workers)
+		}).Should(Succeed())
 
 		By("Checking that CKE did not remove non-cluster node's etcd data")
 		status, err := getClusterStatus()
@@ -59,24 +54,19 @@ var _ = Describe("cluster", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
-		Eventually(func() bool {
+		Eventually(func() error {
 			controlPlanes := []string{node1, node2, node3, node4}
 			workers := []string{node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
-				return false
+				return err
 			}
 
-			if !checkEtcdClusterStatus(status, controlPlanes, workers) {
-				fmt.Println("checkEtcdClusterStatus returned false")
-				return false
+			if err := checkEtcdClusterStatus(status, controlPlanes, workers); err != nil {
+				return err
 			}
-			if !checkKubernetesClusterStatus(status, controlPlanes, workers) {
-				fmt.Println("checkKubernetesClusterStatus returned false")
-				return false
-			}
-			return true
-		}).Should(BeTrue())
+			return checkKubernetesClusterStatus(status, controlPlanes, workers)
+		}).Should(Succeed())
 	})
 
 	It("should adjust command arguments", func() {
@@ -93,20 +83,18 @@ var _ = Describe("cluster", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking that etcd members and controller managers restarted with new arguments")
-		Eventually(func() bool {
+		Eventually(func() error {
 			controlPlanes := []string{node1, node2, node3}
 			workers := []string{node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
-				fmt.Println("failed to get cluster status", err)
-				return false
+				return err
 			}
 
 			for _, node := range controlPlanes {
 				cmds, err := inspect(node, "etcd")
 				if err != nil {
-					fmt.Println("failed to exec docker inspect etcd", err)
-					return false
+					return errors.Wrap(err, "failed to exec docker inspect etcd")
 				}
 
 				ok := false
@@ -116,16 +104,14 @@ var _ = Describe("cluster", func() {
 					}
 				}
 				if !ok {
-					fmt.Println("etcd argument is not updated yet")
-					return false
+					return errors.New("etcd argument is not updated yet")
 				}
 			}
 
 			for _, node := range controlPlanes {
 				cmds, err := inspect(node, "kube-controller-manager")
 				if err != nil {
-					fmt.Println("failed to exec docker inspect kube-controller-manager", err)
-					return false
+					return errors.Wrap(err, "failed to exec docker inspect kube-controller-manager")
 				}
 
 				ok := false
@@ -135,22 +121,15 @@ var _ = Describe("cluster", func() {
 					}
 				}
 				if !ok {
-					fmt.Println("kube-controller-manager argument is not updated yet")
-					return false
+					return errors.New("kube-controller-manager argument is not updated yet")
 				}
 			}
 
-			if !checkEtcdClusterStatus(status, controlPlanes, workers) {
-				fmt.Println("checkEtcdClusterStatus returned false")
-				return false
+			if err := checkEtcdClusterStatus(status, controlPlanes, workers); err != nil {
+				return err
 			}
-			if !checkKubernetesClusterStatus(status, controlPlanes, workers) {
-				fmt.Println("checkKubernetesClusterStatus returned false")
-				return false
-			}
-
-			return true
-		}).Should(BeTrue())
+			return checkKubernetesClusterStatus(status, controlPlanes, workers)
+		}).Should(Succeed())
 
 		// Revert and check here.
 		// Though they will be performed in AfterEach, arguments are not checked there.

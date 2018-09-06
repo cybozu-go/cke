@@ -227,110 +227,157 @@ func ckecliClusterSet(cluster *cke.Cluster) error {
 	return nil
 }
 
-func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []string) bool {
+type clusterStatusError struct {
+	message       string
+	host          string
+	port          uint16
+	status        *cke.ClusterStatus
+	controlPlanes []string
+	workers       []string
+	stdout        string
+	stderr        string
+}
+
+func (e clusterStatusError) Error() string {
+	return fmt.Sprintf(`%s
+host          : %s
+port          : %d
+control planes: %v
+workers       : %v
+stdout        : %s
+stderr        : %s
+status:
+%+v
+`, e.message, e.host, e.port, e.controlPlanes, e.workers, e.stdout, e.stderr, e.status)
+}
+
+func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []string) error {
+	newError := func(msg, host string) error {
+		return clusterStatusError{
+			msg, host, 0, status, controlPlanes, workers, "", "",
+		}
+	}
+
 	for _, host := range controlPlanes {
 		if !status.NodeStatuses[host].Etcd.Running {
-			fmt.Printf("etcd is not running on %s\n", host)
-			return false
+			return newError("etcd is not running", host)
 		}
 		if !status.NodeStatuses[host].Etcd.HasData {
-			fmt.Printf("%s does not have etcd data\n", host)
-			return false
+			return newError("no etcd data", host)
 		}
 	}
 	for _, host := range workers {
 		if status.NodeStatuses[host].Etcd.Running {
-			fmt.Printf("etcd is running on %s\n", host)
-			return false
+			return newError("etcd is still running", host)
 		}
 	}
 	if len(controlPlanes) != len(status.Etcd.Members) {
-		fmt.Printf("len(controlPlanes) != len(status.Etcd.Members), %d != %d\n", len(controlPlanes), len(status.Etcd.Members))
-		return false
+		return newError("wrong number of etcd members", "")
 	}
 	for _, host := range controlPlanes {
 		member, ok := status.Etcd.Members[host]
 		if !ok {
-			fmt.Printf("%s is not a member of etcd cluster\n", host)
-			return false
+			return newError("host is not a member of etcd cluster", host)
 		}
 		if member.Name == "" {
-			fmt.Printf("etcd is not started on %s\n", host)
-			return false
+			return newError("host has not joined to etcd cluster", host)
 		}
-
 		if !status.Etcd.InSyncMembers[host] {
-			fmt.Printf("etcd on %s is not in sync\n", host)
-			return false
+			return newError("local etcd is out of sync", host)
 		}
 	}
-	return true
+	return nil
 }
 
-func isRunningAllControlPlaneComponents(status *cke.ClusterStatus, host string) bool {
+func isRunningAllControlPlaneComponents(status *cke.ClusterStatus, host string) error {
+	newError := func(msg string) error {
+		return clusterStatusError{
+			msg, host, 0, status, nil, nil, "", "",
+		}
+	}
+
 	if !status.NodeStatuses[host].APIServer.Running {
-		fmt.Printf("kube-apiserver is not running on %s\n", host)
-		return false
+		return newError("kube-apiserver is not running")
 	}
 	if !status.NodeStatuses[host].ControllerManager.Running {
-		fmt.Printf("kube-controller-manager is not running on %s\n", host)
-		return false
+		return newError("kube-controller-manager is not running")
 	}
 	if !status.NodeStatuses[host].Scheduler.Running {
-		fmt.Printf("kube-scheduler is not running on %s\n", host)
-		return false
+		return newError("kube-scheduler is not running")
 	}
-	return true
+	return nil
 }
 
-func isRunningAnyControlPlaneComponents(status *cke.ClusterStatus, host string) bool {
+func isRunningAnyControlPlaneComponents(status *cke.ClusterStatus, host string) error {
+	newError := func(msg string) error {
+		return clusterStatusError{
+			msg, host, 0, status, nil, nil, "", "",
+		}
+	}
+
 	if status.NodeStatuses[host].APIServer.Running {
-		fmt.Printf("kube-apiserver is running on %s\n", host)
-		return true
+		return newError("kube-apiserver is running")
 	}
 	if status.NodeStatuses[host].ControllerManager.Running {
-		fmt.Printf("kube-controller-manager is running on %s\n", host)
-		return true
+		return newError("kube-controller-manager is running")
 	}
 	if status.NodeStatuses[host].Scheduler.Running {
-		fmt.Printf("kube-scheduler is running on %s\n", host)
-		return true
+		return newError("kube-scheduler is running")
 	}
-	return false
+	return nil
 }
 
-func isRunningAllCommonComponents(status *cke.ClusterStatus, host string) bool {
+func isRunningAllCommonComponents(status *cke.ClusterStatus, host string) error {
+	newError := func(msg string) error {
+		return clusterStatusError{
+			msg, host, 0, status, nil, nil, "", "",
+		}
+	}
+
 	if !status.NodeStatuses[host].Rivers.Running {
-		fmt.Printf("rivers is not running on %s\n", host)
-		return false
+		return newError("rivers is not running")
 	}
 	if !status.NodeStatuses[host].Proxy.Running {
-		fmt.Printf("kube-proxy is not running on %s\n", host)
-		return false
+		return newError("kube-proxy is not running")
 	}
 	if !status.NodeStatuses[host].Kubelet.Running {
-		fmt.Printf("kubelet is not running on %s\n", host)
-		return false
+		return newError("kubelet is not running")
 	}
-	return true
+	return nil
 }
 
-func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []string) bool {
+func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []string) (err error) {
+	defer func() {
+		e, ok := err.(clusterStatusError)
+		if !ok {
+			return
+		}
+		e.status = status
+		e.controlPlanes = controlPlanes
+		e.workers = workers
+	}()
+
 	nodes := append(controlPlanes, workers...)
 
 	for _, host := range controlPlanes {
-		if !isRunningAllControlPlaneComponents(status, host) {
-			return false
+		if err = isRunningAllControlPlaneComponents(status, host); err != nil {
+			return
 		}
 	}
 	for _, host := range workers {
-		if isRunningAnyControlPlaneComponents(status, host) {
-			return false
+		if err = isRunningAnyControlPlaneComponents(status, host); err != nil {
+			return
 		}
 	}
 	for _, host := range nodes {
-		if !isRunningAllCommonComponents(status, host) {
-			return false
+		if err = isRunningAllCommonComponents(status, host); err != nil {
+			return
+		}
+	}
+
+	newError := func(msg, host string, port uint16, stdout, stderr string) error {
+		return clusterStatusError{
+			msg, host, port, status, controlPlanes, workers, stdout, stderr,
 		}
 	}
 
@@ -339,15 +386,14 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 		for _, port := range []uint16{8080, 10252, 10251} {
 			stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
 			if err != nil {
-				fmt.Println(err, string(stderr))
-				return false
+				return newError(err.Error(), host, port, string(stdout), string(stderr))
 			}
 			if string(stdout) != "ok" {
-				return false
+				return newError("stdout is not ok", host, port, string(stdout), string(stderr))
 			}
 		}
-		if !checkComponentStatuses(host) {
-			return false
+		if err = checkComponentStatuses(host); err != nil {
+			return
 		}
 	}
 
@@ -356,38 +402,41 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 		for _, port := range []uint16{10248, 10256, 18080} {
 			stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
 			if err != nil {
-				fmt.Println(err, string(stderr))
-				return false
+				return newError(err.Error(), host, port, string(stdout), string(stderr))
 			}
 			if string(stdout) != "ok" && port != 10256 { // kube-proxy does not return "ok"
-				return false
+				return newError("stdout is not ok", host, port, string(stdout), string(stderr))
 			}
 		}
 	}
 
-	return true
+	return nil
 }
 
-func checkComponentStatuses(host string) bool {
+func checkComponentStatuses(host string) error {
+	newError := func(msg, stdout string) error {
+		return clusterStatusError{
+			msg, host, 0, nil, nil, nil, stdout, "",
+		}
+	}
+
 	stdout, _, err := execAt(host, "curl", "localhost:18080/api/v1/componentstatuses")
 	if err != nil {
-		fmt.Println(err)
-		return false
+		return newError(err.Error(), string(stdout))
 	}
 	var csl core.ComponentStatusList
 	err = json.NewDecoder(bytes.NewReader(stdout)).Decode(&csl)
 	if err != nil {
-		return false
+		return newError(err.Error(), string(stdout))
 	}
 	for _, item := range csl.Items {
 		for _, condition := range item.Conditions {
 			if condition.Type != core.ComponentHealthy {
-				fmt.Printf("%s is unhealthy on %s\n", item.Name, host)
-				return false
+				return newError(item.Name+" is unhealthy", "")
 			}
 		}
 	}
-	return true
+	return nil
 }
 
 func stopManagementEtcd(client *ssh.Client) error {
@@ -426,18 +475,18 @@ func initializeControlPlane() {
 		cluster.Nodes[i].ControlPlane = true
 	}
 	ckecliClusterSet(cluster)
-	Eventually(func() bool {
+	Eventually(func() error {
 		controlPlanes := []string{node1, node2, node3}
 		workers := []string{node4, node5, node6}
 		status, err := getClusterStatus()
 		if err != nil {
-			return false
+			return err
 		}
-		if !checkEtcdClusterStatus(status, controlPlanes, workers) {
-			return false
+		if err := checkEtcdClusterStatus(status, controlPlanes, workers); err != nil {
+			return err
 		}
 		return checkKubernetesClusterStatus(status, controlPlanes, workers)
-	}, 5*time.Minute).Should(BeTrue())
+	}, 5*time.Minute).Should(Succeed())
 }
 
 func setFailurePoint(failurePoint, code string) {

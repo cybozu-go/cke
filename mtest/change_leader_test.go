@@ -30,15 +30,15 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
-		Eventually(func() bool {
+		Eventually(func() error {
 			controlPlanes := []string{node1, node2, node3, node4}
 			workers := []string{node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
-				return false
+				return err
 			}
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
-		}).Should(BeTrue())
+		}).Should(Succeed())
 
 		By("Checking new leader")
 		newLeader := strings.TrimSpace(string(ckecli("leader")))
@@ -63,15 +63,15 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
-		Eventually(func() bool {
+		Eventually(func() error {
 			controlPlanes := []string{node1, node2}
 			workers := []string{node3, node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
-				return false
+				return err
 			}
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
-		}).Should(BeTrue())
+		}).Should(Succeed())
 
 		By("Checking new leader")
 		newLeader := strings.TrimSpace(string(ckecli("leader")))
@@ -96,15 +96,15 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
-		Eventually(func() bool {
+		Eventually(func() error {
 			controlPlanes := []string{node1, node3}
 			workers := []string{node2, node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
-				return false
+				return err
 			}
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
-		}).Should(BeTrue())
+		}).Should(Succeed())
 
 		By("Add node2 as control plane")
 		ckecli("constraints", "set", "control-plane-count", "3")
@@ -112,15 +112,15 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
-		Eventually(func() bool {
+		Eventually(func() error {
 			controlPlanes := []string{node1, node2, node3}
 			workers := []string{node4, node5, node6}
 			status, err := getClusterStatus()
 			if err != nil {
-				return false
+				return err
 			}
 			return checkEtcdClusterStatus(status, controlPlanes, workers)
-		}).Should(BeTrue())
+		}).Should(Succeed())
 
 		By("Checking new leader")
 		newLeader := strings.TrimSpace(string(ckecli("leader")))
