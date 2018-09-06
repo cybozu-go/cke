@@ -37,7 +37,7 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(nodes) > 0 {
 		return EtcdAddMemberOp(endpoints, nodes, c.Options.Etcd)
 	}
-	if !cs.Etcd.IsHealthy || allInSync(cpNodes, cs.Etcd) {
+	if !cs.Etcd.IsHealthy || !allInSync(cpNodes, cs.Etcd) {
 		return EtcdWaitClusterOp(endpoints)
 	}
 	nodes = newMemberControlPlane(cpNodes, cs.Etcd)
