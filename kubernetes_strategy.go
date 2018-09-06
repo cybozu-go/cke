@@ -11,12 +11,12 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 	}
 
-	// Run rivers on all nodes
-	rivers := filterNodes(cpNodes, func(n *Node) bool {
+	// Run Rivers on all nodes
+	rivers := filterNodes(c.Nodes, func(n *Node) bool {
 		return !cs.NodeStatuses[n.Address].Rivers.Running
 	})
 	if len(rivers) > 0 {
-		return RiversBootOp(cpNodes, rivers, c.Options.Rivers)
+		return RiversBootOp(rivers, cpNodes, c.Options.Rivers)
 	}
 
 	// Run kubernetes control planes on control-plane nodes

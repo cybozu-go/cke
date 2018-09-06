@@ -1,6 +1,7 @@
 package cke
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -68,14 +69,14 @@ func testKubernetesDecideToDo(t *testing.T) {
 		Commands []Command
 	}{
 		{
-			Name: "Bootstrap All Rivers on Control Plane",
+			Name: "Bootstrap Rivers on all nodes",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 			},
 			Commands: []Command{
 				{"image-pull", "rivers", Image("rivers")},
 				{"mkdir", "/var/log/rivers", ""},
-				{"run-container", "10.0.0.11,10.0.0.12,10.0.0.13", "rivers"},
+				{"run-container", strings.Join(allNodes, ","), "rivers"},
 			},
 		},
 		{
@@ -102,7 +103,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 			Name: "Bootstrap kubernetes workers",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: cpNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes,
+				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes,
 			},
 			Commands: []Command{
 				{"image-pull", "kube-proxy", Image("kube-proxy")},
@@ -144,14 +145,8 @@ func testKubernetesDecideToDo(t *testing.T) {
 		}
 		for i, res := range cmds {
 			cmd := c.Commands[i]
-			if cmd.Name != res.Name {
-				t.Errorf("[%s] command name mismatch: %s != %s", c.Name, cmd.Name, res.Name)
-			}
-			if cmd.Target != res.Target {
-				t.Errorf("[%s] command '%s' target mismatch: %s != %s", c.Name, cmd.Name, cmd.Target, res.Target)
-			}
-			if cmd.Detail != res.Detail {
-				t.Errorf("[%s] command '%s' detail mismatch: %s != %s", c.Name, cmd.Name, cmd.Detail, res.Detail)
+			if !reflect.DeepEqual(cmd, res) {
+				t.Errorf("[%s] %#v != %#v", c.Name, cmd, res)
 			}
 		}
 	}
