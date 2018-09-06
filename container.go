@@ -12,6 +12,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -238,26 +239,6 @@ func (c docker) getID(name string) (string, error) {
 	return strings.TrimSpace(string(stdout)), nil
 }
 
-func (c docker) getIDs(names []string) (map[string]string, error) {
-	filters := make([]string, len(names))
-	for i, name := range names {
-		filters[i] = "--filter name=^/" + name + "$"
-	}
-	cmdline := "docker ps -a --no-trunc " + strings.Join(filters, " ") + " --format {{.Names}}:{{.ID}}"
-	stdout, stderr, err := c.agent.Run(cmdline)
-	if err != nil {
-		return nil, errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
-	}
-
-	ids := make(map[string]string)
-	scanner := bufio.NewScanner(bytes.NewReader(stdout))
-	for scanner.Scan() {
-		nameID := strings.Split(scanner.Text(), ":")
-		ids[nameID[0]] = nameID[1]
-	}
-	return ids, nil
-}
-
 func (c docker) Exists(name string) (bool, error) {
 	id, err := c.getID(name)
 	if err != nil {
@@ -266,23 +247,32 @@ func (c docker) Exists(name string) (bool, error) {
 	return len(id) != 0, nil
 }
 
+func isSkippableError(err error, stderr []byte) bool {
+	if e, ok := err.(*ssh.ExitError); ok {
+		exitStatus := e.ExitStatus()
+		if exitStatus != 1 {
+			return false
+		}
+		scanner := bufio.NewScanner(bytes.NewReader(stderr))
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) == 0 {
+				continue
+			}
+			if strings.HasPrefix(line, "Error: No such container: ") {
+				continue
+			}
+			return false
+		}
+		return true
+	}
+	return false
+}
+
 func (c docker) Inspect(names []string) (map[string]ServiceStatus, error) {
-	nameIds, err := c.getIDs(names)
-	if err != nil {
-		return nil, err
-	}
-
-	var ids []string
-	for _, id := range nameIds {
-		ids = append(ids, id)
-	}
-	if len(ids) == 0 {
-		return nil, nil
-	}
-
-	cmdline := "docker container inspect " + strings.Join(ids, " ")
+	cmdline := "docker container inspect " + strings.Join(names, " ")
 	stdout, stderr, err := c.agent.Run(cmdline)
-	if err != nil {
+	if err != nil && !isSkippableError(err, stderr) {
 		return nil, errors.Wrapf(err, "cmdline: %s, stdout: %s, stderr: %s", cmdline, stdout, stderr)
 	}
 
