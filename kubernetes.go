@@ -115,6 +115,7 @@ func (o *riversBootOp) NextCommand() Commander {
 	}
 }
 
+// RiversParams returns a ServiceParams for rivers
 func RiversParams(upstreams []*Node) ServiceParams {
 	var ups []string
 	for _, n := range upstreams {
@@ -373,6 +374,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 
 }
 
+// APIServerParams returns built-in a ServiceParams form kube-apiserver
 func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubnet string) ServiceParams {
 	var etcdServers []string
 	for _, n := range controlPlanes {
@@ -406,6 +408,7 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 	}
 }
 
+// ControllerManagerParams returns a ServiceParams for kube-controller-manager
 func ControllerManagerParams() ServiceParams {
 	args := []string{
 		"controller-manager",
@@ -422,7 +425,7 @@ func ControllerManagerParams() ServiceParams {
 	}
 }
 
-// SchedulerBootOp returns an Operator to bootstrap Scheduler cluster.
+// SchedulerParams return a ServiceParams form kube-scheduler
 func SchedulerParams() ServiceParams {
 	args := []string{
 		"scheduler",
@@ -595,6 +598,7 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 	}
 }
 
+// ProxyParams returns a ServiceParams form kube-proxy
 func ProxyParams() ServiceParams {
 	args := []string{
 		"proxy",
@@ -613,6 +617,7 @@ func ProxyParams() ServiceParams {
 	}
 }
 
+// KubeletServiceParams returns a ServiceParams for kubelet
 func KubeletServiceParams() ServiceParams {
 	args := []string{
 		"kubelet",
