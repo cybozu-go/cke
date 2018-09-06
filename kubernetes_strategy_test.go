@@ -68,6 +68,17 @@ func testKubernetesDecideToDo(t *testing.T) {
 		Commands []Command
 	}{
 		{
+			Name: "Bootstrap All Rivers on Control Plane",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+			},
+			Commands: []Command{
+				{"image-pull", "rivers", Image("rivers")},
+				{"mkdir", "/var/log/rivers", ""},
+				{"run-container", "10.0.0.11,10.0.0.12,10.0.0.13", "rivers"},
+			},
+		},
+		{
 			Name: "Bootstrap Control Planes",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes, Rivers: allNodes,
@@ -77,6 +88,8 @@ func testKubernetesDecideToDo(t *testing.T) {
 				{"mkdir", "/var/log/kubernetes/apiserver", ""},
 				{"mkdir", "/var/log/kubernetes/controller-manager", ""},
 				{"mkdir", "/var/log/kubernetes/scheduler", ""},
+				{"make-file", "/etc/kubernetes/controller-manager/kubeconfig", ""},
+				{"make-file", "/etc/kubernetes/scheduler/kubeconfig", ""},
 				{"issue-apiserver-certificates", "10.0.0.11,10.0.0.12,10.0.0.13", ""},
 				{"run-container", "10.0.0.11", "kube-apiserver"},
 				{"run-container", "10.0.0.12", "kube-apiserver"},
@@ -86,35 +99,24 @@ func testKubernetesDecideToDo(t *testing.T) {
 			},
 		},
 		{
-			Name: "Bootstrap Kubelet",
+			Name: "Bootstrap kubernetes workers",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes,
+				Rivers: cpNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes,
 			},
 			Commands: []Command{
-				{"make-file", "/etc/kubernetes/kubelet/kubeconfig", ""},
-				{"image-pull", "kubelet", Image("kubelet")},
-				{"image-pull", "pause", Image("pause")},
+				{"image-pull", "kube-proxy", Image("kube-proxy")},
 				{"mkdir", "/var/log/kubernetes/kubelet", ""},
+				{"mkdir", "/var/log/kubernetes/proxy", ""},
+				{"make-file", "/etc/kubernetes/kubelet/kubeconfig", ""},
+				{"make-file", "/etc/kubernetes/proxy/kubeconfig", ""},
 				{"volume-create", strings.Join(allNodes, ","), "dockershim"},
 				{"run-container", strings.Join(allNodes, ","), "kubelet"},
-			},
-		},
-		{
-			Name: "Bootstrap Proxy",
-			Input: KubernetesTestConfiguration{
-				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes, Kubelets: allNodes,
-			},
-			Commands: []Command{
-				{"make-file", "/etc/kubernetes/proxy/kubeconfig", ""},
-				{"image-pull", "kube-proxy", Image("kube-proxy")},
-				{"mkdir", "/var/log/kubernetes/proxy", ""},
 				{"run-container", strings.Join(allNodes, ","), "kube-proxy"},
 			},
 		},
 		{
-			Name: "Stop Controll Planes",
+			Name: "Stop Control Planes",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers:             allNodes,
@@ -126,18 +128,6 @@ func testKubernetesDecideToDo(t *testing.T) {
 				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-apiserver"},
 				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-scheduler"},
 				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-controller-manager"},
-			},
-		},
-		{
-			Name: "Stop rivers because its command arguments are different from expected ones",
-			Input: KubernetesTestConfiguration{
-				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes, Kubelets: allNodes, Proxies: allNodes,
-			},
-			Commands: []Command{
-				{"kill-container", "10.0.0.11", "rivers"},
-				{"kill-container", "10.0.0.12", "rivers"},
-				{"kill-container", "10.0.0.13", "rivers"},
 			},
 		},
 	}

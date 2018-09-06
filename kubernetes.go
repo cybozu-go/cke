@@ -38,6 +38,7 @@ type kubeCPBootOp struct {
 type kubeCPRestartOp struct {
 	cps []*Node
 
+	rivers            []*Node
 	apiserver         []*Node
 	controllerManager []*Node
 	scheduler         []*Node
@@ -58,27 +59,27 @@ type kubeCPStopOp struct {
 	step int
 }
 
-type kubeletBootOp struct {
-	nodes  []*Node
-	params KubeletParams
-	step   int
+type kubeWorkerBootOp struct {
+	cps []*Node
+
+	kubelets []*Node
+	proxies  []*Node
+
+	options Options
+
+	step int
 }
 
-type riversStopOp struct {
-	nodes     []*Node
-	nodeIndex int
-}
+type kubeWorkerRestartOp struct {
+	cps []*Node
 
-type proxyBootOp struct {
-	nodes  []*Node
-	params ServiceParams
-	step   int
-}
+	rivers   []*Node
+	kubelets []*Node
+	proxies  []*Node
 
-type kubeletStopOp struct {
-	nodes     []*Node
-	step      int
-	nodeIndex int
+	options Options
+
+	step int
 }
 
 // RiversBootOp returns an Operator to bootstrap rivers cluster.
@@ -175,11 +176,23 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 		return makeDirCommand{o.scheduler, "/var/log/kubernetes/scheduler"}
 	case 4:
 		o.step++
+		if len(o.controllerManager) == 0 {
+			return o.NextCommand()
+		}
+		return makeFileCommand{o.controllerManager, controllerManagerKubeconfig(), "/etc/kubernetes/controller-manager/kubeconfig"}
+	case 5:
+		o.step++
+		if len(o.scheduler) == 0 {
+			return o.NextCommand()
+		}
+		return makeFileCommand{o.scheduler, schedulerKubeconfig(), "/etc/kubernetes/scheduler/kubeconfig"}
+	case 6:
+		o.step++
 		if len(o.apiserver) == 0 {
 			return o.NextCommand()
 		}
 		return issueAPIServerCertificatesCommand{o.apiserver}
-	case 5:
+	case 7:
 		if o.nodeIndex >= len(o.apiserver) {
 			o.step++
 			return o.NextCommand()
@@ -192,13 +205,13 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
 		}
 		return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, opts, apiServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
-	case 6:
+	case 8:
 		o.step++
 		if len(o.scheduler) == 0 {
 			return o.NextCommand()
 		}
 		return runContainerCommand{o.scheduler, kubeSchedulerContainerName, opts, schedulerParams(), o.options.Scheduler}
-	case 7:
+	case 9:
 		o.step++
 		if len(o.controllerManager) == 0 {
 			return o.NextCommand()
@@ -248,9 +261,10 @@ func (o *kubeCPStopOp) NextCommand() Commander {
 }
 
 // KubeCPRestartOp returns an Operator to restart kubernetes control planes
-func KubeCPRestartOp(cps []*Node, apiserver, controllerManager, scheduler []*Node, serviceSubnet string, options Options) Operator {
+func KubeCPRestartOp(cps []*Node, rivers, apiserver, controllerManager, scheduler []*Node, serviceSubnet string, options Options) Operator {
 	return &kubeCPRestartOp{
 		cps:               cps,
+		rivers:            rivers,
 		apiserver:         apiserver,
 		controllerManager: controllerManager,
 		scheduler:         scheduler,
@@ -269,8 +283,30 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 	switch o.step1 {
 	case 0:
 		o.step1++
-		return imagePullCommand{o.cps, kubeAPIServerContainerName}
+		return imagePullCommand{o.cps, riversContainerName}
 	case 1:
+		o.step1++
+		return imagePullCommand{o.cps, kubeAPIServerContainerName}
+	case 2:
+		if o.nodeIndex >= len(o.apiserver) {
+			o.step1++
+			return o.NextCommand()
+		}
+		node := o.rivers[o.nodeIndex]
+
+		switch o.step2 {
+		case 0:
+			o.step2++
+			return stopContainersCommand{[]*Node{node}, riversContainerName}
+		case 1:
+			o.step2++
+			return runContainerCommand{[]*Node{node}, riversContainerName, opts, riversParams(o.cps), o.options.Rivers}
+		default:
+			o.step2 = 0
+			o.nodeIndex++
+			return o.NextCommand()
+		}
+	case 3:
 		if o.nodeIndex >= len(o.apiserver) {
 			o.step1++
 			return o.NextCommand()
@@ -293,7 +329,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 			o.nodeIndex++
 			return o.NextCommand()
 		}
-	case 2:
+	case 4:
 		if o.nodeIndex >= len(o.controllerManager) {
 			o.step1++
 			return o.NextCommand()
@@ -312,7 +348,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 			o.nodeIndex++
 			return o.NextCommand()
 		}
-	case 3:
+	case 5:
 		if o.nodeIndex >= len(o.scheduler) {
 			o.step1++
 			return o.NextCommand()
@@ -403,50 +439,179 @@ func schedulerParams() ServiceParams {
 	}
 }
 
-// KubeletBootOp returns an Operator to bootstrap Kubelet.
-func KubeletBootOp(nodes []*Node, params KubeletParams) Operator {
-	return &kubeletBootOp{
-		nodes:  nodes,
-		params: params,
-		step:   0,
+func KubeWorkerBootOp(cps []*Node, kubelets, proxies []*Node, options Options) Operator {
+	return &kubeWorkerBootOp{
+		cps:      cps,
+		kubelets: kubelets,
+		proxies:  proxies,
+		options:  options,
 	}
 }
 
-func (o *kubeletBootOp) Name() string {
-	return "kubelet-bootstrap"
+func (o *kubeWorkerBootOp) Name() string {
+	return "worker-bootstrap"
 }
 
-func (o *kubeletBootOp) NextCommand() Commander {
-	volName := "dockershim"
-	opts := []string{
-		"--tmpfs=/var/tmp/dockershim",
-		"--privileged",
-	}
+func (o *kubeWorkerBootOp) NextCommand() Commander {
+	var opts []string
+
 	switch o.step {
 	case 0:
 		o.step++
-		return makeFileCommand{o.nodes, kubeletKubeConfig(), "/etc/kubernetes/kubelet/kubeconfig"}
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return imagePullCommand{o.proxies, kubeProxyContainerName}
 	case 1:
 		o.step++
-		return imagePullCommand{o.nodes, kubeletContainerName}
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return makeDirCommand{o.kubelets, "/var/log/kubernetes/kubelet"}
 	case 2:
 		o.step++
-		return imagePullCommand{o.nodes, pauseContainerName}
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return makeDirCommand{o.proxies, "/var/log/kubernetes/proxy"}
 	case 3:
 		o.step++
-		return makeDirCommand{o.nodes, "/var/log/kubernetes/kubelet"}
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return makeFileCommand{o.proxies, kubeletKubeConfig(), "/etc/kubernetes/kubelet/kubeconfig"}
 	case 4:
 		o.step++
-		return volumeCreateCommand{o.nodes, volName}
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return makeFileCommand{o.proxies, proxyKubeConfig(), "/etc/kubernetes/proxy/kubeconfig"}
 	case 5:
 		o.step++
-		return runContainerCommand{o.nodes, kubeletContainerName, opts, o.serviceParams(), o.extraParams()}
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return volumeCreateCommand{o.kubelets, "dockershim"}
+	case 6:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		opts = []string{
+			"--tmpfs=/var/tmp/dockershim",
+			"--privileged",
+		}
+		return runContainerCommand{o.kubelets, kubeletContainerName, opts, kubeletParams(), o.options.Kubelet.ToServiceParams()}
+	case 7:
+		o.step++
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		opts = []string{
+			"--tmpfs=/run",
+			"--privileged",
+		}
+		return runContainerCommand{o.proxies, kubeProxyContainerName, opts, proxyParams(), o.options.Proxy}
 	default:
 		return nil
+
+	}
+	return nil
+}
+
+func KubeWorkerRestartOp(cps []*Node, rivers, kubelets, proxies []*Node, options Options) Operator {
+	return &kubeWorkerRestartOp{
+		cps:      cps,
+		rivers:   rivers,
+		kubelets: kubelets,
+		proxies:  proxies,
+		options:  options,
 	}
 }
 
-func (o *kubeletBootOp) serviceParams() ServiceParams {
+func (o *kubeWorkerRestartOp) Name() string {
+	return "worker-restart"
+}
+
+func (o *kubeWorkerRestartOp) NextCommand() Commander {
+	var opts []string
+
+	switch o.step {
+	case 0:
+		o.step++
+		if len(o.rivers) == 0 {
+			return o.NextCommand()
+		}
+		return imagePullCommand{o.proxies, riversContainerName}
+	case 1:
+		o.step++
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return imagePullCommand{o.proxies, kubeProxyContainerName}
+	case 2:
+		o.step++
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return makeFileCommand{o.proxies, kubeletKubeConfig(), "/etc/kubernetes/kubelet/kubeconfig"}
+	case 3:
+		o.step++
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return makeFileCommand{o.proxies, proxyKubeConfig(), "/etc/kubernetes/proxy/kubeconfig"}
+	case 4:
+		o.step++
+		if len(o.rivers) == 0 {
+			return o.NextCommand()
+		}
+		return runContainerCommand{o.rivers, riversContainerName, opts, riversParams(o.cps), o.options.Rivers}
+	case 5:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		opts = []string{
+			"--tmpfs=/var/tmp/dockershim",
+			"--privileged",
+		}
+		return runContainerCommand{o.kubelets, kubeletContainerName, opts, kubeletParams(), o.options.Kubelet.ToServiceParams()}
+	case 6:
+		o.step++
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		opts = []string{
+			"--tmpfs=/run",
+			"--privileged",
+		}
+		return runContainerCommand{o.proxies, kubeProxyContainerName, opts, proxyParams(), o.options.Proxy}
+	default:
+		return nil
+
+	}
+}
+
+func proxyParams() ServiceParams {
+	args := []string{
+		"proxy",
+		"--proxy-mode=ipvs",
+		"--kubeconfig=/etc/kubernetes/proxy/kubeconfig",
+		"--log-dir=/var/log/kubernetes/proxy",
+	}
+	return ServiceParams{
+		ExtraArguments: args,
+		ExtraBinds: []Mount{
+			{"/etc/hostname", "/etc/machine-id", true},
+			{"/etc/kubernetes/proxy", "/etc/kubernetes/proxy", true},
+			{"/lib/modules", "/lib/modules", true},
+			{"/var/log/kubernetes/proxy", "/var/log/kubernetes/proxy", false},
+		},
+	}
+}
+
+func kubeletParams() ServiceParams {
 	args := []string{
 		"kubelet",
 		"--allow-privileged=true",
@@ -467,131 +632,5 @@ func (o *kubeletBootOp) serviceParams() ServiceParams {
 			{"/var/log/kubernetes/kubelet", "/var/log/kubernetes/kubelet", false},
 			{"/var/run/docker.sock", "/var/run/docker.sock", false},
 		},
-	}
-}
-
-func (o *kubeletBootOp) extraParams() ServiceParams {
-	extraArgs := o.params.ExtraArguments
-	if len(o.params.Domain) > 0 {
-		extraArgs = append(extraArgs, "--cluster-domain="+o.params.Domain)
-	}
-	if o.params.AllowSwap {
-		extraArgs = append(extraArgs, "--fail-swap-on=false")
-	}
-	return ServiceParams{
-		ExtraArguments: extraArgs,
-		ExtraBinds:     o.params.ExtraBinds,
-		ExtraEnvvar:    o.params.ExtraEnvvar,
-	}
-}
-
-// RiversStopOp returns an Operator to stop Rivers.
-func RiversStopOp(nodes []*Node) Operator {
-	return &riversStopOp{
-		nodes:     nodes,
-		nodeIndex: 0,
-	}
-}
-
-// ProxyBootOp returns an Operator to bootstrap Proxy
-func ProxyBootOp(nodes []*Node, params ServiceParams) Operator {
-	return &proxyBootOp{
-		nodes:  nodes,
-		params: params,
-		step:   0,
-	}
-}
-
-func (o *riversStopOp) Name() string {
-	return "rivers-stop"
-}
-
-func (o *riversStopOp) NextCommand() Commander {
-	if o.nodeIndex >= len(o.nodes) {
-		return nil
-	}
-
-	node := o.nodes[o.nodeIndex]
-	o.nodeIndex++
-
-	return killContainerCommand{node, "rivers"}
-}
-
-func (o *proxyBootOp) Name() string {
-	return "proxy-bootstrap"
-}
-
-func (o *proxyBootOp) NextCommand() Commander {
-	extra := o.params
-	opts := []string{
-		"--tmpfs=/run",
-		"--privileged",
-	}
-
-	switch o.step {
-	case 0:
-		o.step++
-		return makeFileCommand{o.nodes, proxyKubeConfig(), "/etc/kubernetes/proxy/kubeconfig"}
-	case 1:
-		o.step++
-		return imagePullCommand{o.nodes, kubeProxyContainerName}
-	case 2:
-		o.step++
-		return makeDirCommand{o.nodes, "/var/log/kubernetes/proxy"}
-	case 3:
-		o.step++
-		return runContainerCommand{o.nodes, kubeProxyContainerName, opts, o.serviceParams(), extra}
-	default:
-		return nil
-	}
-}
-
-func (o *proxyBootOp) serviceParams() ServiceParams {
-	args := []string{
-		"proxy",
-		"--proxy-mode=ipvs",
-		"--kubeconfig=/etc/kubernetes/proxy/kubeconfig",
-		"--log-dir=/var/log/kubernetes/proxy",
-	}
-	return ServiceParams{
-		ExtraArguments: args,
-		ExtraBinds: []Mount{
-			{"/etc/hostname", "/etc/machine-id", true},
-			{"/etc/kubernetes/proxy", "/etc/kubernetes/proxy", true},
-			{"/lib/modules", "/lib/modules", true},
-			{"/var/log/kubernetes/proxy", "/var/log/kubernetes/proxy", false},
-		},
-	}
-}
-
-// KubeletStopOp returns an Operator to stop Kubelet.
-func KubeletStopOp(nodes []*Node) Operator {
-	return &kubeletStopOp{
-		nodes:     nodes,
-		step:      0,
-		nodeIndex: 0,
-	}
-}
-
-func (o *kubeletStopOp) Name() string {
-	return "kubelet-stop"
-}
-
-func (o *kubeletStopOp) NextCommand() Commander {
-	switch o.step {
-	case 0:
-		o.step++
-		return removeFileCommand{o.nodes, "/etc/kubernetes/kubelet/kubeconfig"}
-	case 1:
-		if o.nodeIndex >= len(o.nodes) {
-			return nil
-		}
-
-		node := o.nodes[o.nodeIndex]
-		o.nodeIndex++
-
-		return stopContainerCommand{node, kubeletContainerName}
-	default:
-		return nil
 	}
 }
