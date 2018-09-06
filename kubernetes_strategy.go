@@ -76,7 +76,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	// Check diff of options for rivers, apiservers, controller-managers, and schedulers
 	rivers := filterNodes(cpNodes, func(n *Node) bool {
 		riversStatus := cs.NodeStatuses[n.Address].Rivers
-		if !riversParams(cpNodes).Equal(riversStatus.BuiltInParams) {
+		if !RiversParams(cpNodes).Equal(riversStatus.BuiltInParams) {
 			return true
 		}
 		if !c.Options.Rivers.Equal(riversStatus.ExtraParams) {
@@ -86,7 +86,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	})
 	apiservers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].APIServer
-		if !apiServerParams(cpNodes, n.Address, c.ServiceSubnet).Equal(status.BuiltInParams) {
+		if !APIServerParams(cpNodes, n.Address, c.ServiceSubnet).Equal(status.BuiltInParams) {
 			return true
 		}
 		if !c.Options.APIServer.Equal(status.ExtraParams) {
@@ -96,7 +96,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	})
 	controllerManagers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].ControllerManager
-		if !controllerManagerParams().Equal(status.BuiltInParams) {
+		if !ControllerManagerParams().Equal(status.BuiltInParams) {
 			return true
 		}
 		if !c.Options.ControllerManager.Equal(status.ExtraParams) {
@@ -106,7 +106,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	})
 	schedulers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].Scheduler
-		if !schedulerParams().Equal(status.BuiltInParams) {
+		if !SchedulerParams().Equal(status.BuiltInParams) {
 			return true
 		}
 		if !c.Options.Scheduler.Equal(status.ExtraParams) {
@@ -121,7 +121,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	// Check diff of rivers options for worker nodes
 	rivers = filterNodes(nonCpNodes, func(n *Node) bool {
 		riversStatus := cs.NodeStatuses[n.Address].Rivers
-		if !riversParams(cpNodes).Equal(riversStatus.BuiltInParams) {
+		if !RiversParams(cpNodes).Equal(riversStatus.BuiltInParams) {
 			return true
 		}
 		if !c.Options.Rivers.Equal(riversStatus.ExtraParams) {
@@ -131,7 +131,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	})
 	kubelets := filterNodes(c.Nodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].Kubelet
-		if !kubeletParams().Equal(status.BuiltInParams) {
+		if !KubeletServiceParams().Equal(status.BuiltInParams) {
 			return true
 		}
 		if !c.Options.Kubelet.ToServiceParams().Equal(status.ExtraParams) {
@@ -141,7 +141,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	})
 	proxies := filterNodes(c.Nodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].Proxy
-		if !proxyParams().Equal(status.BuiltInParams) {
+		if !ProxyParams().Equal(status.BuiltInParams) {
 			return true
 		}
 		if !c.Options.Proxy.Equal(status.ExtraParams) {

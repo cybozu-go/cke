@@ -109,13 +109,13 @@ func (o *riversBootOp) NextCommand() Commander {
 		return makeDirCommand{o.nodes, "/var/log/rivers"}
 	case 2:
 		o.step++
-		return runContainerCommand{o.nodes, "rivers", opts, riversParams(o.upstreams), extra}
+		return runContainerCommand{o.nodes, "rivers", opts, RiversParams(o.upstreams), extra}
 	default:
 		return nil
 	}
 }
 
-func riversParams(upstreams []*Node) ServiceParams {
+func RiversParams(upstreams []*Node) ServiceParams {
 	var ups []string
 	for _, n := range upstreams {
 		ups = append(ups, n.Address+":8080")
@@ -204,19 +204,19 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 			// TODO pass keys from CKE
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
 		}
-		return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, opts, apiServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
+		return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, opts, APIServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
 	case 8:
 		o.step++
 		if len(o.scheduler) == 0 {
 			return o.NextCommand()
 		}
-		return runContainerCommand{o.scheduler, kubeSchedulerContainerName, opts, schedulerParams(), o.options.Scheduler}
+		return runContainerCommand{o.scheduler, kubeSchedulerContainerName, opts, SchedulerParams(), o.options.Scheduler}
 	case 9:
 		o.step++
 		if len(o.controllerManager) == 0 {
 			return o.NextCommand()
 		}
-		return runContainerCommand{o.controllerManager, kubeControllerManagerContainerName, opts, controllerManagerParams(), o.options.ControllerManager}
+		return runContainerCommand{o.controllerManager, kubeControllerManagerContainerName, opts, ControllerManagerParams(), o.options.ControllerManager}
 	default:
 		return nil
 	}
@@ -300,7 +300,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 			return stopContainersCommand{[]*Node{node}, riversContainerName}
 		case 1:
 			o.step2++
-			return runContainerCommand{[]*Node{node}, riversContainerName, opts, riversParams(o.cps), o.options.Rivers}
+			return runContainerCommand{[]*Node{node}, riversContainerName, opts, RiversParams(o.cps), o.options.Rivers}
 		default:
 			o.step2 = 0
 			o.nodeIndex++
@@ -323,7 +323,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 				// TODO pass keys from CKE
 				"--mount", "type=tmpfs,dst=/run/kubernetes",
 			}
-			return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, opts, apiServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
+			return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, opts, APIServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
 		default:
 			o.step2 = 0
 			o.nodeIndex++
@@ -342,7 +342,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 			return stopContainersCommand{[]*Node{node}, kubeControllerManagerContainerName}
 		case 1:
 			o.step2++
-			return runContainerCommand{[]*Node{node}, kubeControllerManagerContainerName, opts, apiServerParams(o.cps, node.Address, o.serviceSubnet), o.options.ControllerManager}
+			return runContainerCommand{[]*Node{node}, kubeControllerManagerContainerName, opts, ControllerManagerParams(), o.options.ControllerManager}
 		default:
 			o.step2 = 0
 			o.nodeIndex++
@@ -361,7 +361,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 			return stopContainersCommand{[]*Node{node}, kubeSchedulerContainerName}
 		case 1:
 			o.step2++
-			return runContainerCommand{[]*Node{node}, kubeSchedulerContainerName, opts, apiServerParams(o.cps, node.Address, o.serviceSubnet), o.options.Scheduler}
+			return runContainerCommand{[]*Node{node}, kubeSchedulerContainerName, opts, SchedulerParams(), o.options.Scheduler}
 		default:
 			o.step2 = 0
 			o.nodeIndex++
@@ -373,7 +373,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 
 }
 
-func apiServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubnet string) ServiceParams {
+func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubnet string) ServiceParams {
 	var etcdServers []string
 	for _, n := range controlPlanes {
 		etcdServers = append(etcdServers, "https://"+n.Address+":2379")
@@ -406,7 +406,7 @@ func apiServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 	}
 }
 
-func controllerManagerParams() ServiceParams {
+func ControllerManagerParams() ServiceParams {
 	args := []string{
 		"controller-manager",
 		"--kubeconfig=/etc/kubernetes/controller-manager/kubeconfig",
@@ -423,7 +423,7 @@ func controllerManagerParams() ServiceParams {
 }
 
 // SchedulerBootOp returns an Operator to bootstrap Scheduler cluster.
-func schedulerParams() ServiceParams {
+func SchedulerParams() ServiceParams {
 	args := []string{
 		"scheduler",
 		"--kubeconfig=/etc/kubernetes/scheduler/kubeconfig",
@@ -502,7 +502,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 			"--tmpfs=/var/tmp/dockershim",
 			"--privileged",
 		}
-		return runContainerCommand{o.kubelets, kubeletContainerName, opts, kubeletParams(), o.options.Kubelet.ToServiceParams()}
+		return runContainerCommand{o.kubelets, kubeletContainerName, opts, KubeletServiceParams(), o.options.Kubelet.ToServiceParams()}
 	case 7:
 		o.step++
 		if len(o.proxies) == 0 {
@@ -512,7 +512,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 			"--tmpfs=/run",
 			"--privileged",
 		}
-		return runContainerCommand{o.proxies, kubeProxyContainerName, opts, proxyParams(), o.options.Proxy}
+		return runContainerCommand{o.proxies, kubeProxyContainerName, opts, ProxyParams(), o.options.Proxy}
 	default:
 		return nil
 
@@ -568,7 +568,7 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		if len(o.rivers) == 0 {
 			return o.NextCommand()
 		}
-		return runContainerCommand{o.rivers, riversContainerName, opts, riversParams(o.cps), o.options.Rivers}
+		return runContainerCommand{o.rivers, riversContainerName, opts, RiversParams(o.cps), o.options.Rivers}
 	case 5:
 		o.step++
 		if len(o.kubelets) == 0 {
@@ -578,7 +578,7 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 			"--tmpfs=/var/tmp/dockershim",
 			"--privileged",
 		}
-		return runContainerCommand{o.kubelets, kubeletContainerName, opts, kubeletParams(), o.options.Kubelet.ToServiceParams()}
+		return runContainerCommand{o.kubelets, kubeletContainerName, opts, KubeletServiceParams(), o.options.Kubelet.ToServiceParams()}
 	case 6:
 		o.step++
 		if len(o.proxies) == 0 {
@@ -588,14 +588,14 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 			"--tmpfs=/run",
 			"--privileged",
 		}
-		return runContainerCommand{o.proxies, kubeProxyContainerName, opts, proxyParams(), o.options.Proxy}
+		return runContainerCommand{o.proxies, kubeProxyContainerName, opts, ProxyParams(), o.options.Proxy}
 	default:
 		return nil
 
 	}
 }
 
-func proxyParams() ServiceParams {
+func ProxyParams() ServiceParams {
 	args := []string{
 		"proxy",
 		"--proxy-mode=ipvs",
@@ -613,7 +613,7 @@ func proxyParams() ServiceParams {
 	}
 }
 
-func kubeletParams() ServiceParams {
+func KubeletServiceParams() ServiceParams {
 	args := []string{
 		"kubelet",
 		"--allow-privileged=true",
