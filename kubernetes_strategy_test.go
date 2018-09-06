@@ -114,42 +114,18 @@ func testKubernetesDecideToDo(t *testing.T) {
 			},
 		},
 		{
-			Name: "Stop APIServers",
+			Name: "Stop Controll Planes",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
-				ControllerManagers: cpNodes, Schedulers: cpNodes,
-			},
-			Commands: []Command{
-				{"stop-container", "10.0.0.14", "kube-apiserver"},
-				{"stop-container", "10.0.0.15", "kube-apiserver"},
-			},
-		},
-		{
-			Name: "Stop Controller Managers",
-			Input: KubernetesTestConfiguration{
-				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: cpNodes,
+				Rivers:             allNodes,
+				APIServers:         append(cpNodes, "10.0.0.14", "10.0.0.15"),
 				ControllerManagers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
-				Schedulers:         cpNodes,
+				Schedulers:         append(cpNodes, "10.0.0.14", "10.0.0.15"),
 			},
 			Commands: []Command{
-				{"rm", "/etc/kubernetes/controller-manager/kubeconfig", ""},
-				{"stop-container", "10.0.0.14", "kube-controller-manager"},
-				{"stop-container", "10.0.0.15", "kube-controller-manager"},
-			},
-		},
-		{
-			Name: "Stop Schedulers",
-			Input: KubernetesTestConfiguration{
-				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes,
-				Schedulers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
-			},
-			Commands: []Command{
-				{"rm", "/etc/kubernetes/scheduler/kubeconfig", ""},
-				{"stop-container", "10.0.0.14", "kube-scheduler"},
-				{"stop-container", "10.0.0.15", "kube-scheduler"},
+				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-apiserver"},
+				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-scheduler"},
+				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-controller-manager"},
 			},
 		},
 		{

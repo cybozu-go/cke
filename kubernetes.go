@@ -35,6 +35,29 @@ type kubeCPBootOp struct {
 	nodeIndex int
 }
 
+type kubeCPRestartOp struct {
+	cps []*Node
+
+	apiserver         []*Node
+	controllerManager []*Node
+	scheduler         []*Node
+
+	serviceSubnet string
+	options       Options
+
+	step1     int
+	step2     int
+	nodeIndex int
+}
+
+type kubeCPStopOp struct {
+	apiserver         []*Node
+	controllerManager []*Node
+	scheduler         []*Node
+
+	step int
+}
+
 type kubeletBootOp struct {
 	nodes  []*Node
 	params KubeletParams
@@ -50,23 +73,6 @@ type proxyBootOp struct {
 	nodes  []*Node
 	params ServiceParams
 	step   int
-}
-
-type apiServerStopOp struct {
-	nodes     []*Node
-	nodeIndex int
-}
-
-type controllerManagerStopOp struct {
-	nodes     []*Node
-	step      int
-	nodeIndex int
-}
-
-type schedulerStopOp struct {
-	nodes     []*Node
-	step      int
-	nodeIndex int
 }
 
 type kubeletStopOp struct {
@@ -201,6 +207,134 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 	default:
 		return nil
 	}
+}
+
+// KubeCPStopOp returns an Operator to stop kubernetes control planes
+func KubeCPStopOp(apiserver, controllerManager, scheduler []*Node) Operator {
+	return &kubeCPStopOp{
+		apiserver:         apiserver,
+		controllerManager: controllerManager,
+		scheduler:         scheduler,
+	}
+}
+
+func (o *kubeCPStopOp) Name() string {
+	return "kubernetes-control-plane-stop"
+}
+
+func (o *kubeCPStopOp) NextCommand() Commander {
+	switch o.step {
+	case 0:
+		o.step++
+		if len(o.apiserver) == 0 {
+			return o.NextCommand()
+		}
+		return stopContainersCommand{o.apiserver, kubeAPIServerContainerName}
+	case 1:
+		o.step++
+		if len(o.scheduler) == 0 {
+			return o.NextCommand()
+		}
+		return stopContainersCommand{o.scheduler, kubeSchedulerContainerName}
+	case 2:
+		o.step++
+		if len(o.controllerManager) == 0 {
+			return o.NextCommand()
+		}
+		return stopContainersCommand{o.controllerManager, kubeControllerManagerContainerName}
+	default:
+		return nil
+	}
+}
+
+// KubeCPRestartOp returns an Operator to restart kubernetes control planes
+func KubeCPRestartOp(cps []*Node, apiserver, controllerManager, scheduler []*Node, serviceSubnet string, options Options) Operator {
+	return &kubeCPRestartOp{
+		cps:               cps,
+		apiserver:         apiserver,
+		controllerManager: controllerManager,
+		scheduler:         scheduler,
+		serviceSubnet:     serviceSubnet,
+		options:           options,
+	}
+}
+
+func (o *kubeCPRestartOp) Name() string {
+	return "kubernetes-control-plane-restart"
+}
+
+func (o *kubeCPRestartOp) NextCommand() Commander {
+	var opts []string
+
+	switch o.step1 {
+	case 0:
+		o.step1++
+		return imagePullCommand{o.cps, kubeAPIServerContainerName}
+	case 1:
+		if o.nodeIndex >= len(o.apiserver) {
+			o.step1++
+			return o.NextCommand()
+		}
+		node := o.apiserver[o.nodeIndex]
+
+		switch o.step2 {
+		case 0:
+			o.step2++
+			return stopContainersCommand{[]*Node{node}, kubeAPIServerContainerName}
+		case 1:
+			o.step2++
+			opts = []string{
+				// TODO pass keys from CKE
+				"--mount", "type=tmpfs,dst=/run/kubernetes",
+			}
+			return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, opts, apiServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
+		default:
+			o.step2 = 0
+			o.nodeIndex++
+			return o.NextCommand()
+		}
+	case 2:
+		if o.nodeIndex >= len(o.controllerManager) {
+			o.step1++
+			return o.NextCommand()
+		}
+		node := o.controllerManager[o.nodeIndex]
+
+		switch o.step2 {
+		case 0:
+			o.step2++
+			return stopContainersCommand{[]*Node{node}, kubeControllerManagerContainerName}
+		case 1:
+			o.step2++
+			return runContainerCommand{[]*Node{node}, kubeControllerManagerContainerName, opts, apiServerParams(o.cps, node.Address, o.serviceSubnet), o.options.ControllerManager}
+		default:
+			o.step2 = 0
+			o.nodeIndex++
+			return o.NextCommand()
+		}
+	case 3:
+		if o.nodeIndex >= len(o.scheduler) {
+			o.step1++
+			return o.NextCommand()
+		}
+		node := o.scheduler[o.nodeIndex]
+
+		switch o.step2 {
+		case 0:
+			o.step2++
+			return stopContainersCommand{[]*Node{node}, kubeSchedulerContainerName}
+		case 1:
+			o.step2++
+			return runContainerCommand{[]*Node{node}, kubeSchedulerContainerName, opts, apiServerParams(o.cps, node.Address, o.serviceSubnet), o.options.Scheduler}
+		default:
+			o.step2 = 0
+			o.nodeIndex++
+			return o.NextCommand()
+		}
+	default:
+		return nil
+	}
+
 }
 
 func apiServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubnet string) ServiceParams {
@@ -427,93 +561,6 @@ func (o *proxyBootOp) serviceParams() ServiceParams {
 			{"/lib/modules", "/lib/modules", true},
 			{"/var/log/kubernetes/proxy", "/var/log/kubernetes/proxy", false},
 		},
-	}
-}
-
-// APIServerStopOp returns an Operator to bootstrap Scheduler cluster.
-func APIServerStopOp(nodes []*Node) Operator {
-	return &apiServerStopOp{
-		nodes:     nodes,
-		nodeIndex: 0,
-	}
-}
-
-func (o *apiServerStopOp) Name() string {
-	return "apiserver-stop"
-}
-
-func (o *apiServerStopOp) NextCommand() Commander {
-	if o.nodeIndex >= len(o.nodes) {
-		return nil
-	}
-
-	node := o.nodes[o.nodeIndex]
-	o.nodeIndex++
-
-	return stopContainerCommand{node, kubeAPIServerContainerName}
-}
-
-// ControllerManagerStopOp returns an Operator to stop ControllerManager.
-func ControllerManagerStopOp(nodes []*Node) Operator {
-	return &controllerManagerStopOp{
-		nodes:     nodes,
-		step:      0,
-		nodeIndex: 0,
-	}
-}
-
-func (o *controllerManagerStopOp) Name() string {
-	return "controller-manager-stop"
-}
-
-func (o *controllerManagerStopOp) NextCommand() Commander {
-	switch o.step {
-	case 0:
-		o.step++
-		return removeFileCommand{o.nodes, "/etc/kubernetes/controller-manager/kubeconfig"}
-	case 1:
-		if o.nodeIndex >= len(o.nodes) {
-			return nil
-		}
-
-		node := o.nodes[o.nodeIndex]
-		o.nodeIndex++
-
-		return stopContainerCommand{node, kubeControllerManagerContainerName}
-	default:
-		return nil
-	}
-}
-
-// SchedulerStopOp returns an Operator to stop Scheduler.
-func SchedulerStopOp(nodes []*Node) Operator {
-	return &schedulerStopOp{
-		nodes:     nodes,
-		step:      0,
-		nodeIndex: 0,
-	}
-}
-
-func (o *schedulerStopOp) Name() string {
-	return "scheduler-stop"
-}
-
-func (o *schedulerStopOp) NextCommand() Commander {
-	switch o.step {
-	case 0:
-		o.step++
-		return removeFileCommand{o.nodes, "/etc/kubernetes/scheduler/kubeconfig"}
-	case 1:
-		if o.nodeIndex >= len(o.nodes) {
-			return nil
-		}
-
-		node := o.nodes[o.nodeIndex]
-		o.nodeIndex++
-
-		return stopContainerCommand{node, kubeSchedulerContainerName}
-	default:
-		return nil
 	}
 }
 

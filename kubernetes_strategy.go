@@ -33,28 +33,17 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return KubeCPBootOp(cpNodes, apiservers, controllerManagers, schedulers, c.ServiceSubnet, c.Options)
 	}
 
-	// Stop kubernetes control planes on non-control-plane nodes
-	target = filterNodes(nonCpNodes, func(n *Node) bool {
+	apiservers = filterNodes(nonCpNodes, func(n *Node) bool {
 		return cs.NodeStatuses[n.Address].APIServer.Running
 	})
-	if len(target) > 0 {
-		return APIServerStopOp(target)
-	}
-
-	// Stop kube-controller-manager on non-control-plane nodes
-	target = filterNodes(nonCpNodes, func(n *Node) bool {
+	controllerManagers = filterNodes(nonCpNodes, func(n *Node) bool {
 		return cs.NodeStatuses[n.Address].ControllerManager.Running
 	})
-	if len(target) > 0 {
-		return ControllerManagerStopOp(target)
-	}
-
-	// Stop kube-scheduler on non-control-plane nodes
-	target = filterNodes(nonCpNodes, func(n *Node) bool {
+	schedulers = filterNodes(nonCpNodes, func(n *Node) bool {
 		return cs.NodeStatuses[n.Address].Scheduler.Running
 	})
-	if len(target) > 0 {
-		return SchedulerStopOp(target)
+	if len(apiservers)+len(controllerManagers)+len(schedulers) > 0 {
+		return KubeCPStopOp(apiservers, controllerManagers, schedulers)
 	}
 
 	// Run kubelet on all nodes
@@ -122,8 +111,8 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return RiversStopOp(target)
 	}
 
-	// Check diff of kube-apiserver options
-	target = filterNodes(cpNodes, func(n *Node) bool {
+	// Check diff of options for apiservers, controller-managers, and schedulers
+	apiservers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].APIServer
 		if !apiServerParams(cpNodes, n.Address, c.ServiceSubnet).Equal(status.BuiltInParams) {
 			return true
@@ -133,14 +122,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 		return false
 	})
-	if len(target) > 0 {
-		// Stop just one of targets and go to next iteration, in which
-		// the stopped target will be started
-		return APIServerStopOp([]*Node{target[0]})
-	}
-
-	// Check diff of kube-controller-manager options
-	target = filterNodes(cpNodes, func(n *Node) bool {
+	controllerManagers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].ControllerManager
 		if !controllerManagerParams().Equal(status.BuiltInParams) {
 			return true
@@ -150,14 +132,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 		return false
 	})
-	if len(target) > 0 {
-		// Stop just one of targets and go to next iteration, in which
-		// the stopped target will be started
-		return ControllerManagerStopOp([]*Node{target[0]})
-	}
-
-	// Check diff of kube-scheduler options
-	target = filterNodes(cpNodes, func(n *Node) bool {
+	schedulers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].Scheduler
 		if !schedulerParams().Equal(status.BuiltInParams) {
 			return true
@@ -167,10 +142,8 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 		return false
 	})
-	if len(target) > 0 {
-		// Stop just one of targets and go to next iteration, in which
-		// the stopped target will be started
-		return SchedulerStopOp([]*Node{target[0]})
+	if len(apiservers)+len(controllerManagers)+len(schedulers) > 0 {
+		return KubeCPRestartOp(cpNodes, apiservers, controllerManagers, schedulers, c.ServiceSubnet, c.Options)
 	}
 
 	// Check diff of kubelet options
