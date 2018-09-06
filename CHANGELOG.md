@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.4] - 2018-09-06
+
+### Added
+- CKE deploys etcd with TLS (#31, #32).
+
 ## [0.3] - 2018-09-04
 
 ### Added
@@ -22,6 +27,7 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/sabakan/compare/v0.3...HEAD
+[Unreleased]: https://github.com/cybozu-go/sabakan/compare/v0.4...HEAD
+[0.4]: https://github.com/cybozu-go/sabakan/compare/v0.3...v0.4
 [0.3]: https://github.com/cybozu-go/sabakan/compare/v0.2...v0.3
 [0.2]: https://github.com/cybozu-go/sabakan/compare/v0.1...v0.2
