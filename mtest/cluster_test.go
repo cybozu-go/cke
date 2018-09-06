@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -60,8 +59,6 @@ var _ = Describe("cluster", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
-		// TODO remove this extension by accelerating test
-		timeout := 5 * time.Minute
 		Eventually(func() bool {
 			controlPlanes := []string{node1, node2, node3, node4}
 			workers := []string{node5, node6}
@@ -79,7 +76,7 @@ var _ = Describe("cluster", func() {
 				return false
 			}
 			return true
-		}, timeout).Should(BeTrue())
+		}).Should(BeTrue())
 	})
 
 	It("should adjust command arguments", func() {
@@ -96,8 +93,6 @@ var _ = Describe("cluster", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking that etcd members and controller managers restarted with new arguments")
-		// TODO remove this extension by accelerating test
-		timeout := 5 * time.Minute
 		Eventually(func() bool {
 			controlPlanes := []string{node1, node2, node3}
 			workers := []string{node4, node5, node6}
@@ -155,7 +150,7 @@ var _ = Describe("cluster", func() {
 			}
 
 			return true
-		}, timeout).Should(BeTrue())
+		}).Should(BeTrue())
 
 		// Revert and check here.
 		// Though they will be performed in AfterEach, arguments are not checked there.
