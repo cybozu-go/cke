@@ -18,7 +18,7 @@ func Image(name string) string {
 		return CKETools
 	case "tools":
 		return ToolsImage
-	case "hyperkube", "kube-apiserver", "kube-controller-manager", "kube-scheduler", "kubelet", "kube-proxy":
+	case "hyperkube":
 		return HyperkubeImage
 	case "pause":
 		return PauseImage
