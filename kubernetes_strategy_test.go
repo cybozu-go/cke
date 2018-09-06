@@ -11,6 +11,14 @@ type KubernetesTestConfiguration struct {
 	CpNodes    []string
 	NonCpNodes []string
 
+	// Declared command-line arguments in Cluster or CKE
+	RiverArgs             []string
+	APIServerArgs         []string
+	ControllerManagerArgs []string
+	SchedulerArgs         []string
+	KubeletArgs           []string
+	ProxyArgs             []string
+
 	// Running in ClusterStatus
 	Rivers             []string
 	APIServers         []string
@@ -18,6 +26,14 @@ type KubernetesTestConfiguration struct {
 	Schedulers         []string
 	Kubelets           []string
 	Proxies            []string
+
+	// Current command-line arguments on the containers
+	CurrentRiverArgs             []string
+	CurrentAPIServerArgs         []string
+	CurrentControllerManagerArgs []string
+	CurrentSchedulerArgs         []string
+	CurrentKubeletArgs           []string
+	CurrentProxyArgs             []string
 }
 
 func (c *KubernetesTestConfiguration) Cluster() *Cluster {
@@ -28,13 +44,33 @@ func (c *KubernetesTestConfiguration) Cluster() *Cluster {
 	for i, n := range c.NonCpNodes {
 		nodes[i+len(c.CpNodes)] = &Node{Address: n}
 	}
-	return &Cluster{Nodes: nodes}
+	var options Options
+	options.Rivers.ExtraArguments = c.RiverArgs
+	options.APIServer.ExtraArguments = c.APIServerArgs
+	options.ControllerManager.ExtraArguments = c.ControllerManagerArgs
+	options.Scheduler.ExtraArguments = c.SchedulerArgs
+	options.Kubelet.ExtraArguments = c.KubeletArgs
+	options.Proxy.ExtraArguments = c.ProxyArgs
+	return &Cluster{Nodes: nodes, Options: options, ServiceSubnet: "10.20.30.40/31"}
 }
 
 func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
+
+	var cps = make([]*Node, len(c.CpNodes))
+	for i, n := range c.CpNodes {
+		cps[i] = &Node{Address: n, ControlPlane: true}
+	}
+
 	nodeStatus := make(map[string]*NodeStatus)
 	for _, addr := range append(c.CpNodes, c.NonCpNodes...) {
-		nodeStatus[addr] = &NodeStatus{}
+		nodeStatus[addr] = &NodeStatus{
+			Rivers:            ServiceStatus{BuiltInParams: RiversParams(cps), ExtraParams: ServiceParams{ExtraArguments: c.CurrentRiverArgs}},
+			APIServer:         ServiceStatus{BuiltInParams: APIServerParams(cps, addr, "10.20.30.40/31"), ExtraParams: ServiceParams{ExtraArguments: c.CurrentAPIServerArgs}},
+			ControllerManager: ServiceStatus{BuiltInParams: ControllerManagerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentControllerManagerArgs}},
+			Scheduler:         ServiceStatus{BuiltInParams: SchedulerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentSchedulerArgs}},
+			Proxy:             ServiceStatus{BuiltInParams: ProxyParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentProxyArgs}},
+			Kubelet:           ServiceStatus{BuiltInParams: KubeletServiceParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentKubeletArgs}},
+		}
 	}
 	for _, addr := range c.Rivers {
 		nodeStatus[addr].Rivers.Running = true
@@ -131,16 +167,31 @@ func testKubernetesDecideToDo(t *testing.T) {
 				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-controller-manager"},
 			},
 		},
+		{
+			Name: "Do notions if the cluster is stable",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+				Rivers:             allNodes,
+				APIServers:         cpNodes,
+				ControllerManagers: cpNodes,
+				Schedulers:         cpNodes,
+				Kubelets:           allNodes,
+				Proxies:            allNodes,
+			},
+			Commands: []Command{},
+		},
 	}
 
 	for _, c := range cases {
 		op := kubernetesDecideToDo(c.Input.Cluster(), c.Input.ClusterState())
-		if op == nil {
+		if op == nil && len(c.Commands) == 0 {
+			continue
+		} else if op == nil {
 			t.Fatal("op == nil")
 		}
 		cmds := opCommands(op)
 		if len(c.Commands) != len(cmds) {
-			t.Errorf("[%s] commands length mismatch. expected length: %d, actual: %d", c.Name, len(c.Commands), len(cmds))
+			t.Errorf("[%s](%s) commands length mismatch. expected length: %d, actual: %d", c.Name, op.Name(), len(c.Commands), len(cmds))
 			continue
 		}
 		for i, res := range cmds {
