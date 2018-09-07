@@ -43,6 +43,11 @@
       {
         "mask": true,
         "name": "locksmithd.service"
+      },
+      {
+        "name": "var-lib-docker.mount",
+        "enable": true,
+        "contents": "[Mount]\nWhat=/dev/vdb\nWhere=/var/lib/docker\nType=btrfs\n\n[Install]\nWantedBy=local-fs.target"
       }
     ]
   }
