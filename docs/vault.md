@@ -36,6 +36,14 @@ Create `system` role with these options:
 - `allow_any_name=true`
 - `server_flag=false`
 
+### path `cke/ca-kubernetes`
+
+Issue certificates for kubernetes cluster.
+
+Create `system` role with these options:
+
+- `allow_any_name=true`
+
 ## policy `cke`
 
 Create `cke` policy as follows to allow CKE to issue certificates:
