@@ -320,23 +320,23 @@ func (c stopContainersCommand) Command() Command {
 	}
 }
 
-type issueEtcdCertificatesCommand struct {
+type setupEtcdCertificatesCommand struct {
 	nodes []*Node
 }
 
-func (c issueEtcdCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
+func (c setupEtcdCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	for _, node := range c.nodes {
 		n := node
 		env.Go(func(ctx context.Context) error {
-			return issueEtcdCertificates(ctx, inf, n)
+			return EtcdCA{}.setupNode(ctx, inf, n)
 		})
 	}
 	env.Stop()
 	return env.Wait()
 }
 
-func (c issueEtcdCertificatesCommand) Command() Command {
+func (c setupEtcdCertificatesCommand) Command() Command {
 	targets := make([]string, len(c.nodes))
 	for i, n := range c.nodes {
 		targets[i] = n.Address
@@ -356,7 +356,7 @@ func (c issueAPIServerCertificatesCommand) Run(ctx context.Context, inf Infrastr
 	for _, node := range c.nodes {
 		n := node
 		env.Go(func(ctx context.Context) error {
-			return issueAPIServerCertificates(ctx, inf, n)
+			return EtcdCA{}.issueForAPIServer(ctx, inf, n)
 		})
 	}
 	env.Stop()

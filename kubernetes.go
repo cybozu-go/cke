@@ -388,9 +388,9 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 		"apiserver",
 		"--allow-privileged",
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
-		"--etcd-cafile=/etc/kubernetes/apiserver/ca-server.crt",
-		"--etcd-certfile=/etc/kubernetes/apiserver/apiserver.crt",
-		"--etcd-keyfile=/etc/kubernetes/apiserver/apiserver.key",
+		"--etcd-cafile=" + K8sPKIPath("etcd/ca.crt"),
+		"--etcd-certfile=" + K8sPKIPath("apiserver-etcd-client.crt"),
+		"--etcd-keyfile=" + K8sPKIPath("apiserver-etcd-client.key"),
 
 		// TODO use TLS
 		"--insecure-bind-address=0.0.0.0",

@@ -71,7 +71,7 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	inf := &ckeInfrastructure{agents: agents, storage: s}
 	agents = nil
 
-	ca, cert, key, err := issueEtcdClientCertificates(ctx, inf)
+	ca, cert, key, err := EtcdCA{}.issueRoot(ctx, inf)
 	if err != nil {
 		return nil, err
 	}

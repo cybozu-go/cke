@@ -100,7 +100,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 		return imagePullCommand{o.nodes, etcdContainerName}
 	case 1:
 		o.step++
-		return issueEtcdCertificatesCommand{o.nodes}
+		return setupEtcdCertificatesCommand{o.nodes}
 	case 2:
 		o.step++
 		return volumeCreateCommand{o.nodes, volname}
@@ -212,7 +212,7 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		return volumeCreateCommand{[]*Node{node}, volname}
 	case 4:
 		o.step++
-		return issueEtcdCertificatesCommand{[]*Node{node}}
+		return setupEtcdCertificatesCommand{[]*Node{node}}
 	case 5:
 		o.step++
 		opts := []string{
