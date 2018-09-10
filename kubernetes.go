@@ -407,7 +407,7 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
 			{"/var/log/kubernetes/apiserver", "/var/log/kubernetes/apiserver", false},
-			{"/etc/kubernetes/apiserver", "/etc/kubernetes/apiserver", true},
+			{"/etc/kubernetes", "/etc/kubernetes", true},
 		},
 	}
 }
