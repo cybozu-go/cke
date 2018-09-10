@@ -26,3 +26,14 @@ func Image(name string) string {
 
 	panic("no such image: " + name)
 }
+
+// AllImages return container images list used by CKE
+func AllImages() []string {
+	return []string{
+		EtcdImage,
+		CKETools,
+		ToolsImage,
+		HyperkubeImage,
+		PauseImage,
+	}
+}
