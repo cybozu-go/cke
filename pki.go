@@ -15,10 +15,17 @@ const (
 	k8sPKIPath  = "/etc/kubernetes/pki"
 )
 
+// EtcdPKIPath returns a certificate file path for k8s.
+func EtcdPKIPath(path string) string {
+	return filepath.Join(etcdPKIPath, path)
+}
+
+// K8sPKIPath returns a certificate file path for k8s.
 func K8sPKIPath(path string) string {
 	return filepath.Join(k8sPKIPath, path)
 }
 
+// EtcdCA is a certificate authority for etcd cluster.
 type EtcdCA struct {
 }
 
@@ -27,7 +34,7 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 	if len(hostname) == 0 {
 		hostname = node.Address
 	}
-	err := issueCertificate(inf, node, CAServer, filepath.Join(etcdPKIPath, "server"), map[string]interface{}{
+	err := issueCertificate(inf, node, CAServer, EtcdPKIPath("server"), map[string]interface{}{
 		"common_name": hostname,
 		"alt_names":   "localhost",
 		"ip_sans":     "127.0.0.1," + node.Address,
@@ -35,7 +42,7 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 	if err != nil {
 		return err
 	}
-	err = issueCertificate(inf, node, CAEtcdPeer, filepath.Join(etcdPKIPath, "peer"), map[string]interface{}{
+	err = issueCertificate(inf, node, CAEtcdPeer, EtcdPKIPath("peer"), map[string]interface{}{
 		"common_name":          hostname,
 		"ip_sans":              "127.0.0.1," + node.Address,
 		"exclude_cn_from_sans": "true",
@@ -48,7 +55,7 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 	if err != nil {
 		return err
 	}
-	err = writeFile(inf, node, filepath.Join(etcdPKIPath, "ca-peer.crt"), ca)
+	err = writeFile(inf, node, EtcdPKIPath("ca-peer.crt"), ca)
 	if err != nil {
 		return err
 	}
@@ -56,7 +63,7 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 	if err != nil {
 		return err
 	}
-	return writeFile(inf, node, filepath.Join(etcdPKIPath, "ca-client.crt"), ca)
+	return writeFile(inf, node, EtcdPKIPath("ca-client.crt"), ca)
 }
 
 func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node *Node) error {
@@ -104,6 +111,7 @@ func (e EtcdCA) issueRoot(ctx context.Context, inf Infrastructure) (ca, cert, ke
 	return ca, cert, key, nil
 }
 
+// KubernetesCA is a certificate authority for k8s cluster.
 type KubernetesCA struct {
 }
 
