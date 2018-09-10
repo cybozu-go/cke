@@ -1,6 +1,7 @@
 package cke
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -10,6 +11,14 @@ type KubernetesTestConfiguration struct {
 	CpNodes    []string
 	NonCpNodes []string
 
+	// Declared command-line arguments in Cluster or CKE
+	RiverArgs             []string
+	APIServerArgs         []string
+	ControllerManagerArgs []string
+	SchedulerArgs         []string
+	KubeletArgs           []string
+	ProxyArgs             []string
+
 	// Running in ClusterStatus
 	Rivers             []string
 	APIServers         []string
@@ -17,6 +26,14 @@ type KubernetesTestConfiguration struct {
 	Schedulers         []string
 	Kubelets           []string
 	Proxies            []string
+
+	// Current command-line arguments on the containers
+	CurrentRiverArgs             []string
+	CurrentAPIServerArgs         []string
+	CurrentControllerManagerArgs []string
+	CurrentSchedulerArgs         []string
+	CurrentKubeletArgs           []string
+	CurrentProxyArgs             []string
 }
 
 func (c *KubernetesTestConfiguration) Cluster() *Cluster {
@@ -27,13 +44,33 @@ func (c *KubernetesTestConfiguration) Cluster() *Cluster {
 	for i, n := range c.NonCpNodes {
 		nodes[i+len(c.CpNodes)] = &Node{Address: n}
 	}
-	return &Cluster{Nodes: nodes}
+	var options Options
+	options.Rivers.ExtraArguments = c.RiverArgs
+	options.APIServer.ExtraArguments = c.APIServerArgs
+	options.ControllerManager.ExtraArguments = c.ControllerManagerArgs
+	options.Scheduler.ExtraArguments = c.SchedulerArgs
+	options.Kubelet.ExtraArguments = c.KubeletArgs
+	options.Proxy.ExtraArguments = c.ProxyArgs
+	return &Cluster{Nodes: nodes, Options: options, ServiceSubnet: "10.20.30.40/31"}
 }
 
 func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
+
+	var cps = make([]*Node, len(c.CpNodes))
+	for i, n := range c.CpNodes {
+		cps[i] = &Node{Address: n, ControlPlane: true}
+	}
+
 	nodeStatus := make(map[string]*NodeStatus)
 	for _, addr := range append(c.CpNodes, c.NonCpNodes...) {
-		nodeStatus[addr] = &NodeStatus{}
+		nodeStatus[addr] = &NodeStatus{
+			Rivers:            ServiceStatus{BuiltInParams: RiversParams(cps), ExtraParams: ServiceParams{ExtraArguments: c.CurrentRiverArgs}},
+			APIServer:         ServiceStatus{BuiltInParams: APIServerParams(cps, addr, "10.20.30.40/31"), ExtraParams: ServiceParams{ExtraArguments: c.CurrentAPIServerArgs}},
+			ControllerManager: ServiceStatus{BuiltInParams: ControllerManagerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentControllerManagerArgs}},
+			Scheduler:         ServiceStatus{BuiltInParams: SchedulerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentSchedulerArgs}},
+			Proxy:             ServiceStatus{BuiltInParams: ProxyParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentProxyArgs}},
+			Kubelet:           ServiceStatus{BuiltInParams: KubeletServiceParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentKubeletArgs}},
+		}
 	}
 	for _, addr := range c.Rivers {
 		nodeStatus[addr].Rivers.Running = true
@@ -68,151 +105,155 @@ func testKubernetesDecideToDo(t *testing.T) {
 		Commands []Command
 	}{
 		{
-			Name: "Bootstrap Rivers",
+			Name: "Bootstrap Rivers on all nodes",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 			},
 			Commands: []Command{
-				{"image-pull", "rivers", ""},
+				{"image-pull", "rivers", Image("rivers")},
 				{"mkdir", "/var/log/rivers", ""},
-				{"run-container", strings.Join(allNodes, ","), ""},
+				{"run-container", strings.Join(allNodes, ","), "rivers"},
 			},
 		},
 		{
-			Name: "Bootstrap APIServers",
+			Name: "Bootstrap Control Planes",
 			Input: KubernetesTestConfiguration{
-				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes,
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes, Rivers: allNodes,
 			},
 			Commands: []Command{
-				{"image-pull", "kube-apiserver", ""},
+				{"image-pull", "hyperkube", Image("hyperkube")},
 				{"mkdir", "/var/log/kubernetes/apiserver", ""},
-				{"issue-apiserver-certificates", "10.0.0.11,10.0.0.12,10.0.0.13", ""},
-				{"run-container", "10.0.0.11", ""},
-				{"run-container", "10.0.0.12", ""},
-				{"run-container", "10.0.0.13", ""},
-			},
-		},
-		{
-			Name: "Bootstrap ControllerManagers",
-			Input: KubernetesTestConfiguration{
-				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: cpNodes,
-			},
-			Commands: []Command{
-				{"make-file", "/etc/kubernetes/controller-manager/kubeconfig", ""},
-				{"image-pull", "kube-controller-manager", ""},
 				{"mkdir", "/var/log/kubernetes/controller-manager", ""},
-				{"run-container", strings.Join(cpNodes, ","), ""},
-			},
-		},
-		{
-			Name: "Bootstrap Scheduler",
-			Input: KubernetesTestConfiguration{
-				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes,
-			},
-			Commands: []Command{
-				{"make-file", "/etc/kubernetes/scheduler/kubeconfig", ""},
-				{"image-pull", "kube-scheduler", ""},
 				{"mkdir", "/var/log/kubernetes/scheduler", ""},
-				{"run-container", strings.Join(cpNodes, ","), ""},
+				{"make-file", "/etc/kubernetes/controller-manager/kubeconfig", ""},
+				{"make-file", "/etc/kubernetes/scheduler/kubeconfig", ""},
+				{"issue-apiserver-certificates", "10.0.0.11,10.0.0.12,10.0.0.13", ""},
+				{"run-container", "10.0.0.11", "kube-apiserver"},
+				{"run-container", "10.0.0.12", "kube-apiserver"},
+				{"run-container", "10.0.0.13", "kube-apiserver"},
+				{"run-container", "10.0.0.11,10.0.0.12,10.0.0.13", "kube-scheduler"},
+				{"run-container", "10.0.0.11,10.0.0.12,10.0.0.13", "kube-controller-manager"},
 			},
 		},
 		{
-			Name: "Bootstrap Kubelet",
+			Name: "Bootstrap kubernetes workers",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes,
 			},
 			Commands: []Command{
-				{"make-file", "/etc/kubernetes/kubelet/kubeconfig", ""},
-				{"image-pull", "kubelet", ""},
-				{"image-pull", "pause", ""},
+				{"image-pull", "hyperkube", Image("hyperkube")},
 				{"mkdir", "/var/log/kubernetes/kubelet", ""},
-				{"volume-create", strings.Join(allNodes, ","), ""},
-				{"run-container", strings.Join(allNodes, ","), ""},
-			},
-		},
-		{
-			Name: "Bootstrap Proxy",
-			Input: KubernetesTestConfiguration{
-				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes, Kubelets: allNodes,
-			},
-			Commands: []Command{
-				{"make-file", "/etc/kubernetes/proxy/kubeconfig", ""},
-				{"image-pull", "kube-proxy", ""},
 				{"mkdir", "/var/log/kubernetes/proxy", ""},
-				{"run-container", strings.Join(allNodes, ","), ""},
+				{"make-file", "/etc/kubernetes/kubelet/kubeconfig", ""},
+				{"make-file", "/etc/kubernetes/proxy/kubeconfig", ""},
+				{"volume-create", strings.Join(allNodes, ","), "dockershim"},
+				{"run-container", strings.Join(allNodes, ","), "kubelet"},
+				{"run-container", strings.Join(allNodes, ","), "kube-proxy"},
 			},
 		},
 		{
-			Name: "Stop APIServers",
+			Name: "Stop Control Planes",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
-			},
-			Commands: []Command{
-				{"stop-container", "10.0.0.14", ""},
-				{"stop-container", "10.0.0.15", ""},
-			},
-		},
-		{
-			Name: "Stop Controller Managers",
-			Input: KubernetesTestConfiguration{
-				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: cpNodes,
+				Rivers:             allNodes,
+				APIServers:         append(cpNodes, "10.0.0.14", "10.0.0.15"),
 				ControllerManagers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
+				Schedulers:         append(cpNodes, "10.0.0.14", "10.0.0.15"),
 			},
 			Commands: []Command{
-				{"rm", "/etc/kubernetes/controller-manager/kubeconfig", ""},
-				{"stop-container", "10.0.0.14", ""},
-				{"stop-container", "10.0.0.15", ""},
+				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-apiserver"},
+				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-scheduler"},
+				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-controller-manager"},
 			},
 		},
 		{
-			Name: "Stop Schedulers",
+			Name: "Do notions if the cluster is stable",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes,
-				Schedulers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
+				Rivers:             allNodes,
+				APIServers:         cpNodes,
+				ControllerManagers: cpNodes,
+				Schedulers:         cpNodes,
+				Kubelets:           allNodes,
+				Proxies:            allNodes,
 			},
-			Commands: []Command{
-				{"rm", "/etc/kubernetes/scheduler/kubeconfig", ""},
-				{"stop-container", "10.0.0.14", ""},
-				{"stop-container", "10.0.0.15", ""},
-			},
+			Commands: []Command{},
 		},
 		{
-			Name: "Stop the container because its command arguments are different from expected ones",
+			Name: "Restart kubernetes control planes when params are updated",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
-				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes, Kubelets: allNodes, Proxies: allNodes,
+				Rivers:                allNodes,
+				APIServers:            cpNodes,
+				ControllerManagers:    cpNodes,
+				Schedulers:            cpNodes,
+				Kubelets:              allNodes,
+				Proxies:               allNodes,
+				APIServerArgs:         []string{"--apiserver-count=999"},
+				ControllerManagerArgs: []string{"--contention-profiling=0.99"},
+				SchedulerArgs:         []string{"--leader-elect-retry-period duration=2s"},
+			},
+			Commands: func() []Command {
+				cmds := []Command{
+					{"image-pull", "rivers", Image("rivers")},
+					{"image-pull", "hyperkube", Image("hyperkube")},
+				}
+				for _, n := range cpNodes {
+					cmds = append(cmds,
+						Command{Name: "stop-containers", Target: n, Detail: "kube-apiserver"},
+						Command{Name: "run-container", Target: n, Detail: "kube-apiserver"})
+				}
+				for _, n := range cpNodes {
+					cmds = append(cmds,
+						Command{Name: "stop-containers", Target: n, Detail: "kube-controller-manager"},
+						Command{Name: "run-container", Target: n, Detail: "kube-controller-manager"})
+				}
+				for _, n := range cpNodes {
+					cmds = append(cmds,
+						Command{Name: "stop-containers", Target: n, Detail: "kube-scheduler"},
+						Command{Name: "run-container", Target: n, Detail: "kube-scheduler"})
+				}
+				return cmds
+			}(),
+		},
+		{
+			Name: "Restart kubernetes workers when params are updated",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+				Rivers:             allNodes,
+				APIServers:         cpNodes,
+				ControllerManagers: cpNodes,
+				Schedulers:         cpNodes,
+				Kubelets:           allNodes,
+				Proxies:            allNodes,
+				KubeletArgs:        []string{"--cpu-cfs-quota=true"},
 			},
 			Commands: []Command{
-				{"kill-container", "10.0.0.11", ""},
+				{"image-pull", "hyperkube", Image("hyperkube")},
+				{Name: "make-file", Target: "/etc/kubernetes/kubelet/kubeconfig", Detail: ""},
+				{Name: "stop-containers", Target: strings.Join(allNodes, ","), Detail: "kubelet"},
+				{Name: "run-container", Target: strings.Join(allNodes, ","), Detail: "kubelet"},
 			},
 		},
 	}
 
 	for _, c := range cases {
 		op := kubernetesDecideToDo(c.Input.Cluster(), c.Input.ClusterState())
-		if op == nil {
+		if op == nil && len(c.Commands) == 0 {
+			continue
+		} else if op == nil {
 			t.Fatal("op == nil")
 		}
 		cmds := opCommands(op)
 		if len(c.Commands) != len(cmds) {
-			t.Errorf("[%s] commands length mismatch. expected length: %d, actual: %d", c.Name, len(c.Commands), len(cmds))
+			t.Errorf("[%s](%s) commands length mismatch. expected length: %d, actual: %d", c.Name, op.Name(), len(c.Commands), len(cmds))
 			continue
 		}
 		for i, res := range cmds {
 			cmd := c.Commands[i]
-			if cmd.Name != res.Name {
-				t.Errorf("[%s] command name mismatch: %s != %s", c.Name, cmd.Name, res.Name)
-			}
-			if cmd.Target != res.Target {
-				t.Errorf("[%s] command '%s' target mismatch: %s != %s", c.Name, cmd.Name, cmd.Target, res.Target)
+			if !reflect.DeepEqual(cmd, res) {
+				t.Errorf("[%s] %#v != %#v", c.Name, cmd, res)
 			}
 		}
 	}

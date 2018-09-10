@@ -279,6 +279,47 @@ func (c stopContainerCommand) Command() Command {
 	}
 }
 
+type stopContainersCommand struct {
+	nodes []*Node
+	name  string
+}
+
+func (c stopContainersCommand) Run(ctx context.Context, inf Infrastructure) error {
+
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		ce := Docker(inf.Agent(n.Address))
+		env.Go(func(ctx context.Context) error {
+			exists, err := ce.Exists(c.name)
+			if err != nil {
+				return err
+			}
+			if !exists {
+				return nil
+			}
+			err = ce.Stop(c.name)
+			if err != nil {
+				return err
+			}
+			return ce.Remove(c.name)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c stopContainersCommand) Command() Command {
+	addrs := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		addrs[i] = n.Address
+	}
+	return Command{
+		Name:   "stop-containers",
+		Target: strings.Join(addrs, ","),
+		Detail: c.name,
+	}
+}
+
 type issueEtcdCertificatesCommand struct {
 	nodes []*Node
 }

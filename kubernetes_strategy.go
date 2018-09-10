@@ -12,75 +12,50 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	}
 
 	// Run Rivers on all nodes
-	target := filterNodes(c.Nodes, func(n *Node) bool {
+	rivers := filterNodes(c.Nodes, func(n *Node) bool {
 		return !cs.NodeStatuses[n.Address].Rivers.Running
 	})
-	if len(target) > 0 {
-		return RiversBootOp(target, cpNodes, c.Options.Rivers)
+	if len(rivers) > 0 {
+		return RiversBootOp(rivers, cpNodes, c.Options.Rivers)
 	}
 
-	// Run kube-apiserver on control-plane nodes
-	target = filterNodes(cpNodes, func(n *Node) bool {
+	// Run kubernetes control planes on control-plane nodes
+	apiservers := filterNodes(cpNodes, func(n *Node) bool {
 		return !cs.NodeStatuses[n.Address].APIServer.Running
 	})
-	if len(target) > 0 {
-		return APIServerBootOp(target, cpNodes, c.Options.APIServer, c.ServiceSubnet)
-	}
-
-	// Stop kube-apiserver on non-control-plane nodes
-	target = filterNodes(nonCpNodes, func(n *Node) bool {
-		return cs.NodeStatuses[n.Address].APIServer.Running
-	})
-	if len(target) > 0 {
-		return APIServerStopOp(target)
-	}
-
-	// Run kube-controller-manager on control-plane nodes
-	target = filterNodes(cpNodes, func(n *Node) bool {
+	controllerManagers := filterNodes(cpNodes, func(n *Node) bool {
 		return !cs.NodeStatuses[n.Address].ControllerManager.Running
 	})
-	if len(target) > 0 {
-		return ControllerManagerBootOp(target, c.Options.ControllerManager)
-	}
-
-	// Stop kube-controller-manager on non-control-plane nodes
-	target = filterNodes(nonCpNodes, func(n *Node) bool {
-		return cs.NodeStatuses[n.Address].ControllerManager.Running
-	})
-	if len(target) > 0 {
-		return ControllerManagerStopOp(target)
-	}
-
-	// Run kube-scheduler on control-plane nodes
-	target = filterNodes(cpNodes, func(n *Node) bool {
+	schedulers := filterNodes(cpNodes, func(n *Node) bool {
 		return !cs.NodeStatuses[n.Address].Scheduler.Running
 	})
-	if len(target) > 0 {
-		return SchedulerBootOp(target, c.Options.Scheduler)
+	if len(apiservers)+len(controllerManagers)+len(schedulers) > 0 {
+		return KubeCPBootOp(cpNodes, apiservers, controllerManagers, schedulers, c.ServiceSubnet, c.Options)
 	}
 
-	// Stop kube-scheduler on non-control-plane nodes
-	target = filterNodes(nonCpNodes, func(n *Node) bool {
+	// Stop kubernetes control planes on non-control-plane nodes
+	apiservers = filterNodes(nonCpNodes, func(n *Node) bool {
+		return cs.NodeStatuses[n.Address].APIServer.Running
+	})
+	controllerManagers = filterNodes(nonCpNodes, func(n *Node) bool {
+		return cs.NodeStatuses[n.Address].ControllerManager.Running
+	})
+	schedulers = filterNodes(nonCpNodes, func(n *Node) bool {
 		return cs.NodeStatuses[n.Address].Scheduler.Running
 	})
-	if len(target) > 0 {
-		return SchedulerStopOp(target)
+	if len(apiservers)+len(controllerManagers)+len(schedulers) > 0 {
+		return KubeCPStopOp(apiservers, controllerManagers, schedulers)
 	}
 
-	// Run kubelet on all nodes
-	target = filterNodes(c.Nodes, func(n *Node) bool {
+	// Run kubelet and kube-proxy on all nodes
+	kubelets := filterNodes(c.Nodes, func(n *Node) bool {
 		return !cs.NodeStatuses[n.Address].Kubelet.Running
 	})
-	if len(target) > 0 {
-		return KubeletBootOp(target, c.Options.Kubelet)
-	}
-
-	// Run kube-proxy on all nodes
-	target = filterNodes(c.Nodes, func(n *Node) bool {
+	proxies := filterNodes(c.Nodes, func(n *Node) bool {
 		return !cs.NodeStatuses[n.Address].Proxy.Running
 	})
-	if len(target) > 0 {
-		return ProxyBootOp(target, c.Options.Proxy)
+	if len(rivers)+len(kubelets)+len(proxies) > 0 {
+		return KubeWorkerBootOp(cpNodes, kubelets, proxies, c.Options)
 	}
 
 	// Check diff of command options
@@ -88,12 +63,20 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 }
 
 func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
-	cpNodes := controlPlanes(c.Nodes)
+	var cpNodes []*Node
+	var nonCpNodes []*Node
+	for _, n := range c.Nodes {
+		if n.ControlPlane {
+			cpNodes = append(cpNodes, n)
+		} else {
+			nonCpNodes = append(nonCpNodes, n)
+		}
+	}
 
-	// Check diff of rivers options
-	target := filterNodes(c.Nodes, func(n *Node) bool {
+	// Check diff of options for rivers, apiservers, controller-managers, and schedulers
+	rivers := filterNodes(cpNodes, func(n *Node) bool {
 		riversStatus := cs.NodeStatuses[n.Address].Rivers
-		if !riversParams(cpNodes).Equal(riversStatus.BuiltInParams) {
+		if !RiversParams(cpNodes).Equal(riversStatus.BuiltInParams) {
 			return true
 		}
 		if !c.Options.Rivers.Equal(riversStatus.ExtraParams) {
@@ -101,16 +84,9 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 		return false
 	})
-	if len(target) > 0 {
-		// Stop just one of targets and go to next iteration, in which
-		// the stopped target will be started
-		return RiversStopOp([]*Node{target[0]})
-	}
-
-	// Check diff of kube-apiserver options
-	target = filterNodes(cpNodes, func(n *Node) bool {
+	apiservers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].APIServer
-		if !apiServerParams(cpNodes, n.Address, c.ServiceSubnet).Equal(status.BuiltInParams) {
+		if !APIServerParams(cpNodes, n.Address, c.ServiceSubnet).Equal(status.BuiltInParams) {
 			return true
 		}
 		if !c.Options.APIServer.Equal(status.ExtraParams) {
@@ -118,16 +94,9 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 		return false
 	})
-	if len(target) > 0 {
-		// Stop just one of targets and go to next iteration, in which
-		// the stopped target will be started
-		return APIServerStopOp([]*Node{target[0]})
-	}
-
-	// Check diff of kube-controller-manager options
-	target = filterNodes(cpNodes, func(n *Node) bool {
+	controllerManagers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].ControllerManager
-		if !controllerManagerParams().Equal(status.BuiltInParams) {
+		if !ControllerManagerParams().Equal(status.BuiltInParams) {
 			return true
 		}
 		if !c.Options.ControllerManager.Equal(status.ExtraParams) {
@@ -135,16 +104,9 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 		return false
 	})
-	if len(target) > 0 {
-		// Stop just one of targets and go to next iteration, in which
-		// the stopped target will be started
-		return ControllerManagerStopOp([]*Node{target[0]})
-	}
-
-	// Check diff of kube-scheduler options
-	target = filterNodes(cpNodes, func(n *Node) bool {
+	schedulers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].Scheduler
-		if !schedulerParams().Equal(status.BuiltInParams) {
+		if !SchedulerParams().Equal(status.BuiltInParams) {
 			return true
 		}
 		if !c.Options.Scheduler.Equal(status.ExtraParams) {
@@ -152,29 +114,46 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 		return false
 	})
-	if len(target) > 0 {
-		// Stop just one of targets and go to next iteration, in which
-		// the stopped target will be started
-		return SchedulerStopOp([]*Node{target[0]})
+	if len(rivers)+len(apiservers)+len(controllerManagers)+len(schedulers) > 0 {
+		return KubeCPRestartOp(cpNodes, rivers, apiservers, controllerManagers, schedulers, c.ServiceSubnet, c.Options)
 	}
 
-	// Check diff of kubelet options
-	target = filterNodes(c.Nodes, func(n *Node) bool {
-		bootOp := KubeletBootOp([]*Node{n}, c.Options.Kubelet).(*kubeletBootOp)
-		status := cs.NodeStatuses[n.Address].Kubelet
-		if !bootOp.serviceParams().Equal(status.BuiltInParams) {
+	// Check diff of rivers options for worker nodes
+	rivers = filterNodes(nonCpNodes, func(n *Node) bool {
+		riversStatus := cs.NodeStatuses[n.Address].Rivers
+		if !RiversParams(cpNodes).Equal(riversStatus.BuiltInParams) {
 			return true
 		}
-		if !bootOp.extraParams().Equal(status.ExtraParams) {
+		if !c.Options.Rivers.Equal(riversStatus.ExtraParams) {
 			return true
 		}
 		return false
 	})
-	if len(target) > 0 {
-		// Stop just one of targets and go to next iteration, in which
-		// the stopped target will be started
-		return KubeletStopOp([]*Node{target[0]})
+	kubelets := filterNodes(c.Nodes, func(n *Node) bool {
+		status := cs.NodeStatuses[n.Address].Kubelet
+		if !KubeletServiceParams().Equal(status.BuiltInParams) {
+			return true
+		}
+		if !c.Options.Kubelet.ToServiceParams().Equal(status.ExtraParams) {
+			return true
+		}
+		return false
+	})
+	proxies := filterNodes(c.Nodes, func(n *Node) bool {
+		status := cs.NodeStatuses[n.Address].Proxy
+		if !ProxyParams().Equal(status.BuiltInParams) {
+			return true
+		}
+		if !c.Options.Proxy.Equal(status.ExtraParams) {
+			return true
+		}
+		return false
+	})
+	if len(rivers)+len(kubelets)+len(proxies) > 0 {
+		return KubeWorkerRestartOp(cpNodes, rivers, kubelets, proxies, c.Options)
 	}
+
+	// TODO check image versions and restart container when image is updated
 
 	return nil
 }
