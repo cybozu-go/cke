@@ -5,7 +5,7 @@ func controllerManagerKubeconfig() string {
 clusters:
 - name: local
   cluster:
-    server: http://localhost:18080
+    server: https://localhost:16443
 users:
 - name: controller-manager
 contexts:
@@ -20,7 +20,7 @@ func schedulerKubeconfig() string {
 clusters:
 - name: local
   cluster:
-    server: http://localhost:18080
+    server: https://localhost:16443
 users:
 - name: controller-manager
 contexts:
@@ -35,7 +35,7 @@ func kubeletKubeConfig() string {
 clusters:
 - name: local
   cluster:
-    server: http://localhost:18080
+    server: https://localhost:16443
 users:
 - name: kubelet
 contexts:
@@ -50,7 +50,7 @@ func proxyKubeConfig() string {
 clusters:
 - name: local
   cluster:
-    server: http://localhost:18080
+    server: https://localhost:16443
 users:
 - name: kube-proxy
 contexts:

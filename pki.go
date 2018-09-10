@@ -10,6 +10,7 @@ const (
 	CAServer     = "cke/ca-server"
 	CAEtcdPeer   = "cke/ca-etcd-peer"
 	CAEtcdClient = "cke/ca-etcd-client"
+	CAKubernetes = "cke/ca-kubernetes"
 
 	etcdPKIPath = "/etc/etcd/pki"
 	k8sPKIPath  = "/etc/kubernetes/pki"
@@ -34,19 +35,21 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 	if len(hostname) == 0 {
 		hostname = node.Address
 	}
-	err := issueCertificate(inf, node, CAServer, EtcdPKIPath("server"), map[string]interface{}{
-		"common_name": hostname,
-		"alt_names":   "localhost",
-		"ip_sans":     "127.0.0.1," + node.Address,
-	})
+	err := issueCertificate(inf, node, CAServer, EtcdPKIPath("server"),
+		map[string]interface{}{
+			"common_name": hostname,
+			"alt_names":   "localhost",
+			"ip_sans":     "127.0.0.1," + node.Address,
+		})
 	if err != nil {
 		return err
 	}
-	err = issueCertificate(inf, node, CAEtcdPeer, EtcdPKIPath("peer"), map[string]interface{}{
-		"common_name":          hostname,
-		"ip_sans":              "127.0.0.1," + node.Address,
-		"exclude_cn_from_sans": "true",
-	})
+	err = issueCertificate(inf, node, CAEtcdPeer, EtcdPKIPath("peer"),
+		map[string]interface{}{
+			"common_name":          hostname,
+			"ip_sans":              "127.0.0.1," + node.Address,
+			"exclude_cn_from_sans": "true",
+		})
 	if err != nil {
 		return err
 	}
@@ -71,10 +74,11 @@ func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node 
 	if len(hostname) == 0 {
 		hostname = node.Address
 	}
-	err := issueCertificate(inf, node, CAEtcdClient, K8sPKIPath("apiserver-etcd-client"), map[string]interface{}{
-		"common_name":          "kube-apiserver",
-		"exclude_cn_from_sans": "true",
-	})
+	err := issueCertificate(inf, node, CAEtcdClient, K8sPKIPath("apiserver-etcd-client"),
+		map[string]interface{}{
+			"common_name":          "kube-apiserver",
+			"exclude_cn_from_sans": "true",
+		})
 	if err != nil {
 		return err
 	}
@@ -97,11 +101,12 @@ func (e EtcdCA) issueRoot(ctx context.Context, inf Infrastructure) (ca, cert, ke
 		return "", "", "", err
 	}
 
-	secret, err := client.Logical().Write(CAEtcdClient+"/issue/system", map[string]interface{}{
-		"common_name":          "root",
-		"exclude_cn_from_sans": "true",
-		"ttl":                  "1h",
-	})
+	secret, err := client.Logical().Write(CAEtcdClient+"/issue/system",
+		map[string]interface{}{
+			"common_name":          "root",
+			"exclude_cn_from_sans": "true",
+			"ttl":                  "1h",
+		})
 	if err != nil {
 		return "", "", "", err
 	}
@@ -115,7 +120,28 @@ func (e EtcdCA) issueRoot(ctx context.Context, inf Infrastructure) (ca, cert, ke
 type KubernetesCA struct {
 }
 
-func (k KubernetesCA) setup() {
+// setup generates and installs certificates for API server.
+func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node) error {
+	hostname := node.Hostname
+	if len(hostname) == 0 {
+		hostname = node.Address
+	}
+	err := issueCertificate(inf, node, CAKubernetes, K8sPKIPath("apiserver"),
+		map[string]interface{}{
+			"common_name":          hostname,
+			"alt_names":            "localhost",
+			"ip_sans":              "127.0.0.1," + node.Address,
+			"exclude_cn_from_sans": "true",
+		})
+	if err != nil {
+		return err
+	}
+
+	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
+	if err != nil {
+		return err
+	}
+	return writeFile(inf, node, K8sPKIPath("ca.crt"), ca)
 }
 
 func (k KubernetesCA) issueForScheduler() {

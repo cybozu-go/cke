@@ -398,8 +398,8 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 	}
 
 	for _, host := range nodes {
-		// 10248: kubelet, 10256: kube-proxy, 18080: rivers (to apiserver)
-		for _, port := range []uint16{10248, 10256, 18080} {
+		// 10248: kubelet, 10256: kube-proxy, 16443: rivers (to apiserver)
+		for _, port := range []uint16{10248, 10256, 16443} {
 			stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
 			if err != nil {
 				return newError(err.Error(), host, port, string(stdout), string(stderr))
@@ -420,7 +420,7 @@ func checkComponentStatuses(host string) error {
 		}
 	}
 
-	stdout, _, err := execAt(host, "curl", "localhost:18080/api/v1/componentstatuses")
+	stdout, _, err := execAt(host, "curl", "https://localhost:16443/api/v1/componentstatuses")
 	if err != nil {
 		return newError(err.Error(), string(stdout))
 	}

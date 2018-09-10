@@ -119,12 +119,12 @@ func (o *riversBootOp) NextCommand() Commander {
 func RiversParams(upstreams []*Node) ServiceParams {
 	var ups []string
 	for _, n := range upstreams {
-		ups = append(ups, n.Address+":8080")
+		ups = append(ups, n.Address+":6443")
 	}
 	args := []string{
 		"rivers",
 		"--upstreams=" + strings.Join(ups, ","),
-		"--listen=" + "127.0.0.1:18080",
+		"--listen=" + "127.0.0.1:16443",
 	}
 	return ServiceParams{
 		ExtraArguments: args,
@@ -392,9 +392,15 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 		"--etcd-certfile=" + K8sPKIPath("apiserver-etcd-client.crt"),
 		"--etcd-keyfile=" + K8sPKIPath("apiserver-etcd-client.key"),
 
-		// TODO use TLS
-		"--insecure-bind-address=0.0.0.0",
-		"--insecure-port=8080",
+		"--bind-address=0.0.0.0",
+		"--insecure-port=0",
+		"--client-ca-file=" + K8sPKIPath("ca.crt"),
+		"--tls-cert-file=" + K8sPKIPath("apiserver.crt"),
+		"--tls-private-key-file=" + K8sPKIPath("apiserver.key"),
+		"--kubelet-certificate-authority=" + K8sPKIPath("ca.crt"),
+		"--kubelet-client-certificate=" + K8sPKIPath("apiserver.crt"),
+		"--kubelet-client-key=" + K8sPKIPath("apiserver.key"),
+		"--kubelet-https=true",
 
 		"--advertise-address=" + advertiseAddress,
 		"--service-cluster-ip-range=" + serviceSubnet,
