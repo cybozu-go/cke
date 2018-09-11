@@ -144,7 +144,16 @@ func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node)
 	return writeFile(inf, node, K8sPKIPath("ca.crt"), ca)
 }
 
-func (k KubernetesCA) issueForScheduler() {
+func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure, node *Node) error {
+	hostname := node.Hostname
+	if len(hostname) == 0 {
+		hostname = node.Address
+	}
+	return issueCertificate(inf, node, CAKubernetes, K8sPKIPath("kube-scheduler"),
+		map[string]interface{}{
+			"common_name":          "system:kube-scheduler",
+			"exclude_cn_from_sans": "true",
+		})
 }
 
 func (k KubernetesCA) issueForControllerManager() {

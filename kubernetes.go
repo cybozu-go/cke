@@ -200,6 +200,12 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 		}
 		return setupAPIServerCertificatesCommand{o.apiserver}
 	case 8:
+		o.step++
+		if len(o.apiserver) == 0 {
+			return o.NextCommand()
+		}
+		return issueSchedulerCertificatesCommand{o.scheduler}
+	case 9:
 		if o.nodeIndex >= len(o.apiserver) {
 			o.step++
 			return o.NextCommand()
@@ -212,13 +218,13 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
 		}
 		return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, opts, APIServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
-	case 9:
+	case 10:
 		o.step++
 		if len(o.scheduler) == 0 {
 			return o.NextCommand()
 		}
 		return runContainerCommand{o.scheduler, kubeSchedulerContainerName, opts, SchedulerParams(), o.options.Scheduler}
-	case 10:
+	case 11:
 		o.step++
 		if len(o.controllerManager) == 0 {
 			return o.NextCommand()

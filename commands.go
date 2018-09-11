@@ -401,6 +401,33 @@ func (c setupAPIServerCertificatesCommand) Command() Command {
 	}
 }
 
+type issueSchedulerCertificatesCommand struct {
+	nodes []*Node
+}
+
+func (c issueSchedulerCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, node := range c.nodes {
+		n := node
+		env.Go(func(ctx context.Context) error {
+			return KubernetesCA{}.issueForScheduler(ctx, inf, n)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c issueSchedulerCertificatesCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "issue-scheduler-certificates",
+		Target: strings.Join(targets, ","),
+	}
+}
+
 type killContainerCommand struct {
 	node *Node
 	name string

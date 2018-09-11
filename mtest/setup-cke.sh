@@ -61,7 +61,7 @@ EOF
     $VAULT write cke/ca-server/roles/system ttl=87600h max_ttl=87600h client_flag=false allow_any_name=true
     $VAULT write cke/ca-etcd-peer/roles/system ttl=87600h max_ttl=87600h allow_any_name=true
     $VAULT write cke/ca-etcd-client/roles/system ttl=87600h max_ttl=87600h server_flag=false allow_any_name=true
-    $VAULT write cke/ca-kubernetes/roles/system ttl=87600h max_ttl=87600h allow_any_name=true
+    $VAULT write cke/ca-kubernetes/roles/system ttl=87600h max_ttl=87600h enforce_hostnames=false allow_any_name=true
 }
 
 install_configs() {
