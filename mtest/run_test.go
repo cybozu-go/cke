@@ -3,7 +3,6 @@ package mtest
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -17,11 +16,15 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/etcdutil"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v2"
-	"k8s.io/kubernetes/pkg/apis/core"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 const sshTimeout = 3 * time.Minute
@@ -172,6 +175,45 @@ func kubectl(args ...string) []byte {
 	err := command.Run()
 	Expect(err).NotTo(HaveOccurred())
 	return stdout.Bytes()
+}
+
+func kubeRestClient(host string) (*kubernetes.Clientset, error) {
+	cluster := getCluster()
+
+	etcd, err := connectEtcd()
+	if err != nil {
+		return nil, err
+	}
+	defer etcd.Close()
+
+	storage := cke.Storage{etcd}
+	ca, err := storage.GetCACertificate(context.Background(), "kubernetes")
+	if err != nil {
+		return nil, err
+	}
+
+	inf, err := cke.NewInfrastructure(context.Background(), cluster, storage)
+	if err != nil {
+		return nil, err
+	}
+	defer inf.Close()
+
+	crt, key, err := cke.KubernetesCA{}.IssueAdminCert(context.Background(), inf)
+	if err != nil {
+		return nil, err
+	}
+	tlsCfg := rest.TLSClientConfig{
+		CertData: []byte(crt),
+		KeyData:  []byte(key),
+		CAData:   []byte(ca),
+	}
+	cfg := &rest.Config{
+		Host:            "https://" + host + ":6443",
+		TLSClientConfig: tlsCfg,
+		Timeout:         5 * time.Second,
+	}
+
+	return kubernetes.NewForConfig(cfg)
 }
 
 func getCluster() *cke.Cluster {
@@ -414,25 +456,25 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 }
 
 func checkComponentStatuses(host string) error {
-	newError := func(msg, stdout string) error {
+	newError := func(msg string) error {
 		return clusterStatusError{
-			msg, host, 0, nil, nil, nil, stdout, "",
+			msg, host, 0, nil, nil, nil, "", "",
 		}
 	}
 
-	stdout, _, err := execAt(host, "curl", "https://localhost:16443/api/v1/componentstatuses")
+	cls, err := kubeRestClient(host)
 	if err != nil {
-		return newError(err.Error(), string(stdout))
+		return err
 	}
-	var csl core.ComponentStatusList
-	err = json.NewDecoder(bytes.NewReader(stdout)).Decode(&csl)
+
+	sl, err := cls.CoreV1().ComponentStatuses().List(metav1.ListOptions{})
 	if err != nil {
-		return newError(err.Error(), string(stdout))
+		return err
 	}
-	for _, item := range csl.Items {
+	for _, item := range sl.Items {
 		for _, condition := range item.Conditions {
-			if condition.Type != core.ComponentHealthy {
-				return newError(item.Name+" is unhealthy", "")
+			if string(condition.Type) != "Healthy" {
+				return newError(item.Name + " is unhealthy")
 			}
 		}
 	}

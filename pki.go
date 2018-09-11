@@ -141,8 +141,17 @@ func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node)
 	return writeFile(inf, node, K8sPKIPath("ca.crt"), ca)
 }
 
+// IssueAdminCert issues client certificates for cluster admin.
+func (k KubernetesCA) IssueAdminCert(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
+	return issueCertificate(inf, CAKubernetes, "admin",
+		map[string]interface{}{
+			"common_name":          "admin",
+			"exclude_cn_from_sans": "true",
+		})
+}
+
 func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes,
+	return issueCertificate(inf, CAKubernetes, "system",
 		map[string]interface{}{
 			"common_name":          "system:kube-scheduler",
 			"exclude_cn_from_sans": "true",
@@ -150,7 +159,7 @@ func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure)
 }
 
 func (k KubernetesCA) issueForControllerManager(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes,
+	return issueCertificate(inf, CAKubernetes, "system",
 		map[string]interface{}{
 			"common_name":          "system:kube-controller-manager",
 			"exclude_cn_from_sans": "true",
@@ -180,7 +189,7 @@ func writeFile(inf Infrastructure, node *Node, target string, source string) err
 }
 
 func writeCertificate(inf Infrastructure, node *Node, ca, file string, opts map[string]interface{}) error {
-	crt, key, err := issueCertificate(inf, ca, opts)
+	crt, key, err := issueCertificate(inf, ca, "system", opts)
 	if err != nil {
 		return err
 	}
@@ -195,12 +204,12 @@ func writeCertificate(inf Infrastructure, node *Node, ca, file string, opts map[
 	return nil
 }
 
-func issueCertificate(inf Infrastructure, ca string, opts map[string]interface{}) (crt, key string, err error) {
+func issueCertificate(inf Infrastructure, ca, role string, opts map[string]interface{}) (crt, key string, err error) {
 	client, err := inf.Vault()
 	if err != nil {
 		return "", "", err
 	}
-	secret, err := client.Logical().Write(ca+"/issue/system", opts)
+	secret, err := client.Logical().Write(ca+"/issue/"+role, opts)
 	if err != nil {
 		return "", "", err
 	}
