@@ -55,11 +55,7 @@ jobs:
           name: Create QCOW Image that contains /var/lib/docker
           command: |
             cp /tmp/workspace/create-qcow .
-            /tmp/workspace/create-disk-if-not-exists -instance=${CIRCLE_PROJECT_REPONAME}-${CIRCLE_BUILD_NUM}-var-lib-docker-disk --account-json=/root/project/account.json
-      - run:
-          name: Delete Instance
-          command: gcloud compute instances delete --quiet --project neco-test "${CIRCLE_PROJECT_REPONAME}-${CIRCLE_BUILD_NUM}-var-lib-docker-disk" --zone=asia-northeast1-c || true
-          when: always
+            /tmp/workspace/create-disk-if-not-exists -cleanup=true -instance=${CIRCLE_PROJECT_REPONAME}-${CIRCLE_BUILD_NUM}-var-lib-docker-disk --account-json=/root/project/account.json
 
 workflows:
   version: 2
