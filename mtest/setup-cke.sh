@@ -103,14 +103,14 @@ users:
 EOF
 }
 
+install_cke_configs
+
 if [ $(hostname) = 'host1' ]; then
     run_etcd
     sleep 1
     run_vault
+    install_kubectl_config
 fi
-
-install_cke_configs
-install_kubectl_config
 
 cat <<EOF
 

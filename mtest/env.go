@@ -17,7 +17,6 @@ var (
 	sshKeyFile     = os.Getenv("SSH_PRIVKEY")
 	ckecliPath     = os.Getenv("CKECLI")
 	kubectlPath    = os.Getenv("KUBECTL")
-	kubeconfigPath = os.Getenv("KUBECONFIG")
 	ckeClusterPath = os.Getenv("CKECLUSTER")
 	ckeConfigPath  = os.Getenv("CKECONFIG")
 	debug          = os.Getenv("DEBUG") == "1"

@@ -166,17 +166,6 @@ func ckecli(args ...string) []byte {
 	return stdout.Bytes()
 }
 
-func kubectl(args ...string) []byte {
-	args = append([]string{"--kubeconfig", kubeconfigPath}, args...)
-	var stdout bytes.Buffer
-	command := exec.Command(kubectlPath, args...)
-	command.Stdout = &stdout
-	command.Stderr = GinkgoWriter
-	err := command.Run()
-	Expect(err).NotTo(HaveOccurred())
-	return stdout.Bytes()
-}
-
 func kubeRestClient(host string) (*kubernetes.Clientset, error) {
 	cluster := getCluster()
 
