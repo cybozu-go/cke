@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cmd"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // Command represents some command
@@ -320,29 +321,29 @@ func (c stopContainersCommand) Command() Command {
 	}
 }
 
-type issueEtcdCertificatesCommand struct {
+type setupEtcdCertificatesCommand struct {
 	nodes []*Node
 }
 
-func (c issueEtcdCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
+func (c setupEtcdCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	for _, node := range c.nodes {
 		n := node
 		env.Go(func(ctx context.Context) error {
-			return issueEtcdCertificates(ctx, inf, n)
+			return EtcdCA{}.setupNode(ctx, inf, n)
 		})
 	}
 	env.Stop()
 	return env.Wait()
 }
 
-func (c issueEtcdCertificatesCommand) Command() Command {
+func (c setupEtcdCertificatesCommand) Command() Command {
 	targets := make([]string, len(c.nodes))
 	for i, n := range c.nodes {
 		targets[i] = n.Address
 	}
 	return Command{
-		Name:   "issue-etcd-certificates",
+		Name:   "setup-etcd-certificates",
 		Target: strings.Join(targets, ","),
 	}
 }
@@ -356,7 +357,7 @@ func (c issueAPIServerCertificatesCommand) Run(ctx context.Context, inf Infrastr
 	for _, node := range c.nodes {
 		n := node
 		env.Go(func(ctx context.Context) error {
-			return issueAPIServerCertificates(ctx, inf, n)
+			return EtcdCA{}.issueForAPIServer(ctx, inf, n)
 		})
 	}
 	env.Stop()
@@ -370,6 +371,195 @@ func (c issueAPIServerCertificatesCommand) Command() Command {
 	}
 	return Command{
 		Name:   "issue-apiserver-certificates",
+		Target: strings.Join(targets, ","),
+	}
+}
+
+type setupAPIServerCertificatesCommand struct {
+	nodes []*Node
+}
+
+func (c setupAPIServerCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, node := range c.nodes {
+		n := node
+		env.Go(func(ctx context.Context) error {
+			return KubernetesCA{}.setup(ctx, inf, n)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c setupAPIServerCertificatesCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "setup-apiserver-certificates",
+		Target: strings.Join(targets, ","),
+	}
+}
+
+type makeControllerManagerKubeconfigCommand struct {
+	nodes   []*Node
+	cluster string
+}
+
+func (c makeControllerManagerKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
+	const path = "/etc/kubernetes/controller-manager/kubeconfig"
+
+	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
+	if err != nil {
+		return err
+	}
+	crt, key, err := KubernetesCA{}.issueForControllerManager(ctx, inf)
+	if err != nil {
+		return err
+	}
+	cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
+	src, err := clientcmd.Write(*cfg)
+	if err != nil {
+		return err
+	}
+	return makeFileCommand{c.nodes, string(src), path}.Run(ctx, inf)
+}
+
+func (c makeControllerManagerKubeconfigCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "make-controller-manager-kubeconfig",
+		Target: strings.Join(targets, ","),
+	}
+}
+
+type makeSchedulerKubeconfigCommand struct {
+	nodes   []*Node
+	cluster string
+}
+
+func (c makeSchedulerKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
+	const path = "/etc/kubernetes/scheduler/kubeconfig"
+
+	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
+	if err != nil {
+		return err
+	}
+	crt, key, err := KubernetesCA{}.issueForScheduler(ctx, inf)
+	if err != nil {
+		return err
+	}
+	cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
+	src, err := clientcmd.Write(*cfg)
+	if err != nil {
+		return err
+	}
+	return makeFileCommand{c.nodes, string(src), path}.Run(ctx, inf)
+}
+
+func (c makeSchedulerKubeconfigCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "make-scheduler-kubeconfig",
+		Target: strings.Join(targets, ","),
+	}
+}
+
+type makeProxyKubeconfigCommand struct {
+	nodes   []*Node
+	cluster string
+}
+
+func (c makeProxyKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
+	const path = "/etc/kubernetes/proxy/kubeconfig"
+
+	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
+	if err != nil {
+		return err
+	}
+	crt, key, err := KubernetesCA{}.issueForProxy(ctx, inf)
+	if err != nil {
+		return err
+	}
+	cfg := proxyKubeconfig(c.cluster, ca, crt, key)
+	src, err := clientcmd.Write(*cfg)
+	if err != nil {
+		return err
+	}
+	return makeFileCommand{c.nodes, string(src), path}.Run(ctx, inf)
+}
+
+func (c makeProxyKubeconfigCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "make-proxy-kubeconfig",
+		Target: strings.Join(targets, ","),
+	}
+}
+
+type makeKubeletKubeconfigCommand struct {
+	nodes   []*Node
+	cluster string
+}
+
+func (c makeKubeletKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
+	const path = "/etc/kubernetes/kubelet/kubeconfig"
+	dir := filepath.Dir(path)
+
+	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
+	if err != nil {
+		return err
+	}
+
+	env := cmd.NewEnvironment(ctx)
+	binds := []Mount{{
+		Source:      dir,
+		Destination: filepath.Join("/mnt", dir),
+	}}
+	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", dir)
+	ddCommand := "dd of=" + filepath.Join("/mnt", path)
+
+	for _, n := range c.nodes {
+		crt, key, err := KubernetesCA{}.issueForKubelet(ctx, inf, n)
+		if err != nil {
+			return err
+		}
+		cfg := kubeletKubeconfig(c.cluster, n, ca, crt, key)
+		src, err := clientcmd.Write(*cfg)
+		if err != nil {
+			return err
+		}
+
+		ce := Docker(inf.Agent(n.Address))
+		env.Go(func(ctx context.Context) error {
+			err := ce.Run("tools", binds, mkdirCommand)
+			if err != nil {
+				return err
+			}
+			return ce.RunWithInput("tools", binds, ddCommand, string(src))
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c makeKubeletKubeconfigCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "make-kubelet-kubeconfig",
 		Target: strings.Join(targets, ","),
 	}
 }

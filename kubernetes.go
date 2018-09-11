@@ -28,6 +28,7 @@ type kubeCPBootOp struct {
 	controllerManager []*Node
 	scheduler         []*Node
 
+	cluster       string
 	serviceSubnet string
 	options       Options
 
@@ -65,6 +66,7 @@ type kubeWorkerBootOp struct {
 	kubelets []*Node
 	proxies  []*Node
 
+	cluster string
 	options Options
 
 	step int
@@ -77,6 +79,7 @@ type kubeWorkerRestartOp struct {
 	kubelets []*Node
 	proxies  []*Node
 
+	cluster string
 	options Options
 
 	step int
@@ -119,12 +122,12 @@ func (o *riversBootOp) NextCommand() Commander {
 func RiversParams(upstreams []*Node) ServiceParams {
 	var ups []string
 	for _, n := range upstreams {
-		ups = append(ups, n.Address+":8080")
+		ups = append(ups, n.Address+":6443")
 	}
 	args := []string{
 		"rivers",
 		"--upstreams=" + strings.Join(ups, ","),
-		"--listen=" + "127.0.0.1:18080",
+		"--listen=" + "127.0.0.1:16443",
 	}
 	return ServiceParams{
 		ExtraArguments: args,
@@ -135,12 +138,13 @@ func RiversParams(upstreams []*Node) ServiceParams {
 }
 
 // KubeCPBootOp returns an Operator to bootstrap kubernetes control planes
-func KubeCPBootOp(cps []*Node, apiserver, controllerManager, scheduler []*Node, serviceSubnet string, options Options) Operator {
+func KubeCPBootOp(cps []*Node, apiserver, controllerManager, scheduler []*Node, cluster string, serviceSubnet string, options Options) Operator {
 	return &kubeCPBootOp{
 		cps:               cps,
 		apiserver:         apiserver,
 		controllerManager: controllerManager,
 		scheduler:         scheduler,
+		cluster:           cluster,
 		serviceSubnet:     serviceSubnet,
 		options:           options,
 	}
@@ -177,23 +181,29 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 		return makeDirCommand{o.scheduler, "/var/log/kubernetes/scheduler"}
 	case 4:
 		o.step++
-		if len(o.controllerManager) == 0 {
-			return o.NextCommand()
-		}
-		return makeFileCommand{o.controllerManager, controllerManagerKubeconfig(), "/etc/kubernetes/controller-manager/kubeconfig"}
-	case 5:
-		o.step++
-		if len(o.scheduler) == 0 {
-			return o.NextCommand()
-		}
-		return makeFileCommand{o.scheduler, schedulerKubeconfig(), "/etc/kubernetes/scheduler/kubeconfig"}
-	case 6:
-		o.step++
 		if len(o.apiserver) == 0 {
 			return o.NextCommand()
 		}
 		return issueAPIServerCertificatesCommand{o.apiserver}
+	case 5:
+		o.step++
+		if len(o.apiserver) == 0 {
+			return o.NextCommand()
+		}
+		return setupAPIServerCertificatesCommand{o.apiserver}
+	case 6:
+		o.step++
+		if len(o.scheduler) == 0 {
+			return o.NextCommand()
+		}
+		return makeControllerManagerKubeconfigCommand{o.scheduler, o.cluster}
 	case 7:
+		o.step++
+		if len(o.scheduler) == 0 {
+			return o.NextCommand()
+		}
+		return makeSchedulerKubeconfigCommand{o.scheduler, o.cluster}
+	case 8:
 		if o.nodeIndex >= len(o.apiserver) {
 			o.step++
 			return o.NextCommand()
@@ -206,13 +216,13 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
 		}
 		return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, opts, APIServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
-	case 8:
+	case 9:
 		o.step++
 		if len(o.scheduler) == 0 {
 			return o.NextCommand()
 		}
 		return runContainerCommand{o.scheduler, kubeSchedulerContainerName, opts, SchedulerParams(), o.options.Scheduler}
-	case 9:
+	case 10:
 		o.step++
 		if len(o.controllerManager) == 0 {
 			return o.NextCommand()
@@ -388,13 +398,19 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 		"apiserver",
 		"--allow-privileged",
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
-		"--etcd-cafile=/etc/kubernetes/apiserver/ca-server.crt",
-		"--etcd-certfile=/etc/kubernetes/apiserver/apiserver.crt",
-		"--etcd-keyfile=/etc/kubernetes/apiserver/apiserver.key",
+		"--etcd-cafile=" + K8sPKIPath("etcd/ca.crt"),
+		"--etcd-certfile=" + K8sPKIPath("apiserver-etcd-client.crt"),
+		"--etcd-keyfile=" + K8sPKIPath("apiserver-etcd-client.key"),
 
-		// TODO use TLS
-		"--insecure-bind-address=0.0.0.0",
-		"--insecure-port=8080",
+		"--bind-address=0.0.0.0",
+		"--insecure-port=0",
+		"--client-ca-file=" + K8sPKIPath("ca.crt"),
+		"--tls-cert-file=" + K8sPKIPath("apiserver.crt"),
+		"--tls-private-key-file=" + K8sPKIPath("apiserver.key"),
+		"--kubelet-certificate-authority=" + K8sPKIPath("ca.crt"),
+		"--kubelet-client-certificate=" + K8sPKIPath("apiserver.crt"),
+		"--kubelet-client-key=" + K8sPKIPath("apiserver.key"),
+		"--kubelet-https=true",
 
 		"--advertise-address=" + advertiseAddress,
 		"--service-cluster-ip-range=" + serviceSubnet,
@@ -407,7 +423,7 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
 			{"/var/log/kubernetes/apiserver", "/var/log/kubernetes/apiserver", false},
-			{"/etc/kubernetes/apiserver", "/etc/kubernetes/apiserver", true},
+			{"/etc/kubernetes", "/etc/kubernetes", true},
 		},
 	}
 }
@@ -484,16 +500,16 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		return makeDirCommand{o.proxies, "/var/log/kubernetes/proxy"}
 	case 3:
 		o.step++
-		if len(o.proxies) == 0 {
+		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeFileCommand{o.proxies, kubeletKubeConfig(), "/etc/kubernetes/kubelet/kubeconfig"}
+		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster}
 	case 4:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
-		return makeFileCommand{o.proxies, proxyKubeConfig(), "/etc/kubernetes/proxy/kubeconfig"}
+		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
 	case 5:
 		o.step++
 		if len(o.kubelets) == 0 {
@@ -506,7 +522,9 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 			return o.NextCommand()
 		}
 		opts = []string{
-			"--tmpfs=/var/tmp/dockershim",
+			"--pid=host",
+			"--mount",
+			"type=volume,src=dockershim,dst=/var/lib/dockershim",
 			"--privileged",
 		}
 		return runContainerCommand{o.kubelets, kubeletContainerName, opts, KubeletServiceParams(), o.options.Kubelet.ToServiceParams()}
@@ -563,13 +581,13 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeFileCommand{o.proxies, kubeletKubeConfig(), "/etc/kubernetes/kubelet/kubeconfig"}
+		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster}
 	case 3:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
-		return makeFileCommand{o.proxies, proxyKubeConfig(), "/etc/kubernetes/proxy/kubeconfig"}
+		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
 	case 4:
 		o.step++
 		if len(o.rivers) == 0 {
@@ -594,7 +612,9 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 			return o.NextCommand()
 		}
 		opts = []string{
-			"--tmpfs=/var/tmp/dockershim",
+			"--pid=host",
+			"--mount",
+			"type=volume,src=dockershim,dst=/var/lib/dockershim",
 			"--privileged",
 		}
 		return runContainerCommand{o.kubelets, kubeletContainerName, opts, KubeletServiceParams(), o.options.Kubelet.ToServiceParams()}
@@ -644,7 +664,6 @@ func KubeletServiceParams() ServiceParams {
 	args := []string{
 		"kubelet",
 		"--allow-privileged=true",
-		"--container-runtime-endpoint=/var/tmp/dockershim/dockershim.sock",
 		"--pod-infra-container-image=" + Image(pauseContainerName),
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--log-dir=/var/log/kubernetes/kubelet",
@@ -656,10 +675,11 @@ func KubeletServiceParams() ServiceParams {
 			{"/etc/kubernetes/kubelet", "/etc/kubernetes/kubelet", true},
 			{"/var/lib/kubelet", "/var/lib/kubelet", false},
 			{"/var/lib/docker", "/var/lib/docker", false},
-			{"/var/lib/dockershim", "/var/lib/dockershim", false},
 			{"/var/log/pods", "/var/log/pods", false},
 			{"/var/log/kubernetes/kubelet", "/var/log/kubernetes/kubelet", false},
-			{"/var/run/docker.sock", "/var/run/docker.sock", false},
+			{"/run", "/run", false},
+			{"/sys", "/sys", true},
+			{"/dev", "/dev", false},
 		},
 	}
 }

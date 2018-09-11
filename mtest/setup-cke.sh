@@ -56,41 +56,60 @@ EOF
     create_ca cke/ca-server "server CA" server
     create_ca cke/ca-etcd-peer "etcd peer CA" etcd-peer
     create_ca cke/ca-etcd-client "etcd client CA" etcd-client
+    create_ca cke/ca-kubernetes "kubernetes CA" kubernetes
 
     $VAULT write cke/ca-server/roles/system ttl=87600h max_ttl=87600h client_flag=false allow_any_name=true
     $VAULT write cke/ca-etcd-peer/roles/system ttl=87600h max_ttl=87600h allow_any_name=true
     $VAULT write cke/ca-etcd-client/roles/system ttl=87600h max_ttl=87600h server_flag=false allow_any_name=true
+    $VAULT write cke/ca-kubernetes/roles/system ttl=87600h max_ttl=87600h enforce_hostnames=false allow_any_name=true
+    $VAULT write cke/ca-kubernetes/roles/admin ttl=2h max_ttl=24h enforce_hostnames=false allow_any_name=true organization=system:masters
 }
 
-install_configs() {
+install_cke_configs() {
   sudo tee /etc/cke/config.yml >/dev/null <<EOF
 endpoints: ["http://10.0.0.11:2379"]
 EOF
+}
+
+install_kubectl_config() {
+  $VAULT write -format=json \
+    cke/ca-kubernetes/issue/admin common_name=admin exclude_cn_from_sans=true \
+    >/tmp/admin.json
+
+  ca="$(jq -r .data.issuing_ca /tmp/admin.json | base64  -w0)"
+  crt="$(jq -r .data.certificate /tmp/admin.json | base64  -w0)"
+  key="$(jq -r .data.private_key /tmp/admin.json | base64  -w0)"
 
   mkdir -p $HOME/.kube
   cat >$HOME/.kube/config <<EOF
 apiVersion: v1
 clusters:
-- name: local
-  cluster:
-    server: http://10.0.0.101:8080
-users:
-- name: admin
+- cluster:
+    certificate-authority-data: ${ca}
+    server: https://10.0.0.101:6443
+  name: "mtest"
 contexts:
 - context:
-    cluster: local
+    cluster: "mtest"
     user: admin
+  name: default
+current-context: default
+kind: Config
+users:
+- name: admin
+  user:
+    client-certificate-data: ${crt}
+    client-key-data: ${key}
 EOF
-
-
 }
 
-install_configs
+install_cke_configs
 
 if [ $(hostname) = 'host1' ]; then
     run_etcd
     sleep 1
     run_vault
+    install_kubectl_config
 fi
 
 cat <<EOF

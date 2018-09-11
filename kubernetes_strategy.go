@@ -30,7 +30,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].Scheduler.Running
 	})
 	if len(apiservers)+len(controllerManagers)+len(schedulers) > 0 {
-		return KubeCPBootOp(cpNodes, apiservers, controllerManagers, schedulers, c.ServiceSubnet, c.Options)
+		return KubeCPBootOp(cpNodes, apiservers, controllerManagers, schedulers, c.Name, c.ServiceSubnet, c.Options)
 	}
 
 	// Stop kubernetes control planes on non-control-plane nodes

@@ -100,7 +100,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 		return imagePullCommand{o.nodes, etcdContainerName}
 	case 1:
 		o.step++
-		return issueEtcdCertificatesCommand{o.nodes}
+		return setupEtcdCertificatesCommand{o.nodes}
 	case 2:
 		o.step++
 		return volumeCreateCommand{o.nodes, volname}
@@ -141,14 +141,14 @@ func etcdBuiltInParams(node *Node, initialCluster []string, state string) Servic
 		"--listen-client-urls=https://0.0.0.0:2379",
 		"--initial-advertise-peer-urls=https://" + node.Address + ":2380",
 		"--advertise-client-urls=https://" + node.Address + ":2379",
-		"--cert-file=/etc/etcd/pki/server.crt",
-		"--key-file=/etc/etcd/pki/server.key",
+		"--cert-file=" + EtcdPKIPath("server.crt"),
+		"--key-file=" + EtcdPKIPath("server.key"),
 		"--client-cert-auth=true",
-		"--trusted-ca-file=/etc/etcd/pki/ca-client.crt",
-		"--peer-cert-file=/etc/etcd/pki/peer.crt",
-		"--peer-key-file=/etc/etcd/pki/peer.key",
+		"--trusted-ca-file=" + EtcdPKIPath("ca-client.crt"),
+		"--peer-cert-file=" + EtcdPKIPath("peer.crt"),
+		"--peer-key-file=" + EtcdPKIPath("peer.key"),
 		"--peer-client-cert-auth=true",
-		"--peer-trusted-ca-file=/etc/etcd/pki/ca-peer.crt",
+		"--peer-trusted-ca-file=" + EtcdPKIPath("ca-peer.crt"),
 		"--initial-cluster=" + strings.Join(initialCluster, ","),
 		"--initial-cluster-token=cke",
 		"--initial-cluster-state=" + state,
@@ -212,7 +212,7 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		return volumeCreateCommand{[]*Node{node}, volname}
 	case 4:
 		o.step++
-		return issueEtcdCertificatesCommand{[]*Node{node}}
+		return setupEtcdCertificatesCommand{[]*Node{node}}
 	case 5:
 		o.step++
 		opts := []string{

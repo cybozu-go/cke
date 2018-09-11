@@ -31,18 +31,16 @@ UBUNTU_IMAGE := ubuntu-18.04-server-cloudimg-amd64.img
 COREOS_IMAGE := coreos_production_qemu_image.img
 CKECLI := $(OUTPUT)/ckecli
 KUBECTL := $(OUTPUT)/kubectl
-KUBECONFIG := $(OUTPUT)/kubeconfig.yml
 CKECLUSTER := $(OUTPUT)/cke-cluster.yml
 CKECONFIG := $(OUTPUT)/cke.yml
 
-export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG KUBECTL KUBECONFIG
+export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG KUBECTL
 
 
 GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/vault \
 	$(OUTPUT)/cke $(OUTPUT)/ckecli \
 	$(OUTPUT)/kubectl \
-	$(OUTPUT)/kubeconfig.yml \
 	$(OUTPUT)/cluster.yml \
 	$(OUTPUT)/user-data_host1.yml \
 	$(OUTPUT)/user-data_host2.yml \
@@ -105,10 +103,6 @@ $(OUTPUT)/setup-cke.sh: setup-cke.sh
 	mkdir -p $(OUTPUT)
 	cp $< $@
 	chmod a+x $@
-
-$(OUTPUT)/kubeconfig.yml: kubeconfig.yml
-	mkdir -p $(OUTPUT)
-	sed -e 's/@NODE1@/$(NODE1)/' $< > $@
 
 $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)

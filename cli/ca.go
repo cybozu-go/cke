@@ -31,7 +31,8 @@ func CACommand() subcommands.Command {
 }
 
 func isValidCAName(name string) bool {
-	if name == "server" || name == "etcd-peer" || name == "etcd-client" {
+	switch name {
+	case "server", "etcd-peer", "etcd-client", "kubernetes":
 		return true
 	}
 	return false
@@ -80,6 +81,7 @@ NAME is one of:
 		- server
 		- etcd-peer
 		- etcd-client
+		- kubernetes
 `,
 	}
 }
