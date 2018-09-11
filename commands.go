@@ -343,7 +343,7 @@ func (c setupEtcdCertificatesCommand) Command() Command {
 		targets[i] = n.Address
 	}
 	return Command{
-		Name:   "issue-etcd-certificates",
+		Name:   "setup-etcd-certificates",
 		Target: strings.Join(targets, ","),
 	}
 }
@@ -473,12 +473,27 @@ func (c makeSchedulerKubeconfigCommand) Command() Command {
 }
 
 type makeProxyKubeconfigCommand struct {
-	nodes []*Node
+	nodes   []*Node
+	cluster string
 }
 
 func (c makeProxyKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
-	// TODO create kube-proxy's kubeconfig
-	return nil
+	const path = "/etc/kubernetes/proxy/kubeconfig"
+
+	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
+	if err != nil {
+		return err
+	}
+	crt, key, err := KubernetesCA{}.issueForProxy(ctx, inf)
+	if err != nil {
+		return err
+	}
+	cfg := proxyKubeconfig(c.cluster, ca, crt, key)
+	src, err := clientcmd.Write(*cfg)
+	if err != nil {
+		return err
+	}
+	return makeFileCommand{c.nodes, string(src), path}.Run(ctx, inf)
 }
 
 func (c makeProxyKubeconfigCommand) Command() Command {
@@ -493,12 +508,49 @@ func (c makeProxyKubeconfigCommand) Command() Command {
 }
 
 type makeKubeletKubeconfigCommand struct {
-	nodes []*Node
+	nodes   []*Node
+	cluster string
 }
 
 func (c makeKubeletKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
-	// TODO create kubelet's kubeconfig
-	return nil
+	const path = "/etc/kubernetes/kubelet/kubeconfig"
+	dir := filepath.Dir(path)
+
+	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
+	if err != nil {
+		return err
+	}
+
+	env := cmd.NewEnvironment(ctx)
+	binds := []Mount{{
+		Source:      dir,
+		Destination: filepath.Join("/mnt", dir),
+	}}
+	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", dir)
+	ddCommand := "dd of=" + filepath.Join("/mnt", path)
+
+	for _, n := range c.nodes {
+		crt, key, err := KubernetesCA{}.issueForKubelet(ctx, inf, n)
+		if err != nil {
+			return err
+		}
+		cfg := kubeletKubeconfig(c.cluster, n, ca, crt, key)
+		src, err := clientcmd.Write(*cfg)
+		if err != nil {
+			return err
+		}
+
+		ce := Docker(inf.Agent(n.Address))
+		env.Go(func(ctx context.Context) error {
+			err := ce.Run("tools", binds, mkdirCommand)
+			if err != nil {
+				return err
+			}
+			return ce.RunWithInput("tools", binds, ddCommand, string(src))
+		})
+	}
+	env.Stop()
+	return env.Wait()
 }
 
 func (c makeKubeletKubeconfigCommand) Command() Command {

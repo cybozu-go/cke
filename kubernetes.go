@@ -66,6 +66,7 @@ type kubeWorkerBootOp struct {
 	kubelets []*Node
 	proxies  []*Node
 
+	cluster string
 	options Options
 
 	step int
@@ -78,6 +79,7 @@ type kubeWorkerRestartOp struct {
 	kubelets []*Node
 	proxies  []*Node
 
+	cluster string
 	options Options
 
 	step int
@@ -501,13 +503,13 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeKubeletKubeconfigCommand{o.kubelets}
+		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster}
 	case 4:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
-		return makeProxyKubeconfigCommand{o.proxies}
+		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
 	case 5:
 		o.step++
 		if len(o.kubelets) == 0 {
@@ -520,7 +522,9 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 			return o.NextCommand()
 		}
 		opts = []string{
-			"--tmpfs=/var/tmp/dockershim",
+			"--pid=host",
+			"--mount",
+			"type=volume,src=dockershim,dst=/var/lib/dockershim",
 			"--privileged",
 		}
 		return runContainerCommand{o.kubelets, kubeletContainerName, opts, KubeletServiceParams(), o.options.Kubelet.ToServiceParams()}
@@ -577,13 +581,13 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeKubeletKubeconfigCommand{o.kubelets}
+		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster}
 	case 3:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
-		return makeProxyKubeconfigCommand{o.proxies}
+		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
 	case 4:
 		o.step++
 		if len(o.rivers) == 0 {
@@ -608,7 +612,9 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 			return o.NextCommand()
 		}
 		opts = []string{
-			"--tmpfs=/var/tmp/dockershim",
+			"--pid=host",
+			"--mount",
+			"type=volume,src=dockershim,dst=/var/lib/dockershim",
 			"--privileged",
 		}
 		return runContainerCommand{o.kubelets, kubeletContainerName, opts, KubeletServiceParams(), o.options.Kubelet.ToServiceParams()}
@@ -658,7 +664,6 @@ func KubeletServiceParams() ServiceParams {
 	args := []string{
 		"kubelet",
 		"--allow-privileged=true",
-		"--container-runtime-endpoint=/var/tmp/dockershim/dockershim.sock",
 		"--pod-infra-container-image=" + Image(pauseContainerName),
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--log-dir=/var/log/kubernetes/kubelet",
@@ -670,10 +675,11 @@ func KubeletServiceParams() ServiceParams {
 			{"/etc/kubernetes/kubelet", "/etc/kubernetes/kubelet", true},
 			{"/var/lib/kubelet", "/var/lib/kubelet", false},
 			{"/var/lib/docker", "/var/lib/docker", false},
-			{"/var/lib/dockershim", "/var/lib/dockershim", false},
 			{"/var/log/pods", "/var/log/pods", false},
 			{"/var/log/kubernetes/kubelet", "/var/log/kubernetes/kubelet", false},
-			{"/var/run/docker.sock", "/var/run/docker.sock", false},
+			{"/run", "/run", false},
+			{"/sys", "/sys", true},
+			{"/dev", "/dev", false},
 		},
 	}
 }

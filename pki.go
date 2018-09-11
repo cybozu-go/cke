@@ -166,10 +166,25 @@ func (k KubernetesCA) issueForControllerManager(ctx context.Context, inf Infrast
 		})
 }
 
-func (k KubernetesCA) issueForKubelet() {
+func (k KubernetesCA) issueForKubelet(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
+	hostname := node.Hostname
+	if len(hostname) == 0 {
+		hostname = node.Address
+	}
+
+	return issueCertificate(inf, CAKubernetes, "system",
+		map[string]interface{}{
+			"common_name":          "system:node:" + hostname,
+			"exclude_cn_from_sans": "true",
+		})
 }
 
-func (k KubernetesCA) issueForProxy() {
+func (k KubernetesCA) issueForProxy(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
+	return issueCertificate(inf, CAKubernetes, "system",
+		map[string]interface{}{
+			"common_name":          "system:kube-controller-manager",
+			"exclude_cn_from_sans": "true",
+		})
 }
 
 func writeFile(inf Infrastructure, node *Node, target string, source string) error {

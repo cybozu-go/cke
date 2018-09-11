@@ -311,7 +311,7 @@ func BootstrapCommands(targets ...string) []Command {
 	hosts := strings.Join(targets, ",")
 	commands := []Command{
 		{Name: "image-pull", Target: "etcd"},
-		{Name: "issue-etcd-certificates", Target: hosts},
+		{Name: "setup-etcd-certificates", Target: hosts},
 		{Name: "volume-create", Target: hosts},
 	}
 	for _, addr := range targets {
@@ -332,7 +332,7 @@ func AddMemberCommands(addr string) []Command {
 		{Name: "stop-container", Target: addr},
 		{Name: "volume-remove", Target: addr},
 		{Name: "volume-create", Target: addr},
-		{Name: "issue-etcd-certificates", Target: addr},
+		{Name: "setup-etcd-certificates", Target: addr},
 		{Name: "add-etcd-member", Target: addr},
 		{Name: "wait-etcd-sync", Target: "https://" + addr + ":2379"},
 	}
