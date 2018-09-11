@@ -417,40 +417,40 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 		}
 	}
 
-	newError := func(msg, host string, port uint16, stdout, stderr string) error {
-		return clusterStatusError{
-			msg, host, port, status, controlPlanes, workers, stdout, stderr,
-		}
-	}
+	// newError := func(msg, host string, port uint16, stdout, stderr string) error {
+	// 	return clusterStatusError{
+	// 		msg, host, port, status, controlPlanes, workers, stdout, stderr,
+	// 	}
+	// }
 
-	for _, host := range controlPlanes {
-		// 8080: apiserver, 10252: controller-manager, 10251: scheduler
-		for _, port := range []uint16{8080, 10252, 10251} {
-			stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
-			if err != nil {
-				return newError(err.Error(), host, port, string(stdout), string(stderr))
-			}
-			if string(stdout) != "ok" {
-				return newError("stdout is not ok", host, port, string(stdout), string(stderr))
-			}
-		}
-		if err = checkComponentStatuses(host); err != nil {
-			return
-		}
-	}
+	// for _, host := range controlPlanes {
+	// 	// 8080: apiserver, 10252: controller-manager, 10251: scheduler
+	// 	for _, port := range []uint16{8080, 10252, 10251} {
+	// 		stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
+	// 		if err != nil {
+	// 			return newError(err.Error(), host, port, string(stdout), string(stderr))
+	// 		}
+	// 		if string(stdout) != "ok" {
+	// 			return newError("stdout is not ok", host, port, string(stdout), string(stderr))
+	// 		}
+	// 	}
+	// 	if err = checkComponentStatuses(host); err != nil {
+	// 		return
+	// 	}
+	// }
 
-	for _, host := range nodes {
-		// 10248: kubelet, 10256: kube-proxy, 16443: rivers (to apiserver)
-		for _, port := range []uint16{10248, 10256, 16443} {
-			stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
-			if err != nil {
-				return newError(err.Error(), host, port, string(stdout), string(stderr))
-			}
-			if string(stdout) != "ok" && port != 10256 { // kube-proxy does not return "ok"
-				return newError("stdout is not ok", host, port, string(stdout), string(stderr))
-			}
-		}
-	}
+	// for _, host := range nodes {
+	// 	// 10248: kubelet, 10256: kube-proxy, 16443: rivers (to apiserver)
+	// 	for _, port := range []uint16{10248, 10256, 16443} {
+	// 		stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
+	// 		if err != nil {
+	// 			return newError(err.Error(), host, port, string(stdout), string(stderr))
+	// 		}
+	// 		if string(stdout) != "ok" && port != 10256 { // kube-proxy does not return "ok"
+	// 			return newError("stdout is not ok", host, port, string(stdout), string(stderr))
+	// 		}
+	// 	}
+	// }
 
 	return nil
 }
