@@ -14,6 +14,18 @@ jobs:
       - run: test -z "$(goimports -d . | tee /dev/stderr)"
       - run: golint -set_exit_status ./...
       - run: go test -race -v ./...
+      - run:
+          name: copy to shared workspace
+          command: |
+            mkdir -p /tmp/workspace
+            go get github.com/cybozu/neco-gcp/neco-test/cke/...
+            cp $(which create-disk-if-not-exists) /tmp/workspace/
+            cp $(which create-qcow) /tmp/workspace/
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - create-disk-if-not-exists
+            - create-qcow
   mtest:
     docker:
       - image: google/cloud-sdk
@@ -25,10 +37,32 @@ jobs:
             echo $GCLOUD_SERVICE_ACCOUNT > account.json
             gcloud auth activate-service-account --key-file=account.json
       - run: ./bin/run-mtest.sh
+  var-lib-docker-disk:
+    docker:
+    - image: google/cloud-sdk
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /root/project/account.json
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Store Service Account
+          command: |
+            echo $GCLOUD_SERVICE_ACCOUNT > account.json
+            gcloud auth activate-service-account --key-file=account.json
+      - run:
+          name: Create QCOW Image that contains /var/lib/docker
+          command: |
+            cp /tmp/workspace/create-qcow .
+            /tmp/workspace/create-disk-if-not-exists -cleanup=true -instance=${CIRCLE_PROJECT_REPONAME}-${CIRCLE_BUILD_NUM}-var-lib-docker-disk --account-json=/root/project/account.json
 
 workflows:
   version: 2
   main:
     jobs:
       - build
+      - var-lib-docker-disk:
+          requires:
+          - build
       - mtest
