@@ -81,6 +81,7 @@ NAME is one of:
 		- server
 		- etcd-peer
 		- etcd-client
+		- kubernetes
 `,
 	}
 }
