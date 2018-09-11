@@ -28,6 +28,7 @@ type kubeCPBootOp struct {
 	controllerManager []*Node
 	scheduler         []*Node
 
+	cluster       string
 	serviceSubnet string
 	options       Options
 
@@ -135,12 +136,13 @@ func RiversParams(upstreams []*Node) ServiceParams {
 }
 
 // KubeCPBootOp returns an Operator to bootstrap kubernetes control planes
-func KubeCPBootOp(cps []*Node, apiserver, controllerManager, scheduler []*Node, serviceSubnet string, options Options) Operator {
+func KubeCPBootOp(cps []*Node, apiserver, controllerManager, scheduler []*Node, cluster string, serviceSubnet string, options Options) Operator {
 	return &kubeCPBootOp{
 		cps:               cps,
 		apiserver:         apiserver,
 		controllerManager: controllerManager,
 		scheduler:         scheduler,
+		cluster:           cluster,
 		serviceSubnet:     serviceSubnet,
 		options:           options,
 	}
@@ -177,35 +179,29 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 		return makeDirCommand{o.scheduler, "/var/log/kubernetes/scheduler"}
 	case 4:
 		o.step++
-		if len(o.controllerManager) == 0 {
-			return o.NextCommand()
-		}
-		return makeFileCommand{o.controllerManager, controllerManagerKubeconfig(), "/etc/kubernetes/controller-manager/kubeconfig"}
-	case 5:
-		o.step++
-		if len(o.scheduler) == 0 {
-			return o.NextCommand()
-		}
-		return makeFileCommand{o.scheduler, schedulerKubeconfig(), "/etc/kubernetes/scheduler/kubeconfig"}
-	case 6:
-		o.step++
 		if len(o.apiserver) == 0 {
 			return o.NextCommand()
 		}
 		return issueAPIServerCertificatesCommand{o.apiserver}
-	case 7:
+	case 5:
 		o.step++
 		if len(o.apiserver) == 0 {
 			return o.NextCommand()
 		}
 		return setupAPIServerCertificatesCommand{o.apiserver}
-	case 8:
+	case 6:
 		o.step++
-		if len(o.apiserver) == 0 {
+		if len(o.scheduler) == 0 {
 			return o.NextCommand()
 		}
-		return issueSchedulerCertificatesCommand{o.scheduler}
-	case 9:
+		return makeControllerManagerKubeconfigCommand{o.scheduler, o.cluster}
+	case 7:
+		o.step++
+		if len(o.scheduler) == 0 {
+			return o.NextCommand()
+		}
+		return makeSchedulerKubeconfigCommand{o.scheduler, o.cluster}
+	case 8:
 		if o.nodeIndex >= len(o.apiserver) {
 			o.step++
 			return o.NextCommand()
@@ -218,13 +214,13 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
 		}
 		return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, opts, APIServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
-	case 10:
+	case 9:
 		o.step++
 		if len(o.scheduler) == 0 {
 			return o.NextCommand()
 		}
 		return runContainerCommand{o.scheduler, kubeSchedulerContainerName, opts, SchedulerParams(), o.options.Scheduler}
-	case 11:
+	case 10:
 		o.step++
 		if len(o.controllerManager) == 0 {
 			return o.NextCommand()
@@ -502,16 +498,16 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		return makeDirCommand{o.proxies, "/var/log/kubernetes/proxy"}
 	case 3:
 		o.step++
-		if len(o.proxies) == 0 {
+		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeFileCommand{o.proxies, kubeletKubeConfig(), "/etc/kubernetes/kubelet/kubeconfig"}
+		return makeKubeletKubeconfigCommand{o.kubelets}
 	case 4:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
-		return makeFileCommand{o.proxies, proxyKubeConfig(), "/etc/kubernetes/proxy/kubeconfig"}
+		return makeProxyKubeconfigCommand{o.proxies}
 	case 5:
 		o.step++
 		if len(o.kubelets) == 0 {
@@ -581,13 +577,13 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeFileCommand{o.proxies, kubeletKubeConfig(), "/etc/kubernetes/kubelet/kubeconfig"}
+		return makeKubeletKubeconfigCommand{o.kubelets}
 	case 3:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
-		return makeFileCommand{o.proxies, proxyKubeConfig(), "/etc/kubernetes/proxy/kubeconfig"}
+		return makeProxyKubeconfigCommand{o.proxies}
 	case 4:
 		o.step++
 		if len(o.rivers) == 0 {

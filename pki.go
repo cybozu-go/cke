@@ -35,7 +35,8 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 	if len(hostname) == 0 {
 		hostname = node.Address
 	}
-	err := issueCertificate(inf, node, CAServer, EtcdPKIPath("server"),
+
+	err := writeCertificate(inf, node, CAServer, EtcdPKIPath("server"),
 		map[string]interface{}{
 			"common_name": hostname,
 			"alt_names":   "localhost",
@@ -44,7 +45,7 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 	if err != nil {
 		return err
 	}
-	err = issueCertificate(inf, node, CAEtcdPeer, EtcdPKIPath("peer"),
+	err = writeCertificate(inf, node, CAEtcdPeer, EtcdPKIPath("peer"),
 		map[string]interface{}{
 			"common_name":          hostname,
 			"ip_sans":              "127.0.0.1," + node.Address,
@@ -70,11 +71,7 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 }
 
 func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node *Node) error {
-	hostname := node.Hostname
-	if len(hostname) == 0 {
-		hostname = node.Address
-	}
-	err := issueCertificate(inf, node, CAEtcdClient, K8sPKIPath("apiserver-etcd-client"),
+	err := writeCertificate(inf, node, CAEtcdClient, K8sPKIPath("apiserver-etcd-client"),
 		map[string]interface{}{
 			"common_name":          "kube-apiserver",
 			"exclude_cn_from_sans": "true",
@@ -126,7 +123,7 @@ func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node)
 	if len(hostname) == 0 {
 		hostname = node.Address
 	}
-	err := issueCertificate(inf, node, CAKubernetes, K8sPKIPath("apiserver"),
+	err := writeCertificate(inf, node, CAKubernetes, K8sPKIPath("apiserver"),
 		map[string]interface{}{
 			"common_name":          hostname,
 			"alt_names":            "localhost",
@@ -144,19 +141,20 @@ func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node)
 	return writeFile(inf, node, K8sPKIPath("ca.crt"), ca)
 }
 
-func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure, node *Node) error {
-	hostname := node.Hostname
-	if len(hostname) == 0 {
-		hostname = node.Address
-	}
-	return issueCertificate(inf, node, CAKubernetes, K8sPKIPath("kube-scheduler"),
+func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
+	return issueCertificate(inf, CAKubernetes,
 		map[string]interface{}{
 			"common_name":          "system:kube-scheduler",
 			"exclude_cn_from_sans": "true",
 		})
 }
 
-func (k KubernetesCA) issueForControllerManager() {
+func (k KubernetesCA) issueForControllerManager(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
+	return issueCertificate(inf, CAKubernetes,
+		map[string]interface{}{
+			"common_name":          "system:kube-controller-manager",
+			"exclude_cn_from_sans": "true",
+		})
 }
 
 func (k KubernetesCA) issueForKubelet() {
@@ -181,22 +179,33 @@ func writeFile(inf Infrastructure, node *Node, target string, source string) err
 	return ce.RunWithInput("tools", binds, ddCommand, source)
 }
 
-func issueCertificate(inf Infrastructure, node *Node, ca, file string, opts map[string]interface{}) error {
-	client, err := inf.Vault()
+func writeCertificate(inf Infrastructure, node *Node, ca, file string, opts map[string]interface{}) error {
+	crt, key, err := issueCertificate(inf, ca, opts)
 	if err != nil {
 		return err
 	}
-	secret, err := client.Logical().Write(ca+"/issue/system", opts)
+	err = writeFile(inf, node, file+".crt", crt)
 	if err != nil {
 		return err
 	}
-	err = writeFile(inf, node, file+".crt", secret.Data["certificate"].(string))
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, file+".key", secret.Data["private_key"].(string))
+	err = writeFile(inf, node, file+".key", key)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func issueCertificate(inf Infrastructure, ca string, opts map[string]interface{}) (crt, key string, err error) {
+	client, err := inf.Vault()
+	if err != nil {
+		return "", "", err
+	}
+	secret, err := client.Logical().Write(ca+"/issue/system", opts)
+	if err != nil {
+		return "", "", err
+	}
+	crt = secret.Data["certificate"].(string)
+	key = secret.Data["private_key"].(string)
+	return crt, key, err
+
 }

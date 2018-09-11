@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cmd"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // Command represents some command
@@ -401,29 +402,112 @@ func (c setupAPIServerCertificatesCommand) Command() Command {
 	}
 }
 
-type issueSchedulerCertificatesCommand struct {
-	nodes []*Node
+type makeControllerManagerKubeconfigCommand struct {
+	nodes   []*Node
+	cluster string
 }
 
-func (c issueSchedulerCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
-	env := cmd.NewEnvironment(ctx)
-	for _, node := range c.nodes {
-		n := node
-		env.Go(func(ctx context.Context) error {
-			return KubernetesCA{}.issueForScheduler(ctx, inf, n)
-		})
+func (c makeControllerManagerKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
+	const path = "/etc/kubernetes/controller-manager/kubeconfig"
+
+	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
+	if err != nil {
+		return err
 	}
-	env.Stop()
-	return env.Wait()
+	crt, key, err := KubernetesCA{}.issueForControllerManager(ctx, inf)
+	if err != nil {
+		return err
+	}
+	cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
+	src, err := clientcmd.Write(*cfg)
+	if err != nil {
+		return err
+	}
+	return makeFileCommand{c.nodes, string(src), path}.Run(ctx, inf)
 }
 
-func (c issueSchedulerCertificatesCommand) Command() Command {
+func (c makeControllerManagerKubeconfigCommand) Command() Command {
 	targets := make([]string, len(c.nodes))
 	for i, n := range c.nodes {
 		targets[i] = n.Address
 	}
 	return Command{
-		Name:   "issue-scheduler-certificates",
+		Name:   "make-controller-manager-kubeconfig",
+		Target: strings.Join(targets, ","),
+	}
+}
+
+type makeSchedulerKubeconfigCommand struct {
+	nodes   []*Node
+	cluster string
+}
+
+func (c makeSchedulerKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
+	const path = "/etc/kubernetes/scheduler/kubeconfig"
+
+	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
+	if err != nil {
+		return err
+	}
+	crt, key, err := KubernetesCA{}.issueForScheduler(ctx, inf)
+	if err != nil {
+		return err
+	}
+	cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
+	src, err := clientcmd.Write(*cfg)
+	if err != nil {
+		return err
+	}
+	return makeFileCommand{c.nodes, string(src), path}.Run(ctx, inf)
+}
+
+func (c makeSchedulerKubeconfigCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "make-scheduler-kubeconfig",
+		Target: strings.Join(targets, ","),
+	}
+}
+
+type makeProxyKubeconfigCommand struct {
+	nodes []*Node
+}
+
+func (c makeProxyKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
+	// TODO create kube-proxy's kubeconfig
+	return nil
+}
+
+func (c makeProxyKubeconfigCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "make-proxy-kubeconfig",
+		Target: strings.Join(targets, ","),
+	}
+}
+
+type makeKubeletKubeconfigCommand struct {
+	nodes []*Node
+}
+
+func (c makeKubeletKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
+	// TODO create kubelet's kubeconfig
+	return nil
+}
+
+func (c makeKubeletKubeconfigCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "make-kubelet-kubeconfig",
 		Target: strings.Join(targets, ","),
 	}
 }

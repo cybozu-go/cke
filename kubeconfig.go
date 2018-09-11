@@ -10,8 +10,17 @@ func schedulerKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.C
 	return kubeconfig(cluster, "system:kube-scheduler", ca, clientCrt, clientKey)
 }
 
-func proxyKubeConfig(cluster string, ca, clientCrt, clientKey string) *api.Config {
+func proxyKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Config {
 	return kubeconfig(cluster, "system:kube-proxy", ca, clientCrt, clientKey)
+}
+
+func kubeletKubeconfig(cluster string, n *Node, ca, clientCrt, clientKey string) *api.Config {
+	hostname := n.Hostname
+	if len(hostname) == 0 {
+		hostname = n.Address
+	}
+
+	return kubeconfig(cluster, "system:node:"+hostname, ca, clientCrt, clientKey)
 }
 
 func kubeconfig(cluster, user, ca, clientCrt, clientKey string) *api.Config {
