@@ -15,12 +15,7 @@ func proxyKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Confi
 }
 
 func kubeletKubeconfig(cluster string, n *Node, ca, clientCrt, clientKey string) *api.Config {
-	hostname := n.Hostname
-	if len(hostname) == 0 {
-		hostname = n.Address
-	}
-
-	return kubeconfig(cluster, "system:node:"+hostname, ca, clientCrt, clientKey)
+	return kubeconfig(cluster, "system:node:"+n.Nodename(), ca, clientCrt, clientKey)
 }
 
 func kubeconfig(cluster, user, ca, clientCrt, clientKey string) *api.Config {

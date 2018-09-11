@@ -20,6 +20,14 @@ type Node struct {
 	signer ssh.Signer
 }
 
+// Nodename returns a hostname or address if hostname is empty
+func (n *Node) Nodename() string {
+	if len(n.Hostname) == 0 {
+		return n.Address
+	}
+	return n.Hostname
+}
+
 // Mount is volume mount information
 type Mount struct {
 	Source      string `json:"source"      yaml:"source"`
