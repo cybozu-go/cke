@@ -43,6 +43,15 @@ Issue certificates for kubernetes cluster.
 Create `system` role with these options:
 
 - `allow_any_name=true`
+- `enforce_hostnames=false`
+
+Create `admin` role with these options:
+
+- `allow_any_name=true`
+- `enforce_hostnames=false`
+- `organization=system:masters`
+
+`admin` role can issue certificates for Kubernetes cluster admins.
 
 ## policy `cke`
 
