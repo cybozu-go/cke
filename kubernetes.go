@@ -667,6 +667,7 @@ func KubeletServiceParams() ServiceParams {
 		"--pod-infra-container-image=" + Image(pauseContainerName),
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--log-dir=/var/log/kubernetes/kubelet",
+		"--healthz-bind-address=0.0.0.0",
 	}
 	return ServiceParams{
 		ExtraArguments: args,

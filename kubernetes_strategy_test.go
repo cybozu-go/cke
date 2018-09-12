@@ -66,10 +66,10 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 		nodeStatus[addr] = &NodeStatus{
 			Rivers:            ServiceStatus{BuiltInParams: RiversParams(cps), ExtraParams: ServiceParams{ExtraArguments: c.CurrentRiverArgs}},
 			APIServer:         ServiceStatus{BuiltInParams: APIServerParams(cps, addr, "10.20.30.40/31"), ExtraParams: ServiceParams{ExtraArguments: c.CurrentAPIServerArgs}},
-			ControllerManager: ServiceStatus{BuiltInParams: ControllerManagerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentControllerManagerArgs}},
-			Scheduler:         ServiceStatus{BuiltInParams: SchedulerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentSchedulerArgs}},
+			ControllerManager: KubeComponentStatus{ServiceStatus{BuiltInParams: ControllerManagerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentControllerManagerArgs}}, false},
+			Scheduler:         KubeComponentStatus{ServiceStatus{BuiltInParams: SchedulerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentSchedulerArgs}}, false},
 			Proxy:             ServiceStatus{BuiltInParams: ProxyParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentProxyArgs}},
-			Kubelet:           ServiceStatus{BuiltInParams: KubeletServiceParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentKubeletArgs}},
+			Kubelet:           KubeComponentStatus{ServiceStatus{BuiltInParams: KubeletServiceParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentKubeletArgs}}, false},
 		}
 	}
 	for _, addr := range c.Rivers {
@@ -79,12 +79,15 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 		nodeStatus[addr].APIServer.Running = true
 	}
 	for _, addr := range c.ControllerManagers {
+		nodeStatus[addr].ControllerManager.IsHealthy = true
 		nodeStatus[addr].ControllerManager.Running = true
 	}
 	for _, addr := range c.Schedulers {
+		nodeStatus[addr].Scheduler.IsHealthy = true
 		nodeStatus[addr].Scheduler.Running = true
 	}
 	for _, addr := range c.Kubelets {
+		nodeStatus[addr].Kubelet.IsHealthy = true
 		nodeStatus[addr].Kubelet.Running = true
 	}
 	for _, addr := range c.Proxies {

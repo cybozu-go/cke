@@ -3,6 +3,10 @@ package cke
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/coreos/etcd/clientv3"
@@ -46,10 +50,10 @@ type NodeStatus struct {
 	Etcd              EtcdStatus
 	Rivers            ServiceStatus
 	APIServer         ServiceStatus
-	ControllerManager ServiceStatus
-	Scheduler         ServiceStatus
+	ControllerManager KubeComponentStatus
+	Scheduler         KubeComponentStatus
 	Proxy             ServiceStatus
-	Kubelet           ServiceStatus
+	Kubelet           KubeComponentStatus
 	Labels            map[string]string // are labels for k8s Node resource.
 }
 
@@ -70,6 +74,12 @@ type EtcdStatus struct {
 	HasData bool
 }
 
+// KubeComponentStatus represents service status and endpoint's health
+type KubeComponentStatus struct {
+	ServiceStatus
+	IsHealthy bool
+}
+
 // GetClusterStatus consults the whole cluster and constructs *ClusterStatus.
 func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf Infrastructure) (*ClusterStatus, error) {
 	var mu sync.Mutex
@@ -79,8 +89,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 	for _, n := range cluster.Nodes {
 		n := n
 		env.Go(func(ctx context.Context) error {
-			a := inf.Agent(n.Address)
-			ns, err := c.getNodeStatus(ctx, n, a, cluster)
+			ns, err := c.getNodeStatus(ctx, inf, n, cluster)
 			if err != nil {
 				return errors.Wrap(err, n.Address)
 			}
@@ -140,9 +149,9 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 	return cs, nil
 }
 
-func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, cluster *Cluster) (*NodeStatus, error) {
+func (c Controller) getNodeStatus(ctx context.Context, inf Infrastructure, node *Node, cluster *Cluster) (*NodeStatus, error) {
 	status := &NodeStatus{}
-	ce := Docker(agent)
+	ce := Docker(inf.Agent(node.Address))
 
 	ss, err := ce.Inspect([]string{
 		etcdContainerName,
@@ -165,9 +174,27 @@ func (c Controller) getNodeStatus(ctx context.Context, node *Node, agent Agent, 
 	status.Etcd = EtcdStatus{ss[etcdContainerName], etcdVolumeExists}
 	status.Rivers = ss[riversContainerName]
 	status.APIServer = ss[kubeAPIServerContainerName]
-	status.ControllerManager = ss[kubeControllerManagerContainerName]
-	status.Scheduler = ss[kubeSchedulerContainerName]
-	status.Kubelet = ss[kubeletContainerName]
+
+	var health bool
+	if ss[kubeControllerManagerContainerName].Running {
+		health = c.checkHealthz(ctx, inf, node.Address, 10252) != nil
+	}
+	status.ControllerManager = KubeComponentStatus{ServiceStatus: ss[kubeControllerManagerContainerName], IsHealthy: health}
+
+	health = false
+	if ss[kubeSchedulerContainerName].Running {
+		health = c.checkHealthz(ctx, inf, node.Address, 10251) != nil
+	}
+	status.Scheduler = KubeComponentStatus{ServiceStatus: ss[kubeSchedulerContainerName], IsHealthy: health}
+
+	health = false
+	if ss[kubeletContainerName].Running {
+		health = c.checkHealthz(ctx, inf, node.Address, 10248) != nil
+	}
+	status.Kubelet = KubeComponentStatus{ServiceStatus: ss[kubeletContainerName], IsHealthy: health}
+
+	// NOTE unable to get kube-proxy's health status
+	// https://github.com/kubernetes/kubernetes/issues/65118
 	status.Proxy = ss[kubeProxyContainerName]
 
 	return status, nil
@@ -264,4 +291,27 @@ func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastr
 		Nodes: resp.Items,
 	}
 	return s, nil
+}
+
+func (c Controller) checkHealthz(ctx context.Context, inf Infrastructure, addr string, port uint16) error {
+	url := "http://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	req = req.WithContext(ctx)
+	resp, err := inf.HTTPClient().Do(req)
+	if err != nil {
+		return err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	if strings.TrimSpace(string(body)) == "ok" {
+		return errors.New("component does not healthy")
+		return nil
+	}
+	return nil
 }
