@@ -365,20 +365,20 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 
 	for _, host := range controlPlanes {
 		s := status.NodeStatuses[host]
-		if s.APIServer.IsHealthy {
+		if !s.APIServer.IsHealthy {
 			return errors.New("apiserver is not healthy on " + host)
 		}
-		if s.ControllerManager.IsHealthy {
+		if !s.ControllerManager.IsHealthy {
 			return errors.New("controller-manager is not healthy on " + host)
 		}
-		if s.Scheduler.IsHealthy {
+		if !s.Scheduler.IsHealthy {
 			return errors.New("scheduler is not healthy on " + host)
 		}
 	}
 	for _, host := range nodes {
 		s := status.NodeStatuses[host]
-		if s.Kubelet.IsHealthy {
-			return errors.New("apiserver is not healthy on " + host)
+		if !s.Kubelet.IsHealthy {
+			return errors.New("kubelet is not healthy on " + host)
 		}
 	}
 	return nil
