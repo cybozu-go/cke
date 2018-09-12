@@ -66,7 +66,7 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 		nodeStatus[addr] = &NodeStatus{
 			Rivers:            ServiceStatus{BuiltInParams: RiversParams(cps), ExtraParams: ServiceParams{ExtraArguments: c.CurrentRiverArgs}},
 			APIServer:         KubeComponentStatus{ServiceStatus{BuiltInParams: APIServerParams(cps, addr, "10.20.30.40/31"), ExtraParams: ServiceParams{ExtraArguments: c.CurrentAPIServerArgs}}, false},
-			ControllerManager: KubeComponentStatus{ServiceStatus{BuiltInParams: ControllerManagerParams("test"), ExtraParams: ServiceParams{ExtraArguments: c.CurrentControllerManagerArgs}}, false},
+			ControllerManager: KubeComponentStatus{ServiceStatus{BuiltInParams: ControllerManagerParams("test", "10.20.30.40/31"), ExtraParams: ServiceParams{ExtraArguments: c.CurrentControllerManagerArgs}}, false},
 			Scheduler:         KubeComponentStatus{ServiceStatus{BuiltInParams: SchedulerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentSchedulerArgs}}, false},
 			Proxy:             KubeComponentStatus{ServiceStatus{BuiltInParams: ProxyParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentProxyArgs}}, false},
 			Kubelet:           KubeComponentStatus{ServiceStatus{BuiltInParams: KubeletServiceParams(&Node{Address: addr}), ExtraParams: ServiceParams{ExtraArguments: c.CurrentKubeletArgs}}, false},

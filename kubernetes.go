@@ -14,6 +14,21 @@ const (
 	riversContainerName                = "rivers"
 )
 
+var (
+	// admissionPlugins is the recommended list of admission plugins.
+	// https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#is-there-a-recommended-set-of-admission-controllers-to-use
+	admissionPlugins = []string{
+		"NamespaceLifecycle",
+		"LimitRanger",
+		"ServiceAccount",
+		"DefaultStorageClass",
+		"DefaultTolerationSeconds",
+		"MutatingAdmissionWebhook",
+		"ValidatingAdmissionWebhook",
+		"ResourceQuota",
+	}
+)
+
 type riversBootOp struct {
 	nodes     []*Node
 	upstreams []*Node
@@ -228,7 +243,7 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 		if len(o.controllerManager) == 0 {
 			return o.NextCommand()
 		}
-		return runContainerCommand{o.controllerManager, kubeControllerManagerContainerName, opts, ControllerManagerParams(o.cluster), o.options.ControllerManager}
+		return runContainerCommand{o.controllerManager, kubeControllerManagerContainerName, opts, ControllerManagerParams(o.cluster, o.serviceSubnet), o.options.ControllerManager}
 	default:
 		return nil
 	}
@@ -358,7 +373,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 			return stopContainersCommand{[]*Node{node}, kubeControllerManagerContainerName}
 		case 1:
 			o.step2++
-			return runContainerCommand{[]*Node{node}, kubeControllerManagerContainerName, opts, ControllerManagerParams(o.cluster), o.options.ControllerManager}
+			return runContainerCommand{[]*Node{node}, kubeControllerManagerContainerName, opts, ControllerManagerParams(o.cluster, o.serviceSubnet), o.options.ControllerManager}
 		default:
 			o.step2 = 0
 			o.nodeIndex++
@@ -396,6 +411,7 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet stri
 	for _, n := range controlPlanes {
 		etcdServers = append(etcdServers, "https://"+n.Address+":2379")
 	}
+
 	args := []string{
 		"apiserver",
 		"--allow-privileged",
@@ -414,8 +430,11 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet stri
 		"--kubelet-client-key=" + K8sPKIPath("apiserver.key"),
 		"--kubelet-https=true",
 
+		"--enable-admission-plugins=" + strings.Join(admissionPlugins, ","),
+
 		// for service accounts
 		"--service-account-key-file=" + K8sPKIPath("service-account.crt"),
+		"--service-account-lookup",
 
 		"--advertise-address=" + advertiseAddress,
 		"--service-cluster-ip-range=" + serviceSubnet,
@@ -434,14 +453,17 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet stri
 }
 
 // ControllerManagerParams returns a ServiceParams for kube-controller-manager
-func ControllerManagerParams(clusterName string) ServiceParams {
+func ControllerManagerParams(clusterName, serviceSubnet string) ServiceParams {
 	args := []string{
 		"controller-manager",
 		"--cluster-name=" + clusterName,
+		"--service-cluster-ip-range=" + serviceSubnet,
 		"--kubeconfig=/etc/kubernetes/controller-manager/kubeconfig",
 		"--log-dir=/var/log/kubernetes/controller-manager",
 
-		//    ToDo: cluster signing
+		// ToDo: cluster signing
+		// https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/#a-note-to-cluster-administrators
+		// https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/
 		//    Create an intermediate CA under cke/ca-kubernetes?
 		//    or just an certficate/key pair?
 		// "--cluster-signing-cert-file=..."

@@ -96,7 +96,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	})
 	controllerManagers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].ControllerManager
-		if !ControllerManagerParams(c.Name).Equal(status.BuiltInParams) {
+		if !ControllerManagerParams(c.Name, c.ServiceSubnet).Equal(status.BuiltInParams) {
 			return true
 		}
 		if !c.Options.ControllerManager.Equal(status.ExtraParams) {
