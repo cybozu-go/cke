@@ -10,6 +10,9 @@ import (
 	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
 	"github.com/pkg/errors"
+
+	core "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EtcdClusterStatus is the status of the etcd cluster.
@@ -19,6 +22,10 @@ type EtcdClusterStatus struct {
 	InSyncMembers map[string]bool
 }
 
+type KubernetesClusterStatus struct {
+	Nodes []core.Node
+}
+
 // ClusterStatus represents the working cluster status.
 // The structure reflects Cluster, of course.
 type ClusterStatus struct {
@@ -26,7 +33,9 @@ type ClusterStatus struct {
 	NodeStatuses map[string]*NodeStatus // keys are IP address strings.
 	RBAC         bool                   // true if RBAC is enabled
 
-	Etcd EtcdClusterStatus
+	Etcd       EtcdClusterStatus
+	Kubernetes KubernetesClusterStatus
+
 	// TODO:
 	// CoreDNS will be deployed as k8s Pods.
 	// We probably need to use k8s API to query CoreDNS service status.
@@ -61,13 +70,6 @@ type EtcdStatus struct {
 	HasData bool
 }
 
-// KubeletStatus is the status of kubelet.
-type KubeletStatus struct {
-	ServiceStatus
-	Domain    string
-	AllowSwap bool
-}
-
 // GetClusterStatus consults the whole cluster and constructs *ClusterStatus.
 func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf Infrastructure) (*ClusterStatus, error) {
 	var mu sync.Mutex
@@ -97,25 +99,44 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 	cs := new(ClusterStatus)
 	cs.NodeStatuses = statuses
 
+	var etcdRunning bool
 	for _, n := range controlPlanes(cluster.Nodes) {
 		ns := statuses[n.Address]
 		if ns.Etcd.HasData {
-			goto CHECK_ETCD
+			etcdRunning = true
+			break
+		}
+	}
+
+	if etcdRunning {
+		cs.Etcd, err = c.getEtcdClusterStatus(ctx, inf, cluster.Nodes)
+		if err != nil {
+			log.Error("failed to get etcd cluster status", map[string]interface{}{
+				log.FnError: err,
+			})
+			return nil, err
 		}
 	}
 	return cs, nil
 
-CHECK_ETCD:
-	cs.Etcd, err = c.getEtcdClusterStatus(ctx, inf, cluster.Nodes)
-	if err != nil {
-		log.Error("failed to get etcd cluster status", map[string]interface{}{
-			log.FnError: err,
-		})
-		return nil, err
+	var apiserverRunning bool
+	for _, n := range controlPlanes(cluster.Nodes) {
+		ns := statuses[n.Address]
+		if ns.APIServer.Running {
+			apiserverRunning = true
+			break
+		}
 	}
 
-	// TODO: query k8s cluster status and store it to ClusterStatus.
-
+	if apiserverRunning {
+		cs.Kubernetes, err = c.getKubernetesClusterStatus(ctx, inf, cluster.Nodes)
+		if err != nil {
+			log.Error("failed to get kubernetes cluster status", map[string]interface{}{
+				log.FnError: err,
+			})
+			return nil, err
+		}
+	}
 	return cs, nil
 }
 
@@ -220,4 +241,27 @@ func (c Controller) getEtcdMemberInSync(ctx context.Context, inf Infrastructure,
 	}
 
 	return false
+}
+
+func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastructure, nodes []*Node) (KubernetesClusterStatus, error) {
+	// TODO available high-reliability control planes to get cluster status
+	var master *Node
+	for _, n := range nodes {
+		if n.ControlPlane {
+			master = n
+		}
+	}
+	clientset, err := inf.kubernetesClient(master)
+	if err != nil {
+		return KubernetesClusterStatus{}, err
+	}
+	resp, err := clientset.CoreV1().Nodes().List(meta.ListOptions{})
+	if err != nil {
+		return KubernetesClusterStatus{}, err
+	}
+
+	s := KubernetesClusterStatus{
+		Nodes: resp.Items,
+	}
+	return s, nil
 }
