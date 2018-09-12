@@ -415,6 +415,7 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet stri
 	args := []string{
 		"apiserver",
 		"--allow-privileged",
+		"--authorization-mode=Node,RBAC",
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
 		"--etcd-cafile=" + K8sPKIPath("etcd/ca.crt"),
 		"--etcd-certfile=" + K8sPKIPath("apiserver-etcd-client.crt"),
