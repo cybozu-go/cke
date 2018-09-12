@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -33,6 +34,11 @@ func main() {
 }
 
 func run() error {
+	err := deleteDockerImage()
+	if err != nil {
+		return err
+	}
+
 	images := cke.AllImages()
 	h := sha256.New()
 	h.Write([]byte(strings.Join(images, "")))
@@ -45,7 +51,7 @@ func run() error {
 		log.Info(targetFile+" already exists", nil)
 
 		// Use targetFile as dockerImage.
-		return link(targetFile)
+		return os.Symlink(targetFile, dockerImage)
 	}
 
 	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -58,7 +64,7 @@ func run() error {
 	rc, err := storageClient.Bucket(*flgBucket).Object(targetFile + ".bz2").NewReader(ctxWithTimeout)
 	if err == storage.ErrObjectNotExist {
 		log.Info(targetFile+".bz2 not uploaded", nil)
-		return nil
+		return createDummyImage()
 	} else if err != nil {
 		return err
 	}
@@ -72,10 +78,19 @@ func run() error {
 		return err
 	}
 
-	return link(targetFile)
+	return os.Symlink(targetFile, dockerImage)
+}
+
+func deleteDockerImage() error {
+	err := os.Remove(dockerImage)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 func download(filename string, r io.Reader) error {
+	log.Info("downloading "+filename, nil)
 	expanded := bzip2.NewReader(r)
 
 	w, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
@@ -92,11 +107,31 @@ func download(filename string, r io.Reader) error {
 	return w.Sync()
 }
 
-func link(filename string) error {
-	err := os.Remove(dockerImage)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
+func executeCommand(name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	defer func() {
+		cmd.Process.Kill()
+	}()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	log.Info(name+" "+strings.Join(args, " "), nil)
+	return cmd.Run()
+}
 
-	return os.Symlink(filename, dockerImage)
+func createDummyImage() error {
+	log.Info("creating dummy image "+dockerImage, nil)
+	prepareDeviceCommands := [][]string{
+		{"qemu-img", "create", "-f", "qcow2", dockerImage, "2G"},
+		{"sudo", "modprobe", "nbd"},
+		{"sudo", "qemu-nbd", "-c", "/dev/nbd0", dockerImage},
+		{"sudo", "mkfs", "-t", "btrfs", "/dev/nbd0"},
+		{"sudo", "qemu-nbd", "-d", "/dev/nbd0"},
+	}
+	for _, command := range prepareDeviceCommands {
+		err := executeCommand(command[0], command[1:]...)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
