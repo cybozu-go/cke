@@ -196,7 +196,7 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 		if len(o.scheduler) == 0 {
 			return o.NextCommand()
 		}
-		return makeControllerManagerKubeconfigCommand{o.scheduler, o.cluster}
+		return makeControllerManagerKubeconfigCommand{o.controllerManager, o.cluster}
 	case 7:
 		o.step++
 		if len(o.scheduler) == 0 {
@@ -309,7 +309,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 		switch o.step2 {
 		case 0:
 			o.step2++
-			return stopContainersCommand{[]*Node{node}, riversContainerName}
+			return killContainersCommand{[]*Node{node}, riversContainerName}
 		case 1:
 			o.step2++
 			return runContainerCommand{[]*Node{node}, riversContainerName, opts, RiversParams(o.cps), o.options.Rivers}
@@ -593,7 +593,7 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		if len(o.rivers) == 0 {
 			return o.NextCommand()
 		}
-		return stopContainersCommand{o.rivers, riversContainerName}
+		return killContainersCommand{o.rivers, riversContainerName}
 	case 5:
 		o.step++
 		if len(o.rivers) == 0 {
