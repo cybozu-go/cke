@@ -53,7 +53,7 @@ type NodeStatus struct {
 	APIServer         KubeComponentStatus
 	ControllerManager KubeComponentStatus
 	Scheduler         KubeComponentStatus
-	Proxy             ServiceStatus
+	Proxy             KubeComponentStatus
 	Kubelet           KubeComponentStatus
 	Labels            map[string]string // are labels for k8s Node resource.
 }
@@ -208,7 +208,8 @@ func (c Controller) getNodeStatus(ctx context.Context, inf Infrastructure, node 
 
 	// NOTE unable to get kube-proxy's health status
 	// https://github.com/kubernetes/kubernetes/issues/65118
-	status.Proxy = ss[kubeProxyContainerName]
+	status.Proxy = KubeComponentStatus{ss[kubeProxyContainerName], false}
+	status.Proxy.IsHealthy = status.Proxy.Running
 
 	return status, nil
 }

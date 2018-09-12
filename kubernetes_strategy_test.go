@@ -68,7 +68,7 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 			APIServer:         KubeComponentStatus{ServiceStatus{BuiltInParams: APIServerParams(cps, addr, "10.20.30.40/31"), ExtraParams: ServiceParams{ExtraArguments: c.CurrentAPIServerArgs}}, false},
 			ControllerManager: KubeComponentStatus{ServiceStatus{BuiltInParams: ControllerManagerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentControllerManagerArgs}}, false},
 			Scheduler:         KubeComponentStatus{ServiceStatus{BuiltInParams: SchedulerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentSchedulerArgs}}, false},
-			Proxy:             ServiceStatus{BuiltInParams: ProxyParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentProxyArgs}},
+			Proxy:             KubeComponentStatus{ServiceStatus{BuiltInParams: ProxyParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentProxyArgs}}, false},
 			Kubelet:           KubeComponentStatus{ServiceStatus{BuiltInParams: KubeletServiceParams(&Node{Address: addr}), ExtraParams: ServiceParams{ExtraArguments: c.CurrentKubeletArgs}}, false},
 		}
 	}
@@ -92,6 +92,7 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 		nodeStatus[addr].Kubelet.Running = true
 	}
 	for _, addr := range c.Proxies {
+		nodeStatus[addr].Proxy.IsHealthy = true
 		nodeStatus[addr].Proxy.Running = true
 	}
 
