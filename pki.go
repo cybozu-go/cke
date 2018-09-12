@@ -269,7 +269,7 @@ func (k KubernetesCA) issueForProxy(ctx context.Context, inf Infrastructure) (cr
 			"organization":      "system:node-proxier",
 		},
 		map[string]interface{}{
-			"common_name":          "system:kube-controller-manager",
+			"common_name":          "system:kube-proxy",
 			"exclude_cn_from_sans": "true",
 		})
 }
