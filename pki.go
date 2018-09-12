@@ -148,7 +148,25 @@ type KubernetesCA struct {
 
 // setup generates and installs certificates for API server.
 func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node) error {
-	err := writeCertificate(inf, node, CAKubernetes, K8sPKIPath("apiserver"),
+	sakey, err := inf.Storage().GetServiceAccountKey(ctx)
+	if err != nil {
+		return err
+	}
+	err = writeFile(inf, node, K8sPKIPath("service-account.key"), sakey)
+	if err != nil {
+		return nil
+	}
+
+	sacert, err := inf.Storage().GetServiceAccountCert(ctx)
+	if err != nil {
+		return err
+	}
+	err = writeFile(inf, node, K8sPKIPath("service-account.crt"), sacert)
+	if err != nil {
+		return nil
+	}
+
+	err = writeCertificate(inf, node, CAKubernetes, K8sPKIPath("apiserver"),
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",

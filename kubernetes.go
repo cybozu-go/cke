@@ -44,6 +44,7 @@ type kubeCPRestartOp struct {
 	controllerManager []*Node
 	scheduler         []*Node
 
+	cluster       string
 	serviceSubnet string
 	options       Options
 
@@ -227,7 +228,7 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 		if len(o.controllerManager) == 0 {
 			return o.NextCommand()
 		}
-		return runContainerCommand{o.controllerManager, kubeControllerManagerContainerName, opts, ControllerManagerParams(), o.options.ControllerManager}
+		return runContainerCommand{o.controllerManager, kubeControllerManagerContainerName, opts, ControllerManagerParams(o.cluster), o.options.ControllerManager}
 	default:
 		return nil
 	}
@@ -272,13 +273,14 @@ func (o *kubeCPStopOp) NextCommand() Commander {
 }
 
 // KubeCPRestartOp returns an Operator to restart kubernetes control planes
-func KubeCPRestartOp(cps []*Node, rivers, apiserver, controllerManager, scheduler []*Node, serviceSubnet string, options Options) Operator {
+func KubeCPRestartOp(cps []*Node, rivers, apiserver, controllerManager, scheduler []*Node, cluster string, serviceSubnet string, options Options) Operator {
 	return &kubeCPRestartOp{
 		cps:               cps,
 		rivers:            rivers,
 		apiserver:         apiserver,
 		controllerManager: controllerManager,
 		scheduler:         scheduler,
+		cluster:           cluster,
 		serviceSubnet:     serviceSubnet,
 		options:           options,
 	}
@@ -356,7 +358,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 			return stopContainersCommand{[]*Node{node}, kubeControllerManagerContainerName}
 		case 1:
 			o.step2++
-			return runContainerCommand{[]*Node{node}, kubeControllerManagerContainerName, opts, ControllerManagerParams(), o.options.ControllerManager}
+			return runContainerCommand{[]*Node{node}, kubeControllerManagerContainerName, opts, ControllerManagerParams(o.cluster), o.options.ControllerManager}
 		default:
 			o.step2 = 0
 			o.nodeIndex++
@@ -389,7 +391,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 }
 
 // APIServerParams returns built-in a ServiceParams form kube-apiserver
-func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubnet string) ServiceParams {
+func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet string) ServiceParams {
 	var etcdServers []string
 	for _, n := range controlPlanes {
 		etcdServers = append(etcdServers, "https://"+n.Address+":2379")
@@ -412,6 +414,9 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 		"--kubelet-client-key=" + K8sPKIPath("apiserver.key"),
 		"--kubelet-https=true",
 
+		// for service accounts
+		"--service-account-key-file=" + K8sPKIPath("service-account.crt"),
+
 		"--advertise-address=" + advertiseAddress,
 		"--service-cluster-ip-range=" + serviceSubnet,
 		"--audit-log-path=/var/log/kubernetes/apiserver/audit.log",
@@ -429,11 +434,23 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 }
 
 // ControllerManagerParams returns a ServiceParams for kube-controller-manager
-func ControllerManagerParams() ServiceParams {
+func ControllerManagerParams(clusterName string) ServiceParams {
 	args := []string{
 		"controller-manager",
+		"--cluster-name=" + clusterName,
 		"--kubeconfig=/etc/kubernetes/controller-manager/kubeconfig",
 		"--log-dir=/var/log/kubernetes/controller-manager",
+
+		//    ToDo: cluster signing
+		//    Create an intermediate CA under cke/ca-kubernetes?
+		//    or just an certficate/key pair?
+		// "--cluster-signing-cert-file=..."
+		// "--cluster-signing-key-file=..."
+
+		// for service accounts
+		"--root-ca-file=" + K8sPKIPath("ca.crt"),
+		"--service-account-private-key-file=" + K8sPKIPath("service-account.key"),
+		"--use-service-account-credentials=true",
 	}
 	return ServiceParams{
 		ExtraArguments: args,

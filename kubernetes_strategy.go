@@ -96,7 +96,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	})
 	controllerManagers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].ControllerManager
-		if !ControllerManagerParams().Equal(status.BuiltInParams) {
+		if !ControllerManagerParams(c.Name).Equal(status.BuiltInParams) {
 			return true
 		}
 		if !c.Options.ControllerManager.Equal(status.ExtraParams) {
@@ -115,7 +115,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return false
 	})
 	if len(rivers)+len(apiservers)+len(controllerManagers)+len(schedulers) > 0 {
-		return KubeCPRestartOp(cpNodes, rivers, apiservers, controllerManagers, schedulers, c.ServiceSubnet, c.Options)
+		return KubeCPRestartOp(cpNodes, rivers, apiservers, controllerManagers, schedulers, c.Name, c.ServiceSubnet, c.Options)
 	}
 
 	// Check diff of rivers options for worker nodes
