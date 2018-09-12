@@ -380,6 +380,9 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 		if !s.Kubelet.IsHealthy {
 			return errors.New("kubelet is not healthy on " + host)
 		}
+		if !s.Proxy.IsHealthy {
+			return errors.New("proxy is not healthy on " + host)
+		}
 	}
 	return nil
 }
