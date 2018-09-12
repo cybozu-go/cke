@@ -15,6 +15,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
+	"google.golang.org/api/option"
 )
 
 const (
@@ -56,17 +57,21 @@ func run() error {
 
 	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	storageClient, err := storage.NewClient(ctxWithTimeout)
+	storageClient, err := storage.NewClient(ctxWithTimeout, option.WithoutAuthentication())
 	if err != nil {
 		return err
 	}
 
 	rc, err := storageClient.Bucket(*flgBucket).Object(targetFile + ".bz2").NewReader(ctxWithTimeout)
-	if err == storage.ErrObjectNotExist {
-		log.Info(targetFile+".bz2 not uploaded", nil)
+	if err != nil {
+		if err == storage.ErrObjectNotExist {
+			log.Info(targetFile+".bz2 not uploaded", nil)
+		} else {
+			log.Warn("Failed to download "+targetFile+".bz2.  Continue with an empty image...", map[string]interface{}{
+				log.FnError: err,
+			})
+		}
 		return createDummyImage()
-	} else if err != nil {
-		return err
 	}
 	defer rc.Close()
 

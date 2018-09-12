@@ -34,6 +34,7 @@ KUBECTL := $(OUTPUT)/kubectl
 KUBECONFIG := $(OUTPUT)/kubeconfig.yml
 CKECLUSTER := $(OUTPUT)/cke-cluster.yml
 CKECONFIG := $(OUTPUT)/cke.yml
+DOWNLOADER := download-disk-if-exists
 
 export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG KUBECTL KUBECONFIG
 
@@ -58,7 +59,8 @@ GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/cke.yml \
 	$(OUTPUT)/setup-cke.sh \
 	$(UBUNTU_IMAGE) \
-	$(COREOS_IMAGE)
+	$(COREOS_IMAGE) \
+	$(GOPATH)/bin/$(DOWNLOADER)
 
 all: test
 
@@ -74,6 +76,9 @@ $(UBUNTU_IMAGE):
 $(COREOS_IMAGE):
 	curl -sSLf -o $@.bz2 https://stable.release.core-os.net/amd64-usr/current/$@.bz2
 	bunzip2 -q $@.bz2
+
+$(GOPATH)/bin/$(DOWNLOADER): ../images.go
+	go install ./$(DOWNLOADER)/...
 
 $(OUTPUT)/etcd $(OUTPUT)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
 	mkdir -p $(OUTPUT)
@@ -230,6 +235,7 @@ test: $(GENERATED_FILES)
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node4
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node5
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node6
+	$(DOWNLOADER)
 	./test.sh
 
 placemat: $(GENERATED_FILES)
@@ -241,6 +247,7 @@ placemat: $(GENERATED_FILES)
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node4
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node5
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node6
+	$(DOWNLOADER)
 	sudo -b $(PLACEMAT) output/cluster.yml
 	@echo 'Placemat is running.  To kill it, do "sudo pkill placemat".'
 
