@@ -69,7 +69,7 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 			ControllerManager: KubeComponentStatus{ServiceStatus{BuiltInParams: ControllerManagerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentControllerManagerArgs}}, false},
 			Scheduler:         KubeComponentStatus{ServiceStatus{BuiltInParams: SchedulerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentSchedulerArgs}}, false},
 			Proxy:             ServiceStatus{BuiltInParams: ProxyParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentProxyArgs}},
-			Kubelet:           KubeComponentStatus{ServiceStatus{BuiltInParams: KubeletServiceParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentKubeletArgs}}, false},
+			Kubelet:           KubeComponentStatus{ServiceStatus{BuiltInParams: KubeletServiceParams(&Node{Address: addr}), ExtraParams: ServiceParams{ExtraArguments: c.CurrentKubeletArgs}}, false},
 		}
 	}
 	for _, addr := range c.Rivers {

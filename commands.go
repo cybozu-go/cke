@@ -250,6 +250,39 @@ func (c runContainerCommand) Command() Command {
 	}
 }
 
+type runContainerParamsCommand struct {
+	nodes  []*Node
+	name   string
+	opts   []string
+	params map[string]ServiceParams
+	extra  ServiceParams
+}
+
+func (c runContainerParamsCommand) Run(ctx context.Context, inf Infrastructure) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		ce := Docker(inf.Agent(n.Address))
+		params := c.params[n.Address]
+		env.Go(func(ctx context.Context) error {
+			return ce.RunSystem(c.name, c.opts, params, c.extra)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c runContainerParamsCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "run-container",
+		Target: strings.Join(targets, ","),
+		Detail: c.name,
+	}
+}
+
 type stopContainerCommand struct {
 	node *Node
 	name string

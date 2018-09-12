@@ -19,10 +19,6 @@ import (
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v2"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -164,45 +160,6 @@ func ckecli(args ...string) []byte {
 	err := command.Run()
 	Expect(err).NotTo(HaveOccurred())
 	return stdout.Bytes()
-}
-
-func kubeRestClient(host string) (*kubernetes.Clientset, error) {
-	cluster := getCluster()
-
-	etcd, err := connectEtcd()
-	if err != nil {
-		return nil, err
-	}
-	defer etcd.Close()
-
-	storage := cke.Storage{etcd}
-	ca, err := storage.GetCACertificate(context.Background(), "kubernetes")
-	if err != nil {
-		return nil, err
-	}
-
-	inf, err := cke.NewInfrastructure(context.Background(), cluster, storage)
-	if err != nil {
-		return nil, err
-	}
-	defer inf.Close()
-
-	crt, key, err := cke.KubernetesCA{}.IssueAdminCert(context.Background(), inf)
-	if err != nil {
-		return nil, err
-	}
-	tlsCfg := rest.TLSClientConfig{
-		CertData: []byte(crt),
-		KeyData:  []byte(key),
-		CAData:   []byte(ca),
-	}
-	cfg := &rest.Config{
-		Host:            "https://" + host + ":6443",
-		TLSClientConfig: tlsCfg,
-		Timeout:         5 * time.Second,
-	}
-
-	return kubernetes.NewForConfig(cfg)
 }
 
 func getCluster() *cke.Cluster {
@@ -406,65 +363,22 @@ func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, work
 		}
 	}
 
-	// newError := func(msg, host string, port uint16, stdout, stderr string) error {
-	// 	return clusterStatusError{
-	// 		msg, host, port, status, controlPlanes, workers, stdout, stderr,
-	// 	}
-	// }
-
-	// for _, host := range controlPlanes {
-	// 	// 8080: apiserver, 10252: controller-manager, 10251: scheduler
-	// 	for _, port := range []uint16{8080, 10252, 10251} {
-	// 		stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
-	// 		if err != nil {
-	// 			return newError(err.Error(), host, port, string(stdout), string(stderr))
-	// 		}
-	// 		if string(stdout) != "ok" {
-	// 			return newError("stdout is not ok", host, port, string(stdout), string(stderr))
-	// 		}
-	// 	}
-	// 	if err = checkComponentStatuses(host); err != nil {
-	// 		return
-	// 	}
-	// }
-
-	// for _, host := range nodes {
-	// 	// 10248: kubelet, 10256: kube-proxy, 16443: rivers (to apiserver)
-	// 	for _, port := range []uint16{10248, 10256, 16443} {
-	// 		stdout, stderr, err := execAt(host, "curl", "-sf", fmt.Sprintf("localhost:%d/healthz", port))
-	// 		if err != nil {
-	// 			return newError(err.Error(), host, port, string(stdout), string(stderr))
-	// 		}
-	// 		if string(stdout) != "ok" && port != 10256 { // kube-proxy does not return "ok"
-	// 			return newError("stdout is not ok", host, port, string(stdout), string(stderr))
-	// 		}
-	// 	}
-	// }
-
-	return nil
-}
-
-func checkComponentStatuses(host string) error {
-	newError := func(msg string) error {
-		return clusterStatusError{
-			msg, host, 0, nil, nil, nil, "", "",
+	for _, host := range controlPlanes {
+		s := status.NodeStatuses[host]
+		if s.APIServer.IsHealthy {
+			return errors.New("apiserver is not healthy on " + host)
+		}
+		if s.ControllerManager.IsHealthy {
+			return errors.New("controller-manager is not healthy on " + host)
+		}
+		if s.Scheduler.IsHealthy {
+			return errors.New("scheduler is not healthy on " + host)
 		}
 	}
-
-	cls, err := kubeRestClient(host)
-	if err != nil {
-		return err
-	}
-
-	sl, err := cls.CoreV1().ComponentStatuses().List(metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, item := range sl.Items {
-		for _, condition := range item.Conditions {
-			if string(condition.Type) != "Healthy" {
-				return newError(item.Name + " is unhealthy")
-			}
+	for _, host := range nodes {
+		s := status.NodeStatuses[host]
+		if s.Kubelet.IsHealthy {
+			return errors.New("apiserver is not healthy on " + host)
 		}
 	}
 	return nil

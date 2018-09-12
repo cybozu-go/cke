@@ -131,7 +131,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	})
 	kubelets := filterNodes(c.Nodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].Kubelet
-		if !KubeletServiceParams().Equal(status.BuiltInParams) {
+		if !KubeletServiceParams(n).Equal(status.BuiltInParams) {
 			return true
 		}
 		if !c.Options.Kubelet.ToServiceParams().Equal(status.ExtraParams) {
