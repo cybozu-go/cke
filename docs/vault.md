@@ -1,61 +1,35 @@
-PKI management by HashiCorp [Vault][]
-===================================
+PKI management by HashiCorp Vault
+=================================
 
-CKE requires [Vault][] for issuing certificates with configuration as follows.
+CKE requires [Vault][] to issue certificates for etcd and k8s.
 
-This document describes how CKE enables TLS connection for etcd/k8s cluster.
-All certificates are issued by [Vault][].
+This document describes how to configure Vault for CKE.
 
-## Secret engine `pki`
+## Secret engines
 
-Create following `pki` secret engines.
+Create following `pki` secret engines and root certificates.
+Root certificates need to be registered with `ckecli`.
 
-### path `cke/ca-server`
+* `cke/ca-server`: issues etcd server certificates.
+* `cke/ca-etcd-peer`: issues certificates for etcd peer connection.
+* `cke/ca-etcd-client`: issues client authentication certificates for etcd.
+* `cke/ca-kubernetes`: issues Kubernetes certificates.
 
-Issue certificates for etcd server.
+Example:
+```console
+$ vault secrets enable -path cke/ca-server \
+    -max-lease-ttl=876000h -default-lease-ttl=87600h pki
 
-Create `system` role with these options:
+$ vault write -format=json cke/ca-server/root/generate/internal \
+    common_name='CKE server CA' ttl=876000h | \
+    jq -r .data.certificate > ca-server.crt
 
-- `allow_any_name=true`
-- `client_flag=false`
+$ ckecli ca set server ca-server.crt
+```
 
-### path `cke/ca-etcd-peer`
+## Policy
 
-Issue certificates for peer connection of the etcd cluster.
-
-Create `system` role with these options:
-
-- `allow_any_name=true`
-
-### path `cke/ca-etcd-client`
-
-Issue certificates for etcd clients such as kube-apiserver.
-
-Create `system` role with these options:
-
-- `allow_any_name=true`
-- `server_flag=false`
-
-### path `cke/ca-kubernetes`
-
-Issue certificates for kubernetes cluster.
-
-Create `system` role with these options:
-
-- `allow_any_name=true`
-- `enforce_hostnames=false`
-
-Create `admin` role with these options:
-
-- `allow_any_name=true`
-- `enforce_hostnames=false`
-- `organization=system:masters`
-
-`admin` role can issue certificates for Kubernetes cluster admins.
-
-## policy `cke`
-
-Create `cke` policy as follows to allow CKE to issue certificates:
+Create `cke` policy as follows to allow CKE to manage CAs.
 
 ```hcl
 path "cke/*"
@@ -64,7 +38,7 @@ path "cke/*"
 }
 ```
 
-## approle `cke`
+## AppRole
 
 Create `cke` AppRole to login to Vault.
 

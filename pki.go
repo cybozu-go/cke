@@ -2,7 +2,11 @@ package cke
 
 import (
 	"context"
+	"path"
 	"path/filepath"
+
+	"github.com/cybozu-go/log"
+	vault "github.com/hashicorp/vault/api"
 )
 
 // CA Keys in Vault
@@ -16,14 +20,38 @@ const (
 	k8sPKIPath  = "/etc/kubernetes/pki"
 )
 
+// addRole adds a role to CA if not exists.
+func addRole(client *vault.Client, ca, role string, data map[string]interface{}) error {
+	l := client.Logical()
+	rpath := path.Join(ca, "roles", role)
+	secret, err := l.Read(rpath)
+	if err != nil {
+		return err
+	}
+	if secret != nil {
+		// already exists
+		return nil
+	}
+
+	_, err = l.Write(rpath, data)
+	if err != nil {
+		log.Error("failed to create vault role", map[string]interface{}{
+			log.FnError: err,
+			"ca":        ca,
+			"role":      role,
+		})
+	}
+	return err
+}
+
 // EtcdPKIPath returns a certificate file path for k8s.
-func EtcdPKIPath(path string) string {
-	return filepath.Join(etcdPKIPath, path)
+func EtcdPKIPath(p string) string {
+	return filepath.Join(etcdPKIPath, p)
 }
 
 // K8sPKIPath returns a certificate file path for k8s.
-func K8sPKIPath(path string) string {
-	return filepath.Join(k8sPKIPath, path)
+func K8sPKIPath(p string) string {
+	return filepath.Join(k8sPKIPath, p)
 }
 
 // EtcdCA is a certificate authority for etcd cluster.
@@ -33,6 +61,12 @@ type EtcdCA struct {
 func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) error {
 	err := writeCertificate(inf, node, CAServer, EtcdPKIPath("server"),
 		map[string]interface{}{
+			"ttl":            "87600h",
+			"max_ttl":        "87600h",
+			"client_flag":    "false",
+			"allow_any_name": "true",
+		},
+		map[string]interface{}{
 			"common_name": node.Nodename(),
 			"alt_names":   "localhost",
 			"ip_sans":     "127.0.0.1," + node.Address,
@@ -41,6 +75,11 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 		return err
 	}
 	err = writeCertificate(inf, node, CAEtcdPeer, EtcdPKIPath("peer"),
+		map[string]interface{}{
+			"ttl":            "87600h",
+			"max_ttl":        "87600h",
+			"allow_any_name": "true",
+		},
 		map[string]interface{}{
 			"common_name":          node.Nodename(),
 			"ip_sans":              "127.0.0.1," + node.Address,
@@ -68,6 +107,12 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node *Node) error {
 	err := writeCertificate(inf, node, CAEtcdClient, K8sPKIPath("apiserver-etcd-client"),
 		map[string]interface{}{
+			"ttl":            "87600h",
+			"max_ttl":        "87600h",
+			"server_flag":    "false",
+			"allow_any_name": "true",
+		},
+		map[string]interface{}{
 			"common_name":          "kube-apiserver",
 			"exclude_cn_from_sans": "true",
 		})
@@ -83,7 +128,13 @@ func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node 
 }
 
 func (e EtcdCA) issueRoot(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
-	return issueCertificate(inf, CAEtcdClient, "system",
+	return issueCertificate(inf, CAEtcdClient, "admin",
+		map[string]interface{}{
+			"ttl":            "2h",
+			"max_ttl":        "24h",
+			"server_flag":    "false",
+			"allow_any_name": "true",
+		},
 		map[string]interface{}{
 			"common_name":          "root",
 			"exclude_cn_from_sans": "true",
@@ -98,6 +149,12 @@ type KubernetesCA struct {
 // setup generates and installs certificates for API server.
 func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node) error {
 	err := writeCertificate(inf, node, CAKubernetes, K8sPKIPath("apiserver"),
+		map[string]interface{}{
+			"ttl":               "87600h",
+			"max_ttl":           "87600h",
+			"enforce_hostnames": "false",
+			"allow_any_name":    "true",
+		},
 		map[string]interface{}{
 			"common_name":          node.Nodename(),
 			"alt_names":            "localhost",
@@ -119,6 +176,13 @@ func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node)
 func (k KubernetesCA) issueAdminCert(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "admin",
 		map[string]interface{}{
+			"ttl":               "2h",
+			"max_ttl":           "24h",
+			"enforce_hostnames": "false",
+			"allow_any_name":    "true",
+			"organization":      "system:masters",
+		},
+		map[string]interface{}{
 			"common_name":          "admin",
 			"exclude_cn_from_sans": "true",
 		})
@@ -126,6 +190,12 @@ func (k KubernetesCA) issueAdminCert(ctx context.Context, inf Infrastructure) (c
 
 func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "system",
+		map[string]interface{}{
+			"ttl":               "87600h",
+			"max_ttl":           "87600h",
+			"enforce_hostnames": "false",
+			"allow_any_name":    "true",
+		},
 		map[string]interface{}{
 			"common_name":          "system:kube-scheduler",
 			"exclude_cn_from_sans": "true",
@@ -135,6 +205,12 @@ func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure)
 func (k KubernetesCA) issueForControllerManager(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "system",
 		map[string]interface{}{
+			"ttl":               "87600h",
+			"max_ttl":           "87600h",
+			"enforce_hostnames": "false",
+			"allow_any_name":    "true",
+		},
+		map[string]interface{}{
 			"common_name":          "system:kube-controller-manager",
 			"exclude_cn_from_sans": "true",
 		})
@@ -143,6 +219,12 @@ func (k KubernetesCA) issueForControllerManager(ctx context.Context, inf Infrast
 func (k KubernetesCA) issueForKubelet(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "system",
 		map[string]interface{}{
+			"ttl":               "87600h",
+			"max_ttl":           "87600h",
+			"enforce_hostnames": "false",
+			"allow_any_name":    "true",
+		},
+		map[string]interface{}{
 			"common_name":          "system:node:" + node.Nodename(),
 			"exclude_cn_from_sans": "true",
 		})
@@ -150,6 +232,12 @@ func (k KubernetesCA) issueForKubelet(ctx context.Context, inf Infrastructure, n
 
 func (k KubernetesCA) issueForProxy(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "system",
+		map[string]interface{}{
+			"ttl":               "87600h",
+			"max_ttl":           "87600h",
+			"enforce_hostnames": "false",
+			"allow_any_name":    "true",
+		},
 		map[string]interface{}{
 			"common_name":          "system:kube-controller-manager",
 			"exclude_cn_from_sans": "true",
@@ -172,8 +260,8 @@ func writeFile(inf Infrastructure, node *Node, target string, source string) err
 	return ce.RunWithInput("tools", binds, ddCommand, source)
 }
 
-func writeCertificate(inf Infrastructure, node *Node, ca, file string, opts map[string]interface{}) error {
-	crt, key, err := issueCertificate(inf, ca, "system", opts)
+func writeCertificate(inf Infrastructure, node *Node, ca, file string, roleOpts, certOpts map[string]interface{}) error {
+	crt, key, err := issueCertificate(inf, ca, "system", roleOpts, certOpts)
 	if err != nil {
 		return err
 	}
@@ -188,17 +276,22 @@ func writeCertificate(inf Infrastructure, node *Node, ca, file string, opts map[
 	return nil
 }
 
-func issueCertificate(inf Infrastructure, ca, role string, opts map[string]interface{}) (crt, key string, err error) {
+func issueCertificate(inf Infrastructure, ca, role string, roleOpts, certOpts map[string]interface{}) (crt, key string, err error) {
 	client, err := inf.Vault()
 	if err != nil {
 		return "", "", err
 	}
-	secret, err := client.Logical().Write(ca+"/issue/"+role, opts)
+
+	err = addRole(client, ca, role, roleOpts)
+	if err != nil {
+		return "", "", err
+	}
+
+	secret, err := client.Logical().Write(path.Join(ca, "issue", role), certOpts)
 	if err != nil {
 		return "", "", err
 	}
 	crt = secret.Data["certificate"].(string)
 	key = secret.Data["private_key"].(string)
 	return crt, key, err
-
 }
