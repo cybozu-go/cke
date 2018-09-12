@@ -33,6 +33,10 @@ kind: Image
 name: coreos
 file: ../@COREOS_IMAGE@
 ---
+kind: Image
+name: docker-image
+file: ../docker.img
+---
 kind: Node
 name: host1
 interfaces:
@@ -83,6 +87,10 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
+  - kind: image
+    name: docker
+    image: docker-image
+    copy-on-write: true
 ---
 kind: Node
 name: node2
@@ -95,6 +103,10 @@ volumes:
   - kind: image
     name: root
     image: coreos
+    copy-on-write: true
+  - kind: image
+    name: docker
+    image: docker-image
     copy-on-write: true
 ---
 kind: Node
@@ -109,6 +121,10 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
+  - kind: image
+    name: docker
+    image: docker-image
+    copy-on-write: true
 ---
 kind: Node
 name: node4
@@ -121,6 +137,10 @@ volumes:
   - kind: image
     name: root
     image: coreos
+    copy-on-write: true
+  - kind: image
+    name: docker
+    image: docker-image
     copy-on-write: true
 ---
 kind: Node
@@ -135,6 +155,10 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
+  - kind: image
+    name: docker
+    image: docker-image
+    copy-on-write: true
 ---
 kind: Node
 name: node6
@@ -147,4 +171,8 @@ volumes:
   - kind: image
     name: root
     image: coreos
+    copy-on-write: true
+  - kind: image
+    name: docker
+    image: docker-image
     copy-on-write: true
