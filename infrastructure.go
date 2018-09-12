@@ -5,12 +5,15 @@ import (
 	"net/http"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/etcdutil"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 var httpClient = &cmd.HTTPClient{
@@ -31,6 +34,7 @@ type Infrastructure interface {
 	Storage() Storage
 
 	NewEtcdClient(endpoints []string) (*clientv3.Client, error)
+	kubernetesClient(n *Node) (*kubernetes.Clientset, error)
 	HTTPClient() *cmd.HTTPClient
 }
 
@@ -71,16 +75,24 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	inf := &ckeInfrastructure{agents: agents, storage: s}
 	agents = nil
 
-	ca, cert, key, err := EtcdCA{}.issueRoot(ctx, inf)
+	inf.serverCA, err = inf.Storage().GetCACertificate(ctx, "server")
 	if err != nil {
 		return nil, err
 	}
-	inf.serverCA = ca
-	inf.etcdCert = cert
-	inf.etcdKey = key
+	inf.etcdCert, inf.etcdKey, err = EtcdCA{}.issueRoot(ctx, inf)
+	if err != nil {
+		return nil, err
+	}
+	inf.kubeCA, err = inf.Storage().GetCACertificate(ctx, "kubernetes")
+	if err != nil {
+		return nil, err
+	}
+	inf.kubeCert, inf.kubeKey, err = KubernetesCA{}.issueAdminCert(ctx, inf)
+	if err != nil {
+		return nil, err
+	}
 
 	return inf, nil
-
 }
 
 type ckeInfrastructure struct {
@@ -89,6 +101,9 @@ type ckeInfrastructure struct {
 	serverCA string
 	etcdCert string
 	etcdKey  string
+	kubeCA   string
+	kubeCert string
+	kubeKey  string
 }
 
 func (i ckeInfrastructure) Agent(addr string) Agent {
@@ -125,7 +140,20 @@ func (i ckeInfrastructure) NewEtcdClient(endpoints []string) (*clientv3.Client, 
 	return etcdutil.NewClient(cfg)
 }
 
+func (i ckeInfrastructure) kubernetesClient(n *Node) (*kubernetes.Clientset, error) {
+	tlsCfg := rest.TLSClientConfig{
+		CertData: []byte(i.kubeCert),
+		KeyData:  []byte(i.kubeKey),
+		CAData:   []byte(i.kubeCA),
+	}
+	cfg := &rest.Config{
+		Host:            "https://" + n.Address + ":6443",
+		TLSClientConfig: tlsCfg,
+		Timeout:         5 * time.Second,
+	}
+	return kubernetes.NewForConfig(cfg)
+}
+
 func (i ckeInfrastructure) HTTPClient() *cmd.HTTPClient {
-	// TODO support TLS
 	return httpClient
 }

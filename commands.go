@@ -250,6 +250,39 @@ func (c runContainerCommand) Command() Command {
 	}
 }
 
+type runContainerParamsCommand struct {
+	nodes  []*Node
+	name   string
+	opts   []string
+	params map[string]ServiceParams
+	extra  ServiceParams
+}
+
+func (c runContainerParamsCommand) Run(ctx context.Context, inf Infrastructure) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		ce := Docker(inf.Agent(n.Address))
+		params := c.params[n.Address]
+		env.Go(func(ctx context.Context) error {
+			return ce.RunSystem(c.name, c.opts, params, c.extra)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c runContainerParamsCommand) Command() Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return Command{
+		Name:   "run-container",
+		Target: strings.Join(targets, ","),
+		Detail: c.name,
+	}
+}
+
 type stopContainerCommand struct {
 	node *Node
 	name string
@@ -418,7 +451,7 @@ func (c makeControllerManagerKubeconfigCommand) Run(ctx context.Context, inf Inf
 	if err != nil {
 		return err
 	}
-	cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
+	cfg := controllerManagerKubeconfig(c.cluster, ca, crt, key)
 	src, err := clientcmd.Write(*cfg)
 	if err != nil {
 		return err
@@ -564,32 +597,42 @@ func (c makeKubeletKubeconfigCommand) Command() Command {
 	}
 }
 
-type killContainerCommand struct {
-	node *Node
-	name string
+type killContainersCommand struct {
+	nodes []*Node
+	name  string
 }
 
-func (c killContainerCommand) Run(ctx context.Context, inf Infrastructure) error {
-	ce := Docker(inf.Agent(c.node.Address))
-	exists, err := ce.Exists(c.name)
-	if err != nil {
-		return err
+func (c killContainersCommand) Run(ctx context.Context, inf Infrastructure) error {
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		ce := Docker(inf.Agent(n.Address))
+		env.Go(func(ctx context.Context) error {
+			exists, err := ce.Exists(c.name)
+			if err != nil {
+				return err
+			}
+			if !exists {
+				return nil
+			}
+			err = ce.Kill(c.name)
+			if err != nil {
+				return err
+			}
+			return ce.Remove(c.name)
+		})
 	}
-	if !exists {
-		return nil
-	}
-	err = ce.Kill(c.name)
-	if err != nil {
-		return err
-	}
-	// gofail: var dockerAfterContainerKill struct{}
-	return ce.Remove(c.name)
+	env.Stop()
+	return env.Wait()
 }
 
-func (c killContainerCommand) Command() Command {
+func (c killContainersCommand) Command() Command {
+	addrs := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		addrs[i] = n.Address
+	}
 	return Command{
-		Name:   "kill-container",
-		Target: c.node.Address,
+		Name:   "kill-containers",
+		Target: strings.Join(addrs, ","),
 		Detail: c.name,
 	}
 }

@@ -31,14 +31,9 @@ type EtcdCA struct {
 }
 
 func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) error {
-	hostname := node.Hostname
-	if len(hostname) == 0 {
-		hostname = node.Address
-	}
-
 	err := writeCertificate(inf, node, CAServer, EtcdPKIPath("server"),
 		map[string]interface{}{
-			"common_name": hostname,
+			"common_name": node.Nodename(),
 			"alt_names":   "localhost",
 			"ip_sans":     "127.0.0.1," + node.Address,
 		})
@@ -47,7 +42,7 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 	}
 	err = writeCertificate(inf, node, CAEtcdPeer, EtcdPKIPath("peer"),
 		map[string]interface{}{
-			"common_name":          hostname,
+			"common_name":          node.Nodename(),
 			"ip_sans":              "127.0.0.1," + node.Address,
 			"exclude_cn_from_sans": "true",
 		})
@@ -87,30 +82,13 @@ func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node 
 	return writeFile(inf, node, K8sPKIPath("etcd/ca.crt"), ca)
 }
 
-func (e EtcdCA) issueRoot(ctx context.Context, inf Infrastructure) (ca, cert, key string, err error) {
-	client, err := inf.Vault()
-	if err != nil {
-		return "", "", "", err
-	}
-
-	ca, err = inf.Storage().GetCACertificate(ctx, "server")
-	if err != nil {
-		return "", "", "", err
-	}
-
-	secret, err := client.Logical().Write(CAEtcdClient+"/issue/system",
+func (e EtcdCA) issueRoot(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
+	return issueCertificate(inf, CAEtcdClient, "system",
 		map[string]interface{}{
 			"common_name":          "root",
 			"exclude_cn_from_sans": "true",
 			"ttl":                  "1h",
 		})
-	if err != nil {
-		return "", "", "", err
-	}
-
-	cert = secret.Data["certificate"].(string)
-	key = secret.Data["private_key"].(string)
-	return ca, cert, key, nil
 }
 
 // KubernetesCA is a certificate authority for k8s cluster.
@@ -119,13 +97,9 @@ type KubernetesCA struct {
 
 // setup generates and installs certificates for API server.
 func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node) error {
-	hostname := node.Hostname
-	if len(hostname) == 0 {
-		hostname = node.Address
-	}
 	err := writeCertificate(inf, node, CAKubernetes, K8sPKIPath("apiserver"),
 		map[string]interface{}{
-			"common_name":          hostname,
+			"common_name":          node.Nodename(),
 			"alt_names":            "localhost",
 			"ip_sans":              "127.0.0.1," + node.Address,
 			"exclude_cn_from_sans": "true",
@@ -141,8 +115,8 @@ func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node)
 	return writeFile(inf, node, K8sPKIPath("ca.crt"), ca)
 }
 
-// IssueAdminCert issues client certificates for cluster admin.
-func (k KubernetesCA) IssueAdminCert(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
+// issueAdminCert issues client certificates for cluster admin.
+func (k KubernetesCA) issueAdminCert(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "admin",
 		map[string]interface{}{
 			"common_name":          "admin",
@@ -167,14 +141,9 @@ func (k KubernetesCA) issueForControllerManager(ctx context.Context, inf Infrast
 }
 
 func (k KubernetesCA) issueForKubelet(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
-	hostname := node.Hostname
-	if len(hostname) == 0 {
-		hostname = node.Address
-	}
-
 	return issueCertificate(inf, CAKubernetes, "system",
 		map[string]interface{}{
-			"common_name":          "system:node:" + hostname,
+			"common_name":          "system:node:" + node.Nodename(),
 			"exclude_cn_from_sans": "true",
 		})
 }

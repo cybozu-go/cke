@@ -196,7 +196,7 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 		if len(o.scheduler) == 0 {
 			return o.NextCommand()
 		}
-		return makeControllerManagerKubeconfigCommand{o.scheduler, o.cluster}
+		return makeControllerManagerKubeconfigCommand{o.controllerManager, o.cluster}
 	case 7:
 		o.step++
 		if len(o.scheduler) == 0 {
@@ -309,7 +309,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 		switch o.step2 {
 		case 0:
 			o.step2++
-			return stopContainersCommand{[]*Node{node}, riversContainerName}
+			return killContainersCommand{[]*Node{node}, riversContainerName}
 		case 1:
 			o.step2++
 			return runContainerCommand{[]*Node{node}, riversContainerName, opts, RiversParams(o.cps), o.options.Rivers}
@@ -523,11 +523,14 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		}
 		opts = []string{
 			"--pid=host",
-			"--mount",
-			"type=volume,src=dockershim,dst=/var/lib/dockershim",
+			"--mount=type=volume,src=dockershim,dst=/var/lib/dockershim",
 			"--privileged",
 		}
-		return runContainerCommand{o.kubelets, kubeletContainerName, opts, KubeletServiceParams(), o.options.Kubelet.ToServiceParams()}
+		params := make(map[string]ServiceParams)
+		for _, n := range o.kubelets {
+			params[n.Address] = KubeletServiceParams(n)
+		}
+		return runContainerParamsCommand{o.kubelets, kubeletContainerName, opts, params, o.options.Kubelet.ToServiceParams()}
 	case 7:
 		o.step++
 		if len(o.proxies) == 0 {
@@ -593,7 +596,7 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		if len(o.rivers) == 0 {
 			return o.NextCommand()
 		}
-		return stopContainersCommand{o.rivers, riversContainerName}
+		return killContainersCommand{o.rivers, riversContainerName}
 	case 5:
 		o.step++
 		if len(o.rivers) == 0 {
@@ -613,11 +616,14 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		}
 		opts = []string{
 			"--pid=host",
-			"--mount",
-			"type=volume,src=dockershim,dst=/var/lib/dockershim",
+			"--mount=type=volume,src=dockershim,dst=/var/lib/dockershim",
 			"--privileged",
 		}
-		return runContainerCommand{o.kubelets, kubeletContainerName, opts, KubeletServiceParams(), o.options.Kubelet.ToServiceParams()}
+		params := make(map[string]ServiceParams)
+		for _, n := range o.kubelets {
+			params[n.Address] = KubeletServiceParams(n)
+		}
+		return runContainerParamsCommand{o.kubelets, kubeletContainerName, opts, params, o.options.Kubelet.ToServiceParams()}
 	case 8:
 		o.step++
 		if len(o.proxies) == 0 {
@@ -660,13 +666,15 @@ func ProxyParams() ServiceParams {
 }
 
 // KubeletServiceParams returns a ServiceParams for kubelet
-func KubeletServiceParams() ServiceParams {
+func KubeletServiceParams(n *Node) ServiceParams {
 	args := []string{
 		"kubelet",
 		"--allow-privileged=true",
+		"--hostname-override=" + n.Nodename(),
 		"--pod-infra-container-image=" + Image(pauseContainerName),
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--log-dir=/var/log/kubernetes/kubelet",
+		"--healthz-bind-address=0.0.0.0",
 	}
 	return ServiceParams{
 		ExtraArguments: args,

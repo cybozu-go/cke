@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/cybozu-go/cke"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
@@ -24,10 +25,12 @@ var _ = Describe("cluster", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
+		var status *cke.ClusterStatus
 		Eventually(func() error {
 			controlPlanes := []string{node1, node3}
 			workers := []string{node4, node5, node6}
-			status, err := getClusterStatus()
+			var err error
+			status, err = getClusterStatus()
 			if err != nil {
 				return err
 			}
@@ -39,8 +42,6 @@ var _ = Describe("cluster", func() {
 		}).Should(Succeed())
 
 		By("Checking that CKE did not remove non-cluster node's etcd data")
-		status, err := getClusterStatus()
-		Expect(err).NotTo(HaveOccurred())
 		Expect(status.NodeStatuses[node2].Etcd.HasData).To(BeTrue())
 	})
 

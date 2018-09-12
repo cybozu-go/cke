@@ -299,8 +299,27 @@ B29lX8k9dqD0HitCL6ibsw0DqsU6FC3fd179rH8Bik83FuukuxvD
 	}
 }
 
+func testNodename(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		node     *Node
+		nodename string
+	}{
+		{&Node{Address: "172.16.0.1", Hostname: "my-host"}, "my-host"},
+		{&Node{Address: "172.16.0.1"}, "172.16.0.1"},
+	}
+	for _, c := range cases {
+		if c.node.Nodename() != c.nodename {
+			t.Errorf("%s != %s", c.node.Nodename(), c.nodename)
+		}
+	}
+
+}
+
 func TestCluster(t *testing.T) {
 	t.Run("YAML", testClusterYAML)
 	t.Run("Validate", testClusterValidate)
 	t.Run("ValidateNode", testClusterValidateNode)
+	t.Run("Nodename", testNodename)
 }
