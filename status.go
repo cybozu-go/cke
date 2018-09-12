@@ -26,6 +26,7 @@ type EtcdClusterStatus struct {
 	InSyncMembers map[string]bool
 }
 
+// KubernetesClusterStatus contains kubernetes cluster configurations
 type KubernetesClusterStatus struct {
 	Nodes []core.Node
 }
