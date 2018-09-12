@@ -36,7 +36,6 @@ type Infrastructure interface {
 	NewEtcdClient(endpoints []string) (*clientv3.Client, error)
 	kubernetesClient(n *Node) (*kubernetes.Clientset, error)
 	HTTPClient() *cmd.HTTPClient
-	APIServerHTTPClient(addr string) (*cmd.HTTPClient, error)
 }
 
 // NewInfrastructure creates a new Infrastructure instance
@@ -157,23 +156,4 @@ func (i ckeInfrastructure) kubernetesClient(n *Node) (*kubernetes.Clientset, err
 
 func (i ckeInfrastructure) HTTPClient() *cmd.HTTPClient {
 	return httpClient
-}
-
-func (i ckeInfrastructure) APIServerHTTPClient(addr string) (*cmd.HTTPClient, error) {
-	tlsCfg := rest.TLSClientConfig{
-		CertData: []byte(i.kubeCert),
-		KeyData:  []byte(i.kubeKey),
-		CAData:   []byte(i.kubeCA),
-	}
-	tr, err := rest.TransportFor(&rest.Config{
-		Host:            "https://" + addr + ":6443",
-		TLSClientConfig: tlsCfg,
-		Timeout:         5 * time.Second,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &cmd.HTTPClient{
-		Client: &http.Client{Transport: tr},
-	}, nil
 }

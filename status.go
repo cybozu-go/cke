@@ -176,7 +176,7 @@ func (c Controller) getNodeStatus(ctx context.Context, inf Infrastructure, node 
 
 	status.APIServer = KubeComponentStatus{ss[kubeAPIServerContainerName], false}
 	if status.APIServer.Running {
-		status.APIServer.IsHealthy, err = c.checkTLSHealthz(ctx, inf, node.Address, 6443)
+		status.APIServer.IsHealthy, err = c.checkAPIServerHalth(ctx, inf, node)
 		if err != nil {
 			return nil, err
 		}
@@ -289,6 +289,7 @@ func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastr
 	for _, n := range nodes {
 		if n.ControlPlane {
 			master = n
+			break
 		}
 	}
 	clientset, err := inf.kubernetesClient(master)
@@ -328,26 +329,14 @@ func (c Controller) checkHealthz(ctx context.Context, inf Infrastructure, addr s
 	return strings.TrimSpace(string(body)) == "ok", nil
 }
 
-func (c Controller) checkTLSHealthz(ctx context.Context, inf Infrastructure, addr string, port uint16) (bool, error) {
-	url := "https://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
-	req, err := http.NewRequest("GET", url, nil)
+func (c Controller) checkAPIServerHalth(ctx context.Context, inf Infrastructure, n *Node) (bool, error) {
+	cliantset, err := inf.kubernetesClient(n)
 	if err != nil {
 		return false, err
 	}
-	req = req.WithContext(ctx)
-	cli, err := inf.APIServerHTTPClient(addr)
+	_, err = cliantset.CoreV1().Namespaces().List(meta.ListOptions{})
 	if err != nil {
 		return false, err
 	}
-	resp, err := cli.Do(req)
-	if err != nil {
-		return false, err
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return false, err
-	}
-	resp.Body.Close()
-
-	return strings.TrimSpace(string(body)) == "ok", nil
+	return true, nil
 }
