@@ -157,7 +157,7 @@ func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node)
 		},
 		map[string]interface{}{
 			"common_name":          node.Nodename(),
-			"alt_names":            "localhost",
+			"alt_names":            "localhost,kubernetes.default",
 			"ip_sans":              "127.0.0.1," + node.Address,
 			"exclude_cn_from_sans": "true",
 		})
@@ -189,12 +189,13 @@ func (k KubernetesCA) issueAdminCert(ctx context.Context, inf Infrastructure) (c
 }
 
 func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "system",
+	return issueCertificate(inf, CAKubernetes, "kube-scheduler",
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
+			"organization":      "system:kube-scheduler",
 		},
 		map[string]interface{}{
 			"common_name":          "system:kube-scheduler",
@@ -203,12 +204,13 @@ func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure)
 }
 
 func (k KubernetesCA) issueForControllerManager(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "system",
+	return issueCertificate(inf, CAKubernetes, "kube-controller-manager",
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
+			"organization":      "system:kube-controller-manager",
 		},
 		map[string]interface{}{
 			"common_name":          "system:kube-controller-manager",
@@ -217,29 +219,56 @@ func (k KubernetesCA) issueForControllerManager(ctx context.Context, inf Infrast
 }
 
 func (k KubernetesCA) issueForKubelet(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "system",
+	nodename := node.Nodename()
+	altNames := "localhost"
+	if nodename != node.Address {
+		altNames = "localhost," + nodename
+	}
+
+	return issueCertificate(inf, CAKubernetes, "kubelet",
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
+			"organization":      "system:nodes",
 		},
 		map[string]interface{}{
-			"common_name":          "system:node:" + node.Nodename(),
+			"common_name":          "system:node:" + nodename,
+			"alt_names":            altNames,
+			"ip_sans":              "127.0.0.1," + node.Address,
 			"exclude_cn_from_sans": "true",
 		})
 }
 
 func (k KubernetesCA) issueForProxy(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "system",
+	return issueCertificate(inf, CAKubernetes, "kube-proxy",
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
+			"organization":      "system:node-proxier",
 		},
 		map[string]interface{}{
 			"common_name":          "system:kube-controller-manager",
+			"exclude_cn_from_sans": "true",
+		})
+}
+
+func (k KubernetesCA) issueForServiceAccount(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
+	return issueCertificate(inf, CAKubernetes, "service-account",
+		map[string]interface{}{
+			"ttl":            "87600h",
+			"max_ttl":        "87600h",
+			"allow_any_name": "true",
+			"client_flag":    "false",
+			"server_flag":    "false",
+			"key_usage":      "DigitalSignature,CertSign",
+			"no_store":       "true",
+		},
+		map[string]interface{}{
+			"common_name":          "service-account",
 			"exclude_cn_from_sans": "true",
 		})
 }
