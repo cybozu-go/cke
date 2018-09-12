@@ -65,7 +65,7 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 	for _, addr := range append(c.CpNodes, c.NonCpNodes...) {
 		nodeStatus[addr] = &NodeStatus{
 			Rivers:            ServiceStatus{BuiltInParams: RiversParams(cps), ExtraParams: ServiceParams{ExtraArguments: c.CurrentRiverArgs}},
-			APIServer:         ServiceStatus{BuiltInParams: APIServerParams(cps, addr, "10.20.30.40/31"), ExtraParams: ServiceParams{ExtraArguments: c.CurrentAPIServerArgs}},
+			APIServer:         KubeComponentStatus{ServiceStatus{BuiltInParams: APIServerParams(cps, addr, "10.20.30.40/31"), ExtraParams: ServiceParams{ExtraArguments: c.CurrentAPIServerArgs}}, false},
 			ControllerManager: KubeComponentStatus{ServiceStatus{BuiltInParams: ControllerManagerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentControllerManagerArgs}}, false},
 			Scheduler:         KubeComponentStatus{ServiceStatus{BuiltInParams: SchedulerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentSchedulerArgs}}, false},
 			Proxy:             ServiceStatus{BuiltInParams: ProxyParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentProxyArgs}},
@@ -76,6 +76,7 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 		nodeStatus[addr].Rivers.Running = true
 	}
 	for _, addr := range c.APIServers {
+		nodeStatus[addr].APIServer.IsHealthy = true
 		nodeStatus[addr].APIServer.Running = true
 	}
 	for _, addr := range c.ControllerManagers {

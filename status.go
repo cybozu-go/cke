@@ -49,7 +49,7 @@ type ClusterStatus struct {
 type NodeStatus struct {
 	Etcd              EtcdStatus
 	Rivers            ServiceStatus
-	APIServer         ServiceStatus
+	APIServer         KubeComponentStatus
 	ControllerManager KubeComponentStatus
 	Scheduler         KubeComponentStatus
 	Proxy             ServiceStatus
@@ -126,7 +126,6 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 			return nil, err
 		}
 	}
-	return cs, nil
 
 	var apiserverRunning bool
 	for _, n := range controlPlanes(cluster.Nodes) {
@@ -173,25 +172,38 @@ func (c Controller) getNodeStatus(ctx context.Context, inf Infrastructure, node 
 
 	status.Etcd = EtcdStatus{ss[etcdContainerName], etcdVolumeExists}
 	status.Rivers = ss[riversContainerName]
-	status.APIServer = ss[kubeAPIServerContainerName]
 
-	var health bool
-	if ss[kubeControllerManagerContainerName].Running {
-		health = c.checkHealthz(ctx, inf, node.Address, 10252) != nil
+	status.APIServer = KubeComponentStatus{ss[kubeAPIServerContainerName], false}
+	if status.APIServer.Running {
+		status.APIServer.IsHealthy, err = c.checkTLSHealthz(ctx, inf, node.Address, 6443)
+		if err != nil {
+			return nil, err
+		}
 	}
-	status.ControllerManager = KubeComponentStatus{ServiceStatus: ss[kubeControllerManagerContainerName], IsHealthy: health}
 
-	health = false
-	if ss[kubeSchedulerContainerName].Running {
-		health = c.checkHealthz(ctx, inf, node.Address, 10251) != nil
+	status.ControllerManager = KubeComponentStatus{ss[kubeControllerManagerContainerName], false}
+	if status.ControllerManager.Running {
+		status.ControllerManager.IsHealthy, err = c.checkHealthz(ctx, inf, node.Address, 10252)
+		if err != nil {
+			return nil, err
+		}
 	}
-	status.Scheduler = KubeComponentStatus{ServiceStatus: ss[kubeSchedulerContainerName], IsHealthy: health}
 
-	health = false
-	if ss[kubeletContainerName].Running {
-		health = c.checkHealthz(ctx, inf, node.Address, 10248) != nil
+	status.Scheduler = KubeComponentStatus{ss[kubeSchedulerContainerName], false}
+	if status.Scheduler.Running {
+		status.Scheduler.IsHealthy, err = c.checkHealthz(ctx, inf, node.Address, 10251)
+		if err != nil {
+			return nil, err
+		}
 	}
-	status.Kubelet = KubeComponentStatus{ServiceStatus: ss[kubeletContainerName], IsHealthy: health}
+
+	status.Kubelet = KubeComponentStatus{ss[kubeletContainerName], false}
+	if status.Kubelet.Running {
+		status.Kubelet.IsHealthy, err = c.checkHealthz(ctx, inf, node.Address, 10248)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// NOTE unable to get kube-proxy's health status
 	// https://github.com/kubernetes/kubernetes/issues/65118
@@ -293,25 +305,48 @@ func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastr
 	return s, nil
 }
 
-func (c Controller) checkHealthz(ctx context.Context, inf Infrastructure, addr string, port uint16) error {
+func (c Controller) checkHealthz(ctx context.Context, inf Infrastructure, addr string, port uint16) (bool, error) {
+	return true, nil
+
 	url := "http://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 	req = req.WithContext(ctx)
 	resp, err := inf.HTTPClient().Do(req)
 	if err != nil {
-		return err
+		return false, err
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return false, err
 	}
 	resp.Body.Close()
-	if strings.TrimSpace(string(body)) == "ok" {
-		return errors.New("component does not healthy")
-		return nil
+
+	return strings.TrimSpace(string(body)) == "ok", nil
+}
+
+func (c Controller) checkTLSHealthz(ctx context.Context, inf Infrastructure, addr string, port uint16) (bool, error) {
+	url := "https://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return false, err
 	}
-	return nil
+	req = req.WithContext(ctx)
+	cli, err := inf.APIServerHTTPClient(addr)
+	if err != nil {
+		return false, err
+	}
+	resp, err := cli.Do(req)
+	if err != nil {
+		return false, err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
+	resp.Body.Close()
+
+	return strings.TrimSpace(string(body)) == "ok", nil
 }
