@@ -22,6 +22,34 @@ var httpClient = &cmd.HTTPClient{
 
 var vaultClient atomic.Value
 
+type certCache struct {
+	cert      []byte
+	key       []byte
+	timestamp time.Time
+	lifetime  time.Duration
+}
+
+func (c *certCache) get(issue func() (cert, key []byte, err error)) (cert, key []byte, err error) {
+	now := time.Now()
+	if c.cert != nil {
+		if now.Sub(c.timestamp) < c.lifetime {
+			return c.cert, c.key, nil
+		}
+	}
+
+	cert, key, err = issue()
+	if err == nil {
+		c.cert = cert
+		c.key = key
+		c.timestamp = now
+	}
+	return
+}
+
+var k8sCertCache = &certCache{
+	lifetime: time.Hour * 24,
+}
+
 func setVaultClient(client *vault.Client) {
 	vaultClient.Store(client)
 }
@@ -34,7 +62,7 @@ type Infrastructure interface {
 	Storage() Storage
 
 	NewEtcdClient(endpoints []string) (*clientv3.Client, error)
-	kubernetesClient(n *Node) (*kubernetes.Clientset, error)
+	K8sClient(n *Node) (*kubernetes.Clientset, error)
 	HTTPClient() *cmd.HTTPClient
 }
 
@@ -83,11 +111,20 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	if err != nil {
 		return nil, err
 	}
+
 	inf.kubeCA, err = inf.Storage().GetCACertificate(ctx, "kubernetes")
 	if err != nil {
 		return nil, err
 	}
-	inf.kubeCert, inf.kubeKey, err = KubernetesCA{}.issueAdminCert(ctx, inf)
+
+	issue := func() (cert, key []byte, err error) {
+		c, k, e := KubernetesCA{}.issueAdminCert(ctx, inf, 25)
+		if e != nil {
+			return nil, nil, e
+		}
+		return []byte(c), []byte(k), nil
+	}
+	inf.kubeCert, inf.kubeKey, err = k8sCertCache.get(issue)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +139,8 @@ type ckeInfrastructure struct {
 	etcdCert string
 	etcdKey  string
 	kubeCA   string
-	kubeCert string
-	kubeKey  string
+	kubeCert []byte
+	kubeKey  []byte
 }
 
 func (i ckeInfrastructure) Agent(addr string) Agent {
@@ -140,10 +177,10 @@ func (i ckeInfrastructure) NewEtcdClient(endpoints []string) (*clientv3.Client, 
 	return etcdutil.NewClient(cfg)
 }
 
-func (i ckeInfrastructure) kubernetesClient(n *Node) (*kubernetes.Clientset, error) {
+func (i ckeInfrastructure) K8sClient(n *Node) (*kubernetes.Clientset, error) {
 	tlsCfg := rest.TLSClientConfig{
-		CertData: []byte(i.kubeCert),
-		KeyData:  []byte(i.kubeKey),
+		CertData: i.kubeCert,
+		KeyData:  i.kubeKey,
 		CAData:   []byte(i.kubeCA),
 	}
 	cfg := &rest.Config{

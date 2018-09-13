@@ -128,17 +128,17 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 		}
 	}
 
-	var apiserverRunning bool
+	var livingMaster *Node
 	for _, n := range controlPlanes(cluster.Nodes) {
 		ns := statuses[n.Address]
 		if ns.APIServer.Running {
-			apiserverRunning = true
+			livingMaster = n
 			break
 		}
 	}
 
-	if apiserverRunning {
-		cs.Kubernetes, err = c.getKubernetesClusterStatus(ctx, inf, cluster.Nodes)
+	if livingMaster != nil {
+		cs.Kubernetes, err = c.getKubernetesClusterStatus(ctx, inf, livingMaster)
 		if err != nil {
 			log.Error("failed to get kubernetes cluster status", map[string]interface{}{
 				log.FnError: err,
@@ -284,16 +284,8 @@ func (c Controller) getEtcdMemberInSync(ctx context.Context, inf Infrastructure,
 	return false
 }
 
-func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastructure, nodes []*Node) (KubernetesClusterStatus, error) {
-	// TODO available high-reliability control planes to get cluster status
-	var master *Node
-	for _, n := range nodes {
-		if n.ControlPlane {
-			master = n
-			break
-		}
-	}
-	clientset, err := inf.kubernetesClient(master)
+func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastructure, n *Node) (KubernetesClusterStatus, error) {
+	clientset, err := inf.K8sClient(n)
 	if err != nil {
 		return KubernetesClusterStatus{}, err
 	}
@@ -331,7 +323,7 @@ func (c Controller) checkHealthz(ctx context.Context, inf Infrastructure, addr s
 }
 
 func (c Controller) checkAPIServerHalth(ctx context.Context, inf Infrastructure, n *Node) (bool, error) {
-	cliantset, err := inf.kubernetesClient(n)
+	cliantset, err := inf.K8sClient(n)
 	if err != nil {
 		return false, err
 	}

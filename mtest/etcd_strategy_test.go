@@ -78,12 +78,10 @@ var _ = Describe("etcd strategy", func() {
 		ckecliClusterSet(cluster)
 
 		By("Checking cluster status")
-		var status *cke.ClusterStatus
 		Eventually(func() error {
 			controlPlanes := []string{node1, node3}
 			workers := []string{node2, node4, node5, node6}
-			var err error
-			status, err = getClusterStatus()
+			status, err := getClusterStatus()
 			if err != nil {
 				return err
 			}
@@ -91,7 +89,13 @@ var _ = Describe("etcd strategy", func() {
 		}).Should(Succeed())
 
 		By("Checking that CKE removed worker node's data")
-		Expect(status.NodeStatuses[node2].Etcd.HasData).To(BeFalse())
+		Eventually(func() bool {
+			status, err := getClusterStatus()
+			if err != nil {
+				return true
+			}
+			return status.NodeStatuses[node2].Etcd.HasData
+		}).Should(BeFalse())
 	})
 
 	It("should remove unhealthy node2 from etcd cluster and add node4 in appropriate order", func() {
