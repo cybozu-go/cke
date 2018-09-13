@@ -154,7 +154,7 @@ func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node)
 	}
 	err = writeFile(inf, node, K8sPKIPath("service-account.key"), sakey)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	sacert, err := inf.Storage().GetServiceAccountCert(ctx)
@@ -163,7 +163,7 @@ func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node)
 	}
 	err = writeFile(inf, node, K8sPKIPath("service-account.crt"), sacert)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	err = writeCertificate(inf, node, CAKubernetes, K8sPKIPath("apiserver"),
