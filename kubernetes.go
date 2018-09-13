@@ -415,7 +415,6 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet stri
 	args := []string{
 		"apiserver",
 		"--allow-privileged",
-		"--authorization-mode=Node,RBAC",
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
 		"--etcd-cafile=" + K8sPKIPath("etcd/ca.crt"),
 		"--etcd-certfile=" + K8sPKIPath("apiserver-etcd-client.crt"),
@@ -436,6 +435,9 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet stri
 		// for service accounts
 		"--service-account-key-file=" + K8sPKIPath("service-account.crt"),
 		"--service-account-lookup",
+
+		// for RBAC
+		// "--authorization-mode=Node,RBAC",
 
 		"--advertise-address=" + advertiseAddress,
 		"--service-cluster-ip-range=" + serviceSubnet,
@@ -479,7 +481,7 @@ func ControllerManagerParams(clusterName, serviceSubnet string) ServiceParams {
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
-			{"/etc/kubernetes/controller-manager", "/etc/kubernetes/controller-manager", true},
+			{"/etc/kubernetes", "/etc/kubernetes", true},
 			{"/var/log/kubernetes/controller-manager", "/var/log/kubernetes/controller-manager", false},
 		},
 	}
@@ -496,7 +498,7 @@ func SchedulerParams() ServiceParams {
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
-			{"/etc/kubernetes/scheduler", "/etc/kubernetes/scheduler", true},
+			{"/etc/kubernetes", "/etc/kubernetes", true},
 			{"/var/log/kubernetes/scheduler", "/var/log/kubernetes/scheduler", false},
 		},
 	}
@@ -698,7 +700,7 @@ func ProxyParams() ServiceParams {
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
-			{"/etc/kubernetes/proxy", "/etc/kubernetes/proxy", true},
+			{"/etc/kubernetes", "/etc/kubernetes", true},
 			{"/lib/modules", "/lib/modules", true},
 			{"/var/log/kubernetes/proxy", "/var/log/kubernetes/proxy", false},
 		},
@@ -720,7 +722,7 @@ func KubeletServiceParams(n *Node) ServiceParams {
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
-			{"/etc/kubernetes/kubelet", "/etc/kubernetes/kubelet", true},
+			{"/etc/kubernetes", "/etc/kubernetes", true},
 			{"/var/lib/kubelet", "/var/lib/kubelet", false},
 			{"/var/lib/docker", "/var/lib/docker", false},
 			{"/var/log/pods", "/var/log/pods", false},
