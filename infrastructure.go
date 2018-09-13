@@ -34,7 +34,7 @@ type Infrastructure interface {
 	Storage() Storage
 
 	NewEtcdClient(endpoints []string) (*clientv3.Client, error)
-	kubernetesClient(n *Node) (*kubernetes.Clientset, error)
+	K8sClient(n *Node) (*kubernetes.Clientset, error)
 	HTTPClient() *cmd.HTTPClient
 }
 
@@ -140,7 +140,7 @@ func (i ckeInfrastructure) NewEtcdClient(endpoints []string) (*clientv3.Client, 
 	return etcdutil.NewClient(cfg)
 }
 
-func (i ckeInfrastructure) kubernetesClient(n *Node) (*kubernetes.Clientset, error) {
+func (i ckeInfrastructure) K8sClient(n *Node) (*kubernetes.Clientset, error) {
 	tlsCfg := rest.TLSClientConfig{
 		CertData: []byte(i.kubeCert),
 		KeyData:  []byte(i.kubeKey),
