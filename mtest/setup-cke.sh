@@ -44,14 +44,13 @@ EOF
     $VAULT write auth/approle/role/cke policies=cke period=5s
     role_id=$($VAULT read -format=json auth/approle/role/cke/role-id | jq -r .data.role_id)
     secret_id=$($VAULT write -f -format=json auth/approle/role/cke/secret-id | jq -r .data.secret_id)
-    cat >/tmp/vault.json <<EOF
+    $CKECLI vault config - <<EOF
 {
     "endpoint": "http://10.0.0.11:8200",
     "role-id": "$role_id",
     "secret-id": "$secret_id"
 }
 EOF
-    $CKECLI vault config /tmp/vault.json
 
     create_ca cke/ca-server "server CA" server
     create_ca cke/ca-etcd-peer "etcd peer CA" etcd-peer
