@@ -14,6 +14,21 @@ const (
 	riversContainerName                = "rivers"
 )
 
+var (
+	// admissionPlugins is the recommended list of admission plugins.
+	// https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#is-there-a-recommended-set-of-admission-controllers-to-use
+	admissionPlugins = []string{
+		"NamespaceLifecycle",
+		"LimitRanger",
+		"ServiceAccount",
+		"DefaultStorageClass",
+		"DefaultTolerationSeconds",
+		"MutatingAdmissionWebhook",
+		"ValidatingAdmissionWebhook",
+		"ResourceQuota",
+	}
+)
+
 type riversBootOp struct {
 	nodes     []*Node
 	upstreams []*Node
@@ -44,6 +59,7 @@ type kubeCPRestartOp struct {
 	controllerManager []*Node
 	scheduler         []*Node
 
+	cluster       string
 	serviceSubnet string
 	options       Options
 
@@ -227,7 +243,7 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 		if len(o.controllerManager) == 0 {
 			return o.NextCommand()
 		}
-		return runContainerCommand{o.controllerManager, kubeControllerManagerContainerName, opts, ControllerManagerParams(), o.options.ControllerManager}
+		return runContainerCommand{o.controllerManager, kubeControllerManagerContainerName, opts, ControllerManagerParams(o.cluster, o.serviceSubnet), o.options.ControllerManager}
 	default:
 		return nil
 	}
@@ -272,13 +288,14 @@ func (o *kubeCPStopOp) NextCommand() Commander {
 }
 
 // KubeCPRestartOp returns an Operator to restart kubernetes control planes
-func KubeCPRestartOp(cps []*Node, rivers, apiserver, controllerManager, scheduler []*Node, serviceSubnet string, options Options) Operator {
+func KubeCPRestartOp(cps []*Node, rivers, apiserver, controllerManager, scheduler []*Node, cluster string, serviceSubnet string, options Options) Operator {
 	return &kubeCPRestartOp{
 		cps:               cps,
 		rivers:            rivers,
 		apiserver:         apiserver,
 		controllerManager: controllerManager,
 		scheduler:         scheduler,
+		cluster:           cluster,
 		serviceSubnet:     serviceSubnet,
 		options:           options,
 	}
@@ -356,7 +373,7 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 			return stopContainersCommand{[]*Node{node}, kubeControllerManagerContainerName}
 		case 1:
 			o.step2++
-			return runContainerCommand{[]*Node{node}, kubeControllerManagerContainerName, opts, ControllerManagerParams(), o.options.ControllerManager}
+			return runContainerCommand{[]*Node{node}, kubeControllerManagerContainerName, opts, ControllerManagerParams(o.cluster, o.serviceSubnet), o.options.ControllerManager}
 		default:
 			o.step2 = 0
 			o.nodeIndex++
@@ -389,11 +406,12 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 }
 
 // APIServerParams returns built-in a ServiceParams form kube-apiserver
-func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubnet string) ServiceParams {
+func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet string) ServiceParams {
 	var etcdServers []string
 	for _, n := range controlPlanes {
 		etcdServers = append(etcdServers, "https://"+n.Address+":2379")
 	}
+
 	args := []string{
 		"apiserver",
 		"--allow-privileged",
@@ -412,6 +430,15 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 		"--kubelet-client-key=" + K8sPKIPath("apiserver.key"),
 		"--kubelet-https=true",
 
+		"--enable-admission-plugins=" + strings.Join(admissionPlugins, ","),
+
+		// for service accounts
+		"--service-account-key-file=" + K8sPKIPath("service-account.crt"),
+		"--service-account-lookup",
+
+		// for RBAC
+		// "--authorization-mode=Node,RBAC",
+
 		"--advertise-address=" + advertiseAddress,
 		"--service-cluster-ip-range=" + serviceSubnet,
 		"--audit-log-path=/var/log/kubernetes/apiserver/audit.log",
@@ -429,17 +456,32 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress string, serviceSubn
 }
 
 // ControllerManagerParams returns a ServiceParams for kube-controller-manager
-func ControllerManagerParams() ServiceParams {
+func ControllerManagerParams(clusterName, serviceSubnet string) ServiceParams {
 	args := []string{
 		"controller-manager",
+		"--cluster-name=" + clusterName,
+		"--service-cluster-ip-range=" + serviceSubnet,
 		"--kubeconfig=/etc/kubernetes/controller-manager/kubeconfig",
 		"--log-dir=/var/log/kubernetes/controller-manager",
+
+		// ToDo: cluster signing
+		// https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/#a-note-to-cluster-administrators
+		// https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/
+		//    Create an intermediate CA under cke/ca-kubernetes?
+		//    or just an certficate/key pair?
+		// "--cluster-signing-cert-file=..."
+		// "--cluster-signing-key-file=..."
+
+		// for service accounts
+		"--root-ca-file=" + K8sPKIPath("ca.crt"),
+		"--service-account-private-key-file=" + K8sPKIPath("service-account.key"),
+		"--use-service-account-credentials=true",
 	}
 	return ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
-			{"/etc/kubernetes/controller-manager", "/etc/kubernetes/controller-manager", true},
+			{"/etc/kubernetes", "/etc/kubernetes", true},
 			{"/var/log/kubernetes/controller-manager", "/var/log/kubernetes/controller-manager", false},
 		},
 	}
@@ -456,7 +498,7 @@ func SchedulerParams() ServiceParams {
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
-			{"/etc/kubernetes/scheduler", "/etc/kubernetes/scheduler", true},
+			{"/etc/kubernetes", "/etc/kubernetes", true},
 			{"/var/log/kubernetes/scheduler", "/var/log/kubernetes/scheduler", false},
 		},
 	}
@@ -658,7 +700,7 @@ func ProxyParams() ServiceParams {
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
-			{"/etc/kubernetes/proxy", "/etc/kubernetes/proxy", true},
+			{"/etc/kubernetes", "/etc/kubernetes", true},
 			{"/lib/modules", "/lib/modules", true},
 			{"/var/log/kubernetes/proxy", "/var/log/kubernetes/proxy", false},
 		},
@@ -680,7 +722,7 @@ func KubeletServiceParams(n *Node) ServiceParams {
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
 			{"/etc/hostname", "/etc/machine-id", true},
-			{"/etc/kubernetes/kubelet", "/etc/kubernetes/kubelet", true},
+			{"/etc/kubernetes", "/etc/kubernetes", true},
 			{"/var/lib/kubelet", "/var/lib/kubelet", false},
 			{"/var/lib/docker", "/var/lib/docker", false},
 			{"/var/log/pods", "/var/log/pods", false},

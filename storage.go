@@ -19,13 +19,15 @@ type Storage struct {
 
 // etcd keys and prefixes
 const (
-	KeyRecords     = "records/"
-	KeyRecordID    = "records"
-	KeyCluster     = "cluster"
-	KeyConstraints = "constraints"
-	KeyVault       = "vault"
-	KeyCA          = "ca/"
-	KeyLeader      = "leader/"
+	KeyCA                 = "ca/"
+	KeyCluster            = "cluster"
+	KeyConstraints        = "constraints"
+	KeyLeader             = "leader/"
+	KeyRecords            = "records/"
+	KeyRecordID           = "records"
+	KeyServiceAccountCert = "service-account/certificate"
+	KeyServiceAccountKey  = "service-account/key"
+	KeyVault              = "vault"
 )
 
 const maxRecords = 1000
@@ -133,6 +135,51 @@ func (s Storage) PutCACertificate(ctx context.Context, name, pem string) error {
 
 func recordKey(r *Record) string {
 	return fmt.Sprintf("%s%016x", KeyRecords, r.ID)
+}
+
+// GetServiceAccountCert loads x509 certificate for service account.
+// The format is PEM.
+func (s Storage) GetServiceAccountCert(ctx context.Context) (string, error) {
+	resp, err := s.Get(ctx, KeyServiceAccountCert)
+	if err != nil {
+		return "", err
+	}
+	if resp.Count == 0 {
+		return "", ErrNotFound
+	}
+
+	return string(resp.Kvs[0].Value), nil
+}
+
+// GetServiceAccountKey loads private key for service account.
+// The format is PEM.
+func (s Storage) GetServiceAccountKey(ctx context.Context) (string, error) {
+	resp, err := s.Get(ctx, KeyServiceAccountKey)
+	if err != nil {
+		return "", err
+	}
+	if resp.Count == 0 {
+		return "", ErrNotFound
+	}
+
+	return string(resp.Kvs[0].Value), nil
+}
+
+// PutServiceAccountData stores x509 certificate and private key for service account.
+func (s Storage) PutServiceAccountData(ctx context.Context, leaderKey, cert, key string) error {
+	resp, err := s.Txn(ctx).
+		If(clientv3util.KeyExists(leaderKey)).
+		Then(
+			clientv3.OpPut(KeyServiceAccountCert, cert),
+			clientv3.OpPut(KeyServiceAccountKey, key)).
+		Commit()
+	if err != nil {
+		return err
+	}
+	if !resp.Succeeded {
+		return ErrNoLeader
+	}
+	return nil
 }
 
 // GetRecords loads list of *Record from etcd.

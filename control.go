@@ -163,6 +163,23 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	}
 	defer inf.Close()
 
+	// prepare service account signing
+	_, err = storage.GetServiceAccountCert(ctx)
+	switch err {
+	case nil:
+	case ErrNotFound:
+		crt, key, err := KubernetesCA{}.issueForServiceAccount(ctx, inf)
+		if err != nil {
+			return err
+		}
+		err = storage.PutServiceAccountData(ctx, leaderKey, crt, key)
+		if err != nil {
+			return err
+		}
+	default:
+		return err
+	}
+
 	status, err := c.GetClusterStatus(ctx, cluster, inf)
 	if err != nil {
 		wait = true

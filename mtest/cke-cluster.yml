@@ -45,7 +45,7 @@ dns_servers: ["8.8.8.8", "1.1.1.1"]
 options:
   kube-api:
     extra_args:
-    - --disable-admission-plugins=ServiceAccount
+    - --disable-admission-plugins=Initializers
   kubelet:
     domain: neco
     allow_swap: true

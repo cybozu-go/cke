@@ -44,25 +44,22 @@ EOF
     $VAULT write auth/approle/role/cke policies=cke period=5s
     role_id=$($VAULT read -format=json auth/approle/role/cke/role-id | jq -r .data.role_id)
     secret_id=$($VAULT write -f -format=json auth/approle/role/cke/secret-id | jq -r .data.secret_id)
-    cat >/tmp/vault.json <<EOF
+    $CKECLI vault config - <<EOF
 {
     "endpoint": "http://10.0.0.11:8200",
     "role-id": "$role_id",
     "secret-id": "$secret_id"
 }
 EOF
-    $CKECLI vault config /tmp/vault.json
 
     create_ca cke/ca-server "server CA" server
     create_ca cke/ca-etcd-peer "etcd peer CA" etcd-peer
     create_ca cke/ca-etcd-client "etcd client CA" etcd-client
     create_ca cke/ca-kubernetes "kubernetes CA" kubernetes
 
-    $VAULT write cke/ca-server/roles/system ttl=87600h max_ttl=87600h client_flag=false allow_any_name=true
-    $VAULT write cke/ca-etcd-peer/roles/system ttl=87600h max_ttl=87600h allow_any_name=true
-    $VAULT write cke/ca-etcd-client/roles/system ttl=87600h max_ttl=87600h server_flag=false allow_any_name=true
-    $VAULT write cke/ca-kubernetes/roles/system ttl=87600h max_ttl=87600h enforce_hostnames=false allow_any_name=true
-    $VAULT write cke/ca-kubernetes/roles/admin ttl=2h max_ttl=24h enforce_hostnames=false allow_any_name=true organization=system:masters
+    # admin role need to be created here to generate .kube/config
+    $VAULT write cke/ca-kubernetes/roles/admin ttl=2h max_ttl=24h \
+           enforce_hostnames=false allow_any_name=true organization=system:masters
 }
 
 install_cke_configs() {
