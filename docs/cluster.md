@@ -13,7 +13,6 @@ Name            | Required | Type      | Description
 `service_subnet`| true     | string    | CIDR subnet for k8s `Service`.
 `dns_servers`   | false    | array     | List of upstream DNS server IP addresses.
 `options`       | false    | `Options` | See options.
-`rbac`          | false    | bool      | true to enable [RBAC][].
 
 Node
 ----
@@ -79,6 +78,3 @@ Name              | Required | Type   | Description
 `extra_args`      | false    | array  | Extra command-line arguments.  List of strings.
 `extra_binds`     | false    | array  | Extra bind mounts.  List of `Mount`.
 `extra_env`       | false    | object | Extra environment variables.
-
-[CoreDNS]: https://github.com/coredns/coredns
-[RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/

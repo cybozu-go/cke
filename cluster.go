@@ -102,7 +102,6 @@ type Cluster struct {
 	ServiceSubnet string   `json:"service_subnet" yaml:"service_subnet"`
 	DNSServers    []string `json:"dns_servers"    yaml:"dns_servers"`
 	Options       Options  `json:"options"        yaml:"options"`
-	RBAC          bool     `json:"rbac"           yaml:"rbac"`
 }
 
 // Validate validates the cluster definition.

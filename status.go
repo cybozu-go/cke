@@ -36,7 +36,6 @@ type KubernetesClusterStatus struct {
 type ClusterStatus struct {
 	Name         string
 	NodeStatuses map[string]*NodeStatus // keys are IP address strings.
-	RBAC         bool                   // true if RBAC is enabled
 
 	Etcd       EtcdClusterStatus
 	Kubernetes KubernetesClusterStatus
