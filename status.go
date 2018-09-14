@@ -256,7 +256,11 @@ func (c Controller) getEtcdClusterStatus(ctx context.Context, inf Infrastructure
 	ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
 	defer cancel()
 	resp, err := cli.Grant(ct, 10)
-	clusterStatus.IsHealthy = err == nil && resp.ID != clientv3.NoLease
+	if err != nil {
+		return clusterStatus, err
+	}
+
+	clusterStatus.IsHealthy = resp.ID != clientv3.NoLease
 
 	clusterStatus.InSyncMembers = make(map[string]bool)
 	for name := range clusterStatus.Members {
@@ -277,11 +281,11 @@ func (c Controller) getEtcdMemberInSync(ctx context.Context, inf Infrastructure,
 	ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
 	defer cancel()
 	resp, err := cli.Get(ct, "health")
-	if err == nil && resp.Header.Revision >= clusterRev {
-		return true
+	if err != nil {
+		return false
 	}
 
-	return false
+	return resp.Header.Revision >= clusterRev
 }
 
 func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastructure, n *Node) (KubernetesClusterStatus, error) {
