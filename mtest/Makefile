@@ -13,7 +13,7 @@ NODE4 = 10.0.0.104
 NODE5 = 10.0.0.105
 NODE6 = 10.0.0.106
 PLACEMAT = $(GOPATH)/bin/placemat
-GINKGO = $(GOPATH)/bin/ginkgo
+GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo
 MANAGEMENT_ETCD_VERSION = 3.3.9
 VAULT_VERSION = 0.11.0
 K8S_VERSION = 1.11.2
@@ -76,7 +76,7 @@ $(COREOS_IMAGE):
 	bunzip2 -q $@.bz2
 
 $(GOPATH)/bin/$(DOWNLOADER): ../images.go
-	go install ./$(DOWNLOADER)/...
+	go install -mod=vendor ./$(DOWNLOADER)/...
 
 $(OUTPUT)/etcd $(OUTPUT)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
 	mkdir -p $(OUTPUT)
@@ -90,9 +90,8 @@ $(OUTPUT)/vault: $(VAULT_ARCHIVE)
 
 $(OUTPUT)/cke $(OUTPUT)/ckecli:
 	mkdir -p $(OUTPUT)
-	cd ..; go get -d ./... && \
-		gofail enable && \
-		if GOBIN=$(realpath $(OUTPUT)) go install ./cmd/$(notdir $@); then \
+	cd ..; gofail enable && \
+		if GOBIN=$(realpath $(OUTPUT)) go install -mod=vendor ./cmd/$(notdir $@); then \
 			gofail disable; \
 		else \
 			gofail disable; \
@@ -252,12 +251,9 @@ clean:
 	rm -rf $(OUTPUT)
 
 setup:
-	go get -t -d ./...
-	cd $$GOPATH/src/github.com/coreos/etcd; \
-		git fetch origin && \
-		git checkout v3.3.9
-	go get -u github.com/onsi/ginkgo/ginkgo \
-		github.com/cybozu-go/placemat/... \
-		github.com/coreos/gofail
+	GO111MODULE=off go get -u \
+		github.com/onsi/ginkgo/ginkgo \
+		github.com/coreos/gofail \
+		github.com/cybozu-go/placemat/...
 
 .PHONY:	all clean setup test

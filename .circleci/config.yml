@@ -4,21 +4,17 @@ jobs:
     docker:
       - image: quay.io/cybozu/golang:1.11-bionic
       - image: quay.io/coreos/etcd:v3.3
-    working_directory: /go/src/github.com/cybozu-go/cke
+    working_directory: /work
     steps:
       - checkout
-      # TODO use go mod
-      - run: go get -v -t -d ./...
-      - run: (cd /go/src/github.com/coreos/etcd; git checkout v3.3.9)
-      - run: go get -v -t -d ./...
-      - run: test -z "$(goimports -d . | tee /dev/stderr)"
-      - run: golint -set_exit_status ./...
-      - run: go test -race -v ./...
+      - run: test -z "$(gofmt -s -l . | grep -v '^vendor' | tee /dev/stderr)"
+      - run: golint -set_exit_status $(go list ./... | grep -v /vendor/)
+      - run: go install -mod=vendor ./cmd/... ./tools/...
+      - run: go test -mod=vendor -race -v ./...
       - run:
           name: copy to shared workspace
           command: |
             mkdir -p /tmp/workspace
-            go get github.com/cybozu/neco-gcp/neco-test/cke/...
             cp $(which create-disk-if-not-exists) /tmp/workspace/
             cp $(which create-qcow) /tmp/workspace/
       - persist_to_workspace:

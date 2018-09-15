@@ -46,10 +46,13 @@ chmod 1777 /var/scratch
 # Run mtest
 GOPATH=\$HOME/go
 export GOPATH
+GO111MODULE=on
+export GO111MODULE
 PATH=/usr/local/go/bin:\$GOPATH/bin:\$PATH
 export PATH
 
-git clone https://github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME} \$HOME/go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
+git clone https://github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME} \
+    \$HOME/go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
 cd \$HOME/go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
 git checkout -qf ${CIRCLE_SHA1}
 
