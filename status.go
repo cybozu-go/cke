@@ -13,10 +13,10 @@ import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
-	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 
 	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,6 +30,9 @@ type EtcdClusterStatus struct {
 // KubernetesClusterStatus contains kubernetes cluster configurations
 type KubernetesClusterStatus struct {
 	Nodes []core.Node
+
+	RBACRoleExists        bool
+	RBACRoleBindingExists bool
 }
 
 // ClusterStatus represents the working cluster status.
@@ -100,7 +103,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 		env.Go(func(ctx context.Context) error {
 			ns, err := c.getNodeStatus(ctx, inf, n, cluster)
 			if err != nil {
-				return errors.Wrap(err, n.Address)
+				return fmt.Errorf("%s: %v", n.Address, err)
 			}
 			mu.Lock()
 			statuses[n.Address] = ns
@@ -323,6 +326,25 @@ func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastr
 	s := KubernetesClusterStatus{
 		Nodes: resp.Items,
 	}
+
+	_, err = clientset.RbacV1().ClusterRoles().Get(rbacRoleName, meta.GetOptions{})
+	switch {
+	case err == nil:
+		s.RBACRoleExists = true
+	case errors.IsNotFound(err):
+	default:
+		return KubernetesClusterStatus{}, err
+	}
+
+	_, err = clientset.RbacV1().ClusterRoleBindings().Get(rbacRoleBindingName, meta.GetOptions{})
+	switch {
+	case err == nil:
+		s.RBACRoleBindingExists = true
+	case errors.IsNotFound(err):
+	default:
+		return KubernetesClusterStatus{}, err
+	}
+
 	return s, nil
 }
 

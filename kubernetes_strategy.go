@@ -59,7 +59,18 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	}
 
 	// Check diff of command options
-	return kubernetesOptionsDecideToDo(c, cs)
+	op := kubernetesOptionsDecideToDo(c, cs)
+	if op != nil {
+		return op
+	}
+
+	// Configure kubernetes
+	ks := cs.Kubernetes
+	if !ks.RBACRoleExists || !ks.RBACRoleBindingExists {
+		return KubeRBACRoleInstallOp(cpNodes[0], ks.RBACRoleExists)
+	}
+
+	return nil
 }
 
 func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {

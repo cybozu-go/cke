@@ -12,6 +12,9 @@ const (
 	kubeletContainerName               = "kubelet"
 	pauseContainerName                 = "pause"
 	riversContainerName                = "rivers"
+
+	rbacRoleName        = "system:kube-apiserver-to-kubelet"
+	rbacRoleBindingName = "system:kube-apiserver"
 )
 
 var (
@@ -99,6 +102,12 @@ type kubeWorkerRestartOp struct {
 	options Options
 
 	step int
+}
+
+type kubeRBACRoleInstallOp struct {
+	apiserver     *Node
+	roleExists    bool
+	bindingExists bool
 }
 
 // RiversBootOp returns an Operator to bootstrap rivers cluster.
@@ -685,6 +694,30 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		return nil
 
 	}
+}
+
+// KubeRBACRoleInstallOp returns an Operator to install ClusterRole and binding for RBAC.
+func KubeRBACRoleInstallOp(apiserver *Node, roleExists bool) Operator {
+	return &kubeRBACRoleInstallOp{
+		apiserver:  apiserver,
+		roleExists: roleExists,
+	}
+}
+
+func (o *kubeRBACRoleInstallOp) Name() string {
+	return "install-rbac-role"
+}
+
+func (o *kubeRBACRoleInstallOp) NextCommand() Commander {
+	switch {
+	case !o.roleExists:
+		o.roleExists = true
+		return makeRBACRoleCommand{o.apiserver}
+	case !o.bindingExists:
+		o.bindingExists = true
+		return makeRBACRoleBindingCommand{o.apiserver}
+	}
+	return nil
 }
 
 // ProxyParams returns a ServiceParams form kube-proxy

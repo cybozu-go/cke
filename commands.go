@@ -8,6 +8,8 @@ import (
 
 	"github.com/cybozu-go/cmd"
 	yaml "gopkg.in/yaml.v2"
+	rbac "k8s.io/api/rbac/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -624,6 +626,101 @@ func (c makeKubeletKubeconfigCommand) Command() Command {
 	return Command{
 		Name:   "make-kubelet-kubeconfig",
 		Target: strings.Join(targets, ","),
+	}
+}
+
+type makeRBACRoleCommand struct {
+	apiserver *Node
+}
+
+func (c makeRBACRoleCommand) Run(ctx context.Context, inf Infrastructure) error {
+	cs, err := inf.K8sClient(c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	_, err = cs.RbacV1().ClusterRoles().Create(&rbac.ClusterRole{
+		ObjectMeta: meta.ObjectMeta{
+			Name: rbacRoleName,
+			Labels: map[string]string{
+				"kubernetes.io/bootstrapping": "rbac-defaults",
+			},
+			Annotations: map[string]string{
+				// turn on auto-reconciliation
+				// https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation
+				"rbac.authorization.kubernetes.io/autoupdate": "true",
+			},
+		},
+		Rules: []rbac.PolicyRule{
+			{
+				APIGroups: []string{""},
+				// these are virtual resources.
+				// see https://github.com/kubernetes/kubernetes/issues/44330#issuecomment-293768369
+				Resources: []string{
+					"nodes/proxy",
+					"nodes/stats",
+					"nodes/log",
+					"nodes/spec",
+					"nodes/metrics",
+				},
+				Verbs: []string{"*"},
+			},
+		},
+	})
+
+	return err
+}
+
+func (c makeRBACRoleCommand) Command() Command {
+	return Command{
+		Name:   "makeClusterRole",
+		Target: rbacRoleName,
+	}
+}
+
+type makeRBACRoleBindingCommand struct {
+	apiserver *Node
+}
+
+func (c makeRBACRoleBindingCommand) Run(ctx context.Context, inf Infrastructure) error {
+	cs, err := inf.K8sClient(c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	_, err = cs.RbacV1().ClusterRoleBindings().Create(&rbac.ClusterRoleBinding{
+		ObjectMeta: meta.ObjectMeta{
+			Name: rbacRoleBindingName,
+			Labels: map[string]string{
+				"kubernetes.io/bootstrapping": "rbac-defaults",
+			},
+			Annotations: map[string]string{
+				// turn on auto-reconciliation
+				// https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation
+				"rbac.authorization.kubernetes.io/autoupdate": "true",
+			},
+		},
+		RoleRef: rbac.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     rbacRoleName,
+		},
+		Subjects: []rbac.Subject{
+			{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "User",
+				Name:     "kubernetes",
+			},
+		},
+	})
+
+	return err
+}
+
+func (c makeRBACRoleBindingCommand) Command() Command {
+	return Command{
+		Name:   "makeClusterRoleBinding",
+		Target: rbacRoleBindingName,
 	}
 }
 
