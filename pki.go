@@ -175,7 +175,7 @@ func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node)
 			"allow_any_name":    "true",
 		},
 		map[string]interface{}{
-			"common_name":          node.Nodename(),
+			"common_name":          "kubernetes",
 			"alt_names":            "localhost,kubernetes.default",
 			"ip_sans":              "127.0.0.1," + node.Address,
 			"exclude_cn_from_sans": "true",

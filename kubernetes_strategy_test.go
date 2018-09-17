@@ -34,6 +34,10 @@ type KubernetesTestConfiguration struct {
 	CurrentSchedulerArgs         []string
 	CurrentKubeletArgs           []string
 	CurrentProxyArgs             []string
+
+	// for kubelet
+	CurrentKubeletDomain    string
+	CurrentKubeletAllowSwap bool
 }
 
 func (c *KubernetesTestConfiguration) Cluster() *Cluster {
@@ -69,7 +73,15 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 			ControllerManager: KubeComponentStatus{ServiceStatus{BuiltInParams: ControllerManagerParams("test", "10.20.30.40/31"), ExtraParams: ServiceParams{ExtraArguments: c.CurrentControllerManagerArgs}}, false},
 			Scheduler:         KubeComponentStatus{ServiceStatus{BuiltInParams: SchedulerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentSchedulerArgs}}, false},
 			Proxy:             KubeComponentStatus{ServiceStatus{BuiltInParams: ProxyParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentProxyArgs}}, false},
-			Kubelet:           KubeComponentStatus{ServiceStatus{BuiltInParams: KubeletServiceParams(&Node{Address: addr}), ExtraParams: ServiceParams{ExtraArguments: c.CurrentKubeletArgs}}, false},
+			Kubelet: KubeletStatus{
+				ServiceStatus{
+					BuiltInParams: KubeletServiceParams(&Node{Address: addr}),
+					ExtraParams:   ServiceParams{ExtraArguments: c.CurrentKubeletArgs},
+				},
+				false,
+				c.CurrentKubeletDomain,
+				c.CurrentKubeletAllowSwap,
+			},
 		}
 	}
 	for _, addr := range c.Rivers {

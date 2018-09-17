@@ -134,7 +134,13 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		if !KubeletServiceParams(n).Equal(status.BuiltInParams) {
 			return true
 		}
-		if !c.Options.Kubelet.ToServiceParams().Equal(status.ExtraParams) {
+		if !c.Options.Kubelet.ServiceParams.Equal(status.ExtraParams) {
+			return true
+		}
+		if c.Options.Kubelet.Domain != status.Domain {
+			return true
+		}
+		if c.Options.Kubelet.AllowSwap != status.AllowSwap {
 			return true
 		}
 		return false

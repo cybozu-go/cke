@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cmd"
+	yaml "gopkg.in/yaml.v2"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -543,43 +544,72 @@ func (c makeProxyKubeconfigCommand) Command() Command {
 type makeKubeletKubeconfigCommand struct {
 	nodes   []*Node
 	cluster string
+	params  KubeletParams
 }
 
 func (c makeKubeletKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
-	const path = "/etc/kubernetes/kubelet/kubeconfig"
-	dir := filepath.Dir(path)
+	const kubeletConfigPath = "/etc/kubernetes/kubelet/config.yml"
+	const kubeconfigPath = "/etc/kubernetes/kubelet/kubeconfig"
+	caPath := K8sPKIPath("ca.crt")
+	tlsCertPath := K8sPKIPath("kubelet.crt")
+	tlsKeyPath := K8sPKIPath("kubelet.key")
 
 	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
 	if err != nil {
 		return err
 	}
 
+	cfg := &KubeletConfiguration{
+		APIVersion:            "kubelet.config.k8s.io/v1beta1",
+		Kind:                  "KubeletConfiguration",
+		ReadOnlyPort:          0,
+		TLSCertFile:           tlsCertPath,
+		TLSPrivateKeyFile:     tlsKeyPath,
+		Authentication:        KubeletAuthentication{ClientCAFile: caPath},
+		Authorization:         KubeletAuthorization{Mode: "Webhook"},
+		HealthzBindAddress:    "0.0.0.0",
+		ClusterDomain:         c.params.Domain,
+		RuntimeRequestTimeout: "15m",
+		FailSwapOn:            !c.params.AllowSwap,
+	}
+	cfgData, err := yaml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
 	env := cmd.NewEnvironment(ctx)
-	binds := []Mount{{
-		Source:      dir,
-		Destination: filepath.Join("/mnt", dir),
-	}}
-	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", dir)
-	ddCommand := "dd of=" + filepath.Join("/mnt", path)
-
 	for _, n := range c.nodes {
-		crt, key, err := KubernetesCA{}.issueForKubelet(ctx, inf, n)
-		if err != nil {
-			return err
-		}
-		cfg := kubeletKubeconfig(c.cluster, n, ca, crt, key)
-		src, err := clientcmd.Write(*cfg)
-		if err != nil {
-			return err
-		}
+		n := n
 
-		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
-			err := ce.Run("tools", binds, mkdirCommand)
+			err := writeFile(inf, n, caPath, ca)
 			if err != nil {
 				return err
 			}
-			return ce.RunWithInput("tools", binds, ddCommand, string(src))
+
+			crt, key, err := KubernetesCA{}.issueForKubelet(ctx, inf, n)
+			if err != nil {
+				return err
+			}
+			cfg := kubeletKubeconfig(c.cluster, n, ca, crt, key)
+			kubeconfig, err := clientcmd.Write(*cfg)
+			if err != nil {
+				return err
+			}
+			err = writeFile(inf, n, kubeconfigPath, string(kubeconfig))
+			if err != nil {
+				return err
+			}
+
+			err = writeFile(inf, n, tlsCertPath, crt)
+			if err != nil {
+				return err
+			}
+			err = writeFile(inf, n, tlsKeyPath, key)
+			if err != nil {
+				return err
+			}
+			return writeFile(inf, n, kubeletConfigPath, string(cfgData))
 		})
 	}
 	env.Stop()

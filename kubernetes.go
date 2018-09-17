@@ -436,8 +436,7 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet stri
 		"--service-account-key-file=" + K8sPKIPath("service-account.crt"),
 		"--service-account-lookup",
 
-		// for RBAC
-		// "--authorization-mode=Node,RBAC",
+		"--authorization-mode=Node,RBAC",
 
 		"--advertise-address=" + advertiseAddress,
 		"--service-cluster-ip-range=" + serviceSubnet,
@@ -545,7 +544,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster}
+		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster, o.options.Kubelet}
 	case 4:
 		o.step++
 		if len(o.proxies) == 0 {
@@ -572,7 +571,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		for _, n := range o.kubelets {
 			params[n.Address] = KubeletServiceParams(n)
 		}
-		return runContainerParamsCommand{o.kubelets, kubeletContainerName, opts, params, o.options.Kubelet.ToServiceParams()}
+		return runContainerParamsCommand{o.kubelets, kubeletContainerName, opts, params, o.options.Kubelet.ServiceParams}
 	case 7:
 		o.step++
 		if len(o.proxies) == 0 {
@@ -626,7 +625,7 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster}
+		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster, o.options.Kubelet}
 	case 3:
 		o.step++
 		if len(o.proxies) == 0 {
@@ -665,7 +664,7 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		for _, n := range o.kubelets {
 			params[n.Address] = KubeletServiceParams(n)
 		}
-		return runContainerParamsCommand{o.kubelets, kubeletContainerName, opts, params, o.options.Kubelet.ToServiceParams()}
+		return runContainerParamsCommand{o.kubelets, kubeletContainerName, opts, params, o.options.Kubelet.ServiceParams}
 	case 8:
 		o.step++
 		if len(o.proxies) == 0 {
@@ -711,12 +710,12 @@ func ProxyParams() ServiceParams {
 func KubeletServiceParams(n *Node) ServiceParams {
 	args := []string{
 		"kubelet",
+		"--config=/etc/kubernetes/kubelet/config.yml",
+		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--allow-privileged=true",
 		"--hostname-override=" + n.Nodename(),
 		"--pod-infra-container-image=" + Image(pauseContainerName),
-		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--log-dir=/var/log/kubernetes/kubelet",
-		"--healthz-bind-address=0.0.0.0",
 	}
 	return ServiceParams{
 		ExtraArguments: args,
