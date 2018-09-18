@@ -388,6 +388,10 @@ func (c setupEtcdAuthCommand) Run(ctx context.Context, inf Infrastructure) error
 	if err != nil {
 		return err
 	}
+	_, err = cli.UserGrantRole(ctx, "root", "root")
+	if err != nil {
+		return err
+	}
 
 	err = addUserRole(ctx, cli, "kube-apiserver", "/registry/")
 	if err != nil {
