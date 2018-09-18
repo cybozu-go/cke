@@ -222,7 +222,7 @@ func (c Controller) getNodeStatus(ctx context.Context, inf Infrastructure, node 
 			return nil, err
 		}
 
-		cfgData, _, _ := agent.Run("cat /etc/kubernetes/kubelet/config.yml")
+		cfgData, _, err := agent.Run("cat /etc/kubernetes/kubelet/config.yml")
 		if err == nil {
 			v := struct {
 				ClusterDomain string `yaml:"clusterDomain"`
