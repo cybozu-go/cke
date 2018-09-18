@@ -14,6 +14,7 @@ type Node struct {
 	Hostname     string            `json:"hostname"      yaml:"hostname"`
 	User         string            `json:"user"          yaml:"user"`
 	SSHKey       string            `json:"ssh_key"       yaml:"ssh_key"`
+	SELinux      bool              `json:"selinux"       yaml:"selinux"`
 	ControlPlane bool              `json:"control_plane" yaml:"control_plane"`
 	Labels       map[string]string `json:"labels"        yaml:"labels"`
 
@@ -33,6 +34,7 @@ type Mount struct {
 	Source      string `json:"source"      yaml:"source"`
 	Destination string `json:"destination" yaml:"destination"`
 	ReadOnly    bool   `json:"read_only"   yaml:"read_only"`
+	Propagation string `json:"propagation" yaml:"propagation"`
 }
 
 // Equal returns true if the mount is equals to other one, otherwise return false
@@ -83,6 +85,7 @@ type Cluster struct {
 	Name          string   `json:"name"           yaml:"name"`
 	Nodes         []*Node  `json:"nodes"          yaml:"nodes"`
 	SSHKey        string   `json:"ssh_key"        yaml:"ssh_key"`
+	SELinux       bool     `json:"selinux"        yaml:"selinux"`
 	ServiceSubnet string   `json:"service_subnet" yaml:"service_subnet"`
 	DNSServers    []string `json:"dns_servers"    yaml:"dns_servers"`
 	Options       Options  `json:"options"        yaml:"options"`
@@ -133,6 +136,9 @@ func (c *Cluster) validateNode(n *Node) error {
 	key := n.SSHKey
 	if len(key) == 0 {
 		key = c.SSHKey
+	}
+	if c.SELinux {
+		n.SELinux = true
 	}
 
 	signer, err := ssh.ParsePrivateKey([]byte(key))

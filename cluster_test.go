@@ -21,6 +21,7 @@ nodes:
     labels:
       label1: value1
 ssh_key: clusterkey
+selinux: true
 service_subnet: 12.34.56.00/24
 dns_servers: ["1.1.1.1", "8.8.8.8"]
 options:
@@ -85,6 +86,9 @@ options:
 	if c.SSHKey != "clusterkey" {
 		t.Error(`c.SSHKey != "clusterkey"`)
 	}
+	if !c.SELinux {
+		t.Error(`c.SELinux is not set`)
+	}
 	if c.ServiceSubnet != "12.34.56.00/24" {
 		t.Error(`c.ServiceSubnet != "12.34.56.00/24"`)
 	}
@@ -98,7 +102,7 @@ options:
 	if !reflect.DeepEqual(c.Options.Etcd.ExtraArguments, []string{"arg1", "arg2"}) {
 		t.Error(`!reflect.DeepEqual(c.Options.Etcd.ExtraArguments, []string{"arg1", "arg2"})`)
 	}
-	if !reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true}}) {
+	if !reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true, ""}}) {
 		t.Error(`!reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true}})`)
 	}
 	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {

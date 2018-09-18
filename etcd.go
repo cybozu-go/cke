@@ -293,7 +293,7 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error
 		}
 	}
 
-	return ce.RunSystem(etcdContainerName, c.opts, etcdBuiltInParams(c.node, initialCluster, "existing"), c.extra)
+	return ce.RunSystem(etcdContainerName, c.opts, etcdBuiltInParams(c.node, initialCluster, "existing"), c.extra, c.node.SELinux)
 }
 
 func (c addEtcdMemberCommand) Command() Command {
