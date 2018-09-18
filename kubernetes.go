@@ -411,7 +411,6 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 	default:
 		return nil
 	}
-
 }
 
 // APIServerParams returns built-in a ServiceParams form kube-apiserver
@@ -596,9 +595,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		return runContainerCommand{o.proxies, kubeProxyContainerName, opts, ProxyParams(), o.options.Proxy}
 	default:
 		return nil
-
 	}
-	return nil
 }
 
 // KubeWorkerRestartOp returns an Operator to restart kubernetes workers
@@ -695,7 +692,6 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		return runContainerCommand{o.proxies, kubeProxyContainerName, opts, ProxyParams(), o.options.Proxy}
 	default:
 		return nil
-
 	}
 }
 

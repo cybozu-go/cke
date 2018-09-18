@@ -192,7 +192,7 @@ func getClusterStatus() (*cke.ClusterStatus, error) {
 	}
 	defer etcd.Close()
 
-	inf, err := cke.NewInfrastructure(context.Background(), cluster, cke.Storage{etcd})
+	inf, err := cke.NewInfrastructure(context.Background(), cluster, cke.Storage{Client: etcd})
 	if err != nil {
 		return nil, err
 	}

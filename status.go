@@ -349,8 +349,6 @@ func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastr
 }
 
 func (c Controller) checkHealthz(ctx context.Context, inf Infrastructure, addr string, port uint16) (bool, error) {
-	return true, nil
-
 	url := "http://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
