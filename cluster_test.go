@@ -86,6 +86,9 @@ options:
 	if c.SSHKey != "clusterkey" {
 		t.Error(`c.SSHKey != "clusterkey"`)
 	}
+	if !c.SELinux {
+		t.Error(`c.SELinux is not set`)
+	}
 	if c.ServiceSubnet != "12.34.56.00/24" {
 		t.Error(`c.ServiceSubnet != "12.34.56.00/24"`)
 	}
