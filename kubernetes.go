@@ -451,6 +451,7 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet stri
 		"--service-cluster-ip-range=" + serviceSubnet,
 		"--audit-log-path=/var/log/kubernetes/apiserver/audit.log",
 		"--log-dir=/var/log/kubernetes/apiserver/",
+		"--logtostderr=false",
 		"--machine-id-file=/etc/machine-id",
 	}
 	return ServiceParams{
@@ -471,6 +472,7 @@ func ControllerManagerParams(clusterName, serviceSubnet string) ServiceParams {
 		"--service-cluster-ip-range=" + serviceSubnet,
 		"--kubeconfig=/etc/kubernetes/controller-manager/kubeconfig",
 		"--log-dir=/var/log/kubernetes/controller-manager",
+		"--logtostderr=false",
 
 		// ToDo: cluster signing
 		// https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/#a-note-to-cluster-administrators
@@ -501,6 +503,7 @@ func SchedulerParams() ServiceParams {
 		"scheduler",
 		"--kubeconfig=/etc/kubernetes/scheduler/kubeconfig",
 		"--log-dir=/var/log/kubernetes/scheduler",
+		"--logtostderr=false",
 	}
 	return ServiceParams{
 		ExtraArguments: args,
@@ -727,6 +730,7 @@ func ProxyParams() ServiceParams {
 		"--proxy-mode=ipvs",
 		"--kubeconfig=/etc/kubernetes/proxy/kubeconfig",
 		"--log-dir=/var/log/kubernetes/proxy",
+		"--logtostderr=false",
 	}
 	return ServiceParams{
 		ExtraArguments: args,
@@ -749,6 +753,7 @@ func KubeletServiceParams(n *Node) ServiceParams {
 		"--hostname-override=" + n.Nodename(),
 		"--pod-infra-container-image=" + Image(pauseContainerName),
 		"--log-dir=/var/log/kubernetes/kubelet",
+		"--logtostderr=false",
 	}
 	return ServiceParams{
 		ExtraArguments: args,
