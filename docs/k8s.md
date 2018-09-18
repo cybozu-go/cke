@@ -37,11 +37,13 @@ After kubernetes bootstrapped, CKE deploys the following applications:
 Unchangeable features
 ---------------------
 
+* [RBAC][] is enabled.
 * [CoreDNS][] is installed.
 * [PodSecurity][] is enabled.
 * `kube-proxy` runs in IPVS mode.
 * CNI is enabled.
 
+[RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 [CoreDNS]: https://github.com/coredns/coredns
 [PodSecurity]: https://kubernetes.io/docs/concepts/policy/pod-security-policy/
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/

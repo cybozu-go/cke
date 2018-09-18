@@ -48,7 +48,6 @@ options:
     allow_swap: true
     extra_args:
       - arg1
-rbac: true
 `
 	c := new(Cluster)
 	err := yaml.Unmarshal([]byte(y), c)
@@ -113,10 +112,6 @@ rbac: true
 	}
 	if !reflect.DeepEqual(c.Options.Kubelet.ExtraArguments, []string{"arg1"}) {
 		t.Error(`!reflect.DeepEqual(c.Options.Kubelet.ExtraArguments, []string{"arg1"})`)
-	}
-
-	if !c.RBAC {
-		t.Error(`!c.RBAC`)
 	}
 }
 

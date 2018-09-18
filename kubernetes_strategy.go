@@ -59,7 +59,18 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	}
 
 	// Check diff of command options
-	return kubernetesOptionsDecideToDo(c, cs)
+	op := kubernetesOptionsDecideToDo(c, cs)
+	if op != nil {
+		return op
+	}
+
+	// Configure kubernetes
+	ks := cs.Kubernetes
+	if !ks.RBACRoleExists || !ks.RBACRoleBindingExists {
+		return KubeRBACRoleInstallOp(cpNodes[0], ks.RBACRoleExists)
+	}
+
+	return nil
 }
 
 func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
@@ -134,7 +145,13 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		if !KubeletServiceParams(n).Equal(status.BuiltInParams) {
 			return true
 		}
-		if !c.Options.Kubelet.ToServiceParams().Equal(status.ExtraParams) {
+		if !c.Options.Kubelet.ServiceParams.Equal(status.ExtraParams) {
+			return true
+		}
+		if c.Options.Kubelet.Domain != status.Domain {
+			return true
+		}
+		if c.Options.Kubelet.AllowSwap != status.AllowSwap {
 			return true
 		}
 		return false

@@ -67,22 +67,6 @@ type KubeletParams struct {
 	AllowSwap     bool   `json:"allow_swap"  yaml:"allow_swap"`
 }
 
-// ToServiceParams returns ServiceParams from KubeletParams
-func (p *KubeletParams) ToServiceParams() ServiceParams {
-	extraArgs := p.ExtraArguments
-	if len(p.Domain) > 0 {
-		extraArgs = append(extraArgs, "--cluster-domain="+p.Domain)
-	}
-	if p.AllowSwap {
-		extraArgs = append(extraArgs, "--fail-swap-on=false")
-	}
-	return ServiceParams{
-		ExtraArguments: extraArgs,
-		ExtraBinds:     p.ExtraBinds,
-		ExtraEnvvar:    p.ExtraEnvvar,
-	}
-}
-
 // Options is a set of optional parameters for k8s components.
 type Options struct {
 	Etcd              EtcdParams    `json:"etcd"                    yaml:"etcd"`
@@ -102,7 +86,6 @@ type Cluster struct {
 	ServiceSubnet string   `json:"service_subnet" yaml:"service_subnet"`
 	DNSServers    []string `json:"dns_servers"    yaml:"dns_servers"`
 	Options       Options  `json:"options"        yaml:"options"`
-	RBAC          bool     `json:"rbac"           yaml:"rbac"`
 }
 
 // Validate validates the cluster definition.

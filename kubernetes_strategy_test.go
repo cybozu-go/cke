@@ -34,6 +34,14 @@ type KubernetesTestConfiguration struct {
 	CurrentSchedulerArgs         []string
 	CurrentKubeletArgs           []string
 	CurrentProxyArgs             []string
+
+	// for kubelet
+	CurrentKubeletDomain    string
+	CurrentKubeletAllowSwap bool
+
+	// for RBAC
+	CurrentRBACRoleExists        bool
+	CurrentRBACRoleBindingExists bool
 }
 
 func (c *KubernetesTestConfiguration) Cluster() *Cluster {
@@ -69,7 +77,15 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 			ControllerManager: KubeComponentStatus{ServiceStatus{BuiltInParams: ControllerManagerParams("test", "10.20.30.40/31"), ExtraParams: ServiceParams{ExtraArguments: c.CurrentControllerManagerArgs}}, false},
 			Scheduler:         KubeComponentStatus{ServiceStatus{BuiltInParams: SchedulerParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentSchedulerArgs}}, false},
 			Proxy:             KubeComponentStatus{ServiceStatus{BuiltInParams: ProxyParams(), ExtraParams: ServiceParams{ExtraArguments: c.CurrentProxyArgs}}, false},
-			Kubelet:           KubeComponentStatus{ServiceStatus{BuiltInParams: KubeletServiceParams(&Node{Address: addr}), ExtraParams: ServiceParams{ExtraArguments: c.CurrentKubeletArgs}}, false},
+			Kubelet: KubeletStatus{
+				ServiceStatus{
+					BuiltInParams: KubeletServiceParams(&Node{Address: addr}),
+					ExtraParams:   ServiceParams{ExtraArguments: c.CurrentKubeletArgs},
+				},
+				false,
+				c.CurrentKubeletDomain,
+				c.CurrentKubeletAllowSwap,
+			},
 		}
 	}
 	for _, addr := range c.Rivers {
@@ -96,7 +112,12 @@ func (c *KubernetesTestConfiguration) ClusterState() *ClusterStatus {
 		nodeStatus[addr].Proxy.Running = true
 	}
 
-	return &ClusterStatus{NodeStatuses: nodeStatus}
+	k8sStatus := KubernetesClusterStatus{
+		RBACRoleExists:        c.CurrentRBACRoleExists,
+		RBACRoleBindingExists: c.CurrentRBACRoleBindingExists,
+	}
+
+	return &ClusterStatus{NodeStatuses: nodeStatus, Kubernetes: k8sStatus}
 }
 
 func testKubernetesDecideToDo(t *testing.T) {
@@ -174,7 +195,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 			},
 		},
 		{
-			Name: "Do notions if the cluster is stable",
+			Name: "Install ClusterRole for RBAC",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers:             allNodes,
@@ -183,6 +204,24 @@ func testKubernetesDecideToDo(t *testing.T) {
 				Schedulers:         cpNodes,
 				Kubelets:           allNodes,
 				Proxies:            allNodes,
+			},
+			Commands: []Command{
+				{"makeClusterRole", rbacRoleName, ""},
+				{"makeClusterRoleBinding", rbacRoleBindingName, ""},
+			},
+		},
+		{
+			Name: "Do nothing if the cluster is stable",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+				Rivers:                       allNodes,
+				APIServers:                   cpNodes,
+				ControllerManagers:           cpNodes,
+				Schedulers:                   cpNodes,
+				Kubelets:                     allNodes,
+				Proxies:                      allNodes,
+				CurrentRBACRoleExists:        true,
+				CurrentRBACRoleBindingExists: true,
 			},
 			Commands: []Command{},
 		},

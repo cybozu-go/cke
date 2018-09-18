@@ -7,6 +7,9 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cmd"
+	yaml "gopkg.in/yaml.v2"
+	rbac "k8s.io/api/rbac/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -543,43 +546,72 @@ func (c makeProxyKubeconfigCommand) Command() Command {
 type makeKubeletKubeconfigCommand struct {
 	nodes   []*Node
 	cluster string
+	params  KubeletParams
 }
 
 func (c makeKubeletKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
-	const path = "/etc/kubernetes/kubelet/kubeconfig"
-	dir := filepath.Dir(path)
+	const kubeletConfigPath = "/etc/kubernetes/kubelet/config.yml"
+	const kubeconfigPath = "/etc/kubernetes/kubelet/kubeconfig"
+	caPath := K8sPKIPath("ca.crt")
+	tlsCertPath := K8sPKIPath("kubelet.crt")
+	tlsKeyPath := K8sPKIPath("kubelet.key")
 
 	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
 	if err != nil {
 		return err
 	}
 
+	cfg := &KubeletConfiguration{
+		APIVersion:            "kubelet.config.k8s.io/v1beta1",
+		Kind:                  "KubeletConfiguration",
+		ReadOnlyPort:          0,
+		TLSCertFile:           tlsCertPath,
+		TLSPrivateKeyFile:     tlsKeyPath,
+		Authentication:        KubeletAuthentication{ClientCAFile: caPath},
+		Authorization:         KubeletAuthorization{Mode: "Webhook"},
+		HealthzBindAddress:    "0.0.0.0",
+		ClusterDomain:         c.params.Domain,
+		RuntimeRequestTimeout: "15m",
+		FailSwapOn:            !c.params.AllowSwap,
+	}
+	cfgData, err := yaml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
 	env := cmd.NewEnvironment(ctx)
-	binds := []Mount{{
-		Source:      dir,
-		Destination: filepath.Join("/mnt", dir),
-	}}
-	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", dir)
-	ddCommand := "dd of=" + filepath.Join("/mnt", path)
-
 	for _, n := range c.nodes {
-		crt, key, err := KubernetesCA{}.issueForKubelet(ctx, inf, n)
-		if err != nil {
-			return err
-		}
-		cfg := kubeletKubeconfig(c.cluster, n, ca, crt, key)
-		src, err := clientcmd.Write(*cfg)
-		if err != nil {
-			return err
-		}
+		n := n
 
-		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
-			err := ce.Run("tools", binds, mkdirCommand)
+			err := writeFile(inf, n, caPath, ca)
 			if err != nil {
 				return err
 			}
-			return ce.RunWithInput("tools", binds, ddCommand, string(src))
+
+			crt, key, err := KubernetesCA{}.issueForKubelet(ctx, inf, n)
+			if err != nil {
+				return err
+			}
+			cfg := kubeletKubeconfig(c.cluster, n, ca, crt, key)
+			kubeconfig, err := clientcmd.Write(*cfg)
+			if err != nil {
+				return err
+			}
+			err = writeFile(inf, n, kubeconfigPath, string(kubeconfig))
+			if err != nil {
+				return err
+			}
+
+			err = writeFile(inf, n, tlsCertPath, crt)
+			if err != nil {
+				return err
+			}
+			err = writeFile(inf, n, tlsKeyPath, key)
+			if err != nil {
+				return err
+			}
+			return writeFile(inf, n, kubeletConfigPath, string(cfgData))
 		})
 	}
 	env.Stop()
@@ -594,6 +626,101 @@ func (c makeKubeletKubeconfigCommand) Command() Command {
 	return Command{
 		Name:   "make-kubelet-kubeconfig",
 		Target: strings.Join(targets, ","),
+	}
+}
+
+type makeRBACRoleCommand struct {
+	apiserver *Node
+}
+
+func (c makeRBACRoleCommand) Run(ctx context.Context, inf Infrastructure) error {
+	cs, err := inf.K8sClient(c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	_, err = cs.RbacV1().ClusterRoles().Create(&rbac.ClusterRole{
+		ObjectMeta: meta.ObjectMeta{
+			Name: rbacRoleName,
+			Labels: map[string]string{
+				"kubernetes.io/bootstrapping": "rbac-defaults",
+			},
+			Annotations: map[string]string{
+				// turn on auto-reconciliation
+				// https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation
+				"rbac.authorization.kubernetes.io/autoupdate": "true",
+			},
+		},
+		Rules: []rbac.PolicyRule{
+			{
+				APIGroups: []string{""},
+				// these are virtual resources.
+				// see https://github.com/kubernetes/kubernetes/issues/44330#issuecomment-293768369
+				Resources: []string{
+					"nodes/proxy",
+					"nodes/stats",
+					"nodes/log",
+					"nodes/spec",
+					"nodes/metrics",
+				},
+				Verbs: []string{"*"},
+			},
+		},
+	})
+
+	return err
+}
+
+func (c makeRBACRoleCommand) Command() Command {
+	return Command{
+		Name:   "makeClusterRole",
+		Target: rbacRoleName,
+	}
+}
+
+type makeRBACRoleBindingCommand struct {
+	apiserver *Node
+}
+
+func (c makeRBACRoleBindingCommand) Run(ctx context.Context, inf Infrastructure) error {
+	cs, err := inf.K8sClient(c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	_, err = cs.RbacV1().ClusterRoleBindings().Create(&rbac.ClusterRoleBinding{
+		ObjectMeta: meta.ObjectMeta{
+			Name: rbacRoleBindingName,
+			Labels: map[string]string{
+				"kubernetes.io/bootstrapping": "rbac-defaults",
+			},
+			Annotations: map[string]string{
+				// turn on auto-reconciliation
+				// https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation
+				"rbac.authorization.kubernetes.io/autoupdate": "true",
+			},
+		},
+		RoleRef: rbac.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     rbacRoleName,
+		},
+		Subjects: []rbac.Subject{
+			{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "User",
+				Name:     "kubernetes",
+			},
+		},
+	})
+
+	return err
+}
+
+func (c makeRBACRoleBindingCommand) Command() Command {
+	return Command{
+		Name:   "makeClusterRoleBinding",
+		Target: rbacRoleBindingName,
 	}
 }
 

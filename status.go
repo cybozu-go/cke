@@ -13,9 +13,10 @@ import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
-	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v2"
 
 	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,6 +30,9 @@ type EtcdClusterStatus struct {
 // KubernetesClusterStatus contains kubernetes cluster configurations
 type KubernetesClusterStatus struct {
 	Nodes []core.Node
+
+	RBACRoleExists        bool
+	RBACRoleBindingExists bool
 }
 
 // ClusterStatus represents the working cluster status.
@@ -36,7 +40,6 @@ type KubernetesClusterStatus struct {
 type ClusterStatus struct {
 	Name         string
 	NodeStatuses map[string]*NodeStatus // keys are IP address strings.
-	RBAC         bool                   // true if RBAC is enabled
 
 	Etcd       EtcdClusterStatus
 	Kubernetes KubernetesClusterStatus
@@ -54,7 +57,7 @@ type NodeStatus struct {
 	ControllerManager KubeComponentStatus
 	Scheduler         KubeComponentStatus
 	Proxy             KubeComponentStatus
-	Kubelet           KubeComponentStatus
+	Kubelet           KubeletStatus
 	Labels            map[string]string // are labels for k8s Node resource.
 }
 
@@ -81,6 +84,14 @@ type KubeComponentStatus struct {
 	IsHealthy bool
 }
 
+// KubeletStatus represents kubelet status and health
+type KubeletStatus struct {
+	ServiceStatus
+	IsHealthy bool
+	Domain    string
+	AllowSwap bool
+}
+
 // GetClusterStatus consults the whole cluster and constructs *ClusterStatus.
 func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf Infrastructure) (*ClusterStatus, error) {
 	var mu sync.Mutex
@@ -92,7 +103,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 		env.Go(func(ctx context.Context) error {
 			ns, err := c.getNodeStatus(ctx, inf, n, cluster)
 			if err != nil {
-				return errors.Wrap(err, n.Address)
+				return fmt.Errorf("%s: %v", n.Address, err)
 			}
 			mu.Lock()
 			statuses[n.Address] = ns
@@ -151,7 +162,8 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 
 func (c Controller) getNodeStatus(ctx context.Context, inf Infrastructure, node *Node, cluster *Cluster) (*NodeStatus, error) {
 	status := &NodeStatus{}
-	ce := Docker(inf.Agent(node.Address))
+	agent := inf.Agent(node.Address)
+	ce := Docker(agent)
 
 	ss, err := ce.Inspect([]string{
 		etcdContainerName,
@@ -159,8 +171,8 @@ func (c Controller) getNodeStatus(ctx context.Context, inf Infrastructure, node 
 		kubeAPIServerContainerName,
 		kubeControllerManagerContainerName,
 		kubeSchedulerContainerName,
-		kubeletContainerName,
 		kubeProxyContainerName,
+		kubeletContainerName,
 	})
 	if err != nil {
 		return nil, err
@@ -198,18 +210,31 @@ func (c Controller) getNodeStatus(ctx context.Context, inf Infrastructure, node 
 		}
 	}
 
-	status.Kubelet = KubeComponentStatus{ss[kubeletContainerName], false}
+	// TODO: doe to the following bug, health status cannot be checked for proxy.
+	// https://github.com/kubernetes/kubernetes/issues/65118
+	status.Proxy = KubeComponentStatus{ss[kubeProxyContainerName], false}
+	status.Proxy.IsHealthy = status.Proxy.Running
+
+	status.Kubelet = KubeletStatus{ss[kubeletContainerName], false, "", false}
 	if status.Kubelet.Running {
 		status.Kubelet.IsHealthy, err = c.checkHealthz(ctx, inf, node.Address, 10248)
 		if err != nil {
 			return nil, err
 		}
-	}
 
-	// NOTE unable to get kube-proxy's health status
-	// https://github.com/kubernetes/kubernetes/issues/65118
-	status.Proxy = KubeComponentStatus{ss[kubeProxyContainerName], false}
-	status.Proxy.IsHealthy = status.Proxy.Running
+		cfgData, _, err := agent.Run("cat /etc/kubernetes/kubelet/config.yml")
+		if err == nil {
+			v := struct {
+				ClusterDomain string `yaml:"clusterDomain"`
+				FailSwapOn    bool   `yaml:"failSwapOn"`
+			}{}
+			err = yaml.Unmarshal(cfgData, &v)
+			if err == nil {
+				status.Kubelet.Domain = v.ClusterDomain
+				status.Kubelet.AllowSwap = !v.FailSwapOn
+			}
+		}
+	}
 
 	return status, nil
 }
@@ -301,6 +326,25 @@ func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastr
 	s := KubernetesClusterStatus{
 		Nodes: resp.Items,
 	}
+
+	_, err = clientset.RbacV1().ClusterRoles().Get(rbacRoleName, meta.GetOptions{})
+	switch {
+	case err == nil:
+		s.RBACRoleExists = true
+	case errors.IsNotFound(err):
+	default:
+		return KubernetesClusterStatus{}, err
+	}
+
+	_, err = clientset.RbacV1().ClusterRoleBindings().Get(rbacRoleBindingName, meta.GetOptions{})
+	switch {
+	case err == nil:
+		s.RBACRoleBindingExists = true
+	case errors.IsNotFound(err):
+	default:
+		return KubernetesClusterStatus{}, err
+	}
+
 	return s, nil
 }
 
