@@ -57,9 +57,9 @@ func TestCompareMounts(t *testing.T) {
 		{nil, []Mount{}, true},
 		{nil, nil, true},
 		{[]Mount{}, []Mount{}, true},
-		{[]Mount{{"/var", "/var", true}}, []Mount{{"/var", "/var", true}}, true},
+		{[]Mount{{"/var", "/var", true, "", ""}}, []Mount{{"/var", "/var", true, "", ""}}, true},
 
-		{[]Mount{{"/tmp", "/tmp", true}}, []Mount{{"/var", "/var", true}}, false},
+		{[]Mount{{"/tmp", "/tmp", true, "", ""}}, []Mount{{"/var", "/var", true, "", ""}}, false},
 	}
 	for _, c := range cases {
 		if compareMounts(c.m1, c.m2) != c.ok {
