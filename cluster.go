@@ -35,7 +35,6 @@ type Mount struct {
 	Destination string `json:"destination" yaml:"destination"`
 	ReadOnly    bool   `json:"read_only"   yaml:"read_only"`
 	Propagation string `json:"propagation" yaml:"propagation"`
-	Mode        string `json:"mode"        yaml:"mode"`
 }
 
 // Equal returns true if the mount is equals to other one, otherwise return false

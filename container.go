@@ -151,14 +151,11 @@ func (c docker) RunSystem(name string, opts []string, params, extra ServiceParam
 		var opts []string
 		if m.ReadOnly {
 			opts = append(opts, "ro")
+		} else if selinux {
+			opts = append(opts, "z")
 		}
 		if len(m.Propagation) > 0 {
 			opts = append(opts, m.Propagation)
-		}
-		if len(m.Mode) > 0 {
-			if selinux || (m.Mode != "z" && m.Mode != "Z") {
-				opts = append(opts, m.Mode)
-			}
 		}
 		args = append(args, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, strings.Join(opts, ",")))
 	}
