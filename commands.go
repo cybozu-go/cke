@@ -234,7 +234,7 @@ func (c runContainerCommand) Run(ctx context.Context, inf Infrastructure) error 
 	for _, n := range c.nodes {
 		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
-			return ce.RunSystem(c.name, c.img, c.opts, c.params, c.extra, n.SELinux)
+			return ce.RunSystem(c.name, c.img, c.opts, c.params, c.extra)
 		})
 	}
 	env.Stop()
@@ -268,7 +268,7 @@ func (c runContainerParamsCommand) Run(ctx context.Context, inf Infrastructure) 
 		ce := Docker(inf.Agent(n.Address))
 		params := c.params[n.Address]
 		env.Go(func(ctx context.Context) error {
-			return ce.RunSystem(c.name, c.img, c.opts, params, c.extra, n.SELinux)
+			return ce.RunSystem(c.name, c.img, c.opts, params, c.extra)
 		})
 	}
 	env.Stop()

@@ -21,7 +21,6 @@ nodes:
     labels:
       label1: value1
 ssh_key: clusterkey
-selinux: true
 service_subnet: 12.34.56.00/24
 pod_subnet: 10.1.0.0/16
 dns_servers: ["1.1.1.1", "8.8.8.8"]
@@ -36,6 +35,8 @@ options:
       - source: src1
         destination: target1
         read_only: true
+        propagation: shared
+        selinux_label: z
   kube-controller-manager:
     extra_env:
       env1: val1
@@ -87,9 +88,6 @@ options:
 	if c.SSHKey != "clusterkey" {
 		t.Error(`c.SSHKey != "clusterkey"`)
 	}
-	if !c.SELinux {
-		t.Error(`c.SELinux is not set`)
-	}
 	if c.ServiceSubnet != "12.34.56.00/24" {
 		t.Error(`c.ServiceSubnet != "12.34.56.00/24"`)
 	}
@@ -106,7 +104,7 @@ options:
 	if !reflect.DeepEqual(c.Options.Etcd.ExtraArguments, []string{"arg1", "arg2"}) {
 		t.Error(`!reflect.DeepEqual(c.Options.Etcd.ExtraArguments, []string{"arg1", "arg2"})`)
 	}
-	if !reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true, ""}}) {
+	if !reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true, PropagationShared, LabelShared}}) {
 		t.Error(`!reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true}})`)
 	}
 	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {
@@ -136,6 +134,7 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "",
 				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
 			},
 			true,
 		},
@@ -144,6 +143,16 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "",
+				PodSubnet:     "10.1.0.0/16",
+			},
+			true,
+		},
+		{
+			"No pod subnet",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.1.0.0/16",
+				PodSubnet:     "",
 			},
 			true,
 		},
@@ -152,6 +161,7 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
 				DNSServers:    []string{"a.b.c.d"},
 			},
 			true,
@@ -161,6 +171,7 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
 			},
 			false,
 		},

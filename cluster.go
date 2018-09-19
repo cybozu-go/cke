@@ -14,7 +14,6 @@ type Node struct {
 	Hostname     string            `json:"hostname"      yaml:"hostname"`
 	User         string            `json:"user"          yaml:"user"`
 	SSHKey       string            `json:"ssh_key"       yaml:"ssh_key"`
-	SELinux      bool              `json:"selinux"       yaml:"selinux"`
 	ControlPlane bool              `json:"control_plane" yaml:"control_plane"`
 	Labels       map[string]string `json:"labels"        yaml:"labels"`
 
@@ -29,12 +28,45 @@ func (n *Node) Nodename() string {
 	return n.Hostname
 }
 
+// BindPropagation is bind propagation option for Docker
+// https://docs.docker.com/storage/bind-mounts/#configure-bind-propagation
+type BindPropagation string
+
+// Bind propagation definitions
+const (
+	PropagationShared   = BindPropagation("shared")
+	PropagationSlave    = BindPropagation("slave")
+	PropagationPrivate  = BindPropagation("private")
+	PropagationRShared  = BindPropagation("rshared")
+	PropagationRSlave   = BindPropagation("rslave")
+	PropagationRPrivate = BindPropagation("rprivate")
+)
+
+func (p BindPropagation) String() string {
+	return string(p)
+}
+
+// SELinuxLabel is selinux label of the host file or directory
+// https://docs.docker.com/storage/bind-mounts/#configure-the-selinux-label
+type SELinuxLabel string
+
+// SELinux Label definitions
+const (
+	LabelShared  = SELinuxLabel("z")
+	LabelPrivate = SELinuxLabel("Z")
+)
+
+func (l SELinuxLabel) String() string {
+	return string(l)
+}
+
 // Mount is volume mount information
 type Mount struct {
-	Source      string `json:"source"      yaml:"source"`
-	Destination string `json:"destination" yaml:"destination"`
-	ReadOnly    bool   `json:"read_only"   yaml:"read_only"`
-	Propagation string `json:"propagation" yaml:"propagation"`
+	Source      string          `json:"source"        yaml:"source"`
+	Destination string          `json:"destination"   yaml:"destination"`
+	ReadOnly    bool            `json:"read_only"     yaml:"read_only"`
+	Propagation BindPropagation `json:"propagation"   yaml:"propagation"`
+	Label       SELinuxLabel    `json:"selinux_label" yaml:"selinux_label"`
 }
 
 // Equal returns true if the mount is equals to other one, otherwise return false
@@ -85,7 +117,6 @@ type Cluster struct {
 	Name          string   `json:"name"           yaml:"name"`
 	Nodes         []*Node  `json:"nodes"          yaml:"nodes"`
 	SSHKey        string   `json:"ssh_key"        yaml:"ssh_key"`
-	SELinux       bool     `json:"selinux"        yaml:"selinux"`
 	ServiceSubnet string   `json:"service_subnet" yaml:"service_subnet"`
 	PodSubnet     string   `json:"pod_subnet" yaml:"pod_subnet"`
 	DNSServers    []string `json:"dns_servers"    yaml:"dns_servers"`
@@ -141,9 +172,6 @@ func (c *Cluster) validateNode(n *Node) error {
 	key := n.SSHKey
 	if len(key) == 0 {
 		key = c.SSHKey
-	}
-	if c.SELinux {
-		n.SELinux = true
 	}
 
 	signer, err := ssh.ParsePrivateKey([]byte(key))
