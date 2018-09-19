@@ -463,8 +463,8 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet stri
 	return ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
-			{"/etc/hostname", "/etc/machine-id", true, "", LabelShared},
-			{"/var/log/kubernetes/apiserver", "/var/log/kubernetes/apiserver", false, "", LabelShared},
+			{"/etc/hostname", "/etc/machine-id", true, "", ""},
+			{"/var/log/kubernetes/apiserver", "/var/log/kubernetes/apiserver", false, "", LabelPrivate},
 			{"/etc/kubernetes", "/etc/kubernetes", true, "", LabelShared},
 		},
 	}
@@ -496,9 +496,9 @@ func ControllerManagerParams(clusterName, serviceSubnet string) ServiceParams {
 	return ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
-			{"/etc/hostname", "/etc/machine-id", true, "", LabelShared},
+			{"/etc/hostname", "/etc/machine-id", true, "", ""},
 			{"/etc/kubernetes", "/etc/kubernetes", true, "", LabelShared},
-			{"/var/log/kubernetes/controller-manager", "/var/log/kubernetes/controller-manager", false, "", LabelShared},
+			{"/var/log/kubernetes/controller-manager", "/var/log/kubernetes/controller-manager", false, "", LabelPrivate},
 		},
 	}
 }
@@ -514,9 +514,9 @@ func SchedulerParams() ServiceParams {
 	return ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
-			{"/etc/hostname", "/etc/machine-id", true, "", LabelShared},
+			{"/etc/hostname", "/etc/machine-id", true, "", ""},
 			{"/etc/kubernetes", "/etc/kubernetes", true, "", LabelShared},
-			{"/var/log/kubernetes/scheduler", "/var/log/kubernetes/scheduler", false, "", LabelShared},
+			{"/var/log/kubernetes/scheduler", "/var/log/kubernetes/scheduler", false, "", LabelPrivate},
 		},
 	}
 }
@@ -743,10 +743,10 @@ func ProxyParams() ServiceParams {
 	return ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
-			{"/etc/hostname", "/etc/machine-id", true, "", LabelShared},
+			{"/etc/hostname", "/etc/machine-id", true, "", ""},
 			{"/etc/kubernetes", "/etc/kubernetes", true, "", LabelShared},
 			{"/lib/modules", "/lib/modules", true, "", ""},
-			{"/var/log/kubernetes/proxy", "/var/log/kubernetes/proxy", false, "", LabelShared},
+			{"/var/log/kubernetes/proxy", "/var/log/kubernetes/proxy", false, "", LabelPrivate},
 		},
 	}
 }
@@ -762,16 +762,21 @@ func KubeletServiceParams(n *Node) ServiceParams {
 		"--pod-infra-container-image=" + PauseImage.Name(),
 		"--log-dir=/var/log/kubernetes/kubelet",
 		"--logtostderr=false",
+		"--volume-plugin-dir=/opt/volume/bin",
 	}
 	return ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
-			{"/etc/hostname", "/etc/machine-id", true, "", LabelShared},
+			{"/etc/hostname", "/etc/machine-id", true, "", ""},
 			{"/etc/kubernetes", "/etc/kubernetes", true, "", LabelShared},
 			{"/var/lib/kubelet", "/var/lib/kubelet", false, PropagationShared, LabelShared},
+			// TODO: /var/lib/docker is used by cAdvisor.
+			// cAdvisor will be removed from kubelet. Then remove this bind mount.
 			{"/var/lib/docker", "/var/lib/docker", false, PropagationRSlave, LabelShared},
+			{"/opt/volume/bin", "/opt/volume/bin", false, PropagationShared, LabelShared},
 			{"/var/log/pods", "/var/log/pods", false, "", LabelShared},
-			{"/var/log/kubernetes/kubelet", "/var/log/kubernetes/kubelet", false, "", LabelShared},
+			{"/var/log/containers", "/var/log/containers", false, "", LabelShared},
+			{"/var/log/kubernetes/kubelet", "/var/log/kubernetes/kubelet", false, "", LabelPrivate},
 			{"/run", "/run", false, "", ""},
 			{"/sys", "/sys", true, "", ""},
 			{"/dev", "/dev", false, "", ""},
