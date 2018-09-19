@@ -140,7 +140,7 @@ func runningNonControlPlaneMember(allNodes []*Node, statuses map[string]*NodeSta
 
 func outdatedEtcdImageMember(nodes []*Node, statuses map[string]*NodeStatus) []*Node {
 	return filterNodes(nodes, func(n *Node) bool {
-		return EtcdImage != statuses[n.Address].Etcd.Image
+		return EtcdImage.Name() != statuses[n.Address].Etcd.Image
 	})
 }
 

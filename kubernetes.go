@@ -131,13 +131,13 @@ func (o *riversBootOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return imagePullCommand{o.nodes, "rivers"}
+		return imagePullCommand{o.nodes, ToolsImage}
 	case 1:
 		o.step++
 		return makeDirCommand{o.nodes, "/var/log/rivers"}
 	case 2:
 		o.step++
-		return runContainerCommand{o.nodes, "rivers", opts, RiversParams(o.upstreams), extra}
+		return runContainerCommand{o.nodes, "rivers", ToolsImage, opts, RiversParams(o.upstreams), extra}
 	default:
 		return nil
 	}
@@ -185,7 +185,7 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return imagePullCommand{o.cps, "hyperkube"}
+		return imagePullCommand{o.cps, HyperkubeImage}
 	case 1:
 		o.step++
 		if len(o.apiserver) == 0 {
@@ -240,19 +240,22 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 			// TODO pass keys from CKE
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
 		}
-		return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, opts, APIServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
+		return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, HyperkubeImage,
+			opts, APIServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
 	case 9:
 		o.step++
 		if len(o.scheduler) == 0 {
 			return o.NextCommand()
 		}
-		return runContainerCommand{o.scheduler, kubeSchedulerContainerName, opts, SchedulerParams(), o.options.Scheduler}
+		return runContainerCommand{o.scheduler, kubeSchedulerContainerName, HyperkubeImage,
+			opts, SchedulerParams(), o.options.Scheduler}
 	case 10:
 		o.step++
 		if len(o.controllerManager) == 0 {
 			return o.NextCommand()
 		}
-		return runContainerCommand{o.controllerManager, kubeControllerManagerContainerName, opts, ControllerManagerParams(o.cluster, o.serviceSubnet), o.options.ControllerManager}
+		return runContainerCommand{o.controllerManager, kubeControllerManagerContainerName, HyperkubeImage,
+			opts, ControllerManagerParams(o.cluster, o.serviceSubnet), o.options.ControllerManager}
 	default:
 		return nil
 	}
@@ -320,10 +323,10 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 	switch o.step1 {
 	case 0:
 		o.step1++
-		return imagePullCommand{o.cps, riversContainerName}
+		return imagePullCommand{o.cps, ToolsImage}
 	case 1:
 		o.step1++
-		return imagePullCommand{o.cps, "hyperkube"}
+		return imagePullCommand{o.cps, HyperkubeImage}
 	case 2:
 		if o.nodeIndex >= len(o.rivers) {
 			o.step1++
@@ -338,7 +341,8 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 			return killContainersCommand{[]*Node{node}, riversContainerName}
 		case 1:
 			o.step2++
-			return runContainerCommand{[]*Node{node}, riversContainerName, opts, RiversParams(o.cps), o.options.Rivers}
+			return runContainerCommand{[]*Node{node}, riversContainerName, ToolsImage,
+				opts, RiversParams(o.cps), o.options.Rivers}
 		default:
 			o.step2 = 0
 			o.nodeIndex++
@@ -362,7 +366,8 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 				// TODO pass keys from CKE
 				"--mount", "type=tmpfs,dst=/run/kubernetes",
 			}
-			return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, opts, APIServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
+			return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, HyperkubeImage,
+				opts, APIServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
 		default:
 			o.step2 = 0
 			o.nodeIndex++
@@ -382,7 +387,8 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 			return stopContainersCommand{[]*Node{node}, kubeControllerManagerContainerName}
 		case 1:
 			o.step2++
-			return runContainerCommand{[]*Node{node}, kubeControllerManagerContainerName, opts, ControllerManagerParams(o.cluster, o.serviceSubnet), o.options.ControllerManager}
+			return runContainerCommand{[]*Node{node}, kubeControllerManagerContainerName, HyperkubeImage,
+				opts, ControllerManagerParams(o.cluster, o.serviceSubnet), o.options.ControllerManager}
 		default:
 			o.step2 = 0
 			o.nodeIndex++
@@ -402,7 +408,8 @@ func (o *kubeCPRestartOp) NextCommand() Commander {
 			return stopContainersCommand{[]*Node{node}, kubeSchedulerContainerName}
 		case 1:
 			o.step2++
-			return runContainerCommand{[]*Node{node}, kubeSchedulerContainerName, opts, SchedulerParams(), o.options.Scheduler}
+			return runContainerCommand{[]*Node{node}, kubeSchedulerContainerName, HyperkubeImage,
+				opts, SchedulerParams(), o.options.Scheduler}
 		default:
 			o.step2 = 0
 			o.nodeIndex++
@@ -538,7 +545,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
-		return imagePullCommand{o.proxies, "hyperkube"}
+		return imagePullCommand{o.proxies, HyperkubeImage}
 	case 1:
 		o.step++
 		if len(o.kubelets) == 0 {
@@ -583,7 +590,8 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		for _, n := range o.kubelets {
 			params[n.Address] = KubeletServiceParams(n)
 		}
-		return runContainerParamsCommand{o.kubelets, kubeletContainerName, opts, params, o.options.Kubelet.ServiceParams}
+		return runContainerParamsCommand{o.kubelets, kubeletContainerName, HyperkubeImage,
+			opts, params, o.options.Kubelet.ServiceParams}
 	case 7:
 		o.step++
 		if len(o.proxies) == 0 {
@@ -593,7 +601,8 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 			"--tmpfs=/run",
 			"--privileged",
 		}
-		return runContainerCommand{o.proxies, kubeProxyContainerName, opts, ProxyParams(), o.options.Proxy}
+		return runContainerCommand{o.proxies, kubeProxyContainerName, HyperkubeImage,
+			opts, ProxyParams(), o.options.Proxy}
 	default:
 		return nil
 
@@ -625,13 +634,13 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		if len(o.rivers) == 0 {
 			return o.NextCommand()
 		}
-		return imagePullCommand{o.rivers, riversContainerName}
+		return imagePullCommand{o.rivers, ToolsImage}
 	case 1:
 		o.step++
 		if len(o.proxies)+len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return imagePullCommand{o.proxies, "hyperkube"}
+		return imagePullCommand{o.proxies, HyperkubeImage}
 	case 2:
 		o.step++
 		if len(o.kubelets) == 0 {
@@ -655,7 +664,8 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		if len(o.rivers) == 0 {
 			return o.NextCommand()
 		}
-		return runContainerCommand{o.rivers, riversContainerName, opts, RiversParams(o.cps), o.options.Rivers}
+		return runContainerCommand{o.rivers, riversContainerName, ToolsImage,
+			opts, RiversParams(o.cps), o.options.Rivers}
 	case 6:
 		o.step++
 		if len(o.kubelets) == 0 {
@@ -676,7 +686,8 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 		for _, n := range o.kubelets {
 			params[n.Address] = KubeletServiceParams(n)
 		}
-		return runContainerParamsCommand{o.kubelets, kubeletContainerName, opts, params, o.options.Kubelet.ServiceParams}
+		return runContainerParamsCommand{o.kubelets, kubeletContainerName, HyperkubeImage,
+			opts, params, o.options.Kubelet.ServiceParams}
 	case 8:
 		o.step++
 		if len(o.proxies) == 0 {
@@ -692,7 +703,8 @@ func (o *kubeWorkerRestartOp) NextCommand() Commander {
 			"--tmpfs=/run",
 			"--privileged",
 		}
-		return runContainerCommand{o.proxies, kubeProxyContainerName, opts, ProxyParams(), o.options.Proxy}
+		return runContainerCommand{o.proxies, kubeProxyContainerName, HyperkubeImage,
+			opts, ProxyParams(), o.options.Proxy}
 	default:
 		return nil
 
@@ -751,7 +763,7 @@ func KubeletServiceParams(n *Node) ServiceParams {
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--allow-privileged=true",
 		"--hostname-override=" + n.Nodename(),
-		"--pod-infra-container-image=" + Image(pauseContainerName),
+		"--pod-infra-container-image=" + PauseImage.Name(),
 		"--log-dir=/var/log/kubernetes/kubelet",
 		"--logtostderr=false",
 	}

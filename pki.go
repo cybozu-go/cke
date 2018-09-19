@@ -302,11 +302,11 @@ func writeFile(inf Infrastructure, node *Node, target string, source string) err
 	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", targetDir)
 	ddCommand := "dd of=" + filepath.Join("/mnt", target)
 	ce := Docker(inf.Agent(node.Address))
-	err := ce.Run("tools", binds, mkdirCommand)
+	err := ce.Run(ToolsImage, binds, mkdirCommand)
 	if err != nil {
 		return err
 	}
-	return ce.RunWithInput("tools", binds, ddCommand, source)
+	return ce.RunWithInput(ToolsImage, binds, ddCommand, source)
 }
 
 func writeCertificate(inf Infrastructure, node *Node, ca, file string, roleOpts, certOpts map[string]interface{}) error {

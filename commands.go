@@ -51,7 +51,7 @@ func (c makeDirCommand) Run(ctx context.Context, inf Infrastructure) error {
 	for _, n := range c.nodes {
 		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
-			return ce.Run("tools", binds, mkdirCommand)
+			return ce.Run(ToolsImage, binds, mkdirCommand)
 		})
 	}
 	env.Stop()
@@ -83,11 +83,11 @@ func (c makeFileCommand) Run(ctx context.Context, inf Infrastructure) error {
 	for _, n := range c.nodes {
 		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
-			err := ce.Run("tools", binds, mkdirCommand)
+			err := ce.Run(ToolsImage, binds, mkdirCommand)
 			if err != nil {
 				return err
 			}
-			return ce.RunWithInput("tools", binds, ddCommand, c.source)
+			return ce.RunWithInput(ToolsImage, binds, ddCommand, c.source)
 		})
 	}
 	env.Stop()
@@ -117,7 +117,7 @@ func (c removeFileCommand) Run(ctx context.Context, inf Infrastructure) error {
 	for _, n := range c.nodes {
 		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
-			return ce.Run("tools", binds, command)
+			return ce.Run(ToolsImage, binds, command)
 		})
 	}
 	env.Stop()
@@ -133,7 +133,7 @@ func (c removeFileCommand) Command() Command {
 
 type imagePullCommand struct {
 	nodes []*Node
-	name  string
+	img   Image
 }
 
 func (c imagePullCommand) Run(ctx context.Context, inf Infrastructure) error {
@@ -141,7 +141,7 @@ func (c imagePullCommand) Run(ctx context.Context, inf Infrastructure) error {
 	for _, n := range c.nodes {
 		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
-			return ce.PullImage(c.name)
+			return ce.PullImage(c.img)
 		})
 	}
 	env.Stop()
@@ -151,8 +151,7 @@ func (c imagePullCommand) Run(ctx context.Context, inf Infrastructure) error {
 func (c imagePullCommand) Command() Command {
 	return Command{
 		Name:   "image-pull",
-		Target: c.name,
-		Detail: Image(c.name),
+		Target: c.img.Name(),
 	}
 }
 
@@ -224,6 +223,7 @@ func (c volumeRemoveCommand) Command() Command {
 type runContainerCommand struct {
 	nodes  []*Node
 	name   string
+	img    Image
 	opts   []string
 	params ServiceParams
 	extra  ServiceParams
@@ -234,7 +234,7 @@ func (c runContainerCommand) Run(ctx context.Context, inf Infrastructure) error 
 	for _, n := range c.nodes {
 		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
-			return ce.RunSystem(c.name, c.opts, c.params, c.extra, n.SELinux)
+			return ce.RunSystem(c.name, c.img, c.opts, c.params, c.extra, n.SELinux)
 		})
 	}
 	env.Stop()
@@ -256,6 +256,7 @@ func (c runContainerCommand) Command() Command {
 type runContainerParamsCommand struct {
 	nodes  []*Node
 	name   string
+	img    Image
 	opts   []string
 	params map[string]ServiceParams
 	extra  ServiceParams
@@ -267,7 +268,7 @@ func (c runContainerParamsCommand) Run(ctx context.Context, inf Infrastructure) 
 		ce := Docker(inf.Agent(n.Address))
 		params := c.params[n.Address]
 		env.Go(func(ctx context.Context) error {
-			return ce.RunSystem(c.name, c.opts, params, c.extra, n.SELinux)
+			return ce.RunSystem(c.name, c.img, c.opts, params, c.extra, n.SELinux)
 		})
 	}
 	env.Stop()

@@ -97,7 +97,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return imagePullCommand{o.nodes, etcdContainerName}
+		return imagePullCommand{o.nodes, EtcdImage}
 	case 1:
 		o.step++
 		return setupEtcdCertificatesCommand{o.nodes}
@@ -120,7 +120,8 @@ func (o *etcdBootOp) NextCommand() Commander {
 		for _, n := range o.nodes {
 			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
-		return runContainerCommand{[]*Node{node}, etcdContainerName, opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
+		return runContainerCommand{[]*Node{node}, etcdContainerName, EtcdImage,
+			opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
 	case 4:
 		o.step++
 		return waitEtcdSyncCommand{o.endpoints, false}
@@ -200,7 +201,7 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return imagePullCommand{[]*Node{node}, "etcd"}
+		return imagePullCommand{[]*Node{node}, EtcdImage}
 	case 1:
 		o.step++
 		return stopContainerCommand{node, etcdContainerName}
@@ -293,7 +294,7 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error
 		}
 	}
 
-	return ce.RunSystem(etcdContainerName, c.opts, etcdBuiltInParams(c.node, initialCluster, "existing"), c.extra, c.node.SELinux)
+	return ce.RunSystem(etcdContainerName, EtcdImage, c.opts, etcdBuiltInParams(c.node, initialCluster, "existing"), c.extra, c.node.SELinux)
 }
 
 func (c addEtcdMemberCommand) Command() Command {
@@ -624,7 +625,7 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 		return waitEtcdSyncCommand{o.endpoints, true}
 	case 1:
 		o.step++
-		return imagePullCommand{[]*Node{o.targets[o.nodeIndex]}, "etcd"}
+		return imagePullCommand{[]*Node{o.targets[o.nodeIndex]}, EtcdImage}
 	case 2:
 		o.step++
 		target := o.targets[o.nodeIndex]
@@ -642,7 +643,8 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
 		o.nodeIndex++
-		return runContainerCommand{[]*Node{target}, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
+		return runContainerCommand{[]*Node{target}, etcdContainerName, EtcdImage,
+			opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
 	}
 	return nil
 }
@@ -699,7 +701,8 @@ func (o *etcdRestartOp) NextCommand() Commander {
 			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
 		o.nodeIndex++
-		return runContainerCommand{[]*Node{target}, etcdContainerName, opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
+		return runContainerCommand{[]*Node{target}, etcdContainerName, EtcdImage,
+			opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
 	}
 	return nil
 }
