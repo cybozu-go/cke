@@ -540,8 +540,8 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 
 	// Romana and Kubelet use these paths
 	// https://github.com/romana/romana/blob/1aa6b9b8d43e0eb3830d581deec8f3ab4bba5833/docs/kubernetes/romana-kubeadm.yml#L259-L262
-	cniBinPath := "/host/opt/cni/bin"
-	cniConfPath := "/host/etc/cni/net.d"
+	cniBinDir := "/host/opt/cni/bin"
+	cniConfDir := "/host/etc/cni/net.d"
 
 	switch o.step {
 	case 0:
@@ -552,21 +552,21 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeDirCommand{o.kubelets, cniBinPath}
+		return makeDirCommand{o.kubelets, cniBinDir}
 	case 2:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeDirCommand{o.kubelets, cniConfPath}
+		return makeDirCommand{o.kubelets, cniConfDir}
 	case 3:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
 		opts = []string{
-			"--mount", "type=bind,src=" + cniBinPath + ",target=/host/bin",
-			"--mount", "type=bind,src=" + cniConfPath + ",target=/host/net.d"}
+			"--mount", "type=bind,src=" + cniBinDir + ",target=/host/bin",
+			"--mount", "type=bind,src=" + cniConfDir + ",target=/host/net.d"}
 		return runContainerCommand{nodes: o.kubelets, name: "cke-tools", opts: opts,
 			params: ServiceParams{ExtraArguments: []string{"/usr/local/cke-tools/bin/install-cni"}},
 		}
@@ -614,6 +614,8 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		opts = []string{
 			"--pid=host",
 			"--mount=type=volume,src=dockershim,dst=/var/lib/dockershim",
+			"--mount=type=bind,src=" + cniBinDir + ",target=/opt/cni/bin",
+			"--mount=type=bind,src=" + cniConfDir + ",target=/etc/cni/net.d",
 			"--privileged",
 		}
 		params := make(map[string]ServiceParams)
@@ -793,6 +795,7 @@ func KubeletServiceParams(n *Node) ServiceParams {
 		"--pod-infra-container-image=" + PauseImage.Name(),
 		"--log-dir=/var/log/kubernetes/kubelet",
 		"--logtostderr=false",
+		"--network-plugin=cni",
 	}
 	return ServiceParams{
 		ExtraArguments: args,
