@@ -10,7 +10,6 @@ Name            | Required | Type      | Description
 `name`          | true     | string    | The k8s cluster name.
 `nodes`         | true     | array     | `Node` list.
 `ssh_key`       | false    | string    | Cluster wide SSH private key.
-`selinux`       | false    | bool      | SELinux is enabled on all nodes of the cluster.
 `service_subnet`| true     | string    | CIDR subnet for k8s `Service`.
 `dns_servers`   | false    | array     | List of upstream DNS server IP addresses.
 `options`       | false    | `Options` | See options.
@@ -26,7 +25,6 @@ Name            | Required | Type   | Description
 `hostname`      | false    | string | Override the real hostname of the node in k8s.
 `user`          | true     | string | SSH user name.
 `ssh_key`       | false    | string | SSH private key of the user.
-`selinux`       | false    | bool   | SELinux is enabled on the node.
 `control_plane` | false    | bool   | If true, the node will be used for k8s control plane and etcd.
 `labels`        | false    | object | Node labels for k8s.
 
@@ -61,7 +59,12 @@ Name              | Required | Type   | Description
 `destination`     | true     | string | Path in the container filesystem.
 `read_only`       | false    | bool   | True to mount the directory or file as read-only.
 `propagation`     | false    | string | Whether mounts can be propagated to replicas.
+`selinux_label`   | false    | string | Relabel the SELinux label of the host directory.
 
+`selinux-label`:
+- "z":  The mount content is shared among multiple containers.
+- "Z":  The mount content is private and unshared.
+- This label should not be specified to system directories.
 
 ### EtcdParams
 

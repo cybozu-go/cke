@@ -171,6 +171,9 @@ func testKubernetesDecideToDo(t *testing.T) {
 			Commands: []Command{
 				{"image-pull", HyperkubeImage.Name(), ""},
 				{"mkdir", "/var/log/kubernetes/kubelet", ""},
+				{"mkdir", "/var/log/pods", ""},
+				{"mkdir", "/var/log/containers", ""},
+				{"mkdir", "/opt/volume/bin", ""},
 				{"mkdir", "/var/log/kubernetes/proxy", ""},
 				{"make-kubelet-kubeconfig", strings.Join(allNodes, ","), ""},
 				{"make-proxy-kubeconfig", strings.Join(allNodes, ","), ""},
