@@ -66,7 +66,7 @@ func main() {
 	}
 	defer etcd.Close()
 
-	storage := cke.Storage{etcd}
+	storage := cke.Storage{Client: etcd}
 	cli.Setup(storage)
 
 	exitStatus := subcommands.ExitSuccess

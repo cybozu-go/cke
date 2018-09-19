@@ -66,7 +66,13 @@ var _ = Describe("etcd strategy", func() {
 		}).Should(Succeed())
 
 		By("Checking that CKE removed worker node's data")
-		Expect(status.NodeStatuses[node2].Etcd.HasData).To(BeFalse())
+		Eventually(func() bool {
+			status, err := getClusterStatus()
+			if err != nil {
+				return true
+			}
+			return status.NodeStatuses[node2].Etcd.HasData
+		}).Should(BeFalse())
 	})
 
 	It("should remove non-control-plane node2 from etcd cluster, and destroy it's etcd", func() {
