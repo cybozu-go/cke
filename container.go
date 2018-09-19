@@ -27,7 +27,7 @@ type ContainerEngine interface {
 	// RunWithInput runs the named container as a foreground process with stdin as a string.
 	RunWithInput(img Image, binds []Mount, command, input string) error
 	// RunSystem runs the named container as a system service.
-	RunSystem(name string, img Image, opts []string, params, extra ServiceParams, selinux bool) error
+	RunSystem(name string, img Image, opts []string, params, extra ServiceParams) error
 	// Exists returns if named system container exists.
 	Exists(name string) (bool, error)
 	// Stop stops the named system container.
@@ -121,7 +121,7 @@ func (c docker) RunWithInput(img Image, binds []Mount, command, input string) er
 	return c.agent.RunWithInput(strings.Join(args, " "), input)
 }
 
-func (c docker) RunSystem(name string, img Image, opts []string, params, extra ServiceParams, selinux bool) error {
+func (c docker) RunSystem(name string, img Image, opts []string, params, extra ServiceParams) error {
 	id, err := c.getID(name)
 	if err != nil {
 		return err
@@ -150,11 +150,12 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 		var opts []string
 		if m.ReadOnly {
 			opts = append(opts, "ro")
-		} else if selinux {
-			opts = append(opts, "z")
 		}
 		if len(m.Propagation) > 0 {
-			opts = append(opts, m.Propagation)
+			opts = append(opts, m.Propagation.String())
+		}
+		if len(m.Label) > 0 {
+			opts = append(opts, m.Label.String())
 		}
 		args = append(args, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, strings.Join(opts, ",")))
 	}
