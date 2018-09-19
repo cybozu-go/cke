@@ -567,7 +567,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		opts = []string{
 			"--mount", "type=bind,src=" + cniBinDir + ",target=/host/bin",
 			"--mount", "type=bind,src=" + cniConfDir + ",target=/host/net.d"}
-		return runContainerCommand{nodes: o.kubelets, name: "cke-tools", opts: opts,
+		return runContainerCommand{nodes: o.kubelets, name: "install-cni", img: ToolsImage, opts: opts,
 			params: ServiceParams{ExtraArguments: []string{"/usr/local/cke-tools/bin/install-cni"}},
 		}
 	case 4:

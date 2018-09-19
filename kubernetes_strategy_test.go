@@ -172,7 +172,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				{"image-pull", ToolsImage.Name(), ""},
 				{"mkdir", "/host/opt/cni/bin", ""},
 				{"mkdir", "/host/etc/cni/net.d", ""},
-				{"run-container", strings.Join(allNodes, ","), "cke-tools"},
+				{"run-container", strings.Join(allNodes, ","), "install-cni"},
 				{"image-pull", HyperkubeImage.Name(), ""},
 				{"mkdir", "/var/log/kubernetes/kubelet", ""},
 				{"mkdir", "/var/log/kubernetes/proxy", ""},
