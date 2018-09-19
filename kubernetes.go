@@ -553,29 +553,35 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		return makeDirCommand{o.kubelets, "/var/log/kubernetes/kubelet"}
 	case 2:
 		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return makeDirCommand{o.kubelets, "/opt/volume/bin"}
+	case 3:
+		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
 		return makeDirCommand{o.proxies, "/var/log/kubernetes/proxy"}
-	case 3:
+	case 4:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
 		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster, o.options.Kubelet}
-	case 4:
+	case 5:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
 		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
-	case 5:
+	case 6:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
 		return volumeCreateCommand{o.kubelets, "dockershim"}
-	case 6:
+	case 7:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
@@ -591,7 +597,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		}
 		return runContainerParamsCommand{o.kubelets, kubeletContainerName, HyperkubeImage,
 			opts, params, o.options.Kubelet.ServiceParams}
-	case 7:
+	case 8:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
