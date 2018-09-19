@@ -1,6 +1,7 @@
 package cke
 
 import (
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -170,10 +171,10 @@ func testKubernetesDecideToDo(t *testing.T) {
 			},
 			Commands: []Command{
 				{"image-pull", ToolsImage.Name(), ""},
-				{"mkdir", "/opt/cni/bin", ""},
-				{"mkdir", "/etc/cni/net.d", ""},
-				{"mkdir", "/var/lib/cni", ""},
-				{"make-file", "/etc/cni/net.d/98-bridge.conf", ""},
+				{"mkdir", cniBinDir, ""},
+				{"mkdir", cniConfDir, ""},
+				{"mkdir", cniVarDir, ""},
+				{"make-file", filepath.Join(cniConfDir, "98-bridge.conf"), ""},
 				{"run-container", strings.Join(allNodes, ","), "install-cni"},
 				{"image-pull", HyperkubeImage.Name(), ""},
 				{"mkdir", "/var/log/kubernetes/kubelet", ""},

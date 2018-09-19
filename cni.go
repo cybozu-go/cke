@@ -2,6 +2,12 @@ package cke
 
 import "fmt"
 
+const (
+	cniBinDir  = "/opt/cni/bin"
+	cniConfDir = "/etc/cni/net.d"
+	cniVarDir  = "/var/lib/cni"
+)
+
 func cniBridgeConfig(podSubnet string) string {
 	return fmt.Sprintf(`{
     "cniVersion": "0.3.1",

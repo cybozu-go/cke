@@ -1,6 +1,7 @@
 package cke
 
 import (
+	"path/filepath"
 	"strings"
 )
 
@@ -541,10 +542,6 @@ func (o *kubeWorkerBootOp) Name() string {
 func (o *kubeWorkerBootOp) NextCommand() Commander {
 	var opts []string
 
-	// CNI and Kubelet use these paths
-	cniBinDir := "/opt/cni/bin"
-	cniConfDir := "/etc/cni/net.d"
-
 	switch o.step {
 	case 0:
 		o.step++
@@ -566,13 +563,14 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeDirCommand{o.kubelets, "/var/lib/cni"}
+		return makeDirCommand{o.kubelets, cniVarDir}
 	case 4:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeFileCommand{o.kubelets, cniBridgeConfig(o.podSubnet), "/etc/cni/net.d/98-bridge.conf"}
+		return makeFileCommand{o.kubelets, cniBridgeConfig(o.podSubnet),
+			filepath.Join(cniConfDir, "98-bridge.conf")}
 	case 5:
 		o.step++
 		if len(o.kubelets) == 0 {
@@ -848,9 +846,9 @@ func KubeletServiceParams(n *Node) ServiceParams {
 			{"/run", "/run", false, "", ""},
 			{"/sys", "/sys", true, "", ""},
 			{"/dev", "/dev", false, "", ""},
-			{"/opt/cni/bin", "/opt/cni/bin", true, "", LabelShared},
-			{"/etc/cni/net.d", "/etc/cni/net.d", true, "", LabelShared},
-			{"/var/lib/cni", "/var/lib/cni", false, "", LabelShared},
+			{cniBinDir, cniBinDir, true, "", LabelShared},
+			{cniConfDir, cniConfDir, true, "", LabelShared},
+			{cniVarDir, cniVarDir, false, "", LabelShared},
 		},
 	}
 }
