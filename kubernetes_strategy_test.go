@@ -136,7 +136,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 			},
 			Commands: []Command{
-				{"image-pull", "rivers", Image("rivers")},
+				{"image-pull", ToolsImage.Name(), ""},
 				{"mkdir", "/var/log/rivers", ""},
 				{"run-container", strings.Join(allNodes, ","), "rivers"},
 			},
@@ -147,7 +147,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes, Rivers: allNodes,
 			},
 			Commands: []Command{
-				{"image-pull", "hyperkube", Image("hyperkube")},
+				{"image-pull", HyperkubeImage.Name(), ""},
 				{"mkdir", "/var/log/kubernetes/apiserver", ""},
 				{"mkdir", "/var/log/kubernetes/controller-manager", ""},
 				{"mkdir", "/var/log/kubernetes/scheduler", ""},
@@ -169,7 +169,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes,
 			},
 			Commands: []Command{
-				{"image-pull", "hyperkube", Image("hyperkube")},
+				{"image-pull", HyperkubeImage.Name(), ""},
 				{"mkdir", "/var/log/kubernetes/kubelet", ""},
 				{"mkdir", "/var/log/kubernetes/proxy", ""},
 				{"make-kubelet-kubeconfig", strings.Join(allNodes, ","), ""},
@@ -241,8 +241,8 @@ func testKubernetesDecideToDo(t *testing.T) {
 			},
 			Commands: func() []Command {
 				cmds := []Command{
-					{"image-pull", "rivers", Image("rivers")},
-					{"image-pull", "hyperkube", Image("hyperkube")},
+					{"image-pull", ToolsImage.Name(), ""},
+					{"image-pull", HyperkubeImage.Name(), ""},
 				}
 				for _, n := range cpNodes {
 					cmds = append(cmds,
@@ -275,7 +275,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				KubeletArgs:        []string{"--cpu-cfs-quota=true"},
 			},
 			Commands: []Command{
-				{"image-pull", "hyperkube", Image("hyperkube")},
+				{"image-pull", HyperkubeImage.Name(), ""},
 				{Name: "make-kubelet-kubeconfig", Target: strings.Join(allNodes, ","), Detail: ""},
 				{Name: "stop-containers", Target: strings.Join(allNodes, ","), Detail: "kubelet"},
 				{Name: "run-container", Target: strings.Join(allNodes, ","), Detail: "kubelet"},

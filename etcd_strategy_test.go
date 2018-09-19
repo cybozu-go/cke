@@ -287,9 +287,9 @@ func OutdatedParamsControlPlane() EtcdTestCluster {
 			{Address: "10.0.0.13", ControlPlane: true},
 		},
 		NodeStatuses: map[string]*NodeStatus{
-			"10.0.0.11": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{ExtraParams: oldParams, Image: EtcdImage, Running: true}, HasData: true}},
-			"10.0.0.12": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{ExtraParams: oldParams, Image: EtcdImage, Running: true}, HasData: true}},
-			"10.0.0.13": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{ExtraParams: oldParams, Image: EtcdImage, Running: true}, HasData: true}},
+			"10.0.0.11": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{ExtraParams: oldParams, Image: EtcdImage.Name(), Running: true}, HasData: true}},
+			"10.0.0.12": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{ExtraParams: oldParams, Image: EtcdImage.Name(), Running: true}, HasData: true}},
+			"10.0.0.13": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{ExtraParams: oldParams, Image: EtcdImage.Name(), Running: true}, HasData: true}},
 		},
 		Etcd: EtcdClusterStatus{
 			IsHealthy: true,
@@ -310,7 +310,7 @@ func OutdatedParamsControlPlane() EtcdTestCluster {
 func BootstrapCommands(targets ...string) []Command {
 	hosts := strings.Join(targets, ",")
 	commands := []Command{
-		{Name: "image-pull", Target: "etcd"},
+		{Name: "image-pull", Target: EtcdImage.Name()},
 		{Name: "setup-etcd-certificates", Target: hosts},
 		{Name: "volume-create", Target: hosts},
 	}
@@ -328,7 +328,7 @@ func BootstrapCommands(targets ...string) []Command {
 
 func AddMemberCommands(addr string) []Command {
 	return []Command{
-		{Name: "image-pull", Target: "etcd"},
+		{Name: "image-pull", Target: EtcdImage.Name()},
 		{Name: "stop-container", Target: addr},
 		{Name: "volume-remove", Target: addr},
 		{Name: "volume-create", Target: addr},
@@ -372,7 +372,7 @@ func UpdateImageMemberCommands(cps []string) []Command {
 	for _, cp := range cps {
 		commands = append(commands,
 			Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")},
-			Command{Name: "image-pull", Target: "etcd"},
+			Command{Name: "image-pull", Target: EtcdImage.Name()},
 			Command{Name: "stop-container", Target: cp},
 			Command{Name: "run-container", Target: cp},
 		)

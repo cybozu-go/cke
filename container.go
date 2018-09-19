@@ -21,20 +21,20 @@ const (
 // ContainerEngine defines interfaces for a container engine.
 type ContainerEngine interface {
 	// PullImage pulls the image for the named container.
-	PullImage(name string) error
+	PullImage(img Image) error
 	// Run runs the named container as a foreground process.
-	Run(name string, binds []Mount, command string) error
+	Run(img Image, binds []Mount, command string) error
 	// RunWithInput runs the named container as a foreground process with stdin as a string.
-	RunWithInput(name string, binds []Mount, command, input string) error
+	RunWithInput(img Image, binds []Mount, command, input string) error
 	// RunSystem runs the named container as a system service.
-	RunSystem(name string, opts []string, params, extra ServiceParams, selinux bool) error
-	// Exists returns if named container exists.
+	RunSystem(name string, img Image, opts []string, params, extra ServiceParams, selinux bool) error
+	// Exists returns if named system container exists.
 	Exists(name string) (bool, error)
-	// Stop stops the named container.
+	// Stop stops the named system container.
 	Stop(name string) error
-	// Kill kills the named container.
+	// Kill kills the named system container.
 	Kill(name string) error
-	// Remove removes the named container.
+	// Remove removes the named system container.
 	Remove(name string) error
 	// Inspect returns ServiceStatus for the named container.
 	Inspect(name []string) (map[string]ServiceStatus, error)
@@ -60,27 +60,26 @@ type docker struct {
 	agent Agent
 }
 
-func (c docker) PullImage(name string) error {
-	img := Image(name)
+func (c docker) PullImage(img Image) error {
 	stdout, stderr, err := c.agent.Run("docker image list --format '{{.Repository}}:{{.Tag}}'")
 	if err != nil {
 		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
 	}
 
 	for _, i := range strings.Split(string(stdout), "\n") {
-		if img == i {
+		if img.Name() == i {
 			return nil
 		}
 	}
 
-	stdout, stderr, err = c.agent.Run("docker image pull " + img)
+	stdout, stderr, err = c.agent.Run("docker image pull " + img.Name())
 	if err != nil {
 		return errors.Wrapf(err, "stdout: %s, stderr: %s", stdout, stderr)
 	}
 	return nil
 }
 
-func (c docker) Run(name string, binds []Mount, command string) error {
+func (c docker) Run(img Image, binds []Mount, command string) error {
 	args := []string{
 		"docker",
 		"run",
@@ -95,13 +94,13 @@ func (c docker) Run(name string, binds []Mount, command string) error {
 		}
 		args = append(args, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	args = append(args, Image(name), command)
+	args = append(args, img.Name(), command)
 
 	_, _, err := c.agent.Run(strings.Join(args, " "))
 	return err
 }
 
-func (c docker) RunWithInput(name string, binds []Mount, command, input string) error {
+func (c docker) RunWithInput(img Image, binds []Mount, command, input string) error {
 	args := []string{
 		"docker",
 		"run",
@@ -117,12 +116,12 @@ func (c docker) RunWithInput(name string, binds []Mount, command, input string) 
 		}
 		args = append(args, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	args = append(args, Image(name), command)
+	args = append(args, img.Name(), command)
 
 	return c.agent.RunWithInput(strings.Join(args, " "), input)
 }
 
-func (c docker) RunSystem(name string, opts []string, params, extra ServiceParams, selinux bool) error {
+func (c docker) RunSystem(name string, img Image, opts []string, params, extra ServiceParams, selinux bool) error {
 	id, err := c.getID(name)
 	if err != nil {
 		return err
@@ -180,7 +179,7 @@ func (c docker) RunSystem(name string, opts []string, params, extra ServiceParam
 	}
 	args = append(args, "--label-file="+labelFile)
 
-	args = append(args, Image(name))
+	args = append(args, img.Name())
 
 	args = append(args, params.ExtraArguments...)
 	args = append(args, extra.ExtraArguments...)
