@@ -85,8 +85,9 @@ type kubeWorkerBootOp struct {
 	kubelets []*Node
 	proxies  []*Node
 
-	cluster string
-	options Options
+	cluster   string
+	podSubnet string
+	options   Options
 
 	step int
 }
@@ -522,12 +523,14 @@ func SchedulerParams() ServiceParams {
 }
 
 // KubeWorkerBootOp returns an Operator to boot kubernetes workers.
-func KubeWorkerBootOp(cps []*Node, kubelets, proxies []*Node, options Options) Operator {
+func KubeWorkerBootOp(cps, kubelets, proxies []*Node, cluster, podSubnet string, options Options) Operator {
 	return &kubeWorkerBootOp{
-		cps:      cps,
-		kubelets: kubelets,
-		proxies:  proxies,
-		options:  options,
+		cps:       cps,
+		kubelets:  kubelets,
+		proxies:   proxies,
+		cluster:   cluster,
+		podSubnet: podSubnet,
+		options:   options,
 	}
 }
 
@@ -539,9 +542,8 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 	var opts []string
 
 	// CNI and Kubelet use these paths
-	// https://github.com/romana/romana/blob/1aa6b9b8d43e0eb3830d581deec8f3ab4bba5833/docs/kubernetes/romana-kubeadm.yml#L259-L262
-	cniBinDir := "/host/opt/cni/bin"
-	cniConfDir := "/host/etc/cni/net.d"
+	cniBinDir := "/opt/cni/bin"
+	cniConfDir := "/etc/cni/net.d"
 
 	switch o.step {
 	case 0:
@@ -564,6 +566,18 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
+		return makeDirCommand{o.kubelets, "/var/lib/cni"}
+	case 4:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return makeFileCommand{o.kubelets, cniBridgeConfig(o.podSubnet), "/etc/cni/net.d/98-bridge.conf"}
+	case 5:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
 		return runContainerCommand{nodes: o.kubelets, name: "install-cni", img: ToolsImage, opts: opts,
 			params: ServiceParams{
 				ExtraArguments: []string{"/usr/local/cke-tools/bin/install-cni"},
@@ -573,43 +587,43 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 				},
 			},
 		}
-	case 4:
-		o.step++
-		if len(o.proxies) == 0 {
-			return o.NextCommand()
-		}
-		return imagePullCommand{o.proxies, HyperkubeImage}
-	case 5:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		return makeDirCommand{o.kubelets, "/var/log/kubernetes/kubelet"}
 	case 6:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
-		return makeDirCommand{o.proxies, "/var/log/kubernetes/proxy"}
+		return imagePullCommand{o.proxies, HyperkubeImage}
 	case 7:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster, o.options.Kubelet}
+		return makeDirCommand{o.kubelets, "/var/log/kubernetes/kubelet"}
 	case 8:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
-		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
+		return makeDirCommand{o.proxies, "/var/log/kubernetes/proxy"}
 	case 9:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return volumeCreateCommand{o.kubelets, "dockershim"}
+		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster, o.options.Kubelet}
 	case 10:
+		o.step++
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
+	case 11:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return volumeCreateCommand{o.kubelets, "dockershim"}
+	case 12:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
@@ -625,7 +639,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		}
 		return runContainerParamsCommand{o.kubelets, kubeletContainerName, HyperkubeImage,
 			opts, params, o.options.Kubelet.ServiceParams}
-	case 11:
+	case 13:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
@@ -642,9 +656,10 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 }
 
 // KubeWorkerRestartOp returns an Operator to restart kubernetes workers
-func KubeWorkerRestartOp(cps []*Node, rivers, kubelets, proxies []*Node, options Options) Operator {
+func KubeWorkerRestartOp(cps, rivers, kubelets, proxies []*Node, cluster string, options Options) Operator {
 	return &kubeWorkerRestartOp{
 		cps:      cps,
+		cluster:  cluster,
 		rivers:   rivers,
 		kubelets: kubelets,
 		proxies:  proxies,
@@ -811,8 +826,9 @@ func KubeletServiceParams(n *Node) ServiceParams {
 			{"/run", "/run", false, ""},
 			{"/sys", "/sys", true, ""},
 			{"/dev", "/dev", false, ""},
-			{"/host/opt/cni/bin", "/opt/cni/bin", true, ""},
-			{"/host/etc/cni/net.d", "/etc/cni/net.d", true, ""},
+			{"/opt/cni/bin", "/opt/cni/bin", true, ""},
+			{"/etc/cni/net.d", "/etc/cni/net.d", true, ""},
+			{"/var/lib/cni", "/var/lib/cni", false, ""},
 		},
 	}
 }

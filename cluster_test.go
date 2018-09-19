@@ -23,6 +23,7 @@ nodes:
 ssh_key: clusterkey
 selinux: true
 service_subnet: 12.34.56.00/24
+pod_subnet: 10.1.0.0/16
 dns_servers: ["1.1.1.1", "8.8.8.8"]
 options:
   etcd:
@@ -91,6 +92,9 @@ options:
 	}
 	if c.ServiceSubnet != "12.34.56.00/24" {
 		t.Error(`c.ServiceSubnet != "12.34.56.00/24"`)
+	}
+	if c.PodSubnet != "10.1.0.0/16" {
+		t.Error(`c.PodSubnet != "10.1.0.0/16"`)
 	}
 	if !reflect.DeepEqual(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"}) {
 		t.Error(`!reflect.DeepEqual(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"})`)

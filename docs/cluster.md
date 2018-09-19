@@ -12,6 +12,7 @@ Name            | Required | Type      | Description
 `ssh_key`       | false    | string    | Cluster wide SSH private key.
 `selinux`       | false    | bool      | SELinux is enabled on all nodes of the cluster.
 `service_subnet`| true     | string    | CIDR subnet for k8s `Service`.
+`pod_subnet`    | true     | string    | CIDR subnet for k8s `Pod`.
 `dns_servers`   | false    | array     | List of upstream DNS server IP addresses.
 `options`       | false    | `Options` | See options.
 

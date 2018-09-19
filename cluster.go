@@ -87,6 +87,7 @@ type Cluster struct {
 	SSHKey        string   `json:"ssh_key"        yaml:"ssh_key"`
 	SELinux       bool     `json:"selinux"        yaml:"selinux"`
 	ServiceSubnet string   `json:"service_subnet" yaml:"service_subnet"`
+	PodSubnet     string   `json:"pod_subnet" yaml:"pod_subnet"`
 	DNSServers    []string `json:"dns_servers"    yaml:"dns_servers"`
 	Options       Options  `json:"options"        yaml:"options"`
 }
@@ -98,6 +99,10 @@ func (c *Cluster) Validate() error {
 	}
 
 	_, _, err := net.ParseCIDR(c.ServiceSubnet)
+	if err != nil {
+		return err
+	}
+	_, _, err = net.ParseCIDR(c.PodSubnet)
 	if err != nil {
 		return err
 	}
