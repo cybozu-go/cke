@@ -538,7 +538,7 @@ func (o *kubeWorkerBootOp) Name() string {
 func (o *kubeWorkerBootOp) NextCommand() Commander {
 	var opts []string
 
-	// Romana and Kubelet use these paths
+	// CNI and Kubelet use these paths
 	// https://github.com/romana/romana/blob/1aa6b9b8d43e0eb3830d581deec8f3ab4bba5833/docs/kubernetes/romana-kubeadm.yml#L259-L262
 	cniBinDir := "/host/opt/cni/bin"
 	cniConfDir := "/host/etc/cni/net.d"
@@ -564,11 +564,14 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		opts = []string{
-			"--mount", "type=bind,src=" + cniBinDir + ",target=/host/bin",
-			"--mount", "type=bind,src=" + cniConfDir + ",target=/host/net.d"}
 		return runContainerCommand{nodes: o.kubelets, name: "install-cni", img: ToolsImage, opts: opts,
-			params: ServiceParams{ExtraArguments: []string{"/usr/local/cke-tools/bin/install-cni"}},
+			params: ServiceParams{
+				ExtraArguments: []string{"/usr/local/cke-tools/bin/install-cni"},
+				ExtraBinds: []Mount{
+					{Source: cniBinDir, Destination: "/host/bin", ReadOnly: false},
+					{Source: cniConfDir, Destination: "/host/net.d", ReadOnly: false},
+				},
+			},
 		}
 	case 4:
 		o.step++
@@ -614,8 +617,6 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		opts = []string{
 			"--pid=host",
 			"--mount=type=volume,src=dockershim,dst=/var/lib/dockershim",
-			"--mount=type=bind,src=" + cniBinDir + ",target=/opt/cni/bin",
-			"--mount=type=bind,src=" + cniConfDir + ",target=/etc/cni/net.d",
 			"--privileged",
 		}
 		params := make(map[string]ServiceParams)
@@ -805,10 +806,13 @@ func KubeletServiceParams(n *Node) ServiceParams {
 			{"/var/lib/kubelet", "/var/lib/kubelet", false, "shared"},
 			{"/var/lib/docker", "/var/lib/docker", false, "rslave"},
 			{"/var/log/pods", "/var/log/pods", false, ""},
+			{"/var/log/containers", "/var/log/containers", false, ""},
 			{"/var/log/kubernetes/kubelet", "/var/log/kubernetes/kubelet", false, ""},
 			{"/run", "/run", false, ""},
 			{"/sys", "/sys", true, ""},
 			{"/dev", "/dev", false, ""},
+			{"/host/opt/cni/bin", "/opt/cni/bin", true, ""},
+			{"/host/etc/cni/net.d", "/etc/cni/net.d", true, ""},
 		},
 	}
 }
