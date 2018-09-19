@@ -40,7 +40,8 @@ ssh_key: |-
   tsChz55NjCxNEpn4NvGyeGgJrBEGwAPbx/X2v2BWFxWPNWh6byHi9ZxELa0Utlc8
   B29lX8k9dqD0HitCL6ibsw0DqsU6FC3fd179rH8Bik83FuukuxvD
   -----END RSA PRIVATE KEY-----
-service_subnet: 12.34.56.0/24
+service_subnet: 10.34.56.0/24
+pod_subnet: 10.1.0.0/16
 dns_servers: ["8.8.8.8", "1.1.1.1"]
 options:
   kube-api:

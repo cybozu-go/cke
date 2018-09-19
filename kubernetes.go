@@ -1,6 +1,7 @@
 package cke
 
 import (
+	"path/filepath"
 	"strings"
 )
 
@@ -85,8 +86,9 @@ type kubeWorkerBootOp struct {
 	kubelets []*Node
 	proxies  []*Node
 
-	cluster string
-	options Options
+	cluster   string
+	podSubnet string
+	options   Options
 
 	step int
 }
@@ -522,12 +524,14 @@ func SchedulerParams() ServiceParams {
 }
 
 // KubeWorkerBootOp returns an Operator to boot kubernetes workers.
-func KubeWorkerBootOp(cps []*Node, kubelets, proxies []*Node, options Options) Operator {
+func KubeWorkerBootOp(cps, kubelets, proxies []*Node, cluster, podSubnet string, options Options) Operator {
 	return &kubeWorkerBootOp{
-		cps:      cps,
-		kubelets: kubelets,
-		proxies:  proxies,
-		options:  options,
+		cps:       cps,
+		kubelets:  kubelets,
+		proxies:   proxies,
+		cluster:   cluster,
+		podSubnet: podSubnet,
+		options:   options,
 	}
 }
 
@@ -541,59 +545,101 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		if len(o.proxies) == 0 {
-			return o.NextCommand()
-		}
-		return imagePullCommand{o.proxies, HyperkubeImage}
+		return imagePullCommand{o.kubelets, ToolsImage}
 	case 1:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeDirCommand{o.kubelets, "/var/log/kubernetes/kubelet"}
+		return makeDirCommand{o.kubelets, cniBinDir}
 	case 2:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeDirCommand{o.kubelets, "/var/log/pods"}
+		return makeDirCommand{o.kubelets, cniConfDir}
 	case 3:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeDirCommand{o.kubelets, "/var/log/containers"}
+		return makeDirCommand{o.kubelets, cniVarDir}
 	case 4:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeDirCommand{o.kubelets, "/opt/volume/bin"}
+		return makeFileCommand{o.kubelets, cniBridgeConfig(o.podSubnet),
+			filepath.Join(cniConfDir, "98-bridge.conf")}
 	case 5:
-		o.step++
-		if len(o.proxies) == 0 {
-			return o.NextCommand()
-		}
-		return makeDirCommand{o.proxies, "/var/log/kubernetes/proxy"}
-	case 6:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster, o.options.Kubelet}
-	case 7:
+		return runContainerCommand{nodes: o.kubelets, name: "install-cni", img: ToolsImage, opts: opts,
+			params: ServiceParams{
+				ExtraArguments: []string{"/usr/local/cke-tools/bin/install-cni"},
+				ExtraBinds: []Mount{
+					{Source: cniBinDir, Destination: "/host/bin", ReadOnly: false},
+					{Source: cniConfDir, Destination: "/host/net.d", ReadOnly: false},
+				},
+			},
+		}
+	case 6:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
-		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
+		return imagePullCommand{o.proxies, HyperkubeImage}
+	case 7:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return makeDirCommand{o.kubelets, "/var/log/kubernetes/kubelet"}
 	case 8:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return volumeCreateCommand{o.kubelets, "dockershim"}
+		return makeDirCommand{o.kubelets, "/var/log/pods"}
 	case 9:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return makeDirCommand{o.kubelets, "/var/log/containers"}
+	case 10:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return makeDirCommand{o.kubelets, "/opt/volume/bin"}
+	case 11:
+		o.step++
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return makeDirCommand{o.proxies, "/var/log/kubernetes/proxy"}
+	case 12:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster, o.options.Kubelet}
+	case 13:
+		o.step++
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
+	case 14:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return volumeCreateCommand{o.kubelets, "dockershim"}
+	case 15:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
@@ -609,7 +655,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		}
 		return runContainerParamsCommand{o.kubelets, kubeletContainerName, HyperkubeImage,
 			opts, params, o.options.Kubelet.ServiceParams}
-	case 10:
+	case 16:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
@@ -626,9 +672,10 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 }
 
 // KubeWorkerRestartOp returns an Operator to restart kubernetes workers
-func KubeWorkerRestartOp(cps []*Node, rivers, kubelets, proxies []*Node, options Options) Operator {
+func KubeWorkerRestartOp(cps, rivers, kubelets, proxies []*Node, cluster string, options Options) Operator {
 	return &kubeWorkerRestartOp{
 		cps:      cps,
+		cluster:  cluster,
 		rivers:   rivers,
 		kubelets: kubelets,
 		proxies:  proxies,
@@ -780,6 +827,7 @@ func KubeletServiceParams(n *Node) ServiceParams {
 		"--pod-infra-container-image=" + PauseImage.Name(),
 		"--log-dir=/var/log/kubernetes/kubelet",
 		"--logtostderr=false",
+		"--network-plugin=cni",
 		"--volume-plugin-dir=/opt/volume/bin",
 	}
 	return ServiceParams{
@@ -798,6 +846,9 @@ func KubeletServiceParams(n *Node) ServiceParams {
 			{"/run", "/run", false, "", ""},
 			{"/sys", "/sys", true, "", ""},
 			{"/dev", "/dev", false, "", ""},
+			{cniBinDir, cniBinDir, true, "", LabelShared},
+			{cniConfDir, cniConfDir, true, "", LabelShared},
+			{cniVarDir, cniVarDir, false, "", LabelShared},
 		},
 	}
 }

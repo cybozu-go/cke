@@ -55,7 +55,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].Proxy.Running
 	})
 	if len(rivers)+len(kubelets)+len(proxies) > 0 {
-		return KubeWorkerBootOp(cpNodes, kubelets, proxies, c.Options)
+		return KubeWorkerBootOp(cpNodes, kubelets, proxies, c.Name, c.PodSubnet, c.Options)
 	}
 
 	// Check diff of command options
@@ -167,7 +167,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return false
 	})
 	if len(rivers)+len(kubelets)+len(proxies) > 0 {
-		return KubeWorkerRestartOp(cpNodes, rivers, kubelets, proxies, c.Options)
+		return KubeWorkerRestartOp(cpNodes, rivers, kubelets, proxies, c.Name, c.Options)
 	}
 
 	// TODO check image versions and restart container when image is updated

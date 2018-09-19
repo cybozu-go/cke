@@ -11,6 +11,7 @@ Name            | Required | Type      | Description
 `nodes`         | true     | array     | `Node` list.
 `ssh_key`       | false    | string    | Cluster wide SSH private key.
 `service_subnet`| true     | string    | CIDR subnet for k8s `Service`.
+`pod_subnet`    | true     | string    | CIDR subnet for k8s `Pod`.
 `dns_servers`   | false    | array     | List of upstream DNS server IP addresses.
 `options`       | false    | `Options` | See options.
 
