@@ -169,6 +169,10 @@ func testKubernetesDecideToDo(t *testing.T) {
 				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes,
 			},
 			Commands: []Command{
+				{"image-pull", ToolsImage.Name(), ""},
+				{"mkdir", "/host/opt/cni/bin", ""},
+				{"mkdir", "/host/etc/cni/net.d", ""},
+				{"run-container", strings.Join(allNodes, ","), "cke-tools"},
 				{"image-pull", HyperkubeImage.Name(), ""},
 				{"mkdir", "/var/log/kubernetes/kubelet", ""},
 				{"mkdir", "/var/log/kubernetes/proxy", ""},

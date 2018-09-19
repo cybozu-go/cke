@@ -546,7 +546,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return imagePullCommand{o.kubelets, "cke-tools"}
+		return imagePullCommand{o.kubelets, ToolsImage}
 	case 1:
 		o.step++
 		if len(o.kubelets) == 0 {
