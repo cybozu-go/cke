@@ -136,7 +136,7 @@ func (o *riversBootOp) NextCommand() Commander {
 		return imagePullCommand{o.nodes, ToolsImage}
 	case 1:
 		o.step++
-		return makeDirCommand{o.nodes, "/var/log/rivers"}
+		return makeDirsCommand{o.nodes, []string{"/var/log/rivers"}}
 	case 2:
 		o.step++
 		return runContainerCommand{o.nodes, "rivers", ToolsImage, opts, RiversParams(o.upstreams), extra}
@@ -193,44 +193,37 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 		if len(o.apiserver) == 0 {
 			return o.NextCommand()
 		}
-		return makeDirCommand{o.apiserver, "/var/log/kubernetes/apiserver"}
+		dirs := []string{
+			"/var/log/kubernetes/apiserver",
+			"/var/log/kubernetes/controller-manager",
+			"/var/log/kubernetes/scheduler",
+		}
+		return makeDirsCommand{o.apiserver, dirs}
 	case 2:
-		o.step++
-		if len(o.controllerManager) == 0 {
-			return o.NextCommand()
-		}
-		return makeDirCommand{o.controllerManager, "/var/log/kubernetes/controller-manager"}
-	case 3:
-		o.step++
-		if len(o.scheduler) == 0 {
-			return o.NextCommand()
-		}
-		return makeDirCommand{o.scheduler, "/var/log/kubernetes/scheduler"}
-	case 4:
 		o.step++
 		if len(o.apiserver) == 0 {
 			return o.NextCommand()
 		}
 		return issueAPIServerCertificatesCommand{o.apiserver}
-	case 5:
+	case 3:
 		o.step++
 		if len(o.apiserver) == 0 {
 			return o.NextCommand()
 		}
 		return setupAPIServerCertificatesCommand{o.apiserver}
-	case 6:
+	case 4:
 		o.step++
 		if len(o.scheduler) == 0 {
 			return o.NextCommand()
 		}
 		return makeControllerManagerKubeconfigCommand{o.controllerManager, o.cluster}
-	case 7:
+	case 5:
 		o.step++
 		if len(o.scheduler) == 0 {
 			return o.NextCommand()
 		}
 		return makeSchedulerKubeconfigCommand{o.scheduler, o.cluster}
-	case 8:
+	case 6:
 		if o.nodeIndex >= len(o.apiserver) {
 			o.step++
 			return o.NextCommand()
@@ -239,19 +232,18 @@ func (o *kubeCPBootOp) NextCommand() Commander {
 		o.nodeIndex++
 
 		opts := []string{
-			// TODO pass keys from CKE
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
 		}
 		return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, HyperkubeImage,
 			opts, APIServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
-	case 9:
+	case 7:
 		o.step++
 		if len(o.scheduler) == 0 {
 			return o.NextCommand()
 		}
 		return runContainerCommand{o.scheduler, kubeSchedulerContainerName, HyperkubeImage,
 			opts, SchedulerParams(), o.options.Scheduler}
-	case 10:
+	case 8:
 		o.step++
 		if len(o.controllerManager) == 0 {
 			return o.NextCommand()
@@ -551,27 +543,25 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeDirCommand{o.kubelets, cniBinDir}
+		dirs := []string{
+			cniBinDir,
+			cniConfDir,
+			cniVarDir,
+			"/var/log/kubernetes/kubelet",
+			"/var/log/pods",
+			"/var/log/containers",
+			"/opt/volume/bin",
+			"/var/log/kubernetes/proxy",
+		}
+		return makeDirsCommand{o.kubelets, dirs}
 	case 2:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		return makeDirCommand{o.kubelets, cniConfDir}
-	case 3:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		return makeDirCommand{o.kubelets, cniVarDir}
-	case 4:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
 		return makeFileCommand{o.kubelets, cniBridgeConfig(o.podSubnet),
 			filepath.Join(cniConfDir, "98-bridge.conf")}
-	case 5:
+	case 3:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
@@ -585,61 +575,31 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 				},
 			},
 		}
-	case 6:
+	case 4:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
 		return imagePullCommand{o.proxies, HyperkubeImage}
-	case 7:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		return makeDirCommand{o.kubelets, "/var/log/kubernetes/kubelet"}
-	case 8:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		return makeDirCommand{o.kubelets, "/var/log/pods"}
-	case 9:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		return makeDirCommand{o.kubelets, "/var/log/containers"}
-	case 10:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		return makeDirCommand{o.kubelets, "/opt/volume/bin"}
-	case 11:
-		o.step++
-		if len(o.proxies) == 0 {
-			return o.NextCommand()
-		}
-		return makeDirCommand{o.proxies, "/var/log/kubernetes/proxy"}
-	case 12:
+	case 5:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
 		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster, o.options.Kubelet}
-	case 13:
+	case 6:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
 		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
-	case 14:
+	case 7:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
 		return volumeCreateCommand{o.kubelets, "dockershim"}
-	case 15:
+	case 8:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
@@ -655,7 +615,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		}
 		return runContainerParamsCommand{o.kubelets, kubeletContainerName, HyperkubeImage,
 			opts, params, o.options.Kubelet.ServiceParams}
-	case 16:
+	case 9:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
