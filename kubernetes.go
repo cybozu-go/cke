@@ -538,44 +538,75 @@ func (o *kubeWorkerBootOp) Name() string {
 func (o *kubeWorkerBootOp) NextCommand() Commander {
 	var opts []string
 
+	// Romana and Kubelet use these paths
+	// https://github.com/romana/romana/blob/1aa6b9b8d43e0eb3830d581deec8f3ab4bba5833/docs/kubernetes/romana-kubeadm.yml#L259-L262
+	cniBinPath := "/host/opt/cni/bin"
+	cniConfPath := "/host/etc/cni/net.d"
+
 	switch o.step {
 	case 0:
 		o.step++
-		if len(o.proxies) == 0 {
-			return o.NextCommand()
-		}
-		return imagePullCommand{o.proxies, HyperkubeImage}
+		return imagePullCommand{o.kubelets, "cke-tools"}
 	case 1:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeDirCommand{o.kubelets, "/var/log/kubernetes/kubelet"}
+		return makeDirCommand{o.kubelets, cniBinPath}
 	case 2:
 		o.step++
-		if len(o.proxies) == 0 {
+		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeDirCommand{o.proxies, "/var/log/kubernetes/proxy"}
+		return makeDirCommand{o.kubelets, cniConfPath}
 	case 3:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster, o.options.Kubelet}
+		opts = []string{
+			"--mount", "type=bind,src=" + cniBinPath + ",target=/host/bin",
+			"--mount", "type=bind,src=" + cniConfPath + ",target=/host/net.d"}
+		return runContainerCommand{nodes: o.kubelets, name: "cke-tools", opts: opts,
+			params: ServiceParams{ExtraArguments: []string{"/usr/local/cke-tools/bin/install-cni"}},
+		}
 	case 4:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
 		}
-		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
+		return imagePullCommand{o.proxies, HyperkubeImage}
 	case 5:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return volumeCreateCommand{o.kubelets, "dockershim"}
+		return makeDirCommand{o.kubelets, "/var/log/kubernetes/kubelet"}
 	case 6:
+		o.step++
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return makeDirCommand{o.proxies, "/var/log/kubernetes/proxy"}
+	case 7:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster, o.options.Kubelet}
+	case 8:
+		o.step++
+		if len(o.proxies) == 0 {
+			return o.NextCommand()
+		}
+		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
+	case 9:
+		o.step++
+		if len(o.kubelets) == 0 {
+			return o.NextCommand()
+		}
+		return volumeCreateCommand{o.kubelets, "dockershim"}
+	case 10:
 		o.step++
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
@@ -591,7 +622,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		}
 		return runContainerParamsCommand{o.kubelets, kubeletContainerName, HyperkubeImage,
 			opts, params, o.options.Kubelet.ServiceParams}
-	case 7:
+	case 11:
 		o.step++
 		if len(o.proxies) == 0 {
 			return o.NextCommand()
