@@ -16,8 +16,8 @@ Requirements
 
 ### CKE requirements
 
-* [etcd](http://etcd.io/)
-* [Vault](http://vaultproject.io)
+* [etcd][]
+* [Vault][]
 
 ### Node OS Requirements
 
@@ -38,6 +38,8 @@ Planned Features
 * Cluster features:
 
     * HA control plane.
+    * [RBAC][].
+    * [CNI][] network plugins.
     * CoreDNS add-on.
     * Node-local DNS cache services.
 
@@ -82,6 +84,8 @@ CKE is licensed under MIT license.
 [releases]: https://github.com/cybozu-go/cke/releases
 [godoc]: https://godoc.org/github.com/cybozu-go/cke
 [Kubernetes]: https://kubernetes.io/
-[etcd]: https://github.com/coreos/etcd
-[CRI]: https://github.com/kubernetes/community/blob/master/contributors/devel/container-runtime-interface.md
+[etcd]: https://github.com/etcd-io/etcd
+[Vault]: https://www.vaultproject.io
+[RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+[CNI]: https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/
 [sabakan]: https://github.com/cybozu-go/sabakan

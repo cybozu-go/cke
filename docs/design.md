@@ -8,6 +8,7 @@ CKE should cover:
 
 * Management of Kubernetes and etcd for Kubernetes including:
 
+    * Certificate authority for various TLS/signing tasks.
     * Bootstrapping from scratch.
     * Boot from fully stopped status.
     * Adding/Removing nodes.
@@ -18,7 +19,6 @@ CKE should cover:
 * Deployment of add-ons:
 
     * CoreDNS
-    * Custom add-ons by using custom manifests
 
 * Integration with sabakan
 
@@ -31,6 +31,10 @@ CKE should **NOT** cover:
     * Assets such as `kubelet` are compiled into Docker images.  
       The images should be able to be pulled from Internet or
       pre-loaded by users.
+
+* Custom add-ons
+
+    * Users should be responsible to install and update add-ons other than CoreDNS.
 
 * Management of Ceph or MySQL clusters
 
@@ -73,15 +77,14 @@ Implementation policies
 
     * `kubelet` or other system services run by `docker run --restart=always`.
 
-* CKE does not depend on specific network add-ons.
+* CKE employs CNI network plugins.
 
-    * All its containers should run with `docker run --network=host`.
-    * Users can install network add-ons by custom manifests.
+    * All system containers run with `docker run --network=host`.
+    * Users can install [CNI-compatible network plugins](https://github.com/containernetworking/cni#3rd-party-plugins).
 
 * CKE uses `docker` as a container runtime of Kubernetes
 
-    * Other CRI-conforming runtimes will be supported by allowing users
-      to customize `kubelet` arguments.
+    * Support for other CRI-conforming runtimes may be added later.
 
 * `cke` and `ckecli` does not communicate directly; they communicate through etcd.
 

@@ -15,6 +15,9 @@ Name            | Required | Type      | Description
 `dns_servers`   | false    | array     | List of upstream DNS server IP addresses.
 `options`       | false    | `Options` | See options.
 
+* IP addresses in `pod_subnet` are only used for host-local communication
+  as a fallback CNI plugin.  They are never seen from outside of the cluster.
+
 Node
 ----
 

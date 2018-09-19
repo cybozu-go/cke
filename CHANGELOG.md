@@ -4,16 +4,19 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [0.6] - 2018-09-19
 ### Added
 - Opt in to [Go modules](https://github.com/golang/go/wiki/Modules).
-- Support for RBAC.
-- Enable CNI plugin.
+- Enable [RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) (#47).
+- Enable [CNI network plugin](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/) (#54).
+- Support SELinux enabled node OS (#50, #53).
 
 ## [0.5] - 2018-09-13
 
 ### Added
 - Kubernetes cluster has employed TLS security.
-- Support for [Service Accounts][].
+- Support for [Service Accounts](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/) (#43).
 
 ## [0.4] - 2018-09-06
 
@@ -37,7 +40,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/sabakan/compare/v0.5...HEAD
+[Unreleased]: https://github.com/cybozu-go/sabakan/compare/v0.6...HEAD
+[0.6]: https://github.com/cybozu-go/sabakan/compare/v0.5...v0.6
 [0.5]: https://github.com/cybozu-go/sabakan/compare/v0.4...v0.5
 [0.4]: https://github.com/cybozu-go/sabakan/compare/v0.3...v0.4
 [0.3]: https://github.com/cybozu-go/sabakan/compare/v0.2...v0.3
