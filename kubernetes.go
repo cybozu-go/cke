@@ -772,7 +772,7 @@ func KubeletServiceParams(n *Node) ServiceParams {
 			{"/var/lib/kubelet", "/var/lib/kubelet", false, PropagationShared, LabelShared},
 			// TODO: /var/lib/docker is used by cAdvisor.
 			// cAdvisor will be removed from kubelet. Then remove this bind mount.
-			{"/var/lib/docker", "/var/lib/docker", false, PropagationRSlave, LabelShared},
+			{"/var/lib/docker", "/var/lib/docker", false, "", LabelPrivate},
 			{"/opt/volume/bin", "/opt/volume/bin", false, PropagationShared, LabelShared},
 			{"/var/log/pods", "/var/log/pods", false, "", LabelShared},
 			{"/var/log/containers", "/var/log/containers", false, "", LabelShared},
