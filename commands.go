@@ -85,31 +85,78 @@ func (c makeDirsCommand) Command() Command {
 	}
 }
 
-type FileData struct {
-	name string
-	mu   sync.RWMutex
-	body map[string][]byte
-}
-
-func (f *FileData) addData(n *Node, data []byte) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	f.body[n.Address] = data
-}
-
-func (f *FileData) getData(n *Node) []byte {
-	f.mu.RLock()
-	defer f.mu.RUnlock()
-	return f.body[n.Address]
+type fileData struct {
+	name    string
+	dataMap map[string][]byte
 }
 
 type makeFilesCommand struct {
 	nodes []*Node
-	files []FileData
+	files []fileData
 }
 
-func (c makeFilesCommand) Run(ctx context.Context, inf Infrastructure) error {
+func (c *makeFilesCommand) AddFile(ctx context.Context, name string,
+	f func(context.Context, *Node) ([]byte, error)) error {
+	var mu sync.Mutex
+	dataMap := make(map[string][]byte)
+
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		n := n
+		env.Go(func(ctx context.Context) error {
+			data, err := f(ctx, n)
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			dataMap[n.Address] = data
+			mu.Unlock()
+			return nil
+		})
+	}
+	env.Stop()
+	err := env.Wait()
+	if err != nil {
+		return err
+	}
+
+	c.files = append(c.files, fileData{name, dataMap})
+	return nil
+}
+
+func (c *makeFilesCommand) AddKeyPair(ctx context.Context, name string,
+	f func(context.Context, *Node) (cert, key []byte, err error)) error {
+	var mu sync.Mutex
+	certMap := make(map[string][]byte)
+	keyMap := make(map[string][]byte)
+
+	env := cmd.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		n := n
+		env.Go(func(ctx context.Context) error {
+			certData, keyData, err := f(ctx, n)
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			certMap[n.Address] = certData
+			keyMap[n.Address] = keyData
+			mu.Unlock()
+			return nil
+		})
+	}
+	env.Stop()
+	err := env.Wait()
+	if err != nil {
+		return err
+	}
+
+	c.files = append(c.files, fileData{name + ".crt", certMap})
+	c.files = append(c.files, fileData{name + ".key", keyMap})
+	return nil
+}
+
+func (c *makeFilesCommand) Run(ctx context.Context, inf Infrastructure) error {
 	bindMap := make(map[string]Mount)
 	for _, f := range c.files {
 		parentDir := filepath.Dir(f.name)
@@ -134,7 +181,7 @@ func (c makeFilesCommand) Run(ctx context.Context, inf Infrastructure) error {
 			buf := new(bytes.Buffer)
 			tw := tar.NewWriter(buf)
 			for _, f := range c.files {
-				data := f.getData(n)
+				data := f.dataMap[n.Address]
 				hdr := &tar.Header{
 					Name: f.name,
 					Mode: 0644,
@@ -161,7 +208,7 @@ func (c makeFilesCommand) Run(ctx context.Context, inf Infrastructure) error {
 	return env.Wait()
 }
 
-func (c makeFilesCommand) Command() Command {
+func (c *makeFilesCommand) Command() Command {
 	fileNames := make([]string, len(c.files))
 	for i, f := range c.files {
 		fileNames[i] = f.name
@@ -430,24 +477,23 @@ func (c stopContainersCommand) Command() Command {
 }
 
 type prepareEtcdCertificatesCommand struct {
-	nodes   []*Node
-	addFile func(*Node, string, []byte)
+	makeFiles *makeFilesCommand
 }
 
 func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
-	env := cmd.NewEnvironment(ctx)
-	for _, node := range c.nodes {
-		n := node
-		env.Go(func(ctx context.Context) error {
-			files, err := EtcdCA{}.setupNode(ctx, inf, n, c.addFile)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+	f := func(ctx context.Context, n *Node) (cert, key []byte, err error) {
+		c, k, e := EtcdCA{}.issueServerCert(ctx, inf, n)
+		if e != nil {
+			return nil, nil, e
+		}
+		return []byte(c), []byte(k), nil
 	}
-	env.Stop()
-	return env.Wait()
+	err := c.makeFiles.AddKeyPair(ctx, EtcdPKIPath("server"), f)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c prepareEtcdCertificatesCommand) Command() Command {

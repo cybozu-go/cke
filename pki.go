@@ -59,6 +59,21 @@ func K8sPKIPath(p string) string {
 type EtcdCA struct {
 }
 
+func (e EtcdCA) issueServerCert(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
+	return issueCertificate(inf, CAServer, "system",
+		map[string]interface{}{
+			"ttl":            "87600h",
+			"max_ttl":        "87600h",
+			"client_flag":    "false",
+			"allow_any_name": "true",
+		},
+		map[string]interface{}{
+			"common_name": node.Nodename(),
+			"alt_names":   "localhost",
+			"ip_sans":     "127.0.0.1," + node.Address,
+		})
+}
+
 func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node, addFile func(*Node, string, []byte)) error {
 
 	err := writeCertificate(inf, node, CAServer, EtcdPKIPath("server"),
