@@ -119,14 +119,21 @@ func (o *etcdBootOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
+			// TODO: BUG: this should be Mount in params
 			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		var initialCluster []string
 		for _, n := range o.nodes {
 			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
-		return runContainerCommand{[]*Node{node}, etcdContainerName, EtcdImage,
-			opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
+		return runContainerCommand{
+			nodes:  []*Node{node},
+			name:   etcdContainerName,
+			img:    EtcdImage,
+			opts:   opts,
+			params: etcdBuiltInParams(node, initialCluster, "new"),
+			extra:  extra,
+		}
 	case 5:
 		o.step++
 		return waitEtcdSyncCommand{o.endpoints, false}
@@ -645,8 +652,14 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
 		o.nodeIndex++
-		return runContainerCommand{[]*Node{target}, etcdContainerName, EtcdImage,
-			opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
+		return runContainerCommand{
+			nodes:  []*Node{target},
+			name:   etcdContainerName,
+			img:    EtcdImage,
+			opts:   opts,
+			params: etcdBuiltInParams(target, initialCluster, "new"),
+			extra:  extra,
+		}
 	}
 	return nil
 }
@@ -696,6 +709,7 @@ func (o *etcdRestartOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
+			// TODO: BUG: this should be Mount in params
 			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		var initialCluster []string
@@ -703,8 +717,14 @@ func (o *etcdRestartOp) NextCommand() Commander {
 			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
 		o.nodeIndex++
-		return runContainerCommand{[]*Node{target}, etcdContainerName, EtcdImage,
-			opts, etcdBuiltInParams(target, initialCluster, "new"), extra}
+		return runContainerCommand{
+			nodes:  []*Node{target},
+			name:   etcdContainerName,
+			img:    EtcdImage,
+			opts:   opts,
+			params: etcdBuiltInParams(target, initialCluster, "new"),
+			extra:  extra,
+		}
 	}
 	return nil
 }

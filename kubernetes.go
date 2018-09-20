@@ -40,6 +40,14 @@ type riversBootOp struct {
 	step      int
 }
 
+type riversRestartOp struct {
+	nodes     []*Node
+	upstreams []*Node
+	params    ServiceParams
+
+	pulled bool
+}
+
 type apiServerBootOp struct {
 	cps   []*Node
 	nodes []*Node
@@ -79,10 +87,7 @@ type apiServerRestartOp struct {
 	serviceSubnet string
 	params        ServiceParams
 
-	step1     int
-	step2     int
-	nodeIndex int
-	makeFiles *makeFilesCommand
+	pulled bool
 }
 
 type controllerManagerRestartOp struct {
@@ -92,10 +97,7 @@ type controllerManagerRestartOp struct {
 	serviceSubnet string
 	params        ServiceParams
 
-	step1     int
-	step2     int
-	nodeIndex int
-	makeFiles *makeFilesCommand
+	pulled bool
 }
 
 type schedulerRestartOp struct {
@@ -104,10 +106,7 @@ type schedulerRestartOp struct {
 	cluster string
 	params  ServiceParams
 
-	step1     int
-	step2     int
-	nodeIndex int
-	makeFiles *makeFilesCommand
+	pulled bool
 }
 
 type containerStopOp struct {
@@ -116,30 +115,25 @@ type containerStopOp struct {
 	executed bool
 }
 
-type kubeWorkerBootOp struct {
-	cps []*Node
+type kubeProxyBootOp struct {
+	nodes []*Node
 
-	kubelets []*Node
-	proxies  []*Node
+	cluster string
+	params  ServiceParams
+
+	step      int
+	makeFiles *makeFilesCommand
+}
+
+type kubeletBootOp struct {
+	nodes []*Node
 
 	cluster   string
 	podSubnet string
-	options   Options
+	params    KubeletParams
 
-	step int
-}
-
-type kubeWorkerRestartOp struct {
-	cps []*Node
-
-	rivers   []*Node
-	kubelets []*Node
-	proxies  []*Node
-
-	cluster string
-	options Options
-
-	step int
+	step      int
+	makeFiles *makeFilesCommand
 }
 
 type kubeRBACRoleInstallOp struct {
@@ -148,13 +142,12 @@ type kubeRBACRoleInstallOp struct {
 	bindingExists bool
 }
 
-// RiversBootOp returns an Operator to bootstrap rivers cluster.
-func RiversBootOp(nodes []*Node, upstreams []*Node, params ServiceParams) Operator {
+// RiversBootOp returns an Operator to bootstrap rivers.
+func RiversBootOp(nodes, upstreams []*Node, params ServiceParams) Operator {
 	return &riversBootOp{
 		nodes:     nodes,
 		upstreams: upstreams,
 		params:    params,
-		step:      0,
 	}
 }
 
@@ -163,9 +156,6 @@ func (o *riversBootOp) Name() string {
 }
 
 func (o *riversBootOp) NextCommand() Commander {
-	extra := o.params
-	var opts []string
-
 	switch o.step {
 	case 0:
 		o.step++
@@ -175,9 +165,43 @@ func (o *riversBootOp) NextCommand() Commander {
 		return makeDirsCommand{o.nodes, []string{"/var/log/rivers"}}
 	case 2:
 		o.step++
-		return runContainerCommand{o.nodes, "rivers", ToolsImage, opts, RiversParams(o.upstreams), extra}
+		return runContainerCommand{
+			nodes:  o.nodes,
+			name:   riversContainerName,
+			img:    ToolsImage,
+			params: RiversParams(o.upstreams),
+			extra:  o.params,
+		}
 	default:
 		return nil
+	}
+}
+
+// RiversRestartOp returns an Operator to restart rivers.
+func RiversRestartOp(nodes, upstreams []*Node, params ServiceParams) Operator {
+	return &riversRestartOp{
+		nodes:     nodes,
+		upstreams: upstreams,
+		params:    params,
+	}
+}
+
+func (o *riversRestartOp) Name() string {
+	return "rivers-restart"
+}
+
+func (o *riversRestartOp) NextCommand() Commander {
+	if !o.pulled {
+		o.pulled = true
+		return imagePullCommand{o.nodes, ToolsImage}
+	}
+
+	return restartContainerCommand{
+		nodes:  o.nodes,
+		name:   riversContainerName,
+		img:    ToolsImage,
+		params: RiversParams(o.upstreams),
+		extra:  o.params,
 	}
 }
 
@@ -228,7 +252,7 @@ func (o *apiServerBootOp) NextCommand() Commander {
 		return makeDirsCommand{o.nodes, dirs}
 	case 2:
 		o.step++
-		return setupAPIServerCertificatesCommand{o.makeFiles}
+		return prepareAPIServerFilesCommand{o.makeFiles}
 	case 3:
 		o.step++
 		return o.makeFiles
@@ -266,7 +290,7 @@ func ControllerManagerBootOp(nodes []*Node, cluster string, serviceSubnet string
 }
 
 func (o *controllerManagerBootOp) Name() string {
-	return "kube-apiserver-bootstrap"
+	return "kube-controller-manager-bootstrap"
 }
 
 func (o *controllerManagerBootOp) NextCommand() Commander {
@@ -282,23 +306,18 @@ func (o *controllerManagerBootOp) NextCommand() Commander {
 		return makeDirsCommand{o.nodes, dirs}
 	case 2:
 		o.step++
-		return makeControllerManagerKubeconfigCommand{o.cluster, o.makeFiles}
+		return prepareControllerManagerFilesCommand{o.cluster, o.makeFiles}
 	case 3:
 		o.step++
 		return o.makeFiles
 	case 4:
 		o.step++
-		paramsMap := make(map[string]ServiceParams)
-		for _, n := range o.nodes {
-			paramsMap[n.Address] = ControllerManagerParams(o.cluster, o.serviceSubnet)
-		}
 		return runContainerCommand{
-			nodes:     o.nodes,
-			name:      kubeControllerManagerContainerName,
-			img:       HyperkubeImage,
-			opts:      []string{},
-			paramsMap: paramsMap,
-			extra:     o.params,
+			nodes:  o.nodes,
+			name:   kubeControllerManagerContainerName,
+			img:    HyperkubeImage,
+			params: ControllerManagerParams(o.cluster, o.serviceSubnet),
+			extra:  o.params,
 		}
 	default:
 		return nil
@@ -332,7 +351,7 @@ func (o *schedulerBootOp) NextCommand() Commander {
 		return makeDirsCommand{o.nodes, dirs}
 	case 2:
 		o.step++
-		return makeSchedulerKubeconfigCommand{o.cluster, o.makeFiles}
+		return prepareSchedulerFilesCommand{o.cluster, o.makeFiles}
 	case 3:
 		o.step++
 		return o.makeFiles
@@ -342,7 +361,6 @@ func (o *schedulerBootOp) NextCommand() Commander {
 			nodes:  o.nodes,
 			name:   kubeSchedulerContainerName,
 			img:    HyperkubeImage,
-			opts:   []string{},
 			params: SchedulerParams(),
 			extra:  o.params,
 		}
@@ -360,7 +378,7 @@ func ContainerStopOp(nodes []*Node, name string) Operator {
 }
 
 func (o *containerStopOp) Name() string {
-	return "kube-apiserver-stop"
+	return "container-stop"
 }
 
 func (o *containerStopOp) NextCommand() Commander {
@@ -378,182 +396,100 @@ func APIServerRestartOp(cps, nodes []*Node, serviceSubnet string, params Service
 		nodes:         nodes,
 		serviceSubnet: serviceSubnet,
 		params:        params,
-		makeFiles:     &makeFilesCommand{nodes: nodes},
 	}
 }
 
 func (o *apiServerRestartOp) Name() string {
-	return "kubernetes-control-plane-restart"
+	return "kube-apiserver-restart"
 }
 
 func (o *apiServerRestartOp) NextCommand() Commander {
-	var opts []string
+	if !o.pulled {
+		o.pulled = true
+		return imagePullCommand{o.nodes, HyperkubeImage}
+	}
 
-	switch o.step1 {
-	case 0:
-		o.step1++
-		return imagePullCommand{o.cps, ToolsImage}
-	case 1:
-		o.step1++
-		return imagePullCommand{o.cps, HyperkubeImage}
-	case 3:
-		if o.nodeIndex >= len(o.nodes) {
-			o.step1++
-			o.nodeIndex = 0
-			return o.NextCommand()
-		}
-		node := o.nodes[o.nodeIndex]
-
-		switch o.step2 {
-		case 0:
-			o.step2++
-			return stopContainersCommand{[]*Node{node}, kubeAPIServerContainerName}
-		case 1:
-			o.step2++
-			opts = []string{
-				// TODO pass keys from CKE
-				"--mount", "type=tmpfs,dst=/run/kubernetes",
-			}
-			return runContainerCommand{
-				nodes:  o.nodes,
-				name:   kubeAPIServerContainerName,
-				img:    HyperkubeImage,
-				opts:   opts,
-				params: APIServerParams(o.cps, node.Address, o.serviceSubnet),
-				extra:  o.params,
-			}
-		default:
-			o.nodeIndex++
-			o.step2 = 0
-			return o.NextCommand()
-		}
-	default:
+	if len(o.nodes) == 0 {
 		return nil
 	}
-}
 
-// KubeCPRestartOp returns an Operator to restart kubernetes control planes
-func KubeCPRestartOp(cps []*Node, rivers, apiserver, controllerManager, scheduler []*Node, cluster string, serviceSubnet string, options Options) Operator {
-	return &kubeCPRestartOp{
-		cps:               cps,
-		rivers:            rivers,
-		apiserver:         apiserver,
-		controllerManager: controllerManager,
-		scheduler:         scheduler,
-		cluster:           cluster,
-		serviceSubnet:     serviceSubnet,
-		options:           options,
+	// API server should be restarted one by one.
+	node := o.nodes[0]
+	o.nodes = o.nodes[1:]
+	opts := []string{
+		"--mount", "type=tmpfs,dst=/run/kubernetes",
+	}
+	return runContainerCommand{
+		nodes:   []*Node{node},
+		name:    kubeAPIServerContainerName,
+		img:     HyperkubeImage,
+		opts:    opts,
+		params:  APIServerParams(o.cps, node.Address, o.serviceSubnet),
+		extra:   o.params,
+		restart: true,
 	}
 }
 
-func (o *kubeCPRestartOp) Name() string {
-	return "kubernetes-control-plane-restart"
-}
-
-func (o *kubeCPRestartOp) NextCommand() Commander {
-	var opts []string
-
-	switch o.step1 {
-	case 0:
-		o.step1++
-		return imagePullCommand{o.cps, ToolsImage}
-	case 1:
-		o.step1++
-		return imagePullCommand{o.cps, HyperkubeImage}
-	case 2:
-		if o.nodeIndex >= len(o.rivers) {
-			o.step1++
-			o.nodeIndex = 0
-			return o.NextCommand()
-		}
-		node := o.rivers[o.nodeIndex]
-
-		switch o.step2 {
-		case 0:
-			o.step2++
-			return killContainersCommand{[]*Node{node}, riversContainerName}
-		case 1:
-			o.step2++
-			return runContainerCommand{[]*Node{node}, riversContainerName, ToolsImage,
-				opts, RiversParams(o.cps), o.options.Rivers}
-		default:
-			o.step2 = 0
-			o.nodeIndex++
-			return o.NextCommand()
-		}
-	case 3:
-		if o.nodeIndex >= len(o.apiserver) {
-			o.step1++
-			o.nodeIndex = 0
-			return o.NextCommand()
-		}
-		node := o.apiserver[o.nodeIndex]
-
-		switch o.step2 {
-		case 0:
-			o.step2++
-			return stopContainersCommand{[]*Node{node}, kubeAPIServerContainerName}
-		case 1:
-			o.step2++
-			opts = []string{
-				// TODO pass keys from CKE
-				"--mount", "type=tmpfs,dst=/run/kubernetes",
-			}
-			return runContainerCommand{[]*Node{node}, kubeAPIServerContainerName, HyperkubeImage,
-				opts, APIServerParams(o.cps, node.Address, o.serviceSubnet), o.options.APIServer}
-		default:
-			o.step2 = 0
-			o.nodeIndex++
-			return o.NextCommand()
-		}
-	case 4:
-		if o.nodeIndex >= len(o.controllerManager) {
-			o.step1++
-			o.nodeIndex = 0
-			return o.NextCommand()
-		}
-		node := o.controllerManager[o.nodeIndex]
-
-		switch o.step2 {
-		case 0:
-			o.step2++
-			return stopContainersCommand{[]*Node{node}, kubeControllerManagerContainerName}
-		case 1:
-			o.step2++
-			return runContainerCommand{[]*Node{node}, kubeControllerManagerContainerName, HyperkubeImage,
-				opts, ControllerManagerParams(o.cluster, o.serviceSubnet), o.options.ControllerManager}
-		default:
-			o.step2 = 0
-			o.nodeIndex++
-			return o.NextCommand()
-		}
-	case 5:
-		if o.nodeIndex >= len(o.scheduler) {
-			o.step1++
-			o.nodeIndex = 0
-			return o.NextCommand()
-		}
-		node := o.scheduler[o.nodeIndex]
-
-		switch o.step2 {
-		case 0:
-			o.step2++
-			return stopContainersCommand{[]*Node{node}, kubeSchedulerContainerName}
-		case 1:
-			o.step2++
-			return runContainerCommand{[]*Node{node}, kubeSchedulerContainerName, HyperkubeImage,
-				opts, SchedulerParams(), o.options.Scheduler}
-		default:
-			o.step2 = 0
-			o.nodeIndex++
-			return o.NextCommand()
-		}
-	default:
-		return nil
+// ControllerManagerRestartOp returns an Operator to restart kube-controller-manager
+func ControllerManagerRestartOp(nodes []*Node, cluster, serviceSubnet string, params ServiceParams) Operator {
+	return &controllerManagerRestartOp{
+		nodes:         nodes,
+		cluster:       cluster,
+		serviceSubnet: serviceSubnet,
+		params:        params,
 	}
 }
 
-// APIServerParams returns built-in a ServiceParams form kube-apiserver
+func (o *controllerManagerRestartOp) Name() string {
+	return "kube-controller-manager-restart"
+}
+
+func (o *controllerManagerRestartOp) NextCommand() Commander {
+	if !o.pulled {
+		o.pulled = true
+		return imagePullCommand{o.nodes, HyperkubeImage}
+	}
+
+	return runContainerCommand{
+		nodes:   o.nodes,
+		name:    kubeControllerManagerContainerName,
+		img:     HyperkubeImage,
+		params:  ControllerManagerParams(o.cluster, o.serviceSubnet),
+		extra:   o.params,
+		restart: true,
+	}
+}
+
+// SchedulerRestartOp returns an Operator to restart kube-scheduler
+func SchedulerRestartOp(nodes []*Node, cluster string, params ServiceParams) Operator {
+	return &schedulerRestartOp{
+		nodes:   nodes,
+		cluster: cluster,
+		params:  params,
+	}
+}
+
+func (o *schedulerRestartOp) Name() string {
+	return "kube-scheduler-restart"
+}
+
+func (o *schedulerRestartOp) NextCommand() Commander {
+	if !o.pulled {
+		o.pulled = true
+		return imagePullCommand{o.nodes, HyperkubeImage}
+	}
+
+	return runContainerCommand{
+		nodes:   o.nodes,
+		name:    kubeSchedulerContainerName,
+		img:     HyperkubeImage,
+		params:  SchedulerParams(),
+		extra:   o.params,
+		restart: true,
+	}
+}
+
+// APIServerParams returns built-in ServiceParams form kube-apiserver
 func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet string) ServiceParams {
 	var etcdServers []string
 	for _, n := range controlPlanes {
@@ -564,7 +500,7 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet stri
 		"apiserver",
 		"--allow-privileged",
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
-		"--etcd-cafile=" + K8sPKIPath("etcd/ca.crt"),
+		"--etcd-cafile=" + K8sPKIPath("etcd-ca.crt"),
 		"--etcd-certfile=" + K8sPKIPath("apiserver-etcd-client.crt"),
 		"--etcd-keyfile=" + K8sPKIPath("apiserver-etcd-client.key"),
 
@@ -654,20 +590,51 @@ func SchedulerParams() ServiceParams {
 	}
 }
 
-// KubeWorkerBootOp returns an Operator to boot kubernetes workers.
-func KubeWorkerBootOp(cps, kubelets, proxies []*Node, cluster, podSubnet string, options Options) Operator {
-	return &kubeWorkerBootOp{
-		cps:       cps,
-		kubelets:  kubelets,
-		proxies:   proxies,
+// KubeProxyBootOp returns an Operator to boot kube-proxy.
+func KubeProxyBootOp(nodes []*Node, cluster string, params ServiceParams) Operator {
+	return &kubeProxyBootOp{
+		nodes:     nodes,
 		cluster:   cluster,
-		podSubnet: podSubnet,
-		options:   options,
+		params:    params,
+		makeFiles: &makeFilesCommand{nodes: nodes},
 	}
 }
 
-func (o *kubeWorkerBootOp) Name() string {
-	return "worker-bootstrap"
+func (o *kubeProxyBootOp) Name() string {
+	return "kube-proxy-bootstrap"
+}
+
+func (o *kubeProxyBootOp) NextCommand() Commander {
+	switch o.step {
+	case 0:
+		return imagePullCommand{o.nodes, HyperkubeImage}
+	case 1:
+		dirs := []string{
+			"/var/log/kubernetes/proxy",
+		}
+		return makeDirsCommand{o.nodes, dirs}
+	case 2:
+		o.step++
+		return prepareProxyFilesCommand{o.cluster, o.makeFiles}
+	case 3:
+		o.step++
+		return o.makeFiles
+	case 4:
+		opts := []string{
+			"--tmpfs=/run",
+			"--privileged",
+		}
+		return runContainerCommand{
+			nodes:  o.nodes,
+			name:   kubeProxyContainerName,
+			img:    HyperkubeImage,
+			opts:   opts,
+			params: ProxyParams(),
+			extra:  o.params,
+		}
+	default:
+		return nil
+	}
 }
 
 func (o *kubeWorkerBootOp) NextCommand() Commander {

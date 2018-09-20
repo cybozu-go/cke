@@ -39,7 +39,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return SchedulerBootOp(schedulers, c.Name, c.Options.Scheduler)
 	}
 
-	// Stop kubernetes control planes on non-control-plane nodes
+	// Stop kubernetes control plane containers running on non-control-plane nodes
 	apiservers = filterNodes(nonCpNodes, func(n *Node) bool {
 		return cs.NodeStatuses[n.Address].APIServer.Running
 	})
@@ -73,8 +73,8 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return KubeProxyBootOp(proxies, c.Options.Proxy)
 	}
 
-	// Check diff of command options
-	op := kubernetesOptionsDecideToDo(c, cs)
+	// Restart containers running with stale images or configurations.
+	op := kubernetesDecideRestart(c, cs)
 	if op != nil {
 		return op
 	}
@@ -88,7 +88,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	return nil
 }
 
-func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
+func kubernetesDecideRestart(c *Cluster, cs *ClusterStatus) Operator {
 	var cpNodes []*Node
 	var nonCpNodes []*Node
 	for _, n := range c.Nodes {
@@ -99,8 +99,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 	}
 
-	// Check diff of options for rivers, apiservers, controller-managers, and schedulers
-	rivers := filterNodes(cpNodes, func(n *Node) bool {
+	rivers := filterNodes(c.Nodes, func(n *Node) bool {
 		riversStatus := cs.NodeStatuses[n.Address].Rivers
 		if !RiversParams(cpNodes).Equal(riversStatus.BuiltInParams) {
 			return true
@@ -113,6 +112,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(rivers) > 0 {
 		return RiversRestartOp(cpNodes, rivers, c.Options.Rivers)
 	}
+
 	apiservers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].APIServer
 		if !APIServerParams(cpNodes, n.Address, c.ServiceSubnet).Equal(status.BuiltInParams) {
@@ -126,6 +126,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(apiservers) > 0 {
 		return APIServerRestartOp(cpNodes, apiservers, c.ServiceSubnet, c.Options.APIServer)
 	}
+
 	controllerManagers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].ControllerManager
 		if !ControllerManagerParams(c.Name, c.ServiceSubnet).Equal(status.BuiltInParams) {
@@ -139,6 +140,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(controllerManagers) > 0 {
 		return ControllerManagerRestartOp(cpNodes, controllerManagers, c.Name, c.ServiceSubnet, c.Options.ControllerManager)
 	}
+
 	schedulers := filterNodes(cpNodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].Scheduler
 		if !SchedulerParams().Equal(status.BuiltInParams) {
@@ -153,20 +155,6 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return SchedulerRestartOp(cpNodes, schedulers, c.Name, c.Options.Scheduler)
 	}
 
-	// Check diff of rivers options for worker nodes
-	rivers = filterNodes(nonCpNodes, func(n *Node) bool {
-		riversStatus := cs.NodeStatuses[n.Address].Rivers
-		if !RiversParams(cpNodes).Equal(riversStatus.BuiltInParams) {
-			return true
-		}
-		if !c.Options.Rivers.Equal(riversStatus.ExtraParams) {
-			return true
-		}
-		return false
-	})
-	if len(rivers) > 0 {
-		return RiversRestartOp(cpNodes, rivers, c.Options.Rivers)
-	}
 	kubelets := filterNodes(c.Nodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].Kubelet
 		if !KubeletServiceParams(n).Equal(status.BuiltInParams) {
@@ -186,6 +174,7 @@ func kubernetesOptionsDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	if len(kubelets) > 0 {
 		return KubeletRestartOp(cpNodes, kubelets, c.Name, c.ServiceSubnet, c.Options.Kubelet)
 	}
+
 	proxies := filterNodes(c.Nodes, func(n *Node) bool {
 		status := cs.NodeStatuses[n.Address].Proxy
 		if !ProxyParams().Equal(status.BuiltInParams) {
