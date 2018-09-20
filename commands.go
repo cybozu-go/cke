@@ -36,33 +36,62 @@ type Commander interface {
 	Command() Command
 }
 
-type makeDirCommand struct {
-	nodes     []*Node
-	targetDir string
+type makeDirsCommand struct {
+	nodes []*Node
+	dirs  []string
 }
 
-func (c makeDirCommand) Run(ctx context.Context, inf Infrastructure) error {
+func (c makeDirsCommand) Run(ctx context.Context, inf Infrastructure) error {
+	bindMap := make(map[string]Mount)
+	dests := make([]string, len(c.dirs))
+	for i, d := range c.dirs {
+		dests[i] = filepath.Join("/mnt", d)
+
+		parentDir := filepath.Dir(d)
+		if _, ok := bindMap[parentDir]; ok {
+			continue
+		}
+		bindMap[parentDir] = Mount{
+			Source:      parentDir,
+			Destination: filepath.Join("/mnt", parentDir),
+			Label:       LabelPrivate,
+		}
+	}
+	binds := make([]Mount, 0, len(bindMap))
+	for _, m := range bindMap {
+		binds = append(binds, m)
+	}
+
+	arg := "/usr/local/cke-tools/bin/make_directories " + strings.Join(dests, " ")
+
 	env := cmd.NewEnvironment(ctx)
-	binds := []Mount{{
-		Source:      filepath.Dir(c.targetDir),
-		Destination: filepath.Join("/mnt", filepath.Dir(c.targetDir)),
-	}}
-	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", c.targetDir)
 	for _, n := range c.nodes {
 		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
-			return ce.Run(ToolsImage, binds, mkdirCommand)
+			return ce.Run(ToolsImage, binds, arg)
 		})
 	}
 	env.Stop()
 	return env.Wait()
 }
 
-func (c makeDirCommand) Command() Command {
+func (c makeDirsCommand) Command() Command {
 	return Command{
-		Name:   "mkdir",
-		Target: c.targetDir,
+		Name:   "make-dirs",
+		Target: strings.Join(c.dirs, " "),
 	}
+}
+
+func writeFile(inf Infrastructure, node *Node, target string, source string) error {
+	targetDir := filepath.Dir(target)
+	binds := []Mount{{
+		Source:      targetDir,
+		Destination: filepath.Join("/mnt", targetDir),
+		Label:       LabelPrivate,
+	}}
+	arg := "/usr/local/cke-tools/bin/write_file " + filepath.Join("/mnt", target)
+	ce := Docker(inf.Agent(node.Address))
+	return ce.RunWithInput(ToolsImage, binds, arg, source)
 }
 
 type makeFileCommand struct {
@@ -73,21 +102,10 @@ type makeFileCommand struct {
 
 func (c makeFileCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
-	targetDir := filepath.Dir(c.target)
-	binds := []Mount{{
-		Source:      targetDir,
-		Destination: filepath.Join("/mnt", targetDir),
-	}}
-	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", targetDir)
-	ddCommand := "dd of=" + filepath.Join("/mnt", c.target)
 	for _, n := range c.nodes {
-		ce := Docker(inf.Agent(n.Address))
+		n := n
 		env.Go(func(ctx context.Context) error {
-			err := ce.Run(ToolsImage, binds, mkdirCommand)
-			if err != nil {
-				return err
-			}
-			return ce.RunWithInput(ToolsImage, binds, ddCommand, c.source)
+			return writeFile(inf, n, c.target, c.source)
 		})
 	}
 	env.Stop()

@@ -293,22 +293,6 @@ func (k KubernetesCA) issueForServiceAccount(ctx context.Context, inf Infrastruc
 		})
 }
 
-func writeFile(inf Infrastructure, node *Node, target string, source string) error {
-	targetDir := filepath.Dir(target)
-	binds := []Mount{{
-		Source:      targetDir,
-		Destination: filepath.Join("/mnt", targetDir),
-	}}
-	mkdirCommand := "mkdir -p " + filepath.Join("/mnt", targetDir)
-	ddCommand := "dd of=" + filepath.Join("/mnt", target)
-	ce := Docker(inf.Agent(node.Address))
-	err := ce.Run(ToolsImage, binds, mkdirCommand)
-	if err != nil {
-		return err
-	}
-	return ce.RunWithInput(ToolsImage, binds, ddCommand, source)
-}
-
 func writeCertificate(inf Infrastructure, node *Node, ca, file string, roleOpts, certOpts map[string]interface{}) error {
 	crt, key, err := issueCertificate(inf, ca, "system", roleOpts, certOpts)
 	if err != nil {
