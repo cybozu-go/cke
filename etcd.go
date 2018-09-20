@@ -106,10 +106,10 @@ func (o *etcdBootOp) NextCommand() Commander {
 	case 2:
 		o.step++
 		return o.makeFiles
-	case 2:
+	case 3:
 		o.step++
 		return volumeCreateCommand{o.nodes, volname}
-	case 3:
+	case 4:
 		node := o.nodes[o.cpIndex]
 
 		o.cpIndex++
@@ -127,10 +127,10 @@ func (o *etcdBootOp) NextCommand() Commander {
 		}
 		return runContainerCommand{[]*Node{node}, etcdContainerName, EtcdImage,
 			opts, etcdBuiltInParams(node, initialCluster, "new"), extra}
-	case 4:
+	case 5:
 		o.step++
 		return waitEtcdSyncCommand{o.endpoints, false}
-	case 5:
+	case 6:
 		o.step++
 		return setupEtcdAuthCommand{o.endpoints}
 	default:
@@ -171,22 +171,22 @@ func etcdBuiltInParams(node *Node, initialCluster []string, state string) Servic
 }
 
 // EtcdAddMemberOp returns an Operator to add member to etcd cluster.
-func EtcdAddMemberOp(endpoints []string, targetNodes []*Node, params EtcdParams) Operator {
+func EtcdAddMemberOp(endpoints []string, targetNode *Node, params EtcdParams) Operator {
 	return &etcdAddMemberOp{
-		endpoints:   endpoints,
-		targetNodes: targetNodes,
-		params:      params,
-		step:        0,
-		nodeIndex:   0,
+		endpoints:  endpoints,
+		targetNode: targetNode,
+		params:     params,
+		step:       0,
+		makeFiles:  &makeFilesCommand{nodes: []*Node{targetNode}},
 	}
 }
 
 type etcdAddMemberOp struct {
-	endpoints   []string
-	targetNodes []*Node
-	params      EtcdParams
-	step        int
-	nodeIndex   int
+	endpoints  []string
+	targetNode *Node
+	params     EtcdParams
+	step       int
+	makeFiles  *makeFilesCommand
 }
 
 func (o *etcdAddMemberOp) Name() string {
@@ -197,40 +197,37 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 	volname := etcdVolumeName(o.params)
 	extra := o.params.ServiceParams
 
-	if o.nodeIndex >= len(o.targetNodes) {
-		return nil
-	}
-
-	node := o.targetNodes[o.nodeIndex]
-
+	nodes := []*Node{o.targetNode}
 	switch o.step {
 	case 0:
 		o.step++
-		return imagePullCommand{[]*Node{node}, EtcdImage}
+		return imagePullCommand{nodes, EtcdImage}
 	case 1:
 		o.step++
-		return stopContainerCommand{node, etcdContainerName}
+		return stopContainerCommand{o.targetNode, etcdContainerName}
 	case 2:
 		o.step++
-		return volumeRemoveCommand{[]*Node{node}, volname}
+		return volumeRemoveCommand{nodes, volname}
 	case 3:
 		o.step++
-		return volumeCreateCommand{[]*Node{node}, volname}
+		return volumeCreateCommand{nodes, volname}
 	case 4:
 		o.step++
-		return prepareEtcdCertificatesCommand{[]*Node{node}}
+		return prepareEtcdCertificatesCommand{o.makeFiles}
 	case 5:
+		o.step++
+		return o.makeFiles
+	case 6:
 		o.step++
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
 			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
-		return addEtcdMemberCommand{o.endpoints, node, opts, extra}
-	case 6:
+		return addEtcdMemberCommand{o.endpoints, o.targetNode, opts, extra}
+	case 7:
 		o.step = 0
-		o.nodeIndex++
-		endpoints := []string{"https://" + node.Address + ":2379"}
+		endpoints := []string{"https://" + o.targetNode.Address + ":2379"}
 		return waitEtcdSyncCommand{endpoints, false}
 	}
 	return nil

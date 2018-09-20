@@ -74,24 +74,8 @@ func (e EtcdCA) issueServerCert(ctx context.Context, inf Infrastructure, node *N
 		})
 }
 
-func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node, addFile func(*Node, string, []byte)) error {
-
-	err := writeCertificate(inf, node, CAServer, EtcdPKIPath("server"),
-		map[string]interface{}{
-			"ttl":            "87600h",
-			"max_ttl":        "87600h",
-			"client_flag":    "false",
-			"allow_any_name": "true",
-		},
-		map[string]interface{}{
-			"common_name": node.Nodename(),
-			"alt_names":   "localhost",
-			"ip_sans":     "127.0.0.1," + node.Address,
-		})
-	if err != nil {
-		return err
-	}
-	err = writeCertificate(inf, node, CAEtcdPeer, EtcdPKIPath("peer"),
+func (e EtcdCA) issuePeerCert(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
+	return issueCertificate(inf, CAEtcdPeer, "system",
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
@@ -102,23 +86,6 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node, a
 			"ip_sans":              "127.0.0.1," + node.Address,
 			"exclude_cn_from_sans": "true",
 		})
-	if err != nil {
-		return err
-	}
-
-	ca, err := inf.Storage().GetCACertificate(ctx, "etcd-peer")
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, EtcdPKIPath("ca-peer.crt"), ca)
-	if err != nil {
-		return err
-	}
-	ca, err = inf.Storage().GetCACertificate(ctx, "etcd-client")
-	if err != nil {
-		return err
-	}
-	return writeFile(inf, node, EtcdPKIPath("ca-client.crt"), ca)
 }
 
 func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node *Node) error {

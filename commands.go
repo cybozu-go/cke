@@ -339,20 +339,31 @@ func (c volumeRemoveCommand) Command() Command {
 }
 
 type runContainerCommand struct {
-	nodes  []*Node
-	name   string
-	img    Image
-	opts   []string
-	params ServiceParams
-	extra  ServiceParams
+	nodes     []*Node
+	name      string
+	img       Image
+	opts      []string
+	optsMap   map[string][]string
+	params    ServiceParams
+	paramsMap map[string]ServiceParams
+	extra     ServiceParams
 }
 
 func (c runContainerCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	for _, n := range c.nodes {
+		n := n
 		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
-			return ce.RunSystem(c.name, c.img, c.opts, c.params, c.extra)
+			params, ok := c.paramsMap[n.Address]
+			if !ok {
+				params = c.params
+			}
+			opts, ok := c.optsMap[n.Address]
+			if !ok {
+				opts = c.opts
+			}
+			return ce.RunSystem(c.name, c.img, opts, params, c.extra)
 		})
 	}
 	env.Stop()
@@ -360,40 +371,6 @@ func (c runContainerCommand) Run(ctx context.Context, inf Infrastructure) error 
 }
 
 func (c runContainerCommand) Command() Command {
-	targets := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		targets[i] = n.Address
-	}
-	return Command{
-		Name:   "run-container",
-		Target: strings.Join(targets, ","),
-		Detail: c.name,
-	}
-}
-
-type runContainerParamsCommand struct {
-	nodes  []*Node
-	name   string
-	img    Image
-	opts   []string
-	params map[string]ServiceParams
-	extra  ServiceParams
-}
-
-func (c runContainerParamsCommand) Run(ctx context.Context, inf Infrastructure) error {
-	env := cmd.NewEnvironment(ctx)
-	for _, n := range c.nodes {
-		ce := Docker(inf.Agent(n.Address))
-		params := c.params[n.Address]
-		env.Go(func(ctx context.Context) error {
-			return ce.RunSystem(c.name, c.img, c.opts, params, c.extra)
-		})
-	}
-	env.Stop()
-	return env.Wait()
-}
-
-func (c runContainerParamsCommand) Command() Command {
 	targets := make([]string, len(c.nodes))
 	for i, n := range c.nodes {
 		targets[i] = n.Address
@@ -493,25 +470,60 @@ func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf Infrastruct
 		return err
 	}
 
+	f = func(ctx context.Context, n *Node) (cert, key []byte, err error) {
+		c, k, e := EtcdCA{}.issuePeerCert(ctx, inf, n)
+		if e != nil {
+			return nil, nil, e
+		}
+		return []byte(c), []byte(k), nil
+	}
+	err = c.makeFiles.AddKeyPair(ctx, EtcdPKIPath("peer"), f)
+	if err != nil {
+		return err
+	}
+
+	peerCA, err := inf.Storage().GetCACertificate(ctx, "etcd-peer")
+	if err != nil {
+		return err
+	}
+	f2 := func(ctx context.Context, node *Node) ([]byte, error) {
+		return []byte(peerCA), nil
+	}
+	err = c.makeFiles.AddFile(ctx, EtcdPKIPath("ca-peer.crt"), f2)
+	if err != nil {
+		return err
+	}
+
+	clientCA, err := inf.Storage().GetCACertificate(ctx, "etcd-client")
+	if err != nil {
+		return err
+	}
+	f2 = func(ctx context.Context, node *Node) ([]byte, error) {
+		return []byte(clientCA), nil
+	}
+	err = c.makeFiles.AddFile(ctx, EtcdPKIPath("ca-client.crt"), f2)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (c prepareEtcdCertificatesCommand) Command() Command {
-	targets := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
+	targets := make([]string, len(c.makeFiles.nodes))
+	for i, n := range c.makeFiles.nodes {
 		targets[i] = n.Address
 	}
 	return Command{
-		Name:   "setup-etcd-certificates",
+		Name:   "prepare-etcd-certificates",
 		Target: strings.Join(targets, ","),
 	}
 }
 
-type issueAPIServerCertificatesCommand struct {
-	nodes []*Node
+type setupAPIServerCertificatesCommand struct {
+	makeFiles *makeFilesCommand
 }
 
-func (c issueAPIServerCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
+func (c setupAPIServerCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	for _, node := range c.nodes {
 		n := node
@@ -521,24 +533,6 @@ func (c issueAPIServerCertificatesCommand) Run(ctx context.Context, inf Infrastr
 	}
 	env.Stop()
 	return env.Wait()
-}
-
-func (c issueAPIServerCertificatesCommand) Command() Command {
-	targets := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		targets[i] = n.Address
-	}
-	return Command{
-		Name:   "issue-apiserver-certificates",
-		Target: strings.Join(targets, ","),
-	}
-}
-
-type setupAPIServerCertificatesCommand struct {
-	nodes []*Node
-}
-
-func (c setupAPIServerCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	for _, node := range c.nodes {
 		n := node
@@ -562,8 +556,8 @@ func (c setupAPIServerCertificatesCommand) Command() Command {
 }
 
 type makeControllerManagerKubeconfigCommand struct {
-	nodes   []*Node
-	cluster string
+	cluster   string
+	makeFiles *makeFilesCommand
 }
 
 func (c makeControllerManagerKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
@@ -597,8 +591,8 @@ func (c makeControllerManagerKubeconfigCommand) Command() Command {
 }
 
 type makeSchedulerKubeconfigCommand struct {
-	nodes   []*Node
-	cluster string
+	cluster   string
+	makeFiles *makeFilesCommand
 }
 
 func (c makeSchedulerKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
