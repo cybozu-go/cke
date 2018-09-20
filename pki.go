@@ -59,7 +59,8 @@ func K8sPKIPath(p string) string {
 type EtcdCA struct {
 }
 
-func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) error {
+func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node, addFile func(*Node, string, []byte)) error {
+
 	err := writeCertificate(inf, node, CAServer, EtcdPKIPath("server"),
 		map[string]interface{}{
 			"ttl":            "87600h",
@@ -291,22 +292,6 @@ func (k KubernetesCA) issueForServiceAccount(ctx context.Context, inf Infrastruc
 			"common_name":          "service-account",
 			"exclude_cn_from_sans": "true",
 		})
-}
-
-func writeCertificate(inf Infrastructure, node *Node, ca, file string, roleOpts, certOpts map[string]interface{}) error {
-	crt, key, err := issueCertificate(inf, ca, "system", roleOpts, certOpts)
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, file+".crt", crt)
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, file+".key", key)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func issueCertificate(inf Infrastructure, ca, role string, roleOpts, certOpts map[string]interface{}) (crt, key string, err error) {
