@@ -1,10 +1,13 @@
 package cke
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/cybozu-go/cmd"
 	yaml "gopkg.in/yaml.v2"
@@ -82,40 +85,90 @@ func (c makeDirsCommand) Command() Command {
 	}
 }
 
-func writeFile(inf Infrastructure, node *Node, target string, source string) error {
-	targetDir := filepath.Dir(target)
-	binds := []Mount{{
-		Source:      targetDir,
-		Destination: filepath.Join("/mnt", targetDir),
-		Label:       LabelPrivate,
-	}}
-	arg := "/usr/local/cke-tools/bin/write_file " + filepath.Join("/mnt", target)
-	ce := Docker(inf.Agent(node.Address))
-	return ce.RunWithInput(ToolsImage, binds, arg, source)
+type FileData struct {
+	name string
+	mu   sync.RWMutex
+	body map[string][]byte
 }
 
-type makeFileCommand struct {
-	nodes  []*Node
-	source string
-	target string
+func (f *FileData) addData(n *Node, data []byte) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	f.body[n.Address] = data
 }
 
-func (c makeFileCommand) Run(ctx context.Context, inf Infrastructure) error {
+func (f *FileData) getData(n *Node) []byte {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.body[n.Address]
+}
+
+type makeFilesCommand struct {
+	nodes []*Node
+	files []FileData
+}
+
+func (c makeFilesCommand) Run(ctx context.Context, inf Infrastructure) error {
+	bindMap := make(map[string]Mount)
+	for _, f := range c.files {
+		parentDir := filepath.Dir(f.name)
+		if _, ok := bindMap[parentDir]; ok {
+			continue
+		}
+		bindMap[parentDir] = Mount{
+			Source:      parentDir,
+			Destination: filepath.Join("/mnt", parentDir),
+			Label:       LabelPrivate,
+		}
+	}
+	binds := make([]Mount, 0, len(bindMap))
+	for _, m := range bindMap {
+		binds = append(binds, m)
+	}
+
 	env := cmd.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		n := n
 		env.Go(func(ctx context.Context) error {
-			return writeFile(inf, n, c.target, c.source)
+			buf := new(bytes.Buffer)
+			tw := tar.NewWriter(buf)
+			for _, f := range c.files {
+				data := f.getData(n)
+				hdr := &tar.Header{
+					Name: f.name,
+					Mode: 0644,
+					Size: int64(len(data)),
+				}
+				if err := tw.WriteHeader(hdr); err != nil {
+					return err
+				}
+				if _, err := tw.Write(data); err != nil {
+					return err
+				}
+			}
+			if err := tw.Close(); err != nil {
+				return err
+			}
+			data := buf.String()
+
+			arg := "/usr/local/cke-tools/bin/write_files /mnt"
+			ce := Docker(inf.Agent(n.Address))
+			return ce.RunWithInput(ToolsImage, binds, arg, data)
 		})
 	}
 	env.Stop()
 	return env.Wait()
 }
 
-func (c makeFileCommand) Command() Command {
+func (c makeFilesCommand) Command() Command {
+	fileNames := make([]string, len(c.files))
+	for i, f := range c.files {
+		fileNames[i] = f.name
+	}
 	return Command{
-		Name:   "make-file",
-		Target: c.target,
+		Name:   "make-files",
+		Target: strings.Join(fileNames, ","),
 	}
 }
 
@@ -376,23 +429,28 @@ func (c stopContainersCommand) Command() Command {
 	}
 }
 
-type setupEtcdCertificatesCommand struct {
-	nodes []*Node
+type prepareEtcdCertificatesCommand struct {
+	nodes   []*Node
+	addFile func(*Node, string, []byte)
 }
 
-func (c setupEtcdCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
+func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
 	for _, node := range c.nodes {
 		n := node
 		env.Go(func(ctx context.Context) error {
-			return EtcdCA{}.setupNode(ctx, inf, n)
+			files, err := EtcdCA{}.setupNode(ctx, inf, n, c.addFile)
+			if err != nil {
+				return err
+			}
+			return nil
 		})
 	}
 	env.Stop()
 	return env.Wait()
 }
 
-func (c setupEtcdCertificatesCommand) Command() Command {
+func (c prepareEtcdCertificatesCommand) Command() Command {
 	targets := make([]string, len(c.nodes))
 	for i, n := range c.nodes {
 		targets[i] = n.Address
@@ -478,7 +536,7 @@ func (c makeControllerManagerKubeconfigCommand) Run(ctx context.Context, inf Inf
 	if err != nil {
 		return err
 	}
-	return makeFileCommand{c.nodes, string(src), path}.Run(ctx, inf)
+	return makeFilesCommand{c.nodes, string(src), path}.Run(ctx, inf)
 }
 
 func (c makeControllerManagerKubeconfigCommand) Command() Command {
@@ -513,7 +571,7 @@ func (c makeSchedulerKubeconfigCommand) Run(ctx context.Context, inf Infrastruct
 	if err != nil {
 		return err
 	}
-	return makeFileCommand{c.nodes, string(src), path}.Run(ctx, inf)
+	return makeFilesCommand{c.nodes, string(src), path}.Run(ctx, inf)
 }
 
 func (c makeSchedulerKubeconfigCommand) Command() Command {
@@ -548,7 +606,7 @@ func (c makeProxyKubeconfigCommand) Run(ctx context.Context, inf Infrastructure)
 	if err != nil {
 		return err
 	}
-	return makeFileCommand{c.nodes, string(src), path}.Run(ctx, inf)
+	return makeFilesCommand{c.nodes, string(src), path}.Run(ctx, inf)
 }
 
 func (c makeProxyKubeconfigCommand) Command() Command {
