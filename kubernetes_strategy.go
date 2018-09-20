@@ -44,19 +44,19 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return cs.NodeStatuses[n.Address].APIServer.Running
 	})
 	if len(apiservers) > 0 {
-		return APIServerStopOp(apiservers)
+		return ContainerStopOp(apiservers, kubeAPIServerContainerName)
 	}
 	controllerManagers = filterNodes(nonCpNodes, func(n *Node) bool {
 		return cs.NodeStatuses[n.Address].ControllerManager.Running
 	})
 	if len(controllerManagers) > 0 {
-		return ControllerManagerStopOp(controllerManagers)
+		return ContainerStopOp(apiservers, kubeControllerManagerContainerName)
 	}
 	schedulers = filterNodes(nonCpNodes, func(n *Node) bool {
 		return cs.NodeStatuses[n.Address].Scheduler.Running
 	})
 	if len(schedulers) > 0 {
-		return SchedulerStopOp(schedulers)
+		return ContainerStopOp(apiservers, kubeSchedulerContainerName)
 	}
 
 	// Run kubelet and kube-proxy on all nodes

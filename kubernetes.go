@@ -74,22 +74,6 @@ type schedulerBootOp struct {
 	makeFiles *makeFilesCommand
 }
 
-type kubeCPBootOp struct {
-	cps []*Node
-
-	apiserver         []*Node
-	controllerManager []*Node
-	scheduler         []*Node
-
-	cluster       string
-	serviceSubnet string
-	options       Options
-
-	step      int
-	nodeIndex int
-	makeFiles *makeFilesCommand
-}
-
 type kubeCPRestartOp struct {
 	cps []*Node
 
@@ -107,12 +91,10 @@ type kubeCPRestartOp struct {
 	nodeIndex int
 }
 
-type kubeCPStopOp struct {
-	apiserver         []*Node
-	controllerManager []*Node
-	scheduler         []*Node
-
-	step int
+type containerStopOp struct {
+	nodes    []*Node
+	name     string
+	executed bool
 }
 
 type kubeWorkerBootOp struct {
@@ -352,42 +334,24 @@ func (o *schedulerBootOp) NextCommand() Commander {
 	}
 }
 
-// KubeCPStopOp returns an Operator to stop kubernetes control planes
-func KubeCPStopOp(apiserver, controllerManager, scheduler []*Node) Operator {
-	return &kubeCPStopOp{
-		apiserver:         apiserver,
-		controllerManager: controllerManager,
-		scheduler:         scheduler,
+// ContainerStopOp returns an Operator to stop container
+func ContainerStopOp(nodes []*Node, name string) Operator {
+	return &containerStopOp{
+		nodes: nodes,
+		name:  name,
 	}
 }
 
-func (o *kubeCPStopOp) Name() string {
-	return "kubernetes-control-plane-stop"
+func (o *containerStopOp) Name() string {
+	return "kube-apiserver-stop"
 }
 
-func (o *kubeCPStopOp) NextCommand() Commander {
-	switch o.step {
-	case 0:
-		o.step++
-		if len(o.apiserver) == 0 {
-			return o.NextCommand()
-		}
-		return stopContainersCommand{o.apiserver, kubeAPIServerContainerName}
-	case 1:
-		o.step++
-		if len(o.scheduler) == 0 {
-			return o.NextCommand()
-		}
-		return stopContainersCommand{o.scheduler, kubeSchedulerContainerName}
-	case 2:
-		o.step++
-		if len(o.controllerManager) == 0 {
-			return o.NextCommand()
-		}
-		return stopContainersCommand{o.controllerManager, kubeControllerManagerContainerName}
-	default:
+func (o *containerStopOp) NextCommand() Commander {
+	if o.executed {
 		return nil
 	}
+	o.executed = true
+	return stopContainersCommand{o.nodes, o.name}
 }
 
 // KubeCPRestartOp returns an Operator to restart kubernetes control planes
