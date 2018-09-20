@@ -559,7 +559,7 @@ func (o *kubeWorkerBootOp) NextCommand() Commander {
 		if len(o.kubelets) == 0 {
 			return o.NextCommand()
 		}
-		return makeFilesCommand{o.kubelets, cniBridgeConfig(o.podSubnet),
+		return makeFileCommand{o.kubelets, cniBridgeConfig(o.podSubnet),
 			filepath.Join(cniConfDir, "98-bridge.conf")}
 	case 3:
 		o.step++

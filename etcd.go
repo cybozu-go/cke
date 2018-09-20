@@ -11,7 +11,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
@@ -74,8 +73,6 @@ type etcdBootOp struct {
 	params    EtcdParams
 	step      int
 	cpIndex   int
-	mu        sync.Mutex
-	filesMap  map[string]FileData
 }
 
 // EtcdBootOp returns an Operator to bootstrap etcd cluster.
@@ -86,23 +83,7 @@ func EtcdBootOp(endpoints []string, nodes []*Node, params EtcdParams) Operator {
 		params:    params,
 		step:      0,
 		cpIndex:   0,
-		filesMap:  make(map[string]FileData),
 	}
-}
-
-func (o *etcdBootOp) addFile(n *Node, name string, body []byte) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-
-	data, ok := o.filesMap[name]
-	if !ok {
-		data = FileData{
-			name: name,
-			body: make(map[string][]byte),
-		}
-		o.filesMap[name] = data
-	}
-	data.addData(n, body)
 }
 
 func (o *etcdBootOp) Name() string {
@@ -119,10 +100,7 @@ func (o *etcdBootOp) NextCommand() Commander {
 		return imagePullCommand{o.nodes, EtcdImage}
 	case 1:
 		o.step++
-		return prepareEtcdCertificatesCommand{o.nodes, o.addFile}
-	case 2:
-		o.step++
-		return makeFilesCommand{o.nodes, o.filesMap}
+		return setupEtcdCertificatesCommand{o.nodes}
 	case 2:
 		o.step++
 		return volumeCreateCommand{o.nodes, volname}
@@ -235,7 +213,7 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		return volumeCreateCommand{[]*Node{node}, volname}
 	case 4:
 		o.step++
-		return prepareEtcdCertificatesCommand{[]*Node{node}}
+		return setupEtcdCertificatesCommand{[]*Node{node}}
 	case 5:
 		o.step++
 		opts := []string{
