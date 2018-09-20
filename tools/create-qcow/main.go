@@ -67,7 +67,7 @@ func main() {
 		{"qemu-img", "create", "-f", "qcow2", fileName, "2G"},
 		{"modprobe", "nbd"},
 		{"qemu-nbd", "-c", "/dev/nbd0", fileName},
-		{"mkfs", "-t", "btrfs", "/dev/nbd0"},
+		{"mkfs", "-t", "ext4", "/dev/nbd0"},
 		{"mount", "/dev/nbd0", "/var/lib/docker"},
 		{"systemctl", "start", "docker.service"},
 	}

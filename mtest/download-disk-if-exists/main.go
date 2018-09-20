@@ -129,7 +129,7 @@ func createDummyImage() error {
 		{"qemu-img", "create", "-f", "qcow2", dockerImage, "2G"},
 		{"sudo", "modprobe", "nbd"},
 		{"sudo", "qemu-nbd", "-c", "/dev/nbd0", dockerImage},
-		{"sudo", "mkfs", "-t", "btrfs", "/dev/nbd0"},
+		{"sudo", "mkfs", "-t", "ext4", "/dev/nbd0"},
 		{"sudo", "qemu-nbd", "-d", "/dev/nbd0"},
 	}
 	for _, command := range prepareDeviceCommands {
