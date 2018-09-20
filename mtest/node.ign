@@ -47,7 +47,14 @@
       {
         "name": "var-lib-docker.mount",
         "enable": true,
-        "contents": "[Mount]\nWhat=/dev/vdb\nWhere=/var/lib/docker\nType=btrfs\n\n[Install]\nWantedBy=local-fs.target"
+        "contents": "[Mount]\nWhat=/dev/vdb\nWhere=/var/lib/docker\nType=ext4\n\n[Install]\nWantedBy=local-fs.target"
+      },
+      {
+        "name": "docker.service",
+        "dropins": [{
+          "name": "10-storage-driver.conf",
+          "contents": "[Service]\nEnvironment=DOCKER_OPTS=--storage-driver=overlay"
+        }]
       }
     ]
   }
