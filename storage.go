@@ -1,6 +1,7 @@
 package cke
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -112,6 +113,24 @@ func (s Storage) PutVaultConfig(ctx context.Context, c *VaultConfig) error {
 
 	_, err = s.Put(ctx, KeyVault, string(data))
 	return err
+}
+
+// GetVaultConfig loads *VaultConfig from etcd.
+func (s Storage) GetVaultConfig(ctx context.Context) (*VaultConfig, error) {
+	resp, err := s.Get(ctx, KeyVault)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Count > 1 {
+		return nil, errors.New("VaultConfig is something wrong")
+	}
+
+	cfg := new(VaultConfig)
+	err = json.NewDecoder(bytes.NewReader(resp.Kvs[0].Value)).Decode(&cfg)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 // GetCACertificate loads CA certificate from etcd.

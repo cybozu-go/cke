@@ -43,6 +43,15 @@ Show all constraints on the cluster.
 
 If `JSON` is "-", `ckecli` reads from stdin.
 
+`ckecli vault issue COMMON_NAME TTL`
+------------------------------------
+
+Issue client certificate to stdout.
+
+`COMMON_NAME` is `common_name` for client certificate, user/role for etcd.
+
+`TTL` is `ttl` for client certificate, default is `87600h`.
+
 `ckecli ca set NAME PEM`
 ------------------------
 

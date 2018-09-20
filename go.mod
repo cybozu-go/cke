@@ -99,7 +99,7 @@ require (
 	gopkg.in/vmihailenco/msgpack.v2 v2.9.1 // indirect
 	gopkg.in/yaml.v2 v2.2.1
 	gotest.tools v2.1.0+incompatible // indirect
-	k8s.io/api v0.0.0-20180904230853-4e7be11eab3f
+	k8s.io/api v0.0.0-20180913155108-f456898a08e4
 	k8s.io/apimachinery v0.0.0-20180904193909-def12e63c512
 	k8s.io/client-go v2.0.0-alpha.0.0.20180821074022-f2f85107cac6+incompatible
 )

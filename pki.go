@@ -21,8 +21,8 @@ const (
 	k8sPKIPath  = "/etc/kubernetes/pki"
 )
 
-// addRole adds a role to CA if not exists.
-func addRole(client *vault.Client, ca, role string, data map[string]interface{}) error {
+// AddRole adds a role to CA if not exists.
+func AddRole(client *vault.Client, ca, role string, data map[string]interface{}) error {
 	l := client.Logical()
 	rpath := path.Join(ca, "roles", role)
 	secret, err := l.Read(rpath)
@@ -315,7 +315,7 @@ func issueCertificate(inf Infrastructure, ca, role string, roleOpts, certOpts ma
 		return "", "", err
 	}
 
-	err = addRole(client, ca, role, roleOpts)
+	err = AddRole(client, ca, role, roleOpts)
 	if err != nil {
 		return "", "", err
 	}

@@ -61,12 +61,12 @@ func (c *VaultConfig) Validate() error {
 	return nil
 }
 
-// ConnectVault creates vault client
-func ConnectVault(ctx context.Context, data []byte) error {
+// NewVaultClient creates vault client
+func NewVaultClient(ctx context.Context, data []byte) (*vault.Client, error) {
 	c := new(VaultConfig)
 	err := json.Unmarshal(data, c)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	transport := &http.Transport{
@@ -85,7 +85,7 @@ func ConnectVault(ctx context.Context, data []byte) error {
 	if len(c.CACert) > 0 {
 		cp := x509.NewCertPool()
 		if !cp.AppendCertsFromPEM([]byte(c.CACert)) {
-			return errors.New("invalid CA cert")
+			return nil, errors.New("invalid CA cert")
 		}
 
 		transport.TLSClientConfig = &tls.Config{
@@ -105,7 +105,7 @@ func ConnectVault(ctx context.Context, data []byte) error {
 			log.FnError: err,
 			"endpoint":  c.Endpoint,
 		})
-		return err
+		return nil, err
 	}
 
 	secret, err := client.Logical().Write("auth/approle/login", anyMap{
@@ -117,7 +117,7 @@ func ConnectVault(ctx context.Context, data []byte) error {
 			log.FnError: err,
 			"endpoint":  c.Endpoint,
 		})
-		return err
+		return nil, err
 	}
 	client.SetToken(secret.Auth.ClientToken)
 
@@ -129,7 +129,7 @@ func ConnectVault(ctx context.Context, data []byte) error {
 			log.FnError: err,
 			"endpoint":  c.Endpoint,
 		})
-		return err
+		return nil, err
 	}
 
 	go renewer.Renew()
@@ -138,9 +138,18 @@ func ConnectVault(ctx context.Context, data []byte) error {
 		renewer.Stop()
 	}()
 
+	return client, nil
+}
+
+// ConnectVault connect to vault
+func ConnectVault(ctx context.Context, data []byte) error {
+	client, err := NewVaultClient(ctx, data)
+	if err != nil {
+		return err
+	}
 	setVaultClient(client)
 	log.Info("connected to vault", anyMap{
-		"endpoint": c.Endpoint,
+		"endpoint": client.Address(),
 	})
 	return nil
 }
