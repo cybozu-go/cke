@@ -236,7 +236,6 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
-			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		return addEtcdMemberCommand{o.endpoints, o.targetNode, opts, extra}
 	case 7:
@@ -652,7 +651,6 @@ func (o *etcdUpdateVersionOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
-			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		var initialCluster []string
 		for _, n := range o.cpNodes {
