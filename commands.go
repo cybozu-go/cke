@@ -740,7 +740,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf Infrastructure)
 		}
 		return []byte(c), []byte(k), nil
 	}
-	err = c.makeFiles.AddKeyPair(ctx, EtcdPKIPath("kubelet"), f)
+	err = c.makeFiles.AddKeyPair(ctx, K8sPKIPath("kubelet"), f)
 	if err != nil {
 		return err
 	}
