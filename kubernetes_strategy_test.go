@@ -1,9 +1,6 @@
 package cke
 
 import (
-	"path/filepath"
-	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -129,78 +126,84 @@ func testKubernetesDecideToDo(t *testing.T) {
 	cases := []struct {
 		Name     string
 		Input    KubernetesTestConfiguration
-		Commands []Command
+		Operator string
 	}{
 		{
 			Name: "Bootstrap Rivers on all nodes",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 			},
-			Commands: []Command{
-				{"image-pull", ToolsImage.Name(), ""},
-				{"make-dirs", "/var/log/rivers", ""},
-				{"run-container", strings.Join(allNodes, ","), "rivers"},
-			},
+			Operator: "rivers-bootstrap",
 		},
 		{
-			Name: "Bootstrap Control Planes",
+			Name: "Bootstrap kube-apiserver on control planes",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes, Rivers: allNodes,
 			},
-			Commands: []Command{
-				{"image-pull", HyperkubeImage.Name(), ""},
-				{"make-dirs", "/var/log/kubernetes/apiserver /var/log/kubernetes/controller-manager /var/log/kubernetes/scheduler", ""},
-				{"issue-apiserver-certificates", "10.0.0.11,10.0.0.12,10.0.0.13", ""},
-				{"setup-apiserver-certificates", "10.0.0.11,10.0.0.12,10.0.0.13", ""},
-				{"make-controller-manager-kubeconfig", "10.0.0.11,10.0.0.12,10.0.0.13", ""},
-				{"make-scheduler-kubeconfig", "10.0.0.11,10.0.0.12,10.0.0.13", ""},
-				{"run-container", "10.0.0.11", "kube-apiserver"},
-				{"run-container", "10.0.0.12", "kube-apiserver"},
-				{"run-container", "10.0.0.13", "kube-apiserver"},
-				{"run-container", "10.0.0.11,10.0.0.12,10.0.0.13", "kube-scheduler"},
-				{"run-container", "10.0.0.11,10.0.0.12,10.0.0.13", "kube-controller-manager"},
-			},
+			Operator: "kube-apiserver-bootstrap",
 		},
 		{
-			Name: "Bootstrap kubernetes workers",
+			Name: "Bootstrap kube-controller-manager on control planes",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes, Rivers: allNodes, APIServers: cpNodes,
+			},
+			Operator: "kube-controller-manager-bootstrap",
+		},
+		{
+			Name: "Bootstrap kube-scheduler on control planes",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes, Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes,
+			},
+			Operator: "kube-scheduler-bootstrap",
+		},
+		{
+			Name: "Bootstrap kubelet",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes,
 			},
-			Commands: []Command{
-				{"image-pull", ToolsImage.Name(), ""},
-				{"make-dirs", strings.Join([]string{
-					cniBinDir, cniConfDir, cniVarDir,
-					"/var/log/kubernetes/kubelet",
-					"/var/log/pods",
-					"/var/log/containers",
-					"/opt/volume/bin",
-					"/var/log/kubernetes/proxy",
-				}, " "), ""},
-				{"make-file", filepath.Join(cniConfDir, "98-bridge.conf"), ""},
-				{"run-container", strings.Join(allNodes, ","), "install-cni"},
-				{"image-pull", HyperkubeImage.Name(), ""},
-				{"make-kubelet-kubeconfig", strings.Join(allNodes, ","), ""},
-				{"make-proxy-kubeconfig", strings.Join(allNodes, ","), ""},
-				{"volume-create", strings.Join(allNodes, ","), "dockershim"},
-				{"run-container", strings.Join(allNodes, ","), "kubelet"},
-				{"run-container", strings.Join(allNodes, ","), "kube-proxy"},
-			},
+			Operator: "kubelet-bootstrap",
 		},
 		{
-			Name: "Stop Control Planes",
+			Name: "Bootstrap kube-proxy",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+				Rivers: allNodes, APIServers: cpNodes, ControllerManagers: cpNodes, Schedulers: cpNodes, Kubelets: allNodes,
+			},
+			Operator: "kube-proxy-bootstrap",
+		},
+		{
+			Name: "Stop kube-apiserver",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers:             allNodes,
 				APIServers:         append(cpNodes, "10.0.0.14", "10.0.0.15"),
+				ControllerManagers: cpNodes,
+				Schedulers:         cpNodes,
+			},
+			Operator: "container-stop",
+		},
+		{
+			Name: "Stop kube-controller-manager",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+				Rivers:             allNodes,
+				APIServers:         cpNodes,
 				ControllerManagers: append(cpNodes, "10.0.0.14", "10.0.0.15"),
+				Schedulers:         cpNodes,
+			},
+			Operator: "container-stop",
+		},
+		{
+			Name: "Stop kube-scheduler",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+				Rivers:             allNodes,
+				APIServers:         cpNodes,
+				ControllerManagers: cpNodes,
 				Schedulers:         append(cpNodes, "10.0.0.14", "10.0.0.15"),
 			},
-			Commands: []Command{
-				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-apiserver"},
-				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-scheduler"},
-				{"stop-containers", "10.0.0.14,10.0.0.15", "kube-controller-manager"},
-			},
+			Operator: "container-stop",
 		},
 		{
 			Name: "Install ClusterRole for RBAC",
@@ -213,10 +216,7 @@ func testKubernetesDecideToDo(t *testing.T) {
 				Kubelets:           allNodes,
 				Proxies:            allNodes,
 			},
-			Commands: []Command{
-				{"makeClusterRole", rbacRoleName, ""},
-				{"makeClusterRoleBinding", rbacRoleBindingName, ""},
-			},
+			Operator: "install-rbac-role",
 		},
 		{
 			Name: "Do nothing if the cluster is stable",
@@ -231,10 +231,24 @@ func testKubernetesDecideToDo(t *testing.T) {
 				CurrentRBACRoleExists:        true,
 				CurrentRBACRoleBindingExists: true,
 			},
-			Commands: []Command{},
+			Operator: "",
 		},
 		{
-			Name: "Restart kubernetes control planes when params are updated",
+			Name: "Restart kube-apiserver when params are updated",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+				Rivers:             allNodes,
+				APIServers:         cpNodes,
+				ControllerManagers: cpNodes,
+				Schedulers:         cpNodes,
+				Kubelets:           allNodes,
+				Proxies:            allNodes,
+				APIServerArgs:      []string{"--apiserver-count=999"},
+			},
+			Operator: "kube-apiserver-restart",
+		},
+		{
+			Name: "Restart kube-controller-manager when params are updated",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers:                allNodes,
@@ -243,35 +257,26 @@ func testKubernetesDecideToDo(t *testing.T) {
 				Schedulers:            cpNodes,
 				Kubelets:              allNodes,
 				Proxies:               allNodes,
-				APIServerArgs:         []string{"--apiserver-count=999"},
 				ControllerManagerArgs: []string{"--contention-profiling=0.99"},
-				SchedulerArgs:         []string{"--leader-elect-retry-period duration=2s"},
 			},
-			Commands: func() []Command {
-				cmds := []Command{
-					{"image-pull", ToolsImage.Name(), ""},
-					{"image-pull", HyperkubeImage.Name(), ""},
-				}
-				for _, n := range cpNodes {
-					cmds = append(cmds,
-						Command{Name: "stop-containers", Target: n, Detail: "kube-apiserver"},
-						Command{Name: "run-container", Target: n, Detail: "kube-apiserver"})
-				}
-				for _, n := range cpNodes {
-					cmds = append(cmds,
-						Command{Name: "stop-containers", Target: n, Detail: "kube-controller-manager"},
-						Command{Name: "run-container", Target: n, Detail: "kube-controller-manager"})
-				}
-				for _, n := range cpNodes {
-					cmds = append(cmds,
-						Command{Name: "stop-containers", Target: n, Detail: "kube-scheduler"},
-						Command{Name: "run-container", Target: n, Detail: "kube-scheduler"})
-				}
-				return cmds
-			}(),
+			Operator: "kube-controller-manager-restart",
 		},
 		{
-			Name: "Restart kubernetes workers when params are updated",
+			Name: "Restart kube-scheduler when params are updated",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+				Rivers:             allNodes,
+				APIServers:         cpNodes,
+				ControllerManagers: cpNodes,
+				Schedulers:         cpNodes,
+				Kubelets:           allNodes,
+				Proxies:            allNodes,
+				SchedulerArgs:      []string{"--leader-elect-retry-period duration=2s"},
+			},
+			Operator: "kube-scheduler-restart",
+		},
+		{
+			Name: "Restart kubelet when params are updated",
 			Input: KubernetesTestConfiguration{
 				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
 				Rivers:             allNodes,
@@ -282,37 +287,37 @@ func testKubernetesDecideToDo(t *testing.T) {
 				Proxies:            allNodes,
 				KubeletArgs:        []string{"--cpu-cfs-quota=true"},
 			},
-			Commands: []Command{
-				{"image-pull", HyperkubeImage.Name(), ""},
-				{Name: "make-kubelet-kubeconfig", Target: strings.Join(allNodes, ","), Detail: ""},
-				{Name: "stop-containers", Target: strings.Join(allNodes, ","), Detail: "kubelet"},
-				{Name: "run-container", Target: strings.Join(allNodes, ","), Detail: "kubelet"},
+			Operator: "kubelet-restart",
+		},
+		{
+			Name: "Restart kube-proxy when params are updated",
+			Input: KubernetesTestConfiguration{
+				CpNodes: cpNodes, NonCpNodes: nonCpNodes,
+				Rivers:             allNodes,
+				APIServers:         cpNodes,
+				ControllerManagers: cpNodes,
+				Schedulers:         cpNodes,
+				Kubelets:           allNodes,
+				Proxies:            allNodes,
+				ProxyArgs:          []string{"--healthz-port=11223"},
 			},
+			Operator: "kube-proxy-restart",
 		},
 	}
 
 	for _, c := range cases {
 		op := kubernetesDecideToDo(c.Input.Cluster(), c.Input.ClusterState())
-		if op == nil && len(c.Commands) == 0 {
+		if op == nil && len(c.Operator) == 0 {
 			continue
 		} else if op == nil {
 			t.Fatal("op == nil")
 		}
-		cmds := opCommands(op)
-		if len(c.Commands) != len(cmds) {
-			t.Errorf("[%s](%s) commands length mismatch. expected length: %d, actual: %d", c.Name, op.Name(), len(c.Commands), len(cmds))
-			continue
-		}
-		for i, res := range cmds {
-			cmd := c.Commands[i]
-			if !reflect.DeepEqual(cmd, res) {
-				t.Errorf("[%s] %#v != %#v", c.Name, cmd, res)
-			}
+		if op.Name() != c.Operator {
+			t.Errorf("[%s] operator name mismatch: %s != %s", c.Name, op.Name(), c.Operator)
 		}
 	}
 }
 
 func TestKubernetesStrategy(t *testing.T) {
-	t.Skip()
 	t.Run("KubernetesDecideToDo", testKubernetesDecideToDo)
 }
