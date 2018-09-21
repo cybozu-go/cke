@@ -135,12 +135,10 @@ func (c vaultIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.Ex
 		return handleError(err)
 	}
 
-	data, err = json.Marshal(secret.Data)
-	if err != nil {
-		return handleError(err)
-	}
-	_, err = os.Stdout.Write(data)
-	return handleError(err)
+	e := json.NewEncoder(os.Stdout)
+	e.SetIndent("", "  ")
+	e.Encode(secret.Data)
+	return handleError(nil)
 }
 
 func vaultIssueCommand() subcommands.Command {
