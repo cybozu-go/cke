@@ -120,7 +120,7 @@ func (c vaultIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.Ex
 		"server_flag":    "false",
 		"allow_any_name": "true",
 	}
-	err = cke.AddRole(client, cke.CAEtcdClient, "system", roleOpts)
+	err = cke.AddRole(client, cke.CAEtcdClient, commonName, roleOpts)
 	if err != nil {
 		return handleError(err)
 	}
@@ -130,7 +130,7 @@ func (c vaultIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.Ex
 		"common_name":          commonName,
 		"exclude_cn_from_sans": "true",
 	}
-	secret, err := client.Logical().Write(path.Join(cke.CAEtcdClient, "issue", "system"), certOpts)
+	secret, err := client.Logical().Write(path.Join(cke.CAEtcdClient, "issue", commonName), certOpts)
 	if err != nil {
 		return handleError(err)
 	}
