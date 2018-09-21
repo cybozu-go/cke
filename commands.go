@@ -428,52 +428,6 @@ func (c stopContainerCommand) Command() Command {
 	}
 }
 
-type stopContainersCommand struct {
-	nodes []*Node
-	name  string
-}
-
-func (c stopContainersCommand) Run(ctx context.Context, inf Infrastructure) error {
-	begin := time.Now()
-	env := cmd.NewEnvironment(ctx)
-	for _, n := range c.nodes {
-		ce := Docker(inf.Agent(n.Address))
-		env.Go(func(ctx context.Context) error {
-			exists, err := ce.Exists(c.name)
-			if err != nil {
-				return err
-			}
-			if !exists {
-				return nil
-			}
-			err = ce.Stop(c.name)
-			if err != nil {
-				return err
-			}
-			return ce.Remove(c.name)
-		})
-	}
-	env.Stop()
-	err := env.Wait()
-	log.Info("stop container", map[string]interface{}{
-		"container": c.name,
-		"elapsed":   time.Now().Sub(begin).Seconds(),
-	})
-	return err
-}
-
-func (c stopContainersCommand) Command() Command {
-	addrs := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		addrs[i] = n.Address
-	}
-	return Command{
-		Name:   "stop-containers",
-		Target: strings.Join(addrs, ","),
-		Detail: c.name,
-	}
-}
-
 type prepareEtcdCertificatesCommand struct {
 	makeFiles *makeFilesCommand
 }
@@ -717,20 +671,26 @@ func (c prepareProxyFilesCommand) Command() Command {
 	}
 }
 
-type makeKubeletKubeconfigCommand struct {
-	nodes   []*Node
-	cluster string
-	params  KubeletParams
+type prepareKubeletFilesCommand struct {
+	cluster   string
+	podSubnet string
+	params    KubeletParams
+	makeFiles *makeFilesCommand
 }
 
-func (c makeKubeletKubeconfigCommand) Run(ctx context.Context, inf Infrastructure) error {
+func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf Infrastructure) error {
 	const kubeletConfigPath = "/etc/kubernetes/kubelet/config.yml"
 	const kubeconfigPath = "/etc/kubernetes/kubelet/kubeconfig"
 	caPath := K8sPKIPath("ca.crt")
 	tlsCertPath := K8sPKIPath("kubelet.crt")
 	tlsKeyPath := K8sPKIPath("kubelet.key")
+	storage := inf.Storage()
 
-	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
+	bridgeConfData := []byte(cniBridgeConfig(c.podSubnet))
+	g := func(ctx context.Context, n *Node) ([]byte, error) {
+		return bridgeConfData, nil
+	}
+	err := c.makeFiles.AddFile(ctx, filepath.Join(cniConfDir, "98-bridge.conf"), g)
 	if err != nil {
 		return err
 	}
@@ -752,53 +712,81 @@ func (c makeKubeletKubeconfigCommand) Run(ctx context.Context, inf Infrastructur
 	if err != nil {
 		return err
 	}
+	g = func(ctx context.Context, n *Node) ([]byte, error) {
+		return cfgData, nil
+	}
+	err = c.makeFiles.AddFile(ctx, kubeletConfigPath, g)
+	if err != nil {
+		return err
+	}
 
+	ca, err := storage.GetCACertificate(ctx, "kubernetes")
+	if err != nil {
+		return err
+	}
+	caData := []byte(ca)
+	g = func(ctx context.Context, n *Node) ([]byte, error) {
+		return caData, nil
+	}
+	err = c.makeFiles.AddFile(ctx, caPath, g)
+	if err != nil {
+		return err
+	}
+
+	f := func(ctx context.Context, n *Node) (cert, key []byte, err error) {
+		c, k, e := EtcdCA{}.issueForKubelet(ctx, inf, n)
+		if e != nil {
+			return nil, nil, e
+		}
+		return []byte(c), []byte(k), nil
+	}
+	err := c.makeFiles.AddKeyPair(ctx, EtcdPKIPath("kubelet"), f)
+	if err != nil {
+		return err
+	}
+
+	g = func(ctx context.Context, n *Node) ([]byte, error) {
+		cfg := kubeletKubeconfig(c.cluster, n, caPath, tlsCertPath, tlsKeyPath)
+		return clientcmd.Write(*cfg)
+	}
+	return c.makeFiles.AddFile(ctx, kubeconfigPath, g)
+}
+
+func (c prepareKubeletFilesCommand) Command() Command {
+	return Command{
+		Name: "prepare-kubelet-files",
+	}
+}
+
+type installCNICommand struct {
+	nodes []*Node
+}
+
+func (c installCNICommand) Run(ctx context.Context, inf Infrastructure) error {
 	env := cmd.NewEnvironment(ctx)
+
+	binds := []Mount{
+		{Source: cniBinDir, Destination: "/host/bin", ReadOnly: false, Label: LabelShared},
+		{Source: cniConfDir, Destination: "/host/net.d", ReadOnly: false, Label: LabelShared},
+	}
 	for _, n := range c.nodes {
 		n := n
-
+		ce := Docker(inf.Agent(n.Address))
 		env.Go(func(ctx context.Context) error {
-			err := writeFile(inf, n, caPath, ca)
-			if err != nil {
-				return err
-			}
-
-			crt, key, err := KubernetesCA{}.issueForKubelet(ctx, inf, n)
-			if err != nil {
-				return err
-			}
-			cfg := kubeletKubeconfig(c.cluster, n, ca, crt, key)
-			kubeconfig, err := clientcmd.Write(*cfg)
-			if err != nil {
-				return err
-			}
-			err = writeFile(inf, n, kubeconfigPath, string(kubeconfig))
-			if err != nil {
-				return err
-			}
-
-			err = writeFile(inf, n, tlsCertPath, crt)
-			if err != nil {
-				return err
-			}
-			err = writeFile(inf, n, tlsKeyPath, key)
-			if err != nil {
-				return err
-			}
-			return writeFile(inf, n, kubeletConfigPath, string(cfgData))
+			return ce.Run(ToolsImage, binds, "/usr/local/cke-tools/bin/install-cni")
 		})
 	}
 	env.Stop()
 	return env.Wait()
 }
 
-func (c makeKubeletKubeconfigCommand) Command() Command {
+func (c installCNICommand) Command() Command {
 	targets := make([]string, len(c.nodes))
 	for i, n := range c.nodes {
 		targets[i] = n.Address
 	}
 	return Command{
-		Name:   "make-kubelet-kubeconfig",
+		Name:   "install-cni",
 		Target: strings.Join(targets, ","),
 	}
 }

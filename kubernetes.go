@@ -1,7 +1,6 @@
 package cke
 
 import (
-	"path/filepath"
 	"strings"
 )
 
@@ -115,22 +114,22 @@ type containerStopOp struct {
 	executed bool
 }
 
-type kubeProxyBootOp struct {
-	nodes []*Node
-
-	cluster string
-	params  ServiceParams
-
-	step      int
-	makeFiles *makeFilesCommand
-}
-
 type kubeletBootOp struct {
 	nodes []*Node
 
 	cluster   string
 	podSubnet string
 	params    KubeletParams
+
+	step      int
+	makeFiles *makeFilesCommand
+}
+
+type kubeProxyBootOp struct {
+	nodes []*Node
+
+	cluster string
+	params  ServiceParams
 
 	step      int
 	makeFiles *makeFilesCommand
@@ -386,7 +385,7 @@ func (o *containerStopOp) NextCommand() Commander {
 		return nil
 	}
 	o.executed = true
-	return stopContainersCommand{o.nodes, o.name}
+	return killContainersCommand{o.nodes, o.name}
 }
 
 // APIServerRestartOp returns an Operator to restart kube-apiserver
@@ -590,6 +589,77 @@ func SchedulerParams() ServiceParams {
 	}
 }
 
+// KubeletBootOp returns an Operator to boot kubelet.
+func KubeletBootOp(nodes []*Node, cluster, podSubnet string, params KubeletParams) Operator {
+	return &kubeProxyBootOp{
+		nodes:     nodes,
+		cluster:   cluster,
+		podSubnet: podSubnet,
+		params:    params,
+		makeFiles: &makeFilesCommand{nodes: nodes},
+	}
+}
+
+func (o *kubeletBootOp) Name() string {
+	return "kubelet-bootstrap"
+}
+
+func (o *kubeletBootOp) NextCommand() Commander {
+	switch o.step {
+	case 0:
+		o.step++
+		return imagePullCommand{o.nodes, HyperkubeImage}
+	case 1:
+		o.step++
+		return imagePullCommand{o.nodes, PauseImage}
+	case 2:
+		o.step++
+		dirs := []string{
+			cniBinDir,
+			cniConfDir,
+			cniVarDir,
+			"/var/log/kubernetes/kubelet",
+			"/var/log/pods",
+			"/var/log/containers",
+			"/opt/volume/bin",
+		}
+		return makeDirsCommand{o.nodes, dirs}
+	case 3:
+		o.step++
+		return prepareKubeletFilesCommand{o.cluster, o.podSubnet, o.params, o.makeFiles}
+	case 4:
+		o.step++
+		return o.makeFiles
+	case 5:
+		o.step++
+		return installCNICommand{o.nodes}
+	case 6:
+		o.step++
+		return volumeCreateCommand{o.nodes, "dockershim"}
+	case 7:
+		o.step++
+		opts := []string{
+			"--pid=host",
+			"--mount=type=volume,src=dockershim,dst=/var/lib/dockershim",
+			"--privileged",
+		}
+		paramsMap := make(map[string]ServiceParams)
+		for _, n := range o.nodes {
+			paramsMap[n.Address] = KubeletServiceParams(n)
+		}
+		return runContainerCommand{
+			nodes:     o.nodes,
+			name:      kubeletContainerName,
+			img:       HyperkubeImage,
+			opts:      opts,
+			paramsMap: paramsMap,
+			extra:     o.params.ServiceParams,
+		}
+	default:
+		return nil
+	}
+}
+
 // KubeProxyBootOp returns an Operator to boot kube-proxy.
 func KubeProxyBootOp(nodes []*Node, cluster string, params ServiceParams) Operator {
 	return &kubeProxyBootOp{
@@ -607,8 +677,10 @@ func (o *kubeProxyBootOp) Name() string {
 func (o *kubeProxyBootOp) NextCommand() Commander {
 	switch o.step {
 	case 0:
+		o.step++
 		return imagePullCommand{o.nodes, HyperkubeImage}
 	case 1:
+		o.step++
 		dirs := []string{
 			"/var/log/kubernetes/proxy",
 		}
@@ -620,6 +692,7 @@ func (o *kubeProxyBootOp) NextCommand() Commander {
 		o.step++
 		return o.makeFiles
 	case 4:
+		o.step++
 		opts := []string{
 			"--tmpfs=/run",
 			"--privileged",
@@ -632,106 +705,6 @@ func (o *kubeProxyBootOp) NextCommand() Commander {
 			params: ProxyParams(),
 			extra:  o.params,
 		}
-	default:
-		return nil
-	}
-}
-
-func (o *kubeWorkerBootOp) NextCommand() Commander {
-	var opts []string
-
-	switch o.step {
-	case 0:
-		o.step++
-		return imagePullCommand{o.kubelets, ToolsImage}
-	case 1:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		dirs := []string{
-			cniBinDir,
-			cniConfDir,
-			cniVarDir,
-			"/var/log/kubernetes/kubelet",
-			"/var/log/pods",
-			"/var/log/containers",
-			"/opt/volume/bin",
-			"/var/log/kubernetes/proxy",
-		}
-		return makeDirsCommand{o.kubelets, dirs}
-	case 2:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		return makeFilesCommand{o.kubelets, cniBridgeConfig(o.podSubnet),
-			filepath.Join(cniConfDir, "98-bridge.conf")}
-	case 3:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		return runContainerCommand{nodes: o.kubelets, name: "install-cni", img: ToolsImage, opts: opts,
-			params: ServiceParams{
-				ExtraArguments: []string{"/usr/local/cke-tools/bin/install-cni"},
-				ExtraBinds: []Mount{
-					{Source: cniBinDir, Destination: "/host/bin", ReadOnly: false},
-					{Source: cniConfDir, Destination: "/host/net.d", ReadOnly: false},
-				},
-			},
-		}
-	case 4:
-		o.step++
-		if len(o.proxies) == 0 {
-			return o.NextCommand()
-		}
-		return imagePullCommand{o.proxies, HyperkubeImage}
-	case 5:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		return makeKubeletKubeconfigCommand{o.kubelets, o.cluster, o.options.Kubelet}
-	case 6:
-		o.step++
-		if len(o.proxies) == 0 {
-			return o.NextCommand()
-		}
-		return makeProxyKubeconfigCommand{o.proxies, o.cluster}
-	case 7:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		return volumeCreateCommand{o.kubelets, "dockershim"}
-	case 8:
-		o.step++
-		if len(o.kubelets) == 0 {
-			return o.NextCommand()
-		}
-		opts = []string{
-			"--pid=host",
-			"--mount=type=volume,src=dockershim,dst=/var/lib/dockershim",
-			"--privileged",
-		}
-		params := make(map[string]ServiceParams)
-		for _, n := range o.kubelets {
-			params[n.Address] = KubeletServiceParams(n)
-		}
-		return runContainerParamsCommand{o.kubelets, kubeletContainerName, HyperkubeImage,
-			opts, params, o.options.Kubelet.ServiceParams}
-	case 9:
-		o.step++
-		if len(o.proxies) == 0 {
-			return o.NextCommand()
-		}
-		opts = []string{
-			"--tmpfs=/run",
-			"--privileged",
-		}
-		return runContainerCommand{o.proxies, kubeProxyContainerName, HyperkubeImage,
-			opts, ProxyParams(), o.options.Proxy}
 	default:
 		return nil
 	}
