@@ -51,7 +51,7 @@ func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.
 
 	userName := f.Arg(0)
 	if len(userName) == 0 {
-		return handleError(errors.New("common_name is empty"))
+		return handleError(errors.New("username is empty"))
 	}
 	_, err := time.ParseDuration(c.ttl)
 	if err != nil {
@@ -80,17 +80,17 @@ func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.
 	}
 
 	// Issue certificate
-	roleOpts := map[string]interface{}{
-		"ttl":               c.ttl,
-		"max_ttl":           "87600h",
-		"enforce_hostnames": "false",
-		"allow_any_name":    "true",
-	}
-	certOpts := map[string]interface{}{
-		"common_name":          userName,
-		"exclude_cn_from_sans": "true",
-	}
-	crt, key, err := cke.IssueCertificate(inf, cke.CAEtcdClient, "system", roleOpts, certOpts)
+	crt, key, err := cke.IssueCertificate(inf, cke.CAEtcdClient, "system",
+		map[string]interface{}{
+			"ttl":            c.ttl,
+			"max_ttl":        "87600h",
+			"server_flag":    "false",
+			"allow_any_name": "true",
+		},
+		map[string]interface{}{
+			"common_name":          userName,
+			"exclude_cn_from_sans": "true",
+		})
 	if err != nil {
 		return handleError(err)
 	}
