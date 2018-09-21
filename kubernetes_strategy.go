@@ -24,7 +24,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].APIServer.Running
 	})
 	if len(apiservers) > 0 {
-		return APIServerBootOp(cpNodes, apiservers, c.ServiceSubnet, c.Options.APIServer)
+		return APIServerBootOp(apiservers, cpNodes, c.ServiceSubnet, c.Options.APIServer)
 	}
 	controllerManagers := filterNodes(cpNodes, func(n *Node) bool {
 		return !cs.NodeStatuses[n.Address].ControllerManager.Running
@@ -110,7 +110,7 @@ func kubernetesDecideRestart(c *Cluster, cs *ClusterStatus) Operator {
 		return false
 	})
 	if len(rivers) > 0 {
-		return RiversRestartOp(cpNodes, rivers, c.Options.Rivers)
+		return RiversRestartOp(rivers, cpNodes, c.Options.Rivers)
 	}
 
 	apiservers := filterNodes(cpNodes, func(n *Node) bool {
@@ -124,7 +124,7 @@ func kubernetesDecideRestart(c *Cluster, cs *ClusterStatus) Operator {
 		return false
 	})
 	if len(apiservers) > 0 {
-		return APIServerRestartOp(cpNodes, apiservers, c.ServiceSubnet, c.Options.APIServer)
+		return APIServerRestartOp(apiservers, cpNodes, c.ServiceSubnet, c.Options.APIServer)
 	}
 
 	controllerManagers := filterNodes(cpNodes, func(n *Node) bool {

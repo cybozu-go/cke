@@ -49,8 +49,8 @@ type riversRestartOp struct {
 }
 
 type apiServerBootOp struct {
-	cps   []*Node
 	nodes []*Node
+	cps   []*Node
 
 	serviceSubnet string
 	params        ServiceParams
@@ -81,8 +81,8 @@ type schedulerBootOp struct {
 }
 
 type apiServerRestartOp struct {
-	cps   []*Node
 	nodes []*Node
+	cps   []*Node
 
 	serviceSubnet string
 	params        ServiceParams
@@ -253,10 +253,10 @@ func RiversParams(upstreams []*Node) ServiceParams {
 }
 
 // APIServerBootOp returns an Operator to bootstrap kube-apiserver
-func APIServerBootOp(cps, nodes []*Node, serviceSubnet string, params ServiceParams) Operator {
+func APIServerBootOp(nodes, cps []*Node, serviceSubnet string, params ServiceParams) Operator {
 	return &apiServerBootOp{
-		cps:           cps,
 		nodes:         nodes,
+		cps:           cps,
 		serviceSubnet: serviceSubnet,
 		params:        params,
 		makeFiles:     &makeFilesCommand{nodes: nodes},
@@ -418,10 +418,10 @@ func (o *containerStopOp) NextCommand() Commander {
 }
 
 // APIServerRestartOp returns an Operator to restart kube-apiserver
-func APIServerRestartOp(cps, nodes []*Node, serviceSubnet string, params ServiceParams) Operator {
+func APIServerRestartOp(nodes, cps []*Node, serviceSubnet string, params ServiceParams) Operator {
 	return &apiServerRestartOp{
-		cps:           cps,
 		nodes:         nodes,
+		cps:           cps,
 		serviceSubnet: serviceSubnet,
 		params:        params,
 	}
