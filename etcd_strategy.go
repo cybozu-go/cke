@@ -9,7 +9,7 @@ import (
 func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 	// See docs/etcd.md
 
-	cpNodes := controlPlanes(c.Nodes)
+	cpNodes := ControlPlanes(c.Nodes)
 	endpoints := make([]string, len(cpNodes))
 	for i, n := range cpNodes {
 		endpoints[i] = "https://" + n.Address + ":2379"

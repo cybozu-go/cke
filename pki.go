@@ -21,8 +21,8 @@ const (
 	k8sPKIPath  = "/etc/kubernetes/pki"
 )
 
-// AddRole adds a role to CA if not exists.
-func AddRole(client *vault.Client, ca, role string, data map[string]interface{}) error {
+// addRole adds a role to CA if not exists.
+func addRole(client *vault.Client, ca, role string, data map[string]interface{}) error {
 	l := client.Logical()
 	rpath := path.Join(ca, "roles", role)
 	secret, err := l.Read(rpath)
@@ -129,7 +129,7 @@ func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node 
 }
 
 func (e EtcdCA) issueRoot(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
-	return issueCertificate(inf, CAEtcdClient, "admin",
+	return IssueCertificate(inf, CAEtcdClient, "admin",
 		map[string]interface{}{
 			"ttl":            "2h",
 			"max_ttl":        "24h",
@@ -193,7 +193,7 @@ func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node)
 
 // issueAdminCert issues client certificates for cluster admin.
 func (k KubernetesCA) issueAdminCert(ctx context.Context, inf Infrastructure, hours uint) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "admin",
+	return IssueCertificate(inf, CAKubernetes, "admin",
 		map[string]interface{}{
 			"ttl":               "2h",
 			"max_ttl":           "48h",
@@ -209,7 +209,7 @@ func (k KubernetesCA) issueAdminCert(ctx context.Context, inf Infrastructure, ho
 }
 
 func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "kube-scheduler",
+	return IssueCertificate(inf, CAKubernetes, "kube-scheduler",
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
@@ -224,7 +224,7 @@ func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure)
 }
 
 func (k KubernetesCA) issueForControllerManager(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "kube-controller-manager",
+	return IssueCertificate(inf, CAKubernetes, "kube-controller-manager",
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
@@ -245,7 +245,7 @@ func (k KubernetesCA) issueForKubelet(ctx context.Context, inf Infrastructure, n
 		altNames = "localhost," + nodename
 	}
 
-	return issueCertificate(inf, CAKubernetes, "kubelet",
+	return IssueCertificate(inf, CAKubernetes, "kubelet",
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
@@ -262,7 +262,7 @@ func (k KubernetesCA) issueForKubelet(ctx context.Context, inf Infrastructure, n
 }
 
 func (k KubernetesCA) issueForProxy(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "kube-proxy",
+	return IssueCertificate(inf, CAKubernetes, "kube-proxy",
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
@@ -277,7 +277,7 @@ func (k KubernetesCA) issueForProxy(ctx context.Context, inf Infrastructure) (cr
 }
 
 func (k KubernetesCA) issueForServiceAccount(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "service-account",
+	return IssueCertificate(inf, CAKubernetes, "service-account",
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
@@ -294,7 +294,7 @@ func (k KubernetesCA) issueForServiceAccount(ctx context.Context, inf Infrastruc
 }
 
 func writeCertificate(inf Infrastructure, node *Node, ca, file string, roleOpts, certOpts map[string]interface{}) error {
-	crt, key, err := issueCertificate(inf, ca, "system", roleOpts, certOpts)
+	crt, key, err := IssueCertificate(inf, ca, "system", roleOpts, certOpts)
 	if err != nil {
 		return err
 	}
@@ -309,13 +309,13 @@ func writeCertificate(inf Infrastructure, node *Node, ca, file string, roleOpts,
 	return nil
 }
 
-func issueCertificate(inf Infrastructure, ca, role string, roleOpts, certOpts map[string]interface{}) (crt, key string, err error) {
+func IssueCertificate(inf Infrastructure, ca, role string, roleOpts, certOpts map[string]interface{}) (crt, key string, err error) {
 	client, err := inf.Vault()
 	if err != nil {
 		return "", "", err
 	}
 
-	err = AddRole(client, ca, role, roleOpts)
+	err = addRole(client, ca, role, roleOpts)
 	if err != nil {
 		return "", "", err
 	}
