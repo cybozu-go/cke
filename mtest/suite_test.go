@@ -35,11 +35,11 @@ var _ = BeforeSuite(func() {
 
 	// wait cke
 	Eventually(func() error {
-		_, _, err := execAt(host1, "test", "-f", "/usr/bin/jq")
+		_, _, err := execAt(host1, "test", "-f", "/data/setup-cke.sh")
 		if err != nil {
 			return err
 		}
-		_, _, err = execAt(host2, "test", "-f", "/usr/bin/jq")
+		_, _, err = execAt(host2, "test", "-f", "/data/setup-cke.sh")
 		return err
 	}).Should(Succeed())
 
