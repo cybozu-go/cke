@@ -70,13 +70,16 @@ Show operation history.
 
 Control CKE managed etcd.
 
-### `ckecli etcd issue COMMON_NAME [-ttl=TTL]`
+### `ckecli etcd user-add USER_NAME [-ttl=TTL] [-prefix=PREFIX]`
 
-Add user and role using `COMMON_NAME`, and issue client certificate to stdout.
+Add user and role using `USER_NAME`, and issue client certificate to stdout.
 
-`COMMON_NAME` is `common_name` for client certificate and user/role for etcd.
+`USER_NAME` is used for `common_name` of client certificate and user/role for etcd.
 
-`-ttl` is `TTL` for client certificate, default is `87600h`.
+Option      | Default value         | Description
+----------  | --------------------- | -----------
+`-ttl`      | `87600h`              | `TTL` for client certificate
+`-prefix`   | `/`                   | `PREFIX` to grant permission of etcd key path
 
 `ckecli kubernetes`
 -------------------

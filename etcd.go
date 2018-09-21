@@ -385,7 +385,7 @@ func (c setupEtcdAuthCommand) Run(ctx context.Context, inf Infrastructure) error
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer cancel()
 
-	err = addUserRole(ctx, cli, "root", "")
+	err = AddUserRole(ctx, cli, "root", "")
 	if err != nil {
 		return err
 	}
@@ -394,7 +394,7 @@ func (c setupEtcdAuthCommand) Run(ctx context.Context, inf Infrastructure) error
 		return err
 	}
 
-	err = addUserRole(ctx, cli, "kube-apiserver", "/registry/")
+	err = AddUserRole(ctx, cli, "kube-apiserver", "/registry/")
 	if err != nil {
 		return err
 	}
@@ -410,7 +410,7 @@ func (c setupEtcdAuthCommand) Command() Command {
 	}
 }
 
-func addUserRole(ctx context.Context, cli *clientv3.Client, name, prefix string) error {
+func AddUserRole(ctx context.Context, cli *clientv3.Client, name, prefix string) error {
 	r := make([]byte, 32)
 	_, err := rand.Read(r)
 	if err != nil {
