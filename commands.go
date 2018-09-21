@@ -412,7 +412,7 @@ func (c stopContainerCommand) Run(ctx context.Context, inf Infrastructure) error
 		return err
 	}
 	// gofail: var dockerAfterContainerStop struct{}
-	err := ce.Remove(c.name)
+	err = ce.Remove(c.name)
 	log.Info("stop container", map[string]interface{}{
 		"container": c.name,
 		"elapsed":   time.Now().Sub(begin).Seconds(),
@@ -584,7 +584,7 @@ func (c prepareControllerManagerFilesCommand) Run(ctx context.Context, inf Infra
 	g := func(ctx context.Context, n *Node) ([]byte, error) {
 		crt, key, err := KubernetesCA{}.issueForControllerManager(ctx, inf)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		cfg := controllerManagerKubeconfig(c.cluster, ca, crt, key)
 		return clientcmd.Write(*cfg)
@@ -627,7 +627,7 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf Infrastructur
 	g := func(ctx context.Context, n *Node) ([]byte, error) {
 		crt, key, err := KubernetesCA{}.issueForScheduler(ctx, inf)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
 		return clientcmd.Write(*cfg)
@@ -657,7 +657,7 @@ func (c prepareProxyFilesCommand) Run(ctx context.Context, inf Infrastructure) e
 	g := func(ctx context.Context, n *Node) ([]byte, error) {
 		crt, key, err := KubernetesCA{}.issueForProxy(ctx, inf)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		cfg := proxyKubeconfig(c.cluster, ca, crt, key)
 		return clientcmd.Write(*cfg)
@@ -734,13 +734,13 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf Infrastructure)
 	}
 
 	f := func(ctx context.Context, n *Node) (cert, key []byte, err error) {
-		c, k, e := EtcdCA{}.issueForKubelet(ctx, inf, n)
+		c, k, e := KubernetesCA{}.issueForKubelet(ctx, inf, n)
 		if e != nil {
 			return nil, nil, e
 		}
 		return []byte(c), []byte(k), nil
 	}
-	err := c.makeFiles.AddKeyPair(ctx, EtcdPKIPath("kubelet"), f)
+	err = c.makeFiles.AddKeyPair(ctx, EtcdPKIPath("kubelet"), f)
 	if err != nil {
 		return err
 	}
@@ -755,6 +755,46 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf Infrastructure)
 func (c prepareKubeletFilesCommand) Command() Command {
 	return Command{
 		Name: "prepare-kubelet-files",
+	}
+}
+
+type prepareKubeletConfigCommand struct {
+	params    KubeletParams
+	makeFiles *makeFilesCommand
+}
+
+func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf Infrastructure) error {
+	const kubeletConfigPath = "/etc/kubernetes/kubelet/config.yml"
+	caPath := K8sPKIPath("ca.crt")
+	tlsCertPath := K8sPKIPath("kubelet.crt")
+	tlsKeyPath := K8sPKIPath("kubelet.key")
+
+	cfg := &KubeletConfiguration{
+		APIVersion:            "kubelet.config.k8s.io/v1beta1",
+		Kind:                  "KubeletConfiguration",
+		ReadOnlyPort:          0,
+		TLSCertFile:           tlsCertPath,
+		TLSPrivateKeyFile:     tlsKeyPath,
+		Authentication:        KubeletAuthentication{ClientCAFile: caPath},
+		Authorization:         KubeletAuthorization{Mode: "Webhook"},
+		HealthzBindAddress:    "0.0.0.0",
+		ClusterDomain:         c.params.Domain,
+		RuntimeRequestTimeout: "15m",
+		FailSwapOn:            !c.params.AllowSwap,
+	}
+	cfgData, err := yaml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	g := func(ctx context.Context, n *Node) ([]byte, error) {
+		return cfgData, nil
+	}
+	return c.makeFiles.AddFile(ctx, kubeletConfigPath, g)
+}
+
+func (c prepareKubeletConfigCommand) Command() Command {
+	return Command{
+		Name: "prepare-kubelet-config",
 	}
 }
 

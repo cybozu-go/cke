@@ -119,8 +119,6 @@ func (o *etcdBootOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
-			// TODO: BUG: this should be Mount in params
-			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		var initialCluster []string
 		for _, n := range o.nodes {
@@ -170,8 +168,17 @@ func etcdBuiltInParams(node *Node, initialCluster []string, state string) Servic
 		"--auto-compaction-mode=periodic",
 		"--auto-compaction-retention=24",
 	}
+	binds := []Mount{
+		{
+			Source:      "/etc/etcd/pki",
+			Destination: "/etc/etcd/pki",
+			ReadOnly:    true,
+			Label:       LabelPrivate,
+		},
+	}
 	params := ServiceParams{
 		ExtraArguments: args,
+		ExtraBinds:     binds,
 	}
 
 	return params
@@ -233,7 +240,7 @@ func (o *etcdAddMemberOp) NextCommand() Commander {
 		}
 		return addEtcdMemberCommand{o.endpoints, o.targetNode, opts, extra}
 	case 7:
-		o.step = 0
+		o.step++
 		endpoints := []string{"https://" + o.targetNode.Address + ":2379"}
 		return waitEtcdSyncCommand{endpoints, false}
 	}
@@ -709,8 +716,6 @@ func (o *etcdRestartOp) NextCommand() Commander {
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
-			// TODO: BUG: this should be Mount in params
-			"--volume=/etc/etcd/pki:/etc/etcd/pki:ro",
 		}
 		var initialCluster []string
 		for _, n := range o.cpNodes {

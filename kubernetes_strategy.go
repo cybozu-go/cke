@@ -70,7 +70,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].Proxy.Running
 	})
 	if len(proxies) > 0 {
-		return KubeProxyBootOp(proxies, c.Options.Proxy)
+		return KubeProxyBootOp(proxies, c.Name, c.Options.Proxy)
 	}
 
 	// Restart containers running with stale images or configurations.
@@ -138,7 +138,7 @@ func kubernetesDecideRestart(c *Cluster, cs *ClusterStatus) Operator {
 		return false
 	})
 	if len(controllerManagers) > 0 {
-		return ControllerManagerRestartOp(cpNodes, controllerManagers, c.Name, c.ServiceSubnet, c.Options.ControllerManager)
+		return ControllerManagerRestartOp(controllerManagers, c.Name, c.ServiceSubnet, c.Options.ControllerManager)
 	}
 
 	schedulers := filterNodes(cpNodes, func(n *Node) bool {
@@ -152,7 +152,7 @@ func kubernetesDecideRestart(c *Cluster, cs *ClusterStatus) Operator {
 		return false
 	})
 	if len(schedulers) > 0 {
-		return SchedulerRestartOp(cpNodes, schedulers, c.Name, c.Options.Scheduler)
+		return SchedulerRestartOp(schedulers, c.Name, c.Options.Scheduler)
 	}
 
 	kubelets := filterNodes(c.Nodes, func(n *Node) bool {
@@ -172,7 +172,7 @@ func kubernetesDecideRestart(c *Cluster, cs *ClusterStatus) Operator {
 		return false
 	})
 	if len(kubelets) > 0 {
-		return KubeletRestartOp(cpNodes, kubelets, c.Name, c.ServiceSubnet, c.Options.Kubelet)
+		return KubeletRestartOp(kubelets, c.Name, c.ServiceSubnet, c.Options.Kubelet)
 	}
 
 	proxies := filterNodes(c.Nodes, func(n *Node) bool {
@@ -186,7 +186,7 @@ func kubernetesDecideRestart(c *Cluster, cs *ClusterStatus) Operator {
 		return false
 	})
 	if len(proxies) > 0 {
-		return KubeProxyRestartOp(cpNodes, proxies, c.Options.Proxy)
+		return KubeProxyRestartOp(proxies, c.Name, c.Options.Proxy)
 	}
 
 	// TODO check image versions and restart container when image is updated

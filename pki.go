@@ -119,18 +119,6 @@ func (e EtcdCA) issueRoot(ctx context.Context, inf Infrastructure) (cert, key st
 // KubernetesCA is a certificate authority for k8s cluster.
 type KubernetesCA struct{}
 
-// setup generates and installs certificates for API server.
-func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node) error {
-	sakey, err := inf.Storage().GetServiceAccountKey(ctx)
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, K8sPKIPath("service-account.key"), sakey)
-	if err != nil {
-		return err
-	}
-}
-
 // issueAdminCert issues client certificates for cluster admin.
 func (k KubernetesCA) issueAdminCert(ctx context.Context, inf Infrastructure, hours uint) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "admin",
