@@ -23,7 +23,7 @@ var _ = BeforeSuite(func() {
 	fmt.Println("Preparing...")
 
 	SetDefaultEventuallyPollingInterval(3 * time.Second)
-	SetDefaultEventuallyTimeout(10 * time.Minute)
+	SetDefaultEventuallyTimeout(6 * time.Minute)
 
 	err := prepareSSHClients(host1, host2, node1, node2, node3, node4, node5, node6)
 	Expect(err).NotTo(HaveOccurred())
