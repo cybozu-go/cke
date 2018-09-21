@@ -27,7 +27,6 @@ VAULT_ARCHIVE := vault_$(VAULT_VERSION)_linux_amd64.zip
 KUBECTL_URL := https://storage.googleapis.com/kubernetes-release/release/v$(K8S_VERSION)/bin/linux/amd64/kubectl
 SSH_PRIVKEY := ./mtest_key
 OUTPUT := ./output
-UBUNTU_IMAGE := ubuntu-18.04-server-cloudimg-amd64.img
 COREOS_IMAGE := coreos_production_qemu_image.img
 CKECLI := $(OUTPUT)/ckecli
 KUBECTL := $(OUTPUT)/kubectl
@@ -43,10 +42,8 @@ GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/cke $(OUTPUT)/ckecli \
 	$(OUTPUT)/kubectl \
 	$(OUTPUT)/cluster.yml \
-	$(OUTPUT)/user-data_host1.yml \
-	$(OUTPUT)/user-data_host2.yml \
-	$(OUTPUT)/network1.yml \
-	$(OUTPUT)/network2.yml \
+	$(OUTPUT)/host1.ign \
+	$(OUTPUT)/host2.ign \
 	$(OUTPUT)/node1.ign \
 	$(OUTPUT)/node2.ign \
 	$(OUTPUT)/node3.ign \
@@ -56,7 +53,6 @@ GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/cke-cluster.yml \
 	$(OUTPUT)/cke.yml \
 	$(OUTPUT)/setup-cke.sh \
-	$(UBUNTU_IMAGE) \
 	$(COREOS_IMAGE) \
 	$(GOPATH)/bin/$(DOWNLOADER)
 
@@ -67,9 +63,6 @@ $(MANAGEMENT_ETCD_ARCHIVE):
 
 $(VAULT_ARCHIVE):
 	curl -sSLf -o $@ https://releases.hashicorp.com/vault/$(VAULT_VERSION)/$(VAULT_ARCHIVE)
-
-$(UBUNTU_IMAGE):
-	curl -sSLf -o $@ https://cloud-images.ubuntu.com/releases/18.04/release/$@
 
 $(COREOS_IMAGE):
 	curl -sSLf -o $@.bz2 https://stable.release.core-os.net/amd64-usr/current/$@.bz2
@@ -111,28 +104,33 @@ $(OUTPUT)/setup-cke.sh: setup-cke.sh
 $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)
 	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@UBUNTU_IMAGE@/$(UBUNTU_IMAGE)/' \
 		-e 's/@COREOS_IMAGE@/$(COREOS_IMAGE)/' $< > $@
 
-$(OUTPUT)/user-data_host1.yml: user-data.yml
-	mkdir -p $(OUTPUT)
-	sed -e 's/@HOST1@/$(HOST1)/' \
-		-e 's/@HOST_NAME@/host1/' $< > $@
-
-$(OUTPUT)/user-data_host2.yml: user-data.yml
-	mkdir -p $(OUTPUT)
-	sed -e 's/@HOST1@/$(HOST1)/' \
-		-e 's/@HOST_NAME@/host2/' $< > $@
-
-$(OUTPUT)/network1.yml: network.yml
+$(OUTPUT)/host1.ign: host.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@HOST@/$(HOST1)/' $< > $@
+		-e 's/@NODE_NAME@/host1/' \
+		-e 's/@NODE1@/$(NODE1)/' \
+		-e 's/@NODE2@/$(NODE2)/' \
+		-e 's/@NODE3@/$(NODE3)/' \
+		-e 's/@NODE4@/$(NODE4)/' \
+		-e 's/@NODE5@/$(NODE5)/' \
+		-e 's/@NODE6@/$(NODE6)/' \
+		-e 's/@HOST1@/$(HOST1)/' \
+		-e 's/@NODE_ADDRESS@/$(HOST1)/' $< > $@
 
-$(OUTPUT)/network2.yml: network.yml
+$(OUTPUT)/host2.ign: host.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@HOST@/$(HOST2)/' $< > $@
+		-e 's/@NODE_NAME@/host2/' \
+		-e 's/@NODE1@/$(NODE1)/' \
+		-e 's/@NODE2@/$(NODE2)/' \
+		-e 's/@NODE3@/$(NODE3)/' \
+		-e 's/@NODE4@/$(NODE4)/' \
+		-e 's/@NODE5@/$(NODE5)/' \
+		-e 's/@NODE6@/$(NODE6)/' \
+		-e 's/@HOST1@/$(HOST1)/' \
+		-e 's/@NODE_ADDRESS@/$(HOST2)/' $< > $@
 
 $(OUTPUT)/node1.ign: node.ign
 	mkdir -p $(OUTPUT)

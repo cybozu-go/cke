@@ -35,11 +35,11 @@ var _ = BeforeSuite(func() {
 
 	// wait cke
 	Eventually(func() error {
-		_, _, err := execAt(host1, "test", "-f", "/usr/bin/jq")
+		_, _, err := execAt(host1, "test", "-f", "/data/setup-cke.sh")
 		if err != nil {
 			return err
 		}
-		_, _, err = execAt(host2, "test", "-f", "/usr/bin/jq")
+		_, _, err = execAt(host2, "test", "-f", "/data/setup-cke.sh")
 		return err
 	}).Should(Succeed())
 
@@ -49,7 +49,12 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	for _, h := range []string{host1, host2} {
-		execSafeAt(h, "/data/setup-cke.sh")
+		//execSafeAt(h, "/data/setup-cke.sh")
+		_, stderr, err := execAt(h, "/data/setup-cke.sh")
+		if err != nil {
+			fmt.Println("err!!!", string(stderr))
+			panic(err)
+		}
 	}
 
 	etcd, err := connectEtcd()
