@@ -367,6 +367,17 @@ func testEtcdDecideToDo(t *testing.T) {
 		if op.Name() != c.ExpectedOperator {
 			t.Errorf("[%s] operator name mismatch: %s != %s", c.Name, op.Name(), c.ExpectedOperator)
 		}
+		finished := false
+		for i := 0; i < 100; i++ {
+			commander := op.NextCommand()
+			if commander == nil {
+				finished = true
+				break
+			}
+		}
+		if !finished {
+			t.Fatalf("[%s] Operator.NextCommand() never finished: %s", c.Name, op.Name())
+		}
 	}
 }
 
