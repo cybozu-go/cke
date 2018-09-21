@@ -49,7 +49,12 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	for _, h := range []string{host1, host2} {
-		execSafeAt(h, "/data/setup-cke.sh")
+		//execSafeAt(h, "/data/setup-cke.sh")
+		_, stderr, err := execAt(h, "/data/setup-cke.sh")
+		if err != nil {
+			fmt.Println("err!!!", string(stderr))
+			panic(err)
+		}
 	}
 
 	etcd, err := connectEtcd()
