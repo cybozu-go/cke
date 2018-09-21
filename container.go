@@ -86,6 +86,7 @@ func (c docker) Run(img Image, binds []Mount, command string) error {
 		"--rm",
 		"--network=host",
 		"--uts=host",
+		"--read-only",
 	}
 	for _, m := range binds {
 		o := "rw"
@@ -108,6 +109,7 @@ func (c docker) RunWithInput(img Image, binds []Mount, command, input string) er
 		"-i",
 		"--network=host",
 		"--uts=host",
+		"--read-only",
 	}
 	for _, m := range binds {
 		o := "rw"
