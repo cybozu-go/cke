@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.7] - 2018-09-21
+### Changed
+- Improve bootstrap of etcd and kubernetes cluster bootstrap.
+- Change Docker image file system to ext4 from btrfs.
+
 ## [0.6] - 2018-09-19
 ### Added
 - Opt in to [Go modules](https://github.com/golang/go/wiki/Modules).
@@ -40,7 +45,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.6...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.7...HEAD
+[0.7]: https://github.com/cybozu-go/cke/compare/v0.6...v0.7
 [0.6]: https://github.com/cybozu-go/cke/compare/v0.5...v0.6
 [0.5]: https://github.com/cybozu-go/cke/compare/v0.4...v0.5
 [0.4]: https://github.com/cybozu-go/cke/compare/v0.3...v0.4
