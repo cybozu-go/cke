@@ -190,7 +190,10 @@ func (c Controller) getNodeStatus(ctx context.Context, inf Infrastructure, node 
 	if status.APIServer.Running {
 		status.APIServer.IsHealthy, err = c.checkAPIServerHalth(ctx, inf, node)
 		if err != nil {
-			return nil, err
+			log.Warn("failed to check API server health", map[string]interface{}{
+				log.FnError: err,
+				"node":      node.Address,
+			})
 		}
 	}
 
@@ -198,7 +201,10 @@ func (c Controller) getNodeStatus(ctx context.Context, inf Infrastructure, node 
 	if status.ControllerManager.Running {
 		status.ControllerManager.IsHealthy, err = c.checkHealthz(ctx, inf, node.Address, 10252)
 		if err != nil {
-			return nil, err
+			log.Warn("failed to check controller manager health", map[string]interface{}{
+				log.FnError: err,
+				"node":      node.Address,
+			})
 		}
 	}
 
@@ -206,7 +212,10 @@ func (c Controller) getNodeStatus(ctx context.Context, inf Infrastructure, node 
 	if status.Scheduler.Running {
 		status.Scheduler.IsHealthy, err = c.checkHealthz(ctx, inf, node.Address, 10251)
 		if err != nil {
-			return nil, err
+			log.Warn("failed to check scheduler health", map[string]interface{}{
+				log.FnError: err,
+				"node":      node.Address,
+			})
 		}
 	}
 
@@ -219,7 +228,10 @@ func (c Controller) getNodeStatus(ctx context.Context, inf Infrastructure, node 
 	if status.Kubelet.Running {
 		status.Kubelet.IsHealthy, err = c.checkHealthz(ctx, inf, node.Address, 10248)
 		if err != nil {
-			return nil, err
+			log.Warn("failed to check kubelet health", map[string]interface{}{
+				log.FnError: err,
+				"node":      node.Address,
+			})
 		}
 
 		cfgData, _, err := agent.Run("cat /etc/kubernetes/kubelet/config.yml")
