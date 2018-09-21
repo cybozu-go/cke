@@ -43,15 +43,6 @@ Show all constraints on the cluster.
 
 If `JSON` is "-", `ckecli` reads from stdin.
 
-`ckecli vault issue COMMON_NAME TTL`
-------------------------------------
-
-Issue client certificate to stdout.
-
-`COMMON_NAME` is `common_name` for client certificate, user/role for etcd.
-
-`TTL` is `ttl` for client certificate, default is `87600h`.
-
 `ckecli ca set NAME PEM`
 ------------------------
 
@@ -73,3 +64,29 @@ Show the host name of the current leader.
 ---------------------------
 
 Show operation history.
+
+`ckecli etcd`
+-------------
+
+Control CKE managed etcd.
+
+### `ckecli etcd issue COMMON_NAME [-ttl=TTL]`
+
+Add user and role using `COMMON_NAME`, and issue client certificate to stdout.
+
+`COMMON_NAME` is `common_name` for client certificate and user/role for etcd.
+
+`-ttl` is `TTL` for client certificate, default is `87600h`.
+
+`ckecli kubernetes`
+-------------------
+
+Control CKE managed kubernetes.
+
+### `ckecli kubernetes issue COMMON_NAME [-ttl=TTL]`
+
+Issue client certificate to stdout.
+
+`COMMON_NAME` is used for `common_name` and `organization`for client certificate to access kube-apiserver.
+
+`-ttl` is `TTL` for client certificate, default is `87600h`.
