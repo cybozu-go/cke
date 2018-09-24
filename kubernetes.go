@@ -568,7 +568,7 @@ func APIServerParams(controlPlanes []*Node, advertiseAddress, serviceSubnet stri
 	return ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
-			{"/etc/hostname", "/etc/machine-id", true, "", ""},
+			{"/etc/machine-id", "/etc/machine-id", true, "", ""},
 			{"/var/log/kubernetes/apiserver", "/var/log/kubernetes/apiserver", false, "", LabelPrivate},
 			{"/etc/kubernetes", "/etc/kubernetes", true, "", LabelShared},
 		},
@@ -601,7 +601,7 @@ func ControllerManagerParams(clusterName, serviceSubnet string) ServiceParams {
 	return ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
-			{"/etc/hostname", "/etc/machine-id", true, "", ""},
+			{"/etc/machine-id", "/etc/machine-id", true, "", ""},
 			{"/etc/kubernetes", "/etc/kubernetes", true, "", LabelShared},
 			{"/var/log/kubernetes/controller-manager", "/var/log/kubernetes/controller-manager", false, "", LabelPrivate},
 		},
@@ -619,7 +619,7 @@ func SchedulerParams() ServiceParams {
 	return ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
-			{"/etc/hostname", "/etc/machine-id", true, "", ""},
+			{"/etc/machine-id", "/etc/machine-id", true, "", ""},
 			{"/etc/kubernetes", "/etc/kubernetes", true, "", LabelShared},
 			{"/var/log/kubernetes/scheduler", "/var/log/kubernetes/scheduler", false, "", LabelPrivate},
 		},
@@ -875,7 +875,7 @@ func ProxyParams() ServiceParams {
 	return ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
-			{"/etc/hostname", "/etc/machine-id", true, "", ""},
+			{"/etc/machine-id", "/etc/machine-id", true, "", ""},
 			{"/etc/kubernetes", "/etc/kubernetes", true, "", LabelShared},
 			{"/lib/modules", "/lib/modules", true, "", ""},
 			{"/var/log/kubernetes/proxy", "/var/log/kubernetes/proxy", false, "", LabelPrivate},
@@ -900,7 +900,7 @@ func KubeletServiceParams(n *Node) ServiceParams {
 	return ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []Mount{
-			{"/etc/hostname", "/etc/machine-id", true, "", ""},
+			{"/etc/machine-id", "/etc/machine-id", true, "", ""},
 			{"/etc/kubernetes", "/etc/kubernetes", true, "", LabelShared},
 			{"/var/lib/kubelet", "/var/lib/kubelet", false, PropagationShared, LabelShared},
 			// TODO: /var/lib/docker is used by cAdvisor.
