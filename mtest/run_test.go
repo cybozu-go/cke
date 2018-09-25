@@ -474,9 +474,9 @@ func deleteFailure(failurePoint string) {
 }
 
 func etcdctl(crt, key, ca string, args ...string) error {
-	cmd := exec.Command("output/etcdctl",
-		"--endpoints=https://"+node1+":2379,https://"+node2+":2379,https://"+node3+":2379",
-		"--cert="+crt, "--key="+key, "--cacert="+ca, strings.Join(args, " "))
+	args = append([]string{"--endpoints=https://" + node1 + ":2379,https://" + node2 + ":2379,https://" + node3 + ":2379",
+		"--cert=" + crt, "--key=" + key, "--cacert=" + ca}, args...)
+	cmd := exec.Command("output/etcdctl", args...)
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "ETCDCTL_API=3")
 	cmd.Stdout = os.Stdout
