@@ -26,12 +26,18 @@ create_ca() {
 
 run_vault() {
     sudo systemd-run --unit=my-vault.service /data/vault server -dev -dev-listen-address=0.0.0.0:8200 -dev-root-token-id=cybozu
-    sleep 1
 
     VAULT_TOKEN=cybozu
     export VAULT_TOKEN
     VAULT_ADDR=http://127.0.0.1:8200
     export VAULT_ADDR
+
+    for i in $(seq 10); do
+        sleep 1
+        if $VAULT status >/dev/null 2>&1; then
+            break
+        fi
+    done
 
     $VAULT auth enable approle
     cat > /home/cybozu/cke-policy.hcl <<'EOF'
