@@ -122,6 +122,6 @@ func etcdUserAddCommand() subcommands.Command {
 		&etcdUserAdd{},
 		"user-add",
 		"Issue client certificate and add user/role for CKE managed etcd",
-		"etcd user-add COMMON_NAME PREFIX]",
+		"etcd user-add COMMON_NAME PREFIX",
 	}
 }
