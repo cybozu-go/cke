@@ -13,7 +13,7 @@ var _ = Describe("ckecli", func() {
 
 	It("should issue client certificate for etcd and connect to the CKE managed etcd", func() {
 		By("execute ckecli etcd user-add")
-		stdout := ckecli("etcd", "user-add", "mtest", "/")
+		stdout := ckecli("etcd", "user-add", "mtest")
 		var res cli.IssueResponse
 		err := json.Unmarshal(stdout, &res)
 		Expect(err).NotTo(HaveOccurred())

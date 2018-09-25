@@ -47,7 +47,7 @@ func (c *etcdUserAdd) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
-	if f.NArg() != 2 {
+	if f.NArg() != 1 {
 		f.Usage()
 		return subcommands.ExitUsageError
 	}
@@ -55,11 +55,6 @@ func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.
 	userName := f.Arg(0)
 	if len(userName) == 0 {
 		return handleError(errors.New("username is empty"))
-	}
-
-	prefix := f.Arg(1)
-	if len(prefix) == 0 {
-		return handleError(errors.New("prefix is empty"))
 	}
 
 	cfg, err := storage.GetCluster(ctx)
@@ -105,7 +100,7 @@ func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.
 	if err != nil {
 		return handleError(err)
 	}
-	err = cke.AddUserRole(ctx, etcdClient, userName, prefix)
+	err = cke.AddUserRole(ctx, etcdClient, userName, "/")
 	// accept if user and role already exist
 	if err != nil && err != rpctypes.ErrUserAlreadyExist {
 		return handleError(err)
