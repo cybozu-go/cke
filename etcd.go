@@ -445,6 +445,12 @@ func AddUserRole(ctx context.Context, cli *clientv3.Client, name, prefix string)
 	return nil
 }
 
+// GetUserRoles get roles of target user
+func GetUserRoles(ctx context.Context, cli *clientv3.Client, user string) ([]string, error) {
+	resp, err := cli.UserGet(ctx, user)
+	return resp.Roles, err
+}
+
 type removeEtcdMemberCommand struct {
 	endpoints []string
 	ids       []uint64

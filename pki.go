@@ -144,6 +144,22 @@ func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key st
 		})
 }
 
+// IssueEtcdClientCertificate generate the certificate for target role
+func IssueEtcdClientCertificate(inf Infrastructure, role, commonName, ttl string) (cert, key string, err error) {
+	return issueCertificate(inf, CAEtcdClient, role,
+		map[string]interface{}{
+			"ttl":            "37600h",
+			"max_ttl":        "37600h",
+			"server_flag":    "false",
+			"allow_any_name": "true",
+		},
+		map[string]interface{}{
+			"common_name":          commonName,
+			"exclude_cn_from_sans": "true",
+			"ttl":                  ttl,
+		})
+}
+
 // KubernetesCA is a certificate authority for k8s cluster.
 type KubernetesCA struct {
 }

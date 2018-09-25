@@ -70,15 +70,23 @@ Show operation history.
 
 Control CKE managed etcd.
 
-### `ckecli etcd user-add COMMON_NAME`
+### `ckecli etcd user-add COMMON_NAME PREFIX`
+
+This subcommand is for programs to operate etcd server.
 
 Add `COMMON_NAME` user/role to etcd.
 
+The user can only access under `PREFIX`.
+
+`COMMON_NAME` must not have prefix `system:`.
+
 ### `ckecli etcd issue COMMON_NAME [-ttl=TTL]`
+
+This subcommand is for programs to operate etcd server.
 
 Create client certificate for `COMMON_NAME`.
 
-This subcommand is for programs to operate etcd server.
+If `COMMON_NAME` user does not exist, execute `$ ckecli etcd user-add COMMON_NAME PREFIX`.
 
 Option      | Default value         | Description
 ----------  | --------------------- | -----------
@@ -102,7 +110,7 @@ Control CKE managed kubernetes.
 
 Issue client certificate to stdout.
 
-`COMMON_NAME` is used for `common_name` and `organization`for client certificate to access kube-apiserver.
+`COMMON_NAME` is used for `common_name` for client certificate to access kube-apiserver.
 
 Option      | Default value         | Description
 ----------  | --------------------- | -----------
