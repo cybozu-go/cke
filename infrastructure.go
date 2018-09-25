@@ -107,7 +107,7 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	if err != nil {
 		return nil, err
 	}
-	inf.etcdCert, inf.etcdKey, err = EtcdCA{}.issueRoot(ctx, inf)
+	inf.etcdCert, inf.etcdKey, err = EtcdCA{}.IssueRoot(ctx, inf)
 	if err != nil {
 		return nil, err
 	}
@@ -142,29 +142,13 @@ func NewInfrastructureWithoutSSH(ctx context.Context, c *Cluster, s Storage) (In
 		return nil, err
 	}
 	inf.serverCA = serverCA
-	inf.etcdCert, inf.etcdKey, err = EtcdCA{}.issueRoot(ctx, inf)
+	inf.etcdCert, inf.etcdKey, err = EtcdCA{}.IssueRoot(ctx, inf)
 	if err != nil {
 		return nil, err
 	}
 
 	inf.kubeCA, err = inf.Storage().GetCACertificate(ctx, "kubernetes")
-	if err != nil {
-		return nil, err
-	}
-
-	issue := func() (cert, key []byte, err error) {
-		c, k, e := KubernetesCA{}.issueAdminCert(ctx, inf, 25)
-		if e != nil {
-			return nil, nil, e
-		}
-		return []byte(c), []byte(k), nil
-	}
-	inf.kubeCert, inf.kubeKey, err = k8sCertCache.get(issue)
-	if err != nil {
-		return nil, err
-	}
-
-	return inf, nil
+	return inf, err
 }
 
 type ckeInfrastructure struct {

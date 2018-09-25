@@ -15,6 +15,12 @@ import (
 
 type etcd struct{}
 
+type IssueResponse struct {
+	Crt   string `json:"certificate"`
+	Key   string `json:"private_key"`
+	CACrt string `json:"ca_certificate"`
+}
+
 func (v etcd) SetFlags(f *flag.FlagSet) {}
 
 func (v etcd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
@@ -80,17 +86,13 @@ func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.
 	}
 
 	// Issue certificate
-	crt, key, err := cke.IssueCertificate(inf, cke.CAEtcdClient, "system",
-		map[string]interface{}{
-			"ttl":            c.ttl,
-			"max_ttl":        "87600h",
-			"server_flag":    "false",
-			"allow_any_name": "true",
-		},
-		map[string]interface{}{
-			"common_name":          userName,
-			"exclude_cn_from_sans": "true",
-		})
+	crt, key, err := cke.EtcdCA{}.IssueRoot(ctx, inf)
+	if err != nil {
+		return handleError(err)
+	}
+
+	// Get server CA certificate
+	caCrt, err := storage.GetCACertificate(ctx, "server")
 	if err != nil {
 		return handleError(err)
 	}
@@ -101,7 +103,6 @@ func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.
 	for i, n := range cpNodes {
 		endpoints[i] = "https://" + n.Address + ":2379"
 	}
-
 	etcdClient, err := inf.NewEtcdClient(endpoints)
 	if err != nil {
 		return handleError(err)
@@ -112,13 +113,9 @@ func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.
 		return handleError(err)
 	}
 
-	type response struct {
-		Crt string `json:"certificate"`
-		Key string `json:"private_key"`
-	}
 	e := json.NewEncoder(os.Stdout)
 	e.SetIndent("", "  ")
-	err = e.Encode(response{crt, key})
+	err = e.Encode(IssueResponse{crt, key, caCrt})
 	return handleError(err)
 }
 

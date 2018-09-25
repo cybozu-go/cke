@@ -1,11 +1,9 @@
 package cke
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-
 	"fmt"
 	"strconv"
 
@@ -126,7 +124,7 @@ func (s Storage) GetVaultConfig(ctx context.Context) (*VaultConfig, error) {
 	}
 
 	cfg := new(VaultConfig)
-	err = json.NewDecoder(bytes.NewReader(resp.Kvs[0].Value)).Decode(&cfg)
+	err = json.Unmarshal(resp.Kvs[0].Value, &cfg)
 	if err != nil {
 		return nil, err
 	}
