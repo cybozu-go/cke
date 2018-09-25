@@ -72,23 +72,7 @@ func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.
 		return handleError(err)
 	}
 
-	cfg, err := storage.GetCluster(ctx)
-	if err != nil {
-		return handleError(err)
-	}
-	vaultCfg, err := storage.GetVaultConfig(ctx)
-	if err != nil {
-		return handleError(err)
-	}
-	data, err := json.Marshal(vaultCfg)
-	if err != nil {
-		return handleError(err)
-	}
-	err = cke.ConnectVault(ctx, data)
-	if err != nil {
-		return handleError(err)
-	}
-	inf, err := cke.NewInfrastructureWithoutSSH(ctx, cfg, storage)
+	cfg, inf, err := prepareInfrastructure(ctx)
 	if err != nil {
 		return handleError(err)
 	}
@@ -140,33 +124,16 @@ func (c *etcdIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.Ex
 	if len(userName) == 0 {
 		return handleError(errors.New("COMMON_NAME is empty"))
 	}
-	cfg, err := storage.GetCluster(ctx)
-	if err != nil {
-		return handleError(err)
-	}
-	vaultCfg, err := storage.GetVaultConfig(ctx)
-	if err != nil {
-		return handleError(err)
-	}
-	data, err := json.Marshal(vaultCfg)
-	if err != nil {
-		return handleError(err)
-	}
-	err = cke.ConnectVault(ctx, data)
-	if err != nil {
-		return handleError(err)
-	}
-	inf, err := cke.NewInfrastructureWithoutSSH(ctx, cfg, storage)
-	if err != nil {
-		return handleError(err)
-	}
 
+	cfg, inf, err := prepareInfrastructure(ctx)
+	if err != nil {
+		return handleError(err)
+	}
 	endpoints := endpoints(cfg)
 	etcdClient, err := inf.NewEtcdClient(endpoints)
 	if err != nil {
 		return handleError(err)
 	}
-
 	roles, err := cke.GetUserRoles(ctx, etcdClient, userName)
 	if err != nil {
 		return handleError(err)
@@ -218,23 +185,7 @@ func (c *etcdRootIssue) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *etcdRootIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
-	cfg, err := storage.GetCluster(ctx)
-	if err != nil {
-		return handleError(err)
-	}
-	vaultCfg, err := storage.GetVaultConfig(ctx)
-	if err != nil {
-		return handleError(err)
-	}
-	data, err := json.Marshal(vaultCfg)
-	if err != nil {
-		return handleError(err)
-	}
-	err = cke.ConnectVault(ctx, data)
-	if err != nil {
-		return handleError(err)
-	}
-	inf, err := cke.NewInfrastructureWithoutSSH(ctx, cfg, storage)
+	_, inf, err := prepareInfrastructure(ctx)
 	if err != nil {
 		return handleError(err)
 	}
@@ -272,4 +223,25 @@ func endpoints(cfg *cke.Cluster) []string {
 		endpoints[i] = "https://" + n.Address + ":2379"
 	}
 	return endpoints
+}
+
+func prepareInfrastructure(ctx context.Context) (*cke.Cluster, cke.Infrastructure, error) {
+	cfg, err := storage.GetCluster(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	vaultCfg, err := storage.GetVaultConfig(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	data, err := json.Marshal(vaultCfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = cke.ConnectVault(ctx, data)
+	if err != nil {
+		return nil, nil, err
+	}
+	inf, err := cke.NewInfrastructureWithoutSSH(ctx, cfg, storage)
+	return cfg, inf, err
 }
