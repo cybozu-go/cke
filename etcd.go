@@ -410,6 +410,7 @@ func (c setupEtcdAuthCommand) Command() Command {
 	}
 }
 
+// AddUserRole create etcd user and role
 func AddUserRole(ctx context.Context, cli *clientv3.Client, name, prefix string) error {
 	r := make([]byte, 32)
 	_, err := rand.Read(r)

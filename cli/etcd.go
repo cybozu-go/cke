@@ -14,6 +14,7 @@ import (
 
 type etcd struct{}
 
+// IssueResponse is cli output format
 type IssueResponse struct {
 	Crt   string `json:"certificate"`
 	Key   string `json:"private_key"`
