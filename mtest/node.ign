@@ -12,7 +12,7 @@
         "filesystem": "root",
         "path": "/etc/hosts",
         "mode": 420,
-        "contents": { "source": "data:,127.0.0.1%09localhost%0A::1%09%09localhost%0A%0A10.0.0.2%09node1%0A@NODE1@%09node2%0A@NODE2@%09node3%0A@NODE3@%09node4%0A@NODE4@%09node5%0A@NODE5@%09node6%0A@NODE6@" }
+        "contents": { "source": "data:,127.0.0.1%09localhost%0A::1%09%09localhost%0A%0A@NODE1@%09node1%0A@NODE2@%09node2%0A@NODE3@%09node3%0A@NODE4@%09node4%0A@NODE5@%09node5%0A@NODE6@%09node6%0A" }
       }
     ]
   },
@@ -52,8 +52,8 @@
       {
         "name": "docker.service",
         "dropins": [{
-          "name": "10-storage-driver.conf",
-          "contents": "[Service]\nEnvironment=DOCKER_OPTS=--storage-driver=overlay"
+          "name": "10-docker-opts.conf",
+          "contents": "[Service]\nEnvironment=DOCKER_OPTS=\"--storage-driver=overlay --bridge=none --iptables=false --ip-masq=false\"\n"
         }]
       }
     ]
