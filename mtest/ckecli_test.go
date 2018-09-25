@@ -11,7 +11,7 @@ import (
 var _ = Describe("ckecli", func() {
 	AfterEach(initializeControlPlane)
 
-	It("should connect etcd server by program user", func() {
+	It("should create users with limited access rights", func() {
 		By("creating user and role for etcd")
 		userName := "mtest"
 		stdout := ckecli("etcd", "user-add", userName, "/mtest")
@@ -27,8 +27,10 @@ var _ = Describe("ckecli", func() {
 		c := localTempFile(res.Crt)
 		k := localTempFile(res.Key)
 		ca := localTempFile(res.CACrt)
-		err = etcdctl(c.Name(), k.Name(), ca.Name(), "endpoint", "health")
+		err = etcdctl(c.Name(), k.Name(), ca.Name(), "put", "/mtest/a", "test")
 		Expect(err).NotTo(HaveOccurred())
+		err = etcdctl(c.Name(), k.Name(), ca.Name(), "put", "/a", "test")
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("should connect to the CKE managed etcd", func() {
