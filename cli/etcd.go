@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"os"
-	"time"
 
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"github.com/cybozu-go/cke"
@@ -40,17 +39,14 @@ func EtcdCommand() subcommands.Command {
 }
 
 type etcdUserAdd struct {
-	ttl    string
 	prefix string
 }
 
 func (c *etcdUserAdd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.ttl, "ttl", "87600h", "TTL for client certificate")
-	f.StringVar(&c.prefix, "prefix", "/", "PREFIX to grant permission of etcd key path")
 }
 
 func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
-	if f.NArg() != 1 {
+	if f.NArg() != 2 {
 		f.Usage()
 		return subcommands.ExitUsageError
 	}
@@ -59,9 +55,10 @@ func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.
 	if len(userName) == 0 {
 		return handleError(errors.New("username is empty"))
 	}
-	_, err := time.ParseDuration(c.ttl)
-	if err != nil {
-		return handleError(err)
+
+	prefix := f.Arg(1)
+	if len(prefix) == 0 {
+		return handleError(errors.New("prefix is empty"))
 	}
 
 	cfg, err := storage.GetCluster(ctx)
@@ -107,7 +104,7 @@ func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.
 	if err != nil {
 		return handleError(err)
 	}
-	err = cke.AddUserRole(ctx, etcdClient, userName, c.prefix)
+	err = cke.AddUserRole(ctx, etcdClient, userName, prefix)
 	// accept if user and role already exist
 	if err != nil && err != rpctypes.ErrUserAlreadyExist {
 		return handleError(err)
@@ -124,6 +121,6 @@ func etcdUserAddCommand() subcommands.Command {
 		&etcdUserAdd{},
 		"user-add",
 		"Issue client certificate and add user/role for CKE managed etcd",
-		"etcd user-add COMMON_NAME [-ttl TTL] [-prefix PREFIX]",
+		"etcd user-add COMMON_NAME PREFIX]",
 	}
 }
