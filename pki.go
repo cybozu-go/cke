@@ -140,7 +140,7 @@ func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key st
 		map[string]interface{}{
 			"common_name":          "root",
 			"exclude_cn_from_sans": "true",
-			"ttl": 					"1h",
+			"ttl":                  "1h",
 		})
 }
 
