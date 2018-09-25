@@ -52,8 +52,8 @@
       {
         "name": "docker.service",
         "dropins": [{
-          "name": "10-storage-driver.conf",
-          "contents": "[Service]\nEnvironment=DOCKER_OPTS=--storage-driver=overlay"
+          "name": "10-docker-opts.conf",
+          "contents": "[Service]\nEnvironment=DOCKER_OPTS=\"--storage-driver=overlay --bridge=none --iptables=false --ip-masq=false\"\n"
         }]
       }
     ]
