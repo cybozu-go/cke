@@ -11,14 +11,20 @@ import (
 var _ = Describe("ckecli", func() {
 	AfterEach(initializeControlPlane)
 
-	It("should issue client certificate for etcd and connect to the CKE managed etcd", func() {
-		By("execute ckecli etcd user-add")
+	It("should connect etcd server by program user", func() {
+		By("creating user and role for etcd")
 		stdout := ckecli("etcd", "user-add", "mtest")
+		Expect(string(stdout)).Should(ContainSubstring("mtest created"))
+	})
+
+	It("should connect to the CKE managed etcd", func() {
+		By("issuing root certificate")
+		stdout := ckecli("etcd", "root-issue")
 		var res cli.IssueResponse
 		err := json.Unmarshal(stdout, &res)
 		Expect(err).NotTo(HaveOccurred())
 
-		By("execute etcdctl")
+		By("executing etcdctl")
 		c := localTempFile(res.Crt)
 		k := localTempFile(res.Key)
 		ca := localTempFile(res.CACrt)

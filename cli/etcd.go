@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
@@ -26,6 +27,7 @@ func (v etcd) SetFlags(f *flag.FlagSet) {}
 func (v etcd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
 	newc := NewCommander(f, "etcd")
 	newc.Register(etcdUserAddCommand(), "")
+	newc.Register(etcdIssueCommand(), "")
 	return newc.Execute(ctx)
 }
 
@@ -40,23 +42,86 @@ func EtcdCommand() subcommands.Command {
 }
 
 type etcdUserAdd struct {
-	prefix string
 }
 
 func (c *etcdUserAdd) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
-	if f.NArg() != 1 {
+	if f.NArg() != 2 {
 		f.Usage()
 		return subcommands.ExitUsageError
 	}
 
 	userName := f.Arg(0)
 	if len(userName) == 0 {
-		return handleError(errors.New("username is empty"))
+		return handleError(errors.New("COMMON_NAME is empty"))
 	}
 
+	prefix := f.Arg(1)
+	if len(prefix) == 0 {
+		return handleError(errors.New("PREFIX is empty"))
+	}
+
+	cfg, err := storage.GetCluster(ctx)
+	if err != nil {
+		return handleError(err)
+	}
+	vaultCfg, err := storage.GetVaultConfig(ctx)
+	if err != nil {
+		return handleError(err)
+	}
+	data, err := json.Marshal(vaultCfg)
+	if err != nil {
+		return handleError(err)
+	}
+	err = cke.ConnectVault(ctx, data)
+	if err != nil {
+		return handleError(err)
+	}
+	inf, err := cke.NewInfrastructureWithoutSSH(ctx, cfg, storage)
+	if err != nil {
+		return handleError(err)
+	}
+
+	// Add user/role to managed etcd
+	cpNodes := cke.ControlPlanes(cfg.Nodes)
+	endpoints := make([]string, len(cpNodes))
+	for i, n := range cpNodes {
+		endpoints[i] = "https://" + n.Address + ":2379"
+	}
+	etcdClient, err := inf.NewEtcdClient(endpoints)
+	if err != nil {
+		return handleError(err)
+	}
+	err = cke.AddUserRole(ctx, etcdClient, userName, prefix)
+	// accept if user and role already exist
+	if err != nil && err != rpctypes.ErrUserAlreadyExist {
+		return handleError(err)
+	} else if err == rpctypes.ErrUserAlreadyExist {
+		fmt.Println(userName + " already exists.")
+	} else {
+		fmt.Println(userName + " created.")
+	}
+	return handleError(nil)
+}
+
+func etcdUserAddCommand() subcommands.Command {
+	return subcmd{
+		&etcdUserAdd{},
+		"user-add",
+		"Add user/role for CKE managed etcd",
+		"etcd user-add COMMON_NAME PREFIX",
+	}
+}
+
+type etcdIssue struct {
+}
+
+func (c *etcdIssue) SetFlags(f *flag.FlagSet) {
+}
+
+func (c *etcdIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
 	cfg, err := storage.GetCluster(ctx)
 	if err != nil {
 		return handleError(err)
@@ -89,34 +154,17 @@ func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.
 	if err != nil {
 		return handleError(err)
 	}
-
-	// Add user/role to managed etcd
-	cpNodes := cke.ControlPlanes(cfg.Nodes)
-	endpoints := make([]string, len(cpNodes))
-	for i, n := range cpNodes {
-		endpoints[i] = "https://" + n.Address + ":2379"
-	}
-	etcdClient, err := inf.NewEtcdClient(endpoints)
-	if err != nil {
-		return handleError(err)
-	}
-	err = cke.AddUserRole(ctx, etcdClient, userName, "/")
-	// accept if user and role already exist
-	if err != nil && err != rpctypes.ErrUserAlreadyExist {
-		return handleError(err)
-	}
-
 	e := json.NewEncoder(os.Stdout)
 	e.SetIndent("", "  ")
 	err = e.Encode(IssueResponse{crt, key, caCrt})
 	return handleError(err)
 }
 
-func etcdUserAddCommand() subcommands.Command {
+func etcdIssueCommand() subcommands.Command {
 	return subcmd{
-		&etcdUserAdd{},
-		"user-add",
-		"Issue client certificate and add user/role for CKE managed etcd",
-		"etcd user-add COMMON_NAME PREFIX",
+		&etcdIssue{},
+		"root-issue",
+		"Issue root client certificate for CKE managed etcd",
+		"etcd root-issue",
 	}
 }
