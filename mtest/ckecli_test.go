@@ -28,9 +28,9 @@ var _ = Describe("ckecli", func() {
 		k := localTempFile(res.Key)
 		ca := localTempFile(res.CACrt)
 		err = etcdctl(c.Name(), k.Name(), ca.Name(), "put", "/mtest/a", "test")
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).ShouldNot(HaveOccurred())
 		err = etcdctl(c.Name(), k.Name(), ca.Name(), "put", "/a", "test")
-		Expect(err).To(HaveOccurred())
+		Expect(err).Should(HaveOccurred())
 	})
 
 	It("should connect to the CKE managed etcd", func() {
@@ -38,13 +38,13 @@ var _ = Describe("ckecli", func() {
 		stdout := ckecli("etcd", "root-issue")
 		var res cli.IssueResponse
 		err := json.Unmarshal(stdout, &res)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).ShouldNot(HaveOccurred())
 
 		By("executing etcdctl")
 		c := localTempFile(res.Crt)
 		k := localTempFile(res.Key)
 		ca := localTempFile(res.CACrt)
 		err = etcdctl(c.Name(), k.Name(), ca.Name(), "endpoint", "health")
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 })
