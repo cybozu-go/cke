@@ -473,8 +473,13 @@ func deleteFailure(failurePoint string) {
 	setFailurePoint(failurePoint, "")
 }
 
-func etcdctl(host, crt, key, ca string, args ...string) ([]byte, []byte, error) {
-	return execAt(host, "env", "ETCDCTL_API=3", "/data/etcdctl",
+func etcdctl(crt, key, ca string, args ...string) error {
+	cmd := exec.Command("output/etcdctl",
 		"--endpoints=https://"+node1+":2379,https://"+node2+":2379,https://"+node3+":2379",
 		"--cert="+crt, "--key="+key, "--cacert="+ca, strings.Join(args, " "))
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "ETCDCTL_API=3")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
