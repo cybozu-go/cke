@@ -407,9 +407,16 @@ func (c stopContainerCommand) Run(ctx context.Context, inf Infrastructure) error
 	if !exists {
 		return nil
 	}
-	err = ce.Stop(c.name)
+	// Inspect returns ServiceStatus for the named container.
+	statuses, err := ce.Inspect([]string{c.name})
 	if err != nil {
 		return err
+	}
+	if st, ok := statuses[c.name]; ok && st.Running {
+		err = ce.Stop(c.name)
+		if err != nil {
+			return err
+		}
 	}
 	// gofail: var dockerAfterContainerStop struct{}
 	err = ce.Remove(c.name)
@@ -946,10 +953,17 @@ func (c killContainersCommand) Run(ctx context.Context, inf Infrastructure) erro
 			if !exists {
 				return nil
 			}
-			err = ce.Kill(c.name)
+			statuses, err := ce.Inspect([]string{c.name})
 			if err != nil {
 				return err
 			}
+			if st, ok := statuses[c.name]; ok && st.Running {
+				err = ce.Kill(c.name)
+				if err != nil {
+					return err
+				}
+			}
+			// gofail: var dockerAfterKillContainers struct{}
 			return ce.Remove(c.name)
 		})
 	}

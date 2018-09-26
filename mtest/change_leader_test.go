@@ -85,7 +85,7 @@ var _ = Describe("etcd strategy when the leader is changed", func() {
 		Expect(firstLeader).To(Or(Equal("host1"), Equal("host2")))
 
 		By("Crashing CKE after stopping docker container")
-		injectFailure("dockerAfterContainerStop")
+		injectFailure("dockerAfterKillContainers")
 
 		By("Remove node2 from control plane")
 		ckecli("constraints", "set", "control-plane-count", "2")

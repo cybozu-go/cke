@@ -342,7 +342,7 @@ func testEtcdDecideToDo(t *testing.T) {
 		{
 			Name:             "UpdateOutdatedImage",
 			Input:            OutdatedImageControlPlane(),
-			ExpectedOperator: "etcd-update-version",
+			ExpectedOperator: "etcd-restart",
 		},
 		{
 			Name:             "UpdateOutdatedParams",

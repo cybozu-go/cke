@@ -469,6 +469,10 @@ func injectFailure(failurePoint string) {
 	setFailurePoint(failurePoint, "panic(\"cke-mtest\")")
 }
 
+func injectSleep(failurePoint string) {
+	setFailurePoint(failurePoint, "1*sleep(3000)")
+}
+
 func deleteFailure(failurePoint string) {
 	setFailurePoint(failurePoint, "")
 }

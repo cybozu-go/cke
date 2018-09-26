@@ -22,43 +22,63 @@ func etcdDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		}
 	}
 	if bootstrap {
-		return EtcdBootOp(endpoints, cpNodes, c.Options.Etcd)
+		return EtcdBootOp(cpNodes, c.Options.Etcd)
 	}
 
 	members := unhealthyNonClusterMember(c.Nodes, cs.Etcd)
 	if len(members) > 0 {
-		return EtcdRemoveMemberOp(endpoints, members)
+		var ids []uint64
+		for _, v := range members {
+			ids = append(ids, v.ID)
+		}
+		return EtcdRemoveMemberOp(cpNodes, ids)
 	}
 	nodes := unhealthyNonControlPlaneMember(c.Nodes, cs.Etcd)
 	if len(nodes) > 0 {
-		return EtcdDestroyMemberOp(endpoints, nodes, cs.Etcd.Members)
+		var ids []uint64
+		for _, n := range nodes {
+			if m, ok := cs.Etcd.Members[n.Address]; ok {
+				ids = append(ids, m.ID)
+			}
+		}
+		return EtcdDestroyMemberOp(cpNodes, nodes, ids)
 	}
 	nodes = unstartedMemberControlPlane(cpNodes, cs.Etcd)
 	if len(nodes) > 0 {
-		return EtcdAddMemberOp(endpoints, nodes[0], c.Options.Etcd)
+		return EtcdAddMemberOp(cpNodes, nodes[0], c.Options.Etcd)
 	}
 	if !cs.Etcd.IsHealthy || !allInSync(cpNodes, cs.Etcd) {
-		return EtcdWaitClusterOp(endpoints)
+		return EtcdWaitClusterOp(cpNodes)
 	}
 	nodes = newMemberControlPlane(cpNodes, cs.Etcd)
 	if len(nodes) > 0 {
-		return EtcdAddMemberOp(endpoints, nodes[0], c.Options.Etcd)
+		return EtcdAddMemberOp(cpNodes, nodes[0], c.Options.Etcd)
 	}
 	members = healthyNonClusterMember(c.Nodes, cs.Etcd)
 	if len(members) > 0 {
-		return EtcdRemoveMemberOp(endpoints, members)
+		var ids []uint64
+		for _, v := range members {
+			ids = append(ids, v.ID)
+		}
+		return EtcdRemoveMemberOp(cpNodes, ids)
 	}
 	nodes = runningNonControlPlaneMember(c.Nodes, cs.NodeStatuses)
 	if len(nodes) > 0 {
-		return EtcdDestroyMemberOp(endpoints, nodes, cs.Etcd.Members)
+		var ids []uint64
+		for _, n := range nodes {
+			if m, ok := cs.Etcd.Members[n.Address]; ok {
+				ids = append(ids, m.ID)
+			}
+		}
+		return EtcdDestroyMemberOp(cpNodes, nodes, ids)
 	}
 	nodes = outdatedEtcdImageMember(cpNodes, cs.NodeStatuses)
 	if len(nodes) > 0 {
-		return EtcdUpdateVersionOp(endpoints, nodes, cpNodes, c.Options.Etcd)
+		return EtcdRestartOp(cpNodes, nodes[0], c.Options.Etcd)
 	}
 	nodes = outdatedEtcdParamsMember(cpNodes, c.Options.Etcd.ServiceParams, cs.NodeStatuses)
 	if len(nodes) > 0 {
-		return EtcdRestartOp(endpoints, nodes, cpNodes, c.Options.Etcd)
+		return EtcdRestartOp(cpNodes, nodes[0], c.Options.Etcd)
 	}
 
 	return nil
