@@ -151,6 +151,22 @@ func (k KubernetesCA) IssueAdminCert(ctx context.Context, inf Infrastructure, tt
 		})
 }
 
+func (k KubernetesCA) issueForAPIServer(ctx context.Context, inf Infrastructure, n *Node) (crt, key string, err error) {
+	return issueCertificate(inf, CAKubernetes, "system",
+		map[string]interface{}{
+			"ttl":               "87600h",
+			"max_ttl":           "87600h",
+			"enforce_hostnames": "false",
+			"allow_any_name":    "true",
+		},
+		map[string]interface{}{
+			"common_name":          "kubernetes",
+			"alt_names":            "localhost,kubernetes.default",
+			"ip_sans":              "127.0.0.1," + n.Address,
+			"exclude_cn_from_sans": "true",
+		})
+}
+
 func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "kube-scheduler",
 		map[string]interface{}{
