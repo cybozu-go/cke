@@ -54,7 +54,11 @@ func (c *kubernetesIssue) Execute(ctx context.Context, f *flag.FlagSet) subcomma
 		return handleError(err)
 	}
 
-	cfg := cke.AdminKubeconfig(cluster.Name, caCrt, crt, key)
+	cpNodes := cke.ControlPlanes(cluster.Nodes)
+	apiServerPort := ":6443"
+	// TODO: Replace `server` by Ingress address. Since there is no Ingress yet, set the node IP
+	server := "https://" + cpNodes[0].Address + apiServerPort
+	cfg := cke.AdminKubeconfig(cluster.Name, caCrt, crt, key, server)
 	src, err := clientcmd.Write(*cfg)
 	if err != nil {
 		return handleError(err)
