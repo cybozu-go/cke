@@ -6,6 +6,27 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
+func kubeconfig(cluster, user, ca, clientCrt, clientKey string) *api.Config {
+	cfg := api.NewConfig()
+	c := api.NewCluster()
+	c.Server = "https://localhost:16443"
+	c.CertificateAuthorityData = []byte(ca)
+	cfg.Clusters[cluster] = c
+
+	auth := api.NewAuthInfo()
+	auth.ClientCertificateData = []byte(clientCrt)
+	auth.ClientKeyData = []byte(clientKey)
+	cfg.AuthInfos[user] = auth
+
+	ctx := api.NewContext()
+	ctx.AuthInfo = user
+	ctx.Cluster = cluster
+	cfg.Contexts["default"] = ctx
+	cfg.CurrentContext = "default"
+
+	return cfg
+}
+
 func controllerManagerKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Config {
 	return kubeconfig(cluster, "system:kube-controller-manager", ca, clientCrt, clientKey)
 }
@@ -16,10 +37,6 @@ func schedulerKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.C
 
 func proxyKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Config {
 	return kubeconfig(cluster, "system:kube-proxy", ca, clientCrt, clientKey)
-}
-
-func kubeletKubeconfig(cluster string, n *Node, ca, clientCrt, clientKey string) *api.Config {
-	return kubeconfig(cluster, "system:node:"+n.Nodename(), ca, clientCrt, clientKey)
 }
 
 // AdminKubeconfig makes kubeconfig for admin user
@@ -45,16 +62,17 @@ func AdminKubeconfig(cluster, ca, clientCrt, clientKey, server string) *api.Conf
 	return cfg
 }
 
-func kubeconfig(cluster, user, ca, clientCrt, clientKey string) *api.Config {
+func kubeletKubeconfig(cluster string, n *Node, caPath, certPath, keyPath string) *api.Config {
 	cfg := api.NewConfig()
 	c := api.NewCluster()
 	c.Server = "https://localhost:16443"
-	c.CertificateAuthorityData = []byte(ca)
+	c.CertificateAuthority = caPath
 	cfg.Clusters[cluster] = c
 
 	auth := api.NewAuthInfo()
-	auth.ClientCertificateData = []byte(clientCrt)
-	auth.ClientKeyData = []byte(clientKey)
+	auth.ClientCertificate = certPath
+	auth.ClientKey = keyPath
+	user := "system:node:" + n.Nodename()
 	cfg.AuthInfos[user] = auth
 
 	ctx := api.NewContext()

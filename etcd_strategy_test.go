@@ -1,8 +1,6 @@
 package cke
 
 import (
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
@@ -12,18 +10,6 @@ type EtcdTestCluster struct {
 	Nodes        []*Node
 	NodeStatuses map[string]*NodeStatus
 	Etcd         EtcdClusterStatus
-}
-
-func opCommands(op Operator) []Command {
-	var commands []Command
-	for {
-		commander := op.NextCommand()
-		if commander == nil {
-			break
-		}
-		commands = append(commands, commander.Command())
-	}
-	return commands
 }
 
 func Clean3Nodes() EtcdTestCluster {
@@ -307,166 +293,61 @@ func OutdatedParamsControlPlane() EtcdTestCluster {
 	}
 }
 
-func BootstrapCommands(targets ...string) []Command {
-	hosts := strings.Join(targets, ",")
-	commands := []Command{
-		{Name: "image-pull", Target: EtcdImage.Name()},
-		{Name: "setup-etcd-certificates", Target: hosts},
-		{Name: "volume-create", Target: hosts},
-	}
-	for _, addr := range targets {
-		commands = append(commands, Command{Name: "run-container", Target: addr})
-	}
-	var endpoints []string
-	for _, target := range targets {
-		endpoints = append(endpoints, "https://"+target+":2379")
-	}
-	commands = append(commands, Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")})
-	commands = append(commands, Command{Name: "setup-etcd-auth", Target: strings.Join(endpoints, ",")})
-	return commands
-}
-
-func AddMemberCommands(addr string) []Command {
-	return []Command{
-		{Name: "image-pull", Target: EtcdImage.Name()},
-		{Name: "stop-container", Target: addr},
-		{Name: "volume-remove", Target: addr},
-		{Name: "volume-create", Target: addr},
-		{Name: "setup-etcd-certificates", Target: addr},
-		{Name: "add-etcd-member", Target: addr},
-		{Name: "wait-etcd-sync", Target: "https://" + addr + ":2379"},
-	}
-}
-
-func RemoveMemberCommands(ids ...uint64) []Command {
-	var ss []string
-	for _, id := range ids {
-		ss = append(ss, strconv.FormatUint(id, 10))
-	}
-	return []Command{{Name: "remove-etcd-member", Target: strings.Join(ss, ",")}}
-}
-
-func DestroyMemberCommands(cps []string, addrs []string, ids []uint64) []Command {
-	var endpoints []string
-	for _, cp := range cps {
-		endpoints = append(endpoints, "https://"+cp+":2379")
-	}
-	var commands []Command
-	for i, addr := range addrs {
-		commands = append(commands,
-			Command{Name: "remove-etcd-member", Target: strconv.FormatUint(ids[i], 10)},
-			Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")},
-			Command{Name: "stop-container", Target: addr},
-			Command{Name: "volume-remove", Target: addr},
-		)
-	}
-	return commands
-}
-
-func UpdateImageMemberCommands(cps []string) []Command {
-	var endpoints []string
-	for _, cp := range cps {
-		endpoints = append(endpoints, "https://"+cp+":2379")
-	}
-	var commands []Command
-	for _, cp := range cps {
-		commands = append(commands,
-			Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")},
-			Command{Name: "image-pull", Target: EtcdImage.Name()},
-			Command{Name: "stop-container", Target: cp},
-			Command{Name: "run-container", Target: cp},
-		)
-	}
-	return commands
-}
-
-func RestartCommands(cps []string) []Command {
-	var endpoints []string
-	for _, cp := range cps {
-		endpoints = append(endpoints, "https://"+cp+":2379")
-	}
-	var commands []Command
-	for _, cp := range cps {
-		commands = append(commands,
-			Command{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")},
-			Command{Name: "stop-container", Target: cp},
-			Command{Name: "run-container", Target: cp},
-		)
-	}
-	return commands
-}
-
-func WaitMemberCommands(cps []string) []Command {
-	var endpoints []string
-	for _, cp := range cps {
-		endpoints = append(endpoints, "https://"+cp+":2379")
-	}
-	return []Command{
-		{Name: "wait-etcd-sync", Target: strings.Join(endpoints, ",")},
-	}
-}
-
 func testEtcdDecideToDo(t *testing.T) {
 	cases := []struct {
 		Name             string
 		Input            EtcdTestCluster
-		ExpectedCommands []Command
+		ExpectedOperator string
 	}{
 		{
 			Name:             "Bootstrap",
 			Input:            Clean3Nodes(),
-			ExpectedCommands: BootstrapCommands("10.0.0.11", "10.0.0.12", "10.0.0.13"),
+			ExpectedOperator: "etcd-bootstrap",
 		},
 		{
 			Name:             "RemoveUnhealthyNonCluster",
 			Input:            UnhealthyNonCluster(),
-			ExpectedCommands: RemoveMemberCommands(12, 14),
+			ExpectedOperator: "etcd-remove-member",
 		},
 		{
-			Name:  "RemoveUnhealthyNonControlPlane",
-			Input: UnhealthyNonControlPlane(),
-			ExpectedCommands: DestroyMemberCommands(
-				[]string{"10.0.0.11", "10.0.0.12"},
-				[]string{"10.0.1.11", "10.0.1.12"},
-				[]uint64{2, 3}),
+			Name:             "RemoveUnhealthyNonControlPlane",
+			Input:            UnhealthyNonControlPlane(),
+			ExpectedOperator: "etcd-destroy-member",
 		},
 		{
 			Name:             "StartUnstartedMember",
 			Input:            UnstartedMembers(),
-			ExpectedCommands: AddMemberCommands("10.0.0.13"),
+			ExpectedOperator: "etcd-add-member",
 		},
 		{
 			Name:             "AddNewMember",
 			Input:            NewlyControlPlane(),
-			ExpectedCommands: AddMemberCommands("10.0.0.13"),
+			ExpectedOperator: "etcd-add-member",
 		},
 		{
 			Name:             "RemoveHealthyNonCluster",
 			Input:            HealthyNonCluster(),
-			ExpectedCommands: RemoveMemberCommands(11),
+			ExpectedOperator: "etcd-remove-member",
 		},
 		{
-			Name:  "RemoveHealthyNonControlPlane",
-			Input: HealthyNonControlPlane(),
-			ExpectedCommands: DestroyMemberCommands(
-				[]string{"10.0.0.11", "10.0.0.12"},
-				[]string{"10.0.0.13"},
-				[]uint64{3}),
+			Name:             "RemoveHealthyNonControlPlane",
+			Input:            HealthyNonControlPlane(),
+			ExpectedOperator: "etcd-destroy-member",
 		},
 		{
 			Name:             "WaitUnhealthyControlPlane",
 			Input:            UnhealthyControlPlane(),
-			ExpectedCommands: WaitMemberCommands([]string{"10.0.0.11", "10.0.0.12"}),
+			ExpectedOperator: "etcd-wait-cluster",
 		},
 		{
 			Name:             "UpdateOutdatedImage",
 			Input:            OutdatedImageControlPlane(),
-			ExpectedCommands: UpdateImageMemberCommands([]string{"10.0.0.11", "10.0.0.12", "10.0.0.13"}),
+			ExpectedOperator: "etcd-update-version",
 		},
 		{
 			Name:             "UpdateOutdatedParams",
 			Input:            OutdatedParamsControlPlane(),
-			ExpectedCommands: RestartCommands([]string{"10.0.0.11", "10.0.0.12", "10.0.0.13"}),
+			ExpectedOperator: "etcd-restart",
 		},
 	}
 
@@ -483,19 +364,19 @@ func testEtcdDecideToDo(t *testing.T) {
 		if op == nil {
 			t.Fatal("op == nil")
 		}
-		cmds := opCommands(op)
-		if len(c.ExpectedCommands) != len(cmds) {
-			t.Errorf("[%s] commands length mismatch: %d", c.Name, len(cmds))
-			continue
+		if op.Name() != c.ExpectedOperator {
+			t.Errorf("[%s] operator name mismatch: %s != %s", c.Name, op.Name(), c.ExpectedOperator)
 		}
-		for i, res := range cmds {
-			com := c.ExpectedCommands[i]
-			if com.Name != res.Name {
-				t.Errorf("[%s] command name mismatch: %s != %s", c.Name, com.Name, res.Name)
+		finished := false
+		for i := 0; i < 100; i++ {
+			commander := op.NextCommand()
+			if commander == nil {
+				finished = true
+				break
 			}
-			if com.Target != res.Target {
-				t.Errorf("[%s] command '%s' target mismatch: %s != %s", c.Name, com.Name, com.Target, res.Target)
-			}
+		}
+		if !finished {
+			t.Fatalf("[%s] Operator.NextCommand() never finished: %s", c.Name, op.Name())
 		}
 	}
 }

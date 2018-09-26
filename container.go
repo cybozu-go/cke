@@ -20,11 +20,11 @@ const (
 
 // ContainerEngine defines interfaces for a container engine.
 type ContainerEngine interface {
-	// PullImage pulls the image for the named container.
+	// PullImage pulls an image.
 	PullImage(img Image) error
-	// Run runs the named container as a foreground process.
+	// Run runs a container as a foreground process.
 	Run(img Image, binds []Mount, command string) error
-	// RunWithInput runs the named container as a foreground process with stdin as a string.
+	// RunWithInput runs a container as a foreground process with stdin as a string.
 	RunWithInput(img Image, binds []Mount, command, input string) error
 	// RunSystem runs the named container as a system service.
 	RunSystem(name string, img Image, opts []string, params, extra ServiceParams) error
@@ -86,6 +86,7 @@ func (c docker) Run(img Image, binds []Mount, command string) error {
 		"--rm",
 		"--network=host",
 		"--uts=host",
+		"--read-only",
 	}
 	for _, m := range binds {
 		o := "rw"
@@ -108,6 +109,7 @@ func (c docker) RunWithInput(img Image, binds []Mount, command, input string) er
 		"-i",
 		"--network=host",
 		"--uts=host",
+		"--read-only",
 	}
 	for _, m := range binds {
 		o := "rw"

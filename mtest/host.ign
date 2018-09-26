@@ -13,6 +13,12 @@
         "path": "/etc/hosts",
         "mode": 420,
         "contents": { "source": "data:,127.0.0.1%09localhost%0A::1%09%09localhost%0A%0A@NODE1@%09node1%0A@NODE2@%09node2%0A@NODE3@%09node3%0A@NODE4@%09node4%0A@NODE5@%09node5%0A@NODE6@%09node6%0A" }
+      },
+      {
+        "filesystem": "root",
+        "path": "/etc/cke/config.yml",
+        "mode": 420,
+        "contents": { "source": "data:,endpoints%3a%0d%0a%20%20%2d%20http%3a%2f%2f@HOST1@%3a2379%0d%0a" }
       }
     ]
   },
@@ -45,16 +51,9 @@
         "name": "locksmithd.service"
       },
       {
-        "name": "var-lib-docker.mount",
+        "name": "data.mount",
         "enable": true,
-        "contents": "[Mount]\nWhat=/dev/vdb\nWhere=/var/lib/docker\nType=ext4\n\n[Install]\nWantedBy=local-fs.target"
-      },
-      {
-        "name": "docker.service",
-        "dropins": [{
-          "name": "10-docker-opts.conf",
-          "contents": "[Service]\nEnvironment=DOCKER_OPTS=\"--storage-driver=overlay --bridge=none --iptables=false --ip-masq=false\"\n"
-        }]
+        "contents": "[Mount]\nWhat=/dev/vdb1\nWhere=/data\nType=vfat\nOptions=ro\n\n[Install]\nWantedBy=local-fs.target"
       }
     ]
   }

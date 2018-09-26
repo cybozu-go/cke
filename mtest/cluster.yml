@@ -26,10 +26,6 @@ files:
     file: setup-cke.sh
 ---
 kind: Image
-name: ubuntu
-file: ../@UBUNTU_IMAGE@
----
-kind: Image
 name: coreos
 file: ../@COREOS_IMAGE@
 ---
@@ -43,15 +39,12 @@ interfaces:
   - ext-net
 cpu: 1
 memory: 3G
+ignition: host1.ign
 volumes:
   - kind: image
     name: root
-    image: ubuntu
+    image: coreos
     copy-on-write: true
-  - kind: localds
-    name: seed
-    user-data: user-data_host1.yml
-    network-config: network1.yml
   - kind: vvfat
     name: data
     folder: data
@@ -62,15 +55,12 @@ interfaces:
   - ext-net
 cpu: 1
 memory: 3G
+ignition: host2.ign
 volumes:
   - kind: image
     name: root
-    image: ubuntu
+    image: coreos
     copy-on-write: true
-  - kind: localds
-    name: seed
-    user-data: user-data_host2.yml
-    network-config: network2.yml
   - kind: vvfat
     name: data
     folder: data

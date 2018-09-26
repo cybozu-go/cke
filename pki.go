@@ -55,11 +55,10 @@ func K8sPKIPath(p string) string {
 }
 
 // EtcdCA is a certificate authority for etcd cluster.
-type EtcdCA struct {
-}
+type EtcdCA struct{}
 
-func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) error {
-	err := writeCertificate(inf, node, CAServer, EtcdPKIPath("server"),
+func (e EtcdCA) issueServerCert(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
+	return issueCertificate(inf, CAServer, "system",
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
@@ -71,10 +70,10 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 			"alt_names":   "localhost",
 			"ip_sans":     "127.0.0.1," + node.Address,
 		})
-	if err != nil {
-		return err
-	}
-	err = writeCertificate(inf, node, CAEtcdPeer, EtcdPKIPath("peer"),
+}
+
+func (e EtcdCA) issuePeerCert(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
+	return issueCertificate(inf, CAEtcdPeer, "system",
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
@@ -85,27 +84,10 @@ func (e EtcdCA) setupNode(ctx context.Context, inf Infrastructure, node *Node) e
 			"ip_sans":              "127.0.0.1," + node.Address,
 			"exclude_cn_from_sans": "true",
 		})
-	if err != nil {
-		return err
-	}
-
-	ca, err := inf.Storage().GetCACertificate(ctx, "etcd-peer")
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, EtcdPKIPath("ca-peer.crt"), ca)
-	if err != nil {
-		return err
-	}
-	ca, err = inf.Storage().GetCACertificate(ctx, "etcd-client")
-	if err != nil {
-		return err
-	}
-	return writeFile(inf, node, EtcdPKIPath("ca-client.crt"), ca)
 }
 
-func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node *Node) error {
-	err := writeCertificate(inf, node, CAEtcdClient, K8sPKIPath("apiserver-etcd-client"),
+func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
+	return issueCertificate(inf, CAEtcdClient, "system",
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
@@ -116,15 +98,6 @@ func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node 
 			"common_name":          "kube-apiserver",
 			"exclude_cn_from_sans": "true",
 		})
-	if err != nil {
-		return err
-	}
-
-	ca, err := inf.Storage().GetCACertificate(ctx, "server")
-	if err != nil {
-		return err
-	}
-	return writeFile(inf, node, K8sPKIPath("etcd/ca.crt"), ca)
 }
 
 // IssueRoot generate the certificate for admin role
@@ -160,62 +133,16 @@ func IssueEtcdClientCertificate(inf Infrastructure, role, commonName, ttl string
 }
 
 // KubernetesCA is a certificate authority for k8s cluster.
-type KubernetesCA struct {
-}
-
-// setup generates and installs certificates for API server.
-func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node) error {
-	sakey, err := inf.Storage().GetServiceAccountKey(ctx)
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, K8sPKIPath("service-account.key"), sakey)
-	if err != nil {
-		return err
-	}
-
-	sacert, err := inf.Storage().GetServiceAccountCert(ctx)
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, K8sPKIPath("service-account.crt"), sacert)
-	if err != nil {
-		return err
-	}
-
-	err = writeCertificate(inf, node, CAKubernetes, K8sPKIPath("apiserver"),
-		map[string]interface{}{
-			"ttl":               "87600h",
-			"max_ttl":           "87600h",
-			"enforce_hostnames": "false",
-			"allow_any_name":    "true",
-		},
-		map[string]interface{}{
-			"common_name":          "kubernetes",
-			"alt_names":            "localhost,kubernetes.default",
-			"ip_sans":              "127.0.0.1," + node.Address,
-			"exclude_cn_from_sans": "true",
-		})
-	if err != nil {
-		return err
-	}
-
-	ca, err := inf.Storage().GetCACertificate(ctx, "kubernetes")
-	if err != nil {
-		return err
-	}
-	return writeFile(inf, node, K8sPKIPath("ca.crt"), ca)
-}
+type KubernetesCA struct{}
 
 // IssueAdminCert issues client certificates for cluster admin user.
 func (k KubernetesCA) IssueAdminCert(ctx context.Context, inf Infrastructure, ttl string) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "admin",
 		map[string]interface{}{
-			"ttl":               "2h",
-			"max_ttl":           "48h",
+			"ttl":               "87600h",
+			"max_ttl":           "87600h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
-			"organization":      "system:masters",
 		},
 		map[string]interface{}{
 			"ttl":                  ttl,
@@ -307,22 +234,6 @@ func (k KubernetesCA) issueForServiceAccount(ctx context.Context, inf Infrastruc
 			"common_name":          "service-account",
 			"exclude_cn_from_sans": "true",
 		})
-}
-
-func writeCertificate(inf Infrastructure, node *Node, ca, file string, roleOpts, certOpts map[string]interface{}) error {
-	crt, key, err := issueCertificate(inf, ca, "system", roleOpts, certOpts)
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, file+".crt", crt)
-	if err != nil {
-		return err
-	}
-	err = writeFile(inf, node, file+".key", key)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func issueCertificate(inf Infrastructure, ca, role string, roleOpts, certOpts map[string]interface{}) (crt, key string, err error) {
