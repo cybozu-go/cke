@@ -2,6 +2,8 @@ package cli
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -163,9 +165,10 @@ func (c *etcdIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.Ex
 
 	switch c.output {
 	case "file":
-		crtFile := userName + ".crt"
-		caCrtFile := userName + ".ca"
-		keyFile := userName + ".key"
+		random := random()
+		crtFile := userName + "-" + random + ".crt"
+		caCrtFile := userName + "-" + random + ".ca"
+		keyFile := userName + "-" + random + ".key"
 		err = ioutil.WriteFile(crtFile, []byte(crt), 0600)
 		if err != nil {
 			return handleError(err)
@@ -191,15 +194,6 @@ func (c *etcdIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.Ex
 		}
 	}
 	return subcommands.ExitSuccess
-}
-
-func role(roles []string, userName string) string {
-	for _, r := range roles {
-		if r == userName {
-			return r
-		}
-	}
-	return ""
 }
 
 func etcdIssueCommand() subcommands.Command {
@@ -241,9 +235,10 @@ func (c *etcdRootIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommand
 	}
 	switch c.output {
 	case "file":
-		crtFile := "root.crt"
-		caCrtFile := "root.ca"
-		keyFile := "root.key"
+		random := random()
+		crtFile := "root-" + random + ".crt"
+		caCrtFile := "root-" + random + ".ca"
+		keyFile := "root-" + random + ".key"
 		err = ioutil.WriteFile(crtFile, []byte(crt), 0600)
 		if err != nil {
 			return handleError(err)
@@ -308,4 +303,19 @@ func prepareInfrastructure(ctx context.Context) (*cke.Cluster, cke.Infrastructur
 	}
 	inf, err := cke.NewInfrastructureWithoutSSH(ctx, cfg, storage)
 	return cfg, inf, err
+}
+
+func random() string {
+	b := make([]byte, 8)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+func role(roles []string, userName string) string {
+	for _, r := range roles {
+		if r == userName {
+			return r
+		}
+	}
+	return ""
 }

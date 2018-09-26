@@ -90,7 +90,8 @@ If `COMMON_NAME` user does not exist, execute `$ ckecli etcd user-add COMMON_NAM
 
 Option      | Default value         | Description
 ----------  | --------------------- | -----------
-`-ttl`      | `87600h`               | TTL for client certificate
+`-ttl`      | `87600h`              | TTL for client certificate
+`-output`   | `json`                | output format (json,file)
 
 ### `ckecli etcd root-issue`
 
@@ -99,6 +100,10 @@ Create client certificate for `root`.
 This certificate TTL is `2h`.
 
 This subcommand is for human to operate etcd server.
+
+Option      | Default value         | Description
+----------  | --------------------- | -----------
+`-output`   | `json`                | output format (json,file)
 
 
 `ckecli kubernetes`
