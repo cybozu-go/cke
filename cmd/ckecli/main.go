@@ -47,7 +47,7 @@ func main() {
 	subcommands.Register(cli.LeaderCommand(), "")
 	subcommands.Register(cli.HistoryCommand(), "")
 	subcommands.Register(cli.EtcdCommand(), "")
-	//subcommands.Register(cli.KubernetesCommand(), "")
+	subcommands.Register(cli.KubernetesCommand(), "")
 
 	flag.Parse()
 	cmd.LogConfig{}.Apply()

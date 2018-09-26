@@ -2,6 +2,8 @@ package mtest
 
 import (
 	"encoding/json"
+	"os"
+	"os/exec"
 
 	"github.com/cybozu-go/cke/cli"
 	. "github.com/onsi/ginkgo"
@@ -11,7 +13,7 @@ import (
 var _ = Describe("ckecli", func() {
 	AfterEach(initializeControlPlane)
 
-	It("should create users with limited access rights", func() {
+	It("should create etcd users with limited access rights", func() {
 		By("creating user and role for etcd")
 		userName := "mtest"
 		stdout := ckecli("etcd", "user-add", userName, "/mtest")
@@ -46,5 +48,15 @@ var _ = Describe("ckecli", func() {
 		ca := localTempFile(res.CACrt)
 		err = etcdctl(c.Name(), k.Name(), ca.Name(), "endpoint", "health")
 		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	It("should connect to the kube-apiserver", func() {
+		By("using admin certificate")
+		stdout := ckecli("kubernetes", "issue")
+		kubeconfig := localTempFile(string(stdout))
+		cmd := exec.Command(kubectlPath, "--kubeconfig", kubeconfig.Name(), "get", "nodes")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		Expect(cmd.Run()).ShouldNot(HaveOccurred())
 	})
 })

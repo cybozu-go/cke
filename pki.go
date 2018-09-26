@@ -2,7 +2,6 @@ package cke
 
 import (
 	"context"
-	"fmt"
 	"path"
 	"path/filepath"
 
@@ -208,8 +207,8 @@ func (k KubernetesCA) setup(ctx context.Context, inf Infrastructure, node *Node)
 	return writeFile(inf, node, K8sPKIPath("ca.crt"), ca)
 }
 
-// issueAdminCert issues client certificates for cluster admin.
-func (k KubernetesCA) issueAdminCert(ctx context.Context, inf Infrastructure, hours uint) (crt, key string, err error) {
+// IssueAdminCert issues client certificates for cluster admin user.
+func (k KubernetesCA) IssueAdminCert(ctx context.Context, inf Infrastructure, ttl string) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "admin",
 		map[string]interface{}{
 			"ttl":               "2h",
@@ -219,7 +218,7 @@ func (k KubernetesCA) issueAdminCert(ctx context.Context, inf Infrastructure, ho
 			"organization":      "system:masters",
 		},
 		map[string]interface{}{
-			"ttl":                  fmt.Sprintf("%dh", hours),
+			"ttl":                  ttl,
 			"common_name":          "admin",
 			"exclude_cn_from_sans": "true",
 		})

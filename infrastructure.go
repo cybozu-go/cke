@@ -118,7 +118,7 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	}
 
 	issue := func() (cert, key []byte, err error) {
-		c, k, e := KubernetesCA{}.issueAdminCert(ctx, inf, 25)
+		c, k, e := KubernetesCA{}.IssueAdminCert(ctx, inf, "25h")
 		if e != nil {
 			return nil, nil, e
 		}

@@ -22,6 +22,11 @@ func kubeletKubeconfig(cluster string, n *Node, ca, clientCrt, clientKey string)
 	return kubeconfig(cluster, "system:node:"+n.Nodename(), ca, clientCrt, clientKey)
 }
 
+// AdminKubeconfig makes kubeconfig for admin user
+func AdminKubeconfig(cluster, ca, clientCrt, clientKey string) *api.Config {
+	return kubeconfig(cluster, "admin", ca, clientCrt, clientKey)
+}
+
 func kubeconfig(cluster, user, ca, clientCrt, clientKey string) *api.Config {
 	cfg := api.NewConfig()
 	c := api.NewCluster()
