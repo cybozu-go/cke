@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/cybozu-go/cke"
 	"github.com/google/subcommands"
@@ -39,6 +40,10 @@ func (c *kubernetesIssue) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *kubernetesIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
+	_, err := time.ParseDuration(c.ttl)
+	if err != nil {
+		return handleError(err)
+	}
 	cluster, inf, err := prepareInfrastructure(ctx)
 	if err != nil {
 		return handleError(err)
@@ -48,16 +53,15 @@ func (c *kubernetesIssue) Execute(ctx context.Context, f *flag.FlagSet) subcomma
 	if err != nil {
 		return handleError(err)
 	}
-
 	crt, key, err := cke.KubernetesCA{}.IssueAdminCert(ctx, inf, c.ttl)
 	if err != nil {
 		return handleError(err)
 	}
 
 	cpNodes := cke.ControlPlanes(cluster.Nodes)
-	apiServerPort := ":6443"
-	// TODO: Replace `server` by Ingress address. Since there is no Ingress yet, set the node IP
-	server := "https://" + cpNodes[0].Address + apiServerPort
+	// TODO: Replace `server` from node IP to Ingress address.
+	// Since there is no Ingress yet, use the node IP.
+	server := "https://" + cpNodes[0].Address + ":6443"
 	cfg := cke.AdminKubeconfig(cluster.Name, caCrt, crt, key, server)
 	src, err := clientcmd.Write(*cfg)
 	if err != nil {
