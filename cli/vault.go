@@ -25,8 +25,8 @@ func VaultCommand() subcommands.Command {
 	return subcmd{
 		vault{},
 		"vault",
-		"set the vault configuration",
-		"vault config JSON",
+		"manage the vault configuration",
+		"vault ACTION ...",
 	}
 }
 

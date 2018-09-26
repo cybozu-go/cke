@@ -121,7 +121,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 	cs.NodeStatuses = statuses
 
 	var etcdRunning bool
-	for _, n := range controlPlanes(cluster.Nodes) {
+	for _, n := range ControlPlanes(cluster.Nodes) {
 		ns := statuses[n.Address]
 		if ns.Etcd.HasData {
 			etcdRunning = true
@@ -140,7 +140,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 	}
 
 	var livingMaster *Node
-	for _, n := range controlPlanes(cluster.Nodes) {
+	for _, n := range ControlPlanes(cluster.Nodes) {
 		ns := statuses[n.Address]
 		if ns.APIServer.Running {
 			livingMaster = n

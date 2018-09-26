@@ -2,7 +2,6 @@ package cke
 
 import (
 	"context"
-	"fmt"
 	"path"
 	"path/filepath"
 
@@ -101,7 +100,8 @@ func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node 
 		})
 }
 
-func (e EtcdCA) issueRoot(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
+// IssueRoot generate the certificate for admin role
+func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
 	return issueCertificate(inf, CAEtcdClient, "admin",
 		map[string]interface{}{
 			"ttl":            "2h",
@@ -116,21 +116,36 @@ func (e EtcdCA) issueRoot(ctx context.Context, inf Infrastructure) (cert, key st
 		})
 }
 
+// IssueEtcdClientCertificate generate the certificate for target role
+func IssueEtcdClientCertificate(inf Infrastructure, role, commonName, ttl string) (cert, key string, err error) {
+	return issueCertificate(inf, CAEtcdClient, role,
+		map[string]interface{}{
+			"ttl":            "37600h",
+			"max_ttl":        "37600h",
+			"server_flag":    "false",
+			"allow_any_name": "true",
+		},
+		map[string]interface{}{
+			"common_name":          commonName,
+			"exclude_cn_from_sans": "true",
+			"ttl":                  ttl,
+		})
+}
+
 // KubernetesCA is a certificate authority for k8s cluster.
 type KubernetesCA struct{}
 
-// issueAdminCert issues client certificates for cluster admin.
-func (k KubernetesCA) issueAdminCert(ctx context.Context, inf Infrastructure, hours uint) (crt, key string, err error) {
+// IssueAdminCert issues client certificates for cluster admin user.
+func (k KubernetesCA) IssueAdminCert(ctx context.Context, inf Infrastructure, ttl string) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "admin",
 		map[string]interface{}{
-			"ttl":               "2h",
-			"max_ttl":           "48h",
+			"ttl":               "87600h",
+			"max_ttl":           "87600h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
-			"organization":      "system:masters",
 		},
 		map[string]interface{}{
-			"ttl":                  fmt.Sprintf("%dh", hours),
+			"ttl":                  ttl,
 			"common_name":          "admin",
 			"exclude_cn_from_sans": "true",
 		})

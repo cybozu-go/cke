@@ -215,6 +215,16 @@ func ckecliClusterSet(cluster *cke.Cluster) error {
 	return nil
 }
 
+func ckecliClusterGet() (*cke.Cluster, error) {
+	stdout := ckecli("cluster", "get")
+	var cluster cke.Cluster
+	err := yaml.Unmarshal(stdout, &cluster)
+	if err != nil {
+		return nil, err
+	}
+	return &cluster, nil
+}
+
 type clusterStatusError struct {
 	message       string
 	host          string
@@ -461,4 +471,15 @@ func injectFailure(failurePoint string) {
 
 func deleteFailure(failurePoint string) {
 	setFailurePoint(failurePoint, "")
+}
+
+func etcdctl(crt, key, ca string, args ...string) error {
+	args = append([]string{"--endpoints=https://" + node1 + ":2379,https://" + node2 + ":2379,https://" + node3 + ":2379",
+		"--cert=" + crt, "--key=" + key, "--cacert=" + ca}, args...)
+	cmd := exec.Command("output/etcdctl", args...)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "ETCDCTL_API=3")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
