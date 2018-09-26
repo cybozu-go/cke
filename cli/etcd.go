@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -112,17 +113,22 @@ func etcdUserAddCommand() subcommands.Command {
 }
 
 type etcdIssue struct {
-	ttl string
+	ttl    string
+	output string
 }
 
 func (c *etcdIssue) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.ttl, "ttl", "8760h", "TTL for client certificate")
+	f.StringVar(&c.output, "output", "json", "output format (json|file)")
 }
 
 func (c *etcdIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
 	userName := f.Arg(0)
 	if len(userName) == 0 {
 		return handleError(errors.New("COMMON_NAME is empty"))
+	}
+	if !(c.output == "json" || c.output == "file") {
+		return subcommands.ExitUsageError
 	}
 
 	cfg, inf, err := prepareInfrastructure(ctx)
@@ -154,10 +160,37 @@ func (c *etcdIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.Ex
 	if err != nil {
 		return handleError(err)
 	}
-	e := json.NewEncoder(os.Stdout)
-	e.SetIndent("", "  ")
-	err = e.Encode(IssueResponse{crt, key, caCrt})
-	return handleError(err)
+
+	switch c.output {
+	case "file":
+		crtFile := userName + ".crt"
+		caCrtFile := userName + ".ca"
+		keyFile := userName + ".key"
+		err = ioutil.WriteFile(crtFile, []byte(crt), 0600)
+		if err != nil {
+			return handleError(err)
+		}
+		err = ioutil.WriteFile(caCrtFile, []byte(caCrt), 0600)
+		if err != nil {
+			return handleError(err)
+		}
+		err = ioutil.WriteFile(keyFile, []byte(key), 0600)
+		if err != nil {
+			return handleError(err)
+		}
+		_, err = fmt.Println("write files: ", crtFile, caCrtFile, keyFile)
+		if err != nil {
+			return handleError(err)
+		}
+	default:
+		e := json.NewEncoder(os.Stdout)
+		e.SetIndent("", "  ")
+		err = e.Encode(IssueResponse{crt, key, caCrt})
+		if err != nil {
+			return handleError(err)
+		}
+	}
+	return subcommands.ExitSuccess
 }
 
 func role(roles []string, userName string) string {
@@ -179,15 +212,20 @@ func etcdIssueCommand() subcommands.Command {
 }
 
 type etcdRootIssue struct {
+	output string
 }
 
 func (c *etcdRootIssue) SetFlags(f *flag.FlagSet) {
+	f.StringVar(&c.output, "output", "json", "output format (json|file)")
 }
 
 func (c *etcdRootIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
 	_, inf, err := prepareInfrastructure(ctx)
 	if err != nil {
 		return handleError(err)
+	}
+	if !(c.output == "json" || c.output == "file") {
+		return subcommands.ExitUsageError
 	}
 
 	// Issue certificate
@@ -201,10 +239,36 @@ func (c *etcdRootIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommand
 	if err != nil {
 		return handleError(err)
 	}
-	e := json.NewEncoder(os.Stdout)
-	e.SetIndent("", "  ")
-	err = e.Encode(IssueResponse{crt, key, caCrt})
-	return handleError(err)
+	switch c.output {
+	case "file":
+		crtFile := "root.crt"
+		caCrtFile := "root.ca"
+		keyFile := "root.key"
+		err = ioutil.WriteFile(crtFile, []byte(crt), 0600)
+		if err != nil {
+			return handleError(err)
+		}
+		err = ioutil.WriteFile(caCrtFile, []byte(caCrt), 0600)
+		if err != nil {
+			return handleError(err)
+		}
+		err = ioutil.WriteFile(keyFile, []byte(key), 0600)
+		if err != nil {
+			return handleError(err)
+		}
+		_, err = fmt.Println("write files: ", crtFile, caCrtFile, keyFile)
+		if err != nil {
+			return handleError(err)
+		}
+	default:
+		e := json.NewEncoder(os.Stdout)
+		e.SetIndent("", "  ")
+		err = e.Encode(IssueResponse{crt, key, caCrt})
+		if err != nil {
+			return handleError(err)
+		}
+	}
+	return subcommands.ExitSuccess
 }
 
 func etcdRootIssueCommand() subcommands.Command {
