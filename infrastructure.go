@@ -107,7 +107,7 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	if err != nil {
 		return nil, err
 	}
-	inf.etcdCert, inf.etcdKey, err = EtcdCA{}.issueRoot(ctx, inf)
+	inf.etcdCert, inf.etcdKey, err = EtcdCA{}.IssueRoot(ctx, inf)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	}
 
 	issue := func() (cert, key []byte, err error) {
-		c, k, e := KubernetesCA{}.issueAdminCert(ctx, inf, 25)
+		c, k, e := KubernetesCA{}.IssueAdminCert(ctx, inf, "25h")
 		if e != nil {
 			return nil, nil, e
 		}
@@ -130,6 +130,25 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	}
 
 	return inf, nil
+}
+
+// NewInfrastructureWithoutSSH creates a new Infrastructure instance that has no SSH agents
+func NewInfrastructureWithoutSSH(ctx context.Context, c *Cluster, s Storage) (Infrastructure, error) {
+	// These assignments of the `agent` should be placed last.
+	inf := &ckeInfrastructure{agents: nil, storage: s, serverCA: ""}
+
+	serverCA, err := inf.Storage().GetCACertificate(ctx, "server")
+	if err != nil {
+		return nil, err
+	}
+	inf.serverCA = serverCA
+	inf.etcdCert, inf.etcdKey, err = EtcdCA{}.IssueRoot(ctx, inf)
+	if err != nil {
+		return nil, err
+	}
+
+	inf.kubeCA, err = inf.Storage().GetCACertificate(ctx, "kubernetes")
+	return inf, err
 }
 
 type ckeInfrastructure struct {

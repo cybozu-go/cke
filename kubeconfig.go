@@ -39,6 +39,29 @@ func proxyKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Confi
 	return kubeconfig(cluster, "system:kube-proxy", ca, clientCrt, clientKey)
 }
 
+// AdminKubeconfig makes kubeconfig for admin user
+func AdminKubeconfig(cluster, ca, clientCrt, clientKey, server string) *api.Config {
+	user := "admin"
+	cfg := api.NewConfig()
+	c := api.NewCluster()
+	c.Server = server
+	c.CertificateAuthorityData = []byte(ca)
+	cfg.Clusters[cluster] = c
+
+	auth := api.NewAuthInfo()
+	auth.ClientCertificateData = []byte(clientCrt)
+	auth.ClientKeyData = []byte(clientKey)
+	cfg.AuthInfos[user] = auth
+
+	ctx := api.NewContext()
+	ctx.AuthInfo = user
+	ctx.Cluster = cluster
+	cfg.Contexts["default"] = ctx
+	cfg.CurrentContext = "default"
+
+	return cfg
+}
+
 func kubeletKubeconfig(cluster string, n *Node, caPath, certPath, keyPath string) *api.Config {
 	cfg := api.NewConfig()
 	c := api.NewCluster()
