@@ -97,7 +97,7 @@ Option      | Default value         | Description
 
 Create client certificate for `root`.
 
-This certificate TTL is `2h`.
+TTL for this certificate is fixed to 2h.
 
 This subcommand is for human to operate etcd server.
 
@@ -113,7 +113,9 @@ Control CKE managed kubernetes.
 
 ### `ckecli kubernetes issue [-ttl=TTL]`
 
-Issue client certificate to stdout.
+Write kubeconfig to stdout.
+
+This config file include client certificate.
 
 Option      | Default value         | Description
 ----------  | --------------------- | -----------
