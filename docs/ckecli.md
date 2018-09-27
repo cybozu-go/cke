@@ -115,7 +115,7 @@ Control CKE managed kubernetes.
 
 Write kubeconfig to stdout.
 
-This config file include client certificate.
+This config file embeds client certificate and can be used with `kubectl` to connect Kubernetes cluster.
 
 Option      | Default value         | Description
 ----------  | --------------------- | -----------
