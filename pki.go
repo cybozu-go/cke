@@ -120,8 +120,8 @@ func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key st
 func IssueEtcdClientCertificate(inf Infrastructure, role, commonName, ttl string) (cert, key string, err error) {
 	return issueCertificate(inf, CAEtcdClient, role,
 		map[string]interface{}{
-			"ttl":            "37600h",
-			"max_ttl":        "37600h",
+			"ttl":            "87600h",
+			"max_ttl":        "87600h",
 			"server_flag":    "false",
 			"allow_any_name": "true",
 		},

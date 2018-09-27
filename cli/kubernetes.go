@@ -76,6 +76,6 @@ func kubernetesIssueCommand() subcommands.Command {
 		&kubernetesIssue{},
 		"issue",
 		"Issue client certificate to connect kube-apiserver",
-		"kubernetes issue",
+		"kubernetes issue [-ttl TTL]",
 	}
 }

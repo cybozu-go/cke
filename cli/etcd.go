@@ -120,7 +120,7 @@ type etcdIssue struct {
 }
 
 func (c *etcdIssue) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.ttl, "ttl", "8760h", "TTL for client certificate")
+	f.StringVar(&c.ttl, "ttl", "87600h", "TTL for client certificate")
 	f.StringVar(&c.output, "output", "json", "output format (json|file)")
 }
 
