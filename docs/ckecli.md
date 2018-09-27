@@ -64,3 +64,59 @@ Show the host name of the current leader.
 ---------------------------
 
 Show operation history.
+
+`ckecli etcd`
+-------------
+
+Control CKE managed etcd.
+
+### `ckecli etcd user-add COMMON_NAME PREFIX`
+
+This subcommand is for programs to operate etcd server.
+
+Add `COMMON_NAME` user/role to etcd.
+
+The user can only access under `PREFIX`.
+
+`COMMON_NAME` must not have prefix `system:`.
+
+### `ckecli etcd issue [-ttl=TTL] [-output=FORMAT] COMMON_NAME`
+
+This subcommand is for programs to operate etcd server.
+
+Create client certificate for `COMMON_NAME`.
+
+If `COMMON_NAME` user does not exist, execute `$ ckecli etcd user-add COMMON_NAME PREFIX`.
+
+Option      | Default value         | Description
+----------  | --------------------- | -----------
+`-ttl`      | `87600h`              | TTL for client certificate
+`-output`   | `json`                | output format (`json`,`file`)
+
+### `ckecli etcd root-issue [-output=FORMAT]`
+
+Create client certificate for `root`.
+
+TTL for this certificate is fixed to 2h.
+
+This subcommand is for human to operate etcd server.
+
+Option      | Default value         | Description
+----------  | --------------------- | -----------
+`-output`   | `json`                | output format (`json`,`file`)
+
+
+`ckecli kubernetes`
+-------------------
+
+Control CKE managed kubernetes.
+
+### `ckecli kubernetes issue [-ttl=TTL]`
+
+Write kubeconfig to stdout.
+
+This config file embeds client certificate and can be used with `kubectl` to connect Kubernetes cluster.
+
+Option      | Default value         | Description
+----------  | --------------------- | -----------
+`-ttl`      | `2h`                  | TTL for client certificate

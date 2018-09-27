@@ -182,7 +182,8 @@ func (c *Cluster) validateNode(n *Node) error {
 	return nil
 }
 
-func controlPlanes(nodes []*Node) []*Node {
+// ControlPlanes returns control plane []*Node
+func ControlPlanes(nodes []*Node) []*Node {
 	return filterNodes(nodes, func(n *Node) bool {
 		return n.ControlPlane
 	})
