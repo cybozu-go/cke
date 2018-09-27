@@ -130,7 +130,7 @@ func (c *etcdIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.Ex
 		return handleError(errors.New("COMMON_NAME is empty"))
 	}
 	if !(c.output == "json" || c.output == "file") {
-		return subcommands.ExitUsageError
+		return handleError(errors.New("invalid option: output=" + c.output))
 	}
 
 	cfg, inf, err := prepareInfrastructure(ctx)
@@ -201,7 +201,7 @@ func etcdIssueCommand() subcommands.Command {
 		&etcdIssue{},
 		"issue",
 		"Issue client certificate",
-		"etcd issue COMMON_NAME [-ttl TTL]",
+		"etcd issue [-ttl TTL] [-output FORMAT] COMMON_NAME",
 	}
 }
 
@@ -219,7 +219,7 @@ func (c *etcdRootIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommand
 		return handleError(err)
 	}
 	if !(c.output == "json" || c.output == "file") {
-		return subcommands.ExitUsageError
+		return handleError(errors.New("invalid option: output=" + c.output))
 	}
 
 	// Issue certificate
@@ -271,7 +271,7 @@ func etcdRootIssueCommand() subcommands.Command {
 		&etcdRootIssue{},
 		"root-issue",
 		"Issue root client certificate for CKE managed etcd",
-		"etcd root-issue",
+		"etcd root-issue [-output FORMAT]",
 	}
 }
 

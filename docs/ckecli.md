@@ -80,7 +80,7 @@ The user can only access under `PREFIX`.
 
 `COMMON_NAME` must not have prefix `system:`.
 
-### `ckecli etcd issue COMMON_NAME [-ttl=TTL]`
+### `ckecli etcd issue [-ttl=TTL] [-output=FORMAT] COMMON_NAME`
 
 This subcommand is for programs to operate etcd server.
 
@@ -91,9 +91,9 @@ If `COMMON_NAME` user does not exist, execute `$ ckecli etcd user-add COMMON_NAM
 Option      | Default value         | Description
 ----------  | --------------------- | -----------
 `-ttl`      | `87600h`              | TTL for client certificate
-`-output`   | `json`                | output format (json,file)
+`-output`   | `json`                | output format (`json`,`file`)
 
-### `ckecli etcd root-issue`
+### `ckecli etcd root-issue [-output=FORMAT]`
 
 Create client certificate for `root`.
 
@@ -103,7 +103,7 @@ This subcommand is for human to operate etcd server.
 
 Option      | Default value         | Description
 ----------  | --------------------- | -----------
-`-output`   | `json`                | output format (json,file)
+`-output`   | `json`                | output format (`json`,`file`)
 
 
 `ckecli kubernetes`
@@ -111,12 +111,10 @@ Option      | Default value         | Description
 
 Control CKE managed kubernetes.
 
-### `ckecli kubernetes issue COMMON_NAME [-ttl=TTL]`
+### `ckecli kubernetes issue [-ttl=TTL]`
 
 Issue client certificate to stdout.
 
-`COMMON_NAME` is used for `common_name` for client certificate to access kube-apiserver.
-
 Option      | Default value         | Description
 ----------  | --------------------- | -----------
-`-ttl`      | `87600h`               | TTL for client certificate
+`-ttl`      | `2h`                  | TTL for client certificate
