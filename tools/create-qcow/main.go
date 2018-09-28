@@ -64,7 +64,7 @@ func main() {
 		{"apt", "update", "-qq"},
 		{"apt", "install", "-y", "-qq", "docker.io", "qemu-utils"},
 		{"systemctl", "stop", "docker.service"},
-		{"qemu-img", "create", "-f", "qcow2", fileName, "2G"},
+		{"qemu-img", "create", "-f", "qcow2", fileName, "8G"},
 		{"modprobe", "nbd"},
 		{"qemu-nbd", "-c", "/dev/nbd0", fileName},
 		{"mkfs", "-t", "ext4", "/dev/nbd0"},
