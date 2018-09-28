@@ -53,6 +53,7 @@ type apiServerBootOp struct {
 	cps   []*Node
 
 	serviceSubnet string
+	domain        string
 	params        ServiceParams
 
 	step      int
@@ -253,11 +254,12 @@ func RiversParams(upstreams []*Node) ServiceParams {
 }
 
 // APIServerBootOp returns an Operator to bootstrap kube-apiserver
-func APIServerBootOp(nodes, cps []*Node, serviceSubnet string, params ServiceParams) Operator {
+func APIServerBootOp(nodes, cps []*Node, serviceSubnet, domain string, params ServiceParams) Operator {
 	return &apiServerBootOp{
 		nodes:         nodes,
 		cps:           cps,
 		serviceSubnet: serviceSubnet,
+		domain:        domain,
 		params:        params,
 		makeFiles:     &makeFilesCommand{nodes: nodes},
 	}
@@ -280,7 +282,7 @@ func (o *apiServerBootOp) NextCommand() Commander {
 		return makeDirsCommand{o.nodes, dirs}
 	case 2:
 		o.step++
-		return prepareAPIServerFilesCommand{o.makeFiles}
+		return prepareAPIServerFilesCommand{o.makeFiles, o.serviceSubnet, o.domain}
 	case 3:
 		o.step++
 		return o.makeFiles

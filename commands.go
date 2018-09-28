@@ -490,7 +490,9 @@ func (c prepareEtcdCertificatesCommand) Command() Command {
 }
 
 type prepareAPIServerFilesCommand struct {
-	makeFiles *makeFilesCommand
+	makeFiles     *makeFilesCommand
+	serviceSubnet string
+	domain        string
 }
 
 func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf Infrastructure) error {
@@ -498,7 +500,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf Infrastructur
 
 	// server (and client) certs of API server.
 	f := func(ctx context.Context, n *Node) (cert, key []byte, err error) {
-		c, k, e := KubernetesCA{}.issueForAPIServer(ctx, inf, n)
+		c, k, e := KubernetesCA{}.issueForAPIServer(ctx, inf, n, c.serviceSubnet, c.domain)
 		if e != nil {
 			return nil, nil, e
 		}
