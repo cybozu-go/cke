@@ -7,9 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cybozu-go/netutil"
-
 	"github.com/cybozu-go/log"
+	"github.com/cybozu-go/netutil"
 	vault "github.com/hashicorp/vault/api"
 )
 
