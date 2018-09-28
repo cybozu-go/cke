@@ -5,9 +5,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.8] - 2018-09-28
+### Added
+- Add ckecli subcommands to issue client certificate.
+
 ## [0.7] - 2018-09-21
 ### Changed
-- Improve bootstrap of etcd and kubernetes cluster bootstrap.
 - Change Docker image file system to ext4 from btrfs.
 
 ## [0.6] - 2018-09-19
@@ -45,7 +48,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.7...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.8...HEAD
+[0.8]: https://github.com/cybozu-go/cke/compare/v0.7...v0.8
 [0.7]: https://github.com/cybozu-go/cke/compare/v0.6...v0.7
 [0.6]: https://github.com/cybozu-go/cke/compare/v0.5...v0.6
 [0.5]: https://github.com/cybozu-go/cke/compare/v0.4...v0.5
