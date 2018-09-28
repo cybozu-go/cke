@@ -126,7 +126,7 @@ func executeCommand(name string, args ...string) error {
 func createDummyImage() error {
 	log.Info("creating dummy image "+dockerImage, nil)
 	prepareDeviceCommands := [][]string{
-		{"qemu-img", "create", "-f", "qcow2", dockerImage, "2G"},
+		{"qemu-img", "create", "-f", "qcow2", dockerImage, "8G"},
 		{"sudo", "modprobe", "nbd"},
 		{"sudo", "qemu-nbd", "-c", "/dev/nbd0", dockerImage},
 		{"sudo", "mkfs", "-t", "ext4", "/dev/nbd0"},
