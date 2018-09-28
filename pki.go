@@ -2,8 +2,12 @@ package cke
 
 import (
 	"context"
+	"net"
 	"path"
 	"path/filepath"
+	"strings"
+
+	"github.com/cybozu-go/netutil"
 
 	"github.com/cybozu-go/log"
 	vault "github.com/hashicorp/vault/api"
@@ -152,7 +156,26 @@ func (k KubernetesCA) IssueAdminCert(ctx context.Context, inf Infrastructure, tt
 		})
 }
 
-func (k KubernetesCA) issueForAPIServer(ctx context.Context, inf Infrastructure, n *Node) (crt, key string, err error) {
+func (k KubernetesCA) issueForAPIServer(ctx context.Context, inf Infrastructure, n *Node, serviceSubnet, domain string) (crt, key string, err error) {
+	altNames := []string{
+		"localhost",
+		"kubernetes",
+		"kubernetes.default",
+		"kubernetes.default.svc",
+	}
+	if len(domain) == 0 {
+		domain = "cluster.local"
+	}
+	d := strings.Split(domain, ".")
+	for i := range d {
+		altNames = append(altNames, "kubernetes.default.svc."+strings.Join(d[0:i+1], "."))
+	}
+	ip, _, err := net.ParseCIDR(serviceSubnet)
+	if err != nil {
+		return "", "", err
+	}
+	kubeSvcAddr := netutil.IntToIP4(netutil.IP4ToInt(ip) + 1)
+
 	return issueCertificate(inf, CAKubernetes, "system",
 		map[string]interface{}{
 			"ttl":               "87600h",
@@ -162,8 +185,8 @@ func (k KubernetesCA) issueForAPIServer(ctx context.Context, inf Infrastructure,
 		},
 		map[string]interface{}{
 			"common_name":          "kubernetes",
-			"alt_names":            "localhost,kubernetes.default",
-			"ip_sans":              "127.0.0.1," + n.Address,
+			"alt_names":            strings.Join(altNames, ","),
+			"ip_sans":              "127.0.0.1," + n.Address + "," + kubeSvcAddr.String(),
 			"exclude_cn_from_sans": "true",
 		})
 }

@@ -24,7 +24,7 @@ func kubernetesDecideToDo(c *Cluster, cs *ClusterStatus) Operator {
 		return !cs.NodeStatuses[n.Address].APIServer.Running
 	})
 	if len(nodes) > 0 {
-		return APIServerBootOp(nodes, cpNodes, c.ServiceSubnet, c.Options.APIServer)
+		return APIServerBootOp(nodes, cpNodes, c.ServiceSubnet, c.Options.Kubelet.Domain, c.Options.APIServer)
 	}
 	nodes = filterNodes(cpNodes, func(n *Node) bool {
 		return !cs.NodeStatuses[n.Address].ControllerManager.Running
