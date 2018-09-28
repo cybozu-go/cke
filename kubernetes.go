@@ -10,7 +10,6 @@ const (
 	kubeProxyContainerName             = "kube-proxy"
 	kubeSchedulerContainerName         = "kube-scheduler"
 	kubeletContainerName               = "kubelet"
-	pauseContainerName                 = "pause"
 	riversContainerName                = "rivers"
 
 	rbacRoleName        = "system:kube-apiserver-to-kubelet"
