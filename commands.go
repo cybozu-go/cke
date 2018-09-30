@@ -343,6 +343,16 @@ func (c runContainerCommand) Run(ctx context.Context, inf Infrastructure) error 
 					return err
 				}
 			}
+			exists, err := ce.Exists(c.name)
+			if err != nil {
+				return err
+			}
+			if exists {
+				err = ce.Remove(c.name)
+				if err != nil {
+					return err
+				}
+			}
 			return ce.RunSystem(c.name, c.img, opts, params, c.extra)
 		})
 	}
