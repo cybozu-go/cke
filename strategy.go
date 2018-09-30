@@ -65,7 +65,7 @@ func riversOps(c *Cluster, nf *NodeFilter) (ops []Operator) {
 
 func k8sOps(c *Cluster, nf *NodeFilter) (ops []Operator) {
 	if nodes := nf.APIServerStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, APIServerBootOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.APIServer))
+		ops = append(ops, APIServerBootOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.Kubelet.Domain, c.Options.APIServer))
 	}
 	if nodes := nf.APIServerOutdatedNodes(); len(nodes) > 0 {
 		ops = append(ops, APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.APIServer))
