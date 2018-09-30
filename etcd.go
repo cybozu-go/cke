@@ -381,59 +381,56 @@ type waitEtcdSyncCommand struct {
 	checkRedundancy bool
 }
 
-func (c waitEtcdSyncCommand) Run(ctx context.Context, inf Infrastructure) error {
+func (c waitEtcdSyncCommand) try(ctx context.Context, inf Infrastructure) error {
 	cli, err := inf.NewEtcdClient(c.endpoints)
 	if err != nil {
 		return err
 	}
-	defer cli.Close()
 
-	retries := 3
-	retryBackoff := 5 * time.Second
+	ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
+	defer cancel()
+	resp, err := cli.Grant(ct, 10)
+	if err != nil {
+		return err
+	}
+	if resp.ID == clientv3.NoLease {
+		return errors.New("no lease")
+	}
 
-	for i := 1; ; i++ {
-		ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
-		resp, err := cli.Grant(ct, 10)
-		cancel()
-		if err == nil && resp.ID != clientv3.NoLease {
-			break
+	if !c.checkRedundancy {
+		return nil
+	}
+
+	healthyMemberCount := 0
+	for _, ep := range c.endpoints {
+		ct2, cancel2 := context.WithTimeout(ctx, defaultEtcdTimeout)
+		_, err = cli.Status(ct2, ep)
+		cancel2()
+		if err == nil {
+			healthyMemberCount++
 		}
-		if i >= retries {
-			return errors.New("etcd sync timeout")
+	}
+	if healthyMemberCount <= int(len(c.endpoints)+1)/2 {
+		return errors.New("etcd cluster is not redundant enough")
+	}
+	return nil
+}
+
+func (c waitEtcdSyncCommand) Run(ctx context.Context, inf Infrastructure) error {
+	for i := 0; i < 9; i++ {
+		err := c.try(ctx, inf)
+		if err == nil {
+			return nil
 		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(retryBackoff):
+		case <-time.After(2 * time.Second):
 		}
 	}
 
-	if c.checkRedundancy {
-		for i := 1; ; i++ {
-			healthyMemberCount := 0
-			for _, ep := range c.endpoints {
-				ct, cancel := context.WithTimeout(ctx, defaultEtcdTimeout)
-				_, err = cli.Status(ct, ep)
-				cancel()
-				if err == nil {
-					healthyMemberCount++
-				}
-			}
-			if healthyMemberCount > int(len(c.endpoints)+1)/2 {
-				break
-			}
-			if i >= retries {
-				return errors.New("etcd cluster does not have redundancy")
-			}
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(retryBackoff):
-			}
-		}
-	}
-
-	return nil
+	// last try
+	return c.try(ctx, inf)
 }
 
 func (c waitEtcdSyncCommand) Command() Command {
