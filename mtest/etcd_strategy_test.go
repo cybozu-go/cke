@@ -10,10 +10,8 @@ var _ = Describe("etcd strategy", func() {
 	AfterEach(initializeControlPlane)
 
 	It("should remove unhealthy-and-not-in-cluster node2 from etcd cluster", func() {
-		By("Stopping controller for 3 seconds")
-		injectSleep("stopController")
-
 		By("Stopping etcd in node2")
+		stopCKE()
 		execSafeAt(node2, "docker", "stop", "etcd")
 		execSafeAt(node2, "docker", "rm", "etcd")
 
@@ -25,6 +23,7 @@ var _ = Describe("etcd strategy", func() {
 		}
 		cluster.Nodes = append(cluster.Nodes[:1], cluster.Nodes[2:]...)
 		ckecliClusterSet(cluster)
+		runCKE()
 
 		By("Checking cluster status")
 		var status *cke.ClusterStatus
@@ -44,10 +43,8 @@ var _ = Describe("etcd strategy", func() {
 	})
 
 	It("should remove unhealthy-and-non-control-plane node2 from etcd cluster, and destroy it's etcd", func() {
-		By("Stopping controller for 3 seconds")
-		injectSleep("stopController")
-
 		By("Stopping etcd in node2")
+		stopCKE()
 		execSafeAt(node2, "docker", "stop", "etcd")
 		execSafeAt(node2, "docker", "rm", "etcd")
 
@@ -57,6 +54,7 @@ var _ = Describe("etcd strategy", func() {
 		cluster.Nodes[0].ControlPlane = true
 		cluster.Nodes[2].ControlPlane = true
 		ckecliClusterSet(cluster)
+		runCKE()
 
 		By("Checking cluster status")
 		var status *cke.ClusterStatus

@@ -629,21 +629,16 @@ func (o *etcdDestroyMemberOp) Name() string {
 }
 
 func (o *etcdDestroyMemberOp) NextCommand() Commander {
-	// Destroy need to remove etcd data first.
-	// Otherwise, if CKE crashes just after removing a member from cluster
-	// but leave the data, next time CKE just starts the container without
-	// adding it as a new member.
-
 	switch o.step {
 	case 0:
 		o.step++
-		return killContainersCommand{o.targets, etcdContainerName}
+		return removeEtcdMemberCommand{o.endpoints, o.ids}
 	case 1:
 		o.step++
-		return volumeRemoveCommand{o.targets, etcdVolumeName(o.params)}
+		return killContainersCommand{o.targets, etcdContainerName}
 	case 2:
 		o.step++
-		return removeEtcdMemberCommand{o.endpoints, o.ids}
+		return volumeRemoveCommand{o.targets, etcdVolumeName(o.params)}
 	case 3:
 		o.step++
 		return waitEtcdSyncCommand{o.endpoints, false}

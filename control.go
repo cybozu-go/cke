@@ -95,7 +95,6 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 		default:
 		}
 		err := c.runOnce(ctx, leaderKey, ticker.C, watchChan)
-		// gofail: var stopController struct{}
 		if err != nil {
 			return err
 		}
