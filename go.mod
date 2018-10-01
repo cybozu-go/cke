@@ -24,6 +24,7 @@ require (
 	github.com/cybozu-go/cmd v1.6.0
 	github.com/cybozu-go/etcdutil v1.1.0
 	github.com/cybozu-go/log v1.5.0
+	github.com/cybozu-go/netutil v1.2.0
 	github.com/denisenkom/go-mssqldb v0.0.0-20180901172138-1eb28afdf9b6 // indirect
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0 // indirect
@@ -40,7 +41,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v0.0.0-20170111101155-53e6ce116135 // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
-	github.com/google/martian v2.0.0-beta.2+incompatible // indirect
+	github.com/google/martian v2.1.0+incompatible // indirect
 	github.com/google/subcommands v0.0.0-20180618214453-5bae204cdfb2
 	github.com/googleapis/gax-go v2.0.0+incompatible // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect

@@ -221,36 +221,6 @@ func (c *makeFilesCommand) Command() Command {
 	}
 }
 
-type removeFileCommand struct {
-	nodes  []*Node
-	target string
-}
-
-func (c removeFileCommand) Run(ctx context.Context, inf Infrastructure) error {
-	env := cmd.NewEnvironment(ctx)
-	dir := filepath.Dir(c.target)
-	binds := []Mount{{
-		Source:      dir,
-		Destination: filepath.Join("/mnt", dir),
-	}}
-	command := "rm -f " + filepath.Join("/mnt", c.target)
-	for _, n := range c.nodes {
-		ce := Docker(inf.Agent(n.Address))
-		env.Go(func(ctx context.Context) error {
-			return ce.Run(ToolsImage, binds, command)
-		})
-	}
-	env.Stop()
-	return env.Wait()
-}
-
-func (c removeFileCommand) Command() Command {
-	return Command{
-		Name:   "rm",
-		Target: c.target,
-	}
-}
-
 type imagePullCommand struct {
 	nodes []*Node
 	img   Image
@@ -373,6 +343,16 @@ func (c runContainerCommand) Run(ctx context.Context, inf Infrastructure) error 
 					return err
 				}
 			}
+			exists, err := ce.Exists(c.name)
+			if err != nil {
+				return err
+			}
+			if exists {
+				err = ce.Remove(c.name)
+				if err != nil {
+					return err
+				}
+			}
 			return ce.RunSystem(c.name, c.img, opts, params, c.extra)
 		})
 	}
@@ -407,9 +387,16 @@ func (c stopContainerCommand) Run(ctx context.Context, inf Infrastructure) error
 	if !exists {
 		return nil
 	}
-	err = ce.Stop(c.name)
+	// Inspect returns ServiceStatus for the named container.
+	statuses, err := ce.Inspect([]string{c.name})
 	if err != nil {
 		return err
+	}
+	if st, ok := statuses[c.name]; ok && st.Running {
+		err = ce.Stop(c.name)
+		if err != nil {
+			return err
+		}
 	}
 	// gofail: var dockerAfterContainerStop struct{}
 	err = ce.Remove(c.name)
@@ -946,10 +933,17 @@ func (c killContainersCommand) Run(ctx context.Context, inf Infrastructure) erro
 			if !exists {
 				return nil
 			}
-			err = ce.Kill(c.name)
+			statuses, err := ce.Inspect([]string{c.name})
 			if err != nil {
 				return err
 			}
+			if st, ok := statuses[c.name]; ok && st.Running {
+				err = ce.Kill(c.name)
+				if err != nil {
+					return err
+				}
+			}
+			// gofail: var dockerAfterKillContainers struct{}
 			return ce.Remove(c.name)
 		})
 	}
