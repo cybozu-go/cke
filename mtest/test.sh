@@ -6,6 +6,7 @@ PLACEMAT_PID=$(cat /tmp/placemat_pid$$)
 echo "placemat PID: $PLACEMAT_PID"
 
 fin() {
+    chmod 600 ./mtest_key
     echo "-------- host1: cke log"
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ./mtest_key cybozu@${HOST1} sudo journalctl -u cke.service --no-pager
     echo "-------- host2: cke log"
