@@ -3,6 +3,7 @@ package mtest
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -73,6 +74,13 @@ var _ = BeforeSuite(func() {
 	setupCKE()
 
 	initializeControlPlane()
+
+	kubeconfig := ckecli("kubernetes", "issue")
+	f, err := os.Create("/tmp/cke-mtest-kubeconfig")
+	Expect(err).NotTo(HaveOccurred())
+	defer f.Close()
+	f.Write(kubeconfig)
+	f.Sync()
 
 	fmt.Println("Begin tests...")
 })

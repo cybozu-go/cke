@@ -352,3 +352,8 @@ func etcdctl(crt, key, ca string, args ...string) error {
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
+
+func kubectl(args ...string) ([]byte, error) {
+	args = append([]string{"--kubeconfig=/tmp/cke-mtest-kubeconfig"}, args...)
+	return exec.Command(kubectlPath, args...).Output()
+}
