@@ -5,7 +5,6 @@ import (
 )
 
 var (
-	bridgeAddress  = os.Getenv("BRIDGE_ADDRESS")
 	host1          = os.Getenv("HOST1")
 	host2          = os.Getenv("HOST2")
 	node1          = os.Getenv("NODE1")
@@ -19,5 +18,4 @@ var (
 	kubectlPath    = os.Getenv("KUBECTL")
 	ckeClusterPath = os.Getenv("CKECLUSTER")
 	ckeConfigPath  = os.Getenv("CKECONFIG")
-	debug          = os.Getenv("DEBUG") == "1"
 )

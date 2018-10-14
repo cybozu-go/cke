@@ -82,6 +82,32 @@ func prepareSSHClients(addresses ...string) error {
 	return nil
 }
 
+func reconnectSSH(address string) error {
+	if c, ok := sshClients[address]; ok {
+		c.Close()
+		delete(sshClients, address)
+	}
+
+	sshKey, err := parsePrivateKey()
+	if err != nil {
+		return err
+	}
+	ch := time.After(sshTimeout)
+RETRY:
+	select {
+	case <-ch:
+		return errors.New("timed out")
+	default:
+	}
+	c, err := sshTo(address, sshKey)
+	if err != nil {
+		time.Sleep(5 * time.Second)
+		goto RETRY
+	}
+	sshClients[address] = c
+	return nil
+}
+
 func stopCKE() error {
 	env := cmd.NewEnvironment(context.Background())
 	for _, host := range []string{host1, host2} {
@@ -215,188 +241,6 @@ func ckecliClusterSet(cluster *cke.Cluster) error {
 	return nil
 }
 
-func ckecliClusterGet() (*cke.Cluster, error) {
-	stdout := ckecli("cluster", "get")
-	var cluster cke.Cluster
-	err := yaml.Unmarshal(stdout, &cluster)
-	if err != nil {
-		return nil, err
-	}
-	return &cluster, nil
-}
-
-type clusterStatusError struct {
-	message       string
-	host          string
-	port          uint16
-	status        *cke.ClusterStatus
-	controlPlanes []string
-	workers       []string
-	stdout        string
-	stderr        string
-}
-
-func (e clusterStatusError) Error() string {
-	return fmt.Sprintf(`%s
-host          : %s
-port          : %d
-control planes: %v
-workers       : %v
-stdout        : %s
-stderr        : %s
-status:
-%+v
-`, e.message, e.host, e.port, e.controlPlanes, e.workers, e.stdout, e.stderr, e.status)
-}
-
-func checkEtcdClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []string) error {
-	newError := func(msg, host string) error {
-		return clusterStatusError{
-			msg, host, 0, status, controlPlanes, workers, "", "",
-		}
-	}
-
-	for _, host := range controlPlanes {
-		if !status.NodeStatuses[host].Etcd.Running {
-			return newError("etcd is not running", host)
-		}
-		if !status.NodeStatuses[host].Etcd.HasData {
-			return newError("no etcd data", host)
-		}
-	}
-	for _, host := range workers {
-		if status.NodeStatuses[host].Etcd.Running {
-			return newError("etcd is still running", host)
-		}
-	}
-	if len(controlPlanes) != len(status.Etcd.Members) {
-		return newError("wrong number of etcd members", "")
-	}
-	for _, host := range controlPlanes {
-		member, ok := status.Etcd.Members[host]
-		if !ok {
-			return newError("host is not a member of etcd cluster", host)
-		}
-		if member.Name == "" {
-			return newError("host has not joined to etcd cluster", host)
-		}
-		if !status.Etcd.InSyncMembers[host] {
-			return newError("local etcd is out of sync", host)
-		}
-	}
-	return nil
-}
-
-func isRunningAllControlPlaneComponents(status *cke.ClusterStatus, host string) error {
-	newError := func(msg string) error {
-		return clusterStatusError{
-			msg, host, 0, status, nil, nil, "", "",
-		}
-	}
-
-	if !status.NodeStatuses[host].APIServer.Running {
-		return newError("kube-apiserver is not running")
-	}
-	if !status.NodeStatuses[host].ControllerManager.Running {
-		return newError("kube-controller-manager is not running")
-	}
-	if !status.NodeStatuses[host].Scheduler.Running {
-		return newError("kube-scheduler is not running")
-	}
-	return nil
-}
-
-func isRunningAnyControlPlaneComponents(status *cke.ClusterStatus, host string) error {
-	newError := func(msg string) error {
-		return clusterStatusError{
-			msg, host, 0, status, nil, nil, "", "",
-		}
-	}
-
-	if status.NodeStatuses[host].APIServer.Running {
-		return newError("kube-apiserver is running")
-	}
-	if status.NodeStatuses[host].ControllerManager.Running {
-		return newError("kube-controller-manager is running")
-	}
-	if status.NodeStatuses[host].Scheduler.Running {
-		return newError("kube-scheduler is running")
-	}
-	return nil
-}
-
-func isRunningAllCommonComponents(status *cke.ClusterStatus, host string) error {
-	newError := func(msg string) error {
-		return clusterStatusError{
-			msg, host, 0, status, nil, nil, "", "",
-		}
-	}
-
-	if !status.NodeStatuses[host].Rivers.Running {
-		return newError("rivers is not running")
-	}
-	if !status.NodeStatuses[host].Proxy.Running {
-		return newError("kube-proxy is not running")
-	}
-	if !status.NodeStatuses[host].Kubelet.Running {
-		return newError("kubelet is not running")
-	}
-	return nil
-}
-
-func checkKubernetesClusterStatus(status *cke.ClusterStatus, controlPlanes, workers []string) (err error) {
-	defer func() {
-		e, ok := err.(clusterStatusError)
-		if !ok {
-			return
-		}
-		e.status = status
-		e.controlPlanes = controlPlanes
-		e.workers = workers
-	}()
-
-	nodes := append(controlPlanes, workers...)
-
-	for _, host := range controlPlanes {
-		if err = isRunningAllControlPlaneComponents(status, host); err != nil {
-			return
-		}
-	}
-	for _, host := range workers {
-		if err = isRunningAnyControlPlaneComponents(status, host); err != nil {
-			return
-		}
-	}
-	for _, host := range nodes {
-		if err = isRunningAllCommonComponents(status, host); err != nil {
-			return
-		}
-	}
-
-	for _, host := range controlPlanes {
-		s := status.NodeStatuses[host]
-		if !s.APIServer.IsHealthy {
-			return errors.New("apiserver is not healthy on " + host)
-		}
-		if !s.ControllerManager.IsHealthy {
-			return errors.New("controller-manager is not healthy on " + host)
-		}
-		if !s.Scheduler.IsHealthy {
-			return errors.New("scheduler is not healthy on " + host)
-		}
-	}
-	for _, host := range nodes {
-		s := status.NodeStatuses[host]
-		if !s.Kubelet.IsHealthy {
-			return errors.New("kubelet is not healthy on " + host)
-		}
-		if !s.Proxy.IsHealthy {
-			return errors.New("proxy is not healthy on " + host)
-		}
-	}
-	return nil
-}
-
 func stopManagementEtcd(client *ssh.Client) error {
 	command := "sudo systemctl stop my-etcd.service; sudo rm -rf /home/cybozu/default.etcd"
 	sess, err := client.NewSession()
@@ -426,6 +270,18 @@ func setupCKE() {
 	Expect(err).NotTo(HaveOccurred())
 }
 
+func checkCluster(c *cke.Cluster) error {
+	status, err := getClusterStatus()
+	if err != nil {
+		return err
+	}
+	ops := cke.DecideOps(c, status)
+	if len(ops) == 0 {
+		return nil
+	}
+	return errors.New("ops is not nil: " + ops[0].Name())
+}
+
 func initializeControlPlane() {
 	ckecli("constraints", "set", "control-plane-count", "3")
 	cluster := getCluster()
@@ -434,16 +290,7 @@ func initializeControlPlane() {
 	}
 	ckecliClusterSet(cluster)
 	Eventually(func() error {
-		controlPlanes := []string{node1, node2, node3}
-		workers := []string{node4, node5, node6}
-		status, err := getClusterStatus()
-		if err != nil {
-			return err
-		}
-		if err := checkEtcdClusterStatus(status, controlPlanes, workers); err != nil {
-			return err
-		}
-		return checkKubernetesClusterStatus(status, controlPlanes, workers)
+		return checkCluster(cluster)
 	}).Should(Succeed())
 }
 
