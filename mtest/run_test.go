@@ -178,14 +178,22 @@ func localTempFile(body string) *os.File {
 }
 
 func ckecli(args ...string) []byte {
+	stdout, err := ckecliUnsafe(args...)
+	Expect(err).NotTo(HaveOccurred())
+	return stdout
+}
+
+func ckecliUnsafe(args ...string) ([]byte, error) {
 	args = append([]string{"-config", ckeConfigPath}, args...)
 	var stdout bytes.Buffer
 	command := exec.Command(ckecliPath, args...)
 	command.Stdout = &stdout
 	command.Stderr = GinkgoWriter
 	err := command.Run()
-	Expect(err).NotTo(HaveOccurred())
-	return stdout.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	return stdout.Bytes(), nil
 }
 
 func getCluster() *cke.Cluster {
@@ -270,6 +278,15 @@ func setupCKE() {
 	Expect(err).NotTo(HaveOccurred())
 }
 
+type checkError struct {
+	Ops    []string
+	Status *cke.ClusterStatus
+}
+
+func (e checkError) Error() string {
+	return strings.Join(e.Ops, ",")
+}
+
 func checkCluster(c *cke.Cluster) error {
 	status, err := getClusterStatus()
 	if err != nil {
@@ -279,7 +296,12 @@ func checkCluster(c *cke.Cluster) error {
 	if len(ops) == 0 {
 		return nil
 	}
-	return errors.New("ops is not nil: " + ops[0].Name())
+
+	opNames := make([]string, len(ops))
+	for i, op := range ops {
+		opNames[i] = op.Name()
+	}
+	return checkError{opNames, status}
 }
 
 func initializeControlPlane() {

@@ -398,7 +398,6 @@ func (c stopContainerCommand) Run(ctx context.Context, inf Infrastructure) error
 			return err
 		}
 	}
-	// gofail: var dockerAfterContainerStop struct{}
 	err = ce.Remove(c.name)
 	log.Info("stop container", map[string]interface{}{
 		"container": c.name,
@@ -943,7 +942,6 @@ func (c killContainersCommand) Run(ctx context.Context, inf Infrastructure) erro
 					return err
 				}
 			}
-			// gofail: var dockerAfterKillContainers struct{}
 			return ce.Remove(c.name)
 		})
 	}

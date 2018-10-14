@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/log"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -25,8 +24,6 @@ var _ = BeforeSuite(func() {
 
 	SetDefaultEventuallyPollingInterval(3 * time.Second)
 	SetDefaultEventuallyTimeout(6 * time.Minute)
-
-	log.DefaultLogger().SetThreshold(log.LvCritical)
 
 	err := prepareSSHClients(host1, host2, node1, node2, node3, node4, node5, node6)
 	Expect(err).NotTo(HaveOccurred())

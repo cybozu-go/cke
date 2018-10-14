@@ -1,6 +1,7 @@
 package mtest
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -48,7 +49,7 @@ var _ = Describe("Operations", func() {
 		// - RiversRestartOp
 		// - APIServerRestartOp
 		stopCKE()
-		execSafeAt(node2, "sudo", "reboot")
+		execAt(node2, "sudo", "-b", "reboot", "-f", "-f")
 		time.Sleep(5 * time.Second)
 		ckecli("constraints", "set", "control-plane-count", "2")
 		cluster.Nodes = append(cluster.Nodes[:1], cluster.Nodes[2:]...)
@@ -88,9 +89,19 @@ var _ = Describe("Operations", func() {
 		// - EtcdDestroyMemberOp
 		// - ContainerStopOp
 
+		Eventually(func() error {
+			stdout, err := ckecliUnsafe("leader")
+			if err != nil {
+				return err
+			}
+			leader := strings.TrimSpace(string(stdout))
+			if leader != "host1" && leader != "host2" {
+				return errors.New("unexpected leader: " + leader)
+			}
+			firstLeader = leader
+			return nil
+		}).Should(Succeed())
 		// inject failure into EtcdDestroyMemberOp
-		firstLeader = strings.TrimSpace(string(ckecli("leader")))
-		Expect(firstLeader).To(Or(Equal("host1"), Equal("host2")))
 		injectFailure("etcdAfterMemberRemove")
 
 		ckecli("constraints", "set", "control-plane-count", "2")
@@ -116,12 +127,6 @@ var _ = Describe("Operations", func() {
 		// - SchedulerRestartOp
 		// - KubeProxyRestartOp
 		// - KubeletRestartOp
-
-		// inject failure into stopContainerCommand
-		firstLeader = strings.TrimSpace(string(ckecli("leader")))
-		Expect(firstLeader).To(Or(Equal("host1"), Equal("host2")))
-		injectFailure("dockerAfterKillContainers")
-
 		cluster.Options.Etcd.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.ControllerManager.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Scheduler.ExtraEnvvar = map[string]string{"AAA": "aaa"}
@@ -131,11 +136,5 @@ var _ = Describe("Operations", func() {
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
-		// check leader change
-		newLeader = strings.TrimSpace(string(ckecli("leader")))
-		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
-		Expect(newLeader).NotTo(Equal(firstLeader))
-		stopCKE()
-		runCKE()
 	})
 })
