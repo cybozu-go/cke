@@ -311,7 +311,7 @@ type addEtcdMemberCommand struct {
 }
 
 func (c addEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error {
-	cli, err := inf.NewEtcdClient(c.endpoints)
+	cli, err := inf.NewEtcdClient(ctx, c.endpoints)
 	if err != nil {
 		return err
 	}
@@ -382,7 +382,7 @@ type waitEtcdSyncCommand struct {
 }
 
 func (c waitEtcdSyncCommand) try(ctx context.Context, inf Infrastructure) error {
-	cli, err := inf.NewEtcdClient(c.endpoints)
+	cli, err := inf.NewEtcdClient(ctx, c.endpoints)
 	if err != nil {
 		return err
 	}
@@ -445,7 +445,7 @@ type setupEtcdAuthCommand struct {
 }
 
 func (c setupEtcdAuthCommand) Run(ctx context.Context, inf Infrastructure) error {
-	cli, err := inf.NewEtcdClient(c.endpoints)
+	cli, err := inf.NewEtcdClient(ctx, c.endpoints)
 	if err != nil {
 		return err
 	}
@@ -526,7 +526,7 @@ type removeEtcdMemberCommand struct {
 }
 
 func (c removeEtcdMemberCommand) Run(ctx context.Context, inf Infrastructure) error {
-	cli, err := inf.NewEtcdClient(c.endpoints)
+	cli, err := inf.NewEtcdClient(ctx, c.endpoints)
 	if err != nil {
 		return err
 	}

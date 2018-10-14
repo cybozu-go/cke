@@ -82,7 +82,7 @@ func (c *etcdUserAdd) Execute(ctx context.Context, f *flag.FlagSet) subcommands.
 
 	// Add user/role to managed etcd
 	endpoints := endpoints(cfg)
-	etcdClient, err := inf.NewEtcdClient(endpoints)
+	etcdClient, err := inf.NewEtcdClient(ctx, endpoints)
 	if err != nil {
 		return handleError(err)
 	}
@@ -138,7 +138,7 @@ func (c *etcdIssue) Execute(ctx context.Context, f *flag.FlagSet) subcommands.Ex
 		return handleError(err)
 	}
 	endpoints := endpoints(cfg)
-	etcdClient, err := inf.NewEtcdClient(endpoints)
+	etcdClient, err := inf.NewEtcdClient(ctx, endpoints)
 	if err != nil {
 		return handleError(err)
 	}
@@ -301,8 +301,8 @@ func prepareInfrastructure(ctx context.Context) (*cke.Cluster, cke.Infrastructur
 	if err != nil {
 		return nil, nil, err
 	}
-	inf, err := cke.NewInfrastructureWithoutSSH(ctx, cfg, storage)
-	return cfg, inf, err
+	inf := cke.NewInfrastructureWithoutSSH(storage)
+	return cfg, inf, nil
 }
 
 func random() string {

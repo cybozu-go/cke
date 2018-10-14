@@ -825,7 +825,7 @@ type makeRBACRoleCommand struct {
 }
 
 func (c makeRBACRoleCommand) Run(ctx context.Context, inf Infrastructure) error {
-	cs, err := inf.K8sClient(c.apiserver)
+	cs, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
 		return err
 	}
@@ -874,7 +874,7 @@ type makeRBACRoleBindingCommand struct {
 }
 
 func (c makeRBACRoleBindingCommand) Run(ctx context.Context, inf Infrastructure) error {
-	cs, err := inf.K8sClient(c.apiserver)
+	cs, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
 		return err
 	}
