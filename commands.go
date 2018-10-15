@@ -398,7 +398,6 @@ func (c stopContainerCommand) Run(ctx context.Context, inf Infrastructure) error
 			return err
 		}
 	}
-	// gofail: var dockerAfterContainerStop struct{}
 	err = ce.Remove(c.name)
 	log.Info("stop container", map[string]interface{}{
 		"container": c.name,
@@ -825,7 +824,7 @@ type makeRBACRoleCommand struct {
 }
 
 func (c makeRBACRoleCommand) Run(ctx context.Context, inf Infrastructure) error {
-	cs, err := inf.K8sClient(c.apiserver)
+	cs, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
 		return err
 	}
@@ -874,7 +873,7 @@ type makeRBACRoleBindingCommand struct {
 }
 
 func (c makeRBACRoleBindingCommand) Run(ctx context.Context, inf Infrastructure) error {
-	cs, err := inf.K8sClient(c.apiserver)
+	cs, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
 		return err
 	}
@@ -943,7 +942,6 @@ func (c killContainersCommand) Run(ctx context.Context, inf Infrastructure) erro
 					return err
 				}
 			}
-			// gofail: var dockerAfterKillContainers struct{}
 			return ce.Remove(c.name)
 		})
 	}

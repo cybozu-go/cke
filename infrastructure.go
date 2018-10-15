@@ -61,9 +61,26 @@ type Infrastructure interface {
 	Vault() (*vault.Client, error)
 	Storage() Storage
 
-	NewEtcdClient(endpoints []string) (*clientv3.Client, error)
-	K8sClient(n *Node) (*kubernetes.Clientset, error)
+	NewEtcdClient(ctx context.Context, endpoints []string) (*clientv3.Client, error)
+	K8sClient(ctx context.Context, n *Node) (*kubernetes.Clientset, error)
 	HTTPClient() *cmd.HTTPClient
+}
+
+type ckeInfrastructure struct {
+	agents  map[string]Agent
+	storage Storage
+
+	etcdOnce sync.Once
+	etcdErr  error
+	serverCA string
+	etcdCert string
+	etcdKey  string
+
+	kubeOnce sync.Once
+	kubeErr  error
+	kubeCA   string
+	kubeCert []byte
+	kubeKey  []byte
 }
 
 // NewInfrastructure creates a new Infrastructure instance
@@ -99,67 +116,15 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 		return nil, err
 	}
 
-	// These assignments of the `agent` should be placed last.
+	// This assignment of the `agent` must be placed last.
 	inf := &ckeInfrastructure{agents: agents, storage: s}
 	agents = nil
-
-	inf.serverCA, err = inf.Storage().GetCACertificate(ctx, "server")
-	if err != nil {
-		return nil, err
-	}
-	inf.etcdCert, inf.etcdKey, err = EtcdCA{}.IssueRoot(ctx, inf)
-	if err != nil {
-		return nil, err
-	}
-
-	inf.kubeCA, err = inf.Storage().GetCACertificate(ctx, "kubernetes")
-	if err != nil {
-		return nil, err
-	}
-
-	issue := func() (cert, key []byte, err error) {
-		c, k, e := KubernetesCA{}.IssueAdminCert(ctx, inf, "25h")
-		if e != nil {
-			return nil, nil, e
-		}
-		return []byte(c), []byte(k), nil
-	}
-	inf.kubeCert, inf.kubeKey, err = k8sCertCache.get(issue)
-	if err != nil {
-		return nil, err
-	}
-
 	return inf, nil
 }
 
 // NewInfrastructureWithoutSSH creates a new Infrastructure instance that has no SSH agents
-func NewInfrastructureWithoutSSH(ctx context.Context, c *Cluster, s Storage) (Infrastructure, error) {
-	// These assignments of the `agent` should be placed last.
-	inf := &ckeInfrastructure{agents: nil, storage: s, serverCA: ""}
-
-	serverCA, err := inf.Storage().GetCACertificate(ctx, "server")
-	if err != nil {
-		return nil, err
-	}
-	inf.serverCA = serverCA
-	inf.etcdCert, inf.etcdKey, err = EtcdCA{}.IssueRoot(ctx, inf)
-	if err != nil {
-		return nil, err
-	}
-
-	inf.kubeCA, err = inf.Storage().GetCACertificate(ctx, "kubernetes")
-	return inf, err
-}
-
-type ckeInfrastructure struct {
-	agents   map[string]Agent
-	storage  Storage
-	serverCA string
-	etcdCert string
-	etcdKey  string
-	kubeCA   string
-	kubeCert []byte
-	kubeKey  []byte
+func NewInfrastructureWithoutSSH(s Storage) Infrastructure {
+	return &ckeInfrastructure{storage: s}
 }
 
 func (i ckeInfrastructure) Agent(addr string) Agent {
@@ -185,7 +150,28 @@ func (i ckeInfrastructure) Close() {
 	i.agents = nil
 }
 
-func (i ckeInfrastructure) NewEtcdClient(endpoints []string) (*clientv3.Client, error) {
+func (i *ckeInfrastructure) NewEtcdClient(ctx context.Context, endpoints []string) (*clientv3.Client, error) {
+	i.etcdOnce.Do(func() {
+		serverCA, err := i.Storage().GetCACertificate(ctx, "server")
+		if err != nil {
+			i.etcdErr = err
+			return
+		}
+		etcdCert, etcdKey, err := EtcdCA{}.IssueRoot(ctx, i)
+		if err != nil {
+			i.etcdErr = err
+			return
+		}
+
+		i.serverCA = serverCA
+		i.etcdCert = etcdCert
+		i.etcdKey = etcdKey
+	})
+
+	if i.etcdErr != nil {
+		return nil, i.etcdErr
+	}
+
 	cfg := &etcdutil.Config{
 		Endpoints: endpoints,
 		Timeout:   etcdutil.DefaultTimeout,
@@ -196,7 +182,36 @@ func (i ckeInfrastructure) NewEtcdClient(endpoints []string) (*clientv3.Client, 
 	return etcdutil.NewClient(cfg)
 }
 
-func (i ckeInfrastructure) K8sClient(n *Node) (*kubernetes.Clientset, error) {
+func (i *ckeInfrastructure) K8sClient(ctx context.Context, n *Node) (*kubernetes.Clientset, error) {
+	i.kubeOnce.Do(func() {
+		kubeCA, err := i.Storage().GetCACertificate(ctx, "kubernetes")
+		if err != nil {
+			i.kubeErr = err
+			return
+		}
+
+		issue := func() (cert, key []byte, err error) {
+			c, k, e := KubernetesCA{}.IssueAdminCert(ctx, i, "25h")
+			if e != nil {
+				return nil, nil, e
+			}
+			return []byte(c), []byte(k), nil
+		}
+		kubeCert, kubeKey, err := k8sCertCache.get(issue)
+		if err != nil {
+			i.kubeErr = err
+			return
+		}
+
+		i.kubeCA = kubeCA
+		i.kubeCert = kubeCert
+		i.kubeKey = kubeKey
+	})
+
+	if i.kubeErr != nil {
+		return nil, i.kubeErr
+	}
+
 	tlsCfg := rest.TLSClientConfig{
 		CertData: i.kubeCert,
 		KeyData:  i.kubeKey,

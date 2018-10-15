@@ -3,10 +3,12 @@ package mtest
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/log"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -24,6 +26,8 @@ var _ = BeforeSuite(func() {
 
 	SetDefaultEventuallyPollingInterval(3 * time.Second)
 	SetDefaultEventuallyTimeout(6 * time.Minute)
+
+	log.DefaultLogger().SetThreshold(log.LvError)
 
 	err := prepareSSHClients(host1, host2, node1, node2, node3, node4, node5, node6)
 	Expect(err).NotTo(HaveOccurred())
@@ -70,6 +74,13 @@ var _ = BeforeSuite(func() {
 	setupCKE()
 
 	initializeControlPlane()
+
+	kubeconfig := ckecli("kubernetes", "issue")
+	f, err := os.Create("/tmp/cke-mtest-kubeconfig")
+	Expect(err).NotTo(HaveOccurred())
+	defer f.Close()
+	f.Write(kubeconfig)
+	f.Sync()
 
 	fmt.Println("Begin tests...")
 })

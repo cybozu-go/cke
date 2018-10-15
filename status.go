@@ -130,13 +130,14 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *Cluster, inf 
 	}
 
 	if etcdRunning {
-		cs.Etcd, err = c.getEtcdClusterStatus(ctx, inf, cluster.Nodes)
+		ecs, err := c.getEtcdClusterStatus(ctx, inf, cluster.Nodes)
 		if err != nil {
-			log.Error("failed to get etcd cluster status", map[string]interface{}{
+			log.Warn("failed to get etcd cluster status", map[string]interface{}{
 				log.FnError: err,
 			})
-			return nil, err
+			return cs, nil
 		}
+		cs.Etcd = ecs
 	}
 
 	var livingMaster *Node
@@ -279,7 +280,7 @@ func (c Controller) getEtcdClusterStatus(ctx context.Context, inf Infrastructure
 		}
 	}
 
-	cli, err := inf.NewEtcdClient(endpoints)
+	cli, err := inf.NewEtcdClient(ctx, endpoints)
 	if err != nil {
 		return clusterStatus, err
 	}
@@ -309,7 +310,7 @@ func (c Controller) getEtcdClusterStatus(ctx context.Context, inf Infrastructure
 
 func (c Controller) getEtcdMemberInSync(ctx context.Context, inf Infrastructure, address string, clusterRev int64) bool {
 	endpoints := []string{fmt.Sprintf("https://%s:2379", address)}
-	cli, err := inf.NewEtcdClient(endpoints)
+	cli, err := inf.NewEtcdClient(ctx, endpoints)
 	if err != nil {
 		return false
 	}
@@ -326,7 +327,7 @@ func (c Controller) getEtcdMemberInSync(ctx context.Context, inf Infrastructure,
 }
 
 func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastructure, n *Node) (KubernetesClusterStatus, error) {
-	clientset, err := inf.K8sClient(n)
+	clientset, err := inf.K8sClient(ctx, n)
 	if err != nil {
 		return KubernetesClusterStatus{}, err
 	}
@@ -381,7 +382,7 @@ func (c Controller) checkHealthz(ctx context.Context, inf Infrastructure, addr s
 }
 
 func (c Controller) checkAPIServerHalth(ctx context.Context, inf Infrastructure, n *Node) (bool, error) {
-	cliantset, err := inf.K8sClient(n)
+	cliantset, err := inf.K8sClient(ctx, n)
 	if err != nil {
 		return false, err
 	}
