@@ -292,11 +292,16 @@ func checkCluster(c *cke.Cluster) error {
 	if err != nil {
 		return err
 	}
+
+	nf := cke.NewNodeFilter(c, status)
+	if !nf.EtcdIsGood() {
+		return errors.New("etcd cluster is not good")
+	}
+
 	ops := cke.DecideOps(c, status)
 	if len(ops) == 0 {
 		return nil
 	}
-
 	opNames := make([]string, len(ops))
 	for i, op := range ops {
 		opNames[i] = op.Name()
