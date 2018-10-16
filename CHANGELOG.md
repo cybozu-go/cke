@@ -5,6 +5,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.9] - 2018-10-17
+### Changed
+- Fixed API server certificates (#69).
+- Revamped strategy and mtest (#66, #73)
+- Miscellaneous bug fixes.
+
 ## [0.8] - 2018-09-28
 ### Added
 - Add ckecli subcommands to issue client certificate.
@@ -48,7 +54,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.8...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.9...HEAD
+[0.9]: https://github.com/cybozu-go/cke/compare/v0.8...v0.9
 [0.8]: https://github.com/cybozu-go/cke/compare/v0.7...v0.8
 [0.7]: https://github.com/cybozu-go/cke/compare/v0.6...v0.7
 [0.6]: https://github.com/cybozu-go/cke/compare/v0.5...v0.6
@@ -56,4 +63,3 @@ This is the first release.
 [0.4]: https://github.com/cybozu-go/cke/compare/v0.3...v0.4
 [0.3]: https://github.com/cybozu-go/cke/compare/v0.2...v0.3
 [0.2]: https://github.com/cybozu-go/cke/compare/v0.1...v0.2
-[Service Accounts]: https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/
