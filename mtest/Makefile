@@ -83,11 +83,11 @@ $(OUTPUT)/vault: $(VAULT_ARCHIVE)
 
 $(OUTPUT)/cke $(OUTPUT)/ckecli:
 	mkdir -p $(OUTPUT)
-	cd ..; gofail enable && \
+	cd ..; gofail enable op && \
 		if GOBIN=$(realpath $(OUTPUT)) go install -mod=vendor ./cmd/$(notdir $@); then \
-			gofail disable; \
+			gofail disable op; \
 		else \
-			gofail disable; \
+			gofail disable op; \
 			exit 1; \
 		fi
 
