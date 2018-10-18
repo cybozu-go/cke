@@ -14,6 +14,8 @@ const (
 
 	rbacRoleName        = "system:kube-apiserver-to-kubelet"
 	rbacRoleBindingName = "system:kube-apiserver"
+
+	etcdEndpointsName = "cke-etcd"
 )
 
 var (
@@ -163,6 +165,18 @@ type kubeRBACRoleInstallOp struct {
 	apiserver     *Node
 	roleExists    bool
 	bindingExists bool
+}
+
+type kubeEtcdEndpointsCreateOp struct {
+	apiserver *Node
+	endpoints []*Node
+	finished  bool
+}
+
+type kubeEtcdEndpointsUpdateOp struct {
+	apiserver *Node
+	endpoints []*Node
+	finished  bool
 }
 
 // RiversBootOp returns an Operator to bootstrap rivers.
@@ -862,6 +876,48 @@ func (o *kubeRBACRoleInstallOp) NextCommand() Commander {
 		return makeRBACRoleBindingCommand{o.apiserver}
 	}
 	return nil
+}
+
+// KubeEtcdEndpointsCreateOp returns an Operator to create Endpoints resource for etcd.
+func KubeEtcdEndpointsCreateOp(apiserver *Node, cpNodes []*Node) Operator {
+	return &kubeEtcdEndpointsCreateOp{
+		apiserver: apiserver,
+		endpoints: cpNodes,
+	}
+}
+
+func (o *kubeEtcdEndpointsCreateOp) Name() string {
+	return "create-etcd-endpoints"
+}
+
+func (o *kubeEtcdEndpointsCreateOp) NextCommand() Commander {
+	if o.finished {
+		return nil
+	}
+
+	o.finished = true
+	return createEtcdEndpointsCommand{o.apiserver, o.endpoints}
+}
+
+// KubeEtcdEndpointsUpdateOp returns an Operator to update Endpoints resource for etcd.
+func KubeEtcdEndpointsUpdateOp(apiserver *Node, cpNodes []*Node) Operator {
+	return &kubeEtcdEndpointsUpdateOp{
+		apiserver: apiserver,
+		endpoints: cpNodes,
+	}
+}
+
+func (o *kubeEtcdEndpointsUpdateOp) Name() string {
+	return "update-etcd-endpoints"
+}
+
+func (o *kubeEtcdEndpointsUpdateOp) NextCommand() Commander {
+	if o.finished {
+		return nil
+	}
+
+	o.finished = true
+	return updateEtcdEndpointsCommand{o.apiserver, o.endpoints}
 }
 
 // ProxyParams returns a ServiceParams form kube-proxy

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -174,10 +175,27 @@ func (d testData) withAllServices() testData {
 	return d
 }
 
-func (d testData) withResources() testData {
+func (d testData) withRBACResources() testData {
 	d.withAllServices()
 	d.Status.Kubernetes.RBACRoleExists = true
 	d.Status.Kubernetes.RBACRoleBindingExists = true
+	return d
+}
+
+func (d testData) withEtcdEndpoints() testData {
+	d.withRBACResources()
+	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
+		Subsets: []corev1.EndpointSubset{
+			{
+				Addresses: []corev1.EndpointAddress{
+					{IP: "10.0.0.11"},
+					{IP: "10.0.0.12"},
+					{IP: "10.0.0.13"},
+				},
+				Ports: []corev1.EndpointPort{{Port: 2379}},
+			},
+		},
+	}
 	return d
 }
 
@@ -403,11 +421,37 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name:        "RBAC",
 			Input:       newData().withAllServices(),
-			ExpectedOps: []string{"install-rbac-role"},
+			ExpectedOps: []string{"create-etcd-endpoints", "install-rbac-role"},
+		},
+		{
+			Name:        "EtcdEndpointsCreate",
+			Input:       newData().withRBACResources(),
+			ExpectedOps: []string{"create-etcd-endpoints"},
+		},
+		{
+			Name: "EtcdEndpointsUpdate1",
+			Input: newData().withEtcdEndpoints().with(func(d testData) {
+				d.Status.Kubernetes.EtcdEndpoints.Subsets = []corev1.EndpointSubset{}
+			}),
+			ExpectedOps: []string{"update-etcd-endpoints"},
+		},
+		{
+			Name: "EtcdEndpointsUpdate2",
+			Input: newData().withEtcdEndpoints().with(func(d testData) {
+				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Ports = []corev1.EndpointPort{}
+			}),
+			ExpectedOps: []string{"update-etcd-endpoints"},
+		},
+		{
+			Name: "EtcdEndpointsUpdate1",
+			Input: newData().withEtcdEndpoints().with(func(d testData) {
+				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
+			}),
+			ExpectedOps: []string{"update-etcd-endpoints"},
 		},
 		{
 			Name:        "AllGreen",
-			Input:       newData().withResources(),
+			Input:       newData().withEtcdEndpoints(),
 			ExpectedOps: nil,
 		},
 		{
@@ -434,7 +478,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "EtcdIsNotGood",
-			Input: newData().withResources().with(func(d testData) {
+			Input: newData().withEtcdEndpoints().with(func(d testData) {
 				// a node is to be added
 				delete(d.Status.Etcd.Members, "10.0.0.13")
 				delete(d.Status.Etcd.InSyncMembers, "10.0.0.13")
@@ -476,7 +520,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "Clean",
-			Input: newData().withResources().with(func(d testData) {
+			Input: newData().withEtcdEndpoints().with(func(d testData) {
 				st := d.Status.NodeStatuses["10.0.0.14"]
 				st.Etcd.Running = true
 				st.Etcd.HasData = true

@@ -15,9 +15,9 @@ import (
 	"github.com/cybozu-go/log"
 	yaml "gopkg.in/yaml.v2"
 
-	core "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EtcdClusterStatus is the status of the etcd cluster.
@@ -29,10 +29,12 @@ type EtcdClusterStatus struct {
 
 // KubernetesClusterStatus contains kubernetes cluster configurations
 type KubernetesClusterStatus struct {
-	Nodes []core.Node
+	Nodes []corev1.Node
 
 	RBACRoleExists        bool
 	RBACRoleBindingExists bool
+
+	EtcdEndpoints *corev1.Endpoints
 }
 
 // ClusterStatus represents the working cluster status.
@@ -331,7 +333,7 @@ func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastr
 	if err != nil {
 		return KubernetesClusterStatus{}, err
 	}
-	resp, err := clientset.CoreV1().Nodes().List(meta.ListOptions{})
+	resp, err := clientset.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		return KubernetesClusterStatus{}, err
 	}
@@ -340,7 +342,7 @@ func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastr
 		Nodes: resp.Items,
 	}
 
-	_, err = clientset.RbacV1().ClusterRoles().Get(rbacRoleName, meta.GetOptions{})
+	_, err = clientset.RbacV1().ClusterRoles().Get(rbacRoleName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.RBACRoleExists = true
@@ -349,10 +351,19 @@ func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastr
 		return KubernetesClusterStatus{}, err
 	}
 
-	_, err = clientset.RbacV1().ClusterRoleBindings().Get(rbacRoleBindingName, meta.GetOptions{})
+	_, err = clientset.RbacV1().ClusterRoleBindings().Get(rbacRoleBindingName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.RBACRoleBindingExists = true
+	case errors.IsNotFound(err):
+	default:
+		return KubernetesClusterStatus{}, err
+	}
+
+	ep, err := clientset.CoreV1().Endpoints("kube-system").Get(etcdEndpointsName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.EtcdEndpoints = ep
 	case errors.IsNotFound(err):
 	default:
 		return KubernetesClusterStatus{}, err
@@ -386,7 +397,7 @@ func (c Controller) checkAPIServerHalth(ctx context.Context, inf Infrastructure,
 	if err != nil {
 		return false, err
 	}
-	_, err = cliantset.CoreV1().Namespaces().List(meta.ListOptions{})
+	_, err = cliantset.CoreV1().Namespaces().List(metav1.ListOptions{})
 	if err != nil {
 		return false, err
 	}

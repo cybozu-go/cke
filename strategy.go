@@ -1,6 +1,9 @@
 package cke
 
-import "github.com/cybozu-go/log"
+import (
+	"github.com/cybozu-go/log"
+	corev1 "k8s.io/api/core/v1"
+)
 
 // DecideOps returns the next operations to do.
 // This returns nil when no operation need to be done.
@@ -140,8 +143,46 @@ func k8sMaintOps(cs *ClusterStatus, nf *NodeFilter) (ops []Operator) {
 	if !ks.RBACRoleExists || !ks.RBACRoleBindingExists {
 		ops = append(ops, KubeRBACRoleInstallOp(apiServer, ks.RBACRoleExists))
 	}
+
+	epOp := decideEpOp(ks.EtcdEndpoints, apiServer, nf.ControlPlane())
+	if epOp != nil {
+		ops = append(ops, epOp)
+	}
+
 	// TODO: maintain Node resources
 	return ops
+}
+
+func decideEpOp(ep *corev1.Endpoints, apiServer *Node, cpNodes []*Node) Operator {
+	if ep == nil {
+		return KubeEtcdEndpointsCreateOp(apiServer, cpNodes)
+	}
+
+	op := KubeEtcdEndpointsUpdateOp(apiServer, cpNodes)
+	if len(ep.Subsets) != 1 {
+		return op
+	}
+
+	subset := ep.Subsets[0]
+	if len(subset.Ports) != 1 || subset.Ports[0].Port != 2379 {
+		return op
+	}
+
+	if len(subset.Addresses) != len(cpNodes) {
+		return op
+	}
+
+	endpoints := make(map[string]bool)
+	for _, n := range cpNodes {
+		endpoints[n.Address] = true
+	}
+	for _, a := range subset.Addresses {
+		if !endpoints[a.IP] {
+			return op
+		}
+	}
+
+	return nil
 }
 
 func cleanOps(c *Cluster, nf *NodeFilter) (ops []Operator) {
