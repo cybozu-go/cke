@@ -20,7 +20,7 @@ github.com/coreos/etcd/pkg/types
 github.com/coreos/etcd/clientv3/namespace
 # github.com/cybozu-go/cmd v1.6.0
 github.com/cybozu-go/cmd
-# github.com/cybozu-go/etcdutil v1.1.0
+# github.com/cybozu-go/etcdutil v1.3.0
 github.com/cybozu-go/etcdutil
 # github.com/cybozu-go/log v1.5.0
 github.com/cybozu-go/log
@@ -162,7 +162,7 @@ github.com/peterbourgon/diskv
 github.com/pkg/errors
 # github.com/ryanuber/go-glob v0.0.0-20170128012129-256dc444b735
 github.com/ryanuber/go-glob
-# github.com/spf13/pflag v1.0.2
+# github.com/spf13/pflag v1.0.3
 github.com/spf13/pflag
 # go.opencensus.io v0.17.0
 go.opencensus.io/trace
@@ -178,7 +178,7 @@ go.opencensus.io/tag
 go.opencensus.io
 go.opencensus.io/stats/internal
 go.opencensus.io/internal/tagencoding
-# golang.org/x/crypto v0.0.0-20180910181607-0e37d006457b
+# golang.org/x/crypto v0.0.0-20181009213950-7c1a557ab941
 golang.org/x/crypto/ssh
 golang.org/x/crypto/curve25519
 golang.org/x/crypto/ed25519
@@ -187,7 +187,7 @@ golang.org/x/crypto/poly1305
 golang.org/x/crypto/ssh/terminal
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/subtle
-# golang.org/x/net v0.0.0-20180911220305-26e67e76b6c3
+# golang.org/x/net v0.0.0-20181005035420-146acd28ed58
 golang.org/x/net/context
 golang.org/x/net/netutil
 golang.org/x/net/http2
@@ -206,7 +206,7 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e
+# golang.org/x/sys v0.0.0-20181005133103-4497e2df6f9e
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 # golang.org/x/text v0.3.0
@@ -251,7 +251,7 @@ google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
 google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
-# google.golang.org/genproto v0.0.0-20180831171423-11092d34479b
+# google.golang.org/genproto v0.0.0-20181004005441-af9cb2a35e7f
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/rpc/code

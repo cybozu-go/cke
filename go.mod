@@ -22,7 +22,7 @@ require (
 	github.com/containerd/continuity v0.0.0-20180913211902-c2ac4ecc9593 // indirect
 	github.com/coreos/etcd v3.3.9+incompatible
 	github.com/cybozu-go/cmd v1.6.0
-	github.com/cybozu-go/etcdutil v1.1.0
+	github.com/cybozu-go/etcdutil v1.3.0
 	github.com/cybozu-go/log v1.5.0
 	github.com/cybozu-go/netutil v1.2.0
 	github.com/denisenkom/go-mssqldb v0.0.0-20180901172138-1eb28afdf9b6 // indirect
@@ -69,7 +69,6 @@ require (
 	github.com/jefferai/jsonx v0.0.0-20160721235117-9cc31c3135ee // indirect
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/keybase/go-crypto v0.0.0-20180913154233-91acd11cb745 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.0.0 // indirect
 	github.com/miekg/dns v1.0.8 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
@@ -91,10 +90,9 @@ require (
 	github.com/pkg/errors v0.8.0
 	github.com/ryanuber/go-glob v0.0.0-20170128012129-256dc444b735 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
-	github.com/spf13/pflag v1.0.2 // indirect
 	github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926 // indirect
 	go.opencensus.io v0.17.0 // indirect
-	golang.org/x/crypto v0.0.0-20180910181607-0e37d006457b
+	golang.org/x/crypto v0.0.0-20181009213950-7c1a557ab941
 	google.golang.org/api v0.0.0-20180910000450-7ca32eb868bf
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce // indirect
 	gopkg.in/vmihailenco/msgpack.v2 v2.9.1 // indirect
