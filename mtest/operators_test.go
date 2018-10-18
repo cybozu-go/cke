@@ -22,7 +22,9 @@ var _ = Describe("Operations", func() {
 		// - SchedulerBootOp
 		// - KubeletBootOp
 		// - KubeProxyBootOp
+		// - KubeWaitOp
 		// - KubeRBACRoleInstallOp
+		// - KubeEtcdEndpointsCreateOp
 
 		By("Stopping etcd servers")
 		// this will run:
@@ -48,6 +50,7 @@ var _ = Describe("Operations", func() {
 		// - ToDo: K8sRemoveNodeOp
 		// - RiversRestartOp
 		// - APIServerRestartOp
+		// - KubeEtcdEndpointsUpdateOp
 		stopCKE()
 		execAt(node2, "sudo", "-b", "reboot", "-f", "-f")
 		time.Sleep(5 * time.Second)

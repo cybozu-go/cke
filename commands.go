@@ -13,8 +13,10 @@ import (
 	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
 	yaml "gopkg.in/yaml.v2"
-	rbac "k8s.io/api/rbac/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -819,6 +821,50 @@ func (c installCNICommand) Command() Command {
 	}
 }
 
+type waitKubeCommand struct {
+	apiserver *Node
+}
+
+func (c waitKubeCommand) Run(ctx context.Context, inf Infrastructure) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	begin := time.Now()
+	for i := 0; i < 100; i++ {
+		_, err = cs.CoreV1().ServiceAccounts("kube-system").Get("default", metav1.GetOptions{})
+		switch {
+		case err == nil:
+			elapsed := time.Now().Sub(begin)
+			log.Info("k8s gets initialized", map[string]interface{}{
+				"elapsed": elapsed.Seconds(),
+			})
+			return nil
+
+		case errors.IsNotFound(err):
+			select {
+			case <-time.After(time.Second):
+			case <-ctx.Done():
+			}
+
+		default:
+			return err
+		}
+	}
+
+	// Timed-out here is not an error because waitKubeCommand will be invoked
+	// again by the controller.
+	return nil
+}
+
+func (c waitKubeCommand) Command() Command {
+	return Command{
+		Name:   "waitKubeCommand",
+		Target: "kube-system sa/default",
+	}
+}
+
 type makeRBACRoleCommand struct {
 	apiserver *Node
 }
@@ -829,8 +875,8 @@ func (c makeRBACRoleCommand) Run(ctx context.Context, inf Infrastructure) error 
 		return err
 	}
 
-	_, err = cs.RbacV1().ClusterRoles().Create(&rbac.ClusterRole{
-		ObjectMeta: meta.ObjectMeta{
+	_, err = cs.RbacV1().ClusterRoles().Create(&rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: rbacRoleName,
 			Labels: map[string]string{
 				"kubernetes.io/bootstrapping": "rbac-defaults",
@@ -841,7 +887,7 @@ func (c makeRBACRoleCommand) Run(ctx context.Context, inf Infrastructure) error 
 				"rbac.authorization.kubernetes.io/autoupdate": "true",
 			},
 		},
-		Rules: []rbac.PolicyRule{
+		Rules: []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
 				// these are virtual resources.
@@ -878,8 +924,8 @@ func (c makeRBACRoleBindingCommand) Run(ctx context.Context, inf Infrastructure)
 		return err
 	}
 
-	_, err = cs.RbacV1().ClusterRoleBindings().Create(&rbac.ClusterRoleBinding{
-		ObjectMeta: meta.ObjectMeta{
+	_, err = cs.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: rbacRoleBindingName,
 			Labels: map[string]string{
 				"kubernetes.io/bootstrapping": "rbac-defaults",
@@ -890,12 +936,12 @@ func (c makeRBACRoleBindingCommand) Run(ctx context.Context, inf Infrastructure)
 				"rbac.authorization.kubernetes.io/autoupdate": "true",
 			},
 		},
-		RoleRef: rbac.RoleRef{
+		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
 			Name:     rbacRoleName,
 		},
-		Subjects: []rbac.Subject{
+		Subjects: []rbacv1.Subject{
 			{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "User",
@@ -911,6 +957,78 @@ func (c makeRBACRoleBindingCommand) Command() Command {
 	return Command{
 		Name:   "makeClusterRoleBinding",
 		Target: rbacRoleBindingName,
+	}
+}
+
+type createEtcdEndpointsCommand struct {
+	apiserver *Node
+	endpoints []*Node
+}
+
+func (c createEtcdEndpointsCommand) Run(ctx context.Context, inf Infrastructure) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	subset := corev1.EndpointSubset{
+		Addresses: make([]corev1.EndpointAddress, len(c.endpoints)),
+		Ports:     []corev1.EndpointPort{{Port: 2379}},
+	}
+	for i, n := range c.endpoints {
+		subset.Addresses[i].IP = n.Address
+	}
+
+	_, err = cs.CoreV1().Endpoints("kube-system").Create(&corev1.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: etcdEndpointsName,
+		},
+		Subsets: []corev1.EndpointSubset{subset},
+	})
+
+	return err
+}
+
+func (c createEtcdEndpointsCommand) Command() Command {
+	return Command{
+		Name:   "createEtcdEndpointsCommand",
+		Target: "kube-system/" + etcdEndpointsName,
+	}
+}
+
+type updateEtcdEndpointsCommand struct {
+	apiserver *Node
+	endpoints []*Node
+}
+
+func (c updateEtcdEndpointsCommand) Run(ctx context.Context, inf Infrastructure) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	subset := corev1.EndpointSubset{
+		Addresses: make([]corev1.EndpointAddress, len(c.endpoints)),
+		Ports:     []corev1.EndpointPort{{Port: 2379}},
+	}
+	for i, n := range c.endpoints {
+		subset.Addresses[i].IP = n.Address
+	}
+
+	_, err = cs.CoreV1().Endpoints("kube-system").Update(&corev1.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: etcdEndpointsName,
+		},
+		Subsets: []corev1.EndpointSubset{subset},
+	})
+
+	return err
+}
+
+func (c updateEtcdEndpointsCommand) Command() Command {
+	return Command{
+		Name:   "updateEtcdEndpointsCommand",
+		Target: "kube-system/" + etcdEndpointsName,
 	}
 }
 
