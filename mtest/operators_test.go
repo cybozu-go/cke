@@ -90,7 +90,10 @@ var _ = Describe("Operations", func() {
 		By("Converting a control plane node to a worker node")
 		// this will run these ops:
 		// - EtcdDestroyMemberOp
-		// - ContainerStopOp
+		// - APIServerStopOp
+		// - ControllerManagerStopOp
+		// - SchedulerStopOp
+		// - EtcdStopOp
 
 		Eventually(func() error {
 			stdout, err := ckecliUnsafe("leader")
