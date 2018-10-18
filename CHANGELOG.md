@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.10] - 2018-10-18
+### Added
+- CKE registeres endpoints of etcd as a Kubernetes `Endpoints` (#75).
+
 ## [0.9] - 2018-10-17
 ### Changed
 - Fixed API server certificates (#69).
@@ -54,7 +58,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.9...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.10...HEAD
+[0.10]: https://github.com/cybozu-go/cke/compare/v0.9...v0.10
 [0.9]: https://github.com/cybozu-go/cke/compare/v0.8...v0.9
 [0.8]: https://github.com/cybozu-go/cke/compare/v0.7...v0.8
 [0.7]: https://github.com/cybozu-go/cke/compare/v0.6...v0.7

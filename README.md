@@ -22,8 +22,11 @@ Requirements
 ### Node OS Requirements
 
 * Docker
+
+    Data in Docker volumes must persist between reboots.
+
 * A user who belongs to `docker` group
-* SSH server for the user
+* SSH access for the user
 
 Planned Features
 ----------------
@@ -33,14 +36,20 @@ Planned Features
     CKE can bootstrap a Kubernetes and [etcd][] cluster from scratch.
     CKE can also add or remove nodes to/from the Kubernetes and etcd cluster.
 
-* Automatic backup for etcd data.
+* Managed etcd cluster
+
+    CKE manages an etcd cluster for Kubernetes.
+    Other applications may also store their data in the same etcd cluster.
+    Backups of etcd data are automatically taken by CKE.
+
+    Details are described in [docs/etcd.md](docs/etcd.md).
 
 * Cluster features:
 
     * HA control plane.
     * [RBAC][].
     * [CNI][] network plugins.
-    * CoreDNS add-on.
+    * [CoreDNS][] add-on.
     * Node-local DNS cache services.
 
 * Sabakan integration
@@ -88,4 +97,5 @@ CKE is licensed under MIT license.
 [Vault]: https://www.vaultproject.io
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 [CNI]: https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/
+[CoreDNS]: https://coredns.io/
 [sabakan]: https://github.com/cybozu-go/sabakan
