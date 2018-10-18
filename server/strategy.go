@@ -1,13 +1,15 @@
-package cke
+package server
 
 import (
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // DecideOps returns the next operations to do.
 // This returns nil when no operation need to be done.
-func DecideOps(c *Cluster, cs *ClusterStatus) []Operator {
+func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus) []cke.Operator {
 
 	nf := NewNodeFilter(c, cs)
 
@@ -20,17 +22,17 @@ func DecideOps(c *Cluster, cs *ClusterStatus) []Operator {
 
 	// 2. Bootstrap etcd cluster, if not yet.
 	if !nf.EtcdBootstrapped() {
-		return []Operator{EtcdBootOp(nf.ControlPlane(), c.Options.Etcd)}
+		return []cke.Operator{op.EtcdBootOp(nf.ControlPlane(), c.Options.Etcd)}
 	}
 
 	// 3. Start etcd containers.
 	if nodes := nf.EtcdStoppedMembers(); len(nodes) > 0 {
-		return []Operator{EtcdStartOp(nodes, c.Options.Etcd)}
+		return []cke.Operator{op.EtcdStartOp(nodes, c.Options.Etcd)}
 	}
 
 	// 4. Wait for etcd cluster to become ready
 	if !cs.Etcd.IsHealthy {
-		return []Operator{EtcdWaitClusterOp(nf.ControlPlane())}
+		return []cke.Operator{op.EtcdWaitClusterOp(nf.ControlPlane())}
 	}
 
 	// 5. Run or restart kubernetes components.
@@ -39,8 +41,8 @@ func DecideOps(c *Cluster, cs *ClusterStatus) []Operator {
 	}
 
 	// 6. Maintain etcd cluster.
-	if op := etcdMaintOp(c, nf); op != nil {
-		return []Operator{op}
+	if o := etcdMaintOp(c, nf); o != nil {
+		return []cke.Operator{o}
 	}
 
 	// 7. Maintain k8s resources.
@@ -56,59 +58,59 @@ func DecideOps(c *Cluster, cs *ClusterStatus) []Operator {
 	return nil
 }
 
-func riversOps(c *Cluster, nf *NodeFilter) (ops []Operator) {
+func riversOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	if nodes := nf.RiversStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, RiversBootOp(nodes, nf.ControlPlane(), c.Options.Rivers))
+		ops = append(ops, op.RiversBootOp(nodes, nf.ControlPlane(), c.Options.Rivers))
 	}
 	if nodes := nf.RiversOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, RiversRestartOp(nodes, nf.ControlPlane(), c.Options.Rivers))
+		ops = append(ops, op.RiversRestartOp(nodes, nf.ControlPlane(), c.Options.Rivers))
 	}
 	return ops
 }
 
-func k8sOps(c *Cluster, nf *NodeFilter) (ops []Operator) {
+func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	if nodes := nf.APIServerStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, APIServerBootOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.Kubelet.Domain, c.Options.APIServer))
+		ops = append(ops, op.APIServerBootOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.Kubelet.Domain, c.Options.APIServer))
 	}
 	if nodes := nf.APIServerOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.APIServer))
+		ops = append(ops, op.APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.APIServer))
 	}
 	if nodes := nf.ControllerManagerStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, ControllerManagerBootOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
+		ops = append(ops, op.ControllerManagerBootOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
 	}
 	if nodes := nf.ControllerManagerOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, ControllerManagerRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
+		ops = append(ops, op.ControllerManagerRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
 	}
 	if nodes := nf.SchedulerStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, SchedulerBootOp(nodes, c.Name, c.Options.Scheduler))
+		ops = append(ops, op.SchedulerBootOp(nodes, c.Name, c.Options.Scheduler))
 	}
 	if nodes := nf.SchedulerOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, SchedulerRestartOp(nodes, c.Name, c.Options.Scheduler))
+		ops = append(ops, op.SchedulerRestartOp(nodes, c.Name, c.Options.Scheduler))
 	}
 	if nodes := nf.KubeletStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, KubeletBootOp(nodes, c.Name, c.PodSubnet, c.Options.Kubelet))
+		ops = append(ops, op.KubeletBootOp(nodes, c.Name, c.PodSubnet, c.Options.Kubelet))
 	}
 	if nodes := nf.KubeletOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, KubeletRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.Kubelet))
+		ops = append(ops, op.KubeletRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.Kubelet))
 	}
 	if nodes := nf.ProxyStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, KubeProxyBootOp(nodes, c.Name, c.Options.Proxy))
+		ops = append(ops, op.KubeProxyBootOp(nodes, c.Name, c.Options.Proxy))
 	}
 	if nodes := nf.ProxyOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, KubeProxyRestartOp(nodes, c.Name, c.Options.Proxy))
+		ops = append(ops, op.KubeProxyRestartOp(nodes, c.Name, c.Options.Proxy))
 	}
 	return ops
 }
 
-func etcdMaintOp(c *Cluster, nf *NodeFilter) Operator {
+func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	if ids := nf.EtcdNonClusterMemberIDs(false); len(ids) > 0 {
-		return EtcdRemoveMemberOp(nf.ControlPlane(), ids)
+		return op.EtcdRemoveMemberOp(nf.ControlPlane(), ids)
 	}
 	if nodes, ids := nf.EtcdNonCPMembers(false); len(nodes) > 0 {
-		return EtcdDestroyMemberOp(nf.ControlPlane(), nodes, ids)
+		return op.EtcdDestroyMemberOp(nf.ControlPlane(), nodes, ids)
 	}
 	if nodes := nf.EtcdUnstartedMembers(); len(nodes) > 0 {
-		return EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
+		return op.EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
 	}
 
 	if !nf.EtcdIsGood() {
@@ -121,31 +123,31 @@ func etcdMaintOp(c *Cluster, nf *NodeFilter) Operator {
 	// all members are in sync.
 
 	if nodes := nf.EtcdNewMembers(); len(nodes) > 0 {
-		return EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
+		return op.EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
 	}
 	if ids := nf.EtcdNonClusterMemberIDs(true); len(ids) > 0 {
-		return EtcdRemoveMemberOp(nf.ControlPlane(), ids)
+		return op.EtcdRemoveMemberOp(nf.ControlPlane(), ids)
 	}
 	if nodes, ids := nf.EtcdNonCPMembers(true); len(ids) > 0 {
-		return EtcdDestroyMemberOp(nf.ControlPlane(), nodes, ids)
+		return op.EtcdDestroyMemberOp(nf.ControlPlane(), nodes, ids)
 	}
 	if nodes := nf.EtcdOutdatedMembers(); len(nodes) > 0 {
-		return EtcdRestartOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
+		return op.EtcdRestartOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
 	}
 
 	return nil
 }
 
-func k8sMaintOps(cs *ClusterStatus, nf *NodeFilter) (ops []Operator) {
+func k8sMaintOps(cs *cke.ClusterStatus, nf *NodeFilter) (ops []cke.Operator) {
 	ks := cs.Kubernetes
 	apiServer := nf.HealthyAPIServer()
 
 	if !ks.IsReady {
-		return []Operator{KubeWaitOp(apiServer)}
+		return []cke.Operator{op.KubeWaitOp(apiServer)}
 	}
 
 	if !ks.RBACRoleExists || !ks.RBACRoleBindingExists {
-		ops = append(ops, KubeRBACRoleInstallOp(apiServer, ks.RBACRoleExists))
+		ops = append(ops, op.KubeRBACRoleInstallOp(apiServer, ks.RBACRoleExists))
 	}
 
 	epOp := decideEpOp(ks.EtcdEndpoints, apiServer, nf.ControlPlane())
@@ -157,23 +159,23 @@ func k8sMaintOps(cs *ClusterStatus, nf *NodeFilter) (ops []Operator) {
 	return ops
 }
 
-func decideEpOp(ep *corev1.Endpoints, apiServer *Node, cpNodes []*Node) Operator {
+func decideEpOp(ep *corev1.Endpoints, apiServer *cke.Node, cpNodes []*cke.Node) cke.Operator {
 	if ep == nil {
-		return KubeEtcdEndpointsCreateOp(apiServer, cpNodes)
+		return op.KubeEtcdEndpointsCreateOp(apiServer, cpNodes)
 	}
 
-	op := KubeEtcdEndpointsUpdateOp(apiServer, cpNodes)
+	updateOp := op.KubeEtcdEndpointsUpdateOp(apiServer, cpNodes)
 	if len(ep.Subsets) != 1 {
-		return op
+		return updateOp
 	}
 
 	subset := ep.Subsets[0]
 	if len(subset.Ports) != 1 || subset.Ports[0].Port != 2379 {
-		return op
+		return updateOp
 	}
 
 	if len(subset.Addresses) != len(cpNodes) {
-		return op
+		return updateOp
 	}
 
 	endpoints := make(map[string]bool)
@@ -182,15 +184,15 @@ func decideEpOp(ep *corev1.Endpoints, apiServer *Node, cpNodes []*Node) Operator
 	}
 	for _, a := range subset.Addresses {
 		if !endpoints[a.IP] {
-			return op
+			return updateOp
 		}
 	}
 
 	return nil
 }
 
-func cleanOps(c *Cluster, nf *NodeFilter) (ops []Operator) {
-	var apiServers, controllerManagers, schedulers, etcds []*Node
+func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
+	var apiServers, controllerManagers, schedulers, etcds []*cke.Node
 
 	for _, n := range c.Nodes {
 		if n.ControlPlane {
@@ -213,16 +215,16 @@ func cleanOps(c *Cluster, nf *NodeFilter) (ops []Operator) {
 	}
 
 	if len(apiServers) > 0 {
-		ops = append(ops, ContainerStopOp(apiServers, kubeAPIServerContainerName))
+		ops = append(ops, op.APIServerStopOp(apiServers))
 	}
 	if len(controllerManagers) > 0 {
-		ops = append(ops, ContainerStopOp(controllerManagers, kubeControllerManagerContainerName))
+		ops = append(ops, op.ControllerManagerStopOp(controllerManagers))
 	}
 	if len(schedulers) > 0 {
-		ops = append(ops, ContainerStopOp(schedulers, kubeSchedulerContainerName))
+		ops = append(ops, op.SchedulerStopOp(schedulers))
 	}
 	if len(etcds) > 0 {
-		ops = append(ops, ContainerStopOp(etcds, etcdContainerName))
+		ops = append(ops, op.EtcdStopOp(etcds))
 	}
 	return ops
 }

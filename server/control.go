@@ -1,4 +1,4 @@
-package cke
+package server
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
+	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
 )
@@ -34,7 +35,7 @@ func (c Controller) Run(ctx context.Context) error {
 		return err
 	}
 
-	e := concurrency.NewElection(c.session, KeyLeader)
+	e := concurrency.NewElection(c.session, cke.KeyLeader)
 
 RETRY:
 	select {
@@ -60,7 +61,7 @@ RETRY:
 	if err2 != nil {
 		return err2
 	}
-	if err == ErrNoLeader {
+	if err == cke.ErrNoLeader {
 		log.Warn("lost the leadership", nil)
 		goto RETRY
 	}
@@ -102,7 +103,7 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 }
 
 func (c Controller) checkLastOp(ctx context.Context, leaderKey string) error {
-	storage := Storage{c.session.Client()}
+	storage := cke.Storage{c.session.Client()}
 	records, err := storage.GetRecords(ctx, 1)
 	if err != nil {
 		return err
@@ -112,7 +113,7 @@ func (c Controller) checkLastOp(ctx context.Context, leaderKey string) error {
 	}
 
 	r := records[0]
-	if r.Status == StatusCancelled || r.Status == StatusCompleted {
+	if r.Status == cke.StatusCancelled || r.Status == cke.StatusCompleted {
 		return nil
 	}
 
@@ -137,10 +138,10 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		}
 	}()
 
-	storage := Storage{c.session.Client()}
+	storage := cke.Storage{c.session.Client()}
 	cluster, err := storage.GetCluster(ctx)
 	switch err {
-	case ErrNotFound:
+	case cke.ErrNotFound:
 		wait = true
 		return nil
 	case nil:
@@ -157,7 +158,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return nil
 	}
 
-	inf, err := NewInfrastructure(ctx, cluster, storage)
+	inf, err := cke.NewInfrastructure(ctx, cluster, storage)
 	if err != nil {
 		wait = true
 		log.Error("failed to initialize infrastructure", map[string]interface{}{
@@ -171,8 +172,8 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	_, err = storage.GetServiceAccountCert(ctx)
 	switch err {
 	case nil:
-	case ErrNotFound:
-		crt, key, err := KubernetesCA{}.issueForServiceAccount(ctx, inf)
+	case cke.ErrNotFound:
+		crt, key, err := cke.KubernetesCA{}.IssueForServiceAccount(ctx, inf)
 		if err != nil {
 			return err
 		}
@@ -214,13 +215,13 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	return nil
 }
 
-func runOp(ctx context.Context, op Operator, leaderKey string, storage Storage, inf Infrastructure) error {
+func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.Storage, inf cke.Infrastructure) error {
 	// register operation record
 	id, err := storage.NextRecordID(ctx)
 	if err != nil {
 		return err
 	}
-	record := NewRecord(id, op.Name())
+	record := cke.NewRecord(id, op.Name())
 	err = storage.RegisterRecord(ctx, leaderKey, record)
 	if err != nil {
 		return err

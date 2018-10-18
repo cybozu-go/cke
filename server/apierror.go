@@ -1,4 +1,4 @@
-package cke
+package server
 
 import "net/http"
 
