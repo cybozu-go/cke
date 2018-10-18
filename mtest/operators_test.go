@@ -22,6 +22,7 @@ var _ = Describe("Operations", func() {
 		// - SchedulerBootOp
 		// - KubeletBootOp
 		// - KubeProxyBootOp
+		// - KubeWaitOp
 		// - KubeRBACRoleInstallOp
 		// - KubeEtcdEndpointsCreateOp
 

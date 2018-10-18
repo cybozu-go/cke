@@ -175,8 +175,14 @@ func (d testData) withAllServices() testData {
 	return d
 }
 
-func (d testData) withRBACResources() testData {
+func (d testData) withK8sReady() testData {
 	d.withAllServices()
+	d.Status.Kubernetes.IsReady = true
+	return d
+}
+
+func (d testData) withRBACResources() testData {
+	d.withK8sReady()
 	d.Status.Kubernetes.RBACRoleExists = true
 	d.Status.Kubernetes.RBACRoleBindingExists = true
 	return d
@@ -419,8 +425,13 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
-			Name:        "RBAC",
+			Name:        "WaiKube",
 			Input:       newData().withAllServices(),
+			ExpectedOps: []string{"wait-kubernetes"},
+		},
+		{
+			Name:        "RBAC",
+			Input:       newData().withK8sReady(),
 			ExpectedOps: []string{"create-etcd-endpoints", "install-rbac-role"},
 		},
 		{

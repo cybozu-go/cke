@@ -140,6 +140,10 @@ func k8sMaintOps(cs *ClusterStatus, nf *NodeFilter) (ops []Operator) {
 	ks := cs.Kubernetes
 	apiServer := nf.HealthyAPIServer()
 
+	if !ks.IsReady {
+		return []Operator{KubeWaitOp(apiServer)}
+	}
+
 	if !ks.RBACRoleExists || !ks.RBACRoleBindingExists {
 		ops = append(ops, KubeRBACRoleInstallOp(apiServer, ks.RBACRoleExists))
 	}

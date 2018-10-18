@@ -29,12 +29,11 @@ type EtcdClusterStatus struct {
 
 // KubernetesClusterStatus contains kubernetes cluster configurations
 type KubernetesClusterStatus struct {
-	Nodes []corev1.Node
-
+	IsReady               bool
+	Nodes                 []corev1.Node
 	RBACRoleExists        bool
 	RBACRoleBindingExists bool
-
-	EtcdEndpoints *corev1.Endpoints
+	EtcdEndpoints         *corev1.Endpoints
 }
 
 // ClusterStatus represents the working cluster status.
@@ -333,14 +332,23 @@ func (c Controller) getKubernetesClusterStatus(ctx context.Context, inf Infrastr
 	if err != nil {
 		return KubernetesClusterStatus{}, err
 	}
+
+	s := KubernetesClusterStatus{}
+
+	_, err = clientset.CoreV1().ServiceAccounts("kube-system").Get("default", metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.IsReady = true
+	case errors.IsNotFound(err):
+	default:
+		return KubernetesClusterStatus{}, err
+	}
+
 	resp, err := clientset.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		return KubernetesClusterStatus{}, err
 	}
-
-	s := KubernetesClusterStatus{
-		Nodes: resp.Items,
-	}
+	s.Nodes = resp.Items
 
 	_, err = clientset.RbacV1().ClusterRoles().Get(rbacRoleName, metav1.GetOptions{})
 	switch {

@@ -161,6 +161,10 @@ type kubeProxyRestartOp struct {
 	finished bool
 }
 
+type kubeWaitOp struct {
+	apiserver *Node
+	finished  bool
+}
 type kubeRBACRoleInstallOp struct {
 	apiserver     *Node
 	roleExists    bool
@@ -852,6 +856,24 @@ func (o *kubeProxyRestartOp) NextCommand() Commander {
 		}
 	}
 	return nil
+}
+
+// KubeWaitOp returns an Operator to wait for Kubernetes resources gets initialized
+func KubeWaitOp(apiserver *Node) Operator {
+	return &kubeWaitOp{apiserver: apiserver}
+}
+
+func (o *kubeWaitOp) Name() string {
+	return "wait-kubernetes"
+}
+
+func (o *kubeWaitOp) NextCommand() Commander {
+	if o.finished {
+		return nil
+	}
+
+	o.finished = true
+	return waitKubeCommand{o.apiserver}
 }
 
 // KubeRBACRoleInstallOp returns an Operator to install ClusterRole and binding for RBAC.

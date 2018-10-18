@@ -15,6 +15,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -817,6 +818,50 @@ func (c installCNICommand) Command() Command {
 	return Command{
 		Name:   "install-cni",
 		Target: strings.Join(targets, ","),
+	}
+}
+
+type waitKubeCommand struct {
+	apiserver *Node
+}
+
+func (c waitKubeCommand) Run(ctx context.Context, inf Infrastructure) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	begin := time.Now()
+	for i := 0; i < 100; i++ {
+		_, err = cs.CoreV1().ServiceAccounts("kube-system").Get("default", metav1.GetOptions{})
+		switch {
+		case err == nil:
+			elapsed := time.Now().Sub(begin)
+			log.Info("k8s gets initialized", map[string]interface{}{
+				"elapsed": elapsed.Seconds(),
+			})
+			return nil
+
+		case errors.IsNotFound(err):
+			select {
+			case <-time.After(time.Second):
+			case <-ctx.Done():
+			}
+
+		default:
+			return err
+		}
+	}
+
+	// Timed-out here is not an error because waitKubeCommand will be invoked
+	// again by the controller.
+	return nil
+}
+
+func (c waitKubeCommand) Command() Command {
+	return Command{
+		Name:   "waitKubeCommand",
+		Target: "kube-system sa/default",
 	}
 }
 
