@@ -48,4 +48,11 @@ var _ = Describe("Kubernetes", func() {
 			return errors.New("pod is not yet ready")
 		}).Should(Succeed())
 	})
+
+	It("has kube-system/cke-etcd Service and Endpoints", func() {
+		_, err := kubectl("-n", "kube-system", "get", "services/cke-etcd")
+		Expect(err).ShouldNot(HaveOccurred())
+		_, err = kubectl("-n", "kube-system", "get", "endpoints/cke-etcd")
+		Expect(err).ShouldNot(HaveOccurred())
+	})
 })
