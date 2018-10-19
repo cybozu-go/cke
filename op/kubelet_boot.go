@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -83,7 +84,7 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 			if len(o.params.BootTaints) > 0 {
 				argl := make([]string, len(o.params.BootTaints))
 				for i, t := range o.params.BootTaints {
-					argl[i] = t.ToString()
+					argl[i] = fmt.Sprintf("%s=%s:%s", t.Key, t.Value, t.Effect)
 				}
 				params.ExtraArguments = append(params.ExtraArguments,
 					"--register-with-taints="+strings.Join(argl, ","))
