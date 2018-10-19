@@ -23,14 +23,29 @@ Node
 
 A `Node` has these fields:
 
-Name            | Required | Type   | Description
---------------- | -------- | ------ | -----------
-`address`       | true     | string | IP address of the node.
-`hostname`      | false    | string | Override the real hostname of the node in k8s.
-`user`          | true     | string | SSH user name.
-`ssh_key`       | false    | string | SSH private key of the user.
-`control_plane` | false    | bool   | If true, the node will be used for k8s control plane and etcd.
-`labels`        | false    | object | Node labels for k8s.
+Name            | Required | Type      | Description
+--------------- | -------- | --------- | -----------
+`address`       | true     | string    | IP address of the node.
+`hostname`      | false    | string    | Override the real hostname of the node in k8s.
+`user`          | true     | string    | SSH user name.
+`ssh_key`       | false    | string    | SSH private key of the user.
+`control_plane` | false    | bool      | If true, the node will be used for k8s control plane and etcd.
+`annotations`   | false    | object    | Node annotations.
+`labels`        | false    | object    | Node labels.
+`taints`        | false    | `[]Taint` | Node taints.
+`boot-taints`   | false    | `[]Taint` | Bootstrap node taints.
+
+`boot-taints` are added when a new Node is registered with Kubernetes.
+They can be removed manually when they are no longer needed.
+
+Taint
+-----
+
+Name     | Required | Type   | Description
+-------- | -------- | ------ | -----------
+`key`    | true     | string | The taint key to be applied to a node.
+`value`  | false    | string | The taint value corresponding to the taint key.
+`effect` | true     | string | The effect of the taint on pods that do not tolerate the taint. Valid effects are `NoSchedule`, `PreferNoSchedule` and `NoExecute`.
 
 Options
 -------

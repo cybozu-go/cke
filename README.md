@@ -51,6 +51,7 @@ Planned Features
     * [CNI][] network plugins.
     * [CoreDNS][] add-on.
     * Node-local DNS cache services.
+    * Nodes can be registered with [Taints][].
 
 * Sabakan integration
 
@@ -99,3 +100,4 @@ CKE is licensed under MIT license.
 [CNI]: https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/
 [CoreDNS]: https://coredns.io/
 [sabakan]: https://github.com/cybozu-go/sabakan
+[Taints]: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
