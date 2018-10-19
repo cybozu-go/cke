@@ -49,6 +49,10 @@ options:
   kubelet:
     domain: my.domain
     allow_swap: true
+    boot-taints:
+      - key: taint1
+        value: tainted
+        effect: NoExecute
     extra_args:
       - arg1
 `
@@ -115,6 +119,19 @@ options:
 	}
 	if !c.Options.Kubelet.AllowSwap {
 		t.Error(`!c.Options.Kubelet.AllowSwap`)
+	}
+	if len(c.Options.Kubelet.BootTaints) != 1 {
+		t.Fatal(`len(c.Options.Kubelet.BootTaints) != 1`)
+	}
+	taint := c.Options.Kubelet.BootTaints[0]
+	if taint.Key != "taint1" {
+		t.Error(`taint.Key != "taint1"`)
+	}
+	if taint.Value != "tainted" {
+		t.Error(`taint.Value != "tainted"`)
+	}
+	if taint.Effect != "NoExecute" {
+		t.Error(`taint.Effect != "NoExecute"`)
 	}
 	if !reflect.DeepEqual(c.Options.Kubelet.ExtraArguments, []string{"arg1"}) {
 		t.Error(`!reflect.DeepEqual(c.Options.Kubelet.ExtraArguments, []string{"arg1"})`)

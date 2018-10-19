@@ -33,10 +33,6 @@ Name            | Required | Type      | Description
 `annotations`   | false    | object    | Node annotations.
 `labels`        | false    | object    | Node labels.
 `taints`        | false    | `[]Taint` | Node taints.
-`boot-taints`   | false    | `[]Taint` | Bootstrap node taints.
-
-`boot-taints` are added when a new Node is registered with Kubernetes.
-They can be removed manually when they are no longer needed.
 
 Taint
 -----
@@ -96,10 +92,14 @@ Name              | Required | Type   | Description
 
 ### KubeletParams
 
-Name              | Required | Type   | Description
------------------ | -------- | ------ | -----------
-`domain`          | false    | string | The base domain for the cluster.  Default: `cluster.local`.
-`allow_swap`      | false    | bool   | Do not fail even when swap is on.
-`extra_args`      | false    | array  | Extra command-line arguments.  List of strings.
-`extra_binds`     | false    | array  | Extra bind mounts.  List of `Mount`.
-`extra_env`       | false    | object | Extra environment variables.
+Name              | Required | Type      | Description
+----------------- | -------- | --------- | -----------
+`domain`          | false    | string    | The base domain for the cluster.  Default: `cluster.local`.
+`allow_swap`      | false    | bool      | Do not fail even when swap is on.
+`boot-taints`     | false    | `[]Taint` | Bootstrap node taints.
+`extra_args`      | false    | array     | Extra command-line arguments.  List of strings.
+`extra_binds`     | false    | array     | Extra bind mounts.  List of `Mount`.
+`extra_env`       | false    | object    | Extra environment variables.
+
+`boot-taints` are added when a new Node is registered with Kubernetes.
+They can be removed manually when they are no longer needed.

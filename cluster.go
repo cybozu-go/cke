@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"golang.org/x/crypto/ssh"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Node represents a node in Kubernetes.
@@ -15,7 +16,9 @@ type Node struct {
 	User         string            `json:"user"          yaml:"user"`
 	SSHKey       string            `json:"ssh_key"       yaml:"ssh_key"`
 	ControlPlane bool              `json:"control_plane" yaml:"control_plane"`
+	Annotations  map[string]string `json:"annotations"   yaml:"annotations"`
 	Labels       map[string]string `json:"labels"        yaml:"labels"`
+	Taints       []corev1.Taint    `json:"taints"        yaml:"taints"`
 
 	signer ssh.Signer
 }
@@ -97,8 +100,9 @@ type EtcdParams struct {
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
 	ServiceParams `yaml:",inline"`
-	Domain        string `json:"domain"      yaml:"domain"`
-	AllowSwap     bool   `json:"allow_swap"  yaml:"allow_swap"`
+	Domain        string         `json:"domain"      yaml:"domain"`
+	AllowSwap     bool           `json:"allow_swap"  yaml:"allow_swap"`
+	BootTaints    []corev1.Taint `json:"boot-taints"   yaml:"boot-taints"`
 }
 
 // Options is a set of optional parameters for k8s components.

@@ -217,9 +217,8 @@ func connectEtcd() (*clientv3.Client, error) {
 	return etcdutil.NewClient(etcdConfig)
 }
 
-func getClusterStatus() (*cke.ClusterStatus, error) {
+func getClusterStatus(cluster *cke.Cluster) (*cke.ClusterStatus, error) {
 	controller := server.NewController(nil, 0, time.Second*2)
-	cluster := getCluster()
 
 	etcd, err := connectEtcd()
 	if err != nil {
@@ -233,9 +232,6 @@ func getClusterStatus() (*cke.ClusterStatus, error) {
 	}
 	defer inf.Close()
 
-	for _, n := range cluster.Nodes {
-		n.ControlPlane = true
-	}
 	return controller.GetClusterStatus(context.Background(), cluster, inf)
 }
 
@@ -289,7 +285,7 @@ func (e checkError) Error() string {
 }
 
 func checkCluster(c *cke.Cluster) error {
-	status, err := getClusterStatus()
+	status, err := getClusterStatus(c)
 	if err != nil {
 		return err
 	}
