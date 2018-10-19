@@ -5,8 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cybozu-go/cke"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var _ = Describe("Operations", func() {
@@ -76,10 +78,40 @@ var _ = Describe("Operations", func() {
 		for i := 0; i < 3; i++ {
 			cluster.Nodes[i].ControlPlane = true
 		}
+		cluster.Nodes = append(cluster.Nodes, &cke.Node{
+			Address: node6,
+			User:    "cybozu",
+		})
+		Expect(cluster.Validate()).NotTo(HaveOccurred())
+		cluster.Options.Kubelet.BootTaints = []corev1.Taint{
+			{
+				Key:    "coil.cybozu.com/bootstrap",
+				Effect: corev1.TaintEffectNoSchedule,
+			},
+		}
 		ckecliClusterSet(cluster)
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
+
+		// check bootstrap taints for node6
+		status, err := getClusterStatus(cluster)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(status.Kubernetes.Nodes).Should(HaveLen(len(cluster.Nodes)))
+		for _, n := range status.Kubernetes.Nodes {
+			if n.Name != node6 {
+				Expect(n.Spec.Taints).Should(BeEmpty())
+				continue
+			}
+
+			Expect(n.Spec.Taints).Should(HaveLen(1))
+			taint := n.Spec.Taints[0]
+			Expect(taint.Key).Should(Equal("coil.cybozu.com/bootstrap"))
+			Expect(taint.Value).Should(BeEmpty())
+			Expect(taint.Effect).Should(Equal(corev1.TaintEffectNoSchedule))
+		}
+
 		// check leader change
 		newLeader := strings.TrimSpace(string(ckecli("leader")))
 		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))

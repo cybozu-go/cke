@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -79,7 +80,16 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			paramsMap[n.Address] = KubeletServiceParams(n)
+			params := KubeletServiceParams(n)
+			if len(o.params.BootTaints) > 0 {
+				argl := make([]string, len(o.params.BootTaints))
+				for i, t := range o.params.BootTaints {
+					argl[i] = fmt.Sprintf("%s=%s:%s", t.Key, t.Value, t.Effect)
+				}
+				params.ExtraArguments = append(params.ExtraArguments,
+					"--register-with-taints="+strings.Join(argl, ","))
+			}
+			paramsMap[n.Address] = params
 		}
 		return common.RunContainerCommand(o.nodes, kubeletContainerName, cke.HyperkubeImage,
 			common.WithOpts(opts),

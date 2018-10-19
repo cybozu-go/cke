@@ -10,8 +10,6 @@ nodes:
     user: cybozu
   - address: @NODE5@
     user: cybozu
-  - address: @NODE6@
-    user: cybozu
 ssh_key: |-
   -----BEGIN RSA PRIVATE KEY-----
   MIIEowIBAAKCAQEAqGDTa8Fw0qWuQ/7xvsTdFfP0oqgpXUxl8FpOFWpJWTUM9ZhJ

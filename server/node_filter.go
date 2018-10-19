@@ -353,13 +353,27 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 			fallthrough
 		case currentOpts.AllowSwap != st.AllowSwap:
 			fallthrough
-		case !currentBuiltIn.Equal(st.BuiltInParams):
+		case !kubeletEqualParams(st.BuiltInParams, currentBuiltIn):
 			fallthrough
 		case !currentExtra.Equal(st.ExtraParams):
 			nodes = append(nodes, n)
 		}
 	}
 	return nodes
+}
+
+func kubeletEqualParams(running, current cke.ServiceParams) bool {
+	// NOTE ignore parameter "--register-with-taints".
+	// This option is used only when kubelet registers the node first time.
+	var rarg []string
+	for _, s := range running.ExtraArguments {
+		if !strings.HasPrefix(s, "--register-with-taints") {
+			rarg = append(rarg, s)
+		}
+	}
+
+	running.ExtraArguments = rarg
+	return running.Equal(current)
 }
 
 // ProxyStoppedNodes returns nodes that are not running kube-proxy.

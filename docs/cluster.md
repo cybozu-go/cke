@@ -23,14 +23,25 @@ Node
 
 A `Node` has these fields:
 
-Name            | Required | Type   | Description
---------------- | -------- | ------ | -----------
-`address`       | true     | string | IP address of the node.
-`hostname`      | false    | string | Override the real hostname of the node in k8s.
-`user`          | true     | string | SSH user name.
-`ssh_key`       | false    | string | SSH private key of the user.
-`control_plane` | false    | bool   | If true, the node will be used for k8s control plane and etcd.
-`labels`        | false    | object | Node labels for k8s.
+Name            | Required | Type      | Description
+--------------- | -------- | --------- | -----------
+`address`       | true     | string    | IP address of the node.
+`hostname`      | false    | string    | Override the real hostname of the node in k8s.
+`user`          | true     | string    | SSH user name.
+`ssh_key`       | false    | string    | SSH private key of the user.
+`control_plane` | false    | bool      | If true, the node will be used for k8s control plane and etcd.
+`annotations`   | false    | object    | Node annotations.
+`labels`        | false    | object    | Node labels.
+`taints`        | false    | `[]Taint` | Node taints.
+
+Taint
+-----
+
+Name     | Required | Type   | Description
+-------- | -------- | ------ | -----------
+`key`    | true     | string | The taint key to be applied to a node.
+`value`  | false    | string | The taint value corresponding to the taint key.
+`effect` | true     | string | The effect of the taint on pods that do not tolerate the taint. Valid effects are `NoSchedule`, `PreferNoSchedule` and `NoExecute`.
 
 Options
 -------
@@ -81,10 +92,14 @@ Name              | Required | Type   | Description
 
 ### KubeletParams
 
-Name              | Required | Type   | Description
------------------ | -------- | ------ | -----------
-`domain`          | false    | string | The base domain for the cluster.  Default: `cluster.local`.
-`allow_swap`      | false    | bool   | Do not fail even when swap is on.
-`extra_args`      | false    | array  | Extra command-line arguments.  List of strings.
-`extra_binds`     | false    | array  | Extra bind mounts.  List of `Mount`.
-`extra_env`       | false    | object | Extra environment variables.
+Name              | Required | Type      | Description
+----------------- | -------- | --------- | -----------
+`domain`          | false    | string    | The base domain for the cluster.  Default: `cluster.local`.
+`allow_swap`      | false    | bool      | Do not fail even when swap is on.
+`boot-taints`     | false    | `[]Taint` | Bootstrap node taints.
+`extra_args`      | false    | array     | Extra command-line arguments.  List of strings.
+`extra_binds`     | false    | array     | Extra bind mounts.  List of `Mount`.
+`extra_env`       | false    | object    | Extra environment variables.
+
+`boot-taints` are added when a new Node is registered with Kubernetes.
+They can be removed manually when they are no longer needed.
