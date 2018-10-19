@@ -98,6 +98,7 @@ var _ = Describe("Operations", func() {
 		status, err := getClusterStatus(cluster)
 		Expect(err).NotTo(HaveOccurred())
 
+		Expect(status.Kubernetes.Nodes).Should(HaveLen(len(cluster.Nodes)))
 		for _, n := range status.Kubernetes.Nodes {
 			if n.Name != node6 {
 				Expect(n.Spec.Taints).Should(BeEmpty())
