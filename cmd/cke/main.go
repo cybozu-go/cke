@@ -8,6 +8,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/server"
 	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
@@ -70,10 +71,10 @@ func main() {
 	if err != nil {
 		log.ErrorExit(err)
 	}
-	controller := cke.NewController(session, interval, timeout)
+	controller := server.NewController(session, interval, timeout)
 
 	cmd.Go(controller.Run)
-	server := cke.Server{
+	server := server.Server{
 		EtcdClient: etcd,
 		Timeout:    timeout,
 	}

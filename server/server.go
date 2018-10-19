@@ -1,4 +1,4 @@
-package cke
+package server
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
+	"github.com/cybozu-go/cke"
 )
 
 // Server is the cke server.
@@ -35,7 +36,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	renderJSON(w, version{
-		Version: Version,
+		Version: cke.Version,
 	}, http.StatusOK)
 }
 

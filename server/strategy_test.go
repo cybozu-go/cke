@@ -1,4 +1,4 @@
-package cke
+package server
 
 import (
 	"reflect"
@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -15,11 +17,11 @@ const (
 )
 
 type testData struct {
-	Cluster *Cluster
-	Status  *ClusterStatus
+	Cluster *cke.Cluster
+	Status  *cke.ClusterStatus
 }
 
-func (d testData) ControlPlane() (nodes []*Node) {
+func (d testData) ControlPlane() (nodes []*cke.Node) {
 	for _, n := range d.Cluster.Nodes {
 		if n.ControlPlane {
 			nodes = append(nodes, n)
@@ -28,14 +30,14 @@ func (d testData) ControlPlane() (nodes []*Node) {
 	return nodes
 }
 
-func (d testData) NodeStatus(n *Node) *NodeStatus {
+func (d testData) NodeStatus(n *cke.Node) *cke.NodeStatus {
 	return d.Status.NodeStatuses[n.Address]
 }
 
 func newData() testData {
-	cluster := &Cluster{
+	cluster := &cke.Cluster{
 		Name: testClusterName,
-		Nodes: []*Node{
+		Nodes: []*cke.Node{
 			{Address: "10.0.0.11", ControlPlane: true},
 			{Address: "10.0.0.12", ControlPlane: true},
 			{Address: "10.0.0.13", ControlPlane: true},
@@ -45,14 +47,14 @@ func newData() testData {
 		},
 		ServiceSubnet: testServiceSubnet,
 	}
-	status := &ClusterStatus{
-		NodeStatuses: map[string]*NodeStatus{
-			"10.0.0.11": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: false}, HasData: false}},
-			"10.0.0.12": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: false}, HasData: false}},
-			"10.0.0.13": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: false}, HasData: false}},
-			"10.0.0.14": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: false}, HasData: false}},
-			"10.0.0.15": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: false}, HasData: false}},
-			"10.0.0.16": {Etcd: EtcdStatus{ServiceStatus: ServiceStatus{Running: false}, HasData: false}},
+	status := &cke.ClusterStatus{
+		NodeStatuses: map[string]*cke.NodeStatus{
+			"10.0.0.11": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
+			"10.0.0.12": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
+			"10.0.0.13": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
+			"10.0.0.14": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
+			"10.0.0.15": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
+			"10.0.0.16": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
 		},
 	}
 
@@ -67,8 +69,8 @@ func (d testData) with(f func(data testData)) testData {
 func (d testData) withRivers() testData {
 	for _, v := range d.Status.NodeStatuses {
 		v.Rivers.Running = true
-		v.Rivers.Image = ToolsImage.Name()
-		v.Rivers.BuiltInParams = RiversParams(d.ControlPlane())
+		v.Rivers.Image = cke.ToolsImage.Name()
+		v.Rivers.BuiltInParams = op.RiversParams(d.ControlPlane())
 	}
 	return d
 }
@@ -85,8 +87,8 @@ func (d testData) withUnhealthyEtcd() testData {
 	for _, n := range d.ControlPlane() {
 		st := &d.NodeStatus(n).Etcd
 		st.Running = true
-		st.Image = EtcdImage.Name()
-		st.BuiltInParams = etcdBuiltInParams(n, nil, "")
+		st.Image = cke.EtcdImage.Name()
+		st.BuiltInParams = op.EtcdBuiltInParams(n, nil, "")
 	}
 	return d
 }
@@ -112,8 +114,8 @@ func (d testData) withAPIServer(serviceSubnet string) testData {
 		st := &d.NodeStatus(n).APIServer
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = HyperkubeImage.Name()
-		st.BuiltInParams = APIServerParams(d.ControlPlane(), n.Address, serviceSubnet)
+		st.Image = cke.HyperkubeImage.Name()
+		st.BuiltInParams = op.APIServerParams(d.ControlPlane(), n.Address, serviceSubnet)
 	}
 	return d
 }
@@ -123,8 +125,8 @@ func (d testData) withControllerManager(name, serviceSubnet string) testData {
 		st := &d.NodeStatus(n).ControllerManager
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = HyperkubeImage.Name()
-		st.BuiltInParams = ControllerManagerParams(name, serviceSubnet)
+		st.Image = cke.HyperkubeImage.Name()
+		st.BuiltInParams = op.ControllerManagerParams(name, serviceSubnet)
 	}
 	return d
 }
@@ -134,8 +136,8 @@ func (d testData) withScheduler() testData {
 		st := &d.NodeStatus(n).Scheduler
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = HyperkubeImage.Name()
-		st.BuiltInParams = SchedulerParams()
+		st.Image = cke.HyperkubeImage.Name()
+		st.BuiltInParams = op.SchedulerParams()
 	}
 	return d
 }
@@ -145,8 +147,8 @@ func (d testData) withKubelet(domain string, allowSwap bool) testData {
 		st := &d.NodeStatus(n).Kubelet
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = HyperkubeImage.Name()
-		st.BuiltInParams = KubeletServiceParams(n)
+		st.Image = cke.HyperkubeImage.Name()
+		st.BuiltInParams = op.KubeletServiceParams(n)
 		st.Domain = domain
 		st.AllowSwap = allowSwap
 	}
@@ -158,8 +160,8 @@ func (d testData) withProxy() testData {
 		st := &v.Proxy
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = HyperkubeImage.Name()
-		st.BuiltInParams = ProxyParams()
+		st.Image = cke.HyperkubeImage.Name()
+		st.BuiltInParams = op.ProxyParams()
 	}
 	return d
 }
@@ -539,7 +541,12 @@ func TestDecideOps(t *testing.T) {
 				st.ControllerManager.Running = true
 				st.Scheduler.Running = true
 			}),
-			ExpectedOps: []string{"container-stop", "container-stop", "container-stop", "container-stop"},
+			ExpectedOps: []string{
+				"stop-etcd",
+				"stop-kube-apiserver",
+				"stop-kube-controller-manager",
+				"stop-kube-scheduler",
+			},
 		},
 	}
 

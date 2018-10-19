@@ -4,7 +4,6 @@ import (
 	"context"
 	"net"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/cybozu-go/log"
@@ -18,9 +17,6 @@ const (
 	CAEtcdPeer   = "cke/ca-etcd-peer"
 	CAEtcdClient = "cke/ca-etcd-client"
 	CAKubernetes = "cke/ca-kubernetes"
-
-	etcdPKIPath = "/etc/etcd/pki"
-	k8sPKIPath  = "/etc/kubernetes/pki"
 )
 
 // addRole adds a role to CA if not exists.
@@ -47,20 +43,11 @@ func addRole(client *vault.Client, ca, role string, data map[string]interface{})
 	return err
 }
 
-// EtcdPKIPath returns a certificate file path for k8s.
-func EtcdPKIPath(p string) string {
-	return filepath.Join(etcdPKIPath, p)
-}
-
-// K8sPKIPath returns a certificate file path for k8s.
-func K8sPKIPath(p string) string {
-	return filepath.Join(k8sPKIPath, p)
-}
-
 // EtcdCA is a certificate authority for etcd cluster.
 type EtcdCA struct{}
 
-func (e EtcdCA) issueServerCert(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
+// IssueServerCert issues TLS server certificates.
+func (e EtcdCA) IssueServerCert(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
 	return issueCertificate(inf, CAServer, "system",
 		map[string]interface{}{
 			"ttl":            "87600h",
@@ -75,7 +62,8 @@ func (e EtcdCA) issueServerCert(ctx context.Context, inf Infrastructure, node *N
 		})
 }
 
-func (e EtcdCA) issuePeerCert(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
+// IssuePeerCert issues TLS certificates for mutual peer authentication.
+func (e EtcdCA) IssuePeerCert(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
 	return issueCertificate(inf, CAEtcdPeer, "system",
 		map[string]interface{}{
 			"ttl":            "87600h",
@@ -89,7 +77,8 @@ func (e EtcdCA) issuePeerCert(ctx context.Context, inf Infrastructure, node *Nod
 		})
 }
 
-func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
+// IssueForAPIServer issues TLC client certificate for Kubernetes.
+func (e EtcdCA) IssueForAPIServer(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
 	return issueCertificate(inf, CAEtcdClient, "system",
 		map[string]interface{}{
 			"ttl":            "87600h",
@@ -103,7 +92,7 @@ func (e EtcdCA) issueForAPIServer(ctx context.Context, inf Infrastructure, node 
 		})
 }
 
-// IssueRoot generate the certificate for admin role
+// IssueRoot issues certificate for root user.
 func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
 	return issueCertificate(inf, CAEtcdClient, "admin",
 		map[string]interface{}{
@@ -119,7 +108,7 @@ func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key st
 		})
 }
 
-// IssueEtcdClientCertificate generate the certificate for target role
+// IssueEtcdClientCertificate issues TLS client certificate for a target role.
 func IssueEtcdClientCertificate(inf Infrastructure, role, commonName, ttl string) (cert, key string, err error) {
 	return issueCertificate(inf, CAEtcdClient, role,
 		map[string]interface{}{
@@ -138,7 +127,7 @@ func IssueEtcdClientCertificate(inf Infrastructure, role, commonName, ttl string
 // KubernetesCA is a certificate authority for k8s cluster.
 type KubernetesCA struct{}
 
-// IssueAdminCert issues client certificates for cluster admin user.
+// IssueAdminCert issues client certificate for cluster admin user.
 func (k KubernetesCA) IssueAdminCert(ctx context.Context, inf Infrastructure, ttl string) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "admin",
 		map[string]interface{}{
@@ -155,7 +144,8 @@ func (k KubernetesCA) IssueAdminCert(ctx context.Context, inf Infrastructure, tt
 		})
 }
 
-func (k KubernetesCA) issueForAPIServer(ctx context.Context, inf Infrastructure, n *Node, serviceSubnet, domain string) (crt, key string, err error) {
+// IssueForAPIServer issues TLS certificate for API servers.
+func (k KubernetesCA) IssueForAPIServer(ctx context.Context, inf Infrastructure, n *Node, serviceSubnet, domain string) (crt, key string, err error) {
 	altNames := []string{
 		"localhost",
 		"kubernetes",
@@ -190,7 +180,8 @@ func (k KubernetesCA) issueForAPIServer(ctx context.Context, inf Infrastructure,
 		})
 }
 
-func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
+// IssueForScheduler issues TLS certificate for kube-scheduler.
+func (k KubernetesCA) IssueForScheduler(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "kube-scheduler",
 		map[string]interface{}{
 			"ttl":               "87600h",
@@ -205,7 +196,8 @@ func (k KubernetesCA) issueForScheduler(ctx context.Context, inf Infrastructure)
 		})
 }
 
-func (k KubernetesCA) issueForControllerManager(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
+// IssueForControllerManager issues TLS certificate for kube-controller-manager.
+func (k KubernetesCA) IssueForControllerManager(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "kube-controller-manager",
 		map[string]interface{}{
 			"ttl":               "87600h",
@@ -220,7 +212,8 @@ func (k KubernetesCA) issueForControllerManager(ctx context.Context, inf Infrast
 		})
 }
 
-func (k KubernetesCA) issueForKubelet(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
+// IssueForKubelet issues TLS certificate for kubelet.
+func (k KubernetesCA) IssueForKubelet(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
 	nodename := node.Nodename()
 	altNames := "localhost"
 	if nodename != node.Address {
@@ -243,7 +236,8 @@ func (k KubernetesCA) issueForKubelet(ctx context.Context, inf Infrastructure, n
 		})
 }
 
-func (k KubernetesCA) issueForProxy(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
+// IssueForProxy issues TLS certificate for kube-proxy.
+func (k KubernetesCA) IssueForProxy(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "kube-proxy",
 		map[string]interface{}{
 			"ttl":               "87600h",
@@ -258,7 +252,8 @@ func (k KubernetesCA) issueForProxy(ctx context.Context, inf Infrastructure) (cr
 		})
 }
 
-func (k KubernetesCA) issueForServiceAccount(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
+// IssueForServiceAccount issues TLS certificate to sign service account tokens.
+func (k KubernetesCA) IssueForServiceAccount(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, "service-account",
 		map[string]interface{}{
 			"ttl":            "87600h",

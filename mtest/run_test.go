@@ -14,6 +14,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/server"
 	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/etcdutil"
 	"golang.org/x/crypto/ssh"
@@ -217,7 +218,7 @@ func connectEtcd() (*clientv3.Client, error) {
 }
 
 func getClusterStatus() (*cke.ClusterStatus, error) {
-	controller := cke.NewController(nil, 0, time.Second*2)
+	controller := server.NewController(nil, 0, time.Second*2)
 	cluster := getCluster()
 
 	etcd, err := connectEtcd()
@@ -293,12 +294,12 @@ func checkCluster(c *cke.Cluster) error {
 		return err
 	}
 
-	nf := cke.NewNodeFilter(c, status)
+	nf := server.NewNodeFilter(c, status)
 	if !nf.EtcdIsGood() {
 		return errors.New("etcd cluster is not good")
 	}
 
-	ops := cke.DecideOps(c, status)
+	ops := server.DecideOps(c, status)
 	if len(ops) == 0 {
 		return nil
 	}

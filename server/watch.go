@@ -1,9 +1,10 @@
-package cke
+package server
 
 import (
 	"context"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/cybozu-go/cke"
 )
 
 func initStateless(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{}) (int64, error) {
@@ -12,14 +13,14 @@ func initStateless(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{
 		ch <- struct{}{}
 	}()
 
-	resp, err := etcd.Get(ctx, KeyVault)
+	resp, err := etcd.Get(ctx, cke.KeyVault)
 	if err != nil {
 		return 0, err
 	}
 	rev := resp.Header.Revision
 
 	if resp.Count == 1 {
-		err = ConnectVault(ctx, resp.Kvs[0].Value)
+		err = cke.ConnectVault(ctx, resp.Kvs[0].Value)
 		if err != nil {
 			return 0, err
 		}
@@ -43,13 +44,13 @@ func startWatcher(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{}
 
 			key := string(ev.Kv.Key)
 			switch key {
-			case KeyCluster:
+			case cke.KeyCluster:
 				select {
 				case ch <- struct{}{}:
 				default:
 				}
-			case KeyVault:
-				err = ConnectVault(ctx, ev.Kv.Value)
+			case cke.KeyVault:
+				err = cke.ConnectVault(ctx, ev.Kv.Value)
 				if err != nil {
 					return err
 				}

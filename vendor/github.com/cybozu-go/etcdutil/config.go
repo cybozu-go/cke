@@ -7,7 +7,7 @@ const (
 
 var (
 	// DefaultEndpoints is default etcd servers.
-	DefaultEndpoints = []string{"http://127.0.0.1:2379", "http://127.0.0.1:4001"}
+	DefaultEndpoints = []string{"http://127.0.0.1:2379"}
 )
 
 // Config represents configuration parameters to access etcd.

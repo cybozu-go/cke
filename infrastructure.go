@@ -58,6 +58,7 @@ func setVaultClient(client *vault.Client) {
 type Infrastructure interface {
 	Close()
 	Agent(addr string) Agent
+	Engine(addr string) ContainerEngine
 	Vault() (*vault.Client, error)
 	Storage() Storage
 
@@ -129,6 +130,10 @@ func NewInfrastructureWithoutSSH(s Storage) Infrastructure {
 
 func (i ckeInfrastructure) Agent(addr string) Agent {
 	return i.agents[addr]
+}
+
+func (i ckeInfrastructure) Engine(addr string) ContainerEngine {
+	return Docker(i.agents[addr])
 }
 
 func (i ckeInfrastructure) Vault() (*vault.Client, error) {
