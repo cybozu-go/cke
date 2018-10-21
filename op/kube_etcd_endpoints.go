@@ -5,6 +5,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -70,6 +71,30 @@ type createEtcdEndpointsCommand struct {
 func (c createEtcdEndpointsCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	cs, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
+		return err
+	}
+
+	// Endpoints needs a corresponding Service.
+	// If an Endpoints lacks such a Service, it will be removed.
+	// https://github.com/kubernetes/kubernetes/blob/b7c2d923ef4e166b9572d3aa09ca72231b59b28b/pkg/controller/endpoint/endpoints_controller.go#L392-L397
+	services := cs.CoreV1().Services("kube-system")
+	_, err = services.Get(etcdEndpointsName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+	case errors.IsNotFound(err):
+		_, err = services.Create(&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: etcdEndpointsName,
+			},
+			Spec: corev1.ServiceSpec{
+				Ports:     []corev1.ServicePort{{Port: 2379}},
+				ClusterIP: "None",
+			},
+		})
+		if err != nil {
+			return err
+		}
+	default:
 		return err
 	}
 
