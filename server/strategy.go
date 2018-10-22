@@ -155,7 +155,11 @@ func k8sMaintOps(cs *cke.ClusterStatus, nf *NodeFilter) (ops []cke.Operator) {
 		ops = append(ops, epOp)
 	}
 
-	// TODO: maintain Node resources
+	if nodes := nf.OutdatedAttrsNodes(); len(nodes) > 0 {
+		ops = append(ops, op.KubeNodeUpdateOp(apiServer, nodes))
+	}
+
+	// TODO: remove non-existent Node resources
 	return ops
 }
 

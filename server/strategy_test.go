@@ -9,6 +9,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -41,7 +42,22 @@ func newData() testData {
 			{Address: "10.0.0.11", ControlPlane: true},
 			{Address: "10.0.0.12", ControlPlane: true},
 			{Address: "10.0.0.13", ControlPlane: true},
-			{Address: "10.0.0.14"},
+			{
+				Address:     "10.0.0.14",
+				Labels:      map[string]string{"label1": "value"},
+				Annotations: map[string]string{"annotation1": "value"},
+				Taints: []corev1.Taint{
+					{
+						Key:    "taint1",
+						Value:  "value1",
+						Effect: corev1.TaintEffectNoSchedule,
+					},
+					{
+						Key:    "taint2",
+						Effect: corev1.TaintEffectPreferNoSchedule,
+					},
+				},
+			},
 			{Address: "10.0.0.15"},
 			{Address: "10.0.0.16"},
 		},
@@ -204,6 +220,12 @@ func (d testData) withEtcdEndpoints() testData {
 			},
 		},
 	}
+	return d
+}
+
+func (d testData) withNodes(nodes ...corev1.Node) testData {
+	d.withEtcdEndpoints()
+	d.Status.Kubernetes.Nodes = nodes
 	return d
 }
 
@@ -456,15 +478,201 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"update-etcd-endpoints"},
 		},
 		{
-			Name: "EtcdEndpointsUpdate1",
+			Name: "EtcdEndpointsUpdate3",
 			Input: newData().withEtcdEndpoints().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
 			ExpectedOps: []string{"update-etcd-endpoints"},
 		},
 		{
-			Name:        "AllGreen",
-			Input:       newData().withEtcdEndpoints(),
+			Name: "NodeLabel1",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "10.0.0.14",
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeLabel2",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "10.0.0.14",
+					Labels:      map[string]string{"label1": "wrongvalue"},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeAnnotation1",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.14",
+					Labels: map[string]string{"label1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeAnnotation2",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "10.0.0.14",
+					Labels:      map[string]string{"label1": "value"},
+					Annotations: map[string]string{"annotation1": "wrongvalue"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeTaint1",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "10.0.0.14",
+					Labels:      map[string]string{"label1": "value"},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Value:  "value2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeTaint2",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "10.0.0.14",
+					Labels:      map[string]string{"label1": "value"},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectNoExecute,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeTaint3",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "10.0.0.14",
+					Labels:      map[string]string{"label1": "value"},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint3",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "AllGreen",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "10.0.0.14",
+					Labels:      map[string]string{"label1": "value"},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
 			ExpectedOps: nil,
 		},
 		{
