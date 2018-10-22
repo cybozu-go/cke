@@ -4,9 +4,13 @@ import (
 	"errors"
 	"net"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 	corev1 "k8s.io/api/core/v1"
+	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // Node represents a node in Kubernetes.
@@ -142,8 +146,9 @@ func (c *Cluster) Validate() error {
 		return err
 	}
 
-	for _, n := range c.Nodes {
-		err := c.validateNode(n)
+	fldPath := field.NewPath("nodes")
+	for i, n := range c.Nodes {
+		err := c.validateNode(n, fldPath.Index(i))
 		if err != nil {
 			return err
 		}
@@ -163,7 +168,7 @@ func (c *Cluster) Validate() error {
 	return nil
 }
 
-func (c *Cluster) validateNode(n *Node) error {
+func (c *Cluster) validateNode(n *Node, fldPath *field.Path) error {
 	if net.ParseIP(n.Address) == nil {
 		return errors.New("invalid IP address: " + n.Address)
 	}
@@ -183,6 +188,76 @@ func (c *Cluster) validateNode(n *Node) error {
 		return err
 	}
 	n.signer = signer
+
+	if err = validateNodeLabels(n, fldPath.Child("labels")); err != nil {
+		return err
+	}
+	if err = validateNodeAnnotations(n, fldPath.Child("annotations")); err != nil {
+		return err
+	}
+	if err = validateNodeTaints(n, fldPath.Child("taints")); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateNodeLabels validates label names and values with
+// rules described in:
+// https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+func validateNodeLabels(n *Node, fldPath *field.Path) error {
+	el := v1validation.ValidateLabels(n.Labels, fldPath)
+	if len(el) == 0 {
+		return nil
+	}
+	return el.ToAggregate()
+}
+
+// validateNodeAnnotations validates annotation names.
+// The validation logic references:
+// https://github.com/kubernetes/apimachinery/blob/60666be32c5de527b69dabe8e4400b4f0aa897de/pkg/api/validation/objectmeta.go#L50
+func validateNodeAnnotations(n *Node, fldPath *field.Path) error {
+	for k := range n.Annotations {
+		msgs := validation.IsQualifiedName(strings.ToLower(k))
+		if len(msgs) > 0 {
+			el := make(field.ErrorList, len(msgs))
+			for i, msg := range msgs {
+				el[i] = field.Invalid(fldPath, k, msg)
+			}
+			return el.ToAggregate()
+		}
+	}
+	return nil
+}
+
+// validateNodeTaints validates taint names, values, and effects.
+func validateNodeTaints(n *Node, fldPath *field.Path) error {
+	for i, taint := range n.Taints {
+		err := validateTaint(taint, fldPath.Index(i))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateTaint validates a taint name, value, and effect.
+// The validation logic references:
+// https://github.com/kubernetes/kubernetes/blob/7cbb9995189c5ecc8182da29cd0e30188c911401/pkg/apis/core/validation/validation.go#L4105
+func validateTaint(taint corev1.Taint, fldPath *field.Path) error {
+	el := v1validation.ValidateLabelName(taint.Key, fldPath.Child("key"))
+	if msgs := validation.IsValidLabelValue(taint.Value); len(msgs) > 0 {
+		el = append(el, field.Invalid(fldPath.Child("value"), taint.Value, strings.Join(msgs, ";")))
+	}
+	switch taint.Effect {
+	case corev1.TaintEffectNoSchedule:
+	case corev1.TaintEffectPreferNoSchedule:
+	case corev1.TaintEffectNoExecute:
+	default:
+		el = append(el, field.Invalid(fldPath.Child("effect"), string(taint.Effect), "invalid effect"))
+	}
+	if len(el) > 0 {
+		return el.ToAggregate()
+	}
 	return nil
 }
 
@@ -239,6 +314,23 @@ func validateOptions(opts Options) error {
 	err = v(opts.Kubelet.ExtraBinds)
 	if err != nil {
 		return err
+	}
+
+	fldPath := field.NewPath("options", "kubelet")
+	if len(opts.Kubelet.Domain) > 0 {
+		msgs := validation.IsDNS1123Subdomain(opts.Kubelet.Domain)
+		if len(msgs) > 0 {
+			return field.Invalid(fldPath.Child("domain"),
+				opts.Kubelet.Domain, strings.Join(msgs, ";"))
+		}
+	}
+
+	fldPath = fldPath.Child("boot-taints")
+	for i, taint := range opts.Kubelet.BootTaints {
+		err := validateTaint(taint, fldPath.Index(i))
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
