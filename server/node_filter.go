@@ -105,6 +105,9 @@ func (nf *NodeFilter) EtcdIsGood() bool {
 // EtcdStoppedMembers returns control plane nodes that are not running etcd.
 func (nf *NodeFilter) EtcdStoppedMembers() (nodes []*cke.Node) {
 	for _, n := range nf.cp {
+		if _, ok := nf.status.Etcd.Members[n.Address]; !ok && nf.status.Etcd.IsHealthy {
+			continue
+		}
 		st := nf.nodeStatus(n).Etcd
 		if st.Running {
 			continue
