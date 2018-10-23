@@ -1,6 +1,7 @@
 package mtest
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -170,6 +171,77 @@ var _ = Describe("Operations", func() {
 		cluster.Options.Scheduler.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Proxy.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Kubelet.ExtraEnvvar = map[string]string{"AAA": "aaa"}
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+	})
+
+	It("updates Node resources", func() {
+		By("adding non-existent labels, annotations, and taints")
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		cluster.Nodes[0].Labels = map[string]string{"label1": "value"}
+		cluster.Nodes[0].Annotations = map[string]string{"annotation1": "value"}
+		cluster.Nodes[0].Taints = []corev1.Taint{{
+			Key:    "taint1",
+			Value:  "value",
+			Effect: corev1.TaintEffectNoSchedule,
+		}}
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		By("not removing existing labels, annotations, and taints")
+		cluster = getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		cluster.Nodes[0].Labels = map[string]string{"label2": "value2"}
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		stdout, err := kubectl("get", "nodes/"+node1, "-o", "json")
+		Expect(err).NotTo(HaveOccurred())
+
+		var node corev1.Node
+		err = json.Unmarshal(stdout, &node)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(node.Labels["label1"]).Should(Equal("value"))
+		Expect(node.Labels["label2"]).Should(Equal("value2"))
+		Expect(node.Annotations["annotation1"]).Should(Equal("value"))
+		Expect(node.Spec.Taints).To(HaveLen(1))
+		taint := node.Spec.Taints[0]
+		Expect(taint.Key).Should(Equal("taint1"))
+
+		By("updating existing labels, annotations, and taints")
+		cluster = getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		cluster.Nodes[0].Labels = map[string]string{"label1": "updated"}
+		cluster.Nodes[0].Annotations = map[string]string{
+			"annotation1": "updated",
+			"annotation2": "2",
+		}
+		cluster.Nodes[0].Taints = []corev1.Taint{
+			{
+				Key:    "taint2",
+				Value:  "2",
+				Effect: corev1.TaintEffectNoExecute,
+			},
+			{
+				Key:    "taint1",
+				Value:  "updated",
+				Effect: corev1.TaintEffectNoExecute,
+			},
+		}
 		ckecliClusterSet(cluster)
 		Eventually(func() error {
 			return checkCluster(cluster)

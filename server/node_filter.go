@@ -5,6 +5,8 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/log"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // NodeFilter filters nodes to
@@ -418,4 +420,90 @@ func (nf *NodeFilter) HealthyAPIServer() *cke.Node {
 		}
 	}
 	return node
+}
+
+// OutdatedAttrsNodes returns nodes that have outdated set of labels,
+// attributes, and/or taints.
+func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
+	curNodes := make(map[string]*corev1.Node)
+	for _, cn := range nf.status.Kubernetes.Nodes {
+		curNodes[cn.Name] = cn.DeepCopy()
+	}
+
+	for _, n := range nf.cluster.Nodes {
+		current, ok := curNodes[n.Nodename()]
+		if !ok {
+			log.Warn("missing Kubernetes Node resource", map[string]interface{}{
+				"name":    n.Nodename(),
+				"address": n.Address,
+			})
+			continue
+		}
+
+		if nodeIsOutdated(n, current) {
+			for k, v := range n.Labels {
+				if current.Labels == nil {
+					current.Labels = make(map[string]string)
+				}
+				current.Labels[k] = v
+			}
+			for k, v := range n.Annotations {
+				if current.Annotations == nil {
+					current.Annotations = make(map[string]string)
+				}
+				current.Annotations[k] = v
+			}
+
+		OUTER:
+			for _, taint := range n.Taints {
+				for i, ct := range current.Spec.Taints {
+					if taint.Key == ct.Key {
+						current.Spec.Taints[i].Value = taint.Value
+						current.Spec.Taints[i].Effect = taint.Effect
+						continue OUTER
+					}
+				}
+				current.Spec.Taints = append(current.Spec.Taints, taint)
+			}
+
+			nodes = append(nodes, current)
+		}
+	}
+
+	return nodes
+}
+
+func nodeIsOutdated(n *cke.Node, current *corev1.Node) bool {
+	for k, v := range n.Labels {
+		cv, ok := current.Labels[k]
+		if !ok || v != cv {
+			return true
+		}
+	}
+
+	for k, v := range n.Annotations {
+		cv, ok := current.Annotations[k]
+		if !ok || v != cv {
+			return true
+		}
+	}
+
+	curTaints := make(map[string]corev1.Taint)
+	for _, taint := range current.Spec.Taints {
+		curTaints[taint.Key] = taint
+	}
+	for _, taint := range n.Taints {
+		cv, ok := curTaints[taint.Key]
+		if !ok {
+			return true
+		}
+		if taint.Value != cv.Value {
+			return true
+		}
+		if taint.Effect != cv.Effect {
+			return true
+		}
+	}
+
+	return false
 }

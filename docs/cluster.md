@@ -34,6 +34,9 @@ Name            | Required | Type      | Description
 `labels`        | false    | object    | Node labels.
 `taints`        | false    | `[]Taint` | Node taints.
 
+`annotations`, `labels`, and `taints` are added or updated, but not removed.
+This is because other applications may edit their own annotations, labels, or taints.
+
 Taint
 -----
 

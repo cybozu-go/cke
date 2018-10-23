@@ -37,23 +37,7 @@ var _ = BeforeSuite(func() {
 		execSafeAt(h, "sync")
 	}
 
-	// wait cke
-	Eventually(func() error {
-		_, _, err := execAt(host1, "test", "-f", "/data/setup-cke.sh")
-		if err != nil {
-			return err
-		}
-		_, _, err = execAt(host2, "test", "-f", "/data/setup-cke.sh")
-		return err
-	}).Should(Succeed())
-
-	err = stopManagementEtcd(sshClients[host1])
-	Expect(err).NotTo(HaveOccurred())
-	err = stopVault(sshClients[host1])
-	Expect(err).NotTo(HaveOccurred())
-
 	for _, h := range []string{host1, host2} {
-		//execSafeAt(h, "/data/setup-cke.sh")
 		_, stderr, err := execAt(h, "/data/setup-cke.sh")
 		if err != nil {
 			fmt.Println("err!!!", string(stderr))

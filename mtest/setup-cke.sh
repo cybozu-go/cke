@@ -109,10 +109,12 @@ EOF
 install_cke_configs
 
 if [ $(hostname) = 'host1' ]; then
-    run_etcd
-    sleep 1
-    run_vault
-    install_kubectl_config
+    if [ ! -f $HOME/.kube/config ]; then
+        run_etcd
+        sleep 1
+        run_vault
+        install_kubectl_config
+    fi
 fi
 
 cat <<EOF
