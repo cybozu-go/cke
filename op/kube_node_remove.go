@@ -14,7 +14,7 @@ type kubeNodeRemove struct {
 	done      bool
 }
 
-// KubeNodeRemoveOp updates k8s Node resources.
+// KubeNodeRemoveOp removes k8s Node resources.
 func KubeNodeRemoveOp(apiserver *cke.Node, nodes []*corev1.Node) cke.Operator {
 	return &kubeNodeRemove{apiserver: apiserver, nodes: nodes}
 }
