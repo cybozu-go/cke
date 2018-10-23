@@ -63,7 +63,7 @@ var _ = Describe("Operations", func() {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 
-		execAt(node2, "sudo", "-b", "reboot", "-f", "-f")
+		execAt(node2, "sudo", "reboot", "-f", "-f")
 		time.Sleep(5 * time.Second)
 		Expect(reconnectSSH(node2)).NotTo(HaveOccurred())
 
