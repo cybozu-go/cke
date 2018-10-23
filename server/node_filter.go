@@ -427,7 +427,7 @@ func (nf *NodeFilter) HealthyAPIServer() *cke.Node {
 func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 	curNodes := make(map[string]*corev1.Node)
 	for _, cn := range nf.status.Kubernetes.Nodes {
-		curNodes[cn.Name] = &cn
+		curNodes[cn.Name] = cn.DeepCopy()
 	}
 
 	for _, n := range nf.cluster.Nodes {
@@ -441,33 +441,32 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 		}
 
 		if nodeIsOutdated(n, current) {
-			newNode := current.DeepCopy()
 			for k, v := range n.Labels {
-				if newNode.Labels == nil {
-					newNode.Labels = make(map[string]string)
+				if current.Labels == nil {
+					current.Labels = make(map[string]string)
 				}
-				newNode.Labels[k] = v
+				current.Labels[k] = v
 			}
 			for k, v := range n.Annotations {
-				if newNode.Annotations == nil {
-					newNode.Annotations = make(map[string]string)
+				if current.Annotations == nil {
+					current.Annotations = make(map[string]string)
 				}
-				newNode.Annotations[k] = v
+				current.Annotations[k] = v
 			}
 
 		OUTER:
 			for _, taint := range n.Taints {
-				for i, ct := range newNode.Spec.Taints {
+				for i, ct := range current.Spec.Taints {
 					if taint.Key == ct.Key {
-						newNode.Spec.Taints[i].Value = taint.Value
-						newNode.Spec.Taints[i].Effect = taint.Effect
+						current.Spec.Taints[i].Value = taint.Value
+						current.Spec.Taints[i].Effect = taint.Effect
 						continue OUTER
 					}
 				}
-				newNode.Spec.Taints = append(newNode.Spec.Taints, taint)
+				current.Spec.Taints = append(current.Spec.Taints, taint)
 			}
 
-			nodes = append(nodes, newNode)
+			nodes = append(nodes, current)
 		}
 	}
 
