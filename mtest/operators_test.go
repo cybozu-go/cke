@@ -95,14 +95,16 @@ var _ = Describe("Operations", func() {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 
-		// check bootstrap taints for node6
-		status, err := getClusterStatus(cluster)
-		Expect(err).NotTo(HaveOccurred())
-
+		// check node6 is added
+		var status *cke.ClusterStatus
 		Eventually(func() int {
+			var err error
+			status, err = getClusterStatus(cluster)
+			Expect(err).NotTo(HaveOccurred())
 			return len(status.Kubernetes.Nodes)
 		}).Should(HaveLen(len(cluster.Nodes)))
 
+		// check bootstrap taints for node6
 		for _, n := range status.Kubernetes.Nodes {
 			if n.Name != node6 {
 				Expect(n.Spec.Taints).Should(BeEmpty())
