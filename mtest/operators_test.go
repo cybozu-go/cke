@@ -63,10 +63,6 @@ var _ = Describe("Operations", func() {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 
-		execAt(node2, "sudo", "reboot", "-f", "-f")
-		time.Sleep(5 * time.Second)
-		Expect(reconnectSSH(node2)).NotTo(HaveOccurred())
-
 		By("Adding a new node to the cluster as a control plane")
 		// this will run EtcdAddMemberOp as well as other boot/restart ops.
 
@@ -92,6 +88,11 @@ var _ = Describe("Operations", func() {
 			},
 		}
 		ckecliClusterSet(cluster)
+
+		execAt(node2, "sudo", "systemd-run", "reboot", "-f", "-f")
+		time.Sleep(5 * time.Second)
+		Expect(reconnectSSH(node2)).NotTo(HaveOccurred())
+
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())

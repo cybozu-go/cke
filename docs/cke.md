@@ -10,7 +10,7 @@ Usage
 | --------------- | ------------------------ | ----------------------- |
 | `-http`         | 0.0.0.0:10180            | Listen IP:Port number   |
 | `-config`       | /etc/cke/config.yml      | configuration file path |
-| `-interval`     | 10m                      | check interval          |
+| `-interval`     | 1m                       | check interval          |
 | `-session-ttl`  | 60s                      | leader session's TTL    |
 
 Configuration file

@@ -144,7 +144,6 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 		"--read-only",
 		"--network=host",
 		"--uts=host",
-		"--restart=unless-stopped",
 	}
 	args = append(args, opts...)
 
