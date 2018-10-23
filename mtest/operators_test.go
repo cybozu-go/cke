@@ -55,8 +55,6 @@ var _ = Describe("Operations", func() {
 		// - APIServerRestartOp
 		// - KubeEtcdEndpointsUpdateOp
 		stopCKE()
-		execAt(node2, "sudo", "-b", "reboot", "-f", "-f")
-		time.Sleep(5 * time.Second)
 		ckecli("constraints", "set", "control-plane-count", "2")
 		cluster.Nodes = append(cluster.Nodes[:1], cluster.Nodes[2:]...)
 		ckecliClusterSet(cluster)
@@ -64,6 +62,9 @@ var _ = Describe("Operations", func() {
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
+
+		execAt(node2, "sudo", "-b", "reboot", "-f", "-f")
+		time.Sleep(5 * time.Second)
 		Expect(reconnectSSH(node2)).NotTo(HaveOccurred())
 
 		By("Adding a new node to the cluster as a control plane")
@@ -97,13 +98,13 @@ var _ = Describe("Operations", func() {
 
 		// check node6 is added
 		var status *cke.ClusterStatus
-		Eventually(func() int {
+		Eventually(func() []corev1.Node {
 			var err error
 			status, err = getClusterStatus(cluster)
 			if err != nil {
-				return -1
+				return nil
 			}
-			return len(status.Kubernetes.Nodes)
+			return status.Kubernetes.Nodes
 		}).Should(HaveLen(len(cluster.Nodes)))
 
 		// check bootstrap taints for node6
