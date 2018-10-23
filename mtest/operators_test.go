@@ -100,7 +100,9 @@ var _ = Describe("Operations", func() {
 		Eventually(func() int {
 			var err error
 			status, err = getClusterStatus(cluster)
-			Expect(err).NotTo(HaveOccurred())
+			if err != nil {
+				return -1
+			}
 			return len(status.Kubernetes.Nodes)
 		}).Should(HaveLen(len(cluster.Nodes)))
 
