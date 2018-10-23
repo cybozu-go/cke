@@ -50,7 +50,7 @@ var _ = Describe("Operations", func() {
 		By("Removing a control plane node from the cluster")
 		// this will run:
 		// - EtcdRemoveMemberOp
-		// - ToDo: K8sRemoveNodeOp
+		// - KubeNodeRemoveOp
 		// - RiversRestartOp
 		// - APIServerRestartOp
 		// - KubeEtcdEndpointsUpdateOp

@@ -364,6 +364,19 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
+// NonClusterNodes returns nodes not defined in cluster YAML.
+func (nf *NodeFilter) NonClusterNodes() (nodes []*corev1.Node) {
+	members := nf.status.Kubernetes.Nodes
+	for _, member := range members {
+		if nf.InCluster(member.Name) {
+			continue
+		}
+		member := member
+		nodes = append(nodes, &member)
+	}
+	return nodes
+}
+
 func kubeletEqualParams(running, current cke.ServiceParams) bool {
 	// NOTE ignore parameter "--register-with-taints".
 	// This option is used only when kubelet registers the node first time.
