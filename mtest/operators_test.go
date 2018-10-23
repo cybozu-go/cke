@@ -110,7 +110,7 @@ var _ = Describe("Operations", func() {
 
 		// check bootstrap taints for node6
 		for _, n := range status.Kubernetes.Nodes {
-			if n.Name != node6 {
+			if n.Name != node6 || n.Name != node2 {
 				Expect(n.Spec.Taints).Should(BeEmpty())
 				continue
 			}
