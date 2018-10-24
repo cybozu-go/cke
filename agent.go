@@ -2,6 +2,7 @@ package cke
 
 import (
 	"bytes"
+	"net"
 	"strings"
 	"time"
 
@@ -10,7 +11,21 @@ import (
 )
 
 const (
-	defaultTimeout = 30 * time.Second
+	defaultDialTimeout = 30 * time.Second
+	defaultKeepAlive   = 5 * time.Second
+
+	// DefaultRunTimeout is the timeout value for Agent.Run().
+	DefaultRunTimeout = 10 * time.Minute
+)
+
+var (
+	// When KeepAlive is > 0, the dialer returns TCP connections
+	// with keep-alive enabled.  With the default 5 second duration,
+	// the implementation can detect dead peer in around 50 seconds.
+	agentDialer = &net.Dialer{
+		Timeout:   defaultDialTimeout,
+		KeepAlive: defaultKeepAlive,
+	}
 )
 
 // Agent is the interface to run commands on a node.
@@ -19,29 +34,28 @@ type Agent interface {
 	Close() error
 
 	// Run command on the node.
+	// It returns non-nil error if the command takes too long (> DefaultRunTimeout).
 	Run(command string) (stdout, stderr []byte, err error)
 
+	// RunWithInput run command with input as stdin.
+	// It returns non-nil error if the command takes too long (> DefaultRunTimeout).
 	RunWithInput(command, input string) error
+
+	// RunWithTimeout run command with given timeout.
+	// If timeout is 0, the command will run indefinitely.
+	RunWithTimeout(command, input string, timeout time.Duration) (stdout, stderr []byte, err error)
 }
 
 type sshAgent struct {
 	node   *Node
 	client *ssh.Client
+	conn   net.Conn
 }
 
 // SSHAgent creates an Agent that communicates over SSH.
 // It returns non-nil error when connection could not be established.
 func SSHAgent(node *Node) (Agent, error) {
-	config := &ssh.ClientConfig{
-		User: node.User,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(node.signer),
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         defaultTimeout,
-	}
-
-	client, err := ssh.Dial("tcp", node.Address+":22", config)
+	conn, err := agentDialer.Dial("tcp", node.Address+":22")
 	if err != nil {
 		log.Error("failed to dial: ", map[string]interface{}{
 			log.FnError: err,
@@ -49,16 +63,45 @@ func SSHAgent(node *Node) (Agent, error) {
 		})
 		return nil, err
 	}
+	defer func() {
+		if conn != nil {
+			conn.Close()
+		}
+	}()
 
-	a := sshAgent{
-		node:   node,
-		client: client,
+	config := &ssh.ClientConfig{
+		User: node.User,
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(node.signer),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	_, _, err = a.Run("docker version")
+	err = conn.SetDeadline(time.Now().Add(defaultDialTimeout))
 	if err != nil {
 		return nil, err
 	}
+	clientConn, channelCh, reqCh, err := ssh.NewClientConn(conn, "tcp", config)
+	if err != nil {
+		return nil, err
+	}
+	err = conn.SetDeadline(time.Time{})
+	if err != nil {
+		return nil, err
+	}
+
+	a := sshAgent{
+		node:   node,
+		client: ssh.NewClient(clientConn, channelCh, reqCh),
+		conn:   conn,
+	}
+	conn = nil
+	_, _, err = a.Run("docker version")
+	if err != nil {
+		a.Close()
+		return nil, err
+	}
+
 	return a, nil
 }
 
@@ -69,6 +112,24 @@ func (a sshAgent) Close() error {
 }
 
 func (a sshAgent) Run(command string) ([]byte, []byte, error) {
+	return a.RunWithTimeout(command, "", DefaultRunTimeout)
+}
+
+func (a sshAgent) RunWithInput(command, input string) error {
+	_, _, err := a.RunWithTimeout(command, input, DefaultRunTimeout)
+	return err
+}
+
+func (a sshAgent) RunWithTimeout(command, input string, timeout time.Duration) ([]byte, []byte, error) {
+	if timeout > 0 {
+		err := a.conn.SetDeadline(time.Now().Add(timeout))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		defer a.conn.SetDeadline(time.Time{})
+	}
+
 	session, err := a.client.NewSession()
 	if err != nil {
 		log.Error("failed to create session: ", map[string]interface{}{
@@ -77,6 +138,10 @@ func (a sshAgent) Run(command string) ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 	defer session.Close()
+
+	if len(input) > 0 {
+		session.Stdin = strings.NewReader(input)
+	}
 
 	var stdoutBuff bytes.Buffer
 	var stderrBuff bytes.Buffer
@@ -93,26 +158,4 @@ func (a sshAgent) Run(command string) ([]byte, []byte, error) {
 		return stdout, stderr, err
 	}
 	return stdout, stderr, nil
-}
-
-func (a sshAgent) RunWithInput(command, input string) error {
-	session, err := a.client.NewSession()
-	if err != nil {
-		log.Error("failed to create session: ", map[string]interface{}{
-			log.FnError: err,
-		})
-		return err
-	}
-	defer session.Close()
-
-	session.Stdin = strings.NewReader(input)
-
-	if err := session.Run(command); err != nil {
-		log.Error("failed to run command: ", map[string]interface{}{
-			log.FnError: err,
-			"command":   command,
-		})
-		return err
-	}
-	return nil
 }
