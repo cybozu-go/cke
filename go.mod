@@ -92,7 +92,7 @@ require (
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926 // indirect
 	go.opencensus.io v0.17.0 // indirect
-	golang.org/x/crypto v0.0.0-20181009213950-7c1a557ab941
+	golang.org/x/crypto v0.0.0-20181015023909-0c41d7ab0a0e
 	google.golang.org/api v0.0.0-20180910000450-7ca32eb868bf
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce // indirect
 	gopkg.in/vmihailenco/msgpack.v2 v2.9.1 // indirect
