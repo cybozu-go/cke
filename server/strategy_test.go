@@ -652,6 +652,15 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"update-node"},
 		},
 		{
+			Name: "RemoveNonClusterNodes",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "10.0.0.20",
+				},
+			}),
+			ExpectedOps: []string{"remove-node"},
+		},
+		{
 			Name: "AllGreen",
 			Input: newData().withNodes(corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{

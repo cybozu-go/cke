@@ -50,13 +50,11 @@ var _ = Describe("Operations", func() {
 		By("Removing a control plane node from the cluster")
 		// this will run:
 		// - EtcdRemoveMemberOp
-		// - ToDo: K8sRemoveNodeOp
+		// - KubeNodeRemoveOp
 		// - RiversRestartOp
 		// - APIServerRestartOp
 		// - KubeEtcdEndpointsUpdateOp
 		stopCKE()
-		execAt(node2, "sudo", "-b", "reboot", "-f", "-f")
-		time.Sleep(5 * time.Second)
 		ckecli("constraints", "set", "control-plane-count", "2")
 		cluster.Nodes = append(cluster.Nodes[:1], cluster.Nodes[2:]...)
 		ckecliClusterSet(cluster)
@@ -64,7 +62,6 @@ var _ = Describe("Operations", func() {
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
-		Expect(reconnectSSH(node2)).NotTo(HaveOccurred())
 
 		By("Adding a new node to the cluster as a control plane")
 		// this will run EtcdAddMemberOp as well as other boot/restart ops.
@@ -91,18 +88,29 @@ var _ = Describe("Operations", func() {
 			},
 		}
 		ckecliClusterSet(cluster)
+
+		execAt(node2, "sudo", "systemd-run", "reboot", "-f", "-f")
+		time.Sleep(5 * time.Second)
+		Expect(reconnectSSH(node2)).NotTo(HaveOccurred())
+
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 
-		// check bootstrap taints for node6
-		status, err := getClusterStatus(cluster)
-		Expect(err).NotTo(HaveOccurred())
+		// check node6 is added
+		var status *cke.ClusterStatus
+		Eventually(func() []corev1.Node {
+			var err error
+			status, err = getClusterStatus(cluster)
+			if err != nil {
+				return nil
+			}
+			return status.Kubernetes.Nodes
+		}).Should(HaveLen(len(cluster.Nodes)))
 
-		Expect(status.Kubernetes.Nodes).Should(HaveLen(len(cluster.Nodes)))
+		// check bootstrap taints for node6
 		for _, n := range status.Kubernetes.Nodes {
-			if n.Name != node6 {
-				Expect(n.Spec.Taints).Should(BeEmpty())
+			if n.Name != node6 && n.Name != node2 {
 				continue
 			}
 

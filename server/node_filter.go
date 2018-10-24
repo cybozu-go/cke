@@ -105,6 +105,9 @@ func (nf *NodeFilter) EtcdIsGood() bool {
 // EtcdStoppedMembers returns control plane nodes that are not running etcd.
 func (nf *NodeFilter) EtcdStoppedMembers() (nodes []*cke.Node) {
 	for _, n := range nf.cp {
+		if _, ok := nf.status.Etcd.Members[n.Address]; !ok && nf.status.Etcd.IsHealthy {
+			continue
+		}
 		st := nf.nodeStatus(n).Etcd
 		if st.Running {
 			continue
@@ -360,6 +363,19 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 		case !currentExtra.Equal(st.ExtraParams):
 			nodes = append(nodes, n)
 		}
+	}
+	return nodes
+}
+
+// NonClusterNodes returns nodes not defined in cluster YAML.
+func (nf *NodeFilter) NonClusterNodes() (nodes []*corev1.Node) {
+	members := nf.status.Kubernetes.Nodes
+	for _, member := range members {
+		if nf.InCluster(member.Name) {
+			continue
+		}
+		member := member
+		nodes = append(nodes, &member)
 	}
 	return nodes
 }

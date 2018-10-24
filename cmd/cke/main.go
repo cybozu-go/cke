@@ -12,13 +12,13 @@ import (
 	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var (
 	flgHTTP       = flag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
 	flgConfigPath = flag.String("config", "/etc/cke/config.yml", "configuration file path")
-	flgInterval   = flag.String("interval", "10m", "check interval")
+	flgInterval   = flag.String("interval", "1m", "check interval")
 	flgSessionTTL = flag.String("session-ttl", "60s", "leader session's TTL")
 )
 
