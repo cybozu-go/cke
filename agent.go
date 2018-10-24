@@ -63,11 +63,6 @@ func SSHAgent(node *Node) (Agent, error) {
 		})
 		return nil, err
 	}
-	defer func() {
-		if conn != nil {
-			conn.Close()
-		}
-	}()
 
 	config := &ssh.ClientConfig{
 		User: node.User,
@@ -79,14 +74,18 @@ func SSHAgent(node *Node) (Agent, error) {
 
 	err = conn.SetDeadline(time.Now().Add(defaultDialTimeout))
 	if err != nil {
+		conn.Close()
 		return nil, err
 	}
 	clientConn, channelCh, reqCh, err := ssh.NewClientConn(conn, "tcp", config)
 	if err != nil {
+		// conn was already closed in ssh.NewClientConn
 		return nil, err
 	}
+
 	err = conn.SetDeadline(time.Time{})
 	if err != nil {
+		clientConn.Close()
 		return nil, err
 	}
 
@@ -95,7 +94,6 @@ func SSHAgent(node *Node) (Agent, error) {
 		client: ssh.NewClient(clientConn, channelCh, reqCh),
 		conn:   conn,
 	}
-	conn = nil
 	_, _, err = a.Run("docker version")
 	if err != nil {
 		a.Close()
