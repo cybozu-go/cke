@@ -1,4 +1,7 @@
+# Setup scripts for CKE with Docker Compose
+
 ## Requirements
+
 * Docker
 * Docker Compose
 
@@ -17,3 +20,9 @@ sudo chown 10000:10000 etcd-data
 docker-compose up
 ```
 
+* use cli tools
+```console
+ETCDCTL_API=3 ./bin/etcdctl --endpoints=http://localhost:2379 member list
+VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=cybozu ./bin/vault status
+./bin/ckecli --config=./cke.config history
+```
