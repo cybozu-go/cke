@@ -31,9 +31,11 @@ CKE installs and maintains following Kubernetes resources.
 
 `system:kube-apiserver-to-kubelet` is a [ClusterRole](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#role-and-clusterrole) to authorize API servers by kubelet.
 
+`system:kube-apiserver` is a [ClusterRoleBinding](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#rolebinding-and-clusterrolebinding) to bind `system:kube-apiserver-to-kubelet` to user `kubernetes`.  Note that API server is authenticated as `kubernetes` user.
+
 ### Etcd endpoints
 
-`cke-etcd` is a headless [Service](https://kubernetes.io/docs/concepts/services-networking/service/) and [Endpoints](https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors) to help applications find endpoints of CKE maintained etcd cluster.
+`cke-etcd` in `kube-system` namespace is a headless [Service](https://kubernetes.io/docs/concepts/services-networking/service/) and [Endpoints](https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors) to help applications find endpoints of CKE maintained etcd cluster.
 
 Unchangeable features
 ---------------------
