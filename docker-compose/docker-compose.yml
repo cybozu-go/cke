@@ -6,9 +6,14 @@ services:
     user: "${UID}:${GID}"
     volumes:
       - ./cke.config.yml:/etc/cke/config.yml
+      - ./bin:/host
+      - ./cke-entrypoint.sh:/entrypoint.sh
     depends_on:
-      - setup
+      - etcd
+      - vault
     restart: always
+    entrypoint:
+      - /entrypoint.sh
   setup:
     container_name: setup
     image: quay.io/cybozu/ubuntu-debug:18.04
@@ -20,9 +25,7 @@ services:
     depends_on:
       - vault
       - etcd
-      - setup-cke-tools
-      - setup-etcd-tools
-      - setup-vault-tools
+      - cke
     command: /opt/setup/setup.sh
   vault:
     container_name: vault
@@ -34,11 +37,14 @@ services:
       - etcd
     volumes:
       - ./vault.hcl:/etc/vault/config.hcl
+      - ./bin:/host
+      - ./vault-entrypoint.sh:/entrypoint.sh
     ports:
       - "8200:8200"
       - "8201:8201"
     restart: always
-    command: server -config=/etc/vault/config.hcl
+    entrypoint:
+      - /entrypoint.sh
   etcd:
     container_name: etcd
     image: quay.io/cybozu/etcd:3.3
@@ -46,29 +52,11 @@ services:
     volumes:
       - ./etcd-data:/data/etcd
       - ./etcd.conf.yml:/etc/etcd/etcd.conf.yml
+      - ./bin:/host
+      - ./etcd-entrypoint.sh:/entrypoint.sh
     ports:
       - "2379:2379"
       - "2380:2380"
     restart: always
-    command: --config-file=/etc/etcd/etcd.conf.yml
-  setup-cke-tools:
-    image: quay.io/cybozu/cke:0
-    user: "${UID}:${GID}"
-    volumes:
-      - ./bin:/host
     entrypoint:
-      - /usr/local/cke/install-tools
-  setup-vault-tools:
-    image: quay.io/cybozu/vault:0.11
-    user: "${UID}:${GID}"
-    volumes:
-      - ./bin:/host
-    entrypoint:
-      - /usr/local/vault/install-tools
-  setup-etcd-tools:
-    image: quay.io/cybozu/etcd:3.3
-    user: "${UID}:${GID}"
-    volumes:
-      - ./bin:/host
-    entrypoint:
-      - /usr/local/etcd/install-tools
+      - /entrypoint.sh
