@@ -3,7 +3,6 @@ services:
   cke:
     container_name: cke
     image: quay.io/cybozu/cke:0
-    user: "${UID}:${GID}"
     volumes:
       - ./cke.config.yml:/etc/cke/config.yml
       - ./bin:/host
@@ -17,7 +16,6 @@ services:
   setup:
     container_name: setup
     image: quay.io/cybozu/ubuntu-debug:18.04
-    user: "${UID}:${GID}"
     volumes:
       - ./bin:/usr/local/bin
       - ./setup:/opt/setup
@@ -30,7 +28,6 @@ services:
   vault:
     container_name: vault
     image: quay.io/cybozu/vault:0.11
-    user: "${UID}:${GID}"
     cap_add:
       - IPC_LOCK
     depends_on:
@@ -48,7 +45,6 @@ services:
   etcd:
     container_name: etcd
     image: quay.io/cybozu/etcd:3.3
-    user: "${UID}:${GID}"
     volumes:
       - ./etcd-data:/data/etcd
       - ./etcd.conf.yml:/etc/etcd/etcd.conf.yml
