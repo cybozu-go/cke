@@ -3,7 +3,7 @@ How to develop CKE
 
 ## Go environment
 
-Use Go 1.11 or higher.
+Use Go 1.11.2 or higher.
 
 CKE uses [Go modules](https://github.com/golang/go/wiki/Modules) to manage dependencies.
 So you must either set `GO111MODULE=on` environment variable or checkout CKE out of `GOPATH`.
@@ -13,19 +13,7 @@ So you must either set `GO111MODULE=on` environment variable or checkout CKE out
 To update a dependency, just do:
 
 ```console
-$ go get -d github.com/foo/bar@v1.2.3
-```
-
-To update all dependencies for bug fixes, do:
-
-```console
-$ go get -u=patch ./...
-```
-
-To update all dependencies for new features, do:
-
-```console
-$ go get -u ./...
+$ go get github.com/foo/bar@v1.2.3
 ```
 
 After updating dependencies, run following commands to vendor dependencies:
@@ -43,18 +31,28 @@ $ git commit
 Modules under `k8s.io` such as `k8s.io/client-go` do not have fixed tags
 and therefore are incompatible with Go modules.
 
-For this reason, CKE specifies dependencies with commit hashes.
+Moreover, since `k8s.io/client-go` does not support Go modules yet,
+Go fetches incompatible versions of `k8s.io/api` and `k8s.io/apimachinery`
+that are direct dependencies of `k8s.io/client-go`.
 
-Specifically for Kubernetes 1.11, we picked hashes from these trees:
+To workaround the problems, we need to specify explicit versions
+for these packages.  For Kubernetes 1.11, these branches should be
+specified:
 
-* client-go: https://github.com/kubernetes/client-go/tree/release-8.0
-* api: https://github.com/kubernetes/api/tree/release-1.11
-* apimachinery: https://github.com/kubernetes/apimachinery/tree/release-1.11
+* client-go: [release-8.0](https://github.com/kubernetes/client-go/tree/release-8.0)
+* api: [release-1.11](https://github.com/kubernetes/api/tree/release-1.11)
+* apimachinery: [release-1.11](https://github.com/kubernetes/apimachinery/tree/release-1.11)
 
-Pick the HEAD commits for each tree and `go get` as follows:
+as follows:
 
 ```console
-$ go get -d k8s.io/client-go@HASH
-$ go get -d k8s.io/api@HASH
-$ go get -d k8s.io/apimachinery@HASH
+$ go get k8s.io/client-go@v8.0.0
+$ go get k8s.io/api@release-1.11
+$ go get k8s.io/apimachinery@release-1.11
+
+$ go mod tidy
+$ go mod vendor
+$ git add -f vendor
+$ git add go.mod go.sum
+$ git commit
 ```
