@@ -16,44 +16,52 @@ export VAULT_ADDR=http://vault:8200
 export VAULT_TOKEN=cybozu
 export ETCDCTL_API=3
 
+# wait for preparation of vault
 retry curl ${VAULT_ADDR}/v1/sys/health
 
 res=$(curl ${VAULT_ADDR}/v1/sys/health)
 initialized=$(echo ${res} | jq -r .initialized)
-seald=$(echo ${res} | jq -r .seald)
+sealed=$(echo ${res} | jq -r .sealed)
 
 if [ ${initialized} = "true" ]; then
-  unseal_key=$(etcdctl --endpoints=http://etcd:2379 get --print-value-only boot/vault-unseal-key)
-  curl -XPUT http://vault:8200/v1/sys/unseal -d "{\"key\": ${unseal_key}}"
+  if [ ${sealed} = "true" ]; then
+    # if vault is initialized and sealed, only unseal
+    unseal_key=$(etcdctl --endpoints=http://etcd:2379 get --print-value-only boot/vault-unseal-key)
+    curl -XPUT http://vault:8200/v1/sys/unseal -d "{\"key\": ${unseal_key}}"
+  fi
   exit 0
 fi
 
+# initialize vault
 res=$(vault operator init -format=json -key-shares=1 -key-threshold=1)
 unseal_key=$(echo ${res} | jq .unseal_keys_b64[0])
 root_token=$(echo ${res} | jq -r .root_token)
+export VAULT_TOKEN=${root_token}
 
+# store unseal key and root token to etcd
 etcdctl --endpoints=http://etcd:2379 put boot/vault-unseal-key ${unseal_key}
 etcdctl --endpoints=http://etcd:2379 put boot/vault-root-token ${root_token}
 
+# unseal vault
 curl -XPUT http://vault:8200/v1/sys/unseal -d "{\"key\": ${unseal_key}}"
 
-export VAULT_TOKEN=${root_token}
-
+# setup vault
 vault audit enable file file_path=stdout
-
 vault policy write admin /opt/setup/admin-policy.hcl
 vault policy write cke /opt/setup/cke-policy.hcl
 vault auth enable approle
 
+# setup approle for cke
 vault write auth/approle/role/cke policies=cke period=1h
 r=$(vault read -format=json auth/approle/role/cke/role-id)
 s=$(vault write -f -format=json auth/approle/role/cke/secret-id)
 role_id=$(echo ${r} | jq -r .data.role_id)
 secret_id=$(echo ${s} | jq -r .data.secret_id)
-
-echo "{\"endpoint\": \"http://vault:8200\", \"role-id\": \"${role_id}\", \"secret-id\": \"${secret_id}\"}" | ckecli vault config -
 a=$(vault write -f -format=json auth/approle/login role_id=${role_id} secret_id=${secret_id})
 approle_token=$(echo ${a} | jq -r .auth.client_token)
+
+# register information for connecting to vault to CKE
+echo "{\"endpoint\": \"http://vault:8200\", \"role-id\": \"${role_id}\", \"secret-id\": \"${secret_id}\"}" | ckecli vault config -
 
 function create_ca(){
   ca=$1
@@ -66,8 +74,8 @@ function create_ca(){
   ckecli ca set ${key} /tmp/${key}
 }
 
+# create CA and register it to CKE
 create_ca "cke/ca-server" "server-CA" "server"
 create_ca "cke/ca-etcd-peer" "etcd-peer-CA" "etcd-peer"
 create_ca "cke/ca-etcd-client" "etcd-client-CA" "etcd-client"
 create_ca "cke/ca-kubernetes" "kubernetes-CA" "kubernetes"
-
