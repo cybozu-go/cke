@@ -5,6 +5,16 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.11] - 2018-10-30
+### Added
+- Enable to register a node with taint at boot (#77).
+- Update node annotations, labels, and taints (#79).
+- Remove non-cluster nodes (#80).
+- Set deadline for SSH connection (#81).
+
+### Changed
+- Fix bugs in #75 (#78).
+
 ## [0.10] - 2018-10-18
 ### Added
 - CKE registeres endpoints of etcd as a Kubernetes `Endpoints` (#75).
@@ -58,7 +68,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.10...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.11...HEAD
+[0.11]: https://github.com/cybozu-go/cke/compare/v0.10...v0.11
 [0.10]: https://github.com/cybozu-go/cke/compare/v0.9...v0.10
 [0.9]: https://github.com/cybozu-go/cke/compare/v0.8...v0.9
 [0.8]: https://github.com/cybozu-go/cke/compare/v0.7...v0.8
