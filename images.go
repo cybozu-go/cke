@@ -24,6 +24,6 @@ func AllImages() []string {
 		ToolsImage.Name(),
 		HyperkubeImage.Name(),
 		PauseImage.Name(),
-		CoreDNS.Name(),
+		CoreDNSImage.Name(),
 	}
 }

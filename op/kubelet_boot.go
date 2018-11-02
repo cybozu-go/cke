@@ -134,7 +134,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		Authorization:         KubeletAuthorization{Mode: "Webhook"},
 		HealthzBindAddress:    "0.0.0.0",
 		ClusterDomain:         c.params.Domain,
-		ClusterDNS:            c.params.DNS,
+		ClusterDNS:            []string{c.params.DNS},
 		RuntimeRequestTimeout: "15m",
 		FailSwapOn:            !c.params.AllowSwap,
 	}

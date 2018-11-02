@@ -10,16 +10,14 @@ import (
 )
 
 type kubeCoreDNSCreateOp struct {
-	clusterDomain string
-	clusterDNS    []string
+	apiserver     *cke.Node
+	finished      bool
+	params        cke.KubeletParams
 }
 
 // KubeCoreDNSCreateOp returns an Operator to create CoreDNS.
-func KubeCoreDNSCreateOp(clusterDomain string, clusterDNS []string) cke.Operator {
-	return &kubeCoreDNSCreateOp{
-		clusterDomain: clusterDomain,
-		clusterDNS:    clusterDNS,
-	}
+func KubeCoreDNSCreateOp() cke.Operator {
+	return &kubeCoreDNSCreateOp{}
 }
 
 func (o *kubeCoreDNSCreateOp) Name() string {
@@ -32,20 +30,18 @@ func (o *kubeCoreDNSCreateOp) NextCommand() cke.Commander {
 	}
 
 	o.finished = true
-	return createCoreDNSCommand{o.clusterDomain, o.clusterDNS}
+	return createCoreDNSCommand{o.apiserver,  o.params}
 }
 
 type kubeCoreDNSUpdateOp struct {
-	clusterDomain string
-	clusterDNS    []string
+	apiserver     *cke.Node
 	finished      bool
+	params        cke.KubeletParams
 }
 
 // KubeCoreDNSUpdateOp returns an Operator to update CoreDNS.
-func KubeCoreDNSUpdateOp(clusterDomain string, clusterDNS []string) cke.Operator {
+func KubeCoreDNSUpdateOp() cke.Operator {
 	return &kubeCoreDNSCreateOp{
-		clusterDomain: clusterDomain,
-		clusterDNS:    clusterDNS,
 	}
 }
 
@@ -59,12 +55,11 @@ func (o *kubeCoreDNSUpdateOp) NextCommand() cke.Commander {
 	}
 
 	o.finished = true
-	return updateCoreDNSCommand{o.clusterDomain, o.clusterDNS}
+	return updateCoreDNSCommand{o.apiserver,  o.params}
 }
 
 type createCoreDNSCommand struct {
-	clusterDomain string
-	clusterDNS    []string
+	apiserver     *cke.Node
 	params        cke.KubeletParams
 }
 
@@ -93,7 +88,7 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 		_, err = services.Create(&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      coreDNSAppName,
-				NameSpace: "kube-system",
+				Namespace: "kube-system",
 				Labels: map[string]string{
 					"k8s-app":                       coreDNSAppName,
 					"kubernetes.io/cluster-service": "true",
@@ -104,7 +99,7 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 				Selector: map[string]string{
 					"k8s-app": coreDNSAppName,
 				},
-				ClusterIP: c.params.ClusterDNS,
+				ClusterIP: c.params.DNS,
 				Ports: []corev1.ServicePort{
 					{
 						Name:     "dns",
@@ -137,13 +132,12 @@ func (c createCoreDNSCommand) Command() cke.Command {
 }
 
 type updateCoreDNSCommand struct {
-	clusterDomain string
-	clusterDNS    []string
+	apiserver     *cke.Node
 	params        cke.KubeletParams
 }
 
 func (c updateCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
-	cs, err := inf.K8sClient(ctx, c.apiserver)
+	_, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
 		return err
 	}
@@ -153,7 +147,7 @@ func (c updateCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	return err
 }
 
-func (c updateEtcdEndpointsCommand) Command() cke.Command {
+func (c updateCoreDNSCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "updateCoreDNSCommand",
 		Target: "kube-system",
