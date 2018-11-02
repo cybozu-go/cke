@@ -7,8 +7,8 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
-	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
+	"github.com/cybozu-go/well"
 )
 
 // GetClusterStatus consults the whole cluster and constructs *ClusterStatus.
@@ -16,7 +16,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 	var mu sync.Mutex
 	statuses := make(map[string]*cke.NodeStatus)
 
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 	for _, n := range cluster.Nodes {
 		n := n
 		env.Go(func(ctx context.Context) error {

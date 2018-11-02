@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
+	"github.com/cybozu-go/well"
 )
 
 func renderJSON(w http.ResponseWriter, data interface{}, status int) {
@@ -21,7 +21,7 @@ func renderJSON(w http.ResponseWriter, data interface{}, status int) {
 }
 
 func renderError(ctx context.Context, w http.ResponseWriter, e APIError) {
-	fields := cmd.FieldsFromContext(ctx)
+	fields := well.FieldsFromContext(ctx)
 	fields["status"] = e.Status
 	fields[log.FnError] = e.Error()
 	log.Error(http.StatusText(e.Status), fields)

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cmd"
+	"github.com/cybozu-go/well"
 )
 
 type imagePullCommand struct {
@@ -18,7 +18,7 @@ func ImagePullCommand(nodes []*cke.Node, img cke.Image) cke.Commander {
 }
 
 func (c imagePullCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		ce := inf.Engine(n.Address)
 		env.Go(func(ctx context.Context) error {

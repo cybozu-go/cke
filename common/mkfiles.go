@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cmd"
+	"github.com/cybozu-go/well"
 )
 
 type fileData struct {
@@ -35,7 +35,7 @@ func (c *FilesBuilder) AddFile(ctx context.Context, name string, f func(context.
 	var mu sync.Mutex
 	dataMap := make(map[string][]byte)
 
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		n := n
 		env.Go(func(ctx context.Context) error {
@@ -67,7 +67,7 @@ func (c *FilesBuilder) AddKeyPair(ctx context.Context, name string,
 	certMap := make(map[string][]byte)
 	keyMap := make(map[string][]byte)
 
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		n := n
 		env.Go(func(ctx context.Context) error {
@@ -112,7 +112,7 @@ func (c *FilesBuilder) Run(ctx context.Context, inf cke.Infrastructure) error {
 		binds = append(binds, m)
 	}
 
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		n := n
 		env.Go(func(ctx context.Context) error {

@@ -15,10 +15,10 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/server"
-	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/etcdutil"
+	"github.com/cybozu-go/well"
 	"golang.org/x/crypto/ssh"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,7 +28,7 @@ const sshTimeout = 3 * time.Minute
 
 var (
 	sshClients = make(map[string]*ssh.Client)
-	httpClient = &cmd.HTTPClient{Client: &http.Client{}}
+	httpClient = &well.HTTPClient{Client: &http.Client{}}
 )
 
 func sshTo(address string, sshKey ssh.Signer) (*ssh.Client, error) {
@@ -110,7 +110,7 @@ RETRY:
 }
 
 func stopCKE() error {
-	env := cmd.NewEnvironment(context.Background())
+	env := well.NewEnvironment(context.Background())
 	for _, host := range []string{host1, host2} {
 		host2 := host
 		env.Go(func(ctx context.Context) error {
@@ -131,7 +131,7 @@ func stopCKE() error {
 }
 
 func runCKE() error {
-	env := cmd.NewEnvironment(context.Background())
+	env := well.NewEnvironment(context.Background())
 	for _, host := range []string{host1, host2} {
 		host2 := host
 		env.Go(func(ctx context.Context) error {
