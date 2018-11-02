@@ -55,7 +55,7 @@ jobs:
 
   compose:
     machine:
-    - image: circleci/classic:edge
+      image: circleci/classic:edge
     working_directory: ~/work
     steps:
       - checkout
