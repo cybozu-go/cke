@@ -53,6 +53,26 @@ jobs:
             cp /tmp/workspace/create-qcow .
             /tmp/workspace/create-disk-if-not-exists -cleanup=true -instance=${CIRCLE_PROJECT_REPONAME}-${CIRCLE_BUILD_NUM}-var-lib-docker-disk --account-json=/root/project/account.json
 
+  compose:
+    machine:
+    - image: circleci/classic:edge
+    working_directory: ~/work
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: docker-compose build
+          command: docker-compose -f docker-compose/docker-compose.yml build
+      - run:
+          name: docker-compose up
+          command: docker-compose -f docker-compose/docker-compose.yml up -d
+      - run:
+          name: run test
+          command: docker-compose -f docker-compose/docker-compose.yml run setup /opt/setup/test.sh
+      - run:
+          name: docker-compose down
+          command: docker-compose -f docker-compose/docker-compose.yml down
+
 workflows:
   version: 2
   main:
@@ -62,3 +82,4 @@ workflows:
           requires:
           - build
       - mtest
+      - compose
