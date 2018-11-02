@@ -14,6 +14,7 @@ const (
 	ToolsImage     = Image("quay.io/cybozu/cke-tools:1.2.1-1")
 	HyperkubeImage = Image("quay.io/cybozu/hyperkube:1.11.2-2")
 	PauseImage     = Image("quay.io/cybozu/pause:3.1-1")
+	CoreDNSImage   = Image("quay.io/cybozu/coredns:1.2.5-1")
 )
 
 // AllImages return container images list used by CKE
@@ -23,5 +24,6 @@ func AllImages() []string {
 		ToolsImage.Name(),
 		HyperkubeImage.Name(),
 		PauseImage.Name(),
+		CoreDNS.Name(),
 	}
 }
