@@ -199,15 +199,16 @@ func (d testData) withK8sReady() testData {
 	return d
 }
 
-func (d testData) withRBACResources() testData {
+func (d testData) withK8sResources() testData {
 	d.withK8sReady()
 	d.Status.Kubernetes.RBACRoleExists = true
 	d.Status.Kubernetes.RBACRoleBindingExists = true
+	d.Status.Kubernetes.CoreDNSExists = true
 	return d
 }
 
 func (d testData) withEtcdEndpoints() testData {
-	d.withRBACResources()
+	d.withK8sResources()
 	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
 		Subsets: []corev1.EndpointSubset{
 			{
@@ -456,11 +457,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name:        "RBAC",
 			Input:       newData().withK8sReady(),
-			ExpectedOps: []string{"create-etcd-endpoints", "install-rbac-role"},
+			ExpectedOps: []string{"create-coredns", "create-etcd-endpoints", "install-rbac-role"},
 		},
 		{
 			Name:        "EtcdEndpointsCreate",
-			Input:       newData().withRBACResources(),
+			Input:       newData().withK8sResources(),
 			ExpectedOps: []string{"create-etcd-endpoints"},
 		},
 		{

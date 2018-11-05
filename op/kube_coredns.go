@@ -17,8 +17,12 @@ type kubeCoreDNSCreateOp struct {
 }
 
 // KubeCoreDNSCreateOp returns an Operator to create CoreDNS.
-func KubeCoreDNSCreateOp() cke.Operator {
-	return &kubeCoreDNSCreateOp{}
+func KubeCoreDNSCreateOp(apiserver *cke.Node, params cke.KubeletParams, finished bool) cke.Operator {
+	return &kubeCoreDNSCreateOp{
+		apiserver: apiserver,
+		params:    params,
+		finished:  finished,
+	}
 }
 
 func (o *kubeCoreDNSCreateOp) Name() string {
@@ -32,30 +36,6 @@ func (o *kubeCoreDNSCreateOp) NextCommand() cke.Commander {
 
 	o.finished = true
 	return createCoreDNSCommand{o.apiserver, o.params}
-}
-
-type kubeCoreDNSUpdateOp struct {
-	apiserver *cke.Node
-	finished  bool
-	params    cke.KubeletParams
-}
-
-// KubeCoreDNSUpdateOp returns an Operator to update CoreDNS.
-func KubeCoreDNSUpdateOp() cke.Operator {
-	return &kubeCoreDNSCreateOp{}
-}
-
-func (o *kubeCoreDNSUpdateOp) Name() string {
-	return "update-coredns"
-}
-
-func (o *kubeCoreDNSUpdateOp) NextCommand() cke.Commander {
-	if o.finished {
-		return nil
-	}
-
-	o.finished = true
-	return updateCoreDNSCommand{o.apiserver, o.params}
 }
 
 type createCoreDNSCommand struct {
@@ -198,29 +178,6 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 func (c createCoreDNSCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "createCoreDNSCommand",
-		Target: "kube-system",
-	}
-}
-
-type updateCoreDNSCommand struct {
-	apiserver *cke.Node
-	params    cke.KubeletParams
-}
-
-func (c updateCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
-	_, err := inf.K8sClient(ctx, c.apiserver)
-	if err != nil {
-		return err
-	}
-
-	// TODO
-
-	return err
-}
-
-func (c updateCoreDNSCommand) Command() cke.Command {
-	return cke.Command{
-		Name:   "updateCoreDNSCommand",
 		Target: "kube-system",
 	}
 }

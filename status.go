@@ -19,6 +19,7 @@ type KubernetesClusterStatus struct {
 	Nodes                 []corev1.Node
 	RBACRoleExists        bool
 	RBACRoleBindingExists bool
+	CoreDNSExists         bool
 	EtcdEndpoints         *corev1.Endpoints
 }
 
