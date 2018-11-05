@@ -12,7 +12,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 )
 
 // retrieved from https://github.com/kelseyhightower/kubernetes-the-hard-way
@@ -268,35 +267,7 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		_, err = services.Create(&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      coreDNSAppName,
-				Namespace: "kube-system",
-				Labels: map[string]string{
-					"k8s-app":                       coreDNSAppName,
-					"kubernetes.io/cluster-service": "true",
-					"kubernetes.io/name":            "CoreDNS",
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Selector: map[string]string{
-					"k8s-app": coreDNSAppName,
-				},
-				ClusterIP: c.params.DNS,
-				Ports: []corev1.ServicePort{
-					{
-						Name:     "dns",
-						Port:     53,
-						Protocol: corev1.ProtocolUDP,
-					},
-					{
-						Name:     "dns-tcp",
-						Port:     53,
-						Protocol: corev1.ProtocolTCP,
-					},
-				},
-			},
-		})
+		_, err = services.Create(getCoreDNSService(c.params.DNS))
 		if err != nil {
 			return err
 		}
@@ -352,20 +323,49 @@ func (c updateCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	}
 
 	services := cs.CoreV1().Services("kube-system")
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		service, err := services.Get(coreDNSAppName, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		service.Spec.ClusterIP = c.params.DNS
-		_, err = services.Update(service)
+	err = services.Delete(coreDNSAppName, &metav1.DeleteOptions{})
+	if err != nil {
 		return err
-	})
+	}
+	_, err = services.Create(getCoreDNSService(c.params.DNS))
+	return err
 }
 
 func (c updateCoreDNSCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "updateCoreDNSCommand",
 		Target: "kube-system",
+	}
+}
+
+func getCoreDNSService(dns string) *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      coreDNSAppName,
+			Namespace: "kube-system",
+			Labels: map[string]string{
+				"k8s-app":                       coreDNSAppName,
+				"kubernetes.io/cluster-service": "true",
+				"kubernetes.io/name":            "CoreDNS",
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"k8s-app": coreDNSAppName,
+			},
+			ClusterIP: dns,
+			Ports: []corev1.ServicePort{
+				{
+					Name:     "dns",
+					Port:     53,
+					Protocol: corev1.ProtocolUDP,
+				},
+				{
+					Name:     "dns-tcp",
+					Port:     53,
+					Protocol: corev1.ProtocolTCP,
+				},
+			},
+		},
 	}
 }
