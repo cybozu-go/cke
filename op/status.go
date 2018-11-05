@@ -82,7 +82,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	status.Proxy = cke.KubeComponentStatus{ss[kubeProxyContainerName], false}
 	status.Proxy.IsHealthy = status.Proxy.Running
 
-	status.Kubelet = cke.KubeletStatus{ss[kubeletContainerName], false, "", false}
+	status.Kubelet = cke.KubeletStatus{ss[kubeletContainerName], false, "", "", false}
 	if status.Kubelet.Running {
 		status.Kubelet.IsHealthy, err = checkHealthz(ctx, inf, node.Address, 10248)
 		if err != nil {
@@ -95,13 +95,17 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		cfgData, _, err := agent.Run("cat /etc/kubernetes/kubelet/config.yml")
 		if err == nil {
 			v := struct {
-				ClusterDomain string `yaml:"clusterDomain"`
-				FailSwapOn    bool   `yaml:"failSwapOn"`
+				ClusterDomain string   `yaml:"clusterDomain"`
+				ClusterDNS    []string `yaml:"clusterDNS"`
+				FailSwapOn    bool     `yaml:"failSwapOn"`
 			}{}
 			err = yaml.Unmarshal(cfgData, &v)
 			if err == nil {
 				status.Kubelet.Domain = v.ClusterDomain
 				status.Kubelet.AllowSwap = !v.FailSwapOn
+				if len(v.ClusterDNS) > 0 {
+					status.Kubelet.DNS = v.ClusterDNS[0]
+				}
 			}
 		}
 	}
@@ -221,6 +225,15 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	switch {
 	case err == nil:
 		s.RBACRoleBindingExists = true
+	case errors.IsNotFound(err):
+	default:
+		return cke.KubernetesClusterStatus{}, err
+	}
+
+	core, err := clientset.CoreV1().Services("kube-system").Get(coreDNSAppName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.CoreDNSClusterIP = core.Spec.ClusterIP
 	case errors.IsNotFound(err):
 	default:
 		return cke.KubernetesClusterStatus{}, err

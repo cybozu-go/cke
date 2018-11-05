@@ -19,7 +19,7 @@ type KubernetesClusterStatus struct {
 	Nodes                 []corev1.Node
 	RBACRoleExists        bool
 	RBACRoleBindingExists bool
-	CoreDNSExists         bool
+	CoreDNSClusterIP      string
 	EtcdEndpoints         *corev1.Endpoints
 }
 
@@ -31,10 +31,6 @@ type ClusterStatus struct {
 
 	Etcd       EtcdClusterStatus
 	Kubernetes KubernetesClusterStatus
-
-	// TODO:
-	// CoreDNS will be deployed as k8s Pods.
-	// We probably need to use k8s API to query CoreDNS service status.
 }
 
 // NodeStatus status of a node.
@@ -77,5 +73,6 @@ type KubeletStatus struct {
 	ServiceStatus
 	IsHealthy bool
 	Domain    string
+	DNS       string
 	AllowSwap bool
 }

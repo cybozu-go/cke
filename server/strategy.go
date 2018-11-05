@@ -150,7 +150,7 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 		ops = append(ops, op.KubeRBACRoleInstallOp(apiServer, ks.RBACRoleExists))
 	}
 
-	dnsOp := decideCoreDNSOp(apiServer, c.Options.Kubelet, ks.CoreDNSExists)
+	dnsOp := decideCoreDNSOp(apiServer, c.Options.Kubelet, ks.CoreDNSClusterIP)
 	if dnsOp != nil {
 		ops = append(ops, dnsOp)
 	}
@@ -170,10 +170,15 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 	return ops
 }
 
-func decideCoreDNSOp(apiServer *cke.Node, params cke.KubeletParams, exists bool) cke.Operator {
-	if !exists {
-		return op.KubeCoreDNSCreateOp(apiServer, params, exists)
+func decideCoreDNSOp(apiServer *cke.Node, params cke.KubeletParams, clusterIP string) cke.Operator {
+	if len(clusterIP) == 0 {
+		return op.KubeCoreDNSCreateOp(apiServer, params)
 	}
+
+	if params.DNS != clusterIP {
+		return op.KubeCoreDNSUpdateOp(apiServer, params)
+	}
+
 	return nil
 }
 
