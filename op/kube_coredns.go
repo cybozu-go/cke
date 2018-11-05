@@ -92,6 +92,7 @@ spec:
 type kubeCoreDNSCreateOp struct {
 	apiserver *cke.Node
 	params    cke.KubeletParams
+	finished  bool
 }
 
 // KubeCoreDNSCreateOp returns an Operator to create CoreDNS.
@@ -107,6 +108,10 @@ func (o *kubeCoreDNSCreateOp) Name() string {
 }
 
 func (o *kubeCoreDNSCreateOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
 	return createCoreDNSCommand{o.apiserver, o.params}
 }
 
@@ -308,6 +313,7 @@ func (c createCoreDNSCommand) Command() cke.Command {
 type kubeCoreDNSUpdateOp struct {
 	apiserver *cke.Node
 	params    cke.KubeletParams
+	finished  bool
 }
 
 // KubeCoreDNSUpdateOp returns an Operator to update CoreDNS.
@@ -323,6 +329,10 @@ func (o *kubeCoreDNSUpdateOp) Name() string {
 }
 
 func (o *kubeCoreDNSUpdateOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
 	return updateCoreDNSCommand{o.apiserver, o.params}
 }
 

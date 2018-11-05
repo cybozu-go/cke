@@ -170,12 +170,15 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 	return ops
 }
 
-func decideCoreDNSOp(apiServer *cke.Node, params cke.KubeletParams, clusterIP string) cke.Operator {
-	if len(clusterIP) == 0 {
+func decideCoreDNSOp(apiServer *cke.Node, params cke.KubeletParams, actualDNS string) cke.Operator {
+	if len(params.DNS) == 0 {
+		return nil
+	}
+	if len(actualDNS) == 0 {
 		return op.KubeCoreDNSCreateOp(apiServer, params)
 	}
 
-	if params.DNS != clusterIP {
+	if params.DNS != actualDNS {
 		return op.KubeCoreDNSUpdateOp(apiServer, params)
 	}
 
