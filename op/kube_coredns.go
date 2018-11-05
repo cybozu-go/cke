@@ -2,6 +2,9 @@ package op
 
 import (
 	"context"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/cybozu-go/cke"
 	appsv1 "k8s.io/api/apps/v1"
@@ -247,6 +250,7 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	case errors.IsNotFound(err):
 		deployment := new(appsv1.Deployment)
 		err = deployment.Unmarshal([]byte(deploymentText))
+		err = yaml.NewYAMLToJSONDecoder(strings.NewReader(deploymentText)).Decode(&deployment)
 		if err != nil {
 			return err
 		}
