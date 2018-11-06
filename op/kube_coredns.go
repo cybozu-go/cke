@@ -331,7 +331,7 @@ func getCoreDNSConfigMap(domain string) *corev1.ConfigMap {
 			Namespace: "kube-system",
 		},
 		Data: map[string]string{
-			"Corefile": fmt.Printf(`.:53 {
+			"Corefile": fmt.Sprintf(`.:53 {
     errors
     health
     log
