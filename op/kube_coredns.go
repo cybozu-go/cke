@@ -16,7 +16,7 @@ import (
 )
 
 // retrieved from https://github.com/kelseyhightower/kubernetes-the-hard-way
-var deploymentText = `
+var deploymentTemplate = `
 metadata:
   name: coredns
   namespace: kube-system
@@ -45,7 +45,7 @@ spec:
           operator: "Exists"
       containers:
       - name: coredns
-        image: coredns/coredns:1.2.2
+        image: %s
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -226,8 +226,8 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
+		deploymentText := fmt.Sprintf(deploymentTemplate, cke.CoreDNSImage)
 		deployment := new(appsv1.Deployment)
-		err = deployment.Unmarshal([]byte(deploymentText))
 		err = yaml.NewYAMLToJSONDecoder(strings.NewReader(deploymentText)).Decode(&deployment)
 		if err != nil {
 			return err
