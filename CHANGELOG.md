@@ -5,6 +5,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.12] - 2018-11-06
+### Added
+- Add support of Docker compose for quickstart (#82).
+- Add CoreDNS deployment operation (#83).
+
+### Changed
+- Update Go modules for Go 1.11.2 (#84).
+
 ## [0.11] - 2018-10-30
 ### Added
 - Enable to register a node with taint at boot (#77).
@@ -68,7 +76,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.11...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.12...HEAD
+[0.12]: https://github.com/cybozu-go/cke/compare/v0.11...v0.12
 [0.11]: https://github.com/cybozu-go/cke/compare/v0.10...v0.11
 [0.10]: https://github.com/cybozu-go/cke/compare/v0.9...v0.10
 [0.9]: https://github.com/cybozu-go/cke/compare/v0.8...v0.9
