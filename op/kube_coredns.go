@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -211,29 +212,7 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		_, err = configs.Create(&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      coreDNSAppName,
-				Namespace: "kube-system",
-			},
-			Data: map[string]string{
-				"Corefile": `.:53 {
-    errors
-    health
-    kubernetes cluster.local in-addr.arpa ip6.arpa {
-      pods verified
-      upstream
-      fallthrough in-addr.arpa ip6.arpa
-    }
-    proxy . /etc/resolv.conf
-    cache 30
-    loop
-    reload
-    loadbalance
-}
-`,
-			},
-		})
+		_, err = configs.Create(getCoreDNSConfigMap(c.params.Domain))
 		if err != nil {
 			return err
 		}
@@ -322,6 +301,13 @@ func (c updateCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 		return err
 	}
 
+	configs := cs.CoreV1().ConfigMaps("kube-system")
+	err = configs.Delete(coreDNSAppName, &metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	_, err = configs.Create(getCoreDNSConfigMap(c.params.Domain))
+
 	services := cs.CoreV1().Services("kube-system")
 	err = services.Delete(coreDNSAppName, &metav1.DeleteOptions{})
 	if err != nil {
@@ -335,6 +321,33 @@ func (c updateCoreDNSCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "updateCoreDNSCommand",
 		Target: "kube-system",
+	}
+}
+
+func getCoreDNSConfigMap(domain string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      coreDNSAppName,
+			Namespace: "kube-system",
+		},
+		Data: map[string]string{
+			"Corefile": fmt.Printf(`.:53 {
+    errors
+    health
+    log
+    kubernetes %s in-addr.arpa ip6.arpa {
+      pods verified
+      upstream
+      fallthrough in-addr.arpa ip6.arpa
+    }
+    proxy . /etc/resolv.conf
+    cache 30
+    loop
+    reload
+    loadbalance
+}
+`, domain),
+		},
 	}
 }
 
