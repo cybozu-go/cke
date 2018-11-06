@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.13] - 2018-11-06
+### Changed
+- Use cybzou container image for CoreDNS (#85).
+
 ## [0.12] - 2018-11-06
 ### Added
 - Add support of Docker compose for quickstart (#82).
@@ -76,7 +80,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.12...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.13...HEAD
+[0.13]: https://github.com/cybozu-go/cke/compare/v0.12...v0.13
 [0.12]: https://github.com/cybozu-go/cke/compare/v0.11...v0.12
 [0.11]: https://github.com/cybozu-go/cke/compare/v0.10...v0.11
 [0.10]: https://github.com/cybozu-go/cke/compare/v0.9...v0.10
