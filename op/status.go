@@ -230,10 +230,19 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	core, err := clientset.CoreV1().Services("kube-system").Get(coreDNSAppName, metav1.GetOptions{})
+	coreService, err := clientset.CoreV1().Services("kube-system").Get(coreDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
-		s.CoreDNSClusterIP = core.Spec.ClusterIP
+		s.CoreDNSClusterIP = coreService.Spec.ClusterIP
+	case errors.IsNotFound(err):
+	default:
+		return cke.KubernetesClusterStatus{}, err
+	}
+
+	coreConfig, err := clientset.CoreV1().ConfigMaps("kube-system").Get(coreDNSAppName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.CoreDNSClusterDomain = coreConfig.Labels["cke-domain"]
 	case errors.IsNotFound(err):
 	default:
 		return cke.KubernetesClusterStatus{}, err

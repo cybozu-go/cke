@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	testClusterName    = "test"
-	testServiceSubnet  = "12.34.56.0/24"
-	testDefaultDNSAddr = "10.0.0.53"
+	testClusterName      = "test"
+	testServiceSubnet    = "12.34.56.0/24"
+	testDefaultDNSDomain = "cluster.local"
+	testDefaultDNSAddr   = "10.0.0.53"
 )
 
 type testData struct {
@@ -64,6 +65,7 @@ func newData() testData {
 		},
 		ServiceSubnet: testServiceSubnet,
 	}
+	cluster.Options.Kubelet.Domain = testDefaultDNSDomain
 	cluster.Options.Kubelet.DNS = testDefaultDNSAddr
 	status := &cke.ClusterStatus{
 		NodeStatuses: map[string]*cke.NodeStatus{
@@ -191,7 +193,7 @@ func (d testData) withAllServices() testData {
 	d.withAPIServer(testServiceSubnet)
 	d.withControllerManager(testClusterName, testServiceSubnet)
 	d.withScheduler()
-	d.withKubelet("", testDefaultDNSAddr, false)
+	d.withKubelet(testDefaultDNSDomain, testDefaultDNSAddr, false)
 	d.withProxy()
 	return d
 }
@@ -209,14 +211,15 @@ func (d testData) withK8sRBACReady() testData {
 	return d
 }
 
-func (d testData) withK8sCoreDNSReady(clusterIP string) testData {
+func (d testData) withK8sCoreDNSReady(clusterDomain, clusterIP string) testData {
 	d.withK8sRBACReady()
+	d.Status.Kubernetes.CoreDNSClusterDomain = clusterDomain
 	d.Status.Kubernetes.CoreDNSClusterIP = clusterIP
 	return d
 }
 
 func (d testData) withEtcdEndpoints() testData {
-	d.withK8sCoreDNSReady("10.0.0.53")
+	d.withK8sCoreDNSReady(testDefaultDNSDomain, testDefaultDNSAddr)
 	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
 		Subsets: []corev1.EndpointSubset{
 			{
@@ -483,7 +486,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name:        "EtcdEndpointsCreate",
-			Input:       newData().withK8sCoreDNSReady(testDefaultDNSAddr),
+			Input:       newData().withK8sCoreDNSReady(testDefaultDNSDomain, testDefaultDNSAddr),
 			ExpectedOps: []string{"create-etcd-endpoints"},
 		},
 		{

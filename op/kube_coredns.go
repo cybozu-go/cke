@@ -307,6 +307,9 @@ func (c updateCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 		return err
 	}
 	_, err = configs.Create(getCoreDNSConfigMap(c.params.Domain))
+	if err != nil {
+		return err
+	}
 
 	services := cs.CoreV1().Services("kube-system")
 	err = services.Delete(coreDNSAppName, &metav1.DeleteOptions{})
@@ -329,6 +332,9 @@ func getCoreDNSConfigMap(domain string) *corev1.ConfigMap {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      coreDNSAppName,
 			Namespace: "kube-system",
+			Labels: map[string]string{
+				"cke-domain": domain,
+			},
 		},
 		Data: map[string]string{
 			"Corefile": fmt.Sprintf(`.:53 {
