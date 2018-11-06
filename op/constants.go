@@ -21,6 +21,9 @@ const (
 
 	etcdEndpointsName = "cke-etcd"
 
+	coreDNSRBACRoleName = "system:coredns"
+	coreDNSAppName      = "coredns"
+
 	timeoutDuration = 5 * time.Second
 
 	etcdPKIPath = "/etc/etcd/pki"

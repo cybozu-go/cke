@@ -8,7 +8,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/common"
-	"github.com/cybozu-go/cmd"
+	"github.com/cybozu-go/well"
 	yaml "gopkg.in/yaml.v2"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -134,6 +134,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		Authorization:         KubeletAuthorization{Mode: "Webhook"},
 		HealthzBindAddress:    "0.0.0.0",
 		ClusterDomain:         c.params.Domain,
+		ClusterDNS:            []string{c.params.DNS},
 		RuntimeRequestTimeout: "15m",
 		FailSwapOn:            !c.params.AllowSwap,
 	}
@@ -192,7 +193,7 @@ type installCNICommand struct {
 }
 
 func (c installCNICommand) Run(ctx context.Context, inf cke.Infrastructure) error {
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 
 	binds := []cke.Mount{
 		{Source: cniBinDir, Destination: "/host/bin", ReadOnly: false, Label: cke.LabelShared},

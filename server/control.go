@@ -8,8 +8,8 @@ import (
 
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
+	"github.com/cybozu-go/well"
 )
 
 var (
@@ -75,7 +75,7 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 	}
 
 	watchChan := make(chan struct{})
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 	env.Go(func(ctx context.Context) error {
 		return startWatcher(ctx, c.session.Client(), watchChan)
 	})

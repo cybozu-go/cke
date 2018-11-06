@@ -49,6 +49,20 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 	})
 
+	It("has CoreDNS resources", func() {
+		for resource, name := range map[string]string{
+			"serviceaccounts":     "coredns",
+			"clusterroles":        "system:coredns",
+			"clusterrolebindings": "system:coredns",
+			"configmaps":          "coredns",
+			"deployments":         "coredns",
+			"services":            "coredns",
+		} {
+			_, err := kubectl("-n", "kube-system", "get", resource+"/"+name)
+			Expect(err).ShouldNot(HaveOccurred())
+		}
+	})
+
 	It("has kube-system/cke-etcd Service and Endpoints", func() {
 		_, err := kubectl("-n", "kube-system", "get", "services/cke-etcd")
 		Expect(err).ShouldNot(HaveOccurred())

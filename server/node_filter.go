@@ -356,6 +356,8 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 			fallthrough
 		case currentOpts.Domain != st.Domain:
 			fallthrough
+		case currentOpts.DNS != st.DNS:
+			fallthrough
 		case currentOpts.AllowSwap != st.AllowSwap:
 			fallthrough
 		case !kubeletEqualParams(st.BuiltInParams, currentBuiltIn):

@@ -90,6 +90,7 @@ func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastruc
 		Authorization:         KubeletAuthorization{Mode: "Webhook"},
 		HealthzBindAddress:    "0.0.0.0",
 		ClusterDomain:         c.params.Domain,
+		ClusterDNS:            []string{c.params.DNS},
 		RuntimeRequestTimeout: "15m",
 		FailSwapOn:            !c.params.AllowSwap,
 	}

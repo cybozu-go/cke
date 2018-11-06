@@ -8,11 +8,11 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/cli"
-	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
+	"github.com/cybozu-go/well"
 	"github.com/google/subcommands"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var (
@@ -50,7 +50,7 @@ func main() {
 	subcommands.Register(cli.KubernetesCommand(), "")
 
 	flag.Parse()
-	cmd.LogConfig{}.Apply()
+	well.LogConfig{}.Apply()
 
 	if *flgVersion {
 		fmt.Println(cke.Version)
@@ -72,11 +72,11 @@ func main() {
 	cli.Setup(storage)
 
 	exitStatus := subcommands.ExitSuccess
-	cmd.Go(func(ctx context.Context) error {
+	well.Go(func(ctx context.Context) error {
 		exitStatus = subcommands.Execute(ctx)
 		return nil
 	})
-	cmd.Stop()
-	cmd.Wait()
+	well.Stop()
+	well.Wait()
 	os.Exit(int(exitStatus))
 }

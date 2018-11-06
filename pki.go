@@ -152,9 +152,6 @@ func (k KubernetesCA) IssueForAPIServer(ctx context.Context, inf Infrastructure,
 		"kubernetes.default",
 		"kubernetes.default.svc",
 	}
-	if len(domain) == 0 {
-		domain = "cluster.local"
-	}
 	d := strings.Split(domain, ".")
 	for i := range d {
 		altNames = append(altNames, "kubernetes.default.svc."+strings.Join(d[0:i+1], "."))

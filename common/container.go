@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/log"
+	"github.com/cybozu-go/well"
 )
 
 type runContainerCommand struct {
@@ -66,7 +66,7 @@ func WithExtra(params cke.ServiceParams) RunOption {
 }
 
 func (c runContainerCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		n := n
 		ce := inf.Engine(n.Address)
@@ -173,7 +173,7 @@ func KillContainersCommand(nodes []*cke.Node, name string) cke.Commander {
 
 func (c killContainersCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	begin := time.Now()
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		ce := inf.Engine(n.Address)
 		env.Go(func(ctx context.Context) error {

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cmd"
+	"github.com/cybozu-go/well"
 )
 
 type volumeCreateCommand struct {
@@ -19,7 +19,7 @@ func VolumeCreateCommand(nodes []*cke.Node, name string) cke.Commander {
 }
 
 func (c volumeCreateCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		ce := inf.Engine(n.Address)
 		env.Go(func(ctx context.Context) error {
@@ -53,7 +53,7 @@ func VolumeRemoveCommand(nodes []*cke.Node, name string) cke.Commander {
 }
 
 func (c volumeRemoveCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		ce := inf.Engine(n.Address)
 		env.Go(func(ctx context.Context) error {

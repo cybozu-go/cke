@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cmd"
+	"github.com/cybozu-go/well"
 )
 
 type makeDirsCommand struct {
@@ -42,7 +42,7 @@ func (c makeDirsCommand) Run(ctx context.Context, inf cke.Infrastructure) error 
 
 	arg := "/usr/local/cke-tools/bin/make_directories " + strings.Join(dests, " ")
 
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		ce := inf.Engine(n.Address)
 		env.Go(func(ctx context.Context) error {

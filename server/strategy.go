@@ -46,7 +46,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus) []cke.Operator {
 	}
 
 	// 7. Maintain k8s resources.
-	if ops := k8sMaintOps(cs, nf); len(ops) > 0 {
+	if ops := k8sMaintOps(c, cs, nf); len(ops) > 0 {
 		return ops
 	}
 
@@ -138,7 +138,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	return nil
 }
 
-func k8sMaintOps(cs *cke.ClusterStatus, nf *NodeFilter) (ops []cke.Operator) {
+func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []cke.Operator) {
 	ks := cs.Kubernetes
 	apiServer := nf.HealthyAPIServer()
 
@@ -148,6 +148,11 @@ func k8sMaintOps(cs *cke.ClusterStatus, nf *NodeFilter) (ops []cke.Operator) {
 
 	if !ks.RBACRoleExists || !ks.RBACRoleBindingExists {
 		ops = append(ops, op.KubeRBACRoleInstallOp(apiServer, ks.RBACRoleExists))
+	}
+
+	dnsOp := decideCoreDNSOp(apiServer, c.Options.Kubelet, ks.CoreDNSClusterDomain, ks.CoreDNSClusterIP)
+	if dnsOp != nil {
+		ops = append(ops, dnsOp)
 	}
 
 	epOp := decideEpOp(ks.EtcdEndpoints, apiServer, nf.ControlPlane())
@@ -163,6 +168,25 @@ func k8sMaintOps(cs *cke.ClusterStatus, nf *NodeFilter) (ops []cke.Operator) {
 		ops = append(ops, op.KubeNodeRemoveOp(apiServer, nodes))
 	}
 	return ops
+}
+
+func decideCoreDNSOp(apiServer *cke.Node, params cke.KubeletParams, actualDomain, actualDNS string) cke.Operator {
+	if len(params.DNS) == 0 {
+		return nil
+	}
+
+	if len(actualDomain) == 0 || len(actualDNS) == 0 {
+		return op.KubeCoreDNSCreateOp(apiServer, params)
+	}
+
+	if params.Domain != actualDomain {
+		return op.KubeCoreDNSUpdateOp(apiServer, params)
+	}
+	if params.DNS != actualDNS {
+		return op.KubeCoreDNSUpdateOp(apiServer, params)
+	}
+
+	return nil
 }
 
 func decideEpOp(ep *corev1.Endpoints, apiServer *cke.Node, cpNodes []*cke.Node) cke.Operator {

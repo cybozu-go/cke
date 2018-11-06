@@ -9,9 +9,9 @@ import (
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/server"
-	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
+	"github.com/cybozu-go/well"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -40,7 +40,7 @@ func loadConfig(p string) (*etcdutil.Config, error) {
 
 func main() {
 	flag.Parse()
-	cmd.LogConfig{}.Apply()
+	well.LogConfig{}.Apply()
 
 	interval, err := time.ParseDuration(*flgInterval)
 	if err != nil {
@@ -73,12 +73,12 @@ func main() {
 	}
 	controller := server.NewController(session, interval, timeout)
 
-	cmd.Go(controller.Run)
+	well.Go(controller.Run)
 	server := server.Server{
 		EtcdClient: etcd,
 		Timeout:    timeout,
 	}
-	s := &cmd.HTTPServer{
+	s := &well.HTTPServer{
 		Server: &http.Server{
 			Addr:    *flgHTTP,
 			Handler: server,
@@ -86,8 +86,8 @@ func main() {
 		ShutdownTimeout: 3 * time.Minute,
 	}
 	s.ListenAndServe()
-	err = cmd.Wait()
-	if err != nil && !cmd.IsSignaled(err) {
+	err = well.Wait()
+	if err != nil && !well.IsSignaled(err) {
 		log.ErrorExit(err)
 	}
 }

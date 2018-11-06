@@ -7,7 +7,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/google/subcommands"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 type cluster struct{}
@@ -48,7 +48,7 @@ func (c clusterSet) Execute(ctx context.Context, f *flag.FlagSet) subcommands.Ex
 	}
 	defer r.Close()
 
-	cfg := new(cke.Cluster)
+	cfg := cke.NewCluster()
 	err = yaml.NewDecoder(r).Decode(cfg)
 	if err != nil {
 		return handleError(err)

@@ -13,8 +13,10 @@ import (
 )
 
 const (
-	testClusterName   = "test"
-	testServiceSubnet = "12.34.56.0/24"
+	testClusterName      = "test"
+	testServiceSubnet    = "12.34.56.0/24"
+	testDefaultDNSDomain = "cluster.local"
+	testDefaultDNSAddr   = "10.0.0.53"
 )
 
 type testData struct {
@@ -63,6 +65,8 @@ func newData() testData {
 		},
 		ServiceSubnet: testServiceSubnet,
 	}
+	cluster.Options.Kubelet.Domain = testDefaultDNSDomain
+	cluster.Options.Kubelet.DNS = testDefaultDNSAddr
 	status := &cke.ClusterStatus{
 		NodeStatuses: map[string]*cke.NodeStatus{
 			"10.0.0.11": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
@@ -158,7 +162,7 @@ func (d testData) withScheduler() testData {
 	return d
 }
 
-func (d testData) withKubelet(domain string, allowSwap bool) testData {
+func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 	for _, n := range d.Cluster.Nodes {
 		st := &d.NodeStatus(n).Kubelet
 		st.Running = true
@@ -166,6 +170,7 @@ func (d testData) withKubelet(domain string, allowSwap bool) testData {
 		st.Image = cke.HyperkubeImage.Name()
 		st.BuiltInParams = op.KubeletServiceParams(n)
 		st.Domain = domain
+		st.DNS = dns
 		st.AllowSwap = allowSwap
 	}
 	return d
@@ -188,7 +193,7 @@ func (d testData) withAllServices() testData {
 	d.withAPIServer(testServiceSubnet)
 	d.withControllerManager(testClusterName, testServiceSubnet)
 	d.withScheduler()
-	d.withKubelet("", false)
+	d.withKubelet(testDefaultDNSDomain, testDefaultDNSAddr, false)
 	d.withProxy()
 	return d
 }
@@ -199,15 +204,22 @@ func (d testData) withK8sReady() testData {
 	return d
 }
 
-func (d testData) withRBACResources() testData {
+func (d testData) withK8sRBACReady() testData {
 	d.withK8sReady()
 	d.Status.Kubernetes.RBACRoleExists = true
 	d.Status.Kubernetes.RBACRoleBindingExists = true
 	return d
 }
 
+func (d testData) withK8sCoreDNSReady(clusterDomain, clusterIP string) testData {
+	d.withK8sRBACReady()
+	d.Status.Kubernetes.CoreDNSClusterDomain = clusterDomain
+	d.Status.Kubernetes.CoreDNSClusterIP = clusterIP
+	return d
+}
+
 func (d testData) withEtcdEndpoints() testData {
-	d.withRBACResources()
+	d.withK8sCoreDNSReady(testDefaultDNSDomain, testDefaultDNSAddr)
 	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
 		Subsets: []corev1.EndpointSubset{
 			{
@@ -391,14 +403,14 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name:  "RestartKubelet",
-			Input: newData().withAllServices().withKubelet("foo.local", false),
+			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false),
 			ExpectedOps: []string{
 				"kubelet-restart",
 			},
 		},
 		{
 			Name:  "RestartKubelet2",
-			Input: newData().withAllServices().withKubelet("", true),
+			Input: newData().withAllServices().withKubelet("", "10.0.0.53", true),
 			ExpectedOps: []string{
 				"kubelet-restart",
 			},
@@ -416,6 +428,15 @@ func TestDecideOps(t *testing.T) {
 			Name: "RestartKubelet4",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.Cluster.Nodes[0]).Kubelet.ExtraParams.ExtraArguments = []string{"foo"}
+			}),
+			ExpectedOps: []string{
+				"kubelet-restart",
+			},
+		},
+		{
+			Name: "RestartKubelet5",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.Cluster.Nodes[0]).Kubelet.DNS = "10.0.0.54"
 			}),
 			ExpectedOps: []string{
 				"kubelet-restart",
@@ -449,19 +470,45 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
-			Name:        "WaiKube",
+			Name:        "WaitKube",
 			Input:       newData().withAllServices(),
 			ExpectedOps: []string{"wait-kubernetes"},
 		},
 		{
 			Name:        "RBAC",
 			Input:       newData().withK8sReady(),
-			ExpectedOps: []string{"create-etcd-endpoints", "install-rbac-role"},
+			ExpectedOps: []string{"create-coredns", "create-etcd-endpoints", "install-rbac-role"},
+		},
+		{
+			Name:        "CoreDNS",
+			Input:       newData().withK8sRBACReady(),
+			ExpectedOps: []string{"create-coredns", "create-etcd-endpoints"},
 		},
 		{
 			Name:        "EtcdEndpointsCreate",
-			Input:       newData().withRBACResources(),
+			Input:       newData().withK8sCoreDNSReady(testDefaultDNSDomain, testDefaultDNSAddr),
 			ExpectedOps: []string{"create-etcd-endpoints"},
+		},
+		{
+			Name: "CoreDNSUpdate1",
+			Input: newData().withEtcdEndpoints().with(func(d testData) {
+				d.Cluster.Options.Kubelet.DNS = "10.0.0.54"
+			}),
+			ExpectedOps: []string{
+				"kubelet-restart",
+			},
+		},
+		{
+			Name: "CoreDNSUpdate2",
+			Input: newData().withEtcdEndpoints().with(func(d testData) {
+				d.Cluster.Options.Kubelet.DNS = "10.0.0.54"
+				for _, st := range d.Status.NodeStatuses {
+					st.Kubelet.DNS = "10.0.0.54"
+				}
+			}),
+			ExpectedOps: []string{
+				"update-coredns",
+			},
 		},
 		{
 			Name: "EtcdEndpointsUpdate1",

@@ -8,15 +8,15 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/cybozu-go/cmd"
 	"github.com/cybozu-go/etcdutil"
+	"github.com/cybozu-go/well"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-var httpClient = &cmd.HTTPClient{
+var httpClient = &well.HTTPClient{
 	Client: &http.Client{},
 }
 
@@ -64,7 +64,7 @@ type Infrastructure interface {
 
 	NewEtcdClient(ctx context.Context, endpoints []string) (*clientv3.Client, error)
 	K8sClient(ctx context.Context, n *Node) (*kubernetes.Clientset, error)
-	HTTPClient() *cmd.HTTPClient
+	HTTPClient() *well.HTTPClient
 }
 
 type ckeInfrastructure struct {
@@ -95,7 +95,7 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 
 	mu := new(sync.Mutex)
 
-	env := cmd.NewEnvironment(ctx)
+	env := well.NewEnvironment(ctx)
 	for _, n := range c.Nodes {
 		node := n
 		env.Go(func(ctx context.Context) error {
@@ -230,6 +230,6 @@ func (i *ckeInfrastructure) K8sClient(ctx context.Context, n *Node) (*kubernetes
 	return kubernetes.NewForConfig(cfg)
 }
 
-func (i ckeInfrastructure) HTTPClient() *cmd.HTTPClient {
+func (i ckeInfrastructure) HTTPClient() *well.HTTPClient {
 	return httpClient
 }
