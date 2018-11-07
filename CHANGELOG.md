@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.14] - 2018-11-07
+### Changed
+- Create CoreDNS ConfigMap either w/ or w/o upstream DNS servers (#86).
+
 ## [0.13] - 2018-11-06
 ### Changed
 - Use cybzou container image for CoreDNS (#85).
@@ -80,7 +84,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.13...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.14...HEAD
+[0.14]: https://github.com/cybozu-go/cke/compare/v0.13...v0.14
 [0.13]: https://github.com/cybozu-go/cke/compare/v0.12...v0.13
 [0.12]: https://github.com/cybozu-go/cke/compare/v0.11...v0.12
 [0.11]: https://github.com/cybozu-go/cke/compare/v0.10...v0.11
