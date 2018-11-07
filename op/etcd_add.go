@@ -14,6 +14,7 @@ type etcdAddMemberOp struct {
 	params     cke.EtcdParams
 	step       int
 	files      *common.FilesBuilder
+	domain     string
 }
 
 // EtcdAddMemberOp returns an Operator to add member to etcd cluster.
@@ -50,7 +51,7 @@ func (o *etcdAddMemberOp) NextCommand() cke.Commander {
 		return common.VolumeCreateCommand(nodes, volname)
 	case 4:
 		o.step++
-		return prepareEtcdCertificatesCommand{o.files}
+		return prepareEtcdCertificatesCommand{o.files, o.domain}
 	case 5:
 		o.step++
 		return o.files

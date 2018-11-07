@@ -24,12 +24,12 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus) []cke.Operator {
 
 	// 2. Bootstrap etcd cluster, if not yet.
 	if !nf.EtcdBootstrapped() {
-		return []cke.Operator{op.EtcdBootOp(nf.ControlPlane(), c.Options.Etcd)}
+		return []cke.Operator{op.EtcdBootOp(nf.ControlPlane(), c.Options.Etcd, c.Options.Kubelet.Domain)}
 	}
 
 	// 3. Start etcd containers.
 	if nodes := nf.EtcdStoppedMembers(); len(nodes) > 0 {
-		return []cke.Operator{op.EtcdStartOp(nodes, c.Options.Etcd)}
+		return []cke.Operator{op.EtcdStartOp(nodes, c.Options.Etcd, c.Options.Kubelet.Domain)}
 	}
 
 	// 4. Wait for etcd cluster to become ready
