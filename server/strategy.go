@@ -112,7 +112,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 		return op.EtcdDestroyMemberOp(nf.ControlPlane(), nodes, ids)
 	}
 	if nodes := nf.EtcdUnstartedMembers(); len(nodes) > 0 {
-		return op.EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
+		return op.EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)
 	}
 
 	if !nf.EtcdIsGood() {
@@ -125,7 +125,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	// all members are in sync.
 
 	if nodes := nf.EtcdNewMembers(); len(nodes) > 0 {
-		return op.EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
+		return op.EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)
 	}
 	if ids := nf.EtcdNonClusterMemberIDs(true); len(ids) > 0 {
 		return op.EtcdRemoveMemberOp(nf.ControlPlane(), ids)
