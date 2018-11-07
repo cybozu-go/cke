@@ -71,6 +71,10 @@ To view the contents, use `kubectl` as follows:
 $ kubectl -n kube-system get endpoints/cke-etcd -o yaml
 ```
 
+Furthermore, these endpoints address records are registered at CoreDNS.
+
+The domain name is `cke-etcd.kube-system.svc.<cluster-domain>`.
+
 Backup
 ------
 
