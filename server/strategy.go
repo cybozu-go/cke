@@ -1,6 +1,8 @@
 package server
 
 import (
+	"reflect"
+
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/log"
@@ -150,7 +152,7 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 		ops = append(ops, op.KubeRBACRoleInstallOp(apiServer, ks.RBACRoleExists))
 	}
 
-	dnsOp := decideCoreDNSOp(apiServer, c.Options.Kubelet, ks.CoreDNSClusterDomain, ks.CoreDNSClusterIP)
+	dnsOp := decideCoreDNSOp(apiServer, c, ks)
 	if dnsOp != nil {
 		ops = append(ops, dnsOp)
 	}
@@ -170,20 +172,23 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 	return ops
 }
 
-func decideCoreDNSOp(apiServer *cke.Node, params cke.KubeletParams, actualDomain, actualDNS string) cke.Operator {
-	if len(params.DNS) == 0 {
+func decideCoreDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) cke.Operator {
+	desiredDNSServers := c.DNSServers
+	desiredCoreDNSClusterDomain := c.Options.Kubelet.Domain
+	desiredCoreDNSClusterIP := c.Options.Kubelet.DNS
+
+	if len(desiredCoreDNSClusterIP) == 0 {
 		return nil
 	}
 
-	if len(actualDomain) == 0 || len(actualDNS) == 0 {
-		return op.KubeCoreDNSCreateOp(apiServer, params)
+	if len(ks.CoreDNSClusterDomain) == 0 || len(ks.CoreDNSClusterIP) == 0 {
+		return op.KubeCoreDNSCreateOp(apiServer, c.Options.Kubelet, c.DNSServers)
 	}
 
-	if params.Domain != actualDomain {
-		return op.KubeCoreDNSUpdateOp(apiServer, params)
-	}
-	if params.DNS != actualDNS {
-		return op.KubeCoreDNSUpdateOp(apiServer, params)
+	if !reflect.DeepEqual(desiredDNSServers, ks.DNSServers) ||
+		desiredCoreDNSClusterDomain != ks.CoreDNSClusterDomain ||
+		desiredCoreDNSClusterIP != ks.CoreDNSClusterIP {
+		return op.KubeCoreDNSUpdateOp(apiServer, c.Options.Kubelet, c.DNSServers)
 	}
 
 	return nil
