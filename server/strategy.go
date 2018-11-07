@@ -24,12 +24,12 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus) []cke.Operator {
 
 	// 2. Bootstrap etcd cluster, if not yet.
 	if !nf.EtcdBootstrapped() {
-		return []cke.Operator{op.EtcdBootOp(nf.ControlPlane(), c.Options.Etcd)}
+		return []cke.Operator{op.EtcdBootOp(nf.ControlPlane(), c.Options.Etcd, c.Options.Kubelet.Domain)}
 	}
 
 	// 3. Start etcd containers.
 	if nodes := nf.EtcdStoppedMembers(); len(nodes) > 0 {
-		return []cke.Operator{op.EtcdStartOp(nodes, c.Options.Etcd)}
+		return []cke.Operator{op.EtcdStartOp(nodes, c.Options.Etcd, c.Options.Kubelet.Domain)}
 	}
 
 	// 4. Wait for etcd cluster to become ready
@@ -112,7 +112,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 		return op.EtcdDestroyMemberOp(nf.ControlPlane(), nodes, ids)
 	}
 	if nodes := nf.EtcdUnstartedMembers(); len(nodes) > 0 {
-		return op.EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
+		return op.EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)
 	}
 
 	if !nf.EtcdIsGood() {
@@ -125,7 +125,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	// all members are in sync.
 
 	if nodes := nf.EtcdNewMembers(); len(nodes) > 0 {
-		return op.EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
+		return op.EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)
 	}
 	if ids := nf.EtcdNonClusterMemberIDs(true); len(ids) > 0 {
 		return op.EtcdRemoveMemberOp(nf.ControlPlane(), ids)

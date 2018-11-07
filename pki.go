@@ -47,7 +47,17 @@ func addRole(client *vault.Client, ca, role string, data map[string]interface{})
 type EtcdCA struct{}
 
 // IssueServerCert issues TLS server certificates.
-func (e EtcdCA) IssueServerCert(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
+func (e EtcdCA) IssueServerCert(ctx context.Context, inf Infrastructure, node *Node, domain string) (crt, key string, err error) {
+	altNames := []string{
+		"localhost",
+		"cke-etcd",
+		"cke-etcd.kube-system",
+		"cke-etcd.kube-system.svc",
+	}
+	d := strings.Split(domain, ".")
+	for i := range d {
+		altNames = append(altNames, "cke-etcd.kube-system.svc."+strings.Join(d[0:i+1], "."))
+	}
 	return issueCertificate(inf, CAServer, "system",
 		map[string]interface{}{
 			"ttl":            "87600h",
@@ -57,7 +67,7 @@ func (e EtcdCA) IssueServerCert(ctx context.Context, inf Infrastructure, node *N
 		},
 		map[string]interface{}{
 			"common_name": node.Nodename(),
-			"alt_names":   "localhost",
+			"alt_names":   strings.Join(altNames, ","),
 			"ip_sans":     "127.0.0.1," + node.Address,
 		})
 }

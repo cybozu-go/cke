@@ -10,14 +10,16 @@ type etcdStartOp struct {
 	params cke.EtcdParams
 	step   int
 	files  *common.FilesBuilder
+	domain string
 }
 
 // EtcdStartOp returns an Operator to start etcd containers.
-func EtcdStartOp(nodes []*cke.Node, params cke.EtcdParams) cke.Operator {
+func EtcdStartOp(nodes []*cke.Node, params cke.EtcdParams, domain string) cke.Operator {
 	return &etcdStartOp{
 		nodes:  nodes,
 		params: params,
 		files:  common.NewFilesBuilder(nodes),
+		domain: domain,
 	}
 }
 
@@ -29,7 +31,7 @@ func (o *etcdStartOp) NextCommand() cke.Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return prepareEtcdCertificatesCommand{o.files}
+		return prepareEtcdCertificatesCommand{o.files, o.domain}
 	case 1:
 		o.step++
 		return o.files
