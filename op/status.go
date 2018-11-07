@@ -243,6 +243,9 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	switch {
 	case err == nil:
 		s.DNSServers = strings.Split(coreConfig.Labels["cke-dns-servers"], "_")
+		if len(s.DNSServers) == 1 && s.DNSServers[0] == "" {
+			s.DNSServers = nil
+		}
 		s.CoreDNSClusterDomain = coreConfig.Labels["cke-domain"]
 	case errors.IsNotFound(err):
 	default:
