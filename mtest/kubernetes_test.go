@@ -61,6 +61,18 @@ var _ = Describe("Kubernetes", func() {
 			_, err := kubectl("-n", "kube-system", "get", resource+"/"+name)
 			Expect(err).ShouldNot(HaveOccurred())
 		}
+
+		stdout, err := kubectl("-n", "kube-system", "get", "configmaps/coredns", "-o=json")
+		Expect(err).ShouldNot(HaveOccurred())
+		configMap := new(corev1.ConfigMap)
+		err = json.Unmarshal(stdout, configMap)
+		Expect(err).ShouldNot(HaveOccurred())
+		domain, ok := configMap.ObjectMeta.Labels["cke-domain"]
+		Expect(ok).Should(BeTrue())
+		Expect(domain).Should(Equal("neco"))
+		dnsServers, ok := configMap.ObjectMeta.Labels["cke-dns-servers"]
+		Expect(ok).Should(BeTrue())
+		Expect(dnsServers).Should(Equal("8.8.8.8_1.1.1.1"))
 	})
 
 	It("has kube-system/cke-etcd Service and Endpoints", func() {

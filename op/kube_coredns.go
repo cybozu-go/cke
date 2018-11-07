@@ -93,16 +93,18 @@ spec:
 `
 
 type kubeCoreDNSCreateOp struct {
-	apiserver *cke.Node
-	params    cke.KubeletParams
-	finished  bool
+	apiserver  *cke.Node
+	params     cke.KubeletParams
+	dnsServers []string
+	finished   bool
 }
 
 // KubeCoreDNSCreateOp returns an Operator to create CoreDNS.
-func KubeCoreDNSCreateOp(apiserver *cke.Node, params cke.KubeletParams) cke.Operator {
+func KubeCoreDNSCreateOp(apiserver *cke.Node, params cke.KubeletParams, dnsServers []string) cke.Operator {
 	return &kubeCoreDNSCreateOp{
-		apiserver: apiserver,
-		params:    params,
+		apiserver:  apiserver,
+		params:     params,
+		dnsServers: dnsServers,
 	}
 }
 
@@ -115,12 +117,13 @@ func (o *kubeCoreDNSCreateOp) NextCommand() cke.Commander {
 		return nil
 	}
 	o.finished = true
-	return createCoreDNSCommand{o.apiserver, o.params}
+	return createCoreDNSCommand{o.apiserver, o.params, o.dnsServers}
 }
 
 type createCoreDNSCommand struct {
-	apiserver *cke.Node
-	params    cke.KubeletParams
+	apiserver  *cke.Node
+	params     cke.KubeletParams
+	dnsServers []string
 }
 
 func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
@@ -212,7 +215,7 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		_, err = configs.Create(getCoreDNSConfigMap(c.params.Domain))
+		_, err = configs.Create(getCoreDNSConfigMap(c.params.Domain, c.dnsServers))
 		if err != nil {
 			return err
 		}
@@ -265,16 +268,18 @@ func (c createCoreDNSCommand) Command() cke.Command {
 }
 
 type kubeCoreDNSUpdateOp struct {
-	apiserver *cke.Node
-	params    cke.KubeletParams
-	finished  bool
+	apiserver  *cke.Node
+	params     cke.KubeletParams
+	dnsServers []string
+	finished   bool
 }
 
 // KubeCoreDNSUpdateOp returns an Operator to update CoreDNS.
-func KubeCoreDNSUpdateOp(apiserver *cke.Node, params cke.KubeletParams) cke.Operator {
+func KubeCoreDNSUpdateOp(apiserver *cke.Node, params cke.KubeletParams, dnsServers []string) cke.Operator {
 	return &kubeCoreDNSUpdateOp{
-		apiserver: apiserver,
-		params:    params,
+		apiserver:  apiserver,
+		params:     params,
+		dnsServers: dnsServers,
 	}
 }
 
@@ -287,12 +292,13 @@ func (o *kubeCoreDNSUpdateOp) NextCommand() cke.Commander {
 		return nil
 	}
 	o.finished = true
-	return updateCoreDNSCommand{o.apiserver, o.params}
+	return updateCoreDNSCommand{o.apiserver, o.params, o.dnsServers}
 }
 
 type updateCoreDNSCommand struct {
-	apiserver *cke.Node
-	params    cke.KubeletParams
+	apiserver  *cke.Node
+	params     cke.KubeletParams
+	dnsServers []string
 }
 
 func (c updateCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
@@ -306,7 +312,7 @@ func (c updateCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	if err != nil {
 		return err
 	}
-	_, err = configs.Create(getCoreDNSConfigMap(c.params.Domain))
+	_, err = configs.Create(getCoreDNSConfigMap(c.params.Domain, c.dnsServers))
 	if err != nil {
 		return err
 	}
@@ -327,17 +333,23 @@ func (c updateCoreDNSCommand) Command() cke.Command {
 	}
 }
 
-func getCoreDNSConfigMap(domain string) *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      coreDNSAppName,
-			Namespace: "kube-system",
-			Labels: map[string]string{
-				"cke-domain": domain,
-			},
-		},
-		Data: map[string]string{
-			"Corefile": fmt.Sprintf(`.:53 {
+func getCoreDNSConfigMap(domain string, dnsServers []string) *corev1.ConfigMap {
+	var coreFileContents string
+	if len(dnsServers) == 0 {
+		coreFileContents = fmt.Sprintf(`.:53 {
+    errors
+    health
+    log
+    kubernetes %s in-addr.arpa ip6.arpa {
+      pods verified
+    }
+    cache 30
+    reload
+    loadbalance
+}
+`, domain)
+	} else {
+		coreFileContents = fmt.Sprintf(`.:53 {
     errors
     health
     log
@@ -346,13 +358,26 @@ func getCoreDNSConfigMap(domain string) *corev1.ConfigMap {
       upstream
       fallthrough in-addr.arpa ip6.arpa
     }
-    proxy . /etc/resolv.conf
+    proxy . %s
     cache 30
     loop
     reload
     loadbalance
 }
-`, domain),
+`, domain, strings.Join(dnsServers, " "))
+	}
+
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      coreDNSAppName,
+			Namespace: "kube-system",
+			Labels: map[string]string{
+				"cke-domain":      domain,
+				"cke-dns-servers": strings.Join(dnsServers, "_"),
+			},
+		},
+		Data: map[string]string{
+			"Corefile": coreFileContents,
 		},
 	}
 }
