@@ -181,7 +181,7 @@ var _ = Describe("Operations", func() {
 		cluster.Options.Scheduler.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Proxy.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Kubelet.ExtraEnvvar = map[string]string{"AAA": "aaa"}
-		cluster.Options.Kubelet.DNS = "10.34.56.54"
+		cluster.Options.Kubelet.Domain = "neconeco"
 		ckecliClusterSet(cluster)
 		Eventually(func() error {
 			return checkCluster(cluster)

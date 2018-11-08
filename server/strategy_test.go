@@ -69,7 +69,6 @@ func newData() testData {
 		DNSServers:    testDefaultDNSServers,
 	}
 	cluster.Options.Kubelet.Domain = testDefaultDNSDomain
-	cluster.Options.Kubelet.DNS = testDefaultDNSAddr
 	status := &cke.ClusterStatus{
 		NodeStatuses: map[string]*cke.NodeStatus{
 			"10.0.0.11": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
@@ -173,7 +172,6 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st.Image = cke.HyperkubeImage.Name()
 		st.BuiltInParams = op.KubeletServiceParams(n)
 		st.Domain = domain
-		st.DNS = dns
 		st.AllowSwap = allowSwap
 	}
 	return d
@@ -454,7 +452,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet5",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[0]).Kubelet.DNS = "10.0.0.54"
+				d.NodeStatus(d.Cluster.Nodes[0]).Kubelet.Domain = "neco.local"
 			}),
 			ExpectedOps: []string{
 				"kubelet-restart",
@@ -513,28 +511,29 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"create-etcd-endpoints"},
 		},
 		{
-			Name: "ClusterDNSUpdate1",
+			Name: "DNSUpdate1",
 			Input: newData().withEtcdEndpoints().with(func(d testData) {
-				d.Cluster.Options.Kubelet.DNS = "10.0.0.54"
+				d.Cluster.Options.Kubelet.Domain = "neco.local"
 			}),
 			ExpectedOps: []string{
 				"kubelet-restart",
 			},
 		},
 		{
-			Name: "ClusterDNSUpdate2",
+			Name: "DNSUpdate2",
 			Input: newData().withEtcdEndpoints().with(func(d testData) {
-				d.Cluster.Options.Kubelet.DNS = "10.0.0.54"
+				d.Cluster.Options.Kubelet.Domain = "neco.local"
 				for _, st := range d.Status.NodeStatuses {
-					st.Kubelet.DNS = "10.0.0.54"
+					st.Kubelet.Domain = "neco.local"
 				}
 			}),
 			ExpectedOps: []string{
 				"update-cluster-dns",
+				"update-node-dns",
 			},
 		},
 		{
-			Name: "DNSUpdate1",
+			Name: "DNSUpdate3",
 			Input: newData().withEtcdEndpoints().with(func(d testData) {
 				d.Cluster.DNSServers = []string{"1.1.1.1"}
 			}),
@@ -546,11 +545,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeDNSUpdate1",
 			Input: newData().withEtcdEndpoints().with(func(d testData) {
-				d.Cluster.Options.Kubelet.DNS = "10.0.0.54"
 				d.Status.Kubernetes.ClusterDNS.ClusterIP = "10.0.0.54"
-				for _, st := range d.Status.NodeStatuses {
-					st.Kubelet.DNS = "10.0.0.54"
-				}
 			}),
 			ExpectedOps: []string{
 				"update-node-dns",

@@ -47,5 +47,4 @@ options:
     - --disable-admission-plugins=Initializers
   kubelet:
     domain: neco
-    dns: 10.34.56.53
     allow_swap: true

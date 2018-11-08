@@ -105,7 +105,6 @@ type EtcdParams struct {
 type KubeletParams struct {
 	ServiceParams `yaml:",inline"`
 	Domain        string         `json:"domain"      yaml:"domain"`
-	DNS           string         `json:"dns"      yaml:"dns"`
 	AllowSwap     bool           `json:"allow_swap"  yaml:"allow_swap"`
 	BootTaints    []corev1.Taint `json:"boot-taints"   yaml:"boot-taints"`
 }

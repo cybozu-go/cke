@@ -98,7 +98,6 @@ Name              | Required | Type   | Description
 Name              | Required | Type      | Description
 ----------------- | -------- | --------- | -----------
 `domain`          | false    | string    | The base domain for the cluster.  Default: `cluster.local`.
-`dns`             | false    | string    | DNS server IP address.
 `allow_swap`      | false    | bool      | Do not fail even when swap is on.
 `boot-taints`     | false    | `[]Taint` | Bootstrap node taints.
 `extra_args`      | false    | array     | Extra command-line arguments.  List of strings.

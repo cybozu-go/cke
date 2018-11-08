@@ -90,16 +90,12 @@ func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastruc
 		Authorization:         KubeletAuthorization{Mode: "Webhook"},
 		HealthzBindAddress:    "0.0.0.0",
 		ClusterDomain:         c.params.Domain,
-		ClusterDNS:            []string{c.params.DNS},
 		RuntimeRequestTimeout: "15m",
 		FailSwapOn:            !c.params.AllowSwap,
 	}
-	cfgData, err := yaml.Marshal(cfg)
-	if err != nil {
-		return err
-	}
 	g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		return cfgData, nil
+		cfg.ClusterDNS = []string{n.Address}
+		return yaml.Marshal(cfg)
 	}
 	return c.files.AddFile(ctx, kubeletConfigPath, g)
 }

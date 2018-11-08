@@ -180,22 +180,20 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 func decideClusterDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) cke.Operator {
 	desiredDNSServers := c.DNSServers
 	desiredClusterDomain := c.Options.Kubelet.Domain
-	desiredClusterIP := c.Options.Kubelet.DNS
 
-	if len(desiredClusterIP) == 0 {
+	if len(desiredClusterDomain) == 0 {
 		return nil
 	}
 
 	if !ks.ClusterDNS.ServiceAccountExists || !ks.ClusterDNS.RBACRoleExists ||
 		!ks.ClusterDNS.RBACRoleBindingExists || !ks.ClusterDNS.ConfigMapExists ||
 		!ks.ClusterDNS.DeploymentExists || !ks.ClusterDNS.ServiceExists {
-		return op.KubeClusterDNSCreateOp(apiServer, c.Options.Kubelet, c.DNSServers)
+		return op.KubeClusterDNSCreateOp(apiServer, desiredClusterDomain, desiredDNSServers)
 	}
 
 	if !reflect.DeepEqual(desiredDNSServers, ks.DNSServers) ||
-		desiredClusterDomain != ks.ClusterDNS.ClusterDomain ||
-		desiredClusterIP != ks.ClusterDNS.ClusterIP {
-		return op.KubeClusterDNSUpdateOp(apiServer, c.Options.Kubelet, c.DNSServers)
+		desiredClusterDomain != ks.ClusterDNS.ClusterDomain {
+		return op.KubeClusterDNSUpdateOp(apiServer, desiredClusterDomain, desiredDNSServers)
 	}
 
 	return nil

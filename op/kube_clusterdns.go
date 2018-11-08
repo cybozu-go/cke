@@ -94,16 +94,16 @@ spec:
 
 type kubeClusterDNSCreateOp struct {
 	apiserver  *cke.Node
-	params     cke.KubeletParams
+	domain     string
 	dnsServers []string
 	finished   bool
 }
 
 // KubeClusterDNSCreateOp returns an Operator to create cluster resolver.
-func KubeClusterDNSCreateOp(apiserver *cke.Node, params cke.KubeletParams, dnsServers []string) cke.Operator {
+func KubeClusterDNSCreateOp(apiserver *cke.Node, domain string, dnsServers []string) cke.Operator {
 	return &kubeClusterDNSCreateOp{
 		apiserver:  apiserver,
-		params:     params,
+		domain:     domain,
 		dnsServers: dnsServers,
 	}
 }
@@ -117,12 +117,12 @@ func (o *kubeClusterDNSCreateOp) NextCommand() cke.Commander {
 		return nil
 	}
 	o.finished = true
-	return createClusterDNSCommand{o.apiserver, o.params, o.dnsServers}
+	return createClusterDNSCommand{o.apiserver, o.domain, o.dnsServers}
 }
 
 type createClusterDNSCommand struct {
 	apiserver  *cke.Node
-	params     cke.KubeletParams
+	domain     string
 	dnsServers []string
 }
 
@@ -231,7 +231,7 @@ func (c createClusterDNSCommand) Run(ctx context.Context, inf cke.Infrastructure
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		_, err = configs.Create(getClusterDNSConfigMap(c.params.Domain, c.dnsServers))
+		_, err = configs.Create(getClusterDNSConfigMap(c.domain, c.dnsServers))
 		if err != nil {
 			return err
 		}
@@ -247,7 +247,7 @@ func (c createClusterDNSCommand) Run(ctx context.Context, inf cke.Infrastructure
 	case errors.IsNotFound(err):
 		deploymentText := fmt.Sprintf(deploymentTemplate, cke.CoreDNSImage)
 		deployment := new(appsv1.Deployment)
-		err = yaml.NewYAMLToJSONDecoder(strings.NewReader(deploymentText)).Decode(&deployment)
+		err = yaml.NewYAMLToJSONDecoder(strings.NewReader(deploymentText)).Decode(deployment)
 		if err != nil {
 			return err
 		}
@@ -265,7 +265,7 @@ func (c createClusterDNSCommand) Run(ctx context.Context, inf cke.Infrastructure
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		_, err = services.Create(getClusterDNSService(c.params.DNS))
+		_, err = services.Create(getClusterDNSService())
 		if err != nil {
 			return err
 		}
@@ -285,16 +285,16 @@ func (c createClusterDNSCommand) Command() cke.Command {
 
 type kubeClusterDNSUpdateOp struct {
 	apiserver  *cke.Node
-	params     cke.KubeletParams
+	domain     string
 	dnsServers []string
 	finished   bool
 }
 
 // KubeClusterDNSUpdateOp returns an Operator to update cluster resolver.
-func KubeClusterDNSUpdateOp(apiserver *cke.Node, params cke.KubeletParams, dnsServers []string) cke.Operator {
+func KubeClusterDNSUpdateOp(apiserver *cke.Node, domain string, dnsServers []string) cke.Operator {
 	return &kubeClusterDNSUpdateOp{
 		apiserver:  apiserver,
-		params:     params,
+		domain:     domain,
 		dnsServers: dnsServers,
 	}
 }
@@ -308,12 +308,12 @@ func (o *kubeClusterDNSUpdateOp) NextCommand() cke.Commander {
 		return nil
 	}
 	o.finished = true
-	return updateClusterDNSCommand{o.apiserver, o.params, o.dnsServers}
+	return updateClusterDNSCommand{o.apiserver, o.domain, o.dnsServers}
 }
 
 type updateClusterDNSCommand struct {
 	apiserver  *cke.Node
-	params     cke.KubeletParams
+	domain     string
 	dnsServers []string
 }
 
@@ -328,7 +328,7 @@ func (c updateClusterDNSCommand) Run(ctx context.Context, inf cke.Infrastructure
 	if err != nil {
 		return err
 	}
-	_, err = configs.Create(getClusterDNSConfigMap(c.params.Domain, c.dnsServers))
+	_, err = configs.Create(getClusterDNSConfigMap(c.domain, c.dnsServers))
 	if err != nil {
 		return err
 	}
@@ -338,7 +338,7 @@ func (c updateClusterDNSCommand) Run(ctx context.Context, inf cke.Infrastructure
 	if err != nil {
 		return err
 	}
-	_, err = services.Create(getClusterDNSService(c.params.DNS))
+	_, err = services.Create(getClusterDNSService())
 	return err
 }
 
@@ -398,7 +398,7 @@ func getClusterDNSConfigMap(domain string, dnsServers []string) *corev1.ConfigMa
 	}
 }
 
-func getClusterDNSService(dns string) *corev1.Service {
+func getClusterDNSService() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clusterDNSAppName,
@@ -413,7 +413,6 @@ func getClusterDNSService(dns string) *corev1.Service {
 			Selector: map[string]string{
 				"k8s-app": clusterDNSAppName,
 			},
-			ClusterIP: dns,
 			Ports: []corev1.ServicePort{
 				{
 					Name:     "dns",

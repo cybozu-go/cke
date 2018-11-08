@@ -94,6 +94,5 @@ type KubeletStatus struct {
 	ServiceStatus
 	IsHealthy bool
 	Domain    string
-	DNS       string
 	AllowSwap bool
 }
