@@ -75,7 +75,7 @@ Implementation policies
 
 * CKE does not install any tools onto node OS other than containers.
 
-    * `kubelet` or other system services run by `docker run --restart=always`.
+    * `kubelet` or other system services run by `docker run`.
 
 * CKE employs CNI network plugins.
 
