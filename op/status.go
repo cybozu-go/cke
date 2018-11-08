@@ -251,6 +251,11 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
+	s.NodeDNS, err = GetNodeDNSStatus(ctx, inf, n)
+	if err != nil {
+		return cke.KubernetesClusterStatus{}, err
+	}
+
 	ep, err := clientset.CoreV1().Endpoints("kube-system").Get(etcdEndpointsName,
 		metav1.GetOptions{IncludeUninitialized: true})
 	switch {
@@ -259,6 +264,37 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	case errors.IsNotFound(err):
 	default:
 		return cke.KubernetesClusterStatus{}, err
+	}
+
+	return s, nil
+}
+
+// GetNodeDNSStatus returns NodeDNSStatus
+func GetNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.NodeDNSStatus, error) {
+	clientset, err := inf.K8sClient(ctx, n)
+	if err != nil {
+		return cke.NodeDNSStatus{}, err
+	}
+
+	s := cke.NodeDNSStatus{}
+
+	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(nodeDNSAppName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.ConfigMapExists = true
+		s.Config = config.Data["unbound.conf"]
+	case errors.IsNotFound(err):
+	default:
+		return cke.NodeDNSStatus{}, err
+	}
+
+	_, err = clientset.AppsV1().DaemonSets("kube-system").Get(nodeDNSAppName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.DaemonSetExists = true
+	case errors.IsNotFound(err):
+	default:
+		return cke.NodeDNSStatus{}, err
 	}
 
 	return s, nil

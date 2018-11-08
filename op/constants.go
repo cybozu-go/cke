@@ -24,6 +24,8 @@ const (
 	coreDNSRBACRoleName = "system:coredns"
 	coreDNSAppName      = "coredns"
 
+	nodeDNSAppName = "node-dns"
+
 	timeoutDuration = 5 * time.Second
 
 	etcdPKIPath = "/etc/etcd/pki"

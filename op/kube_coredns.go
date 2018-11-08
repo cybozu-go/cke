@@ -257,7 +257,7 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 		return err
 	}
 
-	return err
+	return nil
 }
 
 func (c createCoreDNSCommand) Command() cke.Command {

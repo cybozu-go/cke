@@ -157,6 +157,11 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 		ops = append(ops, dnsOp)
 	}
 
+	nodeDNSOp := decideNodeDNSOp(apiServer, c, ks)
+	if nodeDNSOp != nil {
+		ops = append(ops, nodeDNSOp)
+	}
+
 	epOp := decideEpOp(ks.EtcdEndpoints, apiServer, nf.ControlPlane())
 	if epOp != nil {
 		ops = append(ops, epOp)
@@ -189,6 +194,22 @@ func decideCoreDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClust
 		desiredCoreDNSClusterDomain != ks.CoreDNSClusterDomain ||
 		desiredCoreDNSClusterIP != ks.CoreDNSClusterIP {
 		return op.KubeCoreDNSUpdateOp(apiServer, c.Options.Kubelet, c.DNSServers)
+	}
+
+	return nil
+}
+
+func decideNodeDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) cke.Operator {
+	if len(ks.CoreDNSClusterIP) == 0 {
+		return nil
+	}
+
+	if !ks.NodeDNS.ConfigMapExists || !ks.NodeDNS.DaemonSetExists {
+		return op.KubeNodeDNSCreateOp(apiServer, ks.CoreDNSClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
+	}
+
+	if ks.NodeDNS.Config != op.GenerateNodeDNSConfig(ks.CoreDNSClusterIP, c.Options.Kubelet.Domain, c.DNSServers) {
+		return op.KubeNodeDNSUpdateOp(apiServer, ks.CoreDNSClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
 	}
 
 	return nil
