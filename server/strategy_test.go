@@ -217,13 +217,27 @@ func (d testData) withK8sRBACReady() testData {
 func (d testData) withK8sClusterDNSReady(dnsServers []string, clusterDomain, clusterIP string) testData {
 	d.withK8sRBACReady()
 	d.Status.Kubernetes.DNSServers = dnsServers
+	d.Status.Kubernetes.ClusterDNS.ServiceAccountExists = true
+	d.Status.Kubernetes.ClusterDNS.RBACRoleExists = true
+	d.Status.Kubernetes.ClusterDNS.RBACRoleBindingExists = true
+	d.Status.Kubernetes.ClusterDNS.ConfigMapExists = true
+	d.Status.Kubernetes.ClusterDNS.DeploymentExists = true
+	d.Status.Kubernetes.ClusterDNS.ServiceExists = true
 	d.Status.Kubernetes.ClusterDNS.ClusterDomain = clusterDomain
 	d.Status.Kubernetes.ClusterDNS.ClusterIP = clusterIP
 	return d
 }
 
-func (d testData) withEtcdEndpoints() testData {
+func (d testData) withK8sNodeDNSReady() testData {
 	d.withK8sClusterDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr)
+	d.Status.Kubernetes.NodeDNS.ConfigMapExists = true
+	d.Status.Kubernetes.NodeDNS.DaemonSetExists = true
+	d.Status.Kubernetes.NodeDNS.Config = op.GenerateNodeDNSConfig(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
+	return d
+}
+
+func (d testData) withEtcdEndpoints() testData {
+	d.withK8sNodeDNSReady()
 	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
 		Subsets: []corev1.EndpointSubset{
 			{
@@ -489,8 +503,13 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"create-cluster-dns", "create-etcd-endpoints"},
 		},
 		{
-			Name:        "EtcdEndpointsCreate",
+			Name:        "NodeDNS",
 			Input:       newData().withK8sClusterDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr),
+			ExpectedOps: []string{"create-etcd-endpoints", "create-node-dns"},
+		},
+		{
+			Name:        "EtcdEndpointsCreate",
+			Input:       newData().withK8sNodeDNSReady(),
 			ExpectedOps: []string{"create-etcd-endpoints"},
 		},
 		{
@@ -515,12 +534,26 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
-			Name: "ClusterDNSUpdate3",
+			Name: "DNSUpdate1",
 			Input: newData().withEtcdEndpoints().with(func(d testData) {
 				d.Cluster.DNSServers = []string{"1.1.1.1"}
 			}),
 			ExpectedOps: []string{
 				"update-cluster-dns",
+				"update-node-dns",
+			},
+		},
+		{
+			Name: "NodeDNSUpdate1",
+			Input: newData().withEtcdEndpoints().with(func(d testData) {
+				d.Cluster.Options.Kubelet.DNS = "10.0.0.54"
+				d.Status.Kubernetes.ClusterDNS.ClusterIP = "10.0.0.54"
+				for _, st := range d.Status.NodeStatuses {
+					st.Kubelet.DNS = "10.0.0.54"
+				}
+			}),
+			ExpectedOps: []string{
+				"update-node-dns",
 			},
 		},
 		{
