@@ -283,6 +283,7 @@ func (c updateNodeDNSCommand) Command() cke.Command {
 	}
 }
 
+// GenerateNodeDNSConfig returns ConfigMap of node-dns
 func GenerateNodeDNSConfig(clusterIP, domain string, dnsServers []string) string {
 	dnsServersText := strings.Join(dnsServers, "\n  ")
 	return fmt.Sprintf(unboundConfTemplate, domain, clusterIP, clusterIP, clusterIP, dnsServersText)
