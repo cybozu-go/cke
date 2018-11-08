@@ -214,16 +214,16 @@ func (d testData) withK8sRBACReady() testData {
 	return d
 }
 
-func (d testData) withK8sCoreDNSReady(dnsServers []string, clusterDomain, clusterIP string) testData {
+func (d testData) withK8sClusterDNSReady(dnsServers []string, clusterDomain, clusterIP string) testData {
 	d.withK8sRBACReady()
 	d.Status.Kubernetes.DNSServers = dnsServers
-	d.Status.Kubernetes.CoreDNSClusterDomain = clusterDomain
-	d.Status.Kubernetes.CoreDNSClusterIP = clusterIP
+	d.Status.Kubernetes.ClusterDNS.ClusterDomain = clusterDomain
+	d.Status.Kubernetes.ClusterDNS.ClusterIP = clusterIP
 	return d
 }
 
 func (d testData) withEtcdEndpoints() testData {
-	d.withK8sCoreDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr)
+	d.withK8sClusterDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr)
 	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
 		Subsets: []corev1.EndpointSubset{
 			{
@@ -481,20 +481,20 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name:        "RBAC",
 			Input:       newData().withK8sReady(),
-			ExpectedOps: []string{"create-coredns", "create-etcd-endpoints", "install-rbac-role"},
+			ExpectedOps: []string{"create-cluster-dns", "create-etcd-endpoints", "install-rbac-role"},
 		},
 		{
-			Name:        "CoreDNS",
+			Name:        "ClusterDNS",
 			Input:       newData().withK8sRBACReady(),
-			ExpectedOps: []string{"create-coredns", "create-etcd-endpoints"},
+			ExpectedOps: []string{"create-cluster-dns", "create-etcd-endpoints"},
 		},
 		{
 			Name:        "EtcdEndpointsCreate",
-			Input:       newData().withK8sCoreDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr),
+			Input:       newData().withK8sClusterDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr),
 			ExpectedOps: []string{"create-etcd-endpoints"},
 		},
 		{
-			Name: "CoreDNSUpdate1",
+			Name: "ClusterDNSUpdate1",
 			Input: newData().withEtcdEndpoints().with(func(d testData) {
 				d.Cluster.Options.Kubelet.DNS = "10.0.0.54"
 			}),
@@ -503,7 +503,7 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
-			Name: "CoreDNSUpdate2",
+			Name: "ClusterDNSUpdate2",
 			Input: newData().withEtcdEndpoints().with(func(d testData) {
 				d.Cluster.Options.Kubelet.DNS = "10.0.0.54"
 				for _, st := range d.Status.NodeStatuses {
@@ -511,16 +511,16 @@ func TestDecideOps(t *testing.T) {
 				}
 			}),
 			ExpectedOps: []string{
-				"update-coredns",
+				"update-cluster-dns",
 			},
 		},
 		{
-			Name: "CoreDNSUpdate3",
+			Name: "ClusterDNSUpdate3",
 			Input: newData().withEtcdEndpoints().with(func(d testData) {
 				d.Cluster.DNSServers = []string{"1.1.1.1"}
 			}),
 			ExpectedOps: []string{
-				"update-coredns",
+				"update-cluster-dns",
 			},
 		},
 		{

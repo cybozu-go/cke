@@ -49,20 +49,20 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 	})
 
-	It("has CoreDNS resources", func() {
+	It("has cluster dns resources", func() {
 		for resource, name := range map[string]string{
-			"serviceaccounts":     "coredns",
-			"clusterroles":        "system:coredns",
-			"clusterrolebindings": "system:coredns",
-			"configmaps":          "coredns",
-			"deployments":         "coredns",
-			"services":            "coredns",
+			"serviceaccounts":     "cluster-dns",
+			"clusterroles":        "system:cluster-dns",
+			"clusterrolebindings": "system:cluster-dns",
+			"configmaps":          "cluster-dns",
+			"deployments":         "cluster-dns",
+			"services":            "cluster-dns",
 		} {
 			_, err := kubectl("-n", "kube-system", "get", resource+"/"+name)
 			Expect(err).ShouldNot(HaveOccurred())
 		}
 
-		stdout, err := kubectl("-n", "kube-system", "get", "configmaps/coredns", "-o=json")
+		stdout, err := kubectl("-n", "kube-system", "get", "configmaps/cluster-dns", "-o=json")
 		Expect(err).ShouldNot(HaveOccurred())
 		configMap := new(corev1.ConfigMap)
 		err = json.Unmarshal(stdout, configMap)

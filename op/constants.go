@@ -21,8 +21,8 @@ const (
 
 	etcdEndpointsName = "cke-etcd"
 
-	coreDNSRBACRoleName = "system:coredns"
-	coreDNSAppName      = "coredns"
+	clusterDNSRBACRoleName = "system:cluster-dns"
+	clusterDNSAppName      = "cluster-dns"
 
 	nodeDNSAppName = "node-dns"
 

@@ -152,7 +152,7 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 		ops = append(ops, op.KubeRBACRoleInstallOp(apiServer, ks.RBACRoleExists))
 	}
 
-	dnsOp := decideCoreDNSOp(apiServer, c, ks)
+	dnsOp := decideClusterDNSOp(apiServer, c, ks)
 	if dnsOp != nil {
 		ops = append(ops, dnsOp)
 	}
@@ -177,39 +177,41 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 	return ops
 }
 
-func decideCoreDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) cke.Operator {
+func decideClusterDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) cke.Operator {
 	desiredDNSServers := c.DNSServers
-	desiredCoreDNSClusterDomain := c.Options.Kubelet.Domain
-	desiredCoreDNSClusterIP := c.Options.Kubelet.DNS
+	desiredClusterDomain := c.Options.Kubelet.Domain
+	desiredClusterIP := c.Options.Kubelet.DNS
 
-	if len(desiredCoreDNSClusterIP) == 0 {
+	if len(desiredClusterIP) == 0 {
 		return nil
 	}
 
-	if len(ks.CoreDNSClusterDomain) == 0 || len(ks.CoreDNSClusterIP) == 0 {
-		return op.KubeCoreDNSCreateOp(apiServer, c.Options.Kubelet, c.DNSServers)
+	if !ks.ClusterDNS.ServiceAccountExists || !ks.ClusterDNS.RBACRoleExists ||
+		!ks.ClusterDNS.RBACRoleBindingExists || !ks.ClusterDNS.ConfigMapExists ||
+		!ks.ClusterDNS.DeploymentExists || !ks.ClusterDNS.ServiceExists {
+		return op.KubeClusterDNSCreateOp(apiServer, c.Options.Kubelet, c.DNSServers)
 	}
 
 	if !reflect.DeepEqual(desiredDNSServers, ks.DNSServers) ||
-		desiredCoreDNSClusterDomain != ks.CoreDNSClusterDomain ||
-		desiredCoreDNSClusterIP != ks.CoreDNSClusterIP {
-		return op.KubeCoreDNSUpdateOp(apiServer, c.Options.Kubelet, c.DNSServers)
+		desiredClusterDomain != ks.ClusterDNS.ClusterDomain ||
+		desiredClusterIP != ks.ClusterDNS.ClusterIP {
+		return op.KubeClusterDNSUpdateOp(apiServer, c.Options.Kubelet, c.DNSServers)
 	}
 
 	return nil
 }
 
 func decideNodeDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) cke.Operator {
-	if len(ks.CoreDNSClusterIP) == 0 {
+	if len(ks.ClusterDNS.ClusterIP) == 0 {
 		return nil
 	}
 
 	if !ks.NodeDNS.ConfigMapExists || !ks.NodeDNS.DaemonSetExists {
-		return op.KubeNodeDNSCreateOp(apiServer, ks.CoreDNSClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
+		return op.KubeNodeDNSCreateOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
 	}
 
-	if ks.NodeDNS.Config != op.GenerateNodeDNSConfig(ks.CoreDNSClusterIP, c.Options.Kubelet.Domain, c.DNSServers) {
-		return op.KubeNodeDNSUpdateOp(apiServer, ks.CoreDNSClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
+	if ks.NodeDNS.Config != op.GenerateNodeDNSConfig(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers) {
+		return op.KubeNodeDNSUpdateOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
 	}
 
 	return nil

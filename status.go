@@ -13,8 +13,8 @@ type EtcdClusterStatus struct {
 	InSyncMembers map[string]bool
 }
 
-// CoreDNSStatus contains CoreDNS status.
-type CoreDNSStatus struct {
+// ClusterDNSStatus contains cluster resolver status.
+type ClusterDNSStatus struct {
 	ServiceAccountExists  bool
 	RBACRoleExists        bool
 	RBACRoleBindingExists bool
@@ -39,9 +39,7 @@ type KubernetesClusterStatus struct {
 	RBACRoleExists        bool
 	RBACRoleBindingExists bool
 	DNSServers            []string
-	CoreDNS               CoreDNSStatus
-	CoreDNSClusterDomain  string
-	CoreDNSClusterIP      string
+	ClusterDNS            ClusterDNSStatus
 	NodeDNS               NodeDNSStatus
 	EtcdEndpoints         *corev1.Endpoints
 }

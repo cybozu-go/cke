@@ -18,10 +18,10 @@ import (
 // retrieved from https://github.com/kelseyhightower/kubernetes-the-hard-way
 var deploymentTemplate = `
 metadata:
-  name: coredns
+  name: cluster-dns
   namespace: kube-system
   labels:
-    k8s-app: coredns
+    k8s-app: cluster-dns
     kubernetes.io/name: "CoreDNS"
 spec:
   replicas: 2
@@ -31,13 +31,13 @@ spec:
       maxUnavailable: 1
   selector:
     matchLabels:
-      k8s-app: coredns
+      k8s-app: cluster-dns
   template:
     metadata:
       labels:
-        k8s-app: coredns
+        k8s-app: cluster-dns
     spec:
-      serviceAccountName: coredns
+      serviceAccountName: cluster-dns
       tolerations:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
@@ -92,41 +92,41 @@ spec:
               path: Corefile
 `
 
-type kubeCoreDNSCreateOp struct {
+type kubeClusterDNSCreateOp struct {
 	apiserver  *cke.Node
 	params     cke.KubeletParams
 	dnsServers []string
 	finished   bool
 }
 
-// KubeCoreDNSCreateOp returns an Operator to create CoreDNS.
-func KubeCoreDNSCreateOp(apiserver *cke.Node, params cke.KubeletParams, dnsServers []string) cke.Operator {
-	return &kubeCoreDNSCreateOp{
+// KubeClusterDNSCreateOp returns an Operator to create cluster resolver.
+func KubeClusterDNSCreateOp(apiserver *cke.Node, params cke.KubeletParams, dnsServers []string) cke.Operator {
+	return &kubeClusterDNSCreateOp{
 		apiserver:  apiserver,
 		params:     params,
 		dnsServers: dnsServers,
 	}
 }
 
-func (o *kubeCoreDNSCreateOp) Name() string {
-	return "create-coredns"
+func (o *kubeClusterDNSCreateOp) Name() string {
+	return "create-cluster-dns"
 }
 
-func (o *kubeCoreDNSCreateOp) NextCommand() cke.Commander {
+func (o *kubeClusterDNSCreateOp) NextCommand() cke.Commander {
 	if o.finished {
 		return nil
 	}
 	o.finished = true
-	return createCoreDNSCommand{o.apiserver, o.params, o.dnsServers}
+	return createClusterDNSCommand{o.apiserver, o.params, o.dnsServers}
 }
 
-type createCoreDNSCommand struct {
+type createClusterDNSCommand struct {
 	apiserver  *cke.Node
 	params     cke.KubeletParams
 	dnsServers []string
 }
 
-func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+func (c createClusterDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	cs, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
 		return err
@@ -134,13 +134,13 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 
 	// ServiceAccount
 	accounts := cs.CoreV1().ServiceAccounts("kube-system")
-	_, err = accounts.Get(coreDNSAppName, metav1.GetOptions{})
+	_, err = accounts.Get(clusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
 		_, err = accounts.Create(&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      coreDNSAppName,
+				Name:      clusterDNSAppName,
 				Namespace: "kube-system",
 			},
 		})
@@ -152,70 +152,86 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	}
 
 	// ClusterRole
-	_, err = cs.RbacV1().ClusterRoles().Create(&rbacv1.ClusterRole{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: coreDNSRBACRoleName,
-			Labels: map[string]string{
-				"kubernetes.io/bootstrapping": "rbac-defaults",
-			},
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{
-					"endpoints",
-					"services",
-					"pods",
-					"namespaces",
-				},
-				Verbs: []string{
-					"list",
-					"watch",
+	clusterRoles := cs.RbacV1().ClusterRoles()
+	_, err = clusterRoles.Get(clusterDNSRBACRoleName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+	case errors.IsNotFound(err):
+		_, err = clusterRoles.Create(&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterDNSRBACRoleName,
+				Labels: map[string]string{
+					"kubernetes.io/bootstrapping": "rbac-defaults",
 				},
 			},
-		},
-	})
-	if err != nil {
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{
+						"endpoints",
+						"services",
+						"pods",
+						"namespaces",
+					},
+					Verbs: []string{
+						"list",
+						"watch",
+					},
+				},
+			},
+		})
+		if err != nil {
+			return err
+		}
+	default:
 		return err
 	}
 
 	// ClusterRoleBinding
-	_, err = cs.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: coreDNSRBACRoleName,
-			Labels: map[string]string{
-				"kubernetes.io/bootstrapping": "rbac-defaults",
+	clusterRoleBindings := cs.RbacV1().ClusterRoleBindings()
+	_, err = clusterRoleBindings.Get(clusterDNSRBACRoleName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+	case errors.IsNotFound(err):
+		_, err = clusterRoleBindings.Create(&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterDNSRBACRoleName,
+				Labels: map[string]string{
+					"kubernetes.io/bootstrapping": "rbac-defaults",
+				},
+				Annotations: map[string]string{
+					// turn on auto-reconciliation
+					// https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation
+					rbacv1.AutoUpdateAnnotationKey: "true",
+				},
 			},
-			Annotations: map[string]string{
-				// turn on auto-reconciliation
-				// https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation
-				rbacv1.AutoUpdateAnnotationKey: "true",
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     clusterDNSRBACRoleName,
 			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
-			Name:     coreDNSRBACRoleName,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      coreDNSAppName,
-				Namespace: "kube-system",
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Name:      clusterDNSAppName,
+					Namespace: "kube-system",
+				},
 			},
-		},
-	})
-	if err != nil {
+		})
+		if err != nil {
+			return err
+		}
+	default:
 		return err
 	}
 
 	// ConfigMap
 	configs := cs.CoreV1().ConfigMaps("kube-system")
-	_, err = configs.Get(coreDNSAppName, metav1.GetOptions{})
+	_, err = configs.Get(clusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		_, err = configs.Create(getCoreDNSConfigMap(c.params.Domain, c.dnsServers))
+		_, err = configs.Create(getClusterDNSConfigMap(c.params.Domain, c.dnsServers))
 		if err != nil {
 			return err
 		}
@@ -225,7 +241,7 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 
 	// Deployment
 	deployments := cs.AppsV1().Deployments("kube-system")
-	_, err = deployments.Get(coreDNSAppName, metav1.GetOptions{})
+	_, err = deployments.Get(clusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
@@ -245,11 +261,11 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 
 	// Service
 	services := cs.CoreV1().Services("kube-system")
-	_, err = services.Get(coreDNSAppName, metav1.GetOptions{})
+	_, err = services.Get(clusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		_, err = services.Create(getCoreDNSService(c.params.DNS))
+		_, err = services.Create(getClusterDNSService(c.params.DNS))
 		if err != nil {
 			return err
 		}
@@ -260,80 +276,80 @@ func (c createCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	return nil
 }
 
-func (c createCoreDNSCommand) Command() cke.Command {
+func (c createClusterDNSCommand) Command() cke.Command {
 	return cke.Command{
-		Name:   "createCoreDNSCommand",
+		Name:   "createClusterDNSCommand",
 		Target: "kube-system",
 	}
 }
 
-type kubeCoreDNSUpdateOp struct {
+type kubeClusterDNSUpdateOp struct {
 	apiserver  *cke.Node
 	params     cke.KubeletParams
 	dnsServers []string
 	finished   bool
 }
 
-// KubeCoreDNSUpdateOp returns an Operator to update CoreDNS.
-func KubeCoreDNSUpdateOp(apiserver *cke.Node, params cke.KubeletParams, dnsServers []string) cke.Operator {
-	return &kubeCoreDNSUpdateOp{
+// KubeClusterDNSUpdateOp returns an Operator to update cluster resolver.
+func KubeClusterDNSUpdateOp(apiserver *cke.Node, params cke.KubeletParams, dnsServers []string) cke.Operator {
+	return &kubeClusterDNSUpdateOp{
 		apiserver:  apiserver,
 		params:     params,
 		dnsServers: dnsServers,
 	}
 }
 
-func (o *kubeCoreDNSUpdateOp) Name() string {
-	return "update-coredns"
+func (o *kubeClusterDNSUpdateOp) Name() string {
+	return "update-cluster-dns"
 }
 
-func (o *kubeCoreDNSUpdateOp) NextCommand() cke.Commander {
+func (o *kubeClusterDNSUpdateOp) NextCommand() cke.Commander {
 	if o.finished {
 		return nil
 	}
 	o.finished = true
-	return updateCoreDNSCommand{o.apiserver, o.params, o.dnsServers}
+	return updateClusterDNSCommand{o.apiserver, o.params, o.dnsServers}
 }
 
-type updateCoreDNSCommand struct {
+type updateClusterDNSCommand struct {
 	apiserver  *cke.Node
 	params     cke.KubeletParams
 	dnsServers []string
 }
 
-func (c updateCoreDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+func (c updateClusterDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	cs, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
 		return err
 	}
 
 	configs := cs.CoreV1().ConfigMaps("kube-system")
-	err = configs.Delete(coreDNSAppName, &metav1.DeleteOptions{})
+	err = configs.Delete(clusterDNSAppName, &metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
-	_, err = configs.Create(getCoreDNSConfigMap(c.params.Domain, c.dnsServers))
+	_, err = configs.Create(getClusterDNSConfigMap(c.params.Domain, c.dnsServers))
 	if err != nil {
 		return err
 	}
 
 	services := cs.CoreV1().Services("kube-system")
-	err = services.Delete(coreDNSAppName, &metav1.DeleteOptions{})
+	err = services.Delete(clusterDNSAppName, &metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
-	_, err = services.Create(getCoreDNSService(c.params.DNS))
+	_, err = services.Create(getClusterDNSService(c.params.DNS))
 	return err
 }
 
-func (c updateCoreDNSCommand) Command() cke.Command {
+func (c updateClusterDNSCommand) Command() cke.Command {
 	return cke.Command{
-		Name:   "updateCoreDNSCommand",
+		Name:   "updateClusterDNSCommand",
 		Target: "kube-system",
 	}
 }
 
-func getCoreDNSConfigMap(domain string, dnsServers []string) *corev1.ConfigMap {
+func getClusterDNSConfigMap(domain string, dnsServers []string) *corev1.ConfigMap {
 	var coreFileContents string
 	if len(dnsServers) == 0 {
 		coreFileContents = fmt.Sprintf(`.:53 {
@@ -369,7 +385,7 @@ func getCoreDNSConfigMap(domain string, dnsServers []string) *corev1.ConfigMap {
 
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      coreDNSAppName,
+			Name:      clusterDNSAppName,
 			Namespace: "kube-system",
 			Labels: map[string]string{
 				"cke-domain":      domain,
@@ -382,20 +398,20 @@ func getCoreDNSConfigMap(domain string, dnsServers []string) *corev1.ConfigMap {
 	}
 }
 
-func getCoreDNSService(dns string) *corev1.Service {
+func getClusterDNSService(dns string) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      coreDNSAppName,
+			Name:      clusterDNSAppName,
 			Namespace: "kube-system",
 			Labels: map[string]string{
-				"k8s-app":                       coreDNSAppName,
+				"k8s-app":                       clusterDNSAppName,
 				"kubernetes.io/cluster-service": "true",
 				"kubernetes.io/name":            "CoreDNS",
 			},
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
-				"k8s-app": coreDNSAppName,
+				"k8s-app": clusterDNSAppName,
 			},
 			ClusterIP: dns,
 			Ports: []corev1.ServicePort{

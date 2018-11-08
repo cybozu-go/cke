@@ -27,7 +27,7 @@ var _ = Describe("Operations", func() {
 		// - KubeProxyBootOp
 		// - KubeWaitOp
 		// - KubeRBACRoleInstallOp
-		// - KubeCoreDNSCreateOp
+		// - KubeClusterDNSCreateOp
 		// - KubeEtcdEndpointsCreateOp
 
 		By("Stopping etcd servers")
@@ -175,7 +175,7 @@ var _ = Describe("Operations", func() {
 		// - SchedulerRestartOp
 		// - KubeProxyRestartOp
 		// - KubeletRestartOp
-		// - KubeCoreDNSUpdateOp
+		// - KubeClusterDNSUpdateOp
 		cluster.Options.Etcd.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.ControllerManager.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Scheduler.ExtraEnvvar = map[string]string{"AAA": "aaa"}
