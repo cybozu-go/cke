@@ -4,7 +4,7 @@ Cluster Overview
 How CKE works
 -------------
 
-![How CKE works](http://www.plantuml.com/plantuml/svg/PP0z2iCm38LtdKBGEKFpitG8AQLJeNTGRIM4EawnvVlN8fbi3uRl0mczDqMX86bp4DW8-SKnFbvFf8ZcotYnTiuFB0bzA3Ao60jaP0zujzlgroY1bF80gG3mksLyvq-TmhLMRQswMlMr6W3qhYRzcl5ONd1RS5TmN_1miEDPcZETnZZDg2tSqEn-NfSK68rBKJZ0nDxcrlu0)
+![How CKE works](http://www.plantuml.com/plantuml/svg/PO-nQiGm38PtFOMWiuScwTAXf9HEXOxTLKi9eOvTRFdkzS--S11i3yRVzsEXVqvAKVFk88fLygiJ_FZwH4fe_mIVc9ToJk4FPQSrljG7C2dzKX8KjGnaDKHyvttpMz98bIWXLG7W0mj-rwku2i-z6derzchgrGj0NTZaV_Ds36zuQ7XiU6huCP33rPkZtecFzd1lXiR9ekLRoL_H1hziQuw2rkMa4c4MptbtDm00)
 
 CKE constructs and maintains Kubernetes cluster from cluster configuration
 defined by user (administrator).  CKE also deploys some components to nodes
