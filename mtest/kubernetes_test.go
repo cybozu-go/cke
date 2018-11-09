@@ -102,7 +102,7 @@ var _ = Describe("Kubernetes", func() {
 				return errors.New("NumberReady is not 5")
 			}
 
-			return errors.New("pods are not yet ready")
+			return nil
 		}).Should(Succeed())
 	})
 
