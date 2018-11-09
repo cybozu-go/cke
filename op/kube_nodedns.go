@@ -19,6 +19,7 @@ server:
   interface: 0.0.0.0
   chroot: ""
   username: ""
+  directory: "/etc/unbound"
   logfile: ""
   use-syslog: no
   log-time-ascii: yes
@@ -285,6 +286,9 @@ func (c updateNodeDNSCommand) Command() cke.Command {
 
 // GenerateNodeDNSConfig returns ConfigMap of node-dns
 func GenerateNodeDNSConfig(clusterIP, domain string, dnsServers []string) string {
+	for i := range dnsServers {
+		dnsServers[i] = fmt.Sprintf("forward-addr: %s", dnsServers[i])
+	}
 	dnsServersText := strings.Join(dnsServers, "\n  ")
 	return fmt.Sprintf(unboundConfTemplate, domain, clusterIP, clusterIP, clusterIP, dnsServersText)
 }
