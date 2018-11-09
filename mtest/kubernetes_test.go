@@ -50,7 +50,7 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 	})
 
-	It("has cluster dns resources", func() {
+	It("has cluster DNS resources", func() {
 		for resource, name := range map[string]string{
 			"serviceaccounts":     "cluster-dns",
 			"clusterroles":        "system:cluster-dns",
@@ -76,7 +76,7 @@ var _ = Describe("Kubernetes", func() {
 		Expect(dnsServers).Should(Equal("8.8.8.8_1.1.1.1"))
 	})
 
-	It("has node dns resources", func() {
+	It("has node DNS resources", func() {
 		for resource, name := range map[string]string{
 			"configmaps": "node-dns",
 			"daemonsets": "node-dns",
@@ -85,7 +85,7 @@ var _ = Describe("Kubernetes", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		}
 
-		By("checking node-dns pod status")
+		By("checking node DNS pod status")
 		Eventually(func() error {
 			stdout, err := kubectl("-n", "kube-system", "get", "daemonsets/node-dns", "-o", "json")
 			if err != nil {
@@ -104,6 +104,12 @@ var _ = Describe("Kubernetes", func() {
 
 			return nil
 		}).Should(Succeed())
+
+		By("querying www.google.com using node DNS from ubuntu pod")
+		stdout, err := kubectl("run", "-it", "--rm", "ubuntu",
+			"--image=quay.io/cybozu/ubuntu-debug:18.04", "--generator=run-pod/v1",
+			"--restart=Never", "--command", "--", "host", "-N", "0", "www.google.com")
+		Expect(err).NotTo(HaveOccurred(), "stdout: %s", stdout)
 	})
 
 	It("has kube-system/cke-etcd Service and Endpoints", func() {

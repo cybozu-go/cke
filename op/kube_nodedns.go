@@ -17,6 +17,8 @@ import (
 var unboundConfTemplate = `
 server:
   interface: 0.0.0.0
+  interface-automatic: yes
+  access-control: 0.0.0.0/0 allow
   chroot: ""
   username: ""
   directory: "/etc/unbound"
