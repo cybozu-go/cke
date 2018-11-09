@@ -13,6 +13,25 @@ type EtcdClusterStatus struct {
 	InSyncMembers map[string]bool
 }
 
+// ClusterDNSStatus contains cluster resolver status.
+type ClusterDNSStatus struct {
+	ServiceAccountExists  bool
+	RBACRoleExists        bool
+	RBACRoleBindingExists bool
+	ConfigMapExists       bool
+	DeploymentExists      bool
+	ServiceExists         bool
+	ClusterDomain         string
+	ClusterIP             string
+}
+
+// NodeDNSStatus contains node local resolver status.
+type NodeDNSStatus struct {
+	ConfigMapExists bool
+	DaemonSetExists bool
+	Config          string
+}
+
 // KubernetesClusterStatus contains kubernetes cluster configurations
 type KubernetesClusterStatus struct {
 	IsReady               bool
@@ -20,8 +39,8 @@ type KubernetesClusterStatus struct {
 	RBACRoleExists        bool
 	RBACRoleBindingExists bool
 	DNSServers            []string
-	CoreDNSClusterDomain  string
-	CoreDNSClusterIP      string
+	ClusterDNS            ClusterDNSStatus
+	NodeDNS               NodeDNSStatus
 	EtcdEndpoints         *corev1.Endpoints
 }
 
@@ -75,6 +94,5 @@ type KubeletStatus struct {
 	ServiceStatus
 	IsHealthy bool
 	Domain    string
-	DNS       string
 	AllowSwap bool
 }

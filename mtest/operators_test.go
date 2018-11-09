@@ -27,7 +27,7 @@ var _ = Describe("Operations", func() {
 		// - KubeProxyBootOp
 		// - KubeWaitOp
 		// - KubeRBACRoleInstallOp
-		// - KubeCoreDNSCreateOp
+		// - KubeClusterDNSCreateOp
 		// - KubeEtcdEndpointsCreateOp
 
 		By("Stopping etcd servers")
@@ -175,13 +175,13 @@ var _ = Describe("Operations", func() {
 		// - SchedulerRestartOp
 		// - KubeProxyRestartOp
 		// - KubeletRestartOp
-		// - KubeCoreDNSUpdateOp
+		// - KubeClusterDNSUpdateOp
 		cluster.Options.Etcd.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.ControllerManager.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Scheduler.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Proxy.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Kubelet.ExtraEnvvar = map[string]string{"AAA": "aaa"}
-		cluster.Options.Kubelet.DNS = "10.34.56.54"
+		cluster.Options.Kubelet.Domain = "neconeco"
 		ckecliClusterSet(cluster)
 		Eventually(func() error {
 			return checkCluster(cluster)

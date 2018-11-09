@@ -6,6 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -49,20 +50,20 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 	})
 
-	It("has CoreDNS resources", func() {
+	It("has cluster DNS resources", func() {
 		for resource, name := range map[string]string{
-			"serviceaccounts":     "coredns",
-			"clusterroles":        "system:coredns",
-			"clusterrolebindings": "system:coredns",
-			"configmaps":          "coredns",
-			"deployments":         "coredns",
-			"services":            "coredns",
+			"serviceaccounts":     "cluster-dns",
+			"clusterroles":        "system:cluster-dns",
+			"clusterrolebindings": "system:cluster-dns",
+			"configmaps":          "cluster-dns",
+			"deployments":         "cluster-dns",
+			"services":            "cluster-dns",
 		} {
 			_, err := kubectl("-n", "kube-system", "get", resource+"/"+name)
 			Expect(err).ShouldNot(HaveOccurred())
 		}
 
-		stdout, err := kubectl("-n", "kube-system", "get", "configmaps/coredns", "-o=json")
+		stdout, err := kubectl("-n", "kube-system", "get", "configmaps/cluster-dns", "-o=json")
 		Expect(err).ShouldNot(HaveOccurred())
 		configMap := new(corev1.ConfigMap)
 		err = json.Unmarshal(stdout, configMap)
@@ -73,6 +74,42 @@ var _ = Describe("Kubernetes", func() {
 		dnsServers, ok := configMap.ObjectMeta.Labels["cke-dns-servers"]
 		Expect(ok).Should(BeTrue())
 		Expect(dnsServers).Should(Equal("8.8.8.8_1.1.1.1"))
+	})
+
+	It("has node DNS resources", func() {
+		for resource, name := range map[string]string{
+			"configmaps": "node-dns",
+			"daemonsets": "node-dns",
+		} {
+			_, err := kubectl("-n", "kube-system", "get", resource+"/"+name)
+			Expect(err).ShouldNot(HaveOccurred())
+		}
+
+		By("checking node DNS pod status")
+		Eventually(func() error {
+			stdout, err := kubectl("-n", "kube-system", "get", "daemonsets/node-dns", "-o", "json")
+			if err != nil {
+				return err
+			}
+
+			var daemonSet appsv1.DaemonSet
+			err = json.Unmarshal(stdout, &daemonSet)
+			if err != nil {
+				return err
+			}
+
+			if daemonSet.Status.NumberReady != 5 {
+				return errors.New("NumberReady is not 5")
+			}
+
+			return nil
+		}).Should(Succeed())
+
+		By("querying www.google.com using node DNS from ubuntu pod")
+		stdout, err := kubectl("run", "-it", "--rm", "ubuntu",
+			"--image=quay.io/cybozu/ubuntu-debug:18.04", "--generator=run-pod/v1",
+			"--restart=Never", "--command", "--", "host", "-N", "0", "www.google.com")
+		Expect(err).NotTo(HaveOccurred(), "stdout: %s", stdout)
 	})
 
 	It("has kube-system/cke-etcd Service and Endpoints", func() {

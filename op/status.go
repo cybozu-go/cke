@@ -82,7 +82,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	status.Proxy = cke.KubeComponentStatus{ss[kubeProxyContainerName], false}
 	status.Proxy.IsHealthy = status.Proxy.Running
 
-	status.Kubelet = cke.KubeletStatus{ss[kubeletContainerName], false, "", "", false}
+	status.Kubelet = cke.KubeletStatus{ss[kubeletContainerName], false, "", false}
 	if status.Kubelet.Running {
 		status.Kubelet.IsHealthy, err = checkHealthz(ctx, inf, node.Address, 10248)
 		if err != nil {
@@ -95,17 +95,13 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		cfgData, _, err := agent.Run("cat /etc/kubernetes/kubelet/config.yml")
 		if err == nil {
 			v := struct {
-				ClusterDomain string   `yaml:"clusterDomain"`
-				ClusterDNS    []string `yaml:"clusterDNS"`
-				FailSwapOn    bool     `yaml:"failSwapOn"`
+				ClusterDomain string `yaml:"clusterDomain"`
+				FailSwapOn    bool   `yaml:"failSwapOn"`
 			}{}
 			err = yaml.Unmarshal(cfgData, &v)
 			if err == nil {
 				status.Kubelet.Domain = v.ClusterDomain
 				status.Kubelet.AllowSwap = !v.FailSwapOn
-				if len(v.ClusterDNS) > 0 {
-					status.Kubelet.DNS = v.ClusterDNS[0]
-				}
 			}
 		}
 	}
@@ -230,24 +226,24 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	coreService, err := clientset.CoreV1().Services("kube-system").Get(coreDNSAppName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.CoreDNSClusterIP = coreService.Spec.ClusterIP
-	case errors.IsNotFound(err):
-	default:
+	s.ClusterDNS, err = GetClusterDNSStatus(ctx, inf, n)
+	if err != nil {
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	coreConfig, err := clientset.CoreV1().ConfigMaps("kube-system").Get(coreDNSAppName, metav1.GetOptions{})
+	coreConfig, err := clientset.CoreV1().ConfigMaps("kube-system").Get(clusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		if len(coreConfig.Labels["cke-dns-servers"]) > 0 {
 			s.DNSServers = strings.Split(coreConfig.Labels["cke-dns-servers"], "_")
 		}
-		s.CoreDNSClusterDomain = coreConfig.Labels["cke-domain"]
 	case errors.IsNotFound(err):
 	default:
+		return cke.KubernetesClusterStatus{}, err
+	}
+
+	s.NodeDNS, err = GetNodeDNSStatus(ctx, inf, n)
+	if err != nil {
 		return cke.KubernetesClusterStatus{}, err
 	}
 
@@ -259,6 +255,105 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	case errors.IsNotFound(err):
 	default:
 		return cke.KubernetesClusterStatus{}, err
+	}
+
+	return s, nil
+}
+
+// GetClusterDNSStatus returns ClusterDNSStatus
+func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.ClusterDNSStatus, error) {
+	clientset, err := inf.K8sClient(ctx, n)
+	if err != nil {
+		return cke.ClusterDNSStatus{}, err
+	}
+
+	s := cke.ClusterDNSStatus{}
+
+	_, err = clientset.CoreV1().ServiceAccounts("kube-system").Get(clusterDNSAppName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.ServiceAccountExists = true
+	case errors.IsNotFound(err):
+	default:
+		return cke.ClusterDNSStatus{}, err
+	}
+
+	_, err = clientset.RbacV1().ClusterRoles().Get(clusterDNSRBACRoleName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.RBACRoleExists = true
+	case errors.IsNotFound(err):
+	default:
+		return cke.ClusterDNSStatus{}, err
+	}
+
+	_, err = clientset.RbacV1().ClusterRoleBindings().Get(clusterDNSRBACRoleName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.RBACRoleBindingExists = true
+	case errors.IsNotFound(err):
+	default:
+		return cke.ClusterDNSStatus{}, err
+	}
+
+	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(clusterDNSAppName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.ConfigMapExists = true
+		s.ClusterDomain = config.Labels["cke-domain"]
+	case errors.IsNotFound(err):
+	default:
+		return cke.ClusterDNSStatus{}, err
+	}
+
+	_, err = clientset.AppsV1().Deployments("kube-system").Get(clusterDNSAppName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.DeploymentExists = true
+	case errors.IsNotFound(err):
+	default:
+		return cke.ClusterDNSStatus{}, err
+	}
+
+	service, err := clientset.CoreV1().Services("kube-system").Get(clusterDNSAppName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.ServiceExists = true
+		s.ClusterIP = service.Spec.ClusterIP
+	case errors.IsNotFound(err):
+	default:
+		return cke.ClusterDNSStatus{}, err
+	}
+
+	return s, nil
+}
+
+// GetNodeDNSStatus returns NodeDNSStatus
+func GetNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.NodeDNSStatus, error) {
+	clientset, err := inf.K8sClient(ctx, n)
+	if err != nil {
+		return cke.NodeDNSStatus{}, err
+	}
+
+	s := cke.NodeDNSStatus{}
+
+	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(nodeDNSAppName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.ConfigMapExists = true
+		s.Config = config.Data["unbound.conf"]
+	case errors.IsNotFound(err):
+	default:
+		return cke.NodeDNSStatus{}, err
+	}
+
+	_, err = clientset.AppsV1().DaemonSets("kube-system").Get(nodeDNSAppName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.DaemonSetExists = true
+	case errors.IsNotFound(err):
+	default:
+		return cke.NodeDNSStatus{}, err
 	}
 
 	return s, nil

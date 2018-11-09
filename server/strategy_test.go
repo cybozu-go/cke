@@ -69,7 +69,6 @@ func newData() testData {
 		DNSServers:    testDefaultDNSServers,
 	}
 	cluster.Options.Kubelet.Domain = testDefaultDNSDomain
-	cluster.Options.Kubelet.DNS = testDefaultDNSAddr
 	status := &cke.ClusterStatus{
 		NodeStatuses: map[string]*cke.NodeStatus{
 			"10.0.0.11": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
@@ -173,7 +172,6 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st.Image = cke.HyperkubeImage.Name()
 		st.BuiltInParams = op.KubeletServiceParams(n)
 		st.Domain = domain
-		st.DNS = dns
 		st.AllowSwap = allowSwap
 	}
 	return d
@@ -214,16 +212,30 @@ func (d testData) withK8sRBACReady() testData {
 	return d
 }
 
-func (d testData) withK8sCoreDNSReady(dnsServers []string, clusterDomain, clusterIP string) testData {
+func (d testData) withK8sClusterDNSReady(dnsServers []string, clusterDomain, clusterIP string) testData {
 	d.withK8sRBACReady()
 	d.Status.Kubernetes.DNSServers = dnsServers
-	d.Status.Kubernetes.CoreDNSClusterDomain = clusterDomain
-	d.Status.Kubernetes.CoreDNSClusterIP = clusterIP
+	d.Status.Kubernetes.ClusterDNS.ServiceAccountExists = true
+	d.Status.Kubernetes.ClusterDNS.RBACRoleExists = true
+	d.Status.Kubernetes.ClusterDNS.RBACRoleBindingExists = true
+	d.Status.Kubernetes.ClusterDNS.ConfigMapExists = true
+	d.Status.Kubernetes.ClusterDNS.DeploymentExists = true
+	d.Status.Kubernetes.ClusterDNS.ServiceExists = true
+	d.Status.Kubernetes.ClusterDNS.ClusterDomain = clusterDomain
+	d.Status.Kubernetes.ClusterDNS.ClusterIP = clusterIP
+	return d
+}
+
+func (d testData) withK8sNodeDNSReady() testData {
+	d.withK8sClusterDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr)
+	d.Status.Kubernetes.NodeDNS.ConfigMapExists = true
+	d.Status.Kubernetes.NodeDNS.DaemonSetExists = true
+	d.Status.Kubernetes.NodeDNS.Config = op.GenerateNodeDNSConfig(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
 	return d
 }
 
 func (d testData) withEtcdEndpoints() testData {
-	d.withK8sCoreDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr)
+	d.withK8sNodeDNSReady()
 	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
 		Subsets: []corev1.EndpointSubset{
 			{
@@ -440,7 +452,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet5",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[0]).Kubelet.DNS = "10.0.0.54"
+				d.NodeStatus(d.Cluster.Nodes[0]).Kubelet.Domain = "neco.local"
 			}),
 			ExpectedOps: []string{
 				"kubelet-restart",
@@ -481,46 +493,62 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name:        "RBAC",
 			Input:       newData().withK8sReady(),
-			ExpectedOps: []string{"create-coredns", "create-etcd-endpoints", "install-rbac-role"},
+			ExpectedOps: []string{"create-cluster-dns", "create-etcd-endpoints", "install-rbac-role"},
 		},
 		{
-			Name:        "CoreDNS",
+			Name:        "ClusterDNS",
 			Input:       newData().withK8sRBACReady(),
-			ExpectedOps: []string{"create-coredns", "create-etcd-endpoints"},
+			ExpectedOps: []string{"create-cluster-dns", "create-etcd-endpoints"},
+		},
+		{
+			Name:        "NodeDNS",
+			Input:       newData().withK8sClusterDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr),
+			ExpectedOps: []string{"create-etcd-endpoints", "create-node-dns"},
 		},
 		{
 			Name:        "EtcdEndpointsCreate",
-			Input:       newData().withK8sCoreDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr),
+			Input:       newData().withK8sNodeDNSReady(),
 			ExpectedOps: []string{"create-etcd-endpoints"},
 		},
 		{
-			Name: "CoreDNSUpdate1",
+			Name: "DNSUpdate1",
 			Input: newData().withEtcdEndpoints().with(func(d testData) {
-				d.Cluster.Options.Kubelet.DNS = "10.0.0.54"
+				d.Cluster.Options.Kubelet.Domain = "neco.local"
 			}),
 			ExpectedOps: []string{
 				"kubelet-restart",
 			},
 		},
 		{
-			Name: "CoreDNSUpdate2",
+			Name: "DNSUpdate2",
 			Input: newData().withEtcdEndpoints().with(func(d testData) {
-				d.Cluster.Options.Kubelet.DNS = "10.0.0.54"
+				d.Cluster.Options.Kubelet.Domain = "neco.local"
 				for _, st := range d.Status.NodeStatuses {
-					st.Kubelet.DNS = "10.0.0.54"
+					st.Kubelet.Domain = "neco.local"
 				}
 			}),
 			ExpectedOps: []string{
-				"update-coredns",
+				"update-cluster-dns",
+				"update-node-dns",
 			},
 		},
 		{
-			Name: "CoreDNSUpdate3",
+			Name: "DNSUpdate3",
 			Input: newData().withEtcdEndpoints().with(func(d testData) {
 				d.Cluster.DNSServers = []string{"1.1.1.1"}
 			}),
 			ExpectedOps: []string{
-				"update-coredns",
+				"update-cluster-dns",
+				"update-node-dns",
+			},
+		},
+		{
+			Name: "NodeDNSUpdate1",
+			Input: newData().withEtcdEndpoints().with(func(d testData) {
+				d.Status.Kubernetes.ClusterDNS.ClusterIP = "10.0.0.54"
+			}),
+			ExpectedOps: []string{
+				"update-node-dns",
 			},
 		},
 		{
