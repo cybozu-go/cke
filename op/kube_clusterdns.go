@@ -86,7 +86,7 @@ spec:
       volumes:
         - name: config-volume
           configMap:
-            name: coredns
+            name: ` + clusterDNSConfigMapName + `
             items:
             - key: Corefile
               path: Corefile
@@ -227,7 +227,7 @@ func (c createClusterDNSCommand) Run(ctx context.Context, inf cke.Infrastructure
 
 	// ConfigMap
 	configs := cs.CoreV1().ConfigMaps("kube-system")
-	_, err = configs.Get(clusterDNSAppName, metav1.GetOptions{})
+	_, err = configs.Get(clusterDNSConfigMapName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
@@ -385,7 +385,7 @@ func getClusterDNSConfigMap(domain string, dnsServers []string) *corev1.ConfigMa
 
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      clusterDNSAppName,
+			Name:      clusterDNSConfigMapName,
 			Namespace: "kube-system",
 			Labels: map[string]string{
 				"cke-domain":      domain,
