@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/cybozu-go/cke/op"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -68,10 +69,10 @@ var _ = Describe("Kubernetes", func() {
 		configMap := new(corev1.ConfigMap)
 		err = json.Unmarshal(stdout, configMap)
 		Expect(err).ShouldNot(HaveOccurred())
-		domain, ok := configMap.ObjectMeta.Labels["cke-domain"]
+		domain, ok := configMap.ObjectMeta.Labels[op.ClusterDNSLabelDomain]
 		Expect(ok).Should(BeTrue())
 		Expect(domain).Should(Equal("neco"))
-		dnsServers, ok := configMap.ObjectMeta.Labels["cke-dns-servers"]
+		dnsServers, ok := configMap.ObjectMeta.Labels[op.ClusterDNSLabelDNSServers]
 		Expect(ok).Should(BeTrue())
 		Expect(dnsServers).Should(Equal("8.8.8.8_1.1.1.1"))
 	})

@@ -32,6 +32,13 @@ const (
 	k8sPKIPath  = "/etc/kubernetes/pki"
 )
 
+const (
+	// ClusterDNSLabelDomain is search key of Domain
+	ClusterDNSLabelDomain = "cke.cybozu.com/domain"
+	// ClusterDNSLabelDNSServers is search key of DNSServers
+	ClusterDNSLabelDNSServers = "cke.cybozu.com/dns-servers"
+)
+
 // EtcdPKIPath returns a certificate file path for k8s.
 func EtcdPKIPath(p string) string {
 	return filepath.Join(etcdPKIPath, p)
