@@ -234,8 +234,8 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	coreConfig, err := clientset.CoreV1().ConfigMaps("kube-system").Get(clusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
-		if len(coreConfig.Labels["cke-dns-servers"]) > 0 {
-			s.DNSServers = strings.Split(coreConfig.Labels["cke-dns-servers"], "_")
+		if len(coreConfig.Labels[ClusterDNSLabelDNSServers]) > 0 {
+			s.DNSServers = strings.Split(coreConfig.Labels[ClusterDNSLabelDNSServers], "_")
 		}
 	case errors.IsNotFound(err):
 	default:
@@ -300,7 +300,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	switch {
 	case err == nil:
 		s.ConfigMapExists = true
-		s.ClusterDomain = config.Labels["cke-domain"]
+		s.ClusterDomain = config.Labels[ClusterDNSLabelDomain]
 	case errors.IsNotFound(err):
 	default:
 		return cke.ClusterDNSStatus{}, err
