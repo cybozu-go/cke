@@ -6,6 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -73,6 +74,36 @@ var _ = Describe("Kubernetes", func() {
 		dnsServers, ok := configMap.ObjectMeta.Labels["cke-dns-servers"]
 		Expect(ok).Should(BeTrue())
 		Expect(dnsServers).Should(Equal("8.8.8.8_1.1.1.1"))
+	})
+
+	It("has node dns resources", func() {
+		for resource, name := range map[string]string{
+			"configmaps": "node-dns",
+			"daemonsets": "node-dns",
+		} {
+			_, err := kubectl("-n", "kube-system", "get", resource+"/"+name)
+			Expect(err).ShouldNot(HaveOccurred())
+		}
+
+		By("checking node-dns pod status")
+		Eventually(func() error {
+			stdout, err := kubectl("-n", "kube-system", "get", "daemonsets/node-dns", "-o", "json")
+			if err != nil {
+				return err
+			}
+
+			var daemonSet appsv1.DaemonSet
+			err = json.Unmarshal(stdout, &daemonSet)
+			if err != nil {
+				return err
+			}
+
+			if daemonSet.Status.NumberReady != 5 {
+				return errors.New("NumberReady is not 5")
+			}
+
+			return errors.New("pods are not yet ready")
+		}).Should(Succeed())
 	})
 
 	It("has kube-system/cke-etcd Service and Endpoints", func() {
