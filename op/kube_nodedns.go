@@ -286,9 +286,10 @@ func (c updateNodeDNSCommand) Command() cke.Command {
 
 // GenerateNodeDNSConfig returns ConfigMap of node-dns
 func GenerateNodeDNSConfig(clusterIP, domain string, dnsServers []string) string {
+	forwardAddrs := make([]string, len(dnsServers))
 	for i := range dnsServers {
-		dnsServers[i] = fmt.Sprintf("forward-addr: %s", dnsServers[i])
+		forwardAddrs[i] = fmt.Sprintf("forward-addr: %s", dnsServers[i])
 	}
-	dnsServersText := strings.Join(dnsServers, "\n  ")
+	dnsServersText := strings.Join(forwardAddrs, "\n  ")
 	return fmt.Sprintf(unboundConfTemplate, domain, clusterIP, clusterIP, clusterIP, dnsServersText)
 }
