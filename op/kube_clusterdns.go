@@ -388,8 +388,8 @@ func getClusterDNSConfigMap(domain string, dnsServers []string) *corev1.ConfigMa
 			Name:      clusterDNSConfigMapName,
 			Namespace: "kube-system",
 			Labels: map[string]string{
-				"cke-domain":      domain,
-				"cke-dns-servers": strings.Join(dnsServers, "_"),
+				"cke.cybozu.com/domain":      domain,
+				"cke.cybozu.com/dns-servers": strings.Join(dnsServers, "_"),
 			},
 		},
 		Data: map[string]string{
