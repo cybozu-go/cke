@@ -253,9 +253,14 @@ func (c retaintBeforeKubeletBootCommand) Run(ctx context.Context, inf cke.Infras
 			needUpdate := false
 		OUTER:
 			for _, bootTaint := range c.params.BootTaints {
-				// append bootTaint except if the same taint is already there
-				for _, nodeTaint := range node.Spec.Taints {
-					if nodeTaint.Key == bootTaint.Key && nodeTaint.Value == bootTaint.Value && nodeTaint.Effect == bootTaint.Effect {
+				// append bootTaint except if matching taint is already there
+				for i, nodeTaint := range node.Spec.Taints {
+					if nodeTaint.MatchTaint(&bootTaint) {
+						if nodeTaint.Value == bootTaint.Value {
+							continue OUTER
+						}
+						node.Spec.Taints[i].Value = bootTaint.Value
+						needUpdate = true
 						continue OUTER
 					}
 				}
