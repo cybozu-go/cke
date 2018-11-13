@@ -104,5 +104,9 @@ Name              | Required | Type      | Description
 `extra_binds`     | false    | array     | Extra bind mounts.  List of `Mount`.
 `extra_env`       | false    | object    | Extra environment variables.
 
-`boot-taints` are added when a new Node is registered with Kubernetes.
-They can be removed manually when they are no longer needed.
+Taints in `boot-taints` are added to a Node in the following cases:
+(1) when that Node is registered with Kubernetes by kubelet, or
+(2) when the kubelet on that Node is being booted while the Node resource is already registered.
+Those taints can be removed manually when they are no longer needed.
+Note that the second case happens when the physical node is rebooted without resource manipulation.
+If you want to add taints only at Node registration, use kubelet's `--register-with-taints` options in `extra_args`.

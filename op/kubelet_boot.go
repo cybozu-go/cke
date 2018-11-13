@@ -10,11 +10,16 @@ import (
 	"github.com/cybozu-go/cke/common"
 	"github.com/cybozu-go/well"
 	yaml "gopkg.in/yaml.v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/retry"
 )
 
 type kubeletBootOp struct {
 	nodes []*cke.Node
+
+	registeredNodes []*cke.Node
+	apiServer       *cke.Node
 
 	cluster   string
 	podSubnet string
@@ -25,13 +30,15 @@ type kubeletBootOp struct {
 }
 
 // KubeletBootOp returns an Operator to boot kubelet.
-func KubeletBootOp(nodes []*cke.Node, cluster, podSubnet string, params cke.KubeletParams) cke.Operator {
+func KubeletBootOp(nodes, registeredNodes []*cke.Node, apiServer *cke.Node, cluster, podSubnet string, params cke.KubeletParams) cke.Operator {
 	return &kubeletBootOp{
-		nodes:     nodes,
-		cluster:   cluster,
-		podSubnet: podSubnet,
-		params:    params,
-		files:     common.NewFilesBuilder(nodes),
+		nodes:           nodes,
+		registeredNodes: registeredNodes,
+		apiServer:       apiServer,
+		cluster:         cluster,
+		podSubnet:       podSubnet,
+		params:          params,
+		files:           common.NewFilesBuilder(nodes),
 	}
 }
 
@@ -70,8 +77,14 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 		return installCNICommand{o.nodes}
 	case 6:
 		o.step++
-		return common.VolumeCreateCommand(o.nodes, "dockershim")
+		if len(o.registeredNodes) > 0 && len(o.params.BootTaints) > 0 {
+			return retaintBeforeKubeletBootCommand{o.registeredNodes, o.apiServer, o.params}
+		}
+		fallthrough
 	case 7:
+		o.step++
+		return common.VolumeCreateCommand(o.nodes, "dockershim")
+	case 8:
 		o.step++
 		opts := []string{
 			"--pid=host",
@@ -213,6 +226,64 @@ func (c installCNICommand) Command() cke.Command {
 	}
 	return cke.Command{
 		Name:   "install-cni",
+		Target: strings.Join(targets, ","),
+	}
+}
+
+type retaintBeforeKubeletBootCommand struct {
+	nodes     []*cke.Node
+	apiServer *cke.Node
+	params    cke.KubeletParams
+}
+
+func (c retaintBeforeKubeletBootCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+	cs, err := inf.K8sClient(ctx, c.apiServer)
+	if err != nil {
+		return err
+	}
+
+	nodesAPI := cs.CoreV1().Nodes()
+	for _, n := range c.nodes {
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			node, err := nodesAPI.Get(n.Nodename(), metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			needUpdate := false
+		OUTER:
+			for _, bootTaint := range c.params.BootTaints {
+				// append bootTaint except if the same taint is already there
+				for _, nodeTaint := range node.Spec.Taints {
+					if nodeTaint.Key == bootTaint.Key && nodeTaint.Value == bootTaint.Value && nodeTaint.Effect == bootTaint.Effect {
+						continue OUTER
+					}
+				}
+				node.Spec.Taints = append(node.Spec.Taints, bootTaint)
+				needUpdate = true
+			}
+			if !needUpdate {
+				return nil
+			}
+
+			_, err = nodesAPI.Update(node)
+			return err
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c retaintBeforeKubeletBootCommand) Command() cke.Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return cke.Command{
+		Name:   "retaint-before-kubelet-boot",
 		Target: strings.Join(targets, ","),
 	}
 }
