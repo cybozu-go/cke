@@ -17,11 +17,10 @@ import (
 	"github.com/cybozu-go/cke/server"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/well"
-	"golang.org/x/crypto/ssh"
-	yaml "gopkg.in/yaml.v2"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"golang.org/x/crypto/ssh"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const sshTimeout = 3 * time.Minute
@@ -218,7 +217,7 @@ func connectEtcd() (*clientv3.Client, error) {
 }
 
 func getClusterStatus(cluster *cke.Cluster) (*cke.ClusterStatus, error) {
-	controller := server.NewController(nil, 0, time.Second*2)
+	controller := server.NewController(nil, 0)
 
 	etcd, err := connectEtcd()
 	if err != nil {

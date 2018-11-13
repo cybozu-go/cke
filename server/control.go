@@ -20,12 +20,11 @@ var (
 type Controller struct {
 	session  *concurrency.Session
 	interval time.Duration
-	timeout  time.Duration
 }
 
 // NewController construct controller instance
-func NewController(s *concurrency.Session, interval time.Duration, timeout time.Duration) Controller {
-	return Controller{s, interval, timeout}
+func NewController(s *concurrency.Session, interval time.Duration) Controller {
+	return Controller{s, interval}
 }
 
 // Run execute procedures with leader elections
@@ -55,9 +54,7 @@ RETRY:
 	})
 
 	err = c.runLoop(ctx, leaderKey)
-	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
-	err2 := e.Resign(ctxWithTimeout)
+	err2 := e.Resign(ctx)
 	if err2 != nil {
 		return err2
 	}

@@ -71,7 +71,7 @@ func main() {
 	if err != nil {
 		log.ErrorExit(err)
 	}
-	controller := server.NewController(session, interval, timeout)
+	controller := server.NewController(session, interval)
 
 	well.Go(controller.Run)
 	server := server.Server{
