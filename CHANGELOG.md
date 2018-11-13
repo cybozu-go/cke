@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.17] - 2018-11-13
+### Changed
+- Add boot-taints to Node resources again on reboot (#92)
+
 ## [0.16] - 2018-11-09
 ### Changed
 - Fix ConfigMap name (#90).
@@ -94,7 +98,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.16...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.17...HEAD
+[0.17]: https://github.com/cybozu-go/cke/compare/v0.16...v0.17
 [0.16]: https://github.com/cybozu-go/cke/compare/v0.15...v0.16
 [0.15]: https://github.com/cybozu-go/cke/compare/v0.14...v0.15
 [0.14]: https://github.com/cybozu-go/cke/compare/v0.13...v0.14
