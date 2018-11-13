@@ -90,9 +90,12 @@ var _ = Describe("Operations", func() {
 		}
 		ckecliClusterSet(cluster)
 
+		// reboot node2 and node4 to check bootstrap taints
 		execAt(node2, "sudo", "systemd-run", "reboot", "-f", "-f")
+		execAt(node4, "sudo", "systemd-run", "reboot", "-f", "-f")
 		time.Sleep(5 * time.Second)
 		Expect(reconnectSSH(node2)).NotTo(HaveOccurred())
+		Expect(reconnectSSH(node4)).NotTo(HaveOccurred())
 
 		Eventually(func() error {
 			return checkCluster(cluster)
@@ -110,8 +113,12 @@ var _ = Describe("Operations", func() {
 		}).Should(HaveLen(len(cluster.Nodes)))
 
 		// check bootstrap taints for node6
+		// also check bootstrap taints for node2 and node4
+		// node6: case of adding new node
+		// node2: case of rebooting node with prior removal of Node resource
+		// node4: case of rebooting node without prior manipulation on Node resource
 		for _, n := range status.Kubernetes.Nodes {
-			if n.Name != node6 && n.Name != node2 {
+			if n.Name != node6 && n.Name != node2 && n.Name != node4 {
 				continue
 			}
 

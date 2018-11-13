@@ -90,7 +90,7 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 		ops = append(ops, op.SchedulerRestartOp(nodes, c.Name, c.Options.Scheduler))
 	}
 	if nodes := nf.KubeletStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.KubeletBootOp(nodes, c.Name, c.PodSubnet, c.Options.Kubelet))
+		ops = append(ops, op.KubeletBootOp(nodes, nf.KubeletStoppedRegisteredNodes(), nf.HealthyAPIServer(), c.Name, c.PodSubnet, c.Options.Kubelet))
 	}
 	if nodes := nf.KubeletOutdatedNodes(); len(nodes) > 0 {
 		ops = append(ops, op.KubeletRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.Kubelet))
