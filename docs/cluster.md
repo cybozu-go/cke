@@ -99,12 +99,12 @@ Name              | Required | Type      | Description
 ----------------- | -------- | --------- | -----------
 `domain`          | false    | string    | The base domain for the cluster.  Default: `cluster.local`.
 `allow_swap`      | false    | bool      | Do not fail even when swap is on.
-`boot-taints`     | false    | `[]Taint` | Bootstrap node taints.
+`boot_taints`     | false    | `[]Taint` | Bootstrap node taints.
 `extra_args`      | false    | array     | Extra command-line arguments.  List of strings.
 `extra_binds`     | false    | array     | Extra bind mounts.  List of `Mount`.
 `extra_env`       | false    | object    | Extra environment variables.
 
-Taints in `boot-taints` are added to a Node in the following cases:
+Taints in `boot_taints` are added to a Node in the following cases:
 (1) when that Node is registered with Kubernetes by kubelet, or
 (2) when the kubelet on that Node is being booted while the Node resource is already registered.
 Those taints can be removed manually when they are no longer needed.

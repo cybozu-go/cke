@@ -80,7 +80,7 @@ options:
   kubelet:
     domain: my.domain
     allow_swap: true
-    boot-taints:
+    boot_taints:
       - key: taint1
         value: tainted
         effect: NoExecute

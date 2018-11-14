@@ -106,7 +106,7 @@ type KubeletParams struct {
 	ServiceParams `yaml:",inline"`
 	Domain        string         `json:"domain"      yaml:"domain"`
 	AllowSwap     bool           `json:"allow_swap"  yaml:"allow_swap"`
-	BootTaints    []corev1.Taint `json:"boot-taints"   yaml:"boot-taints"`
+	BootTaints    []corev1.Taint `json:"boot_taints"   yaml:"boot_taints"`
 }
 
 // Options is a set of optional parameters for k8s components.
@@ -325,7 +325,7 @@ func validateOptions(opts Options) error {
 		}
 	}
 
-	fldPath = fldPath.Child("boot-taints")
+	fldPath = fldPath.Child("boot_taints")
 	for i, taint := range opts.Kubelet.BootTaints {
 		err := validateTaint(taint, fldPath.Index(i))
 		if err != nil {
