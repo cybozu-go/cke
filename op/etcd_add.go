@@ -3,6 +3,7 @@ package op
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/common"
@@ -104,6 +105,14 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	}
 
 	if !inMember {
+		// wait for several seconds to satisfy etcd server check
+		// https://github.com/etcd-io/etcd/blob/fb674833c21e729fe87fff4addcf93b2aa4df9df/etcdserver/server.go#L1562
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(10 * time.Second):
+		}
+
 		ct, cancel := context.WithTimeout(ctx, timeoutDuration)
 		defer cancel()
 		resp, err := cli.MemberAdd(ct, []string{fmt.Sprintf("https://%s:2380", c.node.Address)})
