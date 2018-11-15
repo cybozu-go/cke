@@ -81,7 +81,7 @@ $(OUTPUT)/vault: $(VAULT_ARCHIVE)
 	unzip $< -d $(OUTPUT)
 	touch $@
 
-$(OUTPUT)/cke $(OUTPUT)/ckecli:
+$(OUTPUT)/cke $(OUTPUT)/ckecli: FORCE
 	mkdir -p $(OUTPUT)
 	cd ..; gofail enable op && \
 		if GOBIN=$(realpath $(OUTPUT)) go install -mod=vendor ./cmd/$(notdir $@); then \
@@ -90,6 +90,7 @@ $(OUTPUT)/cke $(OUTPUT)/ckecli:
 			gofail disable op; \
 			exit 1; \
 		fi
+FORCE:
 
 $(OUTPUT)/kubectl:
 	mkdir -p $(OUTPUT)
@@ -242,7 +243,13 @@ placemat: $(GENERATED_FILES)
 	sudo -b $(PLACEMAT) output/cluster.yml
 	@echo 'Placemat is running.  To kill it, do "sudo pkill placemat".'
 
-test-light:
+test-light: $(OUTPUT)/cke
+	for h in $(HOST1) $(HOST2); do \
+		ssh $$h sudo systemctl reset-failed cke.service; \
+		ssh $$h sudo systemctl stop cke.service; \
+		cat $(OUTPUT)/cke | ssh $$h sudo dd of=/opt/bin/cke status=none; \
+		ssh $$h sudo chmod 755 /opt/bin/cke; \
+	done
 	$(GINKGO) -v -focus="${TARGET}"
 
 clean:
