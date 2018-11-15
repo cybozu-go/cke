@@ -2,19 +2,24 @@ package op
 
 import (
 	"context"
-	"fmt"
-	"strings"
-
-	"k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/cybozu-go/cke"
+	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var unboundConfTemplate = `
+const confdToml = `
+[template]
+src = "unbound.conf.tmpl"
+dest = "/etc/unbound/unbound.conf"
+keys = [ "/" ]
+reload_cmd="kill -HUP 1"
+`
+
+const unboundConfTemplate = `
 server:
   interface: 0.0.0.0
   interface-automatic: yes
@@ -30,21 +35,27 @@ server:
   log-local-actions: yes
   log-servfail: yes
   pidfile: "/tmp/unbound.pid"
+  infra-host-ttl: 60
+  prefetch: yes
 stub-zone:
-  name: "%s"
-  stub-addr: %s
+  name: "{{ getv "/domain" }}"
+  stub-addr: {{ getv "/cluster_dns" }}
 forward-zone:
   name: "in-addr.arpa."
-  forward-addr: %s
+  forward-addr: {{ getv "/cluster_dns" }}
 forward-zone:
   name: "ip6.arpa."
-  forward-addr: %s
+  forward-addr: {{ getv "/cluster_dns" }}
+{{- if ls "/upstream_dns" }}
 forward-zone:
   name: "."
-  %s
+  {{- range getvs "/upstream_dns/*" }}
+  forward-addr: {{ . }}
+  {{- end }}
+{{- end }}
 `
 
-var daemonSetTemplate = `
+var daemonSetText = `
 metadata:
   name: node-dns
   namespace: kube-system
@@ -79,7 +90,7 @@ spec:
       terminationGracePeriodSeconds: 0
       containers:
         - name: unbound
-          image: %s
+          image: ` + cke.UnboundImage.Name() + `
           args:
             - -c
             - /etc/unbound/unbound.conf
@@ -105,19 +116,61 @@ spec:
             initialDelaySeconds: 1
             failureThreshold: 6
           volumeMounts:
-            - name: config-volume
+            - name: shared-volume
               mountPath: /etc/unbound
             - name: temporary-volume
               mountPath: /tmp
+        - name: confd
+          image: ` + cke.ConfdImage.Name() + `
+          args:
+            - "-backend=file"
+            - "-file=/etc/confd/kvs.yml"
+            - "-watch"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - all
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: shared-volume
+              mountPath: /etc/unbound
+            - name: confd-volume
+              mountPath: /etc/confd
+      initContainers:
+        - name: confd
+          image: ` + cke.ConfdImage.Name() + `
+          args:
+            - "-backend=file"
+            - "-file=/etc/confd/kvs.yml"
+            - "-onetime"
+            - "-sync-only"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - all
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: shared-volume
+              mountPath: /etc/unbound
+            - name: confd-volume
+              mountPath: /etc/confd
       volumes:
-        - name: config-volume
+        - name: shared-volume
+          emptyDir: {}
+        - name: temporary-volume
+          emptyDir: {}
+        - name: confd-volume
           configMap:
             name: node-dns
             items:
-            - key: unbound.conf
-              path: unbound.conf
-        - name: temporary-volume
-          emptyDir: {}
+            - key: confd.toml
+              path: confd.toml
+            - key: unbound.conf.tmpl
+              path: templates/unbound.conf.tmpl
+            - key: kvs.yml
+              path: kvs.yml
 `
 
 type kubeNodeDNSCreateOp struct {
@@ -169,14 +222,9 @@ func (c createNodeDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		configMap := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      nodeDNSAppName,
-				Namespace: "kube-system",
-			},
-			Data: map[string]string{
-				"unbound.conf": GenerateNodeDNSConfig(c.clusterIP, c.domain, c.dnsServers),
-			},
+		configMap, err := GenerateNodeDNSConfig(c.clusterIP, c.domain, c.dnsServers)
+		if err != nil {
+			return err
 		}
 		_, err = configs.Create(configMap)
 		if err != nil {
@@ -192,9 +240,8 @@ func (c createNodeDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		daemonSetText := fmt.Sprintf(daemonSetTemplate, cke.UnboundImage.Name())
 		daemonSet := new(appsv1.DaemonSet)
-		err = yaml.NewYAMLToJSONDecoder(strings.NewReader(daemonSetText)).Decode(daemonSet)
+		err = yaml.Unmarshal([]byte(daemonSetText), daemonSet)
 		if err != nil {
 			return err
 		}
@@ -260,21 +307,14 @@ func (c updateNodeDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	}
 
 	configs := cs.CoreV1().ConfigMaps("kube-system")
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nodeDNSAppName,
-			Namespace: "kube-system",
-		},
-		Data: map[string]string{
-			"unbound.conf": GenerateNodeDNSConfig(c.clusterIP, c.domain, c.dnsServers),
-		},
+	configMap, err := GenerateNodeDNSConfig(c.clusterIP, c.domain, c.dnsServers)
+	if err != nil {
+		return err
 	}
 	_, err = configs.Update(configMap)
 	if err != nil {
 		return err
 	}
-
-	// TODO: restart or reload
 
 	return nil
 }
@@ -287,11 +327,25 @@ func (c updateNodeDNSCommand) Command() cke.Command {
 }
 
 // GenerateNodeDNSConfig returns ConfigMap of node-dns
-func GenerateNodeDNSConfig(clusterIP, domain string, dnsServers []string) string {
-	forwardAddrs := make([]string, len(dnsServers))
-	for i := range dnsServers {
-		forwardAddrs[i] = fmt.Sprintf("forward-addr: %s", dnsServers[i])
+func GenerateNodeDNSConfig(clusterIP, domain string, dnsServers []string) (*corev1.ConfigMap, error) {
+	kvs := map[string]interface{}{
+		"domain":       domain,
+		"cluster_dns":  clusterIP,
+		"upstream_dns": dnsServers,
 	}
-	dnsServersText := strings.Join(forwardAddrs, "\n  ")
-	return fmt.Sprintf(unboundConfTemplate, domain, clusterIP, clusterIP, clusterIP, dnsServersText)
+	kvsBytes, err := yaml.Marshal(kvs)
+	if err != nil {
+		return nil, err
+	}
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nodeDNSAppName,
+			Namespace: "kube-system",
+		},
+		Data: map[string]string{
+			"confd.toml":        confdToml,
+			"unbound.conf.tmpl": unboundConfTemplate,
+			"kvs.yml":           string(kvsBytes),
+		},
+	}, nil
 }

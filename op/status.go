@@ -340,8 +340,7 @@ func GetNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) 
 	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(nodeDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
-		s.ConfigMapExists = true
-		s.Config = config.Data["unbound.conf"]
+		s.Config = config
 	case errors.IsNotFound(err):
 	default:
 		return cke.NodeDNSStatus{}, err
