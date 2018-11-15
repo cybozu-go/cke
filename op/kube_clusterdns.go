@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cke"
-	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // retrieved from https://github.com/kelseyhightower/kubernetes-the-hard-way
@@ -245,7 +245,7 @@ func (c createClusterDNSCommand) Run(ctx context.Context, inf cke.Infrastructure
 	case err == nil:
 	case errors.IsNotFound(err):
 		deployment := new(appsv1.Deployment)
-		err = yaml.Unmarshal([]byte(deploymentText), deployment)
+		err = k8sYaml.NewYAMLToJSONDecoder(strings.NewReader(deploymentText)).Decode(deployment)
 		if err != nil {
 			return err
 		}

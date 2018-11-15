@@ -217,7 +217,7 @@ func decideNodeDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClust
 		return nil
 	}
 	expectedConfigData := expectedConfig.Data
-	if actualConfigData["confd.toml"] != expectedConfigData["confd.toml"] ||
+	if actualConfigData["unbound.toml"] != expectedConfigData["unbound.toml"] ||
 		actualConfigData["unbound.conf.tmpl"] != expectedConfigData["unbound.conf.tmpl"] ||
 		actualConfigData["kvs.yml"] != expectedConfigData["kvs.yml"] {
 		return op.KubeNodeDNSUpdateOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)

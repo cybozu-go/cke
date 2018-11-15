@@ -2,13 +2,16 @@ package op
 
 import (
 	"context"
+	"strings"
 
 	"github.com/cybozu-go/cke"
+
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 const confdToml = `
@@ -16,7 +19,7 @@ const confdToml = `
 src = "unbound.conf.tmpl"
 dest = "/etc/unbound/unbound.conf"
 keys = [ "/" ]
-reload_cmd="kill -HUP 1"
+reload_cmd="kill -HUP $(cat /tmp/unbound.pid)"
 `
 
 const unboundConfTemplate = `
@@ -74,6 +77,7 @@ spec:
       labels:
         k8s-app: node-dns
     spec:
+      shareProcessNamespace: true
       priorityClassName: system-node-critical
       nodeSelector:
         beta.kubernetes.io/os: linux
@@ -125,7 +129,7 @@ spec:
           args:
             - "-backend=file"
             - "-file=/etc/confd/kvs.yml"
-            - "-watch"
+            - "-interval=5"
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -136,9 +140,13 @@ spec:
             - name: shared-volume
               mountPath: /etc/unbound
             - name: confd-volume
+              mountPath: /etc/confd/conf.d
+            - name: confd-volume
               mountPath: /etc/confd
+            - name: temporary-volume
+              mountPath: /tmp
       initContainers:
-        - name: confd
+        - name: init-confd
           image: ` + cke.ConfdImage.Name() + `
           args:
             - "-backend=file"
@@ -155,6 +163,8 @@ spec:
             - name: shared-volume
               mountPath: /etc/unbound
             - name: confd-volume
+              mountPath: /etc/confd/conf.d
+            - name: confd-volume
               mountPath: /etc/confd
       volumes:
         - name: shared-volume
@@ -165,8 +175,8 @@ spec:
           configMap:
             name: node-dns
             items:
-            - key: confd.toml
-              path: confd.toml
+            - key: unbound.toml
+              path: unbound.toml
             - key: unbound.conf.tmpl
               path: templates/unbound.conf.tmpl
             - key: kvs.yml
@@ -241,7 +251,7 @@ func (c createNodeDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	case err == nil:
 	case errors.IsNotFound(err):
 		daemonSet := new(appsv1.DaemonSet)
-		err = yaml.Unmarshal([]byte(daemonSetText), daemonSet)
+		err = k8sYaml.NewYAMLToJSONDecoder(strings.NewReader(daemonSetText)).Decode(daemonSet)
 		if err != nil {
 			return err
 		}
@@ -343,7 +353,7 @@ func GenerateNodeDNSConfig(clusterIP, domain string, dnsServers []string) (*core
 			Namespace: "kube-system",
 		},
 		Data: map[string]string{
-			"confd.toml":        confdToml,
+			"unbound.toml":      confdToml,
 			"unbound.conf.tmpl": unboundConfTemplate,
 			"kvs.yml":           string(kvsBytes),
 		},
