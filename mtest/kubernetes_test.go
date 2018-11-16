@@ -87,7 +87,7 @@ var _ = Describe("Kubernetes", func() {
 
 		domain, ok := configMap.ObjectMeta.Labels[op.ClusterDNSLabelDomain]
 		Expect(ok).Should(BeTrue())
-		Expect(domain).Should(Equal("neco"))
+		Expect(domain).Should(Equal("cluster.local"))
 
 		dnsServers, ok := configMap.ObjectMeta.Labels[op.ClusterDNSLabelDNSServers]
 		Expect(ok).Should(BeTrue())
