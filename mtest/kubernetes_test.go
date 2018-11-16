@@ -84,12 +84,56 @@ var _ = Describe("Kubernetes", func() {
 		configMap := new(corev1.ConfigMap)
 		err = json.Unmarshal(stdout, configMap)
 		Expect(err).ShouldNot(HaveOccurred())
+
 		domain, ok := configMap.ObjectMeta.Labels[op.ClusterDNSLabelDomain]
 		Expect(ok).Should(BeTrue())
 		Expect(domain).Should(Equal("neco"))
+
 		dnsServers, ok := configMap.ObjectMeta.Labels[op.ClusterDNSLabelDNSServers]
 		Expect(ok).Should(BeTrue())
 		Expect(dnsServers).Should(Equal("8.8.8.8_1.1.1.1"))
+	})
+
+	It("resolves Service IP", func() {
+		By("getting CoreDNS Pods")
+		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=k8s-app=cluster-dns", "-o=json")
+		Expect(err).ShouldNot(HaveOccurred())
+
+		var pods corev1.PodList
+		err = json.Unmarshal(stdout, &pods)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(pods.Items).To(HaveLen(2))
+
+		node := pods.Items[0].Spec.NodeName
+
+		By("deploying Service resource")
+		_, stderr, err = kubectl("run", "nginx", "-n=mtest", "--image=nginx")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		stdout, stderr, err = kubectl("expose", "-n=mtest", "deployments", "nginx", "--port=80")
+		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+
+		overrides := fmt.Sprintf(`{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" }}}`, node)
+		_, stderr, err = kubectl("run",
+			"-n=mtest", "--image=quay.io/cybozu/ubuntu:18.04", "--overrides="+overrides+"", "--restart=Never", "client", "--",
+			"sleep", "infinity")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		By("waiting pods are ready")
+		Eventually(func() error {
+			_, stderr, err = kubectl("exec", "-n=mtest", "client", "true")
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+			return nil
+		}).Should(Succeed())
+
+		By("resolving domain names")
+		_, stderr, err = kubectl("exec", "-n=mtest", "client", "getent", "hosts", "nginx")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		_, stderr, err = kubectl("exec", "-n=mtest", "client", "getent", "hosts", "nginx.mtest.svc.neco")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 	})
 
 	It("has node DNS resources", func() {
