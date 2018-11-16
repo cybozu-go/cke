@@ -141,7 +141,7 @@ func runCKE() error {
 				return err
 			}
 			defer sess.Close()
-			return sess.Run("sudo systemd-run --unit=cke.service --setenv=GOFAIL_HTTP=0.0.0.0:1234 /data/cke -interval 3s -session-ttl 5s")
+			return sess.Run("sudo systemd-run --unit=cke.service --setenv=GOFAIL_HTTP=0.0.0.0:1234 /opt/bin/cke -interval 3s -session-ttl 5s")
 		})
 	}
 	env.Stop()
@@ -355,7 +355,14 @@ func etcdctl(crt, key, ca string, args ...string) error {
 	return cmd.Run()
 }
 
-func kubectl(args ...string) ([]byte, error) {
+func kubectl(args ...string) ([]byte, []byte, error) {
+	outBuf := new(bytes.Buffer)
+	errBuf := new(bytes.Buffer)
+
 	args = append([]string{"--kubeconfig=/tmp/cke-mtest-kubeconfig"}, args...)
-	return exec.Command(kubectlPath, args...).Output()
+	cmd := exec.Command(kubectlPath, args...)
+	cmd.Stdout = outBuf
+	cmd.Stderr = errBuf
+	err := cmd.Run()
+	return outBuf.Bytes(), errBuf.Bytes(), err
 }

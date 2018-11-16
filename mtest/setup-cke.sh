@@ -1,12 +1,10 @@
 #!/bin/sh -e
 
-VAULT=/data/vault
-CKECLI=/data/ckecli
-
-if [ ! -f /usr/bin/jq ]; then
-    echo "please wait; cloud-init will install jq."
-    exit 1
-fi
+install_apps() {
+  sudo cp /data/{vault,cke,ckecli,kubectl,etcd,etcdctl} /opt/bin
+  PATH=/opt/bin:$PATH
+  export PATH
+}
 
 run_etcd() {
     sudo systemd-run --unit=my-etcd.service /data/etcd --listen-client-urls=http://0.0.0.0:2379 --advertise-client-urls=http://10.0.0.11:2379 --data-dir /home/cybozu/default.etcd
@@ -17,11 +15,11 @@ create_ca() {
     common_name="$2"
     key="$3"
 
-    $VAULT secrets enable -path $ca -max-lease-ttl=876000h -default-lease-ttl=87600h pki
-    $VAULT write -format=json "$ca/root/generate/internal" \
+    vault secrets enable -path $ca -max-lease-ttl=876000h -default-lease-ttl=87600h pki
+    vault write -format=json "$ca/root/generate/internal" \
            common_name="$common_name" \
            ttl=876000h format=pem | jq -r .data.certificate > /tmp/ca.pem
-    $CKECLI ca set $key /tmp/ca.pem
+    ckecli ca set $key /tmp/ca.pem
 }
 
 run_vault() {
@@ -34,23 +32,23 @@ run_vault() {
 
     for i in $(seq 10); do
         sleep 1
-        if $VAULT status >/dev/null 2>&1; then
+        if vault status >/dev/null 2>&1; then
             break
         fi
     done
 
-    $VAULT auth enable approle
+    vault auth enable approle
     cat > /home/cybozu/cke-policy.hcl <<'EOF'
 path "cke/*"
 {
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 EOF
-    $VAULT policy write cke /home/cybozu/cke-policy.hcl
-    $VAULT write auth/approle/role/cke policies=cke period=5s
-    role_id=$($VAULT read -format=json auth/approle/role/cke/role-id | jq -r .data.role_id)
-    secret_id=$($VAULT write -f -format=json auth/approle/role/cke/secret-id | jq -r .data.secret_id)
-    $CKECLI vault config - <<EOF
+    vault policy write cke /home/cybozu/cke-policy.hcl
+    vault write auth/approle/role/cke policies=cke period=5s
+    role_id=$(vault read -format=json auth/approle/role/cke/role-id | jq -r .data.role_id)
+    secret_id=$(vault write -f -format=json auth/approle/role/cke/secret-id | jq -r .data.secret_id)
+    ckecli vault config - <<EOF
 {
     "endpoint": "http://10.0.0.11:8200",
     "role-id": "$role_id",
@@ -64,7 +62,7 @@ EOF
     create_ca cke/ca-kubernetes "kubernetes CA" kubernetes
 
     # admin role need to be created here to generate .kube/config
-    $VAULT write cke/ca-kubernetes/roles/admin ttl=2h max_ttl=24h \
+    vault write cke/ca-kubernetes/roles/admin ttl=2h max_ttl=24h \
            enforce_hostnames=false allow_any_name=true organization=system:masters
 }
 
@@ -75,7 +73,7 @@ EOF
 }
 
 install_kubectl_config() {
-  $VAULT write -format=json \
+  vault write -format=json \
     cke/ca-kubernetes/issue/admin common_name=admin exclude_cn_from_sans=true \
     >/tmp/admin.json
 
@@ -106,6 +104,7 @@ users:
 EOF
 }
 
+install_apps
 install_cke_configs
 
 if [ $(hostname) = 'host1' ]; then

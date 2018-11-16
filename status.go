@@ -27,9 +27,8 @@ type ClusterDNSStatus struct {
 
 // NodeDNSStatus contains node local resolver status.
 type NodeDNSStatus struct {
-	ConfigMapExists bool
 	DaemonSetExists bool
-	Config          string
+	Config          *corev1.ConfigMap
 }
 
 // KubernetesClusterStatus contains kubernetes cluster configurations

@@ -5,18 +5,17 @@ import (
 	"fmt"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/util/yaml"
-
 	"github.com/cybozu-go/cke"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // retrieved from https://github.com/kelseyhightower/kubernetes-the-hard-way
-var deploymentTemplate = `
+var deploymentText = `
 metadata:
   name: cluster-dns
   namespace: kube-system
@@ -45,7 +44,7 @@ spec:
           operator: "Exists"
       containers:
       - name: coredns
-        image: %s
+        image: ` + cke.CoreDNSImage.Name() + `
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -245,9 +244,8 @@ func (c createClusterDNSCommand) Run(ctx context.Context, inf cke.Infrastructure
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		deploymentText := fmt.Sprintf(deploymentTemplate, cke.CoreDNSImage)
 		deployment := new(appsv1.Deployment)
-		err = yaml.NewYAMLToJSONDecoder(strings.NewReader(deploymentText)).Decode(deployment)
+		err = k8sYaml.NewYAMLToJSONDecoder(strings.NewReader(deploymentText)).Decode(deployment)
 		if err != nil {
 			return err
 		}

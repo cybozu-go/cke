@@ -227,10 +227,14 @@ func (d testData) withK8sClusterDNSReady(dnsServers []string, clusterDomain, clu
 }
 
 func (d testData) withK8sNodeDNSReady() testData {
+	var err error
+
 	d.withK8sClusterDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr)
-	d.Status.Kubernetes.NodeDNS.ConfigMapExists = true
 	d.Status.Kubernetes.NodeDNS.DaemonSetExists = true
-	d.Status.Kubernetes.NodeDNS.Config = op.GenerateNodeDNSConfig(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
+	d.Status.Kubernetes.NodeDNS.Config, err = op.GenerateNodeDNSConfig(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
+	if err != nil {
+		panic(err)
+	}
 	return d
 }
 

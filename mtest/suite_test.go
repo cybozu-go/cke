@@ -40,8 +40,7 @@ var _ = BeforeSuite(func() {
 	for _, h := range []string{host1, host2} {
 		_, stderr, err := execAt(h, "/data/setup-cke.sh")
 		if err != nil {
-			fmt.Println("err!!!", string(stderr))
-			panic(err)
+			Fail("failed to complete setup-cke.sh: " + string(stderr))
 		}
 	}
 

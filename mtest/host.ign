@@ -20,6 +20,13 @@
         "mode": 420,
         "contents": { "source": "data:,endpoints%3a%0d%0a%20%20%2d%20http%3a%2f%2f@HOST1@%3a2379%0d%0a" }
       }
+    ],
+    "directories": [
+      {
+        "filesystem": "root",
+        "path": "/opt/bin",
+        "mode": 493
+      }
     ]
   },
   "networkd": {

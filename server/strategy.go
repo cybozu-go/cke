@@ -204,11 +204,22 @@ func decideNodeDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClust
 		return nil
 	}
 
-	if !ks.NodeDNS.ConfigMapExists || !ks.NodeDNS.DaemonSetExists {
+	if ks.NodeDNS.Config == nil || !ks.NodeDNS.DaemonSetExists {
 		return op.KubeNodeDNSCreateOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
 	}
 
-	if ks.NodeDNS.Config != op.GenerateNodeDNSConfig(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers) {
+	actualConfigData := ks.NodeDNS.Config.Data
+	expectedConfig, err := op.GenerateNodeDNSConfig(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
+	if err != nil {
+		log.Error("GenerateNodeDNSConfig failed unexpectedly", map[string]interface{}{
+			log.FnError: err,
+		})
+		return nil
+	}
+	expectedConfigData := expectedConfig.Data
+	if actualConfigData["unbound.toml"] != expectedConfigData["unbound.toml"] ||
+		actualConfigData["unbound.conf.tmpl"] != expectedConfigData["unbound.conf.tmpl"] ||
+		actualConfigData["kvs.yml"] != expectedConfigData["kvs.yml"] {
 		return op.KubeNodeDNSUpdateOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
 	}
 
