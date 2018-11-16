@@ -1,7 +1,9 @@
 #!/bin/sh -e
 
 install_apps() {
-  sudo cp /data/{vault,ckecli,kubectl,etcd,etcdctl} /opt/bin
+  sudo cp /data/{vault,cke,ckecli,kubectl,etcd,etcdctl} /opt/bin
+  PATH=/opt/bin:$PATH
+  export PATH
 }
 
 run_etcd() {
@@ -102,8 +104,8 @@ users:
 EOF
 }
 
-install_cke_configs
 install_apps
+install_cke_configs
 
 if [ $(hostname) = 'host1' ]; then
     if [ ! -f $HOME/.kube/config ]; then
