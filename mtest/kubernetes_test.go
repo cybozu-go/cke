@@ -3,6 +3,7 @@ package mtest
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/cybozu-go/cke/op"
 	. "github.com/onsi/ginkgo"
@@ -12,24 +13,37 @@ import (
 )
 
 var _ = Describe("Kubernetes", func() {
+	BeforeEach(func() {
+		_, stderr, err := kubectl("create", "namespace", "mtest")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+	})
+
+	AfterEach(func() {
+		_, stderr, err := kubectl("delete", "namespace", "mtest")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+	})
+
 	It("can run Pods", func() {
 		By("waiting the default service account gets created")
 		Eventually(func() error {
-			_, err := kubectl("get", "sa/default", "-o", "json")
-			return err
+			_, stderr, err := kubectl("get", "sa/default", "-o", "json")
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+			return nil
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, err := kubectl("run", "nginx", "--image=nginx",
+		_, stderr, err := kubectl("run", "nginx", "-n=mtest", "--image=nginx",
 			`--overrides={"spec": {"hostNetwork": true}}`,
 			"--generator=run-pod/v1")
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
 		Eventually(func() error {
-			stdout, err := kubectl("get", "pods/nginx", "-o", "json")
+			stdout, stderr, err := kubectl("get", "pods/nginx", "-n=mtest", "-o", "json")
 			if err != nil {
-				return err
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
 
 			var pod corev1.Pod
@@ -60,12 +74,13 @@ var _ = Describe("Kubernetes", func() {
 			"deployments":         "cluster-dns",
 			"services":            "cluster-dns",
 		} {
-			_, err := kubectl("-n", "kube-system", "get", resource+"/"+name)
-			Expect(err).ShouldNot(HaveOccurred())
+			_, stderr, err := kubectl("-n", "kube-system", "get", resource+"/"+name)
+			Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		}
 
-		stdout, err := kubectl("-n", "kube-system", "get", "configmaps/cluster-dns", "-o=json")
-		Expect(err).ShouldNot(HaveOccurred())
+		stdout, stderr, err := kubectl("-n", "kube-system", "get", "configmaps/cluster-dns", "-o=json")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
 		configMap := new(corev1.ConfigMap)
 		err = json.Unmarshal(stdout, configMap)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -78,19 +93,16 @@ var _ = Describe("Kubernetes", func() {
 	})
 
 	It("has node DNS resources", func() {
-		for resource, name := range map[string]string{
-			"configmaps": "node-dns",
-			"daemonsets": "node-dns",
-		} {
-			_, err := kubectl("-n", "kube-system", "get", resource+"/"+name)
-			Expect(err).ShouldNot(HaveOccurred())
+		for _, name := range []string{"configmaps/node-dns", "daemonsets/node-dns"} {
+			_, stderr, err := kubectl("-n", "kube-system", "get", name)
+			Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		}
 
 		By("checking node DNS pod status")
 		Eventually(func() error {
-			stdout, err := kubectl("-n", "kube-system", "get", "daemonsets/node-dns", "-o", "json")
+			stdout, stderr, err := kubectl("-n", "kube-system", "get", "daemonsets/node-dns", "-o", "json")
 			if err != nil {
-				return err
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
 
 			var daemonSet appsv1.DaemonSet
@@ -107,16 +119,16 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("querying www.google.com using node DNS from ubuntu pod")
-		stdout, err := kubectl("run", "-it", "--rm", "ubuntu",
+		_, stderr, err := kubectl("run", "-it", "--rm", "-n=mtest", "ubuntu",
 			"--image=quay.io/cybozu/ubuntu-debug:18.04", "--generator=run-pod/v1",
 			"--restart=Never", "--command", "--", "host", "-N", "0", "www.google.com")
-		Expect(err).NotTo(HaveOccurred(), "stdout: %s", stdout)
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 	})
 
 	It("has kube-system/cke-etcd Service and Endpoints", func() {
-		_, err := kubectl("-n", "kube-system", "get", "services/cke-etcd")
-		Expect(err).ShouldNot(HaveOccurred())
-		_, err = kubectl("-n", "kube-system", "get", "endpoints/cke-etcd")
-		Expect(err).ShouldNot(HaveOccurred())
+		_, stderr, err := kubectl("-n", "kube-system", "get", "services/cke-etcd")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+		_, stderr, err = kubectl("-n", "kube-system", "get", "endpoints/cke-etcd")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 	})
 })

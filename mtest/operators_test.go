@@ -224,8 +224,8 @@ var _ = Describe("Operations", func() {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 
-		stdout, err := kubectl("get", "nodes/"+node1, "-o", "json")
-		Expect(err).NotTo(HaveOccurred())
+		stdout, stderr, err := kubectl("get", "nodes/"+node1, "-o", "json")
+		Expect(err).NotTo(HaveOccurred(), "stdout:%s, stderr:%s", stdout, stderr)
 
 		var node corev1.Node
 		err = json.Unmarshal(stdout, &node)
