@@ -158,7 +158,7 @@ var _ = Describe("Kubernetes", func() {
 		_, stderr, err = kubectl("expose", "-n=mtest", "deployments", "nginx", "--port=80")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		By("updating domain name to neco-cluster.local")
+		By("updating domain name to neco.local")
 		before := cluster.Options.Kubelet.Domain
 		cluster.Options.Kubelet.Domain = "neco.local"
 		ckecliClusterSet(cluster)
