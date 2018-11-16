@@ -56,8 +56,8 @@ RETRY:
 
 	err = c.runLoop(ctx, leaderKey)
 	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
 	err2 := e.Resign(ctxWithTimeout)
+	cancel()
 	if err2 != nil {
 		return err2
 	}
