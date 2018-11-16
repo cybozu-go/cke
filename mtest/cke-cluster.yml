@@ -47,7 +47,7 @@ options:
     - --disable-admission-plugins=Initializers
     - --feature-gates=PodShareProcessNamespace=true
   kubelet:
-    domain: neco
+    domain: cluster.local
     allow_swap: true
     extra_args:
     - --feature-gates=PodShareProcessNamespace=true

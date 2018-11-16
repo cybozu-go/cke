@@ -97,7 +97,7 @@ var _ = Describe("Kubernetes", func() {
 	It("resolves Service IP", func() {
 		By("getting CoreDNS Pods")
 		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=k8s-app=cluster-dns", "-o=json")
-		Expect(err).ShouldNot(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		var pods corev1.PodList
 		err = json.Unmarshal(stdout, &pods)
@@ -110,8 +110,8 @@ var _ = Describe("Kubernetes", func() {
 		_, stderr, err = kubectl("run", "nginx", "-n=mtest", "--image=nginx")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		stdout, stderr, err = kubectl("expose", "-n=mtest", "deployments", "nginx", "--port=80")
-		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+		_, stderr, err = kubectl("expose", "-n=mtest", "deployments", "nginx", "--port=80")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		overrides := fmt.Sprintf(`{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" }}}`, node)
 		_, stderr, err = kubectl("run",
@@ -132,8 +132,75 @@ var _ = Describe("Kubernetes", func() {
 		_, stderr, err = kubectl("exec", "-n=mtest", "client", "getent", "hosts", "nginx")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
-		_, stderr, err = kubectl("exec", "-n=mtest", "client", "getent", "hosts", "nginx.mtest.svc.neco")
+		_, stderr, err = kubectl("exec", "-n=mtest", "client", "getent", "hosts", "nginx.mtest.svc.cluster.local")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+	})
+
+	It("updates unbound config", func() {
+		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=k8s-app=cluster-dns", "-o=json")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		var pods corev1.PodList
+		err = json.Unmarshal(stdout, &pods)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(pods.Items).To(HaveLen(2))
+
+		node := pods.Items[0].Spec.NodeName
+
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+
+		_, stderr, err = kubectl("run", "nginx", "-n=mtest", "--image=nginx")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		_, stderr, err = kubectl("expose", "-n=mtest", "deployments", "nginx", "--port=80")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		By("updating domain name to neco-cluster.local")
+		before := cluster.Options.Kubelet.Domain
+		cluster.Options.Kubelet.Domain = "neco.local"
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		overrides := fmt.Sprintf(`{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" }}}`, node)
+		_, stderr, err = kubectl("run",
+			"-n=mtest", "--image=quay.io/cybozu/ubuntu:18.04", "--overrides="+overrides+"", "--restart=Never", "client1", "--",
+			"sleep", "infinity")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		By("waiting unbound confid is updated")
+		Eventually(func() error {
+			_, stderr, err = kubectl("exec", "-n=mtest", "client1", "getent", "hosts", "nginx.mtest.svc.neco.local")
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+			return nil
+		}).Should(Succeed())
+
+		cluster.Options.Kubelet.Domain = before
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		overrides = fmt.Sprintf(`{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" }}}`, node)
+		_, stderr, err = kubectl("run",
+			"-n=mtest", "--image=quay.io/cybozu/ubuntu:18.04", "--overrides="+overrides+"", "--restart=Never", "client2", "--",
+			"sleep", "infinity")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		By("waiting unbound confid is updated")
+		Eventually(func() error {
+			_, stderr, err = kubectl("exec", "-n=mtest", "client2", "getent", "hosts", "nginx.mtest.svc."+before)
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+			return nil
+		}).Should(Succeed())
 	})
 
 	It("has node DNS resources", func() {
