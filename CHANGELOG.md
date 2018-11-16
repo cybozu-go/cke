@@ -5,6 +5,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.19] - 2018-11-16
+### Added
+- Add automatic config reloader for Node DNS (#96).
+
+### Changed
+- Wait several seconds before adding a server to etcd (#95).
+- Do not defer in a retry loop (#97).
+
 ## [0.18] - 2018-11-15
 ### Incompatibly Changed
 - Changed parameter name in cluster config from "boot-taints" to "boot_taints" (#93).
@@ -105,7 +113,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.18...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.19...HEAD
+[0.19]: https://github.com/cybozu-go/cke/compare/v0.18...v0.19
 [0.18]: https://github.com/cybozu-go/cke/compare/v0.17...v0.18
 [0.17]: https://github.com/cybozu-go/cke/compare/v0.16...v0.17
 [0.16]: https://github.com/cybozu-go/cke/compare/v0.15...v0.16
