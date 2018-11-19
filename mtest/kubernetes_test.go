@@ -161,15 +161,15 @@ var _ = Describe("Kubernetes", func() {
 		pod := pods.Items[0]
 
 		Eventually(func() error {
-			stdout, _, err := kubectl("exec", "-n=kube-system", pod.Name, "-c=unbound",
+			stdout, stderr, err := kubectl("exec", "-n=kube-system", pod.Name, "-c=unbound",
 				"/usr/local/unbound/sbin/unbound-control", "-c", "/etc/unbound/unbound.conf", "list_stubs")
 			if err != nil {
-				return err
+				return fmt.Errorf("%v: %s", err, string(stderr))
 			}
 			if strings.Contains(string(stdout), "neco.local. IN stub") {
 				return nil
 			}
-			return errors.New("unbound conf is not updated")
+			return errors.New("unbound.conf is not updated")
 		}).Should(Succeed())
 
 		cluster.Options.Kubelet.Domain = before
