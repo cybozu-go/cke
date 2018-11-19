@@ -57,6 +57,7 @@ forward-zone:
 {{- end }}
 `
 
+// UnboundTemplateVersion is the version of unbound template
 const UnboundTemplateVersion = "1"
 
 var unboundDaemonSetText = `
@@ -145,7 +146,7 @@ spec:
               path: unbound.conf
 `
 
-type kubeNodeDNSCreateOp struct {
+type kubeNodeDNSCreateConfigMapOp struct {
 	apiserver  *cke.Node
 	clusterIP  string
 	domain     string
@@ -153,9 +154,9 @@ type kubeNodeDNSCreateOp struct {
 	finished   bool
 }
 
-// KubeNodeDNSCreateOp returns an Operator to create unbound as Node local resolver.
-func KubeNodeDNSCreateOp(apiserver *cke.Node, clusterIP, domain string, dnsServers []string) cke.Operator {
-	return &kubeNodeDNSCreateOp{
+// KubeNodeDNSCreateConfigMapOp returns an Operator to create ConfigMap for unbound daemonset.
+func KubeNodeDNSCreateConfigMapOp(apiserver *cke.Node, clusterIP, domain string, dnsServers []string) cke.Operator {
+	return &kubeNodeDNSCreateConfigMapOp{
 		apiserver:  apiserver,
 		clusterIP:  clusterIP,
 		domain:     domain,
@@ -163,26 +164,26 @@ func KubeNodeDNSCreateOp(apiserver *cke.Node, clusterIP, domain string, dnsServe
 	}
 }
 
-func (o *kubeNodeDNSCreateOp) Name() string {
-	return "create-node-dns"
+func (o *kubeNodeDNSCreateConfigMapOp) Name() string {
+	return "create-node-dns-configmap"
 }
 
-func (o *kubeNodeDNSCreateOp) NextCommand() cke.Commander {
+func (o *kubeNodeDNSCreateConfigMapOp) NextCommand() cke.Commander {
 	if o.finished {
 		return nil
 	}
 	o.finished = true
-	return createNodeDNSCommand{o.apiserver, o.clusterIP, o.domain, o.dnsServers}
+	return createNodeDNSConfigMapCommand{o.apiserver, o.clusterIP, o.domain, o.dnsServers}
 }
 
-type createNodeDNSCommand struct {
+type createNodeDNSConfigMapCommand struct {
 	apiserver  *cke.Node
 	clusterIP  string
 	domain     string
 	dnsServers []string
 }
 
-func (c createNodeDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+func (c createNodeDNSConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	cs, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
 		return err
@@ -200,6 +201,50 @@ func (c createNodeDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 			return err
 		}
 	default:
+		return err
+	}
+
+	return nil
+}
+
+func (c createNodeDNSConfigMapCommand) Command() cke.Command {
+	return cke.Command{
+		Name:   "createNodeDNSConfigMapCommand",
+		Target: "kube-system",
+	}
+}
+
+type kubeNodeDNSCreateDaemonSetOp struct {
+	apiserver *cke.Node
+	finished  bool
+}
+
+// KubeNodeDNSCreateDaemonSetOp returns an Operator to create unbound daemonset.
+func KubeNodeDNSCreateDaemonSetOp(apiserver *cke.Node) cke.Operator {
+	return &kubeNodeDNSCreateDaemonSetOp{
+		apiserver: apiserver,
+	}
+}
+
+func (o *kubeNodeDNSCreateDaemonSetOp) Name() string {
+	return "create-node-dns-daemonset"
+}
+
+func (o *kubeNodeDNSCreateDaemonSetOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
+	return createNodeDNSDaemonSetCommand{o.apiserver}
+}
+
+type createNodeDNSDaemonSetCommand struct {
+	apiserver *cke.Node
+}
+
+func (c createNodeDNSDaemonSetCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
 		return err
 	}
 
@@ -225,9 +270,9 @@ func (c createNodeDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	return nil
 }
 
-func (c createNodeDNSCommand) Command() cke.Command {
+func (c createNodeDNSDaemonSetCommand) Command() cke.Command {
 	return cke.Command{
-		Name:   "createNodeDNSCommand",
+		Name:   "createNodeDNSDaemonSetCommand",
 		Target: "kube-system",
 	}
 }
@@ -302,5 +347,56 @@ func GenerateNodeDNSConfig(clusterIP, domain string, dnsServers []string) *corev
 		Data: map[string]string{
 			"unbound.conf": unboundConf.String(),
 		},
+	}
+}
+
+type kubeNodeDNSUpdateDaemonSetOp struct {
+	apiserver *cke.Node
+	finished  bool
+}
+
+// KubeNodeDNSUpdateDaemonSetOp returns an Operator to update unbound daemonset.
+func KubeNodeDNSUpdateDaemonSetOp(apiserver *cke.Node) cke.Operator {
+	return &kubeNodeDNSUpdateDaemonSetOp{
+		apiserver: apiserver,
+	}
+}
+
+func (o *kubeNodeDNSUpdateDaemonSetOp) Name() string {
+	return "update-node-dns-daemonset"
+}
+
+func (o *kubeNodeDNSUpdateDaemonSetOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
+	return updateNodeDNSDaemonSetCommand{o.apiserver}
+}
+
+type updateNodeDNSDaemonSetCommand struct {
+	apiserver *cke.Node
+}
+
+func (c updateNodeDNSDaemonSetCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	daemonSet := new(appsv1.DaemonSet)
+	err = k8sYaml.NewYAMLToJSONDecoder(strings.NewReader(unboundDaemonSetText)).Decode(daemonSet)
+	if err != nil {
+		return err
+	}
+
+	_, err = cs.AppsV1().DaemonSets("kube-system").Update(daemonSet)
+	return err
+}
+
+func (c updateNodeDNSDaemonSetCommand) Command() cke.Command {
+	return cke.Command{
+		Name:   "updateNodeDNSDaemonSet",
+		Target: "kube-system/node-dns",
 	}
 }

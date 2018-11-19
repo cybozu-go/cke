@@ -204,19 +204,23 @@ func decideNodeDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClust
 		return nil
 	}
 
-	if ks.NodeDNS.DaemonSet == nil || ks.NodeDNS.Config == nil {
-		return []cke.Operator{op.KubeNodeDNSCreateOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)}
+	if ks.NodeDNS.DaemonSet == nil {
+		ops = append(ops, op.KubeNodeDNSCreateDaemonSetOp(apiServer))
+	} else {
+		if ks.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/image"] != cke.UnboundImage.Name() ||
+			ks.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/template-version"] != op.UnboundTemplateVersion {
+			ops = append(ops, op.KubeNodeDNSUpdateDaemonSetOp(apiServer))
+		}
 	}
 
-	actualConfigData := ks.NodeDNS.ConfigMap.Data
-	expectedConfig := op.GenerateNodeDNSConfig(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
-	if actualConfigData["unbound.conf"] != expectedConfig.Data["unbound.conf"] {
-		ops = append(ops, op.KubeNodeDNSUpdateConfigMapOp(apiServer, expectedConfig))
-	}
-
-	if ks.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/image"] != cke.UnboundImage.Name() ||
-		ks.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/template-version"] != op.UnboundTemplateVersion {
-		ops = append(ops, op.KubeNodeDNSUpdateDaemonSetOp(apiServer))
+	if ks.NodeDNS.ConfigMap == nil {
+		ops = append(ops, op.KubeNodeDNSCreateConfigMapOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers))
+	} else {
+		actualConfigData := ks.NodeDNS.ConfigMap.Data
+		expectedConfig := op.GenerateNodeDNSConfig(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
+		if actualConfigData["unbound.conf"] != expectedConfig.Data["unbound.conf"] {
+			ops = append(ops, op.KubeNodeDNSUpdateConfigMapOp(apiServer, expectedConfig))
+		}
 	}
 
 	return ops
