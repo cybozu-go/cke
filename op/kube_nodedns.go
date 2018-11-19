@@ -1,12 +1,12 @@
 package op
 
 import (
+	"bytes"
 	"context"
 	"strings"
+	"text/template"
 
 	"github.com/cybozu-go/cke"
-
-	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -14,15 +14,13 @@ import (
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
-const confdToml = `
-[template]
-src = "unbound.conf.tmpl"
-dest = "/etc/unbound/unbound.conf"
-keys = [ "/" ]
-reload_cmd="kill -HUP $(cat /tmp/unbound.pid)"
-`
+type unboundConfigTemplate struct {
+	Domain    string
+	ClusterIP string
+	Upstreams []string
+}
 
-const unboundConfTemplate = `
+const unboundConfigTemplateText = `
 server:
   interface: 0.0.0.0
   interface-automatic: yes
@@ -40,34 +38,41 @@ server:
   pidfile: "/tmp/unbound.pid"
   infra-host-ttl: 60
   prefetch: yes
+remote-control:
+  control-enable: yes
+  control-use-cert: no
 stub-zone:
-  name: "{{ getv "/domain" }}"
-  stub-addr: {{ getv "/cluster_dns" }}
+  name: "{{ .Domain }}"
+  stub-addr: {{ .ClusterIP }}
 forward-zone:
   name: "in-addr.arpa."
-  forward-addr: {{ getv "/cluster_dns" }}
+  forward-addr: {{ .ClusterIP }}
 forward-zone:
   name: "ip6.arpa."
-  forward-addr: {{ getv "/cluster_dns" }}
-{{- if ls "/upstream_dns" }}
+  forward-addr: {{ .ClusterIP }}
+{{- if .Upstreams }}
 forward-zone:
   name: "."
-  {{- range getvs "/upstream_dns/*" }}
+  {{- range .Upstreams }}
   forward-addr: {{ . }}
   {{- end }}
 {{- end }}
 `
 
-var daemonSetText = `
+// UnboundTemplateVersion is the version of unbound template
+const UnboundTemplateVersion = "1"
+
+var unboundDaemonSetText = `
 metadata:
   name: node-dns
   namespace: kube-system
-  labels:
-    k8s-app: node-dns
+  annotations:
+    cke.cybozu.com/image: ` + cke.UnboundImage.Name() + `
+    cke.cybozu.com/template-version: ` + UnboundTemplateVersion + `
 spec:
   selector:
     matchLabels:
-      k8s-app: node-dns
+      cke.cybozu.com/appname: node-dns
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -75,9 +80,8 @@ spec:
   template:
     metadata:
       labels:
-        k8s-app: node-dns
+        cke.cybozu.com/appname: node-dns
     spec:
-      shareProcessNamespace: true
       priorityClassName: system-node-critical
       nodeSelector:
         beta.kubernetes.io/os: linux
@@ -106,12 +110,6 @@ spec:
               drop:
               - all
             readOnlyRootFilesystem: true
-          resources:
-            limits:
-              memory: 170Mi
-            requests:
-              cpu: 100m
-              memory: 70Mi
           livenessProbe:
             tcpSocket:
               port: 53
@@ -120,16 +118,12 @@ spec:
             initialDelaySeconds: 1
             failureThreshold: 6
           volumeMounts:
-            - name: shared-volume
+            - name: config-volume
               mountPath: /etc/unbound
-            - name: temporary-volume
-              mountPath: /tmp
-        - name: confd
-          image: ` + cke.ConfdImage.Name() + `
-          args:
-            - "-backend=file"
-            - "-file=/etc/confd/kvs.yml"
-            - "-interval=5"
+        - name: reload
+          image: ` + cke.UnboundImage.Name() + `
+          command:
+          - /usr/local/bin/reload-unbound
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -137,53 +131,18 @@ spec:
               - all
             readOnlyRootFilesystem: true
           volumeMounts:
-            - name: shared-volume
+            - name: config-volume
               mountPath: /etc/unbound
-            - name: confd-volume
-              mountPath: /etc/confd/conf.d
-            - name: confd-volume
-              mountPath: /etc/confd
-            - name: temporary-volume
-              mountPath: /tmp
-      initContainers:
-        - name: init-confd
-          image: ` + cke.ConfdImage.Name() + `
-          args:
-            - "-backend=file"
-            - "-file=/etc/confd/kvs.yml"
-            - "-onetime"
-            - "-sync-only"
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - all
-            readOnlyRootFilesystem: true
-          volumeMounts:
-            - name: shared-volume
-              mountPath: /etc/unbound
-            - name: confd-volume
-              mountPath: /etc/confd/conf.d
-            - name: confd-volume
-              mountPath: /etc/confd
       volumes:
-        - name: shared-volume
-          emptyDir: {}
-        - name: temporary-volume
-          emptyDir: {}
-        - name: confd-volume
+        - name: config-volume
           configMap:
             name: node-dns
             items:
-            - key: unbound.toml
-              path: unbound.toml
-            - key: unbound.conf.tmpl
-              path: templates/unbound.conf.tmpl
-            - key: kvs.yml
-              path: kvs.yml
+            - key: unbound.conf
+              path: unbound.conf
 `
 
-type kubeNodeDNSCreateOp struct {
+type kubeNodeDNSCreateConfigMapOp struct {
 	apiserver  *cke.Node
 	clusterIP  string
 	domain     string
@@ -191,9 +150,9 @@ type kubeNodeDNSCreateOp struct {
 	finished   bool
 }
 
-// KubeNodeDNSCreateOp returns an Operator to create unbound as Node local resolver.
-func KubeNodeDNSCreateOp(apiserver *cke.Node, clusterIP, domain string, dnsServers []string) cke.Operator {
-	return &kubeNodeDNSCreateOp{
+// KubeNodeDNSCreateConfigMapOp returns an Operator to create ConfigMap for unbound daemonset.
+func KubeNodeDNSCreateConfigMapOp(apiserver *cke.Node, clusterIP, domain string, dnsServers []string) cke.Operator {
+	return &kubeNodeDNSCreateConfigMapOp{
 		apiserver:  apiserver,
 		clusterIP:  clusterIP,
 		domain:     domain,
@@ -201,26 +160,26 @@ func KubeNodeDNSCreateOp(apiserver *cke.Node, clusterIP, domain string, dnsServe
 	}
 }
 
-func (o *kubeNodeDNSCreateOp) Name() string {
-	return "create-node-dns"
+func (o *kubeNodeDNSCreateConfigMapOp) Name() string {
+	return "create-node-dns-configmap"
 }
 
-func (o *kubeNodeDNSCreateOp) NextCommand() cke.Commander {
+func (o *kubeNodeDNSCreateConfigMapOp) NextCommand() cke.Commander {
 	if o.finished {
 		return nil
 	}
 	o.finished = true
-	return createNodeDNSCommand{o.apiserver, o.clusterIP, o.domain, o.dnsServers}
+	return createNodeDNSConfigMapCommand{o.apiserver, o.clusterIP, o.domain, o.dnsServers}
 }
 
-type createNodeDNSCommand struct {
+type createNodeDNSConfigMapCommand struct {
 	apiserver  *cke.Node
 	clusterIP  string
 	domain     string
 	dnsServers []string
 }
 
-func (c createNodeDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+func (c createNodeDNSConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	cs, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
 		return err
@@ -232,15 +191,56 @@ func (c createNodeDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		configMap, err := GenerateNodeDNSConfig(c.clusterIP, c.domain, c.dnsServers)
-		if err != nil {
-			return err
-		}
+		configMap := GenerateNodeDNSConfig(c.clusterIP, c.domain, c.dnsServers)
 		_, err = configs.Create(configMap)
 		if err != nil {
 			return err
 		}
 	default:
+		return err
+	}
+
+	return nil
+}
+
+func (c createNodeDNSConfigMapCommand) Command() cke.Command {
+	return cke.Command{
+		Name:   "createNodeDNSConfigMapCommand",
+		Target: "kube-system",
+	}
+}
+
+type kubeNodeDNSCreateDaemonSetOp struct {
+	apiserver *cke.Node
+	finished  bool
+}
+
+// KubeNodeDNSCreateDaemonSetOp returns an Operator to create unbound daemonset.
+func KubeNodeDNSCreateDaemonSetOp(apiserver *cke.Node) cke.Operator {
+	return &kubeNodeDNSCreateDaemonSetOp{
+		apiserver: apiserver,
+	}
+}
+
+func (o *kubeNodeDNSCreateDaemonSetOp) Name() string {
+	return "create-node-dns-daemonset"
+}
+
+func (o *kubeNodeDNSCreateDaemonSetOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
+	return createNodeDNSDaemonSetCommand{o.apiserver}
+}
+
+type createNodeDNSDaemonSetCommand struct {
+	apiserver *cke.Node
+}
+
+func (c createNodeDNSDaemonSetCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
 		return err
 	}
 
@@ -251,7 +251,7 @@ func (c createNodeDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	case err == nil:
 	case errors.IsNotFound(err):
 		daemonSet := new(appsv1.DaemonSet)
-		err = k8sYaml.NewYAMLToJSONDecoder(strings.NewReader(daemonSetText)).Decode(daemonSet)
+		err = k8sYaml.NewYAMLToJSONDecoder(strings.NewReader(unboundDaemonSetText)).Decode(daemonSet)
 		if err != nil {
 			return err
 		}
@@ -266,86 +266,74 @@ func (c createNodeDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	return nil
 }
 
-func (c createNodeDNSCommand) Command() cke.Command {
+func (c createNodeDNSDaemonSetCommand) Command() cke.Command {
 	return cke.Command{
-		Name:   "createNodeDNSCommand",
+		Name:   "createNodeDNSDaemonSetCommand",
 		Target: "kube-system",
 	}
 }
 
-type kubeNodeDNSUpdateOp struct {
-	apiserver  *cke.Node
-	clusterIP  string
-	domain     string
-	dnsServers []string
-	finished   bool
+type kubeNodeDNSUpdateConfigMapOp struct {
+	apiserver *cke.Node
+	configMap *corev1.ConfigMap
+	finished  bool
 }
 
-// KubeNodeDNSUpdateOp returns an Operator to update unbound as Node local resolver.
-func KubeNodeDNSUpdateOp(apiserver *cke.Node, clusterIP, domain string, dnsServers []string) cke.Operator {
-	return &kubeNodeDNSUpdateOp{
-		apiserver:  apiserver,
-		clusterIP:  clusterIP,
-		domain:     domain,
-		dnsServers: dnsServers,
+// KubeNodeDNSUpdateConfigMapOp returns an Operator to update unbound as Node local resolver.
+func KubeNodeDNSUpdateConfigMapOp(apiserver *cke.Node, configMap *corev1.ConfigMap) cke.Operator {
+	return &kubeNodeDNSUpdateConfigMapOp{
+		apiserver: apiserver,
+		configMap: configMap,
 	}
 }
 
-func (o *kubeNodeDNSUpdateOp) Name() string {
-	return "update-node-dns"
+func (o *kubeNodeDNSUpdateConfigMapOp) Name() string {
+	return "update-node-dns-configmap"
 }
 
-func (o *kubeNodeDNSUpdateOp) NextCommand() cke.Commander {
+func (o *kubeNodeDNSUpdateConfigMapOp) NextCommand() cke.Commander {
 	if o.finished {
 		return nil
 	}
 	o.finished = true
-	return updateNodeDNSCommand{o.apiserver, o.clusterIP, o.domain, o.dnsServers}
+	return updateNodeDNSConfigMapCommand{o.apiserver, o.configMap}
 }
 
-type updateNodeDNSCommand struct {
-	apiserver  *cke.Node
-	clusterIP  string
-	domain     string
-	dnsServers []string
+type updateNodeDNSConfigMapCommand struct {
+	apiserver *cke.Node
+	configMap *corev1.ConfigMap
 }
 
-func (c updateNodeDNSCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+func (c updateNodeDNSConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	cs, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
 		return err
 	}
 
 	configs := cs.CoreV1().ConfigMaps("kube-system")
-	configMap, err := GenerateNodeDNSConfig(c.clusterIP, c.domain, c.dnsServers)
-	if err != nil {
-		return err
-	}
-	_, err = configs.Update(configMap)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	_, err = configs.Update(c.configMap)
+	return err
 }
 
-func (c updateNodeDNSCommand) Command() cke.Command {
+func (c updateNodeDNSConfigMapCommand) Command() cke.Command {
 	return cke.Command{
-		Name:   "updateNodeDNSCommand",
+		Name:   "updateNodeDNSConfigMapCommand",
 		Target: "kube-system",
 	}
 }
 
 // GenerateNodeDNSConfig returns ConfigMap of node-dns
-func GenerateNodeDNSConfig(clusterIP, domain string, dnsServers []string) (*corev1.ConfigMap, error) {
-	kvs := map[string]interface{}{
-		"domain":       domain,
-		"cluster_dns":  clusterIP,
-		"upstream_dns": dnsServers,
-	}
-	kvsBytes, err := yaml.Marshal(kvs)
+func GenerateNodeDNSConfig(clusterIP, domain string, dnsServers []string) *corev1.ConfigMap {
+	var confTempl unboundConfigTemplate
+	confTempl.Domain = domain
+	confTempl.ClusterIP = clusterIP
+	confTempl.Upstreams = dnsServers
+
+	tmpl := template.Must(template.New("").Parse(unboundConfigTemplateText))
+	unboundConf := new(bytes.Buffer)
+	err := tmpl.Execute(unboundConf, confTempl)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -353,9 +341,58 @@ func GenerateNodeDNSConfig(clusterIP, domain string, dnsServers []string) (*core
 			Namespace: "kube-system",
 		},
 		Data: map[string]string{
-			"unbound.toml":      confdToml,
-			"unbound.conf.tmpl": unboundConfTemplate,
-			"kvs.yml":           string(kvsBytes),
+			"unbound.conf": unboundConf.String(),
 		},
-	}, nil
+	}
+}
+
+type kubeNodeDNSUpdateDaemonSetOp struct {
+	apiserver *cke.Node
+	finished  bool
+}
+
+// KubeNodeDNSUpdateDaemonSetOp returns an Operator to update unbound daemonset.
+func KubeNodeDNSUpdateDaemonSetOp(apiserver *cke.Node) cke.Operator {
+	return &kubeNodeDNSUpdateDaemonSetOp{
+		apiserver: apiserver,
+	}
+}
+
+func (o *kubeNodeDNSUpdateDaemonSetOp) Name() string {
+	return "update-node-dns-daemonset"
+}
+
+func (o *kubeNodeDNSUpdateDaemonSetOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
+	return updateNodeDNSDaemonSetCommand{o.apiserver}
+}
+
+type updateNodeDNSDaemonSetCommand struct {
+	apiserver *cke.Node
+}
+
+func (c updateNodeDNSDaemonSetCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	daemonSet := new(appsv1.DaemonSet)
+	err = k8sYaml.NewYAMLToJSONDecoder(strings.NewReader(unboundDaemonSetText)).Decode(daemonSet)
+	if err != nil {
+		return err
+	}
+
+	_, err = cs.AppsV1().DaemonSets("kube-system").Update(daemonSet)
+	return err
+}
+
+func (c updateNodeDNSDaemonSetCommand) Command() cke.Command {
+	return cke.Command{
+		Name:   "updateNodeDNSDaemonSet",
+		Target: "kube-system/node-dns",
+	}
 }

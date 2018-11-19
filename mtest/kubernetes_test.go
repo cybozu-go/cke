@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/cybozu-go/cke/op"
 	. "github.com/onsi/ginkgo"
@@ -137,26 +138,10 @@ var _ = Describe("Kubernetes", func() {
 	})
 
 	It("updates unbound config", func() {
-		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=k8s-app=cluster-dns", "-o=json")
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-
-		var pods corev1.PodList
-		err = json.Unmarshal(stdout, &pods)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(pods.Items).To(HaveLen(2))
-
-		node := pods.Items[0].Spec.NodeName
-
 		cluster := getCluster()
 		for i := 0; i < 3; i++ {
 			cluster.Nodes[i].ControlPlane = true
 		}
-
-		_, stderr, err = kubectl("run", "nginx", "-n=mtest", "--image=nginx")
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-
-		_, stderr, err = kubectl("expose", "-n=mtest", "deployments", "nginx", "--port=80")
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("updating domain name to neco.local")
 		before := cluster.Options.Kubelet.Domain
@@ -166,19 +151,26 @@ var _ = Describe("Kubernetes", func() {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 
-		overrides := fmt.Sprintf(`{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" }}}`, node)
-		_, stderr, err = kubectl("run",
-			"-n=mtest", "--image=quay.io/cybozu/ubuntu:18.04", "--overrides="+overrides+"", "--restart=Never", "client1", "--",
-			"sleep", "infinity")
+		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=cke.cybozu.com/appname=node-dns", "-o=json")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
-		By("waiting unbound confid is updated")
+		var pods corev1.PodList
+		err = json.Unmarshal(stdout, &pods)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(pods.Items).NotTo(BeEmpty())
+		pod := pods.Items[0]
+
 		Eventually(func() error {
-			_, stderr, err = kubectl("exec", "-n=mtest", "client1", "getent", "hosts", "nginx.mtest.svc.neco.local")
+			stdout, stderr, err := kubectl("exec", "-n=kube-system", pod.Name, "-c=unbound",
+				"/usr/local/unbound/sbin/unbound-control", "--",
+				"-c", "/etc/unbound/unbound.conf", "list_stubs")
 			if err != nil {
-				return fmt.Errorf("%v: stderr=%s", err, stderr)
+				return fmt.Errorf("%v: %s", err, string(stderr))
 			}
-			return nil
+			if strings.Contains(string(stdout), "neco.local. IN stub") {
+				return nil
+			}
+			return errors.New("unbound.conf is not updated")
 		}).Should(Succeed())
 
 		cluster.Options.Kubelet.Domain = before
@@ -187,20 +179,6 @@ var _ = Describe("Kubernetes", func() {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 
-		overrides = fmt.Sprintf(`{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" }}}`, node)
-		_, stderr, err = kubectl("run",
-			"-n=mtest", "--image=quay.io/cybozu/ubuntu:18.04", "--overrides="+overrides+"", "--restart=Never", "client2", "--",
-			"sleep", "infinity")
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-
-		By("waiting unbound confid is updated")
-		Eventually(func() error {
-			_, stderr, err = kubectl("exec", "-n=mtest", "client2", "getent", "hosts", "nginx.mtest.svc."+before)
-			if err != nil {
-				return fmt.Errorf("%v: stderr=%s", err, stderr)
-			}
-			return nil
-		}).Should(Succeed())
 	})
 
 	It("has node DNS resources", func() {

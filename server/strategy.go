@@ -157,9 +157,9 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 		ops = append(ops, dnsOp)
 	}
 
-	nodeDNSOp := decideNodeDNSOp(apiServer, c, ks)
-	if nodeDNSOp != nil {
-		ops = append(ops, nodeDNSOp)
+	nodeDNSOps := decideNodeDNSOp(apiServer, c, ks)
+	if len(nodeDNSOps) != 0 {
+		ops = append(ops, nodeDNSOps...)
 	}
 
 	epOp := decideEpOp(ks.EtcdEndpoints, apiServer, nf.ControlPlane())
@@ -199,31 +199,31 @@ func decideClusterDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesCl
 	return nil
 }
 
-func decideNodeDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) cke.Operator {
+func decideNodeDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) (ops []cke.Operator) {
 	if len(ks.ClusterDNS.ClusterIP) == 0 {
 		return nil
 	}
 
-	if ks.NodeDNS.Config == nil || !ks.NodeDNS.DaemonSetExists {
-		return op.KubeNodeDNSCreateOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
+	if ks.NodeDNS.DaemonSet == nil {
+		ops = append(ops, op.KubeNodeDNSCreateDaemonSetOp(apiServer))
+	} else {
+		if ks.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/image"] != cke.UnboundImage.Name() ||
+			ks.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/template-version"] != op.UnboundTemplateVersion {
+			ops = append(ops, op.KubeNodeDNSUpdateDaemonSetOp(apiServer))
+		}
 	}
 
-	actualConfigData := ks.NodeDNS.Config.Data
-	expectedConfig, err := op.GenerateNodeDNSConfig(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
-	if err != nil {
-		log.Error("GenerateNodeDNSConfig failed unexpectedly", map[string]interface{}{
-			log.FnError: err,
-		})
-		return nil
-	}
-	expectedConfigData := expectedConfig.Data
-	if actualConfigData["unbound.toml"] != expectedConfigData["unbound.toml"] ||
-		actualConfigData["unbound.conf.tmpl"] != expectedConfigData["unbound.conf.tmpl"] ||
-		actualConfigData["kvs.yml"] != expectedConfigData["kvs.yml"] {
-		return op.KubeNodeDNSUpdateOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
+	if ks.NodeDNS.ConfigMap == nil {
+		ops = append(ops, op.KubeNodeDNSCreateConfigMapOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers))
+	} else {
+		actualConfigData := ks.NodeDNS.ConfigMap.Data
+		expectedConfig := op.GenerateNodeDNSConfig(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
+		if actualConfigData["unbound.conf"] != expectedConfig.Data["unbound.conf"] {
+			ops = append(ops, op.KubeNodeDNSUpdateConfigMapOp(apiServer, expectedConfig))
+		}
 	}
 
-	return nil
+	return ops
 }
 
 func decideEpOp(ep *corev1.Endpoints, apiServer *cke.Node, cpNodes []*cke.Node) cke.Operator {

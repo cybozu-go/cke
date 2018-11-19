@@ -1,0 +1,4 @@
+#!/bin/bash
+
+CURRENT_DIR=$(cd $(dirname $0);pwd)
+ssh -F ${CURRENT_DIR}/ssh_config $@
