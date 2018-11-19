@@ -244,11 +244,11 @@ placemat: $(GENERATED_FILES)
 	@echo 'Placemat is running.  To kill it, do "sudo pkill placemat".'
 
 test-light: $(OUTPUT)/cke
-	for h in $(HOST1) $(HOST2); do \
-		ssh $$h sudo systemctl reset-failed cke.service; \
-		ssh $$h sudo systemctl stop cke.service; \
-		cat $(OUTPUT)/cke | ssh $$h sudo dd of=/opt/bin/cke status=none; \
-		ssh $$h sudo chmod 755 /opt/bin/cke; \
+	for h in host-1 host-2; do \
+		./mssh $$h sudo systemctl reset-failed cke.service; \
+		./mssh $$h sudo systemctl stop cke.service; \
+		cat $(OUTPUT)/cke | ./mssh $$h sudo dd of=/opt/bin/cke status=none; \
+		./mssh $$h sudo chmod 755 /opt/bin/cke; \
 	done
 	$(GINKGO) -v -focus="${TARGET}"
 

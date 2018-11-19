@@ -1,0 +1,30 @@
+Host *
+User cybozu
+IdentityFile mtest_key
+StrictHostKeyChecking no
+UserKnownHostsFile /dev/null
+LogLevel ERROR
+
+Host host-1
+HostName 10.0.0.11
+
+Host host-2
+HostName 10.0.0.12
+
+Host node-1
+HostName 10.0.0.101
+
+Host node-2
+HostName 10.0.0.102
+
+Host node-3
+HostName 10.0.0.103
+
+Host node-4
+HostName 10.0.0.104
+
+Host node-5
+HostName 10.0.0.105
+
+Host node-6
+HostName 10.0.0.106
