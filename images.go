@@ -16,7 +16,6 @@ const (
 	PauseImage     = Image("quay.io/cybozu/pause:3.1-1")
 	CoreDNSImage   = Image("quay.io/cybozu/coredns:1.2.5-1")
 	UnboundImage   = Image("quay.io/cybozu/unbound:1.8.1-2")
-	ConfdImage     = Image("quay.io/cybozu/confd:0.16.0-1")
 )
 
 // AllImages return container images list used by CKE
@@ -28,6 +27,5 @@ func AllImages() []string {
 		PauseImage.Name(),
 		CoreDNSImage.Name(),
 		UnboundImage.Name(),
-		ConfdImage.Name(),
 	}
 }
