@@ -39,6 +39,9 @@ server:
   pidfile: "/tmp/unbound.pid"
   infra-host-ttl: 60
   prefetch: yes
+remote-control:
+  control-enable: yes
+  control-use-cert: no
 stub-zone:
   name: "{{ .Domain }}"
   stub-addr: {{ .ClusterIP }}
