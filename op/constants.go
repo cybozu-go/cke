@@ -33,10 +33,8 @@ const (
 )
 
 const (
-	// ClusterDNSLabelDomain is search key of Domain
-	ClusterDNSLabelDomain = "cke.cybozu.com/domain"
-	// ClusterDNSLabelDNSServers is search key of DNSServers
-	ClusterDNSLabelDNSServers = "cke.cybozu.com/dns-servers"
+	// CKELabelAppName is application name
+	CKELabelAppName = "cke.cybozu.com/appname"
 )
 
 // EtcdPKIPath returns a certificate file path for k8s.

@@ -191,7 +191,7 @@ func (c createNodeDNSConfigMapCommand) Run(ctx context.Context, inf cke.Infrastr
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		configMap := GenerateNodeDNSConfig(c.clusterIP, c.domain, c.dnsServers)
+		configMap := NodeDNSConfigMap(c.clusterIP, c.domain, c.dnsServers)
 		_, err = configs.Create(configMap)
 		if err != nil {
 			return err
@@ -322,8 +322,8 @@ func (c updateNodeDNSConfigMapCommand) Command() cke.Command {
 	}
 }
 
-// GenerateNodeDNSConfig returns ConfigMap of node-dns
-func GenerateNodeDNSConfig(clusterIP, domain string, dnsServers []string) *corev1.ConfigMap {
+// NodeDNSConfigMap returns ConfigMap for unbound daemonset
+func NodeDNSConfigMap(clusterIP, domain string, dnsServers []string) *corev1.ConfigMap {
 	var confTempl unboundConfigTemplate
 	confTempl.Domain = domain
 	confTempl.ClusterIP = clusterIP
