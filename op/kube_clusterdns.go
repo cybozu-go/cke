@@ -20,7 +20,7 @@ metadata:
   name: cluster-dns
   namespace: kube-system
   labels:
-    k8s-app: cluster-dns
+    cke.cybozu.com/appname: cluster-dns
     kubernetes.io/name: "CoreDNS"
 spec:
   replicas: 2
@@ -30,11 +30,11 @@ spec:
       maxUnavailable: 1
   selector:
     matchLabels:
-      k8s-app: cluster-dns
+      cke.cybozu.com/appname: cluster-dns
   template:
     metadata:
       labels:
-        k8s-app: cluster-dns
+        cke.cybozu.com/appname: cluster-dns
     spec:
       serviceAccountName: cluster-dns
       tolerations:
@@ -402,14 +402,14 @@ func getClusterDNSService() *corev1.Service {
 			Name:      clusterDNSAppName,
 			Namespace: "kube-system",
 			Labels: map[string]string{
-				"k8s-app":                       clusterDNSAppName,
+				"cke.cybozu.com/appname":        clusterDNSAppName,
 				"kubernetes.io/cluster-service": "true",
 				"kubernetes.io/name":            "CoreDNS",
 			},
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
-				"k8s-app": clusterDNSAppName,
+				"cke.cybozu.com/appname": clusterDNSAppName,
 			},
 			Ports: []corev1.ServicePort{
 				{

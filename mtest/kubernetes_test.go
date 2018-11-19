@@ -97,7 +97,7 @@ var _ = Describe("Kubernetes", func() {
 
 	It("resolves Service IP", func() {
 		By("getting CoreDNS Pods")
-		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=k8s-app=cluster-dns", "-o=json")
+		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=cke.cybozu.com/appname=cluster-dns", "-o=json")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		var pods corev1.PodList
