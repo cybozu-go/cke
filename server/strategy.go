@@ -1,8 +1,6 @@
 package server
 
 import (
-	"reflect"
-
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/log"
@@ -152,13 +150,11 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 		ops = append(ops, op.KubeRBACRoleInstallOp(apiServer, ks.RBACRoleExists))
 	}
 
-	dnsOp := decideClusterDNSOp(apiServer, c, ks)
-	if dnsOp != nil {
-		ops = append(ops, dnsOp)
+	if dnsOps := decideClusterDNSOps(apiServer, c, ks); len(dnsOps) != 0 {
+		ops = append(ops, dnsOps...)
 	}
 
-	nodeDNSOps := decideNodeDNSOp(apiServer, c, ks)
-	if len(nodeDNSOps) != 0 {
+	if nodeDNSOps := decideNodeDNSOps(apiServer, c, ks); len(nodeDNSOps) != 0 {
 		ops = append(ops, nodeDNSOps...)
 	}
 
@@ -177,29 +173,48 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 	return ops
 }
 
-func decideClusterDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) cke.Operator {
+func decideClusterDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) (ops []cke.Operator) {
 	desiredDNSServers := c.DNSServers
 	desiredClusterDomain := c.Options.Kubelet.Domain
 
 	if len(desiredClusterDomain) == 0 {
-		return nil
+		panic("Options.Kubelet.Domain is empty")
 	}
 
-	if !ks.ClusterDNS.ServiceAccountExists || !ks.ClusterDNS.RBACRoleExists ||
-		!ks.ClusterDNS.RBACRoleBindingExists || !ks.ClusterDNS.ConfigMapExists ||
-		!ks.ClusterDNS.DeploymentExists || !ks.ClusterDNS.ServiceExists {
-		return op.KubeClusterDNSCreateOp(apiServer, desiredClusterDomain, desiredDNSServers)
+	if !ks.ClusterDNS.ServiceAccountExists {
+		ops = append(ops, op.KubeClusterDNSCreateServiceAccountOp(apiServer))
+	}
+	if !ks.ClusterDNS.RBACRoleExists {
+		ops = append(ops, op.KubeClusterDNSCreateRBACRoleOp(apiServer))
+	}
+	if !ks.ClusterDNS.RBACRoleBindingExists {
+		ops = append(ops, op.KubeClusterDNSCreateRBACRoleBindingOp(apiServer))
+	}
+	if ks.ClusterDNS.ConfigMap == nil {
+		ops = append(ops, op.KubeClusterDNSCreateConfigMapOp(apiServer, desiredClusterDomain, desiredDNSServers))
+	} else {
+		actualConfigData := ks.ClusterDNS.ConfigMap.Data
+		expectedConfig := op.ClusterDNSConfigMap(c.Options.Kubelet.Domain, c.DNSServers)
+		if actualConfigData["Corefile"] != expectedConfig.Data["Corefile"] {
+			ops = append(ops, op.KubeClusterDNSUpdateConfigMapOp(apiServer, expectedConfig))
+		}
+	}
+	if ks.ClusterDNS.Deployment == nil {
+		ops = append(ops, op.KubeClusterDNSCreateDeploymentOp(apiServer))
+	} else {
+		if ks.ClusterDNS.Deployment.Annotations["cke.cybozu.com/image"] != cke.CoreDNSImage.Name() ||
+			ks.ClusterDNS.Deployment.Annotations["cke.cybozu.com/template-version"] != op.CoreDNSTemplateVersion {
+			ops = append(ops, op.KubeClusterDNSUpdateDeploymentOp(apiServer))
+		}
+	}
+	if !ks.ClusterDNS.ServiceExists {
+		ops = append(ops, op.KubeClusterDNSCreateOp(apiServer))
 	}
 
-	if !reflect.DeepEqual(desiredDNSServers, ks.DNSServers) ||
-		desiredClusterDomain != ks.ClusterDNS.ClusterDomain {
-		return op.KubeClusterDNSUpdateOp(apiServer, desiredClusterDomain, desiredDNSServers)
-	}
-
-	return nil
+	return ops
 }
 
-func decideNodeDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) (ops []cke.Operator) {
+func decideNodeDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) (ops []cke.Operator) {
 	if len(ks.ClusterDNS.ClusterIP) == 0 {
 		return nil
 	}
@@ -217,7 +232,7 @@ func decideNodeDNSOp(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClust
 		ops = append(ops, op.KubeNodeDNSCreateConfigMapOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers))
 	} else {
 		actualConfigData := ks.NodeDNS.ConfigMap.Data
-		expectedConfig := op.GenerateNodeDNSConfig(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
+		expectedConfig := op.NodeDNSConfigMap(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
 		if actualConfigData["unbound.conf"] != expectedConfig.Data["unbound.conf"] {
 			ops = append(ops, op.KubeNodeDNSUpdateConfigMapOp(apiServer, expectedConfig))
 		}

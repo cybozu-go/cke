@@ -219,8 +219,15 @@ func (d testData) withK8sClusterDNSReady(dnsServers []string, clusterDomain, clu
 	d.Status.Kubernetes.ClusterDNS.ServiceAccountExists = true
 	d.Status.Kubernetes.ClusterDNS.RBACRoleExists = true
 	d.Status.Kubernetes.ClusterDNS.RBACRoleBindingExists = true
-	d.Status.Kubernetes.ClusterDNS.ConfigMapExists = true
-	d.Status.Kubernetes.ClusterDNS.DeploymentExists = true
+	d.Status.Kubernetes.ClusterDNS.ConfigMap = op.ClusterDNSConfigMap(clusterDomain, dnsServers)
+	d.Status.Kubernetes.ClusterDNS.Deployment = &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"cke.cybozu.com/image":            cke.CoreDNSImage.Name(),
+				"cke.cybozu.com/template-version": op.CoreDNSTemplateVersion,
+			},
+		},
+	}
 	d.Status.Kubernetes.ClusterDNS.ServiceExists = true
 	d.Status.Kubernetes.ClusterDNS.ClusterDomain = clusterDomain
 	d.Status.Kubernetes.ClusterDNS.ClusterIP = clusterIP
@@ -239,7 +246,7 @@ func (d testData) withK8sNodeDNSReady() testData {
 			},
 		},
 	}
-	d.Status.Kubernetes.NodeDNS.ConfigMap = op.GenerateNodeDNSConfig(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
+	d.Status.Kubernetes.NodeDNS.ConfigMap = op.NodeDNSConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
 	if err != nil {
 		panic(err)
 	}
@@ -503,14 +510,31 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"wait-kubernetes"},
 		},
 		{
-			Name:        "RBAC",
-			Input:       newData().withK8sReady(),
-			ExpectedOps: []string{"create-cluster-dns", "create-etcd-endpoints", "install-rbac-role"},
+			Name:  "RBAC",
+			Input: newData().withK8sReady(),
+			ExpectedOps: []string{
+				"create-cluster-dns-configmap",
+				"create-cluster-dns-deployment",
+				"create-cluster-dns-rbac-role",
+				"create-cluster-dns-rbac-role-binding",
+				"create-cluster-dns-service",
+				"create-cluster-dns-serviceaccount",
+				"create-etcd-endpoints",
+				"install-rbac-role",
+			},
 		},
 		{
-			Name:        "ClusterDNS",
-			Input:       newData().withK8sRBACReady(),
-			ExpectedOps: []string{"create-cluster-dns", "create-etcd-endpoints"},
+			Name:  "ClusterDNS",
+			Input: newData().withK8sRBACReady(),
+			ExpectedOps: []string{
+				"create-cluster-dns-configmap",
+				"create-cluster-dns-deployment",
+				"create-cluster-dns-rbac-role",
+				"create-cluster-dns-rbac-role-binding",
+				"create-cluster-dns-service",
+				"create-cluster-dns-serviceaccount",
+				"create-etcd-endpoints",
+			},
 		},
 		{
 			Name:  "NodeDNS",
@@ -544,7 +568,7 @@ func TestDecideOps(t *testing.T) {
 				}
 			}),
 			ExpectedOps: []string{
-				"update-cluster-dns",
+				"update-cluster-dns-configmap",
 				"update-node-dns-configmap",
 			},
 		},
@@ -554,8 +578,17 @@ func TestDecideOps(t *testing.T) {
 				d.Cluster.DNSServers = []string{"1.1.1.1"}
 			}),
 			ExpectedOps: []string{
-				"update-cluster-dns",
+				"update-cluster-dns-configmap",
 				"update-node-dns-configmap",
+			},
+		},
+		{
+			Name: "DNSUpdate4",
+			Input: newData().withEtcdEndpoints().with(func(d testData) {
+				d.Status.Kubernetes.ClusterDNS.Deployment.Annotations["cke.cybozu.com/template-version"] = "0"
+			}),
+			ExpectedOps: []string{
+				"update-cluster-dns-deployment",
 			},
 		},
 		{

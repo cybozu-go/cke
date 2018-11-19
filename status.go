@@ -19,8 +19,8 @@ type ClusterDNSStatus struct {
 	ServiceAccountExists  bool
 	RBACRoleExists        bool
 	RBACRoleBindingExists bool
-	ConfigMapExists       bool
-	DeploymentExists      bool
+	ConfigMap             *corev1.ConfigMap
+	Deployment            *appsv1.Deployment
 	ServiceExists         bool
 	ClusterDomain         string
 	ClusterIP             string
