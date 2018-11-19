@@ -28,5 +28,6 @@ func AllImages() []string {
 		PauseImage.Name(),
 		CoreDNSImage.Name(),
 		UnboundImage.Name(),
+		ConfdImage.Name(),
 	}
 }
