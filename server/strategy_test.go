@@ -8,6 +8,7 @@ import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -230,8 +231,15 @@ func (d testData) withK8sNodeDNSReady() testData {
 	var err error
 
 	d.withK8sClusterDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr)
-	d.Status.Kubernetes.NodeDNS.DaemonSetExists = true
-	d.Status.Kubernetes.NodeDNS.Config, err = op.GenerateNodeDNSConfig(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
+	d.Status.Kubernetes.NodeDNS.DaemonSet = &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"cke.cybozu.com/image":            cke.UnboundImage.Name(),
+				"cke.cybozu.com/template-version": op.UnboundTemplateVersion,
+			},
+		},
+	}
+	d.Status.Kubernetes.NodeDNS.ConfigMap = op.GenerateNodeDNSConfig(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
 	if err != nil {
 		panic(err)
 	}
@@ -505,9 +513,13 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"create-cluster-dns", "create-etcd-endpoints"},
 		},
 		{
-			Name:        "NodeDNS",
-			Input:       newData().withK8sClusterDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr),
-			ExpectedOps: []string{"create-etcd-endpoints", "create-node-dns"},
+			Name:  "NodeDNS",
+			Input: newData().withK8sClusterDNSReady(testDefaultDNSServers, testDefaultDNSDomain, testDefaultDNSAddr),
+			ExpectedOps: []string{
+				"create-etcd-endpoints",
+				"create-node-dns-configmap",
+				"create-node-dns-daemonset",
+			},
 		},
 		{
 			Name:        "EtcdEndpointsCreate",
@@ -533,7 +545,7 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []string{
 				"update-cluster-dns",
-				"update-node-dns",
+				"update-node-dns-configmap",
 			},
 		},
 		{
@@ -543,7 +555,7 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []string{
 				"update-cluster-dns",
-				"update-node-dns",
+				"update-node-dns-configmap",
 			},
 		},
 		{
@@ -552,7 +564,16 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.ClusterDNS.ClusterIP = "10.0.0.54"
 			}),
 			ExpectedOps: []string{
-				"update-node-dns",
+				"update-node-dns-configmap",
+			},
+		},
+		{
+			Name: "NodeDNSUpdate2",
+			Input: newData().withEtcdEndpoints().with(func(d testData) {
+				d.Status.Kubernetes.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/template-version"] = "0"
+			}),
+			ExpectedOps: []string{
+				"update-node-dns-daemonset",
 			},
 		},
 		{

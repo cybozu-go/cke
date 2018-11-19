@@ -7,7 +7,6 @@ import (
 	"text/template"
 
 	"github.com/cybozu-go/cke"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -111,12 +110,6 @@ spec:
               drop:
               - all
             readOnlyRootFilesystem: true
-          resources:
-            limits:
-              memory: 170Mi
-            requests:
-              cpu: 100m
-              memory: 70Mi
           livenessProbe:
             tcpSocket:
               port: 53
