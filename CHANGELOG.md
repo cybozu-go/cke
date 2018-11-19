@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.20] - 2018-11-19
+### Added
+- Add confd to AllImages (#98).
+
 ## [0.19] - 2018-11-16
 ### Added
 - Add automatic config reloader for Node DNS (#96).
@@ -113,7 +117,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.19...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.20...HEAD
+[0.20]: https://github.com/cybozu-go/cke/compare/v0.19...v0.20
 [0.19]: https://github.com/cybozu-go/cke/compare/v0.18...v0.19
 [0.18]: https://github.com/cybozu-go/cke/compare/v0.17...v0.18
 [0.17]: https://github.com/cybozu-go/cke/compare/v0.16...v0.17
