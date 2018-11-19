@@ -21,7 +21,7 @@ require (
 	github.com/circonus-labs/circonusllhist v0.0.0-20180430145027-5eb751da55c6 // indirect
 	github.com/containerd/continuity v0.0.0-20180913211902-c2ac4ecc9593 // indirect
 	github.com/coreos/etcd v3.3.9+incompatible
-	github.com/cybozu-go/etcdutil v1.3.0
+	github.com/cybozu-go/etcdutil v1.3.1
 	github.com/cybozu-go/log v1.5.0
 	github.com/cybozu-go/netutil v1.2.0
 	github.com/cybozu-go/well v1.8.1
@@ -37,7 +37,6 @@ require (
 	github.com/go-test/deep v1.0.1 // indirect
 	github.com/gocql/gocql v0.0.0-20180913162544-5a139e8dcc59 // indirect
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
-	github.com/google/go-cmp v0.2.0 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v0.0.0-20170111101155-53e6ce116135 // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
