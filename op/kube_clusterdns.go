@@ -3,8 +3,8 @@ package op
 import (
 	"bytes"
 	"context"
-	"html/template"
 	"strings"
+	"text/template"
 
 	"github.com/cybozu-go/cke"
 	appsv1 "k8s.io/api/apps/v1"
