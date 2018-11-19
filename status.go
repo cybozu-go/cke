@@ -3,6 +3,7 @@ package cke
 import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -27,8 +28,8 @@ type ClusterDNSStatus struct {
 
 // NodeDNSStatus contains node local resolver status.
 type NodeDNSStatus struct {
-	DaemonSetExists bool
-	Config          *corev1.ConfigMap
+	DaemonSet *appsv1.DaemonSet
+	ConfigMap *corev1.ConfigMap
 }
 
 // KubernetesClusterStatus contains kubernetes cluster configurations

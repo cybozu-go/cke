@@ -340,16 +340,16 @@ func GetNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) 
 	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(nodeDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
-		s.Config = config
+		s.ConfigMap = config
 	case errors.IsNotFound(err):
 	default:
 		return cke.NodeDNSStatus{}, err
 	}
 
-	_, err = clientset.AppsV1().DaemonSets("kube-system").Get(nodeDNSAppName, metav1.GetOptions{})
+	ds, err := clientset.AppsV1().DaemonSets("kube-system").Get(nodeDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
-		s.DaemonSetExists = true
+		s.DaemonSet = ds
 	case errors.IsNotFound(err):
 	default:
 		return cke.NodeDNSStatus{}, err
