@@ -2,6 +2,8 @@ package cke
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -65,6 +67,7 @@ type Infrastructure interface {
 	NewEtcdClient(ctx context.Context, endpoints []string) (*clientv3.Client, error)
 	K8sClient(ctx context.Context, n *Node) (*kubernetes.Clientset, error)
 	HTTPClient() *well.HTTPClient
+	HTTPSClient(ctx context.Context) (*well.HTTPClient, error)
 }
 
 type ckeInfrastructure struct {
@@ -77,11 +80,53 @@ type ckeInfrastructure struct {
 	etcdCert string
 	etcdKey  string
 
-	kubeOnce sync.Once
-	kubeErr  error
-	kubeCA   string
-	kubeCert []byte
-	kubeKey  []byte
+	kubeOnce    sync.Once
+	kubeErr     error
+	kubeCA      string
+	kubeCert    []byte
+	kubeKey     []byte
+	httpsClient *well.HTTPClient
+}
+
+func (i *ckeInfrastructure) init(ctx context.Context) error {
+	i.kubeOnce.Do(func() {
+		kubeCA, err := i.Storage().GetCACertificate(ctx, "kubernetes")
+		if err != nil {
+			i.kubeErr = err
+			return
+		}
+
+		issue := func() (cert, key []byte, err error) {
+			c, k, e := KubernetesCA{}.IssueAdminCert(ctx, i, "25h")
+			if e != nil {
+				return nil, nil, e
+			}
+			return []byte(c), []byte(k), nil
+		}
+		kubeCert, kubeKey, err := k8sCertCache.get(issue)
+		if err != nil {
+			i.kubeErr = err
+			return
+		}
+
+		i.kubeCA = kubeCA
+		i.kubeCert = kubeCert
+		i.kubeKey = kubeKey
+
+		cp := x509.NewCertPool()
+		cp.AppendCertsFromPEM([]byte(kubeCA))
+		i.httpsClient = &well.HTTPClient{
+			Client: &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+						RootCAs: cp,
+					},
+				},
+			},
+		}
+	})
+
+	return i.kubeErr
 }
 
 // NewInfrastructure creates a new Infrastructure instance
@@ -188,33 +233,9 @@ func (i *ckeInfrastructure) NewEtcdClient(ctx context.Context, endpoints []strin
 }
 
 func (i *ckeInfrastructure) K8sClient(ctx context.Context, n *Node) (*kubernetes.Clientset, error) {
-	i.kubeOnce.Do(func() {
-		kubeCA, err := i.Storage().GetCACertificate(ctx, "kubernetes")
-		if err != nil {
-			i.kubeErr = err
-			return
-		}
-
-		issue := func() (cert, key []byte, err error) {
-			c, k, e := KubernetesCA{}.IssueAdminCert(ctx, i, "25h")
-			if e != nil {
-				return nil, nil, e
-			}
-			return []byte(c), []byte(k), nil
-		}
-		kubeCert, kubeKey, err := k8sCertCache.get(issue)
-		if err != nil {
-			i.kubeErr = err
-			return
-		}
-
-		i.kubeCA = kubeCA
-		i.kubeCert = kubeCert
-		i.kubeKey = kubeKey
-	})
-
-	if i.kubeErr != nil {
-		return nil, i.kubeErr
+	err := i.init(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	tlsCfg := rest.TLSClientConfig{
@@ -232,4 +253,12 @@ func (i *ckeInfrastructure) K8sClient(ctx context.Context, n *Node) (*kubernetes
 
 func (i ckeInfrastructure) HTTPClient() *well.HTTPClient {
 	return httpClient
+}
+
+func (i *ckeInfrastructure) HTTPSClient(ctx context.Context) (*well.HTTPClient, error) {
+	err := i.init(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return i.httpsClient, nil
 }

@@ -57,7 +57,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 
 	status.ControllerManager = cke.KubeComponentStatus{ss[kubeControllerManagerContainerName], false}
 	if status.ControllerManager.Running {
-		status.ControllerManager.IsHealthy, err = checkHealthz(ctx, inf, node.Address, 10252)
+		status.ControllerManager.IsHealthy, err = checkSecureHealthz(ctx, inf, node.Address, 10257)
 		if err != nil {
 			log.Warn("failed to check controller manager health", map[string]interface{}{
 				log.FnError: err,
@@ -354,6 +354,31 @@ func checkHealthz(ctx context.Context, inf cke.Infrastructure, addr string, port
 	}
 	req = req.WithContext(ctx)
 	resp, err := inf.HTTPClient().Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
+
+	return strings.TrimSpace(string(body)) == "ok", nil
+}
+
+func checkSecureHealthz(ctx context.Context, inf cke.Infrastructure, addr string, port uint16) (bool, error) {
+	url := "https://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return false, err
+	}
+	req = req.WithContext(ctx)
+	client, err := inf.HTTPSClient(ctx)
+	if err != nil {
+		return false, err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return false, err
 	}
