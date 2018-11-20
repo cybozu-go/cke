@@ -16,7 +16,7 @@ import (
 )
 
 // CoreDNSTemplateVersion is the version of CoreDNS template
-const CoreDNSTemplateVersion = "1"
+const CoreDNSTemplateVersion = "2"
 
 // retrieved from https://github.com/kelseyhightower/kubernetes-the-hard-way
 var deploymentText = `
@@ -40,6 +40,7 @@ spec:
       labels:
         cke.cybozu.com/appname: cluster-dns
     spec:
+      priorityClassName: system-cluster-critical
       serviceAccountName: cluster-dns
       tolerations:
         - key: node-role.kubernetes.io/master
