@@ -68,7 +68,7 @@ jobs:
           command: docker-compose up -d
       - run:
           name: wait for docker-compose up
-          command: wait-up.sh
+          command: ./wait-up.sh
       - run:
           name: run test
           command: docker-compose run setup /opt/setup/test.sh
