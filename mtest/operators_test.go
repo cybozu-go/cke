@@ -265,4 +265,10 @@ var _ = Describe("Operations", func() {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 	})
+
+	It("removes all taints", func() {
+		kubectl("taint", "--all=true", "node", "coil.cybozu.com/bootstrap-")
+		kubectl("taint", "--all=true", "node", "taint1-")
+		kubectl("taint", "--all=true", "node", "taint2-")
+	})
 })
