@@ -56,21 +56,25 @@ jobs:
   compose:
     machine:
       image: circleci/classic:edge
-    working_directory: ~/work
+    working_directory: ~/work/docker-compose
     steps:
-      - checkout
+      - checkout:
+          path: ~/work
       - run:
           name: docker-compose build
-          command: docker-compose -f docker-compose/docker-compose.yml build
+          command: docker-compose build
       - run:
           name: docker-compose up
-          command: docker-compose -f docker-compose/docker-compose.yml up -d
+          command: docker-compose up -d
+      - run:
+          name: wait for docker-compose up
+          command: ./wait-up.sh
       - run:
           name: run test
-          command: docker-compose -f docker-compose/docker-compose.yml run setup /opt/setup/test.sh
+          command: docker-compose run setup /opt/setup/test.sh
       - run:
           name: docker-compose down
-          command: docker-compose -f docker-compose/docker-compose.yml down
+          command: docker-compose down
 
 workflows:
   version: 2

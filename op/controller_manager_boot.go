@@ -123,6 +123,10 @@ func ControllerManagerParams(clusterName, serviceSubnet string) cke.ServiceParam
 		// "--cluster-signing-cert-file=..."
 		// "--cluster-signing-key-file=..."
 
+		// for healthz service
+		"--tls-cert-file=" + K8sPKIPath("apiserver.crt"),
+		"--tls-private-key-file=" + K8sPKIPath("apiserver.key"),
+
 		// for service accounts
 		"--root-ca-file=" + K8sPKIPath("ca.crt"),
 		"--service-account-private-key-file=" + K8sPKIPath("service-account.key"),
