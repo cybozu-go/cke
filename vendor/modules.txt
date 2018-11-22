@@ -109,6 +109,8 @@ github.com/hashicorp/vault/helper/jsonutil
 github.com/hashicorp/vault/helper/parseutil
 github.com/hashicorp/vault/helper/compressutil
 github.com/hashicorp/vault/helper/strutil
+# github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c
+github.com/howeyc/gopass
 # github.com/hpcloud/tail v1.0.0
 github.com/hpcloud/tail
 github.com/hpcloud/tail/ratelimiter
