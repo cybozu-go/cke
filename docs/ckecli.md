@@ -127,3 +127,42 @@ This config file embeds client certificate and can be used with `kubectl` to con
 Option      | Default value         | Description
 ----------  | --------------------- | -----------
 `-ttl`      | `2h`                  | TTL for client certificate
+
+`ckecli sabakan`
+----------------
+
+Control [sabakan integration feature](sabakan-integration.md).
+
+### `ckecli sabakan set-url URL`
+
+Set URL of sabakan.  This enables sabakan integration.
+
+### `ckecli sabakan get-url`
+
+Show stored URL of sabakan.
+
+### `ckecli sabakan disable`
+
+Disables sabakan integration and removes sabakan URL.
+
+### `ckecli sabakan set-template FILE`
+
+Set the cluster configuration template.
+
+The template format is the same as defined in [cluster.md](cluster.md).
+The template must have one control-plane node and one non-control-plane node.
+
+Node addresses are ignored.
+
+### `ckecli sabakan get-template`
+
+Get the cluster configuration template.
+
+### `ckecli sabakan set-variables FILE`
+
+Set the query variables to search machines in sabakan.
+`FILE` should contain JSON as described in [sabakan integration](sabakan-integration.md#variables).
+
+### `ckecli sabakan get-variables`
+
+Get the query variables to search machines in sabakan.
