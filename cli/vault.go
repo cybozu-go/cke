@@ -7,11 +7,17 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/cybozu-go/cke"
 	"github.com/google/subcommands"
 	"github.com/hashicorp/vault/api"
 	"github.com/howeyc/gopass"
+)
+
+const (
+	ttl100Year = "876000h"
+	ttl10Year  = "87600h"
 )
 
 var ckePolicy = `
@@ -20,6 +26,38 @@ path "cke/*"
   capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 `
+
+type caParams struct {
+	vaultPath  string
+	commonName string
+	key        string
+}
+
+var (
+	cas = []caParams{
+		{
+			vaultPath:  "cke/ca-server",
+			commonName: "server CA",
+			key:        "server",
+		},
+		{
+
+			vaultPath:  "cke/ca-etcd-peer",
+			commonName: "etcd peer CA",
+			key:        "etcd-peer",
+		},
+		{
+			vaultPath:  "cke/ca-etcd-client",
+			commonName: "etcd client CA",
+			key:        "etcd-client",
+		},
+		{
+			vaultPath:  "cke/ca-kubernetes",
+			commonName: "kubernetes CA",
+			key:        "kubernetes",
+		},
+	}
+)
 
 type vault struct{}
 
@@ -126,7 +164,42 @@ func initVault(ctx context.Context) error {
 	cfg.RoleID = roleID
 	cfg.SecretID = secretID
 
-	return storage.PutVaultConfig(ctx, cfg)
+	err = storage.PutVaultConfig(ctx, cfg)
+	if err != nil {
+		return err
+	}
+
+	for _, ca := range cas {
+		err = createCA(ctx, vc, ca)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func createCA(ctx context.Context, vc *api.Client, ca caParams) error {
+	err := vc.Sys().Mount(ca.vaultPath, &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			MaxLeaseTTL:     ttl100Year,
+			DefaultLeaseTTL: ttl10Year,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	secret, err := vc.Logical().Write(path.Join(ca.vaultPath, "/root/generate/internal"), map[string]interface{}{
+		"common_name": ca.commonName,
+		"ttl":         ttl100Year,
+		"format":      "pem",
+	})
+	if err != nil {
+		return err
+	}
+	return storage.PutCACertificate(ctx, ca.key, secret.Data["certificate"].(string))
 }
 
 type vaultConfig struct{}
