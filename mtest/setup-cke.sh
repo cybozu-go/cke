@@ -15,7 +15,7 @@ run_vault() {
 
     VAULT_TOKEN=cybozu
     export VAULT_TOKEN
-    VAULT_ADDR=http://127.0.0.1:8200
+    VAULT_ADDR=http://10.0.0.11:8200
     export VAULT_ADDR
 
     for i in $(seq 10); do
@@ -26,16 +26,7 @@ run_vault() {
     done
 
     ckecli vault init
-    # It allows access to vault in host1 from host2
-    role_id=$(vault read -format=json auth/approle/role/cke/role-id | jq -r .data.role_id)
-    secret_id=$(vault write -f -format=json auth/approle/role/cke/secret-id | jq -r .data.secret_id)
-    ckecli vault config - <<EOF
-{
-    "endpoint": "http://10.0.0.11:8200",
-    "role-id": "$role_id",
-    "secret-id": "$secret_id"
-}
-EOF
+
     # admin role need to be created here to generate .kube/config
     vault write cke/ca-kubernetes/roles/admin ttl=2h max_ttl=24h \
            enforce_hostnames=false allow_any_name=true organization=system:masters

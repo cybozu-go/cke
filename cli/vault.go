@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -177,19 +176,11 @@ func initVault(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, ok := secret.Data["role_id"]
-	if !ok {
-		return errors.New("No role_id exists")
-	}
 	roleID := secret.Data["role_id"].(string)
 
 	secret, err = vc.Logical().Write("auth/approle/role/cke/secret-id", map[string]interface{}{})
 	if err != nil {
 		return err
-	}
-	_, ok = secret.Data["secret_id"].(string)
-	if !ok {
-		return errors.New("No secret_id exists")
 	}
 	secretID := secret.Data["secret_id"].(string)
 
