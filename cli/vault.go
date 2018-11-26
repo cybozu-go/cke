@@ -246,6 +246,10 @@ func createCA(ctx context.Context, vc *api.Client, ca caParams) error {
 	if err != nil {
 		return err
 	}
+	_, ok := secret.Data["certificate"]
+	if !ok {
+		return errors.New("No certificate exists")
+	}
 	return storage.PutCACertificate(ctx, ca.key, secret.Data["certificate"].(string))
 }
 
