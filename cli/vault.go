@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	ttl100Year = "876000h"
-	ttl10Year  = "87600h"
+	ttl100Year  = "876000h"
+	ttl10Year   = "87600h"
+	approlePath = "approle/"
 )
 
 var ckePolicy = `
@@ -37,23 +38,23 @@ type caParams struct {
 var (
 	cas = []caParams{
 		{
-			vaultPath:  "cke/ca-server",
+			vaultPath:  "cke/ca-server/",
 			commonName: "server CA",
 			key:        "server",
 		},
 		{
 
-			vaultPath:  "cke/ca-etcd-peer",
+			vaultPath:  "cke/ca-etcd-peer/",
 			commonName: "etcd peer CA",
 			key:        "etcd-peer",
 		},
 		{
-			vaultPath:  "cke/ca-etcd-client",
+			vaultPath:  "cke/ca-etcd-client/",
 			commonName: "etcd client CA",
 			key:        "etcd-client",
 		},
 		{
-			vaultPath:  "cke/ca-kubernetes",
+			vaultPath:  "cke/ca-kubernetes/",
 			commonName: "kubernetes CA",
 			key:        "kubernetes",
 		},
@@ -139,6 +140,26 @@ func initVault(ctx context.Context) error {
 		return err
 	}
 
+	found := false
+	auths, err := vc.Sys().ListAuth()
+	if err != nil {
+		return err
+	}
+	for k := range auths {
+		if k == approlePath {
+			found = true
+			break
+		}
+	}
+	if !found {
+		err = vc.Sys().EnableAuthWithOptions(approlePath, &api.EnableAuthOptions{
+			Type: "approle",
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	err = vc.Sys().PutPolicy("cke", ckePolicy)
 	if err != nil {
 		return err
@@ -193,15 +214,28 @@ func initVault(ctx context.Context) error {
 }
 
 func createCA(ctx context.Context, vc *api.Client, ca caParams) error {
-	err := vc.Sys().Mount(ca.vaultPath, &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			MaxLeaseTTL:     ttl100Year,
-			DefaultLeaseTTL: ttl10Year,
-		},
-	})
+	mounted := false
+	mounts, err := vc.Sys().ListMounts()
 	if err != nil {
 		return err
+	}
+	for k := range mounts {
+		if k == ca.vaultPath {
+			mounted = true
+			break
+		}
+	}
+	if !mounted {
+		err = vc.Sys().Mount(ca.vaultPath, &api.MountInput{
+			Type: "pki",
+			Config: api.MountConfigInput{
+				MaxLeaseTTL:     ttl100Year,
+				DefaultLeaseTTL: ttl10Year,
+			},
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	secret, err := vc.Logical().Write(path.Join(ca.vaultPath, "/root/generate/internal"), map[string]interface{}{

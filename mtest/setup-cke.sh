@@ -25,7 +25,6 @@ run_vault() {
         fi
     done
 
-    vault auth enable approle
     ckecli vault init
     # It allows access to vault in host1 from host2
     role_id=$(vault read -format=json auth/approle/role/cke/role-id | jq -r .data.role_id)
