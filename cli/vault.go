@@ -66,6 +66,7 @@ func (v vault) SetFlags(f *flag.FlagSet) {}
 func (v vault) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
 	newc := NewCommander(f, "vault")
 	newc.Register(vaultConfigCommand(), "")
+	newc.Register(vaultInitCommand(), "")
 	return newc.Execute(ctx)
 }
 

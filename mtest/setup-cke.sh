@@ -10,18 +10,6 @@ run_etcd() {
     sudo systemd-run --unit=my-etcd.service /data/etcd --listen-client-urls=http://0.0.0.0:2379 --advertise-client-urls=http://10.0.0.11:2379 --data-dir /home/cybozu/default.etcd
 }
 
-create_ca() {
-    ca="$1"
-    common_name="$2"
-    key="$3"
-
-    vault secrets enable -path $ca -max-lease-ttl=876000h -default-lease-ttl=87600h pki
-    vault write -format=json "$ca/root/generate/internal" \
-           common_name="$common_name" \
-           ttl=876000h format=pem | jq -r .data.certificate > /tmp/ca.pem
-    ckecli ca set $key /tmp/ca.pem
-}
-
 run_vault() {
     sudo systemd-run --unit=my-vault.service /data/vault server -dev -dev-listen-address=0.0.0.0:8200 -dev-root-token-id=cybozu
 
@@ -38,14 +26,8 @@ run_vault() {
     done
 
     vault auth enable approle
-    cat > /home/cybozu/cke-policy.hcl <<'EOF'
-path "cke/*"
-{
-  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
-}
-EOF
-    vault policy write cke /home/cybozu/cke-policy.hcl
-    vault write auth/approle/role/cke policies=cke period=5s
+    ckecli vault init
+    # Update vault config with particular endpoint
     role_id=$(vault read -format=json auth/approle/role/cke/role-id | jq -r .data.role_id)
     secret_id=$(vault write -f -format=json auth/approle/role/cke/secret-id | jq -r .data.secret_id)
     ckecli vault config - <<EOF
@@ -55,12 +37,6 @@ EOF
     "secret-id": "$secret_id"
 }
 EOF
-
-    create_ca cke/ca-server "server CA" server
-    create_ca cke/ca-etcd-peer "etcd peer CA" etcd-peer
-    create_ca cke/ca-etcd-client "etcd client CA" etcd-client
-    create_ca cke/ca-kubernetes "kubernetes CA" kubernetes
-
     # admin role need to be created here to generate .kube/config
     vault write cke/ca-kubernetes/roles/admin ttl=2h max_ttl=24h \
            enforce_hostnames=false allow_any_name=true organization=system:masters
