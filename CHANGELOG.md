@@ -5,6 +5,17 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.21] - 2018-11-26
+### Added
+- Add ckecli vault init command (#104).
+
+### Changed
+- Update etcdutil to v1.3.1 (#99).
+- Don't use confd to reload unbound.conf (#100).
+- Refactor CoreDNS strategy (#101).
+- Update images for Kubernetes 1.12 (#102).
+- Remove taints at the last of operators_test.go (#103).
+
 ## [0.20] - 2018-11-19
 ### Added
 - Add confd to AllImages (#98).
@@ -117,7 +128,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.20...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.21...HEAD
+[0.21]: https://github.com/cybozu-go/cke/compare/v0.20...v0.21
 [0.20]: https://github.com/cybozu-go/cke/compare/v0.19...v0.20
 [0.19]: https://github.com/cybozu-go/cke/compare/v0.18...v0.19
 [0.18]: https://github.com/cybozu-go/cke/compare/v0.17...v0.18
