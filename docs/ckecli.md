@@ -39,11 +39,12 @@ Show all constraints on the cluster.
 `ckecli vault init`
 --------------------------
 
-Initialize vault configuration for CKE.
+Initialize vault configuration for CKE with [vault.md](vault.md).
 
 `ckecli vault config JSON`
 --------------------------
 
+Set vault configuration for CKE.
 `JSON` is a filename whose body is a JSON object described in [schema.md](schema.md#vault).
 
 If `JSON` is "-", `ckecli` reads from stdin.
