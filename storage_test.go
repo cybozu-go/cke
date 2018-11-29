@@ -229,9 +229,130 @@ func testStorageMaint(t *testing.T) {
 	}
 }
 
+func testStorageSabakan(t *testing.T) {
+	t.Parallel()
+
+	client := newEtcdClient(t)
+	defer client.Close()
+	s := Storage{client}
+	ctx := context.Background()
+
+	_, rev, err := s.GetClusterWithRevision(ctx)
+	if err != ErrNotFound {
+		t.Error("unexpected error:", err)
+	}
+	if rev != 0 {
+		t.Error("unexpected revision:", rev)
+	}
+
+	_, err = s.GetSabakanQueryVariables(ctx)
+	if err != ErrNotFound {
+		t.Error(`err != ErrNotFound,`, err)
+	}
+
+	const vars = `{"having": {"racks": [0, 1, 2]}}`
+	err = s.SetSabakanQueryVariables(ctx, vars)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vars2, err := s.GetSabakanQueryVariables(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(vars2) != vars {
+		t.Error("unexpected query variables:", string(vars2))
+	}
+
+	_, rev, err = s.GetSabakanTemplate(ctx)
+	if err != ErrNotFound {
+		t.Error(`err != ErrNotFound,`, err)
+	}
+	if rev != 0 {
+		t.Error(`rev != 0`, rev)
+	}
+
+	tmpl := &Cluster{Name: "aaa"}
+	err = s.SetSabakanTemplate(ctx, tmpl)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tmpl2, rev, err := s.GetSabakanTemplate(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rev == 0 {
+		t.Error(`rev == 0`)
+	}
+	if tmpl2.Name != tmpl.Name {
+		t.Error(`tmpl2.Name != tmpl.Name`, tmpl2.Name)
+	}
+
+	err = s.PutCluster(ctx, tmpl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, rev2, err := s.GetClusterWithRevision(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c == nil {
+		t.Error("c is nil")
+	}
+	if rev2 != 0 {
+		t.Error("unexpected revision:", rev2)
+	}
+
+	err = s.PutClusterWithTemplateRevision(ctx, tmpl, rev, KeySabakanTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, rev2, err = s.GetClusterWithRevision(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c == nil {
+		t.Error("c is nil")
+	}
+	if rev2 != rev {
+		t.Error(`rev2 != rev`, rev2, rev)
+	}
+
+	_, err = s.GetSabakanURL(ctx)
+	if err != ErrNotFound {
+		t.Error(`err != ErrNotFound`, err)
+	}
+
+	u := "http://localhost:12345"
+	err = s.SetSabakanURL(ctx, u)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	u2, err := s.GetSabakanURL(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u2 != u {
+		t.Error(`u2 != u`, u2)
+	}
+
+	err = s.DeleteSabakanURL(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.GetSabakanURL(ctx)
+	if err != ErrNotFound {
+		t.Error("URL was not removed")
+	}
+}
+
 func TestStorage(t *testing.T) {
 	t.Run("Cluster", testStorageCluster)
 	t.Run("Constraints", testStorageConstraints)
 	t.Run("Record", testStorageRecord)
 	t.Run("Maint", testStorageMaint)
+	t.Run("Sabakan", testStorageSabakan)
 }
