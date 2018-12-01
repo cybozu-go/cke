@@ -1,18 +1,17 @@
-package cli
+package cmd
 
 import (
 	"bufio"
 	"context"
-	"encoding/json"
-	"flag"
 	"fmt"
 	"os"
 	"path"
 
 	"github.com/cybozu-go/cke"
-	"github.com/google/subcommands"
-	"github.com/hashicorp/vault/api"
+	"github.com/cybozu-go/well"
+	vault "github.com/hashicorp/vault/api"
 	"github.com/howeyc/gopass"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -20,13 +19,6 @@ const (
 	ttl10Year   = "87600h"
 	approlePath = "approle/"
 )
-
-var ckePolicy = `
-path "cke/*"
-{
-  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
-}
-`
 
 type caParams struct {
 	vaultPath  string
@@ -58,50 +50,17 @@ var (
 			key:        "kubernetes",
 		},
 	}
+
+	ckePolicy = `
+path "cke/*"
+{
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}`
 )
 
-type vault struct{}
-
-func (v vault) SetFlags(f *flag.FlagSet) {}
-
-func (v vault) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
-	newc := NewCommander(f, "vault")
-	newc.Register(vaultConfigCommand(), "")
-	newc.Register(vaultInitCommand(), "")
-	return newc.Execute(ctx)
-}
-
-// VaultCommand implements "vault" subcommand
-func VaultCommand() subcommands.Command {
-	return subcmd{
-		vault{},
-		"vault",
-		"manage the vault configuration",
-		"vault ACTION ...",
-	}
-}
-
-type vaultInit struct{}
-
-func (c vaultInit) SetFlags(f *flag.FlagSet) {}
-
-func (c vaultInit) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
-	err := initVault(ctx)
-	return handleError(err)
-}
-
-func vaultInitCommand() subcommands.Command {
-	return subcmd{
-		vaultInit{},
-		"init",
-		"initialize vault connection settings",
-		"vault init",
-	}
-}
-
-func connectVault(ctx context.Context) (*api.Client, error) {
-	cfg := api.DefaultConfig()
-	vc, err := api.NewClient(cfg)
+func connectVault(ctx context.Context) (*vault.Client, error) {
+	cfg := vault.DefaultConfig()
+	vc, err := vault.NewClient(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +98,13 @@ func initVault(ctx context.Context) error {
 		return err
 	}
 
+	for _, ca := range cas {
+		err = createCA(ctx, vc, ca)
+		if err != nil {
+			return err
+		}
+	}
+
 	found := false
 	auths, err := vc.Sys().ListAuth()
 	if err != nil {
@@ -151,7 +117,7 @@ func initVault(ctx context.Context) error {
 		}
 	}
 	if !found {
-		err = vc.Sys().EnableAuthWithOptions(approlePath, &api.EnableAuthOptions{
+		err = vc.Sys().EnableAuthWithOptions(approlePath, &vault.EnableAuthOptions{
 			Type: "approle",
 		})
 		if err != nil {
@@ -194,17 +160,10 @@ func initVault(ctx context.Context) error {
 		return err
 	}
 
-	for _, ca := range cas {
-		err = createCA(ctx, vc, ca)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
-func createCA(ctx context.Context, vc *api.Client, ca caParams) error {
+func createCA(ctx context.Context, vc *vault.Client, ca caParams) error {
 	mounted := false
 	mounts, err := vc.Sys().ListMounts()
 	if err != nil {
@@ -217,9 +176,9 @@ func createCA(ctx context.Context, vc *api.Client, ca caParams) error {
 		}
 	}
 	if !mounted {
-		err = vc.Sys().Mount(ca.vaultPath, &api.MountInput{
+		err = vc.Sys().Mount(ca.vaultPath, &vault.MountInput{
 			Type: "pki",
-			Config: api.MountConfigInput{
+			Config: vault.MountConfigInput{
 				MaxLeaseTTL:     ttl100Year,
 				DefaultLeaseTTL: ttl10Year,
 			},
@@ -244,45 +203,29 @@ func createCA(ctx context.Context, vc *api.Client, ca caParams) error {
 	return storage.PutCACertificate(ctx, ca.key, secret.Data["certificate"].(string))
 }
 
-type vaultConfig struct{}
+// vaultInitCmd represents the "vault init" command
+var vaultInitCmd = &cobra.Command{
+	Use:   "init",
+	Short: "configure Vault for CKE",
+	Long: `Configure HashiCorp Vault for CKE.
 
-func (c vaultConfig) SetFlags(f *flag.FlagSet) {}
+Vault will be configured to:
 
-func (c vaultConfig) Execute(ctx context.Context, f *flag.FlagSet) subcommands.ExitStatus {
-	if f.NArg() != 1 {
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
-	fileName := f.Arg(0)
+    * have "cke" policy that can use secrets under cke/.
+    * have "ca-server", "ca-etcd-peer", "ca-etcd-client", "ca-kubernetes"
+      PKI secrets under cke/.
+    * creates AppRole for CKE.
 
-	r := os.Stdin
-	var err error
-	if fileName != "-" {
-		r, err = os.Open(fileName)
-		if err != nil {
-			return handleError(err)
-		}
-		defer r.Close()
-	}
+This command will ask username and password for Vault authentication
+when VAULT_TOKEN environment variable is not set.`,
 
-	cfg := new(cke.VaultConfig)
-	err = json.NewDecoder(r).Decode(cfg)
-	if err != nil {
-		return handleError(err)
-	}
-	err = cfg.Validate()
-	if err != nil {
-		return handleError(err)
-	}
-	err = storage.PutVaultConfig(ctx, cfg)
-	return handleError(err)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		well.Go(initVault)
+		well.Stop()
+		return well.Wait()
+	},
 }
 
-func vaultConfigCommand() subcommands.Command {
-	return subcmd{
-		vaultConfig{},
-		"config",
-		"set vault connection settings",
-		"vault config JSON",
-	}
+func init() {
+	vaultCmd.AddCommand(vaultInitCmd)
 }

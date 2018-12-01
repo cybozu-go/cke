@@ -12,8 +12,8 @@ contrib.go.opencensus.io/exporter/stackdriver/propagation
 github.com/coreos/etcd/clientv3
 github.com/coreos/etcd/clientv3/clientv3util
 github.com/coreos/etcd/etcdserver/etcdserverpb
-github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes
 github.com/coreos/etcd/clientv3/concurrency
+github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes
 github.com/coreos/etcd/auth/authpb
 github.com/coreos/etcd/mvcc/mvccpb
 github.com/coreos/etcd/pkg/types
@@ -67,8 +67,6 @@ github.com/golang/snappy
 github.com/google/btree
 # github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf
 github.com/google/gofuzz
-# github.com/google/subcommands v0.0.0-20180618214453-5bae204cdfb2
-github.com/google/subcommands
 # github.com/googleapis/gax-go v2.0.0+incompatible
 github.com/googleapis/gax-go
 # github.com/googleapis/gnostic v0.2.0
@@ -119,6 +117,8 @@ github.com/hpcloud/tail/watch
 github.com/hpcloud/tail/winfile
 # github.com/imdario/mergo v0.3.6
 github.com/imdario/mergo
+# github.com/inconshreveable/mousetrap v1.0.0
+github.com/inconshreveable/mousetrap
 # github.com/json-iterator/go v1.1.5
 github.com/json-iterator/go
 # github.com/magiconair/properties v1.8.0
@@ -176,6 +176,8 @@ github.com/spf13/afero
 github.com/spf13/afero/mem
 # github.com/spf13/cast v1.2.0
 github.com/spf13/cast
+# github.com/spf13/cobra v0.0.3
+github.com/spf13/cobra
 # github.com/spf13/jwalterweatherman v1.0.0
 github.com/spf13/jwalterweatherman
 # github.com/spf13/pflag v1.0.3

@@ -17,11 +17,10 @@ import (
 	"github.com/cybozu-go/cke/server"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/well"
-	"golang.org/x/crypto/ssh"
-	yaml "gopkg.in/yaml.v2"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"golang.org/x/crypto/ssh"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const sshTimeout = 3 * time.Minute
@@ -180,12 +179,12 @@ func localTempFile(body string) *os.File {
 
 func ckecli(args ...string) []byte {
 	stdout, err := ckecliUnsafe(args...)
-	Expect(err).NotTo(HaveOccurred())
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return stdout
 }
 
 func ckecliUnsafe(args ...string) ([]byte, error) {
-	args = append([]string{"-config", ckeConfigPath}, args...)
+	args = append([]string{"--config", ckeConfigPath}, args...)
 	var stdout bytes.Buffer
 	command := exec.Command(ckecliPath, args...)
 	command.Stdout = &stdout

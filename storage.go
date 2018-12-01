@@ -461,6 +461,7 @@ func (s Storage) SetSabakanURL(ctx context.Context, url string) error {
 }
 
 // GetSabakanURL gets URL of sabakan API.
+// The URL must be an absolute URL pointing GraphQL endpoint.
 func (s Storage) GetSabakanURL(ctx context.Context) (string, error) {
 	resp, err := s.Get(ctx, KeySabakanURL)
 	if err != nil {
