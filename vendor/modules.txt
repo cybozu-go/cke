@@ -8,6 +8,13 @@ cloud.google.com/go/internal/version
 cloud.google.com/go/compute/metadata
 # contrib.go.opencensus.io/exporter/stackdriver v0.6.0
 contrib.go.opencensus.io/exporter/stackdriver/propagation
+# github.com/99designs/gqlgen v0.7.1
+github.com/99designs/gqlgen/graphql
+github.com/99designs/gqlgen/graphql/introspection
+github.com/99designs/gqlgen/handler
+github.com/99designs/gqlgen/complexity
+# github.com/agnivade/levenshtein v1.0.1
+github.com/agnivade/levenshtein
 # github.com/coreos/etcd v3.3.9+incompatible
 github.com/coreos/etcd/clientv3
 github.com/coreos/etcd/clientv3/clientv3util
@@ -65,6 +72,11 @@ github.com/golang/protobuf/protoc-gen-go/descriptor
 github.com/golang/snappy
 # github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c
 github.com/google/btree
+# github.com/google/go-cmp v0.2.0
+github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/internal/diff
+github.com/google/go-cmp/cmp/internal/function
+github.com/google/go-cmp/cmp/internal/value
 # github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf
 github.com/google/gofuzz
 # github.com/googleapis/gax-go v2.0.0+incompatible
@@ -73,6 +85,8 @@ github.com/googleapis/gax-go
 github.com/googleapis/gnostic/OpenAPIv2
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
+# github.com/gorilla/websocket v1.4.0
+github.com/gorilla/websocket
 # github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7
 github.com/gregjones/httpcache
 github.com/gregjones/httpcache/diskcache
@@ -88,6 +102,9 @@ github.com/hashicorp/go-retryablehttp
 github.com/hashicorp/go-rootcerts
 # github.com/hashicorp/go-sockaddr v0.0.0-20180320115054-6d291a969b86
 github.com/hashicorp/go-sockaddr
+# github.com/hashicorp/golang-lru v0.5.0
+github.com/hashicorp/golang-lru
+github.com/hashicorp/golang-lru/simplelru
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
@@ -184,6 +201,14 @@ github.com/spf13/jwalterweatherman
 github.com/spf13/pflag
 # github.com/spf13/viper v1.2.1
 github.com/spf13/viper
+# github.com/vektah/gqlparser v1.0.0
+github.com/vektah/gqlparser
+github.com/vektah/gqlparser/ast
+github.com/vektah/gqlparser/gqlerror
+github.com/vektah/gqlparser/parser
+github.com/vektah/gqlparser/validator
+github.com/vektah/gqlparser/validator/rules
+github.com/vektah/gqlparser/lexer
 # go.opencensus.io v0.17.0
 go.opencensus.io/trace
 go.opencensus.io/plugin/ochttp
