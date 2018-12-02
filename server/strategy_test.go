@@ -678,6 +678,60 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"update-node"},
 		},
 		{
+			Name: "NodeLabel3",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "10.0.0.14",
+					Labels: map[string]string{
+						"label1":             "value",
+						"cke.cybozu.com/foo": "bar",
+					},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeLabel4",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "10.0.0.14",
+					Labels: map[string]string{
+						"label1":                     "value",
+						"sabakan.cke.cybozu.com/foo": "bar",
+					},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
 			Name: "NodeAnnotation1",
 			Input: newData().withNodes(corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
@@ -707,6 +761,33 @@ func TestDecideOps(t *testing.T) {
 					Name:        "10.0.0.14",
 					Labels:      map[string]string{"label1": "value"},
 					Annotations: map[string]string{"annotation1": "wrongvalue"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeAnnotation3",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.14",
+					Labels: map[string]string{"label1": "value"},
+					Annotations: map[string]string{
+						"annotation1":        "value",
+						"cke.cybozu.com/foo": "bar",
+					},
 				},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
@@ -796,6 +877,68 @@ func TestDecideOps(t *testing.T) {
 				},
 			}),
 			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeTaint4",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "10.0.0.14",
+					Labels:      map[string]string{"label1": "value"},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+						{
+							Key:    "cke.cybozu.com/foo",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeExtraAttrs",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "10.0.0.14",
+					Labels: map[string]string{
+						"label1":              "value",
+						"acke.cybozu.com/foo": "bar",
+					},
+					Annotations: map[string]string{
+						"annotation1":         "value",
+						"acke.cybozu.com/foo": "bar",
+					},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+						{
+							Key:    "acke.cybozu.com/foo",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: nil,
 		},
 		{
 			Name: "RemoveNonClusterNodes",
