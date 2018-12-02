@@ -217,7 +217,7 @@ func connectEtcd() (*clientv3.Client, error) {
 }
 
 func getClusterStatus(cluster *cke.Cluster) (*cke.ClusterStatus, error) {
-	controller := server.NewController(nil, 0, time.Second*2)
+	controller := server.NewController(nil, 0, time.Second*2, nil)
 
 	etcd, err := connectEtcd()
 	if err != nil {

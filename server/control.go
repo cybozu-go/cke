@@ -21,11 +21,12 @@ type Controller struct {
 	session  *concurrency.Session
 	interval time.Duration
 	timeout  time.Duration
+	addon    Integrator
 }
 
 // NewController construct controller instance
-func NewController(s *concurrency.Session, interval time.Duration, timeout time.Duration) Controller {
-	return Controller{s, interval, timeout}
+func NewController(s *concurrency.Session, interval, timeout time.Duration, addon Integrator) Controller {
+	return Controller{s, interval, timeout, addon}
 }
 
 // Run execute procedures with leader elections
@@ -75,7 +76,15 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 	}
 
 	watchChan := make(chan struct{})
+	var addonChan chan struct{}
+
 	env := well.NewEnvironment(ctx)
+	if c.addon != nil {
+		addonChan = make(chan struct{}, 1)
+		env.Go(func(ctx context.Context) error {
+			return c.addon.StartWatch(ctx, addonChan)
+		})
+	}
 	env.Go(func(ctx context.Context) error {
 		return startWatcher(ctx, c.session.Client(), watchChan)
 	})
@@ -95,7 +104,7 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 			return nil
 		default:
 		}
-		err := c.runOnce(ctx, leaderKey, ticker.C, watchChan)
+		err := c.runOnce(ctx, leaderKey, ticker.C, watchChan, addonChan)
 		if err != nil {
 			return err
 		}
@@ -125,7 +134,7 @@ func (c Controller) checkLastOp(ctx context.Context, leaderKey string) error {
 	return storage.UpdateRecord(ctx, leaderKey, r)
 }
 
-func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan time.Time, watchChan <-chan struct{}) error {
+func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan time.Time, watchChan, addonChan <-chan struct{}) error {
 	wait := false
 	defer func() {
 		if !wait {
@@ -133,6 +142,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		}
 		select {
 		case <-watchChan:
+		case <-addonChan:
 		case <-ctx.Done():
 		case <-tick:
 		}
@@ -143,6 +153,9 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	switch err {
 	case cke.ErrNotFound:
 		wait = true
+		if c.addon != nil {
+			return c.addon.Do(ctx, leaderKey)
+		}
 		return nil
 	case nil:
 	default:
@@ -197,6 +210,9 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	ops := DecideOps(cluster, status)
 	if len(ops) == 0 {
 		wait = true
+		if c.addon != nil {
+			return c.addon.Do(ctx, leaderKey)
+		}
 		return nil
 	}
 
