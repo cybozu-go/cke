@@ -74,6 +74,7 @@ github.com/golang/snappy
 github.com/google/btree
 # github.com/google/go-cmp v0.2.0
 github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/cmpopts
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
