@@ -22,6 +22,7 @@ var httpClient = &well.HTTPClient{
 	Client: &http.Client{},
 }
 
+var httpsClient atomic.Value
 var vaultClient atomic.Value
 
 type certCache struct {
@@ -80,12 +81,11 @@ type ckeInfrastructure struct {
 	etcdCert string
 	etcdKey  string
 
-	kubeOnce    sync.Once
-	kubeErr     error
-	kubeCA      string
-	kubeCert    []byte
-	kubeKey     []byte
-	httpsClient *well.HTTPClient
+	kubeOnce sync.Once
+	kubeErr  error
+	kubeCA   string
+	kubeCert []byte
+	kubeKey  []byte
 }
 
 func (i *ckeInfrastructure) init(ctx context.Context) error {
@@ -113,16 +113,18 @@ func (i *ckeInfrastructure) init(ctx context.Context) error {
 		i.kubeCert = kubeCert
 		i.kubeKey = kubeKey
 
-		cp := x509.NewCertPool()
-		cp.AppendCertsFromPEM([]byte(kubeCA))
-		i.httpsClient = &well.HTTPClient{
-			Client: &http.Client{
-				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{
-						RootCAs: cp,
+		if httpsClient.Load() == nil {
+			cp := x509.NewCertPool()
+			cp.AppendCertsFromPEM([]byte(kubeCA))
+			httpsClient.Store(&well.HTTPClient{
+				Client: &http.Client{
+					Transport: &http.Transport{
+						TLSClientConfig: &tls.Config{
+							RootCAs: cp,
+						},
 					},
 				},
-			},
+			})
 		}
 	})
 
@@ -260,5 +262,9 @@ func (i *ckeInfrastructure) HTTPSClient(ctx context.Context) (*well.HTTPClient, 
 	if err != nil {
 		return nil, err
 	}
-	return i.httpsClient, nil
+	res := httpsClient.Load()
+	if res == nil {
+		return nil, errors.New("httpsClient is nil")
+	}
+	return res.(*well.HTTPClient), nil
 }

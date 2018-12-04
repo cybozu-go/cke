@@ -393,11 +393,11 @@ func checkSecureHealthz(ctx context.Context, inf cke.Infrastructure, addr string
 }
 
 func checkAPIServerHealth(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (bool, error) {
-	cliantset, err := inf.K8sClient(ctx, n)
+	clientset, err := inf.K8sClient(ctx, n)
 	if err != nil {
 		return false, err
 	}
-	_, err = cliantset.CoreV1().Namespaces().List(metav1.ListOptions{})
+	_, err = clientset.CoreV1().Namespaces().List(metav1.ListOptions{})
 	if err != nil {
 		return false, err
 	}
