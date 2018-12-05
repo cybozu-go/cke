@@ -48,8 +48,12 @@ func (c *certCache) get(issue func() (cert, key []byte, err error)) (cert, key [
 	return
 }
 
-var k8sCertCache = &certCache{
-	lifetime: time.Hour * 24,
+var kubeHTTP struct {
+	once   sync.Once
+	cache  *certCache
+	err    error
+	ca     string
+	client *well.HTTPClient
 }
 
 func setVaultClient(client *vault.Client) {
@@ -80,42 +84,27 @@ type ckeInfrastructure struct {
 	etcdCert string
 	etcdKey  string
 
-	kubeOnce    sync.Once
-	kubeErr     error
-	kubeCA      string
-	kubeCert    []byte
-	kubeKey     []byte
-	httpsClient *well.HTTPClient
+	kubeCert []byte
+	kubeKey  []byte
 }
 
 func (i *ckeInfrastructure) init(ctx context.Context) error {
-	i.kubeOnce.Do(func() {
-		kubeCA, err := i.Storage().GetCACertificate(ctx, "kubernetes")
+	kubeHTTP.once.Do(func() {
+		cache := &certCache{
+			lifetime: time.Hour * 24,
+		}
+		kubeHTTP.cache = cache
+
+		ca, err := i.Storage().GetCACertificate(ctx, "kubernetes")
 		if err != nil {
-			i.kubeErr = err
+			kubeHTTP.err = err
 			return
 		}
-
-		issue := func() (cert, key []byte, err error) {
-			c, k, e := KubernetesCA{}.IssueAdminCert(ctx, i, "25h")
-			if e != nil {
-				return nil, nil, e
-			}
-			return []byte(c), []byte(k), nil
-		}
-		kubeCert, kubeKey, err := k8sCertCache.get(issue)
-		if err != nil {
-			i.kubeErr = err
-			return
-		}
-
-		i.kubeCA = kubeCA
-		i.kubeCert = kubeCert
-		i.kubeKey = kubeKey
+		kubeHTTP.ca = ca
 
 		cp := x509.NewCertPool()
-		cp.AppendCertsFromPEM([]byte(kubeCA))
-		i.httpsClient = &well.HTTPClient{
+		cp.AppendCertsFromPEM([]byte(kubeHTTP.ca))
+		kubeHTTP.client = &well.HTTPClient{
 			Client: &http.Client{
 				Transport: &http.Transport{
 					TLSClientConfig: &tls.Config{
@@ -126,7 +115,25 @@ func (i *ckeInfrastructure) init(ctx context.Context) error {
 		}
 	})
 
-	return i.kubeErr
+	if kubeHTTP.err != nil {
+		return kubeHTTP.err
+	}
+
+	issue := func() (cert, key []byte, err error) {
+		c, k, e := KubernetesCA{}.IssueAdminCert(ctx, i, "25h")
+		if e != nil {
+			return nil, nil, e
+		}
+		return []byte(c), []byte(k), nil
+	}
+	cert, key, err := kubeHTTP.cache.get(issue)
+	if err != nil {
+		return err
+	}
+
+	i.kubeCert = cert
+	i.kubeKey = key
+	return nil
 }
 
 // NewInfrastructure creates a new Infrastructure instance
@@ -241,7 +248,7 @@ func (i *ckeInfrastructure) K8sClient(ctx context.Context, n *Node) (*kubernetes
 	tlsCfg := rest.TLSClientConfig{
 		CertData: i.kubeCert,
 		KeyData:  i.kubeKey,
-		CAData:   []byte(i.kubeCA),
+		CAData:   []byte(kubeHTTP.ca),
 	}
 	cfg := &rest.Config{
 		Host:            "https://" + n.Address + ":6443",
@@ -260,5 +267,5 @@ func (i *ckeInfrastructure) HTTPSClient(ctx context.Context) (*well.HTTPClient, 
 	if err != nil {
 		return nil, err
 	}
-	return i.httpsClient, nil
+	return kubeHTTP.client, nil
 }
