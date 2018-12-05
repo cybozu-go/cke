@@ -84,6 +84,10 @@ type ckeInfrastructure struct {
 	etcdCert string
 	etcdKey  string
 
+	// following fields are accessed by multiple goroutines, hence
+	// they need to be guarded by sync.Once.
+	once     sync.Once
+	initErr  error
 	kubeCert []byte
 	kubeKey  []byte
 }
@@ -119,21 +123,24 @@ func (i *ckeInfrastructure) init(ctx context.Context) error {
 		return kubeHTTP.err
 	}
 
-	issue := func() (cert, key []byte, err error) {
-		c, k, e := KubernetesCA{}.IssueAdminCert(ctx, i, "25h")
-		if e != nil {
-			return nil, nil, e
+	i.once.Do(func() {
+		issue := func() (cert, key []byte, err error) {
+			c, k, e := KubernetesCA{}.IssueAdminCert(ctx, i, "25h")
+			if e != nil {
+				return nil, nil, e
+			}
+			return []byte(c), []byte(k), nil
 		}
-		return []byte(c), []byte(k), nil
-	}
-	cert, key, err := kubeHTTP.cache.get(issue)
-	if err != nil {
-		return err
-	}
+		cert, key, err := kubeHTTP.cache.get(issue)
+		if err != nil {
+			i.initErr = err
+			return
+		}
 
-	i.kubeCert = cert
-	i.kubeKey = key
-	return nil
+		i.kubeCert = cert
+		i.kubeKey = key
+	})
+	return i.initErr
 }
 
 // NewInfrastructure creates a new Infrastructure instance
