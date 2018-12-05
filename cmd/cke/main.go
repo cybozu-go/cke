@@ -8,6 +8,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/sabakan"
 	"github.com/cybozu-go/cke/server"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
@@ -71,7 +72,9 @@ func main() {
 	if err != nil {
 		log.ErrorExit(err)
 	}
-	controller := server.NewController(session, interval, timeout, nil)
+
+	addon := sabakan.NewIntegrator(etcd)
+	controller := server.NewController(session, interval, timeout, addon)
 
 	well.Go(controller.Run)
 	server := server.Server{
