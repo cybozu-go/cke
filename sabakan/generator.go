@@ -389,7 +389,7 @@ func (g *Generator) removeUnreachable() (*updateOp, error) {
 		op.cps = append(op.cps, m)
 	}
 
-	if len(op.cps)*2 <= g.constraints.ControlPlaneCount {
+	if len(op.cps)*2 <= len(g.controlPlanes) {
 		// Replacing more than half of control plane nodes would destroy
 		// etcd cluster.  We cannot do anything in this case.
 		return nil, errTooManyUnreachable
