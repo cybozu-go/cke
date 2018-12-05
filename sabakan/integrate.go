@@ -9,6 +9,14 @@ import (
 	"github.com/cybozu-go/log"
 )
 
+type sabakanContextKey string
+
+const (
+	// WaitSecs is a context key to pass to change the wait seconds
+	// before removing retiring nodes from the cluster.
+	WaitSecs = sabakanContextKey("wait secs")
+)
+
 type integrator struct {
 	etcd *clientv3.Client
 }
@@ -39,6 +47,7 @@ func (ig integrator) StartWatch(ctx context.Context, ch chan<- struct{}) error {
 	return nil
 }
 
+// Do references WaitSecs in ctx to change the wait second value.
 func (ig integrator) Do(ctx context.Context, leaderKey string) error {
 	st := cke.Storage{Client: ig.etcd}
 
@@ -55,6 +64,11 @@ func (ig integrator) Do(ctx context.Context, leaderKey string) error {
 	if err != nil {
 		// the error is either harmless (cke.ErrNotFound) or already
 		// logged by well.HTTPClient.
+		if err != cke.ErrNotFound {
+			log.Warn("sabakan: query failed", map[string]interface{}{
+				log.FnError: err,
+			})
+		}
 		return nil
 	}
 
@@ -75,6 +89,14 @@ func (ig integrator) Do(ctx context.Context, leaderKey string) error {
 	}
 
 	g := NewGenerator(cluster, tmpl, cstr, machines)
+
+	val := ctx.Value(WaitSecs)
+	if val != nil {
+		if secs, ok := val.(float64); ok {
+			g.SetWaitSeconds(secs)
+		}
+	}
+
 	var newc *cke.Cluster
 	if cluster == nil {
 		newc, err = g.Generate()
@@ -88,8 +110,11 @@ func (ig integrator) Do(ctx context.Context, leaderKey string) error {
 		log.Warn("sabakan: failed to generate cluster", map[string]interface{}{
 			log.FnError: err,
 		})
+		return nil
 	}
+
 	if newc == nil {
+		log.Debug("sabakan: nothing to do", nil)
 		return nil
 	}
 

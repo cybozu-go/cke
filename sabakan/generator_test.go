@@ -96,7 +96,7 @@ func newTestMachineWithIP(rack int, retireDate time.Time, state State, ip string
 	m.Spec.Rack = rack
 	m.Spec.RetireDate = retireDate
 	m.Status.State = state
-	m.Status.Duration = waitRetiringSeconds * 2
+	m.Status.Duration = DefaultWaitRetiringSeconds * 2
 	return m
 }
 

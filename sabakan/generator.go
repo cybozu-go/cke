@@ -16,7 +16,8 @@ var (
 	errMissingMachine     = errors.New("failed to apply new template due to missing machines")
 	errTooManyUnreachable = errors.New("too many unreachable/non-existent control plane nodes")
 
-	waitRetiringSeconds = 300.0
+	// DefaultWaitRetiringSeconds before removing retiring nodes from the cluster.
+	DefaultWaitRetiringSeconds = 300.0
 )
 
 // MachineToNode converts sabakan.Machine to cke.Node.
@@ -83,6 +84,7 @@ type Generator struct {
 	template    *cke.Cluster
 	constraints *cke.Constraints
 	timestamp   time.Time
+	waitSeconds float64
 
 	nodeMap map[string]*cke.Node
 
@@ -107,6 +109,7 @@ func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machine
 		template:    template,
 		constraints: cstr,
 		timestamp:   time.Now(),
+		waitSeconds: DefaultWaitRetiringSeconds,
 	}
 
 	machineMap := make(map[string]*Machine)
@@ -194,6 +197,11 @@ func (g *Generator) selectMachine(cp bool) *Machine {
 	g.unusedMachines = g.unusedMachines[1:]
 	racks[m.Spec.Rack]++
 	return m
+}
+
+// SetWaitSeconds set seconds before removing retiring nodes from the cluster.
+func (g *Generator) SetWaitSeconds(secs float64) {
+	g.waitSeconds = secs
 }
 
 // deselectMachine selects the lowest scored machine and remove it.
@@ -569,7 +577,7 @@ func (g *Generator) decreaseWorker() (*updateOp, error) {
 			continue
 		}
 
-		if m.Status.Duration < waitRetiringSeconds {
+		if m.Status.Duration < g.waitSeconds {
 			workers = append(workers, m)
 			continue
 		}

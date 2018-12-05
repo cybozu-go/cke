@@ -28,7 +28,7 @@ var sabakanSetURLCmd = &cobra.Command{
 			return errors.New("invalid URL")
 		}
 
-		if strings.HasSuffix(u.Path, "/graphql") {
+		if !strings.HasSuffix(u.Path, "/graphql") {
 			u.Path = path.Join(u.Path, "/graphql")
 		}
 
