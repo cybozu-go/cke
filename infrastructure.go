@@ -22,9 +22,11 @@ var httpClient = &well.HTTPClient{
 	Client: &http.Client{},
 }
 
-var httpsClient struct {
+var httpsClient = struct {
 	cli  *well.HTTPClient
 	once sync.Once
+}{
+	cli: &well.HTTPClient{},
 }
 
 var vaultClient atomic.Value
@@ -266,8 +268,8 @@ func (i *ckeInfrastructure) HTTPSClient(ctx context.Context) (*well.HTTPClient, 
 	if err != nil {
 		return nil, err
 	}
-	if httpsClient.cli == nil {
-		return nil, errors.New("httpsClient is nil")
+	if httpsClient.cli.Client == nil {
+		return nil, errors.New("httpsClient is not initialized yet")
 	}
 	return httpsClient.cli, nil
 }
