@@ -22,7 +22,11 @@ var httpClient = &well.HTTPClient{
 	Client: &http.Client{},
 }
 
-var httpsClient atomic.Value
+var httpsClient struct {
+	cli  *well.HTTPClient
+	once sync.Once
+}
+
 var vaultClient atomic.Value
 
 type certCache struct {
@@ -113,19 +117,19 @@ func (i *ckeInfrastructure) init(ctx context.Context) error {
 		i.kubeCert = kubeCert
 		i.kubeKey = kubeKey
 
-		if httpsClient.Load() == nil {
+		// Use sync.Once to avoid creating http.Transport every time
+		// https://github.com/golang/go/issues/24719
+		httpsClient.once.Do(func() {
 			cp := x509.NewCertPool()
 			cp.AppendCertsFromPEM([]byte(kubeCA))
-			httpsClient.Store(&well.HTTPClient{
-				Client: &http.Client{
-					Transport: &http.Transport{
-						TLSClientConfig: &tls.Config{
-							RootCAs: cp,
-						},
+			httpsClient.cli.Client = &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+						RootCAs: cp,
 					},
 				},
-			})
-		}
+			}
+		})
 	})
 
 	return i.kubeErr
@@ -262,9 +266,8 @@ func (i *ckeInfrastructure) HTTPSClient(ctx context.Context) (*well.HTTPClient, 
 	if err != nil {
 		return nil, err
 	}
-	res := httpsClient.Load()
-	if res == nil {
+	if httpsClient.cli == nil {
 		return nil, errors.New("httpsClient is nil")
 	}
-	return res.(*well.HTTPClient), nil
+	return httpsClient.cli, nil
 }
