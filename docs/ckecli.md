@@ -72,6 +72,11 @@ Show the host name of the current leader.
 
 Show operation history.
 
+`ckecli images`
+---------------
+
+List container image names used by `cke`.
+
 `ckecli etcd`
 -------------
 
