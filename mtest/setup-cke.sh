@@ -86,7 +86,7 @@ cat <<EOF
 
 CKE configuration has been initialized.  Run CKE by the following:
 
-    $ /data/cke [-interval <interval>]
+    $ /data/cke [--interval <interval>]
 
 Then, use kubectl to manage a kubernetes cluster as:
 
