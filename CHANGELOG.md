@@ -5,6 +5,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.22] - 2018-12-06
+### Added
+- Sabakan integration (#105).  See [sabakan-integration.md](docs/sabakan-integration.md).
+
+### Changed
+- Update images for Kubernetes 1.12.3 to resolve CVE-2018-1002105 (#107).
+- Fix connection leak introduced in 0.21 (#106, 108)
+
 ## [0.21] - 2018-11-26
 ### Added
 - Add ckecli vault init command (#104).
