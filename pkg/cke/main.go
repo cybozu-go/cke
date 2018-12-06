@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"net/http"
 	"os"
 	"time"
@@ -14,15 +13,16 @@ import (
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
+	"github.com/spf13/pflag"
 	yaml "gopkg.in/yaml.v2"
 )
 
 var (
-	flgHTTP         = flag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
-	flgConfigPath   = flag.String("config", "/etc/cke/config.yml", "configuration file path")
-	flgInterval     = flag.String("interval", "1m", "check interval")
-	flgSessionTTL   = flag.String("session-ttl", "60s", "leader session's TTL")
-	flgDebugSabakan = flag.Bool("debug-sabakan", false, "debug sabakan integration")
+	flgHTTP         = pflag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
+	flgConfigPath   = pflag.String("config", "/etc/cke/config.yml", "configuration file path")
+	flgInterval     = pflag.String("interval", "1m", "check interval")
+	flgSessionTTL   = pflag.String("session-ttl", "60s", "leader session's TTL")
+	flgDebugSabakan = pflag.Bool("debug-sabakan", false, "debug sabakan integration")
 )
 
 func loadConfig(p string) (*etcdutil.Config, error) {
@@ -54,7 +54,7 @@ func debugSabakan(addon server.Integrator) {
 }
 
 func main() {
-	flag.Parse()
+	pflag.Parse()
 	well.LogConfig{}.Apply()
 
 	interval, err := time.ParseDuration(*flgInterval)

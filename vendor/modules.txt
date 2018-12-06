@@ -400,9 +400,9 @@ k8s.io/apimachinery/pkg/runtime/serializer
 k8s.io/apimachinery/pkg/version
 k8s.io/apimachinery/pkg/api/meta
 k8s.io/apimachinery/pkg/util/clock
+k8s.io/apimachinery/third_party/forked/golang/reflect
 k8s.io/apimachinery/pkg/runtime/serializer/json
 k8s.io/apimachinery/pkg/runtime/serializer/versioning
-k8s.io/apimachinery/third_party/forked/golang/reflect
 k8s.io/apimachinery/pkg/runtime/serializer/protobuf
 k8s.io/apimachinery/pkg/runtime/serializer/recognizer
 k8s.io/apimachinery/pkg/apis/meta/v1beta1

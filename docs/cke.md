@@ -6,13 +6,17 @@ Usage
 
 `cke [OPTIONS]`
 
-Option           | Default value            | Description
----------------- | ------------------------ | -----------
-`-http`          | 0.0.0.0:10180            | Listen IP:Port number
-`-config`        | /etc/cke/config.yml      | configuration file path
-`-interval`      | 1m                       | check interval
-`-session-ttl`   | 60s                      | leader session's TTL
-`-debug-sabakan` | false                    | debug sabakan integration
+```console
+$ cke -h
+      --config string        configuration file path (default "/etc/cke/config.yml")
+      --debug-sabakan        debug sabakan integration
+      --http string          <Listen IP>:<Port number> (default "0.0.0.0:10180")
+      --interval string      check interval (default "1m")
+      --logfile string       Log filename
+      --logformat string     Log format [plain,logfmt,json]
+      --loglevel string      Log level [critical,error,warning,info,debug]
+      --session-ttl string   leader session's TTL (default "60s")
+```
 
 Configuration file
 ------------------
