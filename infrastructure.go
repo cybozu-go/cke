@@ -182,11 +182,6 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	return inf, nil
 }
 
-// NewInfrastructureWithoutSSH creates a new Infrastructure instance that has no SSH agents
-func NewInfrastructureWithoutSSH(s Storage) Infrastructure {
-	return &ckeInfrastructure{storage: s}
-}
-
 func (i ckeInfrastructure) Agent(addr string) Agent {
 	return i.agents[addr]
 }

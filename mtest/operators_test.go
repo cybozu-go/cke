@@ -203,11 +203,18 @@ var _ = Describe("Operations", func() {
 		}
 		cluster.Nodes[0].Labels = map[string]string{"label1": "value"}
 		cluster.Nodes[0].Annotations = map[string]string{"annotation1": "value"}
-		cluster.Nodes[0].Taints = []corev1.Taint{{
-			Key:    "taint1",
-			Value:  "value",
-			Effect: corev1.TaintEffectNoSchedule,
-		}}
+		cluster.Nodes[0].Taints = []corev1.Taint{
+			{
+				Key:    "taint1",
+				Value:  "value",
+				Effect: corev1.TaintEffectNoSchedule,
+			},
+			{
+				Key:    "hoge.cke.cybozu.com/foo",
+				Value:  "bar",
+				Effect: corev1.TaintEffectNoExecute,
+			},
+		}
 		ckecliClusterSet(cluster)
 		Eventually(func() error {
 			return checkCluster(cluster)

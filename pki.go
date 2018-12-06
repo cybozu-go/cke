@@ -19,6 +19,13 @@ const (
 	CAKubernetes = "cke/ca-kubernetes"
 )
 
+// IssueResponse is cli output format.
+type IssueResponse struct {
+	Cert   string `json:"certificate"`
+	Key    string `json:"private_key"`
+	CACert string `json:"ca_certificate"`
+}
+
 // addRole adds a role to CA if not exists.
 func addRole(client *vault.Client, ca, role string, data map[string]interface{}) error {
 	l := client.Logical()
@@ -118,9 +125,9 @@ func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key st
 		})
 }
 
-// IssueEtcdClientCertificate issues TLS client certificate for a target role.
-func IssueEtcdClientCertificate(inf Infrastructure, role, commonName, ttl string) (cert, key string, err error) {
-	return issueCertificate(inf, CAEtcdClient, role,
+// IssueEtcdClientCertificate issues TLS client certificate for a user.
+func IssueEtcdClientCertificate(inf Infrastructure, username, ttl string) (cert, key string, err error) {
+	return issueCertificate(inf, CAEtcdClient, "system",
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
@@ -128,7 +135,7 @@ func IssueEtcdClientCertificate(inf Infrastructure, role, commonName, ttl string
 			"allow_any_name": "true",
 		},
 		map[string]interface{}{
-			"common_name":          commonName,
+			"common_name":          username,
 			"exclude_cn_from_sans": "true",
 			"ttl":                  ttl,
 		})

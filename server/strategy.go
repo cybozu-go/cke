@@ -50,7 +50,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus) []cke.Operator {
 		return ops
 	}
 
-	// 8. Stop and delele control plane services running on non control plane nodes.
+	// 8. Stop and delete control plane services running on non control plane nodes.
 	if ops := cleanOps(c, nf); len(ops) > 0 {
 		return ops
 	}

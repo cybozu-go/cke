@@ -61,14 +61,9 @@ func (c *VaultConfig) Validate() error {
 	return nil
 }
 
-// ConnectVault creates vault client
-func ConnectVault(ctx context.Context, data []byte) error {
-	c := new(VaultConfig)
-	err := json.Unmarshal(data, c)
-	if err != nil {
-		return err
-	}
-
+// VaultClient creates vault client.
+// The client has logged-in to Vault using RoleID and SecretID in cfg.
+func VaultClient(cfg *VaultConfig) (*vault.Client, *vault.Secret, error) {
 	transport := &http.Transport{
 		Proxy:             http.ProxyFromEnvironment,
 		DisableKeepAlives: true,
@@ -82,10 +77,10 @@ func ConnectVault(ctx context.Context, data []byte) error {
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 
-	if len(c.CACert) > 0 {
+	if len(cfg.CACert) > 0 {
 		cp := x509.NewCertPool()
-		if !cp.AppendCertsFromPEM([]byte(c.CACert)) {
-			return errors.New("invalid CA cert")
+		if !cp.AppendCertsFromPEM([]byte(cfg.CACert)) {
+			return nil, nil, errors.New("invalid CA cert")
 		}
 
 		transport.TLSClientConfig = &tls.Config{
@@ -95,7 +90,7 @@ func ConnectVault(ctx context.Context, data []byte) error {
 	}
 
 	client, err := vault.NewClient(&vault.Config{
-		Address: c.Endpoint,
+		Address: cfg.Endpoint,
 		HttpClient: &http.Client{
 			Transport: transport,
 		},
@@ -103,23 +98,40 @@ func ConnectVault(ctx context.Context, data []byte) error {
 	if err != nil {
 		log.Error("failed to connect to vault", anyMap{
 			log.FnError: err,
-			"endpoint":  c.Endpoint,
+			"endpoint":  cfg.Endpoint,
 		})
-		return err
+		return nil, nil, err
 	}
 
 	secret, err := client.Logical().Write("auth/approle/login", anyMap{
-		"role_id":   c.RoleID,
-		"secret_id": c.SecretID,
+		"role_id":   cfg.RoleID,
+		"secret_id": cfg.SecretID,
 	})
 	if err != nil {
 		log.Error("failed to login to vault", anyMap{
 			log.FnError: err,
-			"endpoint":  c.Endpoint,
+			"endpoint":  cfg.Endpoint,
 		})
+		return nil, nil, err
+	}
+
+	client.SetToken(secret.Auth.ClientToken)
+	return client, secret, nil
+}
+
+// ConnectVault unmarshal data to get VaultConfig and call VaultClient
+// with it.  It then start renewing login token for long-running process.
+func ConnectVault(ctx context.Context, data []byte) error {
+	c := new(VaultConfig)
+	err := json.Unmarshal(data, c)
+	if err != nil {
 		return err
 	}
-	client.SetToken(secret.Auth.ClientToken)
+
+	client, secret, err := VaultClient(c)
+	if err != nil {
+		return err
+	}
 
 	renewer, err := client.NewRenewer(&vault.RenewerInput{
 		Secret: secret,

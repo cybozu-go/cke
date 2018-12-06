@@ -453,6 +453,16 @@ func (nf *NodeFilter) HealthyAPIServer() *cke.Node {
 	return node
 }
 
+func isInternal(name string) bool {
+	if strings.HasPrefix(name, "cke.cybozu.com/") {
+		return true
+	}
+	if strings.Contains(name, ".cke.cybozu.com/") {
+		return true
+	}
+	return false
+}
+
 // OutdatedAttrsNodes returns nodes that have outdated set of labels,
 // attributes, and/or taints.
 func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
@@ -472,30 +482,43 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 		}
 
 		if nodeIsOutdated(n, current) {
-			for k, v := range n.Labels {
-				if current.Labels == nil {
-					current.Labels = make(map[string]string)
+			labels := make(map[string]string)
+			for k, v := range current.Labels {
+				if isInternal(k) {
+					continue
 				}
-				current.Labels[k] = v
+				labels[k] = v
+			}
+			for k, v := range n.Labels {
+				labels[k] = v
+			}
+			current.Labels = labels
+
+			annotations := make(map[string]string)
+			for k, v := range current.Annotations {
+				if isInternal(k) {
+					continue
+				}
+				annotations[k] = v
 			}
 			for k, v := range n.Annotations {
-				if current.Annotations == nil {
-					current.Annotations = make(map[string]string)
-				}
-				current.Annotations[k] = v
+				annotations[k] = v
 			}
+			current.Annotations = annotations
 
-		OUTER:
+			nTaints := make(map[string]bool)
 			for _, taint := range n.Taints {
-				for i, ct := range current.Spec.Taints {
-					if taint.Key == ct.Key {
-						current.Spec.Taints[i].Value = taint.Value
-						current.Spec.Taints[i].Effect = taint.Effect
-						continue OUTER
-					}
-				}
-				current.Spec.Taints = append(current.Spec.Taints, taint)
+				nTaints[taint.Key] = true
 			}
+			taints := make([]corev1.Taint, len(n.Taints))
+			copy(taints, n.Taints)
+			for _, taint := range current.Spec.Taints {
+				if isInternal(taint.Key) || nTaints[taint.Key] {
+					continue
+				}
+				taints = append(taints, taint)
+			}
+			current.Spec.Taints = taints
 
 			nodes = append(nodes, current)
 		}
@@ -512,9 +535,29 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node) bool {
 		}
 	}
 
+	// Labels for CKE internal use need to be synchronized.
+	for k := range current.Labels {
+		if !isInternal(k) {
+			continue
+		}
+		if _, ok := n.Labels[k]; !ok {
+			return true
+		}
+	}
+
 	for k, v := range n.Annotations {
 		cv, ok := current.Annotations[k]
 		if !ok || v != cv {
+			return true
+		}
+	}
+
+	// Annotations for CKE internal use need to be synchronized.
+	for k := range current.Annotations {
+		if !isInternal(k) {
+			continue
+		}
+		if _, ok := n.Annotations[k]; !ok {
 			return true
 		}
 	}
@@ -532,6 +575,20 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node) bool {
 			return true
 		}
 		if taint.Effect != cv.Effect {
+			return true
+		}
+	}
+
+	// Taints for CKE internal use need to be synchronized.
+	nTaints := make(map[string]corev1.Taint)
+	for _, taint := range n.Taints {
+		nTaints[taint.Key] = taint
+	}
+	for _, taint := range current.Spec.Taints {
+		if !isInternal(taint.Key) {
+			continue
+		}
+		if _, ok := nTaints[taint.Key]; !ok {
 			return true
 		}
 	}

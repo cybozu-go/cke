@@ -61,3 +61,27 @@ The next ID of the record formatted as a decimal string.
 Each entry of audit log is stored with this type of key.
 
 The value is JSON defined in [Record](record.md).
+
+`sabakan/`
+----------
+
+Configurations for [sabakan integration](sabakan-integration.md).
+
+### `sabakan/query-variables`
+
+User-specified variables for the GraphQL query.
+
+### `sabakan/template`
+
+This key stores cluster template from which `cluster` will be generated.
+
+The template is JSON formatted [Cluster](cluster.md) data.
+
+### `sabakan/last-revision`
+
+Record the ModRevision of the template used to generate the cluster
+configuration.
+
+### `sabakan/url`
+
+Sabakan URL.

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"net/http"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/sabakan"
 	"github.com/cybozu-go/cke/server"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
@@ -16,10 +18,11 @@ import (
 )
 
 var (
-	flgHTTP       = flag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
-	flgConfigPath = flag.String("config", "/etc/cke/config.yml", "configuration file path")
-	flgInterval   = flag.String("interval", "1m", "check interval")
-	flgSessionTTL = flag.String("session-ttl", "60s", "leader session's TTL")
+	flgHTTP         = flag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
+	flgConfigPath   = flag.String("config", "/etc/cke/config.yml", "configuration file path")
+	flgInterval     = flag.String("interval", "1m", "check interval")
+	flgSessionTTL   = flag.String("session-ttl", "60s", "leader session's TTL")
+	flgDebugSabakan = flag.Bool("debug-sabakan", false, "debug sabakan integration")
 )
 
 func loadConfig(p string) (*etcdutil.Config, error) {
@@ -36,6 +39,18 @@ func loadConfig(p string) (*etcdutil.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func debugSabakan(addon server.Integrator) {
+	well.Go(func(ctx context.Context) error {
+		ctx = context.WithValue(ctx, sabakan.WaitSecs, float64(5))
+		return server.RunIntegrator(ctx, addon)
+	})
+	well.Stop()
+	err := well.Wait()
+	if err != nil && !well.IsSignaled(err) {
+		log.ErrorExit(err)
+	}
 }
 
 func main() {
@@ -63,6 +78,12 @@ func main() {
 	}
 	defer etcd.Close()
 
+	addon := sabakan.NewIntegrator(etcd)
+	if *flgDebugSabakan {
+		debugSabakan(addon)
+		return
+	}
+
 	session, err := concurrency.NewSession(etcd, concurrency.WithTTL(int(ttl.Seconds())))
 	if err != nil {
 		log.ErrorExit(err)
@@ -71,7 +92,7 @@ func main() {
 	if err != nil {
 		log.ErrorExit(err)
 	}
-	controller := server.NewController(session, interval, timeout)
+	controller := server.NewController(session, interval, timeout, addon)
 
 	well.Go(controller.Run)
 	server := server.Server{

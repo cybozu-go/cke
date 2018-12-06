@@ -18,15 +18,19 @@ type Storage struct {
 
 // etcd keys and prefixes
 const (
-	KeyCA                 = "ca/"
-	KeyCluster            = "cluster"
-	KeyConstraints        = "constraints"
-	KeyLeader             = "leader/"
-	KeyRecords            = "records/"
-	KeyRecordID           = "records"
-	KeyServiceAccountCert = "service-account/certificate"
-	KeyServiceAccountKey  = "service-account/key"
-	KeyVault              = "vault"
+	KeyCA                    = "ca/"
+	KeyCluster               = "cluster"
+	KeyClusterRevision       = "cluster-revision"
+	KeyConstraints           = "constraints"
+	KeyLeader                = "leader/"
+	KeyRecords               = "records/"
+	KeyRecordID              = "records"
+	KeySabakanQueryVariables = "sabakan/query-variables"
+	KeySabakanTemplate       = "sabakan/template"
+	KeySabakanURL            = "sabakan/url"
+	KeyServiceAccountCert    = "service-account/certificate"
+	KeyServiceAccountKey     = "service-account/key"
+	KeyVault                 = "vault"
 )
 
 const maxRecords = 1000
@@ -49,6 +53,29 @@ func (s Storage) PutCluster(ctx context.Context, c *Cluster) error {
 	return err
 }
 
+// PutClusterWithTemplateRevision stores *Cluster into etcd along with a revision number.
+func (s Storage) PutClusterWithTemplateRevision(ctx context.Context, c *Cluster, rev int64, leaderKey string) error {
+	data, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.Txn(ctx).
+		If(clientv3util.KeyExists(leaderKey)).
+		Then(
+			clientv3.OpPut(KeyCluster, string(data)),
+			clientv3.OpPut(KeyClusterRevision, strconv.FormatInt(rev, 10)),
+		).Commit()
+	if err != nil {
+		return err
+	}
+
+	if !resp.Succeeded {
+		return ErrNoLeader
+	}
+	return nil
+}
+
 // GetCluster loads *Cluster from etcd.
 // If cluster configuration has not been stored, this returns ErrNotFound.
 func (s Storage) GetCluster(ctx context.Context) (*Cluster, error) {
@@ -68,6 +95,45 @@ func (s Storage) GetCluster(ctx context.Context) (*Cluster, error) {
 	}
 
 	return c, nil
+}
+
+// GetClusterWithRevision loads *Cluster from etcd as well as the stored
+// revision number.  The revision number was stored with *Cluster by
+// PutClusterWithTemplateRevision().
+func (s Storage) GetClusterWithRevision(ctx context.Context) (*Cluster, int64, error) {
+	resp, err := s.Txn(ctx).
+		Then(
+			clientv3.OpGet(KeyCluster),
+			clientv3.OpGet(KeyClusterRevision),
+		).Commit()
+	if err != nil {
+		return nil, 0, err
+	}
+	if !resp.Succeeded {
+		panic("transaction without if condition failed")
+	}
+
+	gresp0 := resp.Responses[0].GetResponseRange()
+	gresp1 := resp.Responses[1].GetResponseRange()
+	if gresp0.Count == 0 {
+		return nil, 0, ErrNotFound
+	}
+
+	c := new(Cluster)
+	err = json.Unmarshal(gresp0.Kvs[0].Value, c)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var rev int64
+	if gresp1.Count > 0 {
+		rev, err = strconv.ParseInt(string(gresp1.Kvs[0].Value), 10, 64)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
+	return c, rev, nil
 }
 
 // PutConstraints stores *Constraints into etcd.
@@ -332,4 +398,84 @@ func (s Storage) GetLeaderHostname(ctx context.Context) (string, error) {
 		return "", errors.New("no leader")
 	}
 	return string(resp.Kvs[0].Value), nil
+}
+
+// SetSabakanQueryVariables sets query variables for Sabakan.
+// Caller must validate the contents.
+func (s Storage) SetSabakanQueryVariables(ctx context.Context, vars string) error {
+	_, err := s.Put(ctx, KeySabakanQueryVariables, vars)
+	return err
+}
+
+// GetSabakanQueryVariables gets query variables for Sabakan.
+func (s Storage) GetSabakanQueryVariables(ctx context.Context) ([]byte, error) {
+	resp, err := s.Get(ctx, KeySabakanQueryVariables)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Count == 0 {
+		return nil, ErrNotFound
+	}
+
+	return resp.Kvs[0].Value, nil
+}
+
+// SetSabakanTemplate stores template cluster configuration.
+// Caller must validate the template.
+func (s Storage) SetSabakanTemplate(ctx context.Context, tmpl *Cluster) error {
+	data, err := json.Marshal(tmpl)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.Put(ctx, KeySabakanTemplate, string(data))
+	return err
+}
+
+// GetSabakanTemplate gets template cluster configuration.
+// If a template exists, it will be returned with ModRevision.
+func (s Storage) GetSabakanTemplate(ctx context.Context) (*Cluster, int64, error) {
+	resp, err := s.Get(ctx, KeySabakanTemplate)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if resp.Count == 0 {
+		return nil, 0, ErrNotFound
+	}
+
+	tmpl := new(Cluster)
+	err = json.Unmarshal(resp.Kvs[0].Value, tmpl)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return tmpl, resp.Kvs[0].ModRevision, nil
+}
+
+// SetSabakanURL stores URL of sabakan API.
+func (s Storage) SetSabakanURL(ctx context.Context, url string) error {
+	_, err := s.Put(ctx, KeySabakanURL, url)
+	return err
+}
+
+// GetSabakanURL gets URL of sabakan API.
+// The URL must be an absolute URL pointing GraphQL endpoint.
+func (s Storage) GetSabakanURL(ctx context.Context) (string, error) {
+	resp, err := s.Get(ctx, KeySabakanURL)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.Count == 0 {
+		return "", ErrNotFound
+	}
+	return string(resp.Kvs[0].Value), nil
+}
+
+// DeleteSabakanURL deletes URL of sabakan API.
+func (s Storage) DeleteSabakanURL(ctx context.Context) error {
+	_, err := s.Delete(ctx, KeySabakanURL)
+	return err
 }
