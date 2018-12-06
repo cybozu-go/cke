@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.23] - 2018-12-06
+### Added
+- Add `ckecli images` subcommand to list container image names used by `cke` (#109).
+
 ## [0.22] - 2018-12-06
 ### Added
 - Sabakan integration (#105).  See [sabakan-integration.md](docs/sabakan-integration.md).
@@ -136,7 +140,9 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.21...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.23...HEAD
+[0.23]: https://github.com/cybozu-go/cke/compare/v0.22...v0.23
+[0.22]: https://github.com/cybozu-go/cke/compare/v0.21...v0.22
 [0.21]: https://github.com/cybozu-go/cke/compare/v0.20...v0.21
 [0.20]: https://github.com/cybozu-go/cke/compare/v0.19...v0.20
 [0.19]: https://github.com/cybozu-go/cke/compare/v0.18...v0.19
