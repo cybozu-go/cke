@@ -78,8 +78,11 @@ The domain name is `cke-etcd.kube-system.svc.<cluster-domain>`.
 Backup
 ------
 
-**TBD**
+If etcd backup is enabled on cluster configuration, `CronJob` which stores etcd snapshot will be deployed on Kubernetes cluster.
+Before enable etcd backup, you need to create `PersistentVolume` and `PersistentVolumeClaim` to store the backup data.
+
 
 [etcd]: https://github.com/etcd-io/etcd
 [RBAC]: https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/authentication.md
 [Endpoints]: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
+[PersistentVolume]: https://kubernetes.io/docs/concepts/storage/persistent-volumes

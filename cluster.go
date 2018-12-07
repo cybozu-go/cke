@@ -105,6 +105,13 @@ type KubeletParams struct {
 	BootTaints    []corev1.Taint `json:"boot_taints"   yaml:"boot_taints"`
 }
 
+// EtcdBackup is a set of configrations for etcd-backup.
+type EtcdBackup struct {
+	Enabled  bool   `json:"enabled"  yaml:"enabled"`
+	PVCName  string `json:"pvc_name" yaml:"pvc_name"`
+	Schedule string `json:"schedule" yaml:"schedule"`
+}
+
 // Options is a set of optional parameters for k8s components.
 type Options struct {
 	Etcd              EtcdParams    `json:"etcd"                    yaml:"etcd"`
@@ -118,13 +125,14 @@ type Options struct {
 
 // Cluster is a set of configurations for a etcd/Kubernetes cluster.
 type Cluster struct {
-	Name          string   `json:"name"           yaml:"name"`
-	Nodes         []*Node  `json:"nodes"          yaml:"nodes"`
-	ServiceSubnet string   `json:"service_subnet" yaml:"service_subnet"`
-	PodSubnet     string   `json:"pod_subnet"     yaml:"pod_subnet"`
-	DNSServers    []string `json:"dns_servers"    yaml:"dns_servers"`
-	DNSService    string   `json:"dns_service"    yaml:"dns_service"`
-	Options       Options  `json:"options"        yaml:"options"`
+	Name          string     `json:"name"           yaml:"name"`
+	Nodes         []*Node    `json:"nodes"          yaml:"nodes"`
+	ServiceSubnet string     `json:"service_subnet" yaml:"service_subnet"`
+	PodSubnet     string     `json:"pod_subnet"     yaml:"pod_subnet"`
+	DNSServers    []string   `json:"dns_servers"    yaml:"dns_servers"`
+	DNSService    string     `json:"dns_service"    yaml:"dns_service"`
+	EtcdBackup    EtcdBackup `json:"etcd_backup"    yaml:"etcd_backup"`
+	Options       Options    `json:"options"        yaml:"options"`
 }
 
 // Validate validates the cluster definition.
@@ -161,6 +169,11 @@ func (c *Cluster) Validate() error {
 		if len(fields) != 2 {
 			return errors.New("invalid DNS service (no namespace?): " + c.DNSService)
 		}
+	}
+
+	err = validateEtcdBackup(c.EtcdBackup)
+	if err != nil {
+		return err
 	}
 
 	err = validateOptions(c.Options)
@@ -266,6 +279,19 @@ func filterNodes(nodes []*Node, f func(n *Node) bool) []*Node {
 		}
 	}
 	return filtered
+}
+
+func validateEtcdBackup(etcdBackup EtcdBackup) error {
+	if etcdBackup.Enabled == false {
+		return nil
+	}
+	if len(etcdBackup.PVCName) == 0 {
+		return errors.New("pvc_name is empty")
+	}
+	if len(etcdBackup.Schedule) == 0 {
+		return errors.New("schedule is empty")
+	}
+	return nil
 }
 
 func validateOptions(opts Options) error {

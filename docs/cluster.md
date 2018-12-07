@@ -13,6 +13,7 @@ Name            | Required | Type      | Description
 `pod_subnet`    | true     | string    | CIDR subnet for k8s `Pod`.
 `dns_servers`   | false    | array     | List of upstream DNS server IP addresses.
 `dns_service`   | false    | string    | Upstream DNS service name with namespace as `namespace/service`.
+`etcd_backup`   | false    | `EtcdBackup` | See EtcdBackup.
 `options`       | false    | `Options` | See options.
 
 * IP addresses in `pod_subnet` are only used for host-local communication
@@ -51,6 +52,15 @@ Name     | Required | Type   | Description
 `key`    | true     | string | The taint key to be applied to a node.
 `value`  | false    | string | The taint value corresponding to the taint key.
 `effect` | true     | string | The effect of the taint on pods that do not tolerate the taint. Valid effects are `NoSchedule`, `PreferNoSchedule` and `NoExecute`.
+
+EtcdBackup
+----------
+
+Name       | Required | Type   | Description
+---------- | -------- | ------ | -----------
+`enabled`  | true     | bool   | If true, periodic etcd backup will be run.
+`pvc_name` | true     | string | The name of `PersistentVolumeClaim` where backup data is stored.
+`schedule` | true     | string | The schedule for etcd backup in Cron format.
 
 Options
 -------

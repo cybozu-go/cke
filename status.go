@@ -4,6 +4,7 @@ import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -32,6 +33,12 @@ type NodeDNSStatus struct {
 	ConfigMap *corev1.ConfigMap
 }
 
+// EtcdBackupStatus is the status of etcd-backup
+type EtcdBackupStatus struct {
+	CronJob *batchv1beta1.CronJob
+	Secret  *corev1.Secret
+}
+
 // KubernetesClusterStatus contains kubernetes cluster configurations
 type KubernetesClusterStatus struct {
 	IsReady               bool
@@ -42,6 +49,7 @@ type KubernetesClusterStatus struct {
 	ClusterDNS            ClusterDNSStatus
 	NodeDNS               NodeDNSStatus
 	EtcdEndpoints         *corev1.Endpoints
+	EtcdBackup            EtcdBackupStatus
 }
 
 // ClusterStatus represents the working cluster status.

@@ -125,6 +125,21 @@ func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key st
 		})
 }
 
+// IssueForBackup issues certificate for etcd-backup.
+func (e EtcdCA) IssueForBackup(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
+	return issueCertificate(inf, CAEtcdClient, "system",
+		map[string]interface{}{
+			"ttl":            "87600h",
+			"max_ttl":        "87600h",
+			"server_flag":    "false",
+			"allow_any_name": "true",
+		},
+		map[string]interface{}{
+			"common_name":          "backup",
+			"exclude_cn_from_sans": "true",
+		})
+}
+
 // IssueEtcdClientCertificate issues TLS client certificate for a user.
 func IssueEtcdClientCertificate(inf Infrastructure, username, ttl string) (cert, key string, err error) {
 	return issueCertificate(inf, CAEtcdClient, "system",

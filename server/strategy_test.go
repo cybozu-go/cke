@@ -9,6 +9,8 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -248,6 +250,40 @@ func (d testData) withK8sNodeDNSReady() testData {
 	d.Status.Kubernetes.NodeDNS.ConfigMap = op.NodeDNSConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
 	if err != nil {
 		panic(err)
+	}
+	return d
+}
+
+func (d testData) withEtcdBackup() testData {
+	d.withEtcdEndpoints()
+	d.Cluster.EtcdBackup = cke.EtcdBackup{
+		Enabled:  true,
+		PVCName:  "etcd-backup-pvc",
+		Schedule: "*/1 * * * *",
+	}
+	d.Status.Kubernetes.EtcdBackup.Secret = &corev1.Secret{}
+	d.Status.Kubernetes.EtcdBackup.CronJob = &batchv1beta1.CronJob{
+		Spec: batchv1beta1.CronJobSpec{
+			Schedule: "*/1 * * * *",
+			JobTemplate: batchv1beta1.JobTemplateSpec{
+				Spec: batchv1.JobSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Volumes: []corev1.Volume{
+								{
+									Name: "etcd-backup",
+									VolumeSource: corev1.VolumeSource{
+										PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+											ClaimName: "etcd-backup-pvc",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	return d
 }
@@ -1047,6 +1083,49 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Etcd.Image = ""
 			}),
 			ExpectedOps: []string{"etcd-restart"},
+		},
+		{
+			Name: "EtcdBackupCreate",
+			Input: newData().withEtcdBackup().with(func(d testData) {
+				d.Status.Kubernetes.EtcdBackup.Secret = nil
+				d.Status.Kubernetes.EtcdBackup.CronJob = nil
+			}),
+			ExpectedOps: []string{"etcd-backup-job-create", "etcd-backup-secret-create"},
+		},
+		{
+			Name: "EtcdBackupSecretCreate",
+			Input: newData().withEtcdBackup().with(func(d testData) {
+				d.Status.Kubernetes.EtcdBackup.Secret = nil
+			}),
+			ExpectedOps: []string{"etcd-backup-secret-create"},
+		},
+		{
+			Name: "EtcdBackupJobCreate",
+			Input: newData().withEtcdBackup().with(func(d testData) {
+				d.Status.Kubernetes.EtcdBackup.CronJob = nil
+			}),
+			ExpectedOps: []string{"etcd-backup-job-create"},
+		},
+		{
+			Name: "EtcdBackupUpdate",
+			Input: newData().withEtcdBackup().with(func(d testData) {
+				d.Cluster.EtcdBackup.PVCName = "new-pvc-name"
+			}),
+			ExpectedOps: []string{"etcd-backup-job-update"},
+		},
+		{
+			Name: "EtcdBackupUpdate",
+			Input: newData().withEtcdBackup().with(func(d testData) {
+				d.Cluster.EtcdBackup.Schedule = "* */0 * * *"
+			}),
+			ExpectedOps: []string{"etcd-backup-job-update"},
+		},
+		{
+			Name: "EtcdBackupRemove",
+			Input: newData().withEtcdBackup().with(func(d testData) {
+				d.Cluster.EtcdBackup.Enabled = false
+			}),
+			ExpectedOps: []string{"etcd-backup-job-remove", "etcd-backup-secret-remove"},
 		},
 		{
 			Name: "Clean",

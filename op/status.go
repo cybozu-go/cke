@@ -251,6 +251,11 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
+	s.EtcdBackup, err = GetEtcdBackupStatus(ctx, inf, n)
+	if err != nil {
+		return cke.KubernetesClusterStatus{}, err
+	}
+
 	ep, err := clientset.CoreV1().Endpoints("kube-system").Get(etcdEndpointsName,
 		metav1.GetOptions{IncludeUninitialized: true})
 	switch {
@@ -356,6 +361,36 @@ func GetNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) 
 	case errors.IsNotFound(err):
 	default:
 		return cke.NodeDNSStatus{}, err
+	}
+
+	return s, nil
+}
+
+// GetEtcdBackupStatus returns EtcdBackupStatus
+func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.EtcdBackupStatus, error) {
+	clientset, err := inf.K8sClient(ctx, n)
+	if err != nil {
+		return cke.EtcdBackupStatus{}, err
+	}
+
+	s := cke.EtcdBackupStatus{}
+
+	secret, err := clientset.CoreV1().Secrets("kube-system").Get(etcdBackupSecretName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.Secret = secret
+	case errors.IsNotFound(err):
+	default:
+		return cke.EtcdBackupStatus{}, err
+	}
+
+	job, err := clientset.BatchV1beta1().CronJobs("kube-system").Get(etcdBackupJobName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.CronJob = job
+	case errors.IsNotFound(err):
+	default:
+		return cke.EtcdBackupStatus{}, err
 	}
 
 	return s, nil

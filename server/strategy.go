@@ -170,6 +170,11 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 	if nodes := nf.NonClusterNodes(); len(nodes) > 0 {
 		ops = append(ops, op.KubeNodeRemoveOp(apiServer, nodes))
 	}
+
+	if etcdBackupOps := decideEtcdBackupOps(apiServer, c, ks); len(etcdBackupOps) != 0 {
+		ops = append(ops, etcdBackupOps...)
+	}
+
 	return ops
 }
 
@@ -287,6 +292,55 @@ func decideEpOp(ep *corev1.Endpoints, apiServer *cke.Node, cpNodes []*cke.Node) 
 	}
 
 	return nil
+}
+
+func decideEtcdBackupOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) (ops []cke.Operator) {
+	if c.EtcdBackup.Enabled == false {
+		if ks.EtcdBackup.Secret != nil {
+			ops = append(ops, op.EtcdBackupSecretRemoveOp(apiServer))
+		}
+		if ks.EtcdBackup.CronJob != nil {
+			ops = append(ops, op.EtcdBackupCronJobRemoveOp(apiServer))
+		}
+		return ops
+	}
+
+	if ks.EtcdBackup.Secret == nil {
+		ops = append(ops, op.EtcdBackupSecretCreateOp(apiServer))
+	}
+
+	if ks.EtcdBackup.CronJob == nil {
+		ops = append(ops, op.EtcdBackupCronJobCreateOp(apiServer, c.EtcdBackup))
+	} else if needUpdateEtcdBackupCronJob(c, ks) {
+		ops = append(ops, op.EtcdBackupCronJobUpdateOp(apiServer, c.EtcdBackup))
+	}
+
+	return ops
+}
+
+func needUpdateEtcdBackupCronJob(c *cke.Cluster, ks cke.KubernetesClusterStatus) bool {
+	if ks.EtcdBackup.CronJob.Spec.Schedule != c.EtcdBackup.Schedule {
+		return true
+	}
+	volumes := ks.EtcdBackup.CronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes
+	vol := new(corev1.Volume)
+	for _, v := range volumes {
+		if v.Name == "etcd-backup" {
+			vol = &v
+			break
+		}
+	}
+	if vol == nil {
+		return true
+	}
+
+	if vol.PersistentVolumeClaim == nil {
+		return true
+	}
+	if vol.PersistentVolumeClaim.ClaimName != c.EtcdBackup.PVCName {
+		return true
+	}
+	return false
 }
 
 func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
