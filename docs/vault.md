@@ -3,7 +3,15 @@ PKI management by HashiCorp Vault
 
 CKE requires [Vault][] to issue certificates for etcd and k8s.
 
-This document describes how to configure Vault for CKE.
+This document describes how `ckecli vault init` configures Vault.
+
+## Prerequisites
+
+* `approle` auth method need to be enabled as follows.
+
+```console
+$ vault auth enable approle
+```
 
 ## Secret engines
 
@@ -15,17 +23,7 @@ Root certificates need to be registered with `ckecli`.
 * `cke/ca-etcd-client`: issues client authentication certificates for etcd.
 * `cke/ca-kubernetes`: issues Kubernetes certificates.
 
-Example:
-```console
-$ vault secrets enable -path cke/ca-server \
-    -max-lease-ttl=876000h -default-lease-ttl=87600h pki
-
-$ vault write -format=json cke/ca-server/root/generate/internal \
-    common_name='CKE server CA' ttl=876000h | \
-    jq -r .data.certificate > ca-server.crt
-
-$ ckecli ca set server ca-server.crt
-```
+Additionally, `kv` secret engine version 1 is mounted at `cke/secrets`.
 
 ## Policy
 
@@ -43,7 +41,6 @@ path "cke/*"
 Create `cke` AppRole to login to Vault.
 
 ```console
-$ vault auth enable approle
 $ vault write auth/approle/role/cke policies=cke period=1h
 ```
 
