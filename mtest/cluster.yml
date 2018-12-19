@@ -26,6 +26,12 @@ files:
     file: setup-cke.sh
   - name: mtest_key
     file: mtest_key
+  - name: setup-local-pv.sh
+    file: setup-local-pv.sh
+  - name: local-pv.yml
+    file: local-pv.yml
+  - name: selector.yml
+    file: selector.yml
 ---
 kind: Image
 name: coreos
@@ -83,6 +89,9 @@ volumes:
     name: docker
     image: docker-image
     copy-on-write: true
+  - kind: vvfat
+    name: data
+    folder: data
 ---
 kind: Node
 name: node2
@@ -100,6 +109,9 @@ volumes:
     name: docker
     image: docker-image
     copy-on-write: true
+  - kind: vvfat
+    name: data
+    folder: data
 ---
 kind: Node
 name: node3
@@ -117,6 +129,9 @@ volumes:
     name: docker
     image: docker-image
     copy-on-write: true
+  - kind: vvfat
+    name: data
+    folder: data
 ---
 kind: Node
 name: node4
@@ -134,6 +149,9 @@ volumes:
     name: docker
     image: docker-image
     copy-on-write: true
+  - kind: vvfat
+    name: data
+    folder: data
 ---
 kind: Node
 name: node5
@@ -151,6 +169,9 @@ volumes:
     name: docker
     image: docker-image
     copy-on-write: true
+  - kind: vvfat
+    name: data
+    folder: data
 ---
 kind: Node
 name: node6
@@ -168,3 +189,6 @@ volumes:
     name: docker
     image: docker-image
     copy-on-write: true
+  - kind: vvfat
+    name: data
+    folder: data

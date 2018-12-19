@@ -36,6 +36,10 @@ DOWNLOADER := download-disk-if-exists
 
 export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG KUBECTL
 
+ETCD_BACKUP = \
+	$(OUTPUT)/setup-local-pv.sh \
+	$(OUTPUT)/local-pv.yml \
+	$(OUTPUT)/selector.yml
 
 GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/vault \
@@ -54,6 +58,7 @@ GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/cke.yml \
 	$(OUTPUT)/setup-cke.sh \
 	$(OUTPUT)/mtest_key \
+	$(ETCD_BACKUP) \
 	$(COREOS_IMAGE) \
 	$(GOPATH)/bin/$(DOWNLOADER)
 
@@ -104,6 +109,19 @@ $(OUTPUT)/setup-cke.sh: setup-cke.sh
 	chmod a+x $@
 
 $(OUTPUT)/mtest_key: $(SSH_PRIVKEY)
+	mkdir -p $(OUTPUT)
+	cp $< $@
+
+$(OUTPUT)/setup-local-pv.sh: setup-local-pv.sh
+	mkdir -p $(OUTPUT)
+	cp $< $@
+	chmod a+x $@
+
+$(OUTPUT)/local-pv.yml: local-pv.yml
+	mkdir -p $(OUTPUT)
+	cp $< $@
+
+$(OUTPUT)/selector.yml: selector.yml
 	mkdir -p $(OUTPUT)
 	cp $< $@
 

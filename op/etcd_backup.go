@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"strings"
 	"text/template"
 
 	"github.com/cybozu-go/cke"
@@ -13,6 +14,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 )
+
+var configMapText = `
+metadata:
+  name: etcd-backup-scripts
+  namespace: kube-system
+data:
+  etcd-backup.sh: |
+    #!/bin/sh -e
+
+    SNAPSHOT=snapshot-$(date '+%Y%m%d_%H%M%S');
+
+    env ETCDCTL_API=3 /usr/local/etcd/bin/etcdctl \
+        --endpoints https://cke-etcd:2379 \
+        --cacert=/etcd-certs/ca \
+        --cert=/etcd-certs/cert \
+        --key=/etcd-certs/key \
+        snapshot save /etcd-backup/${SNAPSHOT};
+    tar --remove-files -cvzf /etcd-backup/${SNAPSHOT}.tar.gz /etcd-backup/${SNAPSHOT};
+    find /etcd-backup/ -mtime +14 -exec rm -f {} \;
+`
 
 var secretTemplate = template.Must(template.New("").Parse(`
 metadata:
@@ -37,19 +58,23 @@ spec:
           containers:
           - name: etcd-backup
             image: ` + cke.EtcdImage.Name() + `
-            command: ["/bin/sh"]
-            args:
-            - -c
-            - SNAPSHOT=snapshot-$(date '+%Y%m%d_%H%M%S');
-              env ETCDCTL_API=3 /usr/local/etcd/bin/etcdctl --endpoints https://cke-etcd:2379 --cacert=/etcd-certs/ca --cert=/etcd-certs/cert --key=/etcd-certs/key snapshot save /etcd-backup/${SNAPSHOT};
-              tar --remove-files -cvzf /etcd-backup/${SNAPSHOT}.tar.gz /etcd-backup/${SNAPSHOT};
-              find /etcd-backup/ -mtime +14 -exec rm -f {} \;
+            command:
+              - /etcd-scripts/etcd-backup.sh
             volumeMounts:
+              - mountPath: /etcd-scripts
+                name: etcd-backup-scripts
               - mountPath: /etcd-certs
                 name: etcd-certs
               - mountPath: /etcd-backup
                 name: etcd-backup
           volumes:
+          - name: etcd-backup-scripts
+            configMap:
+              name: etcd-backup-scripts
+              items:
+              - key: etcd-backup.sh
+                path: etcd-backup.sh
+              defaultMode: 0555
           - name: etcd-certs
             secret:
               secretName: etcd-backup-secret
@@ -57,8 +82,69 @@ spec:
           - name: etcd-backup
             persistentVolumeClaim:
               claimName: {{ .PVCName }}
-          restartPolicy: OnFailure
+          restartPolicy: Never
 `))
+
+type etcdBackupConfigMapCreateOp struct {
+	apiserver *cke.Node
+	finished  bool
+}
+
+// EtcdBackupConfigMapCreateOp returns an Operator to create etcd-backup config.
+func EtcdBackupConfigMapCreateOp(apiserver *cke.Node) cke.Operator {
+	return &etcdBackupConfigMapCreateOp{
+		apiserver: apiserver,
+	}
+}
+
+func (o *etcdBackupConfigMapCreateOp) Name() string {
+	return "etcd-backup-configmap-create"
+}
+
+func (o *etcdBackupConfigMapCreateOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
+	return createEtcdBackupConfigMapCommand{o.apiserver}
+}
+
+type createEtcdBackupConfigMapCommand struct {
+	apiserver *cke.Node
+}
+
+func (c createEtcdBackupConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	configs := cs.CoreV1().ConfigMaps("kube-system")
+	_, err = configs.Get(etcdBackupConfigMapName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+	case errors.IsNotFound(err):
+		config := new(corev1.ConfigMap)
+		err = k8sYaml.NewYAMLToJSONDecoder(strings.NewReader(configMapText)).Decode(config)
+		if err != nil {
+			return err
+		}
+		_, err = configs.Create(config)
+		if err != nil {
+			return err
+		}
+	default:
+		return err
+	}
+	return nil
+}
+
+func (c createEtcdBackupConfigMapCommand) Command() cke.Command {
+	return cke.Command{
+		Name:   "create-etcd-backup-configmap",
+		Target: "etcd-backup",
+	}
+}
 
 type etcdBackupSecretCreateOp struct {
 	apiserver *cke.Node
@@ -141,6 +227,49 @@ func (c createEtcdBackupSecretCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "create-etcd-backup-secret",
 		Target: "etcd-backup",
+	}
+}
+
+type etcdBackupConfigMapRemoveOp struct {
+	apiserver *cke.Node
+	finished  bool
+}
+
+// EtcdBackupConfigMapRemoveOp returns an Operator to Remove etcd-backup config.
+func EtcdBackupConfigMapRemoveOp(apiserver *cke.Node) cke.Operator {
+	return &etcdBackupConfigMapRemoveOp{
+		apiserver: apiserver,
+	}
+}
+
+func (o *etcdBackupConfigMapRemoveOp) Name() string {
+	return "etcd-backup-configmap-remove"
+}
+
+func (o *etcdBackupConfigMapRemoveOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
+	return removeEtcdBackupConfigMapCommand{o.apiserver}
+}
+
+type removeEtcdBackupConfigMapCommand struct {
+	apiserver *cke.Node
+}
+
+func (c removeEtcdBackupConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
+		return err
+	}
+	return cs.CoreV1().ConfigMaps("kube-system").Delete(etcdBackupConfigMapName, metav1.NewDeleteOptions(0))
+}
+
+func (c removeEtcdBackupConfigMapCommand) Command() cke.Command {
+	return cke.Command{
+		Name:   "remove-etcd-backup-configmap",
+		Target: "etcd-backup-configmap",
 	}
 }
 

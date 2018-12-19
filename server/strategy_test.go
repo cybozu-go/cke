@@ -261,6 +261,7 @@ func (d testData) withEtcdBackup() testData {
 		PVCName:  "etcd-backup-pvc",
 		Schedule: "*/1 * * * *",
 	}
+	d.Status.Kubernetes.EtcdBackup.ConfigMap = &corev1.ConfigMap{}
 	d.Status.Kubernetes.EtcdBackup.Secret = &corev1.Secret{}
 	d.Status.Kubernetes.EtcdBackup.CronJob = &batchv1beta1.CronJob{
 		Spec: batchv1beta1.CronJobSpec{
@@ -1087,10 +1088,18 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "EtcdBackupCreate",
 			Input: newData().withEtcdBackup().with(func(d testData) {
+				d.Status.Kubernetes.EtcdBackup.ConfigMap = nil
 				d.Status.Kubernetes.EtcdBackup.Secret = nil
 				d.Status.Kubernetes.EtcdBackup.CronJob = nil
 			}),
-			ExpectedOps: []string{"etcd-backup-job-create", "etcd-backup-secret-create"},
+			ExpectedOps: []string{"etcd-backup-configmap-create", "etcd-backup-job-create", "etcd-backup-secret-create"},
+		},
+		{
+			Name: "EtcdBackupConfigMapCreate",
+			Input: newData().withEtcdBackup().with(func(d testData) {
+				d.Status.Kubernetes.EtcdBackup.ConfigMap = nil
+			}),
+			ExpectedOps: []string{"etcd-backup-configmap-create"},
 		},
 		{
 			Name: "EtcdBackupSecretCreate",
@@ -1125,7 +1134,7 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withEtcdBackup().with(func(d testData) {
 				d.Cluster.EtcdBackup.Enabled = false
 			}),
-			ExpectedOps: []string{"etcd-backup-job-remove", "etcd-backup-secret-remove"},
+			ExpectedOps: []string{"etcd-backup-configmap-remove", "etcd-backup-job-remove", "etcd-backup-secret-remove"},
 		},
 		{
 			Name: "Clean",

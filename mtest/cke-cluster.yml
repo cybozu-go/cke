@@ -19,3 +19,11 @@ options:
     - --disable-admission-plugins=Initializers
   kubelet:
     domain: cluster.local
+    extra_binds:
+    - source: /mnt/disks
+      destination: /mnt/disks
+      read_only: false
+etcd_backup:
+  enabled: false
+  pvc_name: etcd-backup-pvc
+  schedule: "* * * * *"

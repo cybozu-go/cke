@@ -44,6 +44,11 @@ var _ = BeforeSuite(func() {
 		}
 	}
 
+	_, stderr, err := execAt(node1, "/data/setup-local-pv.sh")
+	if err != nil {
+		Fail("failed to complete setup-local-pv.sh: " + string(stderr))
+	}
+
 	etcd, err := connectEtcd()
 	Expect(err).NotTo(HaveOccurred())
 	defer etcd.Close()

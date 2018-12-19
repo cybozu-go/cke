@@ -296,6 +296,9 @@ func decideEpOp(ep *corev1.Endpoints, apiServer *cke.Node, cpNodes []*cke.Node) 
 
 func decideEtcdBackupOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) (ops []cke.Operator) {
 	if c.EtcdBackup.Enabled == false {
+		if ks.EtcdBackup.ConfigMap != nil {
+			ops = append(ops, op.EtcdBackupConfigMapRemoveOp(apiServer))
+		}
 		if ks.EtcdBackup.Secret != nil {
 			ops = append(ops, op.EtcdBackupSecretRemoveOp(apiServer))
 		}
@@ -303,6 +306,10 @@ func decideEtcdBackupOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesC
 			ops = append(ops, op.EtcdBackupCronJobRemoveOp(apiServer))
 		}
 		return ops
+	}
+
+	if ks.EtcdBackup.ConfigMap == nil {
+		ops = append(ops, op.EtcdBackupConfigMapCreateOp(apiServer))
 	}
 
 	if ks.EtcdBackup.Secret == nil {

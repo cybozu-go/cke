@@ -375,6 +375,15 @@ func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 
 	s := cke.EtcdBackupStatus{}
 
+	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(etcdBackupConfigMapName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.ConfigMap = config
+	case errors.IsNotFound(err):
+	default:
+		return cke.EtcdBackupStatus{}, err
+	}
+
 	secret, err := clientset.CoreV1().Secrets("kube-system").Get(etcdBackupSecretName, metav1.GetOptions{})
 	switch {
 	case err == nil:

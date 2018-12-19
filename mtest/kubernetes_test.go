@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -210,5 +211,47 @@ var _ = Describe("Kubernetes", func() {
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		_, stderr, err = kubectl("-n", "kube-system", "get", "endpoints/cke-etcd")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+	})
+
+	It("has etcd backup", func() {
+		By("deploying cluster-dns to node1")
+		_, stderr, err := kubectl("patch", "deployment", "cluster-dns", "-n", "kube-system", "--patch", "$(cat /data/selector.yml)")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+
+		By("deploying local persistent volume")
+		_, stderr, err = kubectl("create", "-f", "/data/local-pv.yml")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		By("enabling etcd backup")
+		cluster.EtcdBackup.Enabled = true
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		By("checking etcd backup job status")
+		Eventually(func() error {
+			stdout, stderr, err := kubectl("-n", "kube-system", "get", "job", "--sort-by=.metadata.creationTimestamp", "-o", "json")
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+
+			var jobs batchv1.JobList
+			err = json.Unmarshal(stdout, &jobs)
+			if err != nil {
+				return err
+			}
+
+			if jobs.Items[0].Status.Succeeded != 1 {
+				return errors.New("Succeeded is not 1")
+			}
+
+			return nil
+		}).Should(Succeed())
 	})
 })
