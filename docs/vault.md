@@ -1,7 +1,7 @@
 PKI management by HashiCorp Vault
 =================================
 
-CKE requires [Vault][] to issue certificates for etcd and k8s.
+CKE depends on [Vault][] to issue certificates for etcd and k8s.
 
 This document describes how `ckecli vault init` configures Vault.
 
@@ -38,7 +38,7 @@ path "cke/*"
 
 ## AppRole
 
-Create `cke` AppRole to login to Vault.
+Create `cke` AppRole to login to Vault as follows:
 
 ```console
 $ vault write auth/approle/role/cke policies=cke period=1h

@@ -29,23 +29,23 @@ type caParams struct {
 var (
 	cas = []caParams{
 		{
-			vaultPath:  "cke/ca-server/",
+			vaultPath:  cke.CAServer,
 			commonName: "server CA",
 			key:        "server",
 		},
 		{
 
-			vaultPath:  "cke/ca-etcd-peer/",
+			vaultPath:  cke.CAEtcdPeer,
 			commonName: "etcd peer CA",
 			key:        "etcd-peer",
 		},
 		{
-			vaultPath:  "cke/ca-etcd-client/",
+			vaultPath:  cke.CAEtcdClient,
 			commonName: "etcd client CA",
 			key:        "etcd-client",
 		},
 		{
-			vaultPath:  "cke/ca-kubernetes/",
+			vaultPath:  cke.CAKubernetes,
 			commonName: "kubernetes CA",
 			key:        "kubernetes",
 		},
@@ -60,6 +60,20 @@ path "cke/*"
 
 func connectVault(ctx context.Context) (*vault.Client, error) {
 	cfg := vault.DefaultConfig()
+	if len(vaultInitCfg.endpoint) > 0 {
+		cfg.Address = vaultInitCfg.endpoint
+	}
+
+	if len(vaultInitCfg.caCertFile) > 0 {
+		tlsCfg := &vault.TLSConfig{
+			CACert: vaultInitCfg.caCertFile,
+		}
+		err := cfg.ConfigureTLS(tlsCfg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	vc, err := vault.NewClient(cfg)
 	if err != nil {
 		return nil, err
@@ -103,6 +117,11 @@ func initVault(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	err = createKV(ctx, vc)
+	if err != nil {
+		return err
 	}
 
 	found := false
@@ -203,6 +222,19 @@ func createCA(ctx context.Context, vc *vault.Client, ca caParams) error {
 	return storage.PutCACertificate(ctx, ca.key, secret.Data["certificate"].(string))
 }
 
+func createKV(ctx context.Context, vc *vault.Client) error {
+	kv1 := &vault.MountInput{
+		Type:    "kv",
+		Options: map[string]string{"version": "1"},
+	}
+	return vc.Sys().Mount(cke.CKESecret, kv1)
+}
+
+var vaultInitCfg struct {
+	caCertFile string
+	endpoint   string
+}
+
 // vaultInitCmd represents the "vault init" command
 var vaultInitCmd = &cobra.Command{
 	Use:   "init",
@@ -227,5 +259,7 @@ when VAULT_TOKEN environment variable is not set.`,
 }
 
 func init() {
+	vaultInitCmd.Flags().StringVar(&vaultInitCfg.caCertFile, "cacert", "", "x509 CA certificate file")
+	vaultInitCmd.Flags().StringVar(&vaultInitCfg.endpoint, "endpoint", "", "Vault URL")
 	vaultCmd.AddCommand(vaultInitCmd)
 }

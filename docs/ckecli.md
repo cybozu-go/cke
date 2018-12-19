@@ -39,7 +39,7 @@ Show all constraints on the cluster.
 `ckecli vault init`
 --------------------------
 
-Initialize vault configuration for CKE with [vault.md](vault.md).
+Initialize vault configuration for CKE as described in [vault.md](vault.md).
 
 `ckecli vault config JSON`
 --------------------------

@@ -16,6 +16,9 @@ import (
 	vault "github.com/hashicorp/vault/api"
 )
 
+// CKESecret is the path of key-value secret engine for CKE.
+const CKESecret = "cke/secrets"
+
 type anyMap = map[string]interface{}
 
 // VaultConfig is data to store in etcd
