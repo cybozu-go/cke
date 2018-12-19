@@ -12,7 +12,7 @@ NODE3 = 10.0.0.103
 NODE4 = 10.0.0.104
 NODE5 = 10.0.0.105
 NODE6 = 10.0.0.106
-PLACEMAT = $(GOPATH)/bin/placemat
+PLACEMAT = /usr/bin/placemat
 GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo
 MANAGEMENT_ETCD_VERSION = 3.3.9
 VAULT_VERSION = 0.11.0
@@ -258,7 +258,6 @@ clean:
 setup:
 	GO111MODULE=off go get -u \
 		github.com/onsi/ginkgo/ginkgo \
-		github.com/coreos/gofail \
-		github.com/cybozu-go/placemat/...
+		github.com/coreos/gofail
 
 .PHONY:	all clean setup test
