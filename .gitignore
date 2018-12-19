@@ -12,3 +12,6 @@
 .*.swp
 .#*
 \#*#
+
+# ignore go.sum
+/go.sum
