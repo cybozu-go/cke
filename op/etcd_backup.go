@@ -3,6 +3,7 @@ package op
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"text/template"
 
 	"github.com/cybozu-go/cke"
@@ -15,11 +16,12 @@ import (
 
 var secretTemplate = template.Must(template.New("").Parse(`
 metadata:
-  name: etcd-backup-secrets
+  name: etcd-backup-secret
   namespace: kube-system
 data:
-  cert: {{ .Cert }}
-  key: {{ .Key }}
+  cert: "{{ .Cert }}"
+  key: "{{ .Key }}"
+  ca: "{{ .CA }}"
 `))
 
 var cronJobTemplate = template.Must(template.New("").Parse(`
@@ -27,7 +29,7 @@ metadata:
   name: etcd-backup
   namespace: kube-system
 spec:
-  schedule: {{ .Schedule }}
+  schedule: "{{ .Schedule }}"
   jobTemplate:
     spec:
       template:
@@ -39,7 +41,7 @@ spec:
             args:
             - -c
             - SNAPSHOT=snapshot-$(date '+%Y%m%d_%H%M%S');
-              env ETCDCTL_API=3 /usr/local/bin/etcdctl --endpoints https://cke-etcd:2379 --cert=/etcd-certs/cert --key=/etcd-certs/key snapshot save /etcd-backup/${SNAPSHOT};
+              env ETCDCTL_API=3 /usr/local/etcd/bin/etcdctl --endpoints https://cke-etcd:2379 --cacert=/etcd-certs/ca --cert=/etcd-certs/cert --key=/etcd-certs/key snapshot save /etcd-backup/${SNAPSHOT};
               tar --remove-files -cvzf /etcd-backup/${SNAPSHOT}.tar.gz /etcd-backup/${SNAPSHOT};
               find /etcd-backup/ -mtime +14 -exec rm -f {} \;
             volumeMounts:
@@ -50,8 +52,8 @@ spec:
           volumes:
           - name: etcd-certs
             secret:
-              secretName: etcd-backup-secrets
-              defaultMode: 0400
+              secretName: etcd-backup-secret
+              defaultMode: 0444
           - name: etcd-backup
             persistentVolumeClaim:
               claimName: {{ .PVCName }}
@@ -101,14 +103,20 @@ func (c createEtcdBackupSecretCommand) Run(ctx context.Context, inf cke.Infrastr
 		if err != nil {
 			return err
 		}
+		ca, err := inf.Storage().GetCACertificate(ctx, "server")
+		if err != nil {
+			return err
+		}
 
 		buf := new(bytes.Buffer)
 		err = secretTemplate.Execute(buf, struct {
 			Cert string
 			Key  string
+			CA   string
 		}{
-			Cert: crt,
-			Key:  key,
+			Cert: base64.StdEncoding.EncodeToString([]byte(crt)),
+			Key:  base64.StdEncoding.EncodeToString([]byte(key)),
+			CA:   base64.StdEncoding.EncodeToString([]byte(ca)),
 		})
 		if err != nil {
 			return err
