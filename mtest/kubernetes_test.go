@@ -215,7 +215,8 @@ var _ = Describe("Kubernetes", func() {
 
 	It("has etcd backup", func() {
 		By("deploying cluster-dns to node1")
-		_, stderr, err := kubectl("patch", "deployment", "cluster-dns", "-n", "kube-system", "--patch", "$(cat /data/selector.yml)")
+		patch := fmt.Sprintf(`{ "spec": { "template": { "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" } } } } } }`, node1)
+		_, stderr, err := kubectl("patch", "deployment", "cluster-dns", "-n", "kube-system", "--patch="+patch)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		cluster := getCluster()
@@ -224,7 +225,7 @@ var _ = Describe("Kubernetes", func() {
 		}
 
 		By("deploying local persistent volume")
-		_, stderr, err = kubectl("create", "-f", "/data/local-pv.yml")
+		_, stderr, err = kubectl("create", "-f", "local-pv.yml")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("enabling etcd backup")
