@@ -213,7 +213,7 @@ var _ = Describe("Kubernetes", func() {
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 	})
 
-	It("has etcd backup", func() {
+	It("can backup etcd snapshot", func() {
 		By("deploying cluster-dns to node1")
 		patch := fmt.Sprintf(`{ "spec": { "template": { "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" } } } } } }`, node1)
 		_, stderr, err := kubectl("patch", "deployment", "cluster-dns", "-n", "kube-system", "--patch="+patch)
@@ -258,8 +258,16 @@ var _ = Describe("Kubernetes", func() {
 			return nil
 		}).Should(Succeed())
 
-		By("checking etcd snapshot exists")
-		_, stderr, err = execAt(node1, "ls", "/mnt/disks/etcd-backup/snapshot-*")
+		By("checking etcd snapshot is correct")
+		stdout, stderr, err := execAt(node1, "ls", "-1", "-t", "/mnt/disks/etcd-backup/snapshot-*")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		backupFile := strings.Split(string(stdout), "\n")[0]
+
+		_, stderr, err = execAt(node1, "tar", "xf", backupFile)
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		_, stderr, err = execAt(node1, "env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/home/cybozu/etcd-backup/*")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 	})
 })
