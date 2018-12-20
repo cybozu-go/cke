@@ -25,6 +25,7 @@ run_vault() {
         fi
     done
 
+    vault auth enable approle
     ckecli vault init
 
     # admin role need to be created here to generate .kube/config
