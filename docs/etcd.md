@@ -81,6 +81,77 @@ Backup
 If etcd backup is enabled on cluster configuration, `CronJob` which stores etcd snapshot will be deployed on Kubernetes cluster.
 Before enable etcd backup, you need to create `PersistentVolume` and `PersistentVolumeClaim` to store the backup data.
 
+1. Deploy `PersistentVolume` and `PersistentVolumeClaim`. This is example of using local persistent volume in particular node.
+```yaml
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: local-storage
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: etcd-backup-pv
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /mnt/disks/etcd-backup
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - 10.0.0.101
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: etcd-backup-pvc
+  namespace: kube-system
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: local-storage
+```
+2. Enable etcd backup in `cluster.yml` and set cron schedule. For example:
+```yaml
+options:
+  kubelet:
+    extra_binds:            # Bind mounts local directory for local persistent volume
+    - source: /mnt/disks
+      destination: /mnt/disks
+      read_only: false
+etcd_backup:
+  enabled: enable           # Enable etcd backup
+  pvc_name: etcd-backup-pvc # Make sure this name is same as `PersistentVolumeClaim` name.
+  schedule: "0 * * * *"     # Cron job format
+```
+3. Run `ckecli cluster set cluster.yml` to deploy etcd backup `CronJob`.
+4. You can find etcd snapshots in persistent volume after etcd backup `Job` is completed.
+```console
+$ kubectl get job -n kube-system
+NAME                     COMPLETIONS   DURATION   AGE
+etcd-backup-1545274380   1/1           4s         2m45s
+
+$ ls -l /mnt/disks/etcd-backup/
+total 1900
+-rw-r--r--. 1 10000 root 125927 Dec 20 02:41 snapshot-20181220_024105.tar.gz
+-rw-r--r--. 1 10000 root 133107 Dec 20 02:42 snapshot-20181220_024204.tar.gz
+...
+```
 
 [etcd]: https://github.com/etcd-io/etcd
 [RBAC]: https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/authentication.md
