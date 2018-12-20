@@ -20,18 +20,12 @@ files:
     file: etcdctl
   - name: vault
     file: vault
-  - name: kubectl
-    file: kubectl
   - name: setup-cke.sh
     file: setup-cke.sh
   - name: mtest_key
     file: mtest_key
   - name: setup-local-pv.sh
     file: setup-local-pv.sh
-  - name: local-pv.yml
-    file: local-pv.yml
-  - name: selector.yml
-    file: selector.yml
 ---
 kind: Image
 name: coreos

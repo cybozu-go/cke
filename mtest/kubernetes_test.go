@@ -248,11 +248,18 @@ var _ = Describe("Kubernetes", func() {
 				return err
 			}
 
+			if len(jobs.Items) < 1 {
+				return errors.New("no etcd backup jobs")
+			}
 			if jobs.Items[0].Status.Succeeded != 1 {
 				return errors.New("Succeeded is not 1")
 			}
 
 			return nil
 		}).Should(Succeed())
+
+		By("checking etcd snapshot exists")
+		_, stderr, err = execAt(node1, "ls", "/mnt/disks/etcd-backup/snapshot-*")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 	})
 })
