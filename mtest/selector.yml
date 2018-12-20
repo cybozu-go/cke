@@ -1,0 +1,5 @@
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: 10.0.0.101
