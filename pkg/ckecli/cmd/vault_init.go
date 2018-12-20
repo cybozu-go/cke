@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 
@@ -173,6 +174,13 @@ func initVault(ctx context.Context) error {
 	cfg.Endpoint = vc.Address()
 	cfg.RoleID = roleID
 	cfg.SecretID = secretID
+	if len(vaultInitCfg.caCertFile) > 0 {
+		data, err := ioutil.ReadFile(vaultInitCfg.caCertFile)
+		if err != nil {
+			return err
+		}
+		cfg.CACert = string(data)
+	}
 
 	err = storage.PutVaultConfig(ctx, cfg)
 	if err != nil {
