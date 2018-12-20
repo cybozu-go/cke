@@ -120,6 +120,15 @@ Option     | Default value | Description
 ---------- | ------------- | -----------
 `--output` | `json`        | output format (`json`,`file`)
 
+### `ckecli etcd snapshot list`
+
+List etcd snapshots.
+
+### `ckecli etcd snapshot get SNAPSHOT_NAME`
+
+Download etcd snapshot file to current directory.
+
+SNAPSHOT_NAME is the name of snapshot.
 
 `ckecli kubernetes`
 -------------------
