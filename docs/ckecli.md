@@ -49,6 +49,13 @@ Set vault configuration for CKE.
 
 If `JSON` is "-", `ckecli` reads from stdin.
 
+`ckecli vault ssh-privkey [--host=HOST] FILE`
+---------------------------------------------
+
+Store SSH private key for a host into Vault.  If no HOST is specified, the key will be
+used as the default key.
+
+FILE should be a SSH private key file.  If FILE is `-`, the contents are read from stdin.
 
 `ckecli ca set NAME PEM`
 ------------------------
