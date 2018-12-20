@@ -16,9 +16,8 @@ import (
 )
 
 const (
-	ttl100Year  = "876000h"
-	ttl10Year   = "87600h"
-	approlePath = "approle/"
+	ttl100Year = "876000h"
+	ttl10Year  = "87600h"
 )
 
 type caParams struct {
@@ -114,7 +113,7 @@ func initVault(ctx context.Context) error {
 	}
 
 	for _, ca := range cas {
-		err = createCA(ctx, vc, ca)
+		err = createPKI(ctx, vc, ca)
 		if err != nil {
 			return err
 		}
@@ -123,26 +122,6 @@ func initVault(ctx context.Context) error {
 	err = createKV(ctx, vc)
 	if err != nil {
 		return err
-	}
-
-	found := false
-	auths, err := vc.Sys().ListAuth()
-	if err != nil {
-		return err
-	}
-	for k := range auths {
-		if k == approlePath {
-			found = true
-			break
-		}
-	}
-	if !found {
-		err = vc.Sys().EnableAuthWithOptions(approlePath, &vault.EnableAuthOptions{
-			Type: "approle",
-		})
-		if err != nil {
-			return err
-		}
 	}
 
 	err = vc.Sys().PutPolicy("cke", ckePolicy)
@@ -187,10 +166,22 @@ func initVault(ctx context.Context) error {
 		return err
 	}
 
+	vc2, _, err := cke.VaultClient(cfg)
+	if err != nil {
+		return err
+	}
+
+	for _, ca := range cas {
+		err = createRootCA(ctx, vc2, ca)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-func createCA(ctx context.Context, vc *vault.Client, ca caParams) error {
+func createPKI(ctx context.Context, vc *vault.Client, ca caParams) error {
 	mounted := false
 	mounts, err := vc.Sys().ListMounts()
 	if err != nil {
@@ -202,19 +193,20 @@ func createCA(ctx context.Context, vc *vault.Client, ca caParams) error {
 			break
 		}
 	}
-	if !mounted {
-		err = vc.Sys().Mount(ca.vaultPath, &vault.MountInput{
-			Type: "pki",
-			Config: vault.MountConfigInput{
-				MaxLeaseTTL:     ttl100Year,
-				DefaultLeaseTTL: ttl10Year,
-			},
-		})
-		if err != nil {
-			return err
-		}
+	if mounted {
+		return nil
 	}
 
+	return vc.Sys().Mount(ca.vaultPath, &vault.MountInput{
+		Type: "pki",
+		Config: vault.MountConfigInput{
+			MaxLeaseTTL:     ttl100Year,
+			DefaultLeaseTTL: ttl10Year,
+		},
+	})
+}
+
+func createRootCA(ctx context.Context, vc *vault.Client, ca caParams) error {
 	secret, err := vc.Logical().Write(path.Join(ca.vaultPath, "/root/generate/internal"), map[string]interface{}{
 		"common_name": ca.commonName,
 		"ttl":         ttl100Year,
