@@ -60,6 +60,14 @@ func setVaultClient(client *vault.Client) {
 	vaultClient.Store(client)
 }
 
+func getVaultClient() (*vault.Client, error) {
+	v := vaultClient.Load()
+	if v == nil {
+		return nil, errors.New("vault is not connected")
+	}
+	return v.(*vault.Client), nil
+}
+
 // Infrastructure presents an interface for infrastructure on CKE
 type Infrastructure interface {
 	Close()
@@ -145,6 +153,17 @@ func (i *ckeInfrastructure) init(ctx context.Context) error {
 
 // NewInfrastructure creates a new Infrastructure instance
 func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructure, error) {
+	vc, err := getVaultClient()
+	if err != nil {
+		return nil, err
+	}
+
+	secret, err := vc.Logical().Read(SSHSecret)
+	if err != nil {
+		return nil, err
+	}
+	privkeys := secret.Data
+
 	agents := make(map[string]Agent)
 	defer func() {
 		for _, a := range agents {
@@ -158,7 +177,14 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	for _, n := range c.Nodes {
 		node := n
 		env.Go(func(ctx context.Context) error {
-			a, err := SSHAgent(node)
+			mykey, ok := privkeys[node.Address]
+			if !ok {
+				mykey = privkeys[""]
+			}
+			if mykey == nil {
+				return errors.New("no ssh private key for " + node.Address)
+			}
+			a, err := SSHAgent(node, mykey.(string))
 			if err != nil {
 				return errors.Wrap(err, node.Address)
 			}
@@ -171,7 +197,7 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 
 	}
 	env.Stop()
-	err := env.Wait()
+	err = env.Wait()
 	if err != nil {
 		return nil, err
 	}
@@ -182,27 +208,23 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 	return inf, nil
 }
 
-func (i ckeInfrastructure) Agent(addr string) Agent {
+func (i *ckeInfrastructure) Agent(addr string) Agent {
 	return i.agents[addr]
 }
 
-func (i ckeInfrastructure) Engine(addr string) ContainerEngine {
+func (i *ckeInfrastructure) Engine(addr string) ContainerEngine {
 	return Docker(i.agents[addr])
 }
 
-func (i ckeInfrastructure) Vault() (*vault.Client, error) {
-	v := vaultClient.Load()
-	if v == nil {
-		return nil, errors.New("vault is not connected")
-	}
-	return v.(*vault.Client), nil
+func (i *ckeInfrastructure) Vault() (*vault.Client, error) {
+	return getVaultClient()
 }
 
-func (i ckeInfrastructure) Storage() Storage {
+func (i *ckeInfrastructure) Storage() Storage {
 	return i.storage
 }
 
-func (i ckeInfrastructure) Close() {
+func (i *ckeInfrastructure) Close() {
 	for _, a := range i.agents {
 		a.Close()
 	}
@@ -260,7 +282,7 @@ func (i *ckeInfrastructure) K8sClient(ctx context.Context, n *Node) (*kubernetes
 	return kubernetes.NewForConfig(cfg)
 }
 
-func (i ckeInfrastructure) HTTPClient() *well.HTTPClient {
+func (i *ckeInfrastructure) HTTPClient() *well.HTTPClient {
 	return httpClient
 }
 

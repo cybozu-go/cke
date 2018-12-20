@@ -53,6 +53,7 @@ GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/cke-cluster.yml \
 	$(OUTPUT)/cke.yml \
 	$(OUTPUT)/setup-cke.sh \
+	$(OUTPUT)/mtest_key \
 	$(COREOS_IMAGE) \
 	$(GOPATH)/bin/$(DOWNLOADER)
 
@@ -101,6 +102,10 @@ $(OUTPUT)/setup-cke.sh: setup-cke.sh
 	mkdir -p $(OUTPUT)
 	cp $< $@
 	chmod a+x $@
+
+$(OUTPUT)/mtest_key: $(SSH_PRIVKEY)
+	mkdir -p $(OUTPUT)
+	cp $< $@
 
 $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)

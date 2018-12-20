@@ -29,7 +29,6 @@ func testStorageCluster(t *testing.T) {
 				User:     "cybozu",
 			},
 		},
-		SSHKey: "aaa",
 		DNSServers: []string{
 			"8.8.8.8",
 			"8.8.4.4",

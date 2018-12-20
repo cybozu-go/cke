@@ -29,7 +29,6 @@ func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 	n := &cke.Node{
 		Address:      m.Spec.IPv4[0],
 		User:         tmpl.User,
-		SSHKey:       tmpl.SSHKey,
 		ControlPlane: tmpl.ControlPlane,
 		Annotations:  make(map[string]string),
 		Labels:       make(map[string]string),
