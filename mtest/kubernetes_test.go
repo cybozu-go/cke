@@ -252,7 +252,7 @@ var _ = Describe("Kubernetes", func() {
 				return errors.New("no etcd backup jobs")
 			}
 			if jobs.Items[0].Status.Succeeded != 1 {
-				return errors.New("Succeeded is not 1")
+				return errors.New(".Succeeded is not 1")
 			}
 
 			return nil
@@ -269,5 +269,8 @@ var _ = Describe("Kubernetes", func() {
 
 		_, stderr, err = execAt(node1, "env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/home/cybozu/etcd-backup/*")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		stdout = ckecli("etcd", "snapshot", "list")
+		Expect(string(stdout)).To(ContainSubstring(".db"))
 	})
 })
