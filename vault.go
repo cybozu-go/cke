@@ -19,6 +19,9 @@ import (
 // CKESecret is the path of key-value secret engine for CKE.
 const CKESecret = "cke/secrets"
 
+// SSHSecret is the path of SSH private keys in Vault.
+const SSHSecret = CKESecret + "/ssh"
+
 type anyMap = map[string]interface{}
 
 // VaultConfig is data to store in etcd
