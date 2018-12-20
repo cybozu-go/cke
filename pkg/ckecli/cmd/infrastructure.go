@@ -102,7 +102,7 @@ func (i *cliInfrastructure) K8sClient(ctx context.Context, n *cke.Node) (*kubern
 	if err != nil {
 		return nil, err
 	}
-	ca, err := i.Storage().GetCACertificate(ctx, "server")
+	ca, err := i.Storage().GetCACertificate(ctx, "kubernetes")
 	if err != nil {
 		return nil, err
 	}

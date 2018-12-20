@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
@@ -48,8 +47,8 @@ spec:
             claimName: {{ .PVCName }}
 `))
 
-var etcdSnapShotCmd = &cobra.Command{
-	Use:   "snapshot list",
+var etcdSnapshotListCmd = &cobra.Command{
+	Use:   "list",
 	Short: "List etcd snapshots.",
 	Long: `List etcd snapshot file names.
 The filenames are usually contained created date string.`,
@@ -93,17 +92,20 @@ The filenames are usually contained created date string.`,
 			if err != nil {
 				return err
 			}
-			_, err = jobs.Create(job)
+			job, err = jobs.Create(job)
 			if err != nil {
 				return err
 			}
+			defer jobs.Delete("ckecli-etcd-snapshot-list", &metav1.DeleteOptions{})
+
 			pods := cs.CoreV1().Pods("kube-system")
-			w, err := pods.Watch(metav1.SingleObject(metav1.ObjectMeta{Labels: map[string]string{"job-name": "ckecli-etcd-snapshot-list"}}))
+			w, err := pods.Watch(metav1.ListOptions{
+				LabelSelector:   "job-name=ckecli-etcd-snapshot-list",
+				ResourceVersion: job.ResourceVersion,
+			})
 			if err != nil {
 				return err
 			}
-			ctx, cancel := watchtools.ContextWithOptionalTimeout(ctx, 0*time.Second)
-			defer cancel()
 			var result *corev1.Pod
 			ev, err := watchtools.UntilWithoutRetry(ctx, w, func(ev watch.Event) (bool, error) {
 				return podCompleted(ev)
@@ -114,6 +116,7 @@ The filenames are usually contained created date string.`,
 			if err != nil {
 				return err
 			}
+			defer pods.Delete(result.Name, &metav1.DeleteOptions{})
 
 			req := cs.CoreV1().RESTClient().Get().
 				Namespace("kube-system").
@@ -128,7 +131,8 @@ The filenames are usually contained created date string.`,
 			_, err = io.Copy(os.Stdout, readCloser)
 			return err
 		})
-		return nil
+		well.Stop()
+		return well.Wait()
 	},
 }
 
@@ -145,4 +149,8 @@ func podCompleted(event watch.Event) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func init() {
+	etcdSnapshotCmd.AddCommand(etcdSnapshotListCmd)
 }
