@@ -30,8 +30,8 @@ data:
         --cacert=/etcd-certs/ca \
         --cert=/etcd-certs/cert \
         --key=/etcd-certs/key \
-        snapshot save /etcd-backup/${SNAPSHOT};
-    tar --remove-files -cvzf /etcd-backup/${SNAPSHOT}.tar.gz /etcd-backup/${SNAPSHOT};
+        snapshot save /etcd-backup/${SNAPSHOT}.db;
+    tar --remove-files -cvzf /etcd-backup/${SNAPSHOT}.tar.gz /etcd-backup/${SNAPSHOT}.db;
     find /etcd-backup/ -mtime +14 -exec rm -f {} \;
 `
 
