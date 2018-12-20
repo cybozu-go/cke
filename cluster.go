@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/crypto/ssh"
 	corev1 "k8s.io/api/core/v1"
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -18,13 +17,10 @@ type Node struct {
 	Address      string            `json:"address"       yaml:"address"`
 	Hostname     string            `json:"hostname"      yaml:"hostname"`
 	User         string            `json:"user"          yaml:"user"`
-	SSHKey       string            `json:"ssh_key"       yaml:"ssh_key"`
 	ControlPlane bool              `json:"control_plane" yaml:"control_plane"`
 	Annotations  map[string]string `json:"annotations"   yaml:"annotations"`
 	Labels       map[string]string `json:"labels"        yaml:"labels"`
 	Taints       []corev1.Taint    `json:"taints"        yaml:"taints"`
-
-	signer ssh.Signer
 }
 
 // Nodename returns a hostname or address if hostname is empty
@@ -124,7 +120,6 @@ type Options struct {
 type Cluster struct {
 	Name          string   `json:"name"           yaml:"name"`
 	Nodes         []*Node  `json:"nodes"          yaml:"nodes"`
-	SSHKey        string   `json:"ssh_key"        yaml:"ssh_key"`
 	ServiceSubnet string   `json:"service_subnet" yaml:"service_subnet"`
 	PodSubnet     string   `json:"pod_subnet"     yaml:"pod_subnet"`
 	DNSServers    []string `json:"dns_servers"    yaml:"dns_servers"`
@@ -175,27 +170,14 @@ func (c *Cluster) validateNode(n *Node, fldPath *field.Path) error {
 	if len(n.User) == 0 {
 		return errors.New("user name is empty")
 	}
-	if len(c.SSHKey) == 0 && len(n.SSHKey) == 0 {
-		return errors.New("no SSH private key")
-	}
-	key := n.SSHKey
-	if len(key) == 0 {
-		key = c.SSHKey
-	}
 
-	signer, err := ssh.ParsePrivateKey([]byte(key))
-	if err != nil {
+	if err := validateNodeLabels(n, fldPath.Child("labels")); err != nil {
 		return err
 	}
-	n.signer = signer
-
-	if err = validateNodeLabels(n, fldPath.Child("labels")); err != nil {
+	if err := validateNodeAnnotations(n, fldPath.Child("annotations")); err != nil {
 		return err
 	}
-	if err = validateNodeAnnotations(n, fldPath.Child("annotations")); err != nil {
-		return err
-	}
-	if err = validateNodeTaints(n, fldPath.Child("taints")); err != nil {
+	if err := validateNodeTaints(n, fldPath.Child("taints")); err != nil {
 		return err
 	}
 	return nil

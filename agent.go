@@ -54,7 +54,7 @@ type sshAgent struct {
 
 // SSHAgent creates an Agent that communicates over SSH.
 // It returns non-nil error when connection could not be established.
-func SSHAgent(node *Node) (Agent, error) {
+func SSHAgent(node *Node, privkey string) (Agent, error) {
 	conn, err := agentDialer.Dial("tcp", node.Address+":22")
 	if err != nil {
 		log.Error("failed to dial: ", map[string]interface{}{
@@ -63,11 +63,15 @@ func SSHAgent(node *Node) (Agent, error) {
 		})
 		return nil, err
 	}
+	signer, err := ssh.ParsePrivateKey([]byte(privkey))
+	if err != nil {
+		return nil, err
+	}
 
 	config := &ssh.ClientConfig{
 		User: node.User,
 		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(node.signer),
+			ssh.PublicKeys(signer),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}

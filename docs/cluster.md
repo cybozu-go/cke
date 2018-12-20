@@ -9,7 +9,6 @@ Name            | Required | Type      | Description
 --------------- | -------- | --------- | -----------
 `name`          | true     | string    | The k8s cluster name.
 `nodes`         | true     | array     | `Node` list.
-`ssh_key`       | false    | string    | Cluster wide SSH private key.
 `service_subnet`| true     | string    | CIDR subnet for k8s `Service`.
 `pod_subnet`    | true     | string    | CIDR subnet for k8s `Pod`.
 `dns_servers`   | false    | array     | List of upstream DNS server IP addresses.
@@ -28,7 +27,6 @@ Name            | Required | Type      | Description
 `address`       | true     | string    | IP address of the node.
 `hostname`      | false    | string    | Override the real hostname of the node in k8s.
 `user`          | true     | string    | SSH user name.
-`ssh_key`       | false    | string    | SSH private key of the user.
 `control_plane` | false    | bool      | If true, the node will be used for k8s control plane and etcd.
 `annotations`   | false    | object    | Node annotations.
 `labels`        | false    | object    | Node labels.

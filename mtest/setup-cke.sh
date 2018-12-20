@@ -25,7 +25,9 @@ run_vault() {
         fi
     done
 
+    vault auth enable approle
     ckecli vault init
+    ckecli vault ssh-privkey /data/mtest_key
 
     # admin role need to be created here to generate .kube/config
     vault write cke/ca-kubernetes/roles/admin ttl=2h max_ttl=24h \

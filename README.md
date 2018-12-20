@@ -9,7 +9,7 @@ Cybozu Kubernetes Engine
 **CKE** (Cybozu Kubernetes Engine) is a distributed service that automates
 [Kubernetes][] cluster management.
 
-**Project Status**: Initial development.
+**Project Status**: Most features are implemented.
 
 Requirements
 ------------
@@ -28,8 +28,8 @@ Requirements
 * A user who belongs to `docker` group
 * SSH access for the user
 
-Planned Features
-----------------
+Features
+--------
 
 * Bootstrapping and life-cycle management.
 

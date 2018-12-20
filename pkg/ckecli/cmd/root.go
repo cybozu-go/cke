@@ -46,6 +46,9 @@ with etcd.  CKE server watches etcd to receive any updates.`,
 	Version: cke.Version,
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// without this, each subcommand's RunE would display usage text.
+		cmd.SilenceUsage = true
+
 		err := well.LogConfig{}.Apply()
 		if err != nil {
 			return err

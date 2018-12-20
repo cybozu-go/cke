@@ -1,9 +1,17 @@
 PKI management by HashiCorp Vault
 =================================
 
-CKE requires [Vault][] to issue certificates for etcd and k8s.
+CKE depends on [Vault][] to issue certificates for etcd and k8s.
 
-This document describes how to configure Vault for CKE.
+This document describes how `ckecli vault init` configures Vault.
+
+## Prerequisites
+
+* `approle` auth method need to be enabled as follows.
+
+```console
+$ vault auth enable approle
+```
 
 ## Secret engines
 
@@ -15,17 +23,16 @@ Root certificates need to be registered with `ckecli`.
 * `cke/ca-etcd-client`: issues client authentication certificates for etcd.
 * `cke/ca-kubernetes`: issues Kubernetes certificates.
 
-Example:
-```console
-$ vault secrets enable -path cke/ca-server \
-    -max-lease-ttl=876000h -default-lease-ttl=87600h pki
+Additionally, `kv` secret engine version 1 is mounted at `cke/secrets`.
 
-$ vault write -format=json cke/ca-server/root/generate/internal \
-    common_name='CKE server CA' ttl=876000h | \
-    jq -r .data.certificate > ca-server.crt
+## Secrets in `cke/secrets`
 
-$ ckecli ca set server ca-server.crt
-```
+Currently, there is only one secret `ssh` to hold SSH private keys
+to logging in to nodes.
+
+A secret in Vault can keep arbitrary number of key-value pairs.
+Keys in `ssh` are node addresses.  Empty key holds the default SSH
+private key used if matching key for the host is not found.
 
 ## Policy
 
@@ -40,10 +47,9 @@ path "cke/*"
 
 ## AppRole
 
-Create `cke` AppRole to login to Vault.
+Create `cke` AppRole to login to Vault as follows:
 
 ```console
-$ vault auth enable approle
 $ vault write auth/approle/role/cke policies=cke period=1h
 ```
 

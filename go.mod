@@ -1,7 +1,7 @@
 module github.com/cybozu-go/cke
 
 require (
-	cloud.google.com/go v0.26.0
+	cloud.google.com/go v0.34.0
 	contrib.go.opencensus.io/exporter/stackdriver v0.6.0 // indirect
 	github.com/99designs/gqlgen v0.7.1
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect

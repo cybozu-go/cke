@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 
@@ -15,9 +16,8 @@ import (
 )
 
 const (
-	ttl100Year  = "876000h"
-	ttl10Year   = "87600h"
-	approlePath = "approle/"
+	ttl100Year = "876000h"
+	ttl10Year  = "87600h"
 )
 
 type caParams struct {
@@ -29,23 +29,23 @@ type caParams struct {
 var (
 	cas = []caParams{
 		{
-			vaultPath:  "cke/ca-server/",
+			vaultPath:  cke.CAServer,
 			commonName: "server CA",
 			key:        "server",
 		},
 		{
 
-			vaultPath:  "cke/ca-etcd-peer/",
+			vaultPath:  cke.CAEtcdPeer,
 			commonName: "etcd peer CA",
 			key:        "etcd-peer",
 		},
 		{
-			vaultPath:  "cke/ca-etcd-client/",
+			vaultPath:  cke.CAEtcdClient,
 			commonName: "etcd client CA",
 			key:        "etcd-client",
 		},
 		{
-			vaultPath:  "cke/ca-kubernetes/",
+			vaultPath:  cke.CAKubernetes,
 			commonName: "kubernetes CA",
 			key:        "kubernetes",
 		},
@@ -60,6 +60,20 @@ path "cke/*"
 
 func connectVault(ctx context.Context) (*vault.Client, error) {
 	cfg := vault.DefaultConfig()
+	if len(vaultInitCfg.endpoint) > 0 {
+		cfg.Address = vaultInitCfg.endpoint
+	}
+
+	if len(vaultInitCfg.caCertFile) > 0 {
+		tlsCfg := &vault.TLSConfig{
+			CACert: vaultInitCfg.caCertFile,
+		}
+		err := cfg.ConfigureTLS(tlsCfg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	vc, err := vault.NewClient(cfg)
 	if err != nil {
 		return nil, err
@@ -99,30 +113,15 @@ func initVault(ctx context.Context) error {
 	}
 
 	for _, ca := range cas {
-		err = createCA(ctx, vc, ca)
+		err = createPKI(ctx, vc, ca)
 		if err != nil {
 			return err
 		}
 	}
 
-	found := false
-	auths, err := vc.Sys().ListAuth()
+	err = createKV(ctx, vc)
 	if err != nil {
 		return err
-	}
-	for k := range auths {
-		if k == approlePath {
-			found = true
-			break
-		}
-	}
-	if !found {
-		err = vc.Sys().EnableAuthWithOptions(approlePath, &vault.EnableAuthOptions{
-			Type: "approle",
-		})
-		if err != nil {
-			return err
-		}
 	}
 
 	err = vc.Sys().PutPolicy("cke", ckePolicy)
@@ -154,16 +153,35 @@ func initVault(ctx context.Context) error {
 	cfg.Endpoint = vc.Address()
 	cfg.RoleID = roleID
 	cfg.SecretID = secretID
+	if len(vaultInitCfg.caCertFile) > 0 {
+		data, err := ioutil.ReadFile(vaultInitCfg.caCertFile)
+		if err != nil {
+			return err
+		}
+		cfg.CACert = string(data)
+	}
 
 	err = storage.PutVaultConfig(ctx, cfg)
 	if err != nil {
 		return err
 	}
 
+	vc2, _, err := cke.VaultClient(cfg)
+	if err != nil {
+		return err
+	}
+
+	for _, ca := range cas {
+		err = createRootCA(ctx, vc2, ca)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-func createCA(ctx context.Context, vc *vault.Client, ca caParams) error {
+func createPKI(ctx context.Context, vc *vault.Client, ca caParams) error {
 	mounted := false
 	mounts, err := vc.Sys().ListMounts()
 	if err != nil {
@@ -175,19 +193,20 @@ func createCA(ctx context.Context, vc *vault.Client, ca caParams) error {
 			break
 		}
 	}
-	if !mounted {
-		err = vc.Sys().Mount(ca.vaultPath, &vault.MountInput{
-			Type: "pki",
-			Config: vault.MountConfigInput{
-				MaxLeaseTTL:     ttl100Year,
-				DefaultLeaseTTL: ttl10Year,
-			},
-		})
-		if err != nil {
-			return err
-		}
+	if mounted {
+		return nil
 	}
 
+	return vc.Sys().Mount(ca.vaultPath, &vault.MountInput{
+		Type: "pki",
+		Config: vault.MountConfigInput{
+			MaxLeaseTTL:     ttl100Year,
+			DefaultLeaseTTL: ttl10Year,
+		},
+	})
+}
+
+func createRootCA(ctx context.Context, vc *vault.Client, ca caParams) error {
 	secret, err := vc.Logical().Write(path.Join(ca.vaultPath, "/root/generate/internal"), map[string]interface{}{
 		"common_name": ca.commonName,
 		"ttl":         ttl100Year,
@@ -201,6 +220,19 @@ func createCA(ctx context.Context, vc *vault.Client, ca caParams) error {
 		return fmt.Errorf("Failed to issue ca: %#v", secret.Warnings)
 	}
 	return storage.PutCACertificate(ctx, ca.key, secret.Data["certificate"].(string))
+}
+
+func createKV(ctx context.Context, vc *vault.Client) error {
+	kv1 := &vault.MountInput{
+		Type:    "kv",
+		Options: map[string]string{"version": "1"},
+	}
+	return vc.Sys().Mount(cke.CKESecret, kv1)
+}
+
+var vaultInitCfg struct {
+	caCertFile string
+	endpoint   string
 }
 
 // vaultInitCmd represents the "vault init" command
@@ -227,5 +259,7 @@ when VAULT_TOKEN environment variable is not set.`,
 }
 
 func init() {
+	vaultInitCmd.Flags().StringVar(&vaultInitCfg.caCertFile, "cacert", "", "x509 CA certificate file")
+	vaultInitCmd.Flags().StringVar(&vaultInitCfg.endpoint, "endpoint", "", "Vault URL")
 	vaultCmd.AddCommand(vaultInitCmd)
 }
