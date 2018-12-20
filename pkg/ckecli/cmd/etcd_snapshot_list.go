@@ -19,8 +19,6 @@ import (
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/apimachinery/pkg/watch"
 	watchtools "k8s.io/client-go/tools/watch"
-	"k8s.io/kubernetes/pkg/kubectl"
-	"k8s.io/kubernetes/pkg/util/interrupt"
 )
 
 var snapshotListTemplate = template.Must(template.New("").Parse(`
@@ -106,17 +104,16 @@ The filenames are usually contained created date string.`,
 			}
 			ctx, cancel := watchtools.ContextWithOptionalTimeout(ctx, 0*time.Second)
 			defer cancel()
-			intr := interrupt.New(nil, cancel)
 			var result *corev1.Pod
-			err = intr.Run(func() error {
-				ev, err := watchtools.UntilWithoutRetry(ctx, w, func(ev watch.Event) (bool, error) {
-					return kubectl.PodCompleted(ev)
-				})
-				if ev != nil {
-					result = ev.Object.(*corev1.Pod)
-				}
-				return err
+			ev, err := watchtools.UntilWithoutRetry(ctx, w, func(ev watch.Event) (bool, error) {
+				return podCompleted(ev)
 			})
+			if ev != nil {
+				result = ev.Object.(*corev1.Pod)
+			}
+			if err != nil {
+				return err
+			}
 
 			req := cs.CoreV1().RESTClient().Get().
 				Namespace("kube-system").
@@ -133,4 +130,19 @@ The filenames are usually contained created date string.`,
 		})
 		return nil
 	},
+}
+
+func podCompleted(event watch.Event) (bool, error) {
+	switch event.Type {
+	case watch.Deleted:
+		return false, errors.New("target pod is deleted")
+	}
+	switch t := event.Object.(type) {
+	case *corev1.Pod:
+		switch t.Status.Phase {
+		case corev1.PodFailed, corev1.PodSucceeded:
+			return true, nil
+		}
+	}
+	return false, nil
 }
