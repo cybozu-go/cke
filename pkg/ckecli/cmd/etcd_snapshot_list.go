@@ -12,7 +12,6 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
@@ -25,26 +24,21 @@ metadata:
   name: ckecli-etcd-snapshot-list
   namespace: kube-system
 spec:
-  template:
-    metadata:
-      labels:
-        job-name: ckecli-etcd-snapshot-list
-    spec:
-      containers:
-        - command:
-            - ls
-            - /etcd-backup
-          image: quay.io/cybozu/etcd:3.3.9-4
-          imagePullPolicy: IfNotPresent
-          name: ckecli-etcd-snapshot-list
-          volumeMounts:
-            - mountPath: /etcd-backup
-              name: etcd-backup
-      restartPolicy: Never
-      volumes:
-        - name: etcd-backup
-          persistentVolumeClaim:
-            claimName: {{ .PVCName }}
+  containers:
+    - command:
+        - ls
+        - /etcd-backup
+      image: quay.io/cybozu/etcd:3.3.9-4
+      imagePullPolicy: IfNotPresent
+      name: ckecli-etcd-snapshot-list
+      volumeMounts:
+        - mountPath: /etcd-backup
+          name: etcd-backup
+  restartPolicy: Never
+  volumes:
+    - name: etcd-backup
+      persistentVolumeClaim:
+        claimName: {{ .PVCName }}
 `))
 
 var etcdSnapshotListCmd = &cobra.Command{
@@ -75,7 +69,7 @@ The filenames are usually contained created date string.`,
 			if err != nil {
 				return err
 			}
-			jobs := cs.BatchV1().Jobs("kube-system")
+			pods := cs.CoreV1().Pods("kube-system")
 
 			buf := new(bytes.Buffer)
 			err = snapshotListTemplate.Execute(buf, struct {
@@ -87,21 +81,20 @@ The filenames are usually contained created date string.`,
 				return err
 			}
 
-			job := new(batchv1.Job)
-			err = k8sYaml.NewYAMLToJSONDecoder(strings.NewReader(buf.String())).Decode(job)
+			pod := new(corev1.Pod)
+			err = k8sYaml.NewYAMLToJSONDecoder(strings.NewReader(buf.String())).Decode(pod)
 			if err != nil {
 				return err
 			}
-			job, err = jobs.Create(job)
+			pod, err = pods.Create(pod)
 			if err != nil {
 				return err
 			}
-			defer jobs.Delete("ckecli-etcd-snapshot-list", &metav1.DeleteOptions{})
+			defer pods.Delete(pod.Name, &metav1.DeleteOptions{})
 
-			pods := cs.CoreV1().Pods("kube-system")
 			w, err := pods.Watch(metav1.ListOptions{
-				LabelSelector:   "job-name=ckecli-etcd-snapshot-list",
-				ResourceVersion: job.ResourceVersion,
+				FieldSelector:   "metadata.name=ckecli-etcd-snapshot-list",
+				ResourceVersion: pod.ResourceVersion,
 			})
 			if err != nil {
 				return err
@@ -116,7 +109,6 @@ The filenames are usually contained created date string.`,
 			if err != nil {
 				return err
 			}
-			defer pods.Delete(result.Name, &metav1.DeleteOptions{})
 
 			req := cs.CoreV1().RESTClient().Get().
 				Namespace("kube-system").
