@@ -24,6 +24,8 @@ files:
     file: kubectl
   - name: setup-cke.sh
     file: setup-cke.sh
+  - name: mtest_key
+    file: mtest_key
 ---
 kind: Image
 name: coreos
