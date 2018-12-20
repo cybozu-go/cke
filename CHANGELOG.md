@@ -5,6 +5,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.24] - 2018-12-20
+### Changed
+- Drop `ssh_key` fields from `cluster.yml` (#113).
+- Fix bugs in `ckecli vault init` (#113).
+
+### Added
+- `ckecli vault ssh-privkey` stores SSH private key to Vault (#113).
+
 ## [0.23] - 2018-12-06
 ### Added
 - Add `ckecli images` subcommand to list container image names used by `cke` (#109).
@@ -140,7 +148,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.23...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.24...HEAD
+[0.24]: https://github.com/cybozu-go/cke/compare/v0.23...v0.24
 [0.23]: https://github.com/cybozu-go/cke/compare/v0.22...v0.23
 [0.22]: https://github.com/cybozu-go/cke/compare/v0.21...v0.22
 [0.21]: https://github.com/cybozu-go/cke/compare/v0.20...v0.21
