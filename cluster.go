@@ -123,6 +123,7 @@ type Cluster struct {
 	ServiceSubnet string   `json:"service_subnet" yaml:"service_subnet"`
 	PodSubnet     string   `json:"pod_subnet"     yaml:"pod_subnet"`
 	DNSServers    []string `json:"dns_servers"    yaml:"dns_servers"`
+	DNSService    string   `json:"dns_service"    yaml:"dns_service"`
 	Options       Options  `json:"options"        yaml:"options"`
 }
 
@@ -152,6 +153,13 @@ func (c *Cluster) Validate() error {
 	for _, a := range c.DNSServers {
 		if net.ParseIP(a) == nil {
 			return errors.New("invalid IP address: " + a)
+		}
+	}
+
+	if len(c.DNSService) > 0 {
+		fields := strings.Split(c.DNSService, "/")
+		if len(fields) != 2 {
+			return errors.New("invalid DNS service (no namespace?): " + c.DNSService)
 		}
 	}
 
