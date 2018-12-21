@@ -1,7 +1,7 @@
 #!/bin/sh -e
 
 install_apps() {
-  sudo cp /data/{vault,cke,ckecli,kubectl,etcd,etcdctl} /opt/bin
+  sudo cp /data/{vault,cke,ckecli,etcd,etcdctl} /opt/bin
   PATH=/opt/bin:$PATH
   export PATH
 }

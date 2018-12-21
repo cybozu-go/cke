@@ -26,6 +26,10 @@ const (
 
 	nodeDNSAppName = "node-dns"
 
+	etcdBackupConfigMapName = "etcd-backup-scripts"
+	etcdBackupSecretName    = "etcd-backup-secret"
+	etcdBackupJobName       = "etcd-backup"
+
 	timeoutDuration = 5 * time.Second
 
 	etcdPKIPath = "/etc/etcd/pki"

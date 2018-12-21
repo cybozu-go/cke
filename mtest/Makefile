@@ -16,7 +16,7 @@ PLACEMAT = /usr/bin/placemat
 GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo
 MANAGEMENT_ETCD_VERSION = 3.3.9
 VAULT_VERSION = 0.11.0
-K8S_VERSION = 1.11.2
+K8S_VERSION = 1.12.3
 PLACEMAT_DATADIR = /var/scratch/placemat
 
 export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO
@@ -36,7 +36,6 @@ DOWNLOADER := download-disk-if-exists
 
 export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG KUBECTL
 
-
 GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/vault \
 	$(OUTPUT)/cke $(OUTPUT)/ckecli \
@@ -54,6 +53,8 @@ GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/cke.yml \
 	$(OUTPUT)/setup-cke.sh \
 	$(OUTPUT)/mtest_key \
+	$(ETCD_BACKUP) \
+	$(OUTPUT)/setup-local-pv.sh \
 	$(COREOS_IMAGE) \
 	$(GOPATH)/bin/$(DOWNLOADER)
 
@@ -106,6 +107,11 @@ $(OUTPUT)/setup-cke.sh: setup-cke.sh
 $(OUTPUT)/mtest_key: $(SSH_PRIVKEY)
 	mkdir -p $(OUTPUT)
 	cp $< $@
+
+$(OUTPUT)/setup-local-pv.sh: setup-local-pv.sh
+	mkdir -p $(OUTPUT)
+	cp $< $@
+	chmod a+x $@
 
 $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)

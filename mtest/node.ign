@@ -57,6 +57,11 @@
         "contents": "[Mount]\nWhat=/dev/vdb\nWhere=/var/lib/docker\nType=ext4\n\n[Install]\nWantedBy=local-fs.target"
       },
       {
+        "name": "data.mount",
+        "enable": true,
+        "contents": "[Mount]\nWhat=/dev/vdc1\nWhere=/data\nType=vfat\nOptions=ro\n\n[Install]\nWantedBy=local-fs.target"
+      },
+      {
         "name": "docker.service",
         "dropins": [{
           "name": "10-docker-opts.conf",

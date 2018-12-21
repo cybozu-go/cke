@@ -20,12 +20,12 @@ files:
     file: etcdctl
   - name: vault
     file: vault
-  - name: kubectl
-    file: kubectl
   - name: setup-cke.sh
     file: setup-cke.sh
   - name: mtest_key
     file: mtest_key
+  - name: setup-local-pv.sh
+    file: setup-local-pv.sh
 ---
 kind: Image
 name: coreos
@@ -83,6 +83,9 @@ volumes:
     name: docker
     image: docker-image
     copy-on-write: true
+  - kind: vvfat
+    name: data
+    folder: data
 ---
 kind: Node
 name: node2
@@ -100,6 +103,9 @@ volumes:
     name: docker
     image: docker-image
     copy-on-write: true
+  - kind: vvfat
+    name: data
+    folder: data
 ---
 kind: Node
 name: node3
@@ -117,6 +123,9 @@ volumes:
     name: docker
     image: docker-image
     copy-on-write: true
+  - kind: vvfat
+    name: data
+    folder: data
 ---
 kind: Node
 name: node4
@@ -134,6 +143,9 @@ volumes:
     name: docker
     image: docker-image
     copy-on-write: true
+  - kind: vvfat
+    name: data
+    folder: data
 ---
 kind: Node
 name: node5
@@ -151,6 +163,9 @@ volumes:
     name: docker
     image: docker-image
     copy-on-write: true
+  - kind: vvfat
+    name: data
+    folder: data
 ---
 kind: Node
 name: node6
@@ -168,3 +183,6 @@ volumes:
     name: docker
     image: docker-image
     copy-on-write: true
+  - kind: vvfat
+    name: data
+    folder: data

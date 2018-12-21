@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
+	"k8s.io/client-go/rest"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
@@ -95,8 +98,27 @@ func (i *cliInfrastructure) NewEtcdClient(ctx context.Context, endpoints []strin
 }
 
 func (i *cliInfrastructure) K8sClient(ctx context.Context, n *cke.Node) (*kubernetes.Clientset, error) {
-	panic("not implemented")
+	c, k, err := cke.KubernetesCA{}.IssueAdminCert(ctx, i, "1h")
+	if err != nil {
+		return nil, err
+	}
+	ca, err := i.Storage().GetCACertificate(ctx, "kubernetes")
+	if err != nil {
+		return nil, err
+	}
+	tlsCfg := rest.TLSClientConfig{
+		CertData: []byte(c),
+		KeyData:  []byte(k),
+		CAData:   []byte(ca),
+	}
+	cfg := &rest.Config{
+		Host:            "https://" + n.Address + ":6443",
+		TLSClientConfig: tlsCfg,
+		Timeout:         5 * time.Second,
+	}
+	return kubernetes.NewForConfig(cfg)
 }
+
 func (i *cliInfrastructure) HTTPClient() *well.HTTPClient {
 	panic("not implemented")
 }

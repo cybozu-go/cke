@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -210,5 +211,66 @@ var _ = Describe("Kubernetes", func() {
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		_, stderr, err = kubectl("-n", "kube-system", "get", "endpoints/cke-etcd")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+	})
+
+	It("can backup etcd snapshot", func() {
+		By("deploying cluster-dns to node1")
+		patch := fmt.Sprintf(`{ "spec": { "template": { "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" } } } } } }`, node1)
+		_, stderr, err := kubectl("patch", "deployment", "cluster-dns", "-n", "kube-system", "--patch="+patch)
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+
+		By("deploying local persistent volume")
+		_, stderr, err = kubectl("create", "-f", "local-pv.yml")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		By("enabling etcd backup")
+		cluster.EtcdBackup.Enabled = true
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		By("checking etcd backup job status")
+		Eventually(func() error {
+			stdout, stderr, err := kubectl("-n", "kube-system", "get", "job", "--sort-by=.metadata.creationTimestamp", "-o", "json")
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+
+			var jobs batchv1.JobList
+			err = json.Unmarshal(stdout, &jobs)
+			if err != nil {
+				return err
+			}
+
+			if len(jobs.Items) < 1 {
+				return errors.New("no etcd backup jobs")
+			}
+			if jobs.Items[0].Status.Succeeded != 1 {
+				return errors.New(".Succeeded is not 1")
+			}
+
+			return nil
+		}).Should(Succeed())
+
+		By("checking etcd snapshot is correct")
+		stdout, stderr, err := execAt(node1, "ls", "-1", "-t", "/mnt/disks/etcd-backup/snapshot-*")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		backupFile := strings.Split(string(stdout), "\n")[0]
+
+		_, stderr, err = execAt(node1, "tar", "xf", backupFile)
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		_, stderr, err = execAt(node1, "env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/home/cybozu/etcd-backup/*")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		stdout = ckecli("etcd", "snapshot", "list")
+		Expect(string(stdout)).To(ContainSubstring("snapshot-"))
 	})
 })

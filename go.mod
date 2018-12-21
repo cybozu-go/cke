@@ -34,8 +34,12 @@ require (
 	github.com/docker/go-units v0.3.3 // indirect
 	github.com/duosecurity/duo_api_golang v0.0.0-20180315112207-d0530c80e49a // indirect
 	github.com/elazarl/go-bindata-assetfs v1.0.0 // indirect
+	github.com/emicklei/go-restful v2.8.0+incompatible // indirect
 	github.com/etcd-io/gofail v0.0.0-20180808172546-51ce9a71510a
+	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
+	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/fatih/structs v1.0.0 // indirect
+	github.com/go-openapi/spec v0.17.2 // indirect
 	github.com/go-sql-driver/mysql v1.4.0 // indirect
 	github.com/go-test/deep v1.0.1 // indirect
 	github.com/gocql/gocql v0.0.0-20180913162544-5a139e8dcc59 // indirect
@@ -106,5 +110,12 @@ require (
 	gotest.tools v2.1.0+incompatible // indirect
 	k8s.io/api v0.0.0-20181013020047-475331a8afff
 	k8s.io/apimachinery v0.0.0-20181022183627-f71dbbc36e12
+	k8s.io/cli-runtime v0.0.0-20181219232542-2fe405ec89ac // indirect
 	k8s.io/client-go v9.0.0+incompatible
+	k8s.io/klog v0.1.0 // indirect
+	k8s.io/kube-openapi v0.0.0-20181114233023-0317810137be // indirect
+	k8s.io/kubernetes v1.13.1
+	k8s.io/utils v0.0.0-20181115163542-0d26856f57b3 // indirect
+	sigs.k8s.io/kustomize v1.0.11 // indirect
+	sigs.k8s.io/yaml v1.1.0 // indirect
 )
