@@ -271,6 +271,6 @@ var _ = Describe("Kubernetes", func() {
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		stdout = ckecli("etcd", "snapshot", "list")
-		Expect(string(stdout)).To(ContainSubstring(".db"))
+		Expect(string(stdout)).To(ContainSubstring("snapshot-"))
 	})
 })
