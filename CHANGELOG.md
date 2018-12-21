@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.25] - 2018-12-21
+### Added
+- `dns_service` to specify Kubernetes Service for upstream DNS servers (#114).
+
 ## [0.24] - 2018-12-20
 ### Changed
 - Drop `ssh_key` fields from `cluster.yml` (#113).
@@ -148,7 +152,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.24...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.25...HEAD
+[0.25]: https://github.com/cybozu-go/cke/compare/v0.24...v0.25
 [0.24]: https://github.com/cybozu-go/cke/compare/v0.23...v0.24
 [0.23]: https://github.com/cybozu-go/cke/compare/v0.22...v0.23
 [0.22]: https://github.com/cybozu-go/cke/compare/v0.21...v0.22
