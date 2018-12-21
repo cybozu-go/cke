@@ -24,6 +24,7 @@ nodes:
 service_subnet: 12.34.56.00/24
 pod_subnet: 10.1.0.0/16
 dns_servers: ["1.1.1.1", "8.8.8.8"]
+dns_service: kube-system/dns
 options:
   etcd:
     volume_name: myetcd
@@ -94,6 +95,9 @@ options:
 	}
 	if !reflect.DeepEqual(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"}) {
 		t.Error(`!reflect.DeepEqual(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"})`)
+	}
+	if c.DNSService != "kube-system/dns" {
+		t.Error(`c.DNSService != "kube-system/dns"`)
 	}
 
 	if c.Options.Etcd.VolumeName != "myetcd" {
@@ -174,6 +178,16 @@ func testClusterValidate(t *testing.T) {
 				ServiceSubnet: "10.0.0.0/14",
 				PodSubnet:     "10.1.0.0/16",
 				DNSServers:    []string{"a.b.c.d"},
+			},
+			true,
+		},
+		{
+			"invalid DNS service name",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				DNSService:    "hoge",
 			},
 			true,
 		},
@@ -277,6 +291,7 @@ func testClusterValidate(t *testing.T) {
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
 				PodSubnet:     "10.1.0.0/16",
+				DNSService:    "kube-system/dns",
 				Options: Options{
 					Kubelet: KubeletParams{
 						Domain: "cybozu.com",

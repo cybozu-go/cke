@@ -38,7 +38,7 @@ type KubernetesClusterStatus struct {
 	Nodes                 []corev1.Node
 	RBACRoleExists        bool
 	RBACRoleBindingExists bool
-	DNSServers            []string
+	DNSService            *corev1.Service
 	ClusterDNS            ClusterDNSStatus
 	NodeDNS               NodeDNSStatus
 	EtcdEndpoints         *corev1.Endpoints

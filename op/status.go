@@ -185,7 +185,7 @@ func getEtcdMemberInSync(ctx context.Context, inf cke.Infrastructure, address st
 }
 
 // GetKubernetesClusterStatus returns KubernetesClusterStatus
-func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.KubernetesClusterStatus, error) {
+func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node, cluster *cke.Cluster) (cke.KubernetesClusterStatus, error) {
 	clientset, err := inf.K8sClient(ctx, n)
 	if err != nil {
 		return cke.KubernetesClusterStatus{}, err
@@ -224,6 +224,21 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	case errors.IsNotFound(err):
 	default:
 		return cke.KubernetesClusterStatus{}, err
+	}
+
+	if len(cluster.DNSService) > 0 {
+		fields := strings.Split(cluster.DNSService, "/")
+		if len(fields) != 2 {
+			panic("invalid dns_service in cluster.yml")
+		}
+		svc, err := clientset.CoreV1().Services(fields[0]).Get(fields[1], metav1.GetOptions{})
+		switch {
+		case errors.IsNotFound(err):
+		case err == nil:
+			s.DNSService = svc
+		default:
+			return cke.KubernetesClusterStatus{}, err
+		}
 	}
 
 	s.ClusterDNS, err = GetClusterDNSStatus(ctx, inf, n)

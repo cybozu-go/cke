@@ -215,7 +215,6 @@ func (d testData) withK8sRBACReady() testData {
 
 func (d testData) withK8sClusterDNSReady(dnsServers []string, clusterDomain, clusterIP string) testData {
 	d.withK8sRBACReady()
-	d.Status.Kubernetes.DNSServers = dnsServers
 	d.Status.Kubernetes.ClusterDNS.ServiceAccountExists = true
 	d.Status.Kubernetes.ClusterDNS.RBACRoleExists = true
 	d.Status.Kubernetes.ClusterDNS.RBACRoleBindingExists = true
@@ -543,6 +542,18 @@ func TestDecideOps(t *testing.T) {
 				"create-etcd-endpoints",
 				"create-node-dns-configmap",
 				"create-node-dns-daemonset",
+			},
+		},
+		{
+			Name: "UpdateDNSService",
+			Input: newData().withEtcdEndpoints().with(func(d testData) {
+				svc := &corev1.Service{}
+				svc.Spec.ClusterIP = "1.1.1.1"
+				d.Status.Kubernetes.DNSService = svc
+			}),
+			ExpectedOps: []string{
+				"update-cluster-dns-configmap",
+				"update-node-dns-configmap",
 			},
 		},
 		{

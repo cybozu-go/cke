@@ -12,10 +12,15 @@ Name            | Required | Type      | Description
 `service_subnet`| true     | string    | CIDR subnet for k8s `Service`.
 `pod_subnet`    | true     | string    | CIDR subnet for k8s `Pod`.
 `dns_servers`   | false    | array     | List of upstream DNS server IP addresses.
+`dns_service`   | false    | string    | Upstream DNS service name with namespace as `namespace/service`.
 `options`       | false    | `Options` | See options.
 
 * IP addresses in `pod_subnet` are only used for host-local communication
   as a fallback CNI plugin.  They are never seen from outside of the cluster.
+* Upstream DNS servers can be specified one of the following ways:
+    * List server IP addresses in `dns_servers`.
+    * Specify Kubernetes `Service` name in `dns_service` (e.g. `"kube-system/dns"`).  
+      The service type must be `ClusterIP`.
 
 Node
 ----

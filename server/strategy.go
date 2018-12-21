@@ -175,6 +175,13 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 
 func decideClusterDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) (ops []cke.Operator) {
 	desiredDNSServers := c.DNSServers
+	if ks.DNSService != nil {
+		switch ip := ks.DNSService.Spec.ClusterIP; ip {
+		case "", "None":
+		default:
+			desiredDNSServers = []string{ip}
+		}
+	}
 	desiredClusterDomain := c.Options.Kubelet.Domain
 
 	if len(desiredClusterDomain) == 0 {
@@ -194,7 +201,7 @@ func decideClusterDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesC
 		ops = append(ops, op.KubeClusterDNSCreateConfigMapOp(apiServer, desiredClusterDomain, desiredDNSServers))
 	} else {
 		actualConfigData := ks.ClusterDNS.ConfigMap.Data
-		expectedConfig := op.ClusterDNSConfigMap(c.Options.Kubelet.Domain, c.DNSServers)
+		expectedConfig := op.ClusterDNSConfigMap(desiredClusterDomain, desiredDNSServers)
 		if actualConfigData["Corefile"] != expectedConfig.Data["Corefile"] {
 			ops = append(ops, op.KubeClusterDNSUpdateConfigMapOp(apiServer, expectedConfig))
 		}
@@ -228,11 +235,20 @@ func decideNodeDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClus
 		}
 	}
 
+	desiredDNSServers := c.DNSServers
+	if ks.DNSService != nil {
+		switch ip := ks.DNSService.Spec.ClusterIP; ip {
+		case "", "None":
+		default:
+			desiredDNSServers = []string{ip}
+		}
+	}
+
 	if ks.NodeDNS.ConfigMap == nil {
-		ops = append(ops, op.KubeNodeDNSCreateConfigMapOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers))
+		ops = append(ops, op.KubeNodeDNSCreateConfigMapOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, desiredDNSServers))
 	} else {
 		actualConfigData := ks.NodeDNS.ConfigMap.Data
-		expectedConfig := op.NodeDNSConfigMap(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, c.DNSServers)
+		expectedConfig := op.NodeDNSConfigMap(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, desiredDNSServers)
 		if actualConfigData["unbound.conf"] != expectedConfig.Data["unbound.conf"] {
 			ops = append(ops, op.KubeNodeDNSUpdateConfigMapOp(apiServer, expectedConfig))
 		}

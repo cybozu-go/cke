@@ -69,7 +69,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 	}
 
 	if livingMaster != nil {
-		cs.Kubernetes, err = op.GetKubernetesClusterStatus(ctx, inf, livingMaster)
+		cs.Kubernetes, err = op.GetKubernetesClusterStatus(ctx, inf, livingMaster, cluster)
 		if err != nil {
 			log.Error("failed to get kubernetes cluster status", map[string]interface{}{
 				log.FnError: err,
