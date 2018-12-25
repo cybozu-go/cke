@@ -54,12 +54,7 @@ func (c createEtcdBackupConfigMapCommand) Run(ctx context.Context, inf cke.Infra
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		config := RenderConfigMap(c.rotate)
-		if err != nil {
-			return err
-		}
-
-		_, err = configs.Create(config)
+		_, err = configs.Create(RenderConfigMap(c.rotate))
 		if err != nil {
 			return err
 		}

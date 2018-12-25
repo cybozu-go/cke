@@ -4,11 +4,12 @@ import (
 	"text/template"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 )
 
 var configMapTemplate = template.Must(template.New("").Parse(`
 metadata:
-  name: etcdbackup-config
+  name: ` + op.EtcdBackupAppName + `
   namespace: kube-system
 data:
   config.yml: |
@@ -25,7 +26,7 @@ data:
 
 var secretTemplate = template.Must(template.New("").Parse(`
 metadata:
-  name: etcdbackup-secret
+  name: ` + op.EtcdBackupAppName + `
   namespace: kube-system
 data:
   cert: "{{ .Cert }}"
@@ -35,7 +36,7 @@ data:
 
 var podTemplate = template.Must(template.New("").Parse(`
 metadata:
-  name: etcdbackup
+  name: ` + op.EtcdBackupAppName + `
   namespace: kube-system
 spec:
   containers:
@@ -57,14 +58,14 @@ spec:
   volumes:
   - name: etcd-certs
     secret:
-      secretName: etcdbackup-secret
+      secretName: ` + op.EtcdBackupAppName + `
       defaultMode: 0444
   - name: etcdbackup
     persistentVolumeClaim:
       claimName: {{ .PVCName }}
   - name: config
     configMap:
-      name: etcdbackup-config
+      name: ` + op.EtcdBackupAppName + `
       items:
         - key: config.yml
           path: config.yml
@@ -73,7 +74,7 @@ spec:
 
 var cronJobTemplate = template.Must(template.New("").Parse(`
 metadata:
-  name: etcdbackup
+  name: ` + op.EtcdBackupAppName + `
   namespace: kube-system
 spec:
   jobTemplate:
@@ -93,7 +94,7 @@ spec:
 
 var serviceText = `
 metadata:
-  name: etcdbackup
+  name: ` + op.EtcdBackupAppName + `
   namespace: kube-system
 spec:
   ports:
