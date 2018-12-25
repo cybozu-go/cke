@@ -41,7 +41,7 @@ func (c removeEtcdBackupCronJobCommand) Run(ctx context.Context, inf cke.Infrast
 	if err != nil {
 		return err
 	}
-	return cs.BatchV1beta1().CronJobs("kube-system").Delete(op.EtcdBackupJobName, metav1.NewDeleteOptions(60))
+	return cs.BatchV1beta1().CronJobs("kube-system").Delete(op.EtcdBackupAppName, metav1.NewDeleteOptions(60))
 }
 
 func (c removeEtcdBackupCronJobCommand) Command() cke.Command {

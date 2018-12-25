@@ -56,7 +56,7 @@ func (c createEtcdBackupPodCommand) Run(ctx context.Context, inf cke.Infrastruct
 	}
 
 	pods := cs.CoreV1().Pods("kube-system")
-	_, err = pods.Get(op.EtcdBackupPodName, metav1.GetOptions{})
+	_, err = pods.Get(op.EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):

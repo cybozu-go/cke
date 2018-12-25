@@ -26,12 +26,6 @@ const (
 
 	nodeDNSAppName = "node-dns"
 
-	EtcdBackupConfigMapName = "etcdbackup-scripts"
-	EtcdBackupSecretName    = "etcdbackup-secret"
-	EtcdBackupJobName       = "etcdbackup"
-	EtcdBackupPodName       = "etcdbackup"
-	EtcdBackupServiceName   = "etcdbackup"
-
 	timeoutDuration = 5 * time.Second
 
 	etcdPKIPath = "/etc/etcd/pki"
@@ -41,6 +35,8 @@ const (
 const (
 	// CKELabelAppName is application name
 	CKELabelAppName = "cke.cybozu.com/appname"
+	// EtcdBackupAppName is application name for etcdbackup
+	EtcdBackupAppName = "etcdbackup"
 )
 
 // EtcdPKIPath returns a certificate file path for k8s.

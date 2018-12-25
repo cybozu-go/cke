@@ -48,7 +48,7 @@ func (c createEtcdBackupSecretCommand) Run(ctx context.Context, inf cke.Infrastr
 	}
 
 	secrets := cs.CoreV1().Secrets("kube-system")
-	_, err = secrets.Get(op.EtcdBackupSecretName, metav1.GetOptions{})
+	_, err = secrets.Get(op.EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):

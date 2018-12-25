@@ -47,7 +47,7 @@ func (c createEtcdBackupServiceCommand) Run(ctx context.Context, inf cke.Infrast
 	}
 
 	services := cs.CoreV1().Services("kube-system")
-	_, err = services.Get(op.EtcdBackupServiceName, metav1.GetOptions{})
+	_, err = services.Get(op.EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):

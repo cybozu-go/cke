@@ -395,7 +395,7 @@ func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 
 	s := cke.EtcdBackupStatus{}
 
-	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(EtcdBackupConfigMapName, metav1.GetOptions{})
+	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.ConfigMap = config
@@ -404,7 +404,7 @@ func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.EtcdBackupStatus{}, err
 	}
 
-	pod, err := clientset.CoreV1().Pods("kube-system").Get(EtcdBackupPodName, metav1.GetOptions{})
+	pod, err := clientset.CoreV1().Pods("kube-system").Get(EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.Pod = pod
@@ -413,7 +413,7 @@ func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.EtcdBackupStatus{}, err
 	}
 
-	service, err := clientset.CoreV1().Services("kube-system").Get(EtcdBackupServiceName, metav1.GetOptions{})
+	service, err := clientset.CoreV1().Services("kube-system").Get(EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.Service = service
@@ -422,7 +422,7 @@ func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.EtcdBackupStatus{}, err
 	}
 
-	secret, err := clientset.CoreV1().Secrets("kube-system").Get(EtcdBackupSecretName, metav1.GetOptions{})
+	secret, err := clientset.CoreV1().Secrets("kube-system").Get(EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.Secret = secret
@@ -431,7 +431,7 @@ func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.EtcdBackupStatus{}, err
 	}
 
-	job, err := clientset.BatchV1beta1().CronJobs("kube-system").Get(EtcdBackupJobName, metav1.GetOptions{})
+	job, err := clientset.BatchV1beta1().CronJobs("kube-system").Get(EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.CronJob = job
