@@ -212,9 +212,27 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 	return cke.ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []cke.Mount{
-			{"/etc/machine-id", "/etc/machine-id", true, "", ""},
-			{"/var/log/kubernetes/apiserver", "/var/log/kubernetes/apiserver", false, "", cke.LabelPrivate},
-			{"/etc/kubernetes", "/etc/kubernetes", true, "", cke.LabelShared},
+			{
+				Source:      "/etc/machine-id",
+				Destination: "/etc/machine-id",
+				ReadOnly:    true,
+				Propagation: "",
+				Label:       "",
+			},
+			{
+				Source:      "/var/log/kubernetes/apiserver",
+				Destination: "/var/log/kubernetes/apiserver",
+				ReadOnly:    false,
+				Propagation: "",
+				Label:       cke.LabelPrivate,
+			},
+			{
+				Source:      "/etc/kubernetes",
+				Destination: "/etc/kubernetes",
+				ReadOnly:    true,
+				Propagation: "",
+				Label:       cke.LabelShared,
+			},
 		},
 	}
 }

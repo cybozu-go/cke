@@ -106,10 +106,34 @@ func ProxyParams() cke.ServiceParams {
 	return cke.ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []cke.Mount{
-			{"/etc/machine-id", "/etc/machine-id", true, "", ""},
-			{"/etc/kubernetes", "/etc/kubernetes", true, "", cke.LabelShared},
-			{"/lib/modules", "/lib/modules", true, "", ""},
-			{"/var/log/kubernetes/proxy", "/var/log/kubernetes/proxy", false, "", cke.LabelPrivate},
+			{
+				Source:      "/etc/machine-id",
+				Destination: "/etc/machine-id",
+				ReadOnly:    true,
+				Propagation: "",
+				Label:       "",
+			},
+			{
+				Source:      "/etc/kubernetes",
+				Destination: "/etc/kubernetes",
+				ReadOnly:    true,
+				Propagation: "",
+				Label:       cke.LabelShared,
+			},
+			{
+				Source:      "/lib/modules",
+				Destination: "/lib/modules",
+				ReadOnly:    true,
+				Propagation: "",
+				Label:       "",
+			},
+			{
+				Source:      "/var/log/kubernetes/proxy",
+				Destination: "/var/log/kubernetes/proxy",
+				ReadOnly:    false,
+				Propagation: "",
+				Label:       cke.LabelPrivate,
+			},
 		},
 	}
 }

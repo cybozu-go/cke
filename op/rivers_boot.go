@@ -59,7 +59,13 @@ func RiversParams(upstreams []*cke.Node) cke.ServiceParams {
 	return cke.ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []cke.Mount{
-			{"/var/log/rivers", "/var/log/rivers", false, "", cke.LabelShared},
+			{
+				Source:      "/var/log/rivers",
+				Destination: "/var/log/rivers",
+				ReadOnly:    false,
+				Propagation: "",
+				Label:       cke.LabelShared,
+			},
 		},
 	}
 }
