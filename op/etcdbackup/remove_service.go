@@ -21,7 +21,7 @@ func ServiceRemoveOp(apiserver *cke.Node) cke.Operator {
 }
 
 func (o *etcdBackupServiceRemoveOp) Name() string {
-	return "etcdbackup-Service-remove"
+	return "etcdbackup-service-remove"
 }
 
 func (o *etcdBackupServiceRemoveOp) NextCommand() cke.Commander {
