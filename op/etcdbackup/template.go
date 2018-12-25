@@ -38,6 +38,8 @@ var podTemplate = template.Must(template.New("").Parse(`
 metadata:
   name: ` + op.EtcdBackupAppName + `
   namespace: kube-system
+  labels:
+    k8s-app: ` + op.EtcdBackupAppName + `
 spec:
   containers:
   - name: etcdbackup
@@ -96,11 +98,13 @@ var serviceText = `
 metadata:
   name: ` + op.EtcdBackupAppName + `
   namespace: kube-system
+  labels:
+    k8s-app: ` + op.EtcdBackupAppName + `
 spec:
   ports:
     - port: 80
       protocol: TCP
       targetPort: 8080
   selector:
-    app: etcdbackup
+    k8s-app: ` + op.EtcdBackupAppName + `
   type: NodePort`
