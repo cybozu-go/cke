@@ -26,9 +26,11 @@ const (
 
 	nodeDNSAppName = "node-dns"
 
-	etcdBackupConfigMapName = "etcd-backup-scripts"
-	etcdBackupSecretName    = "etcd-backup-secret"
-	etcdBackupJobName       = "etcd-backup"
+	EtcdBackupConfigMapName = "etcdbackup-scripts"
+	EtcdBackupSecretName    = "etcdbackup-secret"
+	EtcdBackupJobName       = "etcdbackup"
+	EtcdBackupPodName       = "etcdbackup"
+	EtcdBackupServiceName   = "etcdbackup"
 
 	timeoutDuration = 5 * time.Second
 

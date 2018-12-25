@@ -27,16 +27,16 @@ spec:
   containers:
     - command:
         - ls
-        - /etcd-backup
+        - /etcdbackup
       image: quay.io/cybozu/etcd:3.3.9-4
       imagePullPolicy: IfNotPresent
       name: ckecli-etcd-snapshot-list
       volumeMounts:
-        - mountPath: /etcd-backup
-          name: etcd-backup
+        - mountPath: /etcdbackup
+          name: etcdbackup
   restartPolicy: Never
   volumes:
-    - name: etcd-backup
+    - name: etcdbackup
       persistentVolumeClaim:
         claimName: {{ .PVCName }}
 `))

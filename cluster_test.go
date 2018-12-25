@@ -27,7 +27,7 @@ dns_servers: ["1.1.1.1", "8.8.8.8"]
 dns_service: kube-system/dns
 etcd_backup:
   enabled: true
-  pvc_name: etcd-backup-pvc
+  pvc_name: etcdbackup-pvc
   schedule: "*/1 * * * *"
 options:
   etcd:
@@ -103,8 +103,8 @@ options:
 	if c.DNSService != "kube-system/dns" {
 		t.Error(`c.DNSService != "kube-system/dns"`)
 	}
-	if !reflect.DeepEqual(c.EtcdBackup, EtcdBackup{Enabled: true, PVCName: "etcd-backup-pvc", Schedule: "*/1 * * * *"}) {
-		t.Error(`!reflect.DeepEqual(c.EtcdBackup, EtcdBackup{Enabled:true, PVCName:"etcd-backup-pvc", Schedule:"*/1 * * * *"})`)
+	if !reflect.DeepEqual(c.EtcdBackup, EtcdBackup{Enabled: true, PVCName: "etcdbackup-pvc", Schedule: "*/1 * * * *"}) {
+		t.Error(`!reflect.DeepEqual(c.EtcdBackup, EtcdBackup{Enabled:true, PVCName:"etcdbackup-pvc", Schedule:"*/1 * * * *"})`)
 	}
 	if c.Options.Etcd.VolumeName != "myetcd" {
 		t.Error(`c.Options.Etcd.VolumeName != "myetcd"`)
@@ -219,7 +219,7 @@ func testClusterValidate(t *testing.T) {
 				PodSubnet:     "10.1.0.0/16",
 				EtcdBackup: EtcdBackup{
 					Enabled:  true,
-					PVCName:  "etcd-backup-pvc",
+					PVCName:  "etcdbackup-pvc",
 					Schedule: "",
 				},
 			},

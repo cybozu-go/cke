@@ -94,7 +94,7 @@ volumeBindingMode: WaitForFirstConsumer
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: etcd-backup-pv
+  name: etcdbackup-pv
 spec:
   capacity:
     storage: 2Gi
@@ -103,7 +103,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
-    path: /mnt/disks/etcd-backup
+    path: /mnt/disks/etcdbackup
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -116,7 +116,7 @@ spec:
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: etcd-backup-pvc
+  name: etcdbackup-pvc
   namespace: kube-system
 spec:
   accessModes:
@@ -136,7 +136,7 @@ options:
       read_only: false
 etcd_backup:
   enabled: enable           # Enable etcd backup
-  pvc_name: etcd-backup-pvc # Make sure this name is same as `PersistentVolumeClaim` name.
+  pvc_name: etcdbackup-pvc # Make sure this name is same as `PersistentVolumeClaim` name.
   schedule: "0 * * * *"     # Cron job format
 ```
 3. Run `ckecli cluster set cluster.yml` to deploy etcd backup `CronJob`.
@@ -144,9 +144,9 @@ etcd_backup:
 ```console
 $ kubectl get job -n kube-system
 NAME                     COMPLETIONS   DURATION   AGE
-etcd-backup-1545274380   1/1           4s         2m45s
+etcdbackup-1545274380   1/1           4s         2m45s
 
-$ ls -l /mnt/disks/etcd-backup/
+$ ls -l /mnt/disks/etcdbackup/
 total 1900
 -rw-r--r--. 1 10000 root 125927 Dec 20 02:41 snapshot-20181220_024105.tar.gz
 -rw-r--r--. 1 10000 root 133107 Dec 20 02:42 snapshot-20181220_024204.tar.gz

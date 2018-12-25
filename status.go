@@ -33,11 +33,13 @@ type NodeDNSStatus struct {
 	ConfigMap *corev1.ConfigMap
 }
 
-// EtcdBackupStatus is the status of etcd-backup
+// EtcdBackupStatus is the status of etcdbackup
 type EtcdBackupStatus struct {
 	ConfigMap *corev1.ConfigMap
 	CronJob   *batchv1beta1.CronJob
+	Pod       *corev1.Pod
 	Secret    *corev1.Secret
+	Service   *corev1.Service
 }
 
 // KubernetesClusterStatus contains kubernetes cluster configurations

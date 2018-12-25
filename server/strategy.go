@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/etcdbackup"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -297,42 +298,58 @@ func decideEpOp(ep *corev1.Endpoints, apiServer *cke.Node, cpNodes []*cke.Node) 
 func decideEtcdBackupOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) (ops []cke.Operator) {
 	if c.EtcdBackup.Enabled == false {
 		if ks.EtcdBackup.ConfigMap != nil {
-			ops = append(ops, op.EtcdBackupConfigMapRemoveOp(apiServer))
+			ops = append(ops, etcdbackup.ConfigMapRemoveOp(apiServer))
 		}
 		if ks.EtcdBackup.Secret != nil {
-			ops = append(ops, op.EtcdBackupSecretRemoveOp(apiServer))
+			ops = append(ops, etcdbackup.SecretRemoveOp(apiServer))
 		}
 		if ks.EtcdBackup.CronJob != nil {
-			ops = append(ops, op.EtcdBackupCronJobRemoveOp(apiServer))
+			ops = append(ops, etcdbackup.CronJobRemoveOp(apiServer))
+		}
+		if ks.EtcdBackup.Service != nil {
+			ops = append(ops, etcdbackup.ServiceRemoveOp(apiServer))
+		}
+		if ks.EtcdBackup.Pod != nil {
+			ops = append(ops, etcdbackup.PodRemoveOp(apiServer))
 		}
 		return ops
 	}
 
 	if ks.EtcdBackup.ConfigMap == nil {
-		ops = append(ops, op.EtcdBackupConfigMapCreateOp(apiServer))
+		ops = append(ops, etcdbackup.ConfigMapCreateOp(apiServer, c.EtcdBackup.Rotate))
+	} else {
+		actual := ks.EtcdBackup.ConfigMap.Data["config.yml"]
+		expected := etcdbackup.RenderConfigMap(c.EtcdBackup.Rotate).Data["config.yml"]
+		if actual != expected {
+			ops = append(ops, etcdbackup.ConfigMapUpdateOp(apiServer, c.EtcdBackup))
+		}
 	}
-
 	if ks.EtcdBackup.Secret == nil {
-		ops = append(ops, op.EtcdBackupSecretCreateOp(apiServer))
+		ops = append(ops, etcdbackup.SecretCreateOp(apiServer))
+	}
+	if ks.EtcdBackup.Service == nil {
+		ops = append(ops, etcdbackup.ServiceCreateOp(apiServer))
+	}
+	if ks.EtcdBackup.Pod == nil {
+		ops = append(ops, etcdbackup.PodCreateOp(apiServer, c.EtcdBackup))
+	} else if needUpdateEtcdBackupPod(c, ks) {
+		ops = append(ops, etcdbackup.PodUpdateOp(apiServer, c.EtcdBackup))
 	}
 
 	if ks.EtcdBackup.CronJob == nil {
-		ops = append(ops, op.EtcdBackupCronJobCreateOp(apiServer, c.EtcdBackup))
-	} else if needUpdateEtcdBackupCronJob(c, ks) {
-		ops = append(ops, op.EtcdBackupCronJobUpdateOp(apiServer, c.EtcdBackup))
+		ops = append(ops, etcdbackup.CronJobCreateOp(apiServer, c.EtcdBackup))
+	} else if ks.EtcdBackup.CronJob.Spec.Schedule != c.EtcdBackup.Schedule {
+		ops = append(ops, etcdbackup.CronJobUpdateOp(apiServer, c.EtcdBackup))
 	}
 
 	return ops
 }
 
-func needUpdateEtcdBackupCronJob(c *cke.Cluster, ks cke.KubernetesClusterStatus) bool {
-	if ks.EtcdBackup.CronJob.Spec.Schedule != c.EtcdBackup.Schedule {
-		return true
-	}
-	volumes := ks.EtcdBackup.CronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes
+func needUpdateEtcdBackupPod(c *cke.Cluster, ks cke.KubernetesClusterStatus) bool {
+	volumes := ks.EtcdBackup.Pod.Spec.Volumes
 	vol := new(corev1.Volume)
 	for _, v := range volumes {
-		if v.Name == "etcd-backup" {
+		if v.Name == "etcdbackup" {
 			vol = &v
 			break
 		}

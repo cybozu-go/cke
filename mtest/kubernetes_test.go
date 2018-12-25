@@ -259,7 +259,7 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("checking etcd snapshot is correct")
-		stdout, stderr, err := execAt(node1, "ls", "-1", "-t", "/mnt/disks/etcd-backup/snapshot-*")
+		stdout, stderr, err := execAt(node1, "ls", "-1", "-t", "/mnt/disks/etcdbackup/snapshot-*")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		backupFile := strings.Split(string(stdout), "\n")[0]
@@ -267,7 +267,7 @@ var _ = Describe("Kubernetes", func() {
 		_, stderr, err = execAt(node1, "tar", "xf", backupFile)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		_, stderr, err = execAt(node1, "env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/home/cybozu/etcd-backup/*")
+		_, stderr, err = execAt(node1, "env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/home/cybozu/etcdbackup/*")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		stdout = ckecli("etcd", "snapshot", "list")
