@@ -27,3 +27,4 @@ etcd_backup:
   enabled: false
   pvc_name: etcdbackup-pvc
   schedule: "* * * * *"
+  rotate: 14
