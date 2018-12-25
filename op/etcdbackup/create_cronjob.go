@@ -13,16 +13,16 @@ import (
 )
 
 type etcdBackupCronJobCreateOp struct {
-	apiserver  *cke.Node
-	etcdBackup cke.EtcdBackup
-	finished   bool
+	apiserver *cke.Node
+	schedule  string
+	finished  bool
 }
 
 // CronJobCreateOp returns an Operator to create etcdbackup cron job.
-func CronJobCreateOp(apiserver *cke.Node, etcdBackup cke.EtcdBackup) cke.Operator {
+func CronJobCreateOp(apiserver *cke.Node, schedule string) cke.Operator {
 	return &etcdBackupCronJobCreateOp{
-		apiserver:  apiserver,
-		etcdBackup: etcdBackup,
+		apiserver: apiserver,
+		schedule:  schedule,
 	}
 }
 
@@ -35,22 +35,16 @@ func (o *etcdBackupCronJobCreateOp) NextCommand() cke.Commander {
 		return nil
 	}
 	o.finished = true
-	return createEtcdBackupCronJobCommand{o.apiserver, o.etcdBackup}
+	return createEtcdBackupCronJobCommand{o.apiserver, o.schedule}
 }
 
 type createEtcdBackupCronJobCommand struct {
-	apiserver  *cke.Node
-	etcdBackup cke.EtcdBackup
+	apiserver *cke.Node
+	schedule  string
 }
 
 func (c createEtcdBackupCronJobCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	cs, err := inf.K8sClient(ctx, c.apiserver)
-	if err != nil {
-		return err
-	}
-
-	claims := cs.CoreV1().PersistentVolumeClaims("kube-system")
-	_, err = claims.Get(c.etcdBackup.PVCName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -61,7 +55,11 @@ func (c createEtcdBackupCronJobCommand) Run(ctx context.Context, inf cke.Infrast
 	case err == nil:
 	case errors.IsNotFound(err):
 		buf := new(bytes.Buffer)
-		err := cronJobTemplate.Execute(buf, c.etcdBackup)
+		err := cronJobTemplate.Execute(buf, struct {
+			Schedule string
+		}{
+			Schedule: c.schedule,
+		})
 		if err != nil {
 			return err
 		}

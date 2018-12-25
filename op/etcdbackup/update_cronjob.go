@@ -6,21 +6,20 @@ import (
 
 	"github.com/cybozu-go/cke"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 type etcdBackupCronJobUpdateOp struct {
-	apiserver  *cke.Node
-	etcdBackup cke.EtcdBackup
-	finished   bool
+	apiserver *cke.Node
+	schedule  string
+	finished  bool
 }
 
 // CronJobUpdateOp returns an Operator to Update etcdbackup cron job.
-func CronJobUpdateOp(apiserver *cke.Node, etcdBackup cke.EtcdBackup) cke.Operator {
+func CronJobUpdateOp(apiserver *cke.Node, schedule string) cke.Operator {
 	return &etcdBackupCronJobUpdateOp{
-		apiserver:  apiserver,
-		etcdBackup: etcdBackup,
+		apiserver: apiserver,
+		schedule:  schedule,
 	}
 }
 
@@ -33,12 +32,12 @@ func (o *etcdBackupCronJobUpdateOp) NextCommand() cke.Commander {
 		return nil
 	}
 	o.finished = true
-	return updateEtcdBackupCronJobCommand{o.apiserver, o.etcdBackup}
+	return updateEtcdBackupCronJobCommand{o.apiserver, o.schedule}
 }
 
 type updateEtcdBackupCronJobCommand struct {
-	apiserver  *cke.Node
-	etcdBackup cke.EtcdBackup
+	apiserver *cke.Node
+	schedule  string
 }
 
 func (c updateEtcdBackupCronJobCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
@@ -47,14 +46,12 @@ func (c updateEtcdBackupCronJobCommand) Run(ctx context.Context, inf cke.Infrast
 		return err
 	}
 
-	claims := cs.CoreV1().PersistentVolumeClaims("kube-system")
-	_, err = claims.Get(c.etcdBackup.PVCName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
 	buf := new(bytes.Buffer)
-	err = cronJobTemplate.Execute(buf, c.etcdBackup)
+	err = cronJobTemplate.Execute(buf, struct {
+		Schedule string
+	}{
+		Schedule: c.schedule,
+	})
 	if err != nil {
 		return err
 	}

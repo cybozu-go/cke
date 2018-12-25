@@ -13,21 +13,21 @@ import (
 )
 
 type etcdBackupPodCreateOp struct {
-	apiserver  *cke.Node
-	etcdBackup cke.EtcdBackup
-	finished   bool
+	apiserver *cke.Node
+	pvcname   string
+	finished  bool
 }
 
-// PodCreateOp returns an Operator to create etcdbackup cron job.
-func PodCreateOp(apiserver *cke.Node, etcdBackup cke.EtcdBackup) cke.Operator {
+// PodCreateOp returns an Operator to create etcdbackup pod.
+func PodCreateOp(apiserver *cke.Node, pvcname string) cke.Operator {
 	return &etcdBackupPodCreateOp{
-		apiserver:  apiserver,
-		etcdBackup: etcdBackup,
+		apiserver: apiserver,
+		pvcname:   pvcname,
 	}
 }
 
 func (o *etcdBackupPodCreateOp) Name() string {
-	return "etcdbackup-job-create"
+	return "etcdbackup-pod-create"
 }
 
 func (o *etcdBackupPodCreateOp) NextCommand() cke.Commander {
@@ -35,12 +35,12 @@ func (o *etcdBackupPodCreateOp) NextCommand() cke.Commander {
 		return nil
 	}
 	o.finished = true
-	return createEtcdBackupPodCommand{o.apiserver, o.etcdBackup}
+	return createEtcdBackupPodCommand{o.apiserver, o.pvcname}
 }
 
 type createEtcdBackupPodCommand struct {
-	apiserver  *cke.Node
-	etcdBackup cke.EtcdBackup
+	apiserver *cke.Node
+	pvcname   string
 }
 
 func (c createEtcdBackupPodCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
@@ -50,7 +50,7 @@ func (c createEtcdBackupPodCommand) Run(ctx context.Context, inf cke.Infrastruct
 	}
 
 	claims := cs.CoreV1().PersistentVolumeClaims("kube-system")
-	_, err = claims.Get(c.etcdBackup.PVCName, metav1.GetOptions{})
+	_, err = claims.Get(c.pvcname, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,11 @@ func (c createEtcdBackupPodCommand) Run(ctx context.Context, inf cke.Infrastruct
 	case err == nil:
 	case errors.IsNotFound(err):
 		buf := new(bytes.Buffer)
-		err := podTemplate.Execute(buf, c.etcdBackup)
+		err := podTemplate.Execute(buf, struct {
+			PVCName string
+		}{
+			PVCName: c.pvcname,
+		})
 		if err != nil {
 			return err
 		}

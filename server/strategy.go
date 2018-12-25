@@ -321,7 +321,7 @@ func decideEtcdBackupOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesC
 		actual := ks.EtcdBackup.ConfigMap.Data["config.yml"]
 		expected := etcdbackup.RenderConfigMap(c.EtcdBackup.Rotate).Data["config.yml"]
 		if actual != expected {
-			ops = append(ops, etcdbackup.ConfigMapUpdateOp(apiServer, c.EtcdBackup))
+			ops = append(ops, etcdbackup.ConfigMapUpdateOp(apiServer, c.EtcdBackup.Rotate))
 		}
 	}
 	if ks.EtcdBackup.Secret == nil {
@@ -331,15 +331,15 @@ func decideEtcdBackupOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesC
 		ops = append(ops, etcdbackup.ServiceCreateOp(apiServer))
 	}
 	if ks.EtcdBackup.Pod == nil {
-		ops = append(ops, etcdbackup.PodCreateOp(apiServer, c.EtcdBackup))
+		ops = append(ops, etcdbackup.PodCreateOp(apiServer, c.EtcdBackup.PVCName))
 	} else if needUpdateEtcdBackupPod(c, ks) {
-		ops = append(ops, etcdbackup.PodUpdateOp(apiServer, c.EtcdBackup))
+		ops = append(ops, etcdbackup.PodUpdateOp(apiServer, c.EtcdBackup.PVCName))
 	}
 
 	if ks.EtcdBackup.CronJob == nil {
-		ops = append(ops, etcdbackup.CronJobCreateOp(apiServer, c.EtcdBackup))
+		ops = append(ops, etcdbackup.CronJobCreateOp(apiServer, c.EtcdBackup.Schedule))
 	} else if ks.EtcdBackup.CronJob.Spec.Schedule != c.EtcdBackup.Schedule {
-		ops = append(ops, etcdbackup.CronJobUpdateOp(apiServer, c.EtcdBackup))
+		ops = append(ops, etcdbackup.CronJobUpdateOp(apiServer, c.EtcdBackup.Schedule))
 	}
 
 	return ops

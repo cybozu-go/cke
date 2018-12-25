@@ -7,21 +7,20 @@ import (
 	"k8s.io/api/core/v1"
 
 	"github.com/cybozu-go/cke"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 type etcdBackupConfigMapUpdateOp struct {
-	apiserver  *cke.Node
-	etcdBackup cke.EtcdBackup
-	finished   bool
+	apiserver *cke.Node
+	rotate    int
+	finished  bool
 }
 
 // ConfigMapUpdateOp returns an Operator to Update etcdbackup ConfigMap.
-func ConfigMapUpdateOp(apiserver *cke.Node, etcdBackup cke.EtcdBackup) cke.Operator {
+func ConfigMapUpdateOp(apiserver *cke.Node, rotate int) cke.Operator {
 	return &etcdBackupConfigMapUpdateOp{
-		apiserver:  apiserver,
-		etcdBackup: etcdBackup,
+		apiserver: apiserver,
+		rotate:    rotate,
 	}
 }
 
@@ -34,12 +33,12 @@ func (o *etcdBackupConfigMapUpdateOp) NextCommand() cke.Commander {
 		return nil
 	}
 	o.finished = true
-	return updateEtcdBackupConfigMapCommand{o.apiserver, o.etcdBackup}
+	return updateEtcdBackupConfigMapCommand{o.apiserver, o.rotate}
 }
 
 type updateEtcdBackupConfigMapCommand struct {
-	apiserver  *cke.Node
-	etcdBackup cke.EtcdBackup
+	apiserver *cke.Node
+	rotate    int
 }
 
 func (c updateEtcdBackupConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
@@ -48,14 +47,12 @@ func (c updateEtcdBackupConfigMapCommand) Run(ctx context.Context, inf cke.Infra
 		return err
 	}
 
-	claims := cs.CoreV1().PersistentVolumeClaims("kube-system")
-	_, err = claims.Get(c.etcdBackup.PVCName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
 	buf := new(bytes.Buffer)
-	err = configMapTemplate.Execute(buf, c.etcdBackup)
+	err = configMapTemplate.Execute(buf, struct {
+		Rotate int
+	}{
+		Rotate: c.rotate,
+	})
 	if err != nil {
 		return err
 	}

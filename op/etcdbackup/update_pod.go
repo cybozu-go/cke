@@ -11,16 +11,16 @@ import (
 )
 
 type etcdBackupPodUpdateOp struct {
-	apiserver  *cke.Node
-	etcdBackup cke.EtcdBackup
-	finished   bool
+	apiserver *cke.Node
+	pvcname   string
+	finished  bool
 }
 
 // PodUpdateOp returns an Operator to Update etcdbackup pod.
-func PodUpdateOp(apiserver *cke.Node, etcdBackup cke.EtcdBackup) cke.Operator {
+func PodUpdateOp(apiserver *cke.Node, pvcname string) cke.Operator {
 	return &etcdBackupPodUpdateOp{
-		apiserver:  apiserver,
-		etcdBackup: etcdBackup,
+		apiserver: apiserver,
+		pvcname:   pvcname,
 	}
 }
 
@@ -33,12 +33,12 @@ func (o *etcdBackupPodUpdateOp) NextCommand() cke.Commander {
 		return nil
 	}
 	o.finished = true
-	return updateEtcdBackupPodCommand{o.apiserver, o.etcdBackup}
+	return updateEtcdBackupPodCommand{o.apiserver, o.pvcname}
 }
 
 type updateEtcdBackupPodCommand struct {
-	apiserver  *cke.Node
-	etcdBackup cke.EtcdBackup
+	apiserver *cke.Node
+	pvcname   string
 }
 
 func (c updateEtcdBackupPodCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
@@ -48,13 +48,17 @@ func (c updateEtcdBackupPodCommand) Run(ctx context.Context, inf cke.Infrastruct
 	}
 
 	claims := cs.CoreV1().PersistentVolumeClaims("kube-system")
-	_, err = claims.Get(c.etcdBackup.PVCName, metav1.GetOptions{})
+	_, err = claims.Get(c.pvcname, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
 	buf := new(bytes.Buffer)
-	err = podTemplate.Execute(buf, c.etcdBackup)
+	err = podTemplate.Execute(buf, struct {
+		PVCName string
+	}{
+		PVCName: c.pvcname,
+	})
 	if err != nil {
 		return err
 	}
