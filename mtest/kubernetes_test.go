@@ -270,7 +270,7 @@ var _ = Describe("Kubernetes", func() {
 		_, stderr, err = execAt(node1, "env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/home/cybozu/etcdbackup/*")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		stdout = ckecli("etcd", "snapshot", "list")
+		stdout = ckecli("etcd", "backup", "list")
 		Expect(string(stdout)).To(ContainSubstring("snapshot-"))
 	})
 })

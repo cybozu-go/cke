@@ -78,7 +78,7 @@ The domain name is `cke-etcd.kube-system.svc.<cluster-domain>`.
 Backup
 ------
 
-If etcd backup is enabled on cluster configuration, `CronJob` which stores etcd snapshot will be deployed on Kubernetes cluster.
+If etcd backup is enabled on cluster configuration, `CronJob` which stores compressed etcd snapshot will be deployed on Kubernetes cluster.
 Before enable etcd backup, you need to create `PersistentVolume` and `PersistentVolumeClaim` to store the backup data.
 
 1. Deploy `PersistentVolume` and `PersistentVolumeClaim`. This is example of using local persistent volume in particular node.
@@ -136,8 +136,9 @@ options:
       read_only: false
 etcd_backup:
   enabled: enable           # Enable etcd backup
-  pvc_name: etcdbackup-pvc # Make sure this name is same as `PersistentVolumeClaim` name.
+  pvc_name: etcdbackup-pvc  # Make sure this name is same as `PersistentVolumeClaim` name.
   schedule: "0 * * * *"     # Cron job format
+  rotate: 14                # Keep a number of backups
 ```
 3. Run `ckecli cluster set cluster.yml` to deploy etcd backup `CronJob`.
 4. You can find etcd snapshots in persistent volume after etcd backup `Job` is completed.
@@ -148,8 +149,8 @@ etcdbackup-1545274380   1/1           4s         2m45s
 
 $ ls -l /mnt/disks/etcdbackup/
 total 1900
--rw-r--r--. 1 10000 root 125927 Dec 20 02:41 snapshot-20181220_024105.tar.gz
--rw-r--r--. 1 10000 root 133107 Dec 20 02:42 snapshot-20181220_024204.tar.gz
+-rw-r--r--. 1 10000 root 125927 Dec 20 02:41 snapshot-20181220_024105.db.gz
+-rw-r--r--. 1 10000 root 133107 Dec 20 02:42 snapshot-20181220_024204.db.gz
 ...
 ```
 
