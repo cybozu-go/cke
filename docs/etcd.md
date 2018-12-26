@@ -156,7 +156,7 @@ $ ls -l /mnt/disks/etcdbackup/
 ```
 5. Also, You can download it.
 ```console
-$ ckecli etcd backup snapshot-20181226_054710.db.gz
+$ ckecli etcd backup get snapshot-20181226_054710.db.gz
 ```
 
 [etcd]: https://github.com/etcd-io/etcd
