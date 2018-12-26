@@ -78,7 +78,7 @@ The domain name is `cke-etcd.kube-system.svc.<cluster-domain>`.
 Backup
 ------
 
-If etcd backup is enabled on cluster configuration, `CronJob` which stores compressed etcd snapshot will be deployed on Kubernetes cluster.
+When the etcd backup is enabled on cluster configuration, [etcdbackup][] `Pod` and `CronJob` are deployed on Kubernetes cluster to manage compressed etcd snapshot.
 Before enable etcd backup, you need to create `PersistentVolume` and `PersistentVolumeClaim` to store the backup data.
 
 1. Deploy `PersistentVolume` and `PersistentVolumeClaim`. This is example of using local persistent volume in particular node.
@@ -141,20 +141,26 @@ etcd_backup:
   rotate: 14                # Keep a number of backups
 ```
 3. Run `ckecli cluster set cluster.yml` to deploy etcd backup `CronJob`.
-4. You can find etcd snapshots in persistent volume after etcd backup `Job` is completed.
+4. You can find etcd backups in persistent volume after etcd backup `Job` is completed.
 ```console
 $ kubectl get job -n kube-system
-NAME                     COMPLETIONS   DURATION   AGE
-etcdbackup-1545274380   1/1           4s         2m45s
+NAME                    COMPLETIONS   DURATION   AGE
+etcdbackup-1545803760   1/1           7s         2m23s
+
+$ ckecli etcd backup list
+["snapshot-20181226_054710.db.gz"]
 
 $ ls -l /mnt/disks/etcdbackup/
-total 1900
--rw-r--r--. 1 10000 root 125927 Dec 20 02:41 snapshot-20181220_024105.db.gz
--rw-r--r--. 1 10000 root 133107 Dec 20 02:42 snapshot-20181220_024204.db.gz
+-rw-r--r--. 1 root root 506231 Dec 26 05:47 snapshot-20181226_054710.db.gz
 ...
+```
+5. Also, You can download it.
+```console
+$ ckecli etcd backup snapshot-20181226_054710.db.gz
 ```
 
 [etcd]: https://github.com/etcd-io/etcd
 [RBAC]: https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/authentication.md
 [Endpoints]: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
 [PersistentVolume]: https://kubernetes.io/docs/concepts/storage/persistent-volumes
+[etcdbackup]: https://github.com/cybozu-go/cke-tools/tree/master/cmd/etcdbackup
