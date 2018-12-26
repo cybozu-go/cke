@@ -270,21 +270,14 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("checking etcd snapshot is correct")
-		stdout, stderr, err = execAt(node1, "ls", "-1", "-t", "/mnt/disks/etcdbackup/snapshot-*")
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-
-		backupFile := strings.Split(string(stdout), "\n")[0]
-
-		_, stderr, err = execAt(node1, "gunzip", "-c", backupFile, ">/tmp/snapshot.db")
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-
-		_, stderr, err = execAt(node1, "env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/tmp/snapshot.db")
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-
 		stdout = ckecli("etcd", "backup", "list")
 		var list []string
 		err = json.Unmarshal(stdout, &list)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		Expect(list[0]).To(ContainSubstring("snapshot-"))
+
+		ckecli("etcd", "backup", "get", list[0])
+		execAtLocal("gunzip", "-c", list[0], ">/tmp/snapshot.db")
+		execAtLocal("env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/tmp/snapshot.db")
 	})
 })

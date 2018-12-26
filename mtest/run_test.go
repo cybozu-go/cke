@@ -169,6 +169,18 @@ func execSafeAt(host string, args ...string) string {
 	return string(stdout)
 }
 
+func execAtLocal(cmd string, args ...string) ([]byte, error) {
+	var stdout bytes.Buffer
+	command := exec.Command(cmd, args...)
+	command.Stdout = &stdout
+	command.Stderr = GinkgoWriter
+	err := command.Run()
+	if err != nil {
+		return nil, err
+	}
+	return stdout.Bytes(), nil
+}
+
 func localTempFile(body string) *os.File {
 	f, err := ioutil.TempFile("", "cke-mtest")
 	Expect(err).NotTo(HaveOccurred())
