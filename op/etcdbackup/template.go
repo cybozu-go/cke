@@ -49,7 +49,6 @@ spec:
     args: ['-config', '/config/config.yml']
     ports:
       - containerPort: 8080
-        name: etcdbackup
     volumeMounts:
       - mountPath: /etcd-certs
         name: etcd-certs
@@ -57,6 +56,13 @@ spec:
         name: etcdbackup
       - mountPath: /config
         name: config
+    securityContext:
+      capabilities:
+        add:
+        - NET_BIND_SERVICE
+        drop:
+        - all
+      readOnlyRootFilesystem: true
   volumes:
   - name: etcd-certs
     secret:
@@ -88,8 +94,9 @@ spec:
               image: ` + cke.ToolsImage.Name() + `
               command:
                 - curl
+                - -s
                 - -XPOST
-                - http://etcdbackup/api/v1/backup
+                - http://etcdbackup:8080/api/v1/backup
           restartPolicy: Never
   schedule:  "{{ .Schedule }}"
 `))
@@ -102,7 +109,7 @@ metadata:
     k8s-app: ` + op.EtcdBackupAppName + `
 spec:
   ports:
-    - port: 80
+    - port: 8080
       protocol: TCP
       targetPort: 8080
   selector:
