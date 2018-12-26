@@ -13,6 +13,28 @@
         "path": "/etc/hosts",
         "mode": 420,
         "contents": { "source": "data:,127.0.0.1%09localhost%0A::1%09%09localhost%0A%0A@NODE1@%09node1%0A@NODE2@%09node2%0A@NODE3@%09node3%0A@NODE4@%09node4%0A@NODE5@%09node5%0A@NODE6@%09node6%0A" }
+      },
+      {
+        "filesystem": "root",
+        "group": {},
+        "path": "/etc/modules-load.d/br_netfilter.conf",
+        "user": {},
+        "contents": {
+            "source": "data:,br_netfilter",
+            "verification": {}
+        },
+        "mode": 420
+      },
+      {
+        "filesystem": "root",
+        "group": {},
+        "path": "/etc/sysctl.d/br_netfilter.conf",
+        "user": {},
+        "contents": {
+            "source": "data:,net.bridge.bridge-nf-call-iptables%3D1",
+            "verification": {}
+        },
+        "mode": 420
       }
     ],
     "directories": [
