@@ -8,7 +8,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -275,13 +274,16 @@ var _ = Describe("Kubernetes", func() {
 
 		backupFile := strings.Split(string(stdout), "\n")[0]
 
-		_, stderr, err = execAt(node1, "tar", "xf", backupFile)
+		_, stderr, err = execAt(node1, "gunzip", "-c", backupFile, ">/tmp/snapshot.db")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		_, stderr, err = execAt(node1, "env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/home/cybozu/etcdbackup/*")
+		_, stderr, err = execAt(node1, "env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/tmp/snapshot.db")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		stdout = ckecli("etcd", "backup", "list")
-		Expect(string(stdout)).To(ContainSubstring("snapshot-"))
+		var list []string
+		err = json.Unmarshal(stdout, &list)
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+		Expect(list[0]).To(ContainSubstring("snapshot-"))
 	})
 })

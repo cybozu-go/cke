@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/cybozu-go/cke/op"
@@ -58,11 +58,15 @@ func backupList(ctx context.Context, cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 
-	e := json.NewEncoder(cmd.OutOrStdout())
-	e.SetIndent("", "  ")
-	return e.Encode(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(body))
+	return nil
 }
 
 var etcdBackupListCmd = &cobra.Command{
