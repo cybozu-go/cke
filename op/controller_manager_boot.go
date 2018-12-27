@@ -135,9 +135,24 @@ func ControllerManagerParams(clusterName, serviceSubnet string) cke.ServiceParam
 	return cke.ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []cke.Mount{
-			{"/etc/machine-id", "/etc/machine-id", true, "", ""},
-			{"/etc/kubernetes", "/etc/kubernetes", true, "", cke.LabelShared},
-			{"/var/log/kubernetes/controller-manager", "/var/log/kubernetes/controller-manager", false, "", cke.LabelPrivate},
+			{
+				Source:      "/etc/machine-id",
+				Destination: "/etc/machine-id",
+				ReadOnly:    true,
+				Propagation: "",
+				Label:       ""},
+			{
+				Source:      "/etc/kubernetes",
+				Destination: "/etc/kubernetes",
+				ReadOnly:    true,
+				Propagation: "",
+				Label:       cke.LabelShared},
+			{
+				Source:      "/var/log/kubernetes/controller-manager",
+				Destination: "/var/log/kubernetes/controller-manager",
+				ReadOnly:    false,
+				Propagation: "",
+				Label:       cke.LabelPrivate},
 		},
 	}
 }

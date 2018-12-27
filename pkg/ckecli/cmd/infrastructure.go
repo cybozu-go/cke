@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"k8s.io/client-go/rest"
@@ -15,6 +16,10 @@ import (
 	vault "github.com/hashicorp/vault/api"
 	"k8s.io/client-go/kubernetes"
 )
+
+var httpClient = &well.HTTPClient{
+	Client: &http.Client{},
+}
 
 // cliInfrastructure impelements cke.Infrastructure for CLI usage.
 type cliInfrastructure struct {
@@ -120,7 +125,7 @@ func (i *cliInfrastructure) K8sClient(ctx context.Context, n *cke.Node) (*kubern
 }
 
 func (i *cliInfrastructure) HTTPClient() *well.HTTPClient {
-	panic("not implemented")
+	return httpClient
 }
 func (i *cliInfrastructure) HTTPSClient(ctx context.Context) (*well.HTTPClient, error) {
 	panic("not implemented")

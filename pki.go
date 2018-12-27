@@ -125,7 +125,7 @@ func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key st
 		})
 }
 
-// IssueForBackup issues certificate for etcd-backup.
+// IssueForBackup issues certificate for etcdbackup.
 func (e EtcdCA) IssueForBackup(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
 	return issueCertificate(inf, CAEtcdClient, "admin",
 		map[string]interface{}{

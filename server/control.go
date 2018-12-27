@@ -112,7 +112,9 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 }
 
 func (c Controller) checkLastOp(ctx context.Context, leaderKey string) error {
-	storage := cke.Storage{c.session.Client()}
+	storage := cke.Storage{
+		Client: c.session.Client(),
+	}
 	records, err := storage.GetRecords(ctx, 1)
 	if err != nil {
 		return err
@@ -148,7 +150,9 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		}
 	}()
 
-	storage := cke.Storage{c.session.Client()}
+	storage := cke.Storage{
+		Client: c.session.Client(),
+	}
 	cluster, err := storage.GetCluster(ctx)
 	switch err {
 	case cke.ErrNotFound:

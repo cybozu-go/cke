@@ -105,11 +105,12 @@ type KubeletParams struct {
 	BootTaints    []corev1.Taint `json:"boot_taints"   yaml:"boot_taints"`
 }
 
-// EtcdBackup is a set of configrations for etcd-backup.
+// EtcdBackup is a set of configurations for etcdbackup.
 type EtcdBackup struct {
 	Enabled  bool   `json:"enabled"  yaml:"enabled"`
 	PVCName  string `json:"pvc_name" yaml:"pvc_name"`
 	Schedule string `json:"schedule" yaml:"schedule"`
+	Rotate   int    `json:"rotate,omitempty" yaml:"rotate,omitempty"`
 }
 
 // Options is a set of optional parameters for k8s components.

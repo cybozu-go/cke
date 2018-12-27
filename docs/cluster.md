@@ -61,6 +61,7 @@ Name       | Required | Type   | Description
 `enabled`  | true     | bool   | If true, periodic etcd backup will be run.
 `pvc_name` | true     | string | The name of `PersistentVolumeClaim` where backup data is stored.
 `schedule` | true     | string | The schedule for etcd backup in Cron format.
+`rotate`   | false    | int    | Keep a number of backup files. Default: 14.
 
 Options
 -------

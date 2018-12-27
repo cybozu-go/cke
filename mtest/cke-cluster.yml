@@ -25,5 +25,6 @@ options:
       read_only: false
 etcd_backup:
   enabled: false
-  pvc_name: etcd-backup-pvc
+  pvc_name: etcdbackup-pvc
   schedule: "* * * * *"
+  rotate: 14
