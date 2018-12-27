@@ -67,15 +67,20 @@ func connectToNode(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
 		_, err = f.Write([]byte(mykey.(string)))
+		f.Close()
 		if err != nil {
 			return err
 		}
+		time.Sleep(100 * time.Millisecond)
 
 		// OpenSSH reads the private key file twice, it need to write key twice.
-		time.Sleep(100 * time.Millisecond)
+		f, err = os.OpenFile(fifo, os.O_WRONLY, 0600)
+		if err != nil {
+			return err
+		}
 		_, err = f.Write([]byte(mykey.(string)))
+		f.Close()
 		return err
 	})
 	well.Stop()
