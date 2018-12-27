@@ -63,7 +63,7 @@ func connectToNode(ctx context.Context, args []string) error {
 	}
 
 	well.Go(func(ctx context.Context) error {
-		f, err := os.OpenFile(fifo, os.O_RDWR, 0600)
+		f, err := os.OpenFile(fifo, os.O_WRONLY, 0600)
 		if err != nil {
 			return err
 		}
