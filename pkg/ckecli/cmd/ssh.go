@@ -12,9 +12,30 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
+
+func writeToFifo(fifo string, data string) {
+	f, err := os.OpenFile(fifo, os.O_WRONLY, 0600)
+	if err != nil {
+		log.Error("failed to open fifo", map[string]interface{}{
+			log.FnError: err,
+			"fifo":      fifo,
+		})
+		return
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(data)
+	if err != nil {
+		log.Error("failed to write to fifo", map[string]interface{}{
+			log.FnError: err,
+			"fifo":      fifo,
+		})
+	}
+}
 
 func connectToNode(ctx context.Context, args []string) error {
 	nodeName := args[0]
@@ -37,6 +58,10 @@ func connectToNode(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	err = os.MkdirAll(filepath.Join(usr.HomeDir, ".ssh"), 700)
+	if err != nil {
+		return err
+	}
 	fifo := filepath.Join(usr.HomeDir, ".ssh", "ckecli-ssh-key-"+strconv.Itoa(os.Getpid()))
 	err = syscall.Mkfifo(fifo, 0600)
 	if err != nil {
@@ -52,6 +77,9 @@ func connectToNode(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	if secret == nil {
+		return errors.New("no ssh private keys")
+	}
 	privKeys := secret.Data
 
 	mykey, ok := privKeys[node.Address]
@@ -62,28 +90,12 @@ func connectToNode(ctx context.Context, args []string) error {
 		return errors.New("no ssh private key for " + nodeName)
 	}
 
-	well.Go(func(ctx context.Context) error {
-		f, err := os.OpenFile(fifo, os.O_WRONLY, 0600)
-		if err != nil {
-			return err
-		}
-		_, err = f.Write([]byte(mykey.(string)))
-		f.Close()
-		if err != nil {
-			return err
-		}
+	go func() {
+		writeToFifo(fifo, mykey.(string))
 		time.Sleep(100 * time.Millisecond)
-
 		// OpenSSH reads the private key file twice, it need to write key twice.
-		f, err = os.OpenFile(fifo, os.O_WRONLY, 0600)
-		if err != nil {
-			return err
-		}
-		_, err = f.Write([]byte(mykey.(string)))
-		f.Close()
-		return err
-	})
-	well.Stop()
+		writeToFifo(fifo, mykey.(string))
+	}()
 
 	sshArgs := []string{
 		"-i", fifo,
@@ -115,6 +127,7 @@ If COMMAND is specified, it will be executed on the node.
 		well.Go(func(ctx context.Context) error {
 			return connectToNode(ctx, args)
 		})
+		well.Stop()
 		return well.Wait()
 	},
 }
