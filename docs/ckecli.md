@@ -145,6 +145,17 @@ Option  | Default value | Description
 ------- | ------------- | -----------
 `--ttl` | `2h`          | TTL of the client certificate
 
+`ckecli ssh NODE [COMMAND...]`
+------------------------------
+
+Connect to the node via ssh.
+
+`NODE` is IP address or hostname of the node to be connected.
+The node should be defined in the cluster definition.
+The user name defined in the cluster will be used.
+
+If `COMMAND` is specified, it will be executed on the node.
+
 `ckecli sabakan`
 ----------------
 
