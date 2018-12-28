@@ -58,7 +58,7 @@ func connectToNode(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = os.MkdirAll(filepath.Join(usr.HomeDir, ".ssh"), 700)
+	err = os.MkdirAll(filepath.Join(usr.HomeDir, ".ssh"), 0700)
 	if err != nil {
 		return err
 	}
