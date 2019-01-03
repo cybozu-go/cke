@@ -22,6 +22,7 @@ type unboundConfigTemplate struct {
 
 const unboundConfigTemplateText = `
 server:
+  do-daemonize: no
   interface: 0.0.0.0
   interface-automatic: yes
   access-control: 0.0.0.0/0 allow
@@ -35,11 +36,13 @@ server:
   log-replies: yes
   log-local-actions: yes
   log-servfail: yes
+  rrset-roundrobin: yes
   pidfile: "/tmp/unbound.pid"
   infra-host-ttl: 60
   prefetch: yes
 remote-control:
   control-enable: yes
+  control-interface: 127.0.0.1
   control-use-cert: no
 stub-zone:
   name: "{{ .Domain }}"
