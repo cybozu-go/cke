@@ -92,11 +92,11 @@ var scpParams struct {
 	recursive bool
 }
 
-// leaderCmd represents the leader command
+// scpCmd represents the scp command
 var scpCmd = &cobra.Command{
 	Use:   "scp [NODE1:]FILE1 ... [NODE2:]FILE2",
 	Short: "copy files between hosts via scp",
-	Long: `copy files between hosts via scp.
+	Long: `Copy files between hosts via scp.
 
 NODE is IP address or hostname of the node.
 `,

@@ -127,11 +127,11 @@ func ssh(ctx context.Context, args []string) error {
 	return c.Run()
 }
 
-// leaderCmd represents the leader command
+// sshCmd represents the ssh command
 var sshCmd = &cobra.Command{
 	Use:   "ssh NODE [COMMAND...]",
 	Short: "connect to the node via ssh",
-	Long: `connect to the node via ssh.
+	Long: `Connect to the node via ssh.
 
 NODE is IP address or hostname of the node to be connected.
 
