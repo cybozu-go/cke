@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/common"
+	"github.com/cybozu-go/cke/op/common"
 	"github.com/cybozu-go/well"
 	yaml "gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

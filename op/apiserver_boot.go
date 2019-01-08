@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/common"
+	"github.com/cybozu-go/cke/op/common"
 )
 
 var (

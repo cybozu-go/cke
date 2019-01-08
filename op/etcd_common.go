@@ -11,7 +11,7 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/common"
+	"github.com/cybozu-go/cke/op/common"
 )
 
 func etcdVolumeName(e cke.EtcdParams) string {
