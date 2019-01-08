@@ -51,11 +51,11 @@ func BuiltInParams(node *cke.Node, initialCluster []string, state string) cke.Se
 		"--cert-file=" + op.EtcdPKIPath("server.crt"),
 		"--key-file=" + op.EtcdPKIPath("server.key"),
 		"--client-cert-auth=true",
-		"--trusted-ca-file=" + op.K8sPKIPath("ca-client.crt"),
-		"--peer-cert-file=" + op.K8sPKIPath("peer.crt"),
-		"--peer-key-file=" + op.K8sPKIPath("peer.key"),
+		"--trusted-ca-file=" + op.EtcdPKIPath("ca-client.crt"),
+		"--peer-cert-file=" + op.EtcdPKIPath("peer.crt"),
+		"--peer-key-file=" + op.EtcdPKIPath("peer.key"),
 		"--peer-client-cert-auth=true",
-		"--peer-trusted-ca-file=" + op.K8sPKIPath("ca-peer.crt"),
+		"--peer-trusted-ca-file=" + op.EtcdPKIPath("ca-peer.crt"),
 		"--enable-v2=false",
 		"--enable-pprof=true",
 		"--auto-compaction-mode=periodic",
@@ -97,7 +97,7 @@ func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf cke.Infrast
 		}
 		return []byte(c), []byte(k), nil
 	}
-	err := c.files.AddKeyPair(ctx, op.K8sPKIPath("server"), f)
+	err := c.files.AddKeyPair(ctx, op.EtcdPKIPath("server"), f)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf cke.Infrast
 		}
 		return []byte(c), []byte(k), nil
 	}
-	err = c.files.AddKeyPair(ctx, op.K8sPKIPath("peer"), f)
+	err = c.files.AddKeyPair(ctx, op.EtcdPKIPath("peer"), f)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf cke.Infrast
 	f2 := func(ctx context.Context, node *cke.Node) ([]byte, error) {
 		return []byte(peerCA), nil
 	}
-	err = c.files.AddFile(ctx, op.K8sPKIPath("ca-peer.crt"), f2)
+	err = c.files.AddFile(ctx, op.EtcdPKIPath("ca-peer.crt"), f2)
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf cke.Infrast
 	f2 = func(ctx context.Context, node *cke.Node) ([]byte, error) {
 		return []byte(clientCA), nil
 	}
-	err = c.files.AddFile(ctx, op.K8sPKIPath("ca-client.crt"), f2)
+	err = c.files.AddFile(ctx, op.EtcdPKIPath("ca-client.crt"), f2)
 	if err != nil {
 		return err
 	}
