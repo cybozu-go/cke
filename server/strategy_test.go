@@ -7,10 +7,10 @@ import (
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/clusterdns"
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
+	"github.com/cybozu-go/cke/op/nodedns"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -245,11 +245,11 @@ func (d testData) withK8sNodeDNSReady() testData {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"cke.cybozu.com/image":            cke.UnboundImage.Name(),
-				"cke.cybozu.com/template-version": op.UnboundTemplateVersion,
+				"cke.cybozu.com/template-version": nodedns.UnboundTemplateVersion,
 			},
 		},
 	}
-	d.Status.Kubernetes.NodeDNS.ConfigMap = op.NodeDNSConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
+	d.Status.Kubernetes.NodeDNS.ConfigMap = nodedns.ConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
 	if err != nil {
 		panic(err)
 	}

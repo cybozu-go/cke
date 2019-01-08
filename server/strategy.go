@@ -7,6 +7,7 @@ import (
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/etcdbackup"
 	"github.com/cybozu-go/cke/op/k8s"
+	"github.com/cybozu-go/cke/op/nodedns"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -236,11 +237,11 @@ func decideNodeDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClus
 	}
 
 	if ks.NodeDNS.DaemonSet == nil {
-		ops = append(ops, op.KubeNodeDNSCreateDaemonSetOp(apiServer))
+		ops = append(ops, nodedns.CreateDaemonSetOp(apiServer))
 	} else {
 		if ks.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/image"] != cke.UnboundImage.Name() ||
-			ks.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/template-version"] != op.UnboundTemplateVersion {
-			ops = append(ops, op.KubeNodeDNSUpdateDaemonSetOp(apiServer))
+			ks.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/template-version"] != nodedns.UnboundTemplateVersion {
+			ops = append(ops, nodedns.UpdateDaemonSetOp(apiServer))
 		}
 	}
 
@@ -254,12 +255,12 @@ func decideNodeDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClus
 	}
 
 	if ks.NodeDNS.ConfigMap == nil {
-		ops = append(ops, op.KubeNodeDNSCreateConfigMapOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, desiredDNSServers))
+		ops = append(ops, nodedns.CreateConfigMapOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, desiredDNSServers))
 	} else {
 		actualConfigData := ks.NodeDNS.ConfigMap.Data
-		expectedConfig := op.NodeDNSConfigMap(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, desiredDNSServers)
+		expectedConfig := nodedns.ConfigMap(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, desiredDNSServers)
 		if actualConfigData["unbound.conf"] != expectedConfig.Data["unbound.conf"] {
-			ops = append(ops, op.KubeNodeDNSUpdateConfigMapOp(apiServer, expectedConfig))
+			ops = append(ops, nodedns.UpdateConfigMapOp(apiServer, expectedConfig))
 		}
 	}
 

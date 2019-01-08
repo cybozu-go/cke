@@ -11,8 +11,6 @@ const (
 
 	etcdEndpointsName = "cke-etcd"
 
-	nodeDNSAppName = "node-dns"
-
 	etcdPKIPath = "/etc/etcd/pki"
 	k8sPKIPath  = "/etc/kubernetes/pki"
 )
@@ -37,6 +35,8 @@ const (
 	ClusterDNSRBACRoleName = "system:cluster-dns"
 	// ClusterDNSAppName is app name of cluster DNS
 	ClusterDNSAppName = "cluster-dns"
+	// NodeDNSAppName is app name of node-dns
+	NodeDNSAppName = "node-dns"
 
 	// DefaultEtcdVolumeName is etcd default volume name
 	DefaultEtcdVolumeName = "etcd-cke"
