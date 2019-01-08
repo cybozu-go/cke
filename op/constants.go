@@ -6,16 +6,6 @@ import (
 )
 
 const (
-	defaultEtcdVolumeName = "etcd-cke"
-
-	EtcdContainerName                  = "etcd"
-	KubeAPIServerContainerName         = "kube-apiserver"
-	KubeControllerManagerContainerName = "kube-controller-manager"
-	KubeProxyContainerName             = "kube-proxy"
-	KubeSchedulerContainerName         = "kube-scheduler"
-	KubeletContainerName               = "kubelet"
-	RiversContainerName                = "rivers"
-
 	rbacRoleName        = "system:kube-apiserver-to-kubelet"
 	rbacRoleBindingName = "system:kube-apiserver"
 
@@ -26,13 +16,32 @@ const (
 
 	nodeDNSAppName = "node-dns"
 
-	timeoutDuration = 5 * time.Second
-
 	etcdPKIPath = "/etc/etcd/pki"
 	k8sPKIPath  = "/etc/kubernetes/pki"
 )
 
 const (
+	// EtcdContainerName is container name of etcd
+	EtcdContainerName = "etcd"
+	// KubeAPIServerContainerName is name of kube-apiserver
+	KubeAPIServerContainerName = "kube-apiserver"
+	// KubeControllerManagerContainerName is name of kube-controller-manager
+	KubeControllerManagerContainerName = "kube-controller-manager"
+	// KubeProxyContainerName is container name of kube-proxy
+	KubeProxyContainerName = "kube-proxy"
+	// KubeSchedulerContainerName is container name of kube-scheduler
+	KubeSchedulerContainerName = "kube-scheduler"
+	// KubeletContainerName is container name of kubelet
+	KubeletContainerName = "kubelet"
+	// RiversContainerName is container name of rivers
+	RiversContainerName = "rivers"
+
+	// DefaultEtcdVolumeName is etcd default volume name
+	DefaultEtcdVolumeName = "etcd-cke"
+
+	// TimeoutDuration is default timeout duration
+	TimeoutDuration = 5 * time.Second
+
 	// CKELabelAppName is application name
 	CKELabelAppName = "cke.cybozu.com/appname"
 	// EtcdBackupAppName is application name for etcdbackup

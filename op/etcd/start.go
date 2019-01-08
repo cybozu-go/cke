@@ -1,7 +1,8 @@
-package op
+package etcd
 
 import (
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 )
 
@@ -13,8 +14,8 @@ type etcdStartOp struct {
 	domain string
 }
 
-// EtcdStartOp returns an Operator to start etcd containers.
-func EtcdStartOp(nodes []*cke.Node, params cke.EtcdParams, domain string) cke.Operator {
+// StartOp returns an Operator to start etcd containers.
+func StartOp(nodes []*cke.Node, params cke.EtcdParams, domain string) cke.Operator {
 	return &etcdStartOp{
 		nodes:  nodes,
 		params: params,
@@ -39,13 +40,13 @@ func (o *etcdStartOp) NextCommand() cke.Commander {
 		o.step++
 		opts := []string{
 			"--mount",
-			"type=volume,src=" + etcdVolumeName(o.params) + ",dst=/var/lib/etcd",
+			"type=volume,src=" + op.EtcdVolumeName(o.params) + ",dst=/var/lib/etcd",
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			paramsMap[n.Address] = EtcdBuiltInParams(n, nil, "")
+			paramsMap[n.Address] = BuiltInParams(n, nil, "")
 		}
-		return common.RunContainerCommand(o.nodes, EtcdContainerName, cke.EtcdImage,
+		return common.RunContainerCommand(o.nodes, op.EtcdContainerName, cke.EtcdImage,
 			common.WithOpts(opts),
 			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params.ServiceParams))

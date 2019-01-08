@@ -3,10 +3,9 @@ package server
 import (
 	"strings"
 
-	"github.com/cybozu-go/cke/op/k8s"
-
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/etcd"
+	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -227,7 +226,7 @@ func (nf *NodeFilter) EtcdOutdatedMembers() (nodes []*cke.Node) {
 		if !st.Running {
 			continue
 		}
-		currentBuiltIn := op.EtcdBuiltInParams(n, []string{}, "new")
+		currentBuiltIn := etcd.BuiltInParams(n, []string{}, "new")
 		switch {
 		case cke.EtcdImage.Name() != st.Image:
 			fallthrough

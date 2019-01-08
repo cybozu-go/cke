@@ -2,9 +2,12 @@ package op
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -12,8 +15,8 @@ import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
-	yaml "gopkg.in/yaml.v2"
-	"k8s.io/apimachinery/pkg/api/errors"
+	"gopkg.in/yaml.v2"
+	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -36,7 +39,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		return nil, err
 	}
 
-	etcdVolumeExists, err := ce.VolumeExists(etcdVolumeName(cluster.Options.Etcd))
+	etcdVolumeExists, err := ce.VolumeExists(EtcdVolumeName(cluster.Options.Etcd))
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +154,7 @@ func GetEtcdClusterStatus(ctx context.Context, inf cke.Infrastructure, nodes []*
 		return clusterStatus, err
 	}
 
-	ct, cancel := context.WithTimeout(ctx, timeoutDuration)
+	ct, cancel := context.WithTimeout(ctx, TimeoutDuration)
 	defer cancel()
 	resp, err := cli.Grant(ct, 10)
 	if err != nil {
@@ -169,7 +172,7 @@ func GetEtcdClusterStatus(ctx context.Context, inf cke.Infrastructure, nodes []*
 }
 
 func getEtcdMembers(ctx context.Context, inf cke.Infrastructure, cli *clientv3.Client) (map[string]*etcdserverpb.Member, error) {
-	ct, cancel := context.WithTimeout(ctx, timeoutDuration)
+	ct, cancel := context.WithTimeout(ctx, TimeoutDuration)
 	defer cancel()
 	resp, err := cli.MemberList(ct)
 	if err != nil {
@@ -177,13 +180,33 @@ func getEtcdMembers(ctx context.Context, inf cke.Infrastructure, cli *clientv3.C
 	}
 	members := make(map[string]*etcdserverpb.Member)
 	for _, m := range resp.Members {
-		name, err := etcdGuessMemberName(m)
+		name, err := guessMemberName(m)
 		if err != nil {
 			return nil, err
 		}
 		members[name] = m
 	}
 	return members, nil
+}
+
+func guessMemberName(m *etcdserverpb.Member) (string, error) {
+	if len(m.Name) > 0 {
+		return m.Name, nil
+	}
+
+	if len(m.PeerURLs) == 0 {
+		return "", errors.New("empty PeerURLs")
+	}
+
+	u, err := url.Parse(m.PeerURLs[0])
+	if err != nil {
+		return "", err
+	}
+	h, _, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		return "", err
+	}
+	return h, nil
 }
 
 func getEtcdMemberInSync(ctx context.Context, inf cke.Infrastructure, address string, clusterRev int64) bool {
@@ -194,7 +217,7 @@ func getEtcdMemberInSync(ctx context.Context, inf cke.Infrastructure, address st
 	}
 	defer cli.Close()
 
-	ct, cancel := context.WithTimeout(ctx, timeoutDuration)
+	ct, cancel := context.WithTimeout(ctx, TimeoutDuration)
 	defer cancel()
 	resp, err := cli.Get(ct, "health")
 	if err != nil {
@@ -217,7 +240,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	switch {
 	case err == nil:
 		s.IsReady = true
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.KubernetesClusterStatus{}, err
 	}
@@ -232,7 +255,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	switch {
 	case err == nil:
 		s.RBACRoleExists = true
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.KubernetesClusterStatus{}, err
 	}
@@ -241,7 +264,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	switch {
 	case err == nil:
 		s.RBACRoleBindingExists = true
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.KubernetesClusterStatus{}, err
 	}
@@ -253,7 +276,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		}
 		svc, err := clientset.CoreV1().Services(fields[0]).Get(fields[1], metav1.GetOptions{})
 		switch {
-		case errors.IsNotFound(err):
+		case k8serr.IsNotFound(err):
 		case err == nil:
 			s.DNSService = svc
 		default:
@@ -281,7 +304,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	switch {
 	case err == nil:
 		s.EtcdEndpoints = ep
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.KubernetesClusterStatus{}, err
 	}
@@ -302,7 +325,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	switch {
 	case err == nil:
 		s.ServiceAccountExists = true
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.ClusterDNSStatus{}, err
 	}
@@ -311,7 +334,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	switch {
 	case err == nil:
 		s.RBACRoleExists = true
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.ClusterDNSStatus{}, err
 	}
@@ -320,7 +343,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	switch {
 	case err == nil:
 		s.RBACRoleBindingExists = true
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.ClusterDNSStatus{}, err
 	}
@@ -329,7 +352,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	switch {
 	case err == nil:
 		s.ConfigMap = config
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.ClusterDNSStatus{}, err
 	}
@@ -338,7 +361,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	switch {
 	case err == nil:
 		s.Deployment = deployment
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.ClusterDNSStatus{}, err
 	}
@@ -348,7 +371,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	case err == nil:
 		s.ServiceExists = true
 		s.ClusterIP = service.Spec.ClusterIP
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.ClusterDNSStatus{}, err
 	}
@@ -369,7 +392,7 @@ func GetNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) 
 	switch {
 	case err == nil:
 		s.ConfigMap = config
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.NodeDNSStatus{}, err
 	}
@@ -378,7 +401,7 @@ func GetNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) 
 	switch {
 	case err == nil:
 		s.DaemonSet = ds
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.NodeDNSStatus{}, err
 	}
@@ -399,7 +422,7 @@ func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	switch {
 	case err == nil:
 		s.ConfigMap = config
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.EtcdBackupStatus{}, err
 	}
@@ -408,7 +431,7 @@ func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	switch {
 	case err == nil:
 		s.Pod = pod
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.EtcdBackupStatus{}, err
 	}
@@ -417,7 +440,7 @@ func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	switch {
 	case err == nil:
 		s.Service = service
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.EtcdBackupStatus{}, err
 	}
@@ -426,7 +449,7 @@ func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	switch {
 	case err == nil:
 		s.Secret = secret
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.EtcdBackupStatus{}, err
 	}
@@ -435,7 +458,7 @@ func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	switch {
 	case err == nil:
 		s.CronJob = job
-	case errors.IsNotFound(err):
+	case k8serr.IsNotFound(err):
 	default:
 		return cke.EtcdBackupStatus{}, err
 	}
@@ -499,4 +522,12 @@ func checkAPIServerHealth(ctx context.Context, inf cke.Infrastructure, n *cke.No
 		return false, err
 	}
 	return true, nil
+}
+
+// EtcdVolumeName returns etcd volume name
+func EtcdVolumeName(e cke.EtcdParams) string {
+	if len(e.VolumeName) == 0 {
+		return DefaultEtcdVolumeName
+	}
+	return e.VolumeName
 }

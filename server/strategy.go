@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/etcdbackup"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/log"
@@ -24,17 +25,17 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus) []cke.Operator {
 
 	// 2. Bootstrap etcd cluster, if not yet.
 	if !nf.EtcdBootstrapped() {
-		return []cke.Operator{op.EtcdBootOp(nf.ControlPlane(), c.Options.Etcd, c.Options.Kubelet.Domain)}
+		return []cke.Operator{etcd.BootOp(nf.ControlPlane(), c.Options.Etcd, c.Options.Kubelet.Domain)}
 	}
 
 	// 3. Start etcd containers.
 	if nodes := nf.EtcdStoppedMembers(); len(nodes) > 0 {
-		return []cke.Operator{op.EtcdStartOp(nodes, c.Options.Etcd, c.Options.Kubelet.Domain)}
+		return []cke.Operator{etcd.StartOp(nodes, c.Options.Etcd, c.Options.Kubelet.Domain)}
 	}
 
 	// 4. Wait for etcd cluster to become ready
 	if !cs.Etcd.IsHealthy {
-		return []cke.Operator{op.EtcdWaitClusterOp(nf.ControlPlane())}
+		return []cke.Operator{etcd.WaitClusterOp(nf.ControlPlane())}
 	}
 
 	// 5. Run or restart kubernetes components.
@@ -106,13 +107,13 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 
 func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	if ids := nf.EtcdNonClusterMemberIDs(false); len(ids) > 0 {
-		return op.EtcdRemoveMemberOp(nf.ControlPlane(), ids)
+		return etcd.RemoveMemberOp(nf.ControlPlane(), ids)
 	}
 	if nodes, ids := nf.EtcdNonCPMembers(false); len(nodes) > 0 {
-		return op.EtcdDestroyMemberOp(nf.ControlPlane(), nodes, ids)
+		return etcd.DestroyMemberOp(nf.ControlPlane(), nodes, ids)
 	}
 	if nodes := nf.EtcdUnstartedMembers(); len(nodes) > 0 {
-		return op.EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)
+		return etcd.AddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)
 	}
 
 	if !nf.EtcdIsGood() {
@@ -125,16 +126,16 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	// all members are in sync.
 
 	if nodes := nf.EtcdNewMembers(); len(nodes) > 0 {
-		return op.EtcdAddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)
+		return etcd.AddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)
 	}
 	if ids := nf.EtcdNonClusterMemberIDs(true); len(ids) > 0 {
-		return op.EtcdRemoveMemberOp(nf.ControlPlane(), ids)
+		return etcd.RemoveMemberOp(nf.ControlPlane(), ids)
 	}
 	if nodes, ids := nf.EtcdNonCPMembers(true); len(ids) > 0 {
-		return op.EtcdDestroyMemberOp(nf.ControlPlane(), nodes, ids)
+		return etcd.DestroyMemberOp(nf.ControlPlane(), nodes, ids)
 	}
 	if nodes := nf.EtcdOutdatedMembers(); len(nodes) > 0 {
-		return op.EtcdRestartOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
+		return etcd.RestartOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
 	}
 
 	return nil

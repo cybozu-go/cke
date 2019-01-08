@@ -1,4 +1,4 @@
-package op
+package etcd
 
 import (
 	"context"
@@ -9,17 +9,10 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 )
-
-func etcdVolumeName(e cke.EtcdParams) string {
-	if len(e.VolumeName) == 0 {
-		return defaultEtcdVolumeName
-	}
-	return e.VolumeName
-}
 
 func etcdEndpoints(nodes []*cke.Node) []string {
 	endpoints := make([]string, len(nodes))
@@ -46,28 +39,8 @@ func addressInURLs(address string, urls []string) (bool, error) {
 	return false, nil
 }
 
-func etcdGuessMemberName(m *etcdserverpb.Member) (string, error) {
-	if len(m.Name) > 0 {
-		return m.Name, nil
-	}
-
-	if len(m.PeerURLs) == 0 {
-		return "", errors.New("empty PeerURLs")
-	}
-
-	u, err := url.Parse(m.PeerURLs[0])
-	if err != nil {
-		return "", err
-	}
-	h, _, err := net.SplitHostPort(u.Host)
-	if err != nil {
-		return "", err
-	}
-	return h, nil
-}
-
-// EtcdBuiltInParams returns etcd parameters.
-func EtcdBuiltInParams(node *cke.Node, initialCluster []string, state string) cke.ServiceParams {
+// BuiltInParams returns etcd parameters.
+func BuiltInParams(node *cke.Node, initialCluster []string, state string) cke.ServiceParams {
 	// NOTE: "--initial-*" flags and its value must be joined with '=' to
 	// compare parameters to detect outdated parameters.
 	args := []string{
@@ -75,14 +48,14 @@ func EtcdBuiltInParams(node *cke.Node, initialCluster []string, state string) ck
 		"--listen-peer-urls=https://0.0.0.0:2380",
 		"--listen-client-urls=https://0.0.0.0:2379",
 		"--advertise-client-urls=https://" + node.Address + ":2379",
-		"--cert-file=" + EtcdPKIPath("server.crt"),
-		"--key-file=" + EtcdPKIPath("server.key"),
+		"--cert-file=" + op.EtcdPKIPath("server.crt"),
+		"--key-file=" + op.EtcdPKIPath("server.key"),
 		"--client-cert-auth=true",
-		"--trusted-ca-file=" + EtcdPKIPath("ca-client.crt"),
-		"--peer-cert-file=" + EtcdPKIPath("peer.crt"),
-		"--peer-key-file=" + EtcdPKIPath("peer.key"),
+		"--trusted-ca-file=" + op.K8sPKIPath("ca-client.crt"),
+		"--peer-cert-file=" + op.K8sPKIPath("peer.crt"),
+		"--peer-key-file=" + op.K8sPKIPath("peer.key"),
 		"--peer-client-cert-auth=true",
-		"--peer-trusted-ca-file=" + EtcdPKIPath("ca-peer.crt"),
+		"--peer-trusted-ca-file=" + op.K8sPKIPath("ca-peer.crt"),
 		"--enable-v2=false",
 		"--enable-pprof=true",
 		"--auto-compaction-mode=periodic",
@@ -124,7 +97,7 @@ func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf cke.Infrast
 		}
 		return []byte(c), []byte(k), nil
 	}
-	err := c.files.AddKeyPair(ctx, EtcdPKIPath("server"), f)
+	err := c.files.AddKeyPair(ctx, op.K8sPKIPath("server"), f)
 	if err != nil {
 		return err
 	}
@@ -136,7 +109,7 @@ func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf cke.Infrast
 		}
 		return []byte(c), []byte(k), nil
 	}
-	err = c.files.AddKeyPair(ctx, EtcdPKIPath("peer"), f)
+	err = c.files.AddKeyPair(ctx, op.K8sPKIPath("peer"), f)
 	if err != nil {
 		return err
 	}
@@ -148,7 +121,7 @@ func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf cke.Infrast
 	f2 := func(ctx context.Context, node *cke.Node) ([]byte, error) {
 		return []byte(peerCA), nil
 	}
-	err = c.files.AddFile(ctx, EtcdPKIPath("ca-peer.crt"), f2)
+	err = c.files.AddFile(ctx, op.K8sPKIPath("ca-peer.crt"), f2)
 	if err != nil {
 		return err
 	}
@@ -160,7 +133,7 @@ func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf cke.Infrast
 	f2 = func(ctx context.Context, node *cke.Node) ([]byte, error) {
 		return []byte(clientCA), nil
 	}
-	err = c.files.AddFile(ctx, EtcdPKIPath("ca-client.crt"), f2)
+	err = c.files.AddFile(ctx, op.K8sPKIPath("ca-client.crt"), f2)
 	if err != nil {
 		return err
 	}
@@ -184,7 +157,7 @@ func (c waitEtcdSyncCommand) try(ctx context.Context, inf cke.Infrastructure) er
 		return err
 	}
 
-	ct, cancel := context.WithTimeout(ctx, timeoutDuration)
+	ct, cancel := context.WithTimeout(ctx, op.TimeoutDuration)
 	defer cancel()
 	resp, err := cli.Grant(ct, 10)
 	if err != nil {
@@ -200,7 +173,7 @@ func (c waitEtcdSyncCommand) try(ctx context.Context, inf cke.Infrastructure) er
 
 	healthyMemberCount := 0
 	for _, ep := range c.endpoints {
-		ct2, cancel2 := context.WithTimeout(ctx, timeoutDuration)
+		ct2, cancel2 := context.WithTimeout(ctx, op.TimeoutDuration)
 		_, err = cli.Status(ct2, ep)
 		cancel2()
 		if err == nil {

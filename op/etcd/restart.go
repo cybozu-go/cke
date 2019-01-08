@@ -1,7 +1,8 @@
-package op
+package etcd
 
 import (
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 )
 
@@ -12,8 +13,8 @@ type etcdRestartOp struct {
 	step    int
 }
 
-// EtcdRestartOp returns an Operator to restart an etcd member.
-func EtcdRestartOp(cpNodes []*cke.Node, target *cke.Node, params cke.EtcdParams) cke.Operator {
+// RestartOp returns an Operator to restart an etcd member.
+func RestartOp(cpNodes []*cke.Node, target *cke.Node, params cke.EtcdParams) cke.Operator {
 	return &etcdRestartOp{
 		cpNodes: cpNodes,
 		target:  target,
@@ -35,20 +36,20 @@ func (o *etcdRestartOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand([]*cke.Node{o.target}, cke.EtcdImage)
 	case 2:
 		o.step++
-		return common.StopContainerCommand(o.target, EtcdContainerName)
+		return common.StopContainerCommand(o.target, op.EtcdContainerName)
 	case 3:
 		o.step++
 		opts := []string{
 			"--mount",
-			"type=volume,src=" + etcdVolumeName(o.params) + ",dst=/var/lib/etcd",
+			"type=volume,src=" + op.EtcdVolumeName(o.params) + ",dst=/var/lib/etcd",
 		}
 		var initialCluster []string
 		for _, n := range o.cpNodes {
 			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
-		return common.RunContainerCommand([]*cke.Node{o.target}, EtcdContainerName, cke.EtcdImage,
+		return common.RunContainerCommand([]*cke.Node{o.target}, op.EtcdContainerName, cke.EtcdImage,
 			common.WithOpts(opts),
-			common.WithParams(EtcdBuiltInParams(o.target, initialCluster, "new")),
+			common.WithParams(BuiltInParams(o.target, initialCluster, "new")),
 			common.WithExtra(o.params.ServiceParams))
 	}
 	return nil
