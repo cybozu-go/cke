@@ -1,4 +1,4 @@
-package op
+package k8s
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 	"github.com/cybozu-go/well"
 	yaml "gopkg.in/yaml.v2"
@@ -104,7 +105,7 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 			}
 			paramsMap[n.Address] = params
 		}
-		return common.RunContainerCommand(o.nodes, kubeletContainerName, cke.HyperkubeImage,
+		return common.RunContainerCommand(o.nodes, op.KubeletContainerName, cke.HyperkubeImage,
 			common.WithOpts(opts),
 			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params.ServiceParams))
@@ -123,9 +124,9 @@ type prepareKubeletFilesCommand struct {
 func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	const kubeletConfigPath = "/etc/kubernetes/kubelet/config.yml"
 	const kubeconfigPath = "/etc/kubernetes/kubelet/kubeconfig"
-	caPath := K8sPKIPath("ca.crt")
-	tlsCertPath := K8sPKIPath("kubelet.crt")
-	tlsKeyPath := K8sPKIPath("kubelet.key")
+	caPath := op.K8sPKIPath("ca.crt")
+	tlsCertPath := op.K8sPKIPath("kubelet.crt")
+	tlsKeyPath := op.K8sPKIPath("kubelet.key")
 	storage := inf.Storage()
 
 	bridgeConfData := []byte(cniBridgeConfig(c.podSubnet))
@@ -137,14 +138,14 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		return err
 	}
 
-	cfg := &KubeletConfiguration{
+	cfg := &kubeletConfiguration{
 		APIVersion:            "kubelet.config.k8s.io/v1beta1",
-		Kind:                  "KubeletConfiguration",
+		Kind:                  "kubeletConfiguration",
 		ReadOnlyPort:          0,
 		TLSCertFile:           tlsCertPath,
 		TLSPrivateKeyFile:     tlsKeyPath,
 		Authentication:        KubeletAuthentication{ClientCAFile: caPath},
-		Authorization:         KubeletAuthorization{Mode: "Webhook"},
+		Authorization:         kubeletAuthorization{Mode: "Webhook"},
 		HealthzBindAddress:    "0.0.0.0",
 		ClusterDomain:         c.params.Domain,
 		RuntimeRequestTimeout: "15m",
@@ -179,7 +180,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		}
 		return []byte(c), []byte(k), nil
 	}
-	err = c.files.AddKeyPair(ctx, K8sPKIPath("kubelet"), f)
+	err = c.files.AddKeyPair(ctx, op.K8sPKIPath("kubelet"), f)
 	if err != nil {
 		return err
 	}

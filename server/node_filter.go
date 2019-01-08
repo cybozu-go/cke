@@ -3,6 +3,8 @@ package server
 import (
 	"strings"
 
+	"github.com/cybozu-go/cke/op/k8s"
+
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/log"
@@ -64,7 +66,7 @@ func (nf *NodeFilter) RiversStoppedNodes() (nodes []*cke.Node) {
 
 // RiversOutdatedNodes returns nodes that are running rivers with outdated image or params.
 func (nf *NodeFilter) RiversOutdatedNodes() (nodes []*cke.Node) {
-	currentBuiltIn := op.RiversParams(nf.cp)
+	currentBuiltIn := k8s.RiversParams(nf.cp)
 	currentExtra := nf.cluster.Options.Rivers
 
 	for _, n := range nf.cluster.Nodes {
@@ -254,7 +256,7 @@ func (nf *NodeFilter) APIServerOutdatedNodes() (nodes []*cke.Node) {
 
 	for _, n := range nf.cp {
 		st := nf.nodeStatus(n).APIServer
-		currentBuiltIn := op.APIServerParams(nf.ControlPlane(), n.Address, nf.cluster.ServiceSubnet)
+		currentBuiltIn := k8s.APIServerParams(nf.ControlPlane(), n.Address, nf.cluster.ServiceSubnet)
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
@@ -281,7 +283,7 @@ func (nf *NodeFilter) ControllerManagerStoppedNodes() (nodes []*cke.Node) {
 
 // ControllerManagerOutdatedNodes returns nodes that are running controller manager with outdated image or params.
 func (nf *NodeFilter) ControllerManagerOutdatedNodes() (nodes []*cke.Node) {
-	currentBuiltIn := op.ControllerManagerParams(nf.cluster.Name, nf.cluster.ServiceSubnet)
+	currentBuiltIn := k8s.ControllerManagerParams(nf.cluster.Name, nf.cluster.ServiceSubnet)
 	currentExtra := nf.cluster.Options.ControllerManager
 
 	for _, n := range nf.cp {
@@ -312,7 +314,7 @@ func (nf *NodeFilter) SchedulerStoppedNodes() (nodes []*cke.Node) {
 
 // SchedulerOutdatedNodes returns nodes that are running kube-scheduler with outdated image or params.
 func (nf *NodeFilter) SchedulerOutdatedNodes() (nodes []*cke.Node) {
-	currentBuiltIn := op.SchedulerParams()
+	currentBuiltIn := k8s.SchedulerParams()
 	currentExtra := nf.cluster.Options.Scheduler
 
 	for _, n := range nf.cp {
@@ -363,7 +365,7 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 
 	for _, n := range nf.cluster.Nodes {
 		st := nf.nodeStatus(n).Kubelet
-		currentBuiltIn := op.KubeletServiceParams(n)
+		currentBuiltIn := k8s.KubeletServiceParams(n)
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
@@ -421,7 +423,7 @@ func (nf *NodeFilter) ProxyStoppedNodes() (nodes []*cke.Node) {
 
 // ProxyOutdatedNodes returns nodes that are running kube-proxy with outdated image or params.
 func (nf *NodeFilter) ProxyOutdatedNodes() (nodes []*cke.Node) {
-	currentBuiltIn := op.ProxyParams()
+	currentBuiltIn := k8s.ProxyParams()
 	currentExtra := nf.cluster.Options.Proxy
 
 	for _, n := range nf.cluster.Nodes {

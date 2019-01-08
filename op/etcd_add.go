@@ -44,7 +44,7 @@ func (o *etcdAddMemberOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(nodes, cke.EtcdImage)
 	case 1:
 		o.step++
-		return common.StopContainerCommand(o.targetNode, etcdContainerName)
+		return common.StopContainerCommand(o.targetNode, EtcdContainerName)
 	case 2:
 		o.step++
 		return common.VolumeRemoveCommand(nodes, volname)
@@ -123,11 +123,11 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	}
 	// gofail: var etcdAfterMemberAdd struct{}
 	ce := inf.Engine(c.node.Address)
-	ss, err := ce.Inspect([]string{etcdContainerName})
+	ss, err := ce.Inspect([]string{EtcdContainerName})
 	if err != nil {
 		return err
 	}
-	if ss[etcdContainerName].Running {
+	if ss[EtcdContainerName].Running {
 		return nil
 	}
 
@@ -142,7 +142,7 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 		}
 	}
 
-	return ce.RunSystem(etcdContainerName, cke.EtcdImage, c.opts, EtcdBuiltInParams(c.node, initialCluster, "existing"), c.extra)
+	return ce.RunSystem(EtcdContainerName, cke.EtcdImage, c.opts, EtcdBuiltInParams(c.node, initialCluster, "existing"), c.extra)
 }
 
 func (c addEtcdMemberCommand) Command() cke.Command {

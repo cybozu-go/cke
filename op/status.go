@@ -24,13 +24,13 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	ce := inf.Engine(node.Address)
 
 	ss, err := ce.Inspect([]string{
-		etcdContainerName,
-		riversContainerName,
-		kubeAPIServerContainerName,
-		kubeControllerManagerContainerName,
-		kubeSchedulerContainerName,
-		kubeProxyContainerName,
-		kubeletContainerName,
+		EtcdContainerName,
+		RiversContainerName,
+		KubeAPIServerContainerName,
+		KubeControllerManagerContainerName,
+		KubeSchedulerContainerName,
+		KubeProxyContainerName,
+		KubeletContainerName,
 	})
 	if err != nil {
 		return nil, err
@@ -42,13 +42,13 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	}
 
 	status.Etcd = cke.EtcdStatus{
-		ServiceStatus: ss[etcdContainerName],
+		ServiceStatus: ss[EtcdContainerName],
 		HasData:       etcdVolumeExists,
 	}
-	status.Rivers = ss[riversContainerName]
+	status.Rivers = ss[RiversContainerName]
 
 	status.APIServer = cke.KubeComponentStatus{
-		ServiceStatus: ss[kubeAPIServerContainerName],
+		ServiceStatus: ss[KubeAPIServerContainerName],
 		IsHealthy:     false,
 	}
 	if status.APIServer.Running {
@@ -62,7 +62,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	}
 
 	status.ControllerManager = cke.KubeComponentStatus{
-		ServiceStatus: ss[kubeControllerManagerContainerName],
+		ServiceStatus: ss[KubeControllerManagerContainerName],
 		IsHealthy:     false,
 	}
 	if status.ControllerManager.Running {
@@ -76,7 +76,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	}
 
 	status.Scheduler = cke.KubeComponentStatus{
-		ServiceStatus: ss[kubeSchedulerContainerName],
+		ServiceStatus: ss[KubeSchedulerContainerName],
 		IsHealthy:     false,
 	}
 	if status.Scheduler.Running {
@@ -92,13 +92,13 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	// TODO: doe to the following bug, health status cannot be checked for proxy.
 	// https://github.com/kubernetes/kubernetes/issues/65118
 	status.Proxy = cke.KubeComponentStatus{
-		ServiceStatus: ss[kubeProxyContainerName],
+		ServiceStatus: ss[KubeProxyContainerName],
 		IsHealthy:     false,
 	}
 	status.Proxy.IsHealthy = status.Proxy.Running
 
 	status.Kubelet = cke.KubeletStatus{
-		ServiceStatus: ss[kubeletContainerName],
+		ServiceStatus: ss[KubeletContainerName],
 		IsHealthy:     false,
 		Domain:        "",
 		AllowSwap:     false,

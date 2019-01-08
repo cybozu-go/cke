@@ -1,7 +1,8 @@
-package op
+package k8s
 
 import (
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 )
 
@@ -46,7 +47,7 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 		"--mount", "type=tmpfs,dst=/run/kubernetes",
 	}
 	return common.RunContainerCommand([]*cke.Node{node},
-		kubeAPIServerContainerName, cke.HyperkubeImage,
+		op.KubeAPIServerContainerName, cke.HyperkubeImage,
 		common.WithOpts(opts),
 		common.WithParams(APIServerParams(o.cps, node.Address, o.serviceSubnet)),
 		common.WithExtra(o.params),

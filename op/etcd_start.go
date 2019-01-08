@@ -45,7 +45,7 @@ func (o *etcdStartOp) NextCommand() cke.Commander {
 		for _, n := range o.nodes {
 			paramsMap[n.Address] = EtcdBuiltInParams(n, nil, "")
 		}
-		return common.RunContainerCommand(o.nodes, etcdContainerName, cke.EtcdImage,
+		return common.RunContainerCommand(o.nodes, EtcdContainerName, cke.EtcdImage,
 			common.WithOpts(opts),
 			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params.ServiceParams))

@@ -1,7 +1,8 @@
-package op
+package k8s
 
 import (
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 )
 
@@ -36,7 +37,7 @@ func (o *schedulerRestartOp) NextCommand() cke.Commander {
 
 	if !o.finished {
 		o.finished = true
-		return common.RunContainerCommand(o.nodes, kubeSchedulerContainerName, cke.HyperkubeImage,
+		return common.RunContainerCommand(o.nodes, op.KubeSchedulerContainerName, cke.HyperkubeImage,
 			common.WithParams(SchedulerParams()),
 			common.WithExtra(o.params),
 			common.WithRestart())

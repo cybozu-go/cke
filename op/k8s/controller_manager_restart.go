@@ -1,7 +1,8 @@
-package op
+package k8s
 
 import (
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 )
 
@@ -38,7 +39,7 @@ func (o *controllerManagerRestartOp) NextCommand() cke.Commander {
 
 	if !o.finished {
 		o.finished = true
-		return common.RunContainerCommand(o.nodes, kubeControllerManagerContainerName, cke.HyperkubeImage,
+		return common.RunContainerCommand(o.nodes, op.KubeControllerManagerContainerName, cke.HyperkubeImage,
 			common.WithParams(ControllerManagerParams(o.cluster, o.serviceSubnet)),
 			common.WithExtra(o.params),
 			common.WithRestart())

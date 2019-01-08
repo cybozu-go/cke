@@ -35,7 +35,7 @@ func (o *etcdRestartOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand([]*cke.Node{o.target}, cke.EtcdImage)
 	case 2:
 		o.step++
-		return common.StopContainerCommand(o.target, etcdContainerName)
+		return common.StopContainerCommand(o.target, EtcdContainerName)
 	case 3:
 		o.step++
 		opts := []string{
@@ -46,7 +46,7 @@ func (o *etcdRestartOp) NextCommand() cke.Commander {
 		for _, n := range o.cpNodes {
 			initialCluster = append(initialCluster, n.Address+"=https://"+n.Address+":2380")
 		}
-		return common.RunContainerCommand([]*cke.Node{o.target}, etcdContainerName, cke.EtcdImage,
+		return common.RunContainerCommand([]*cke.Node{o.target}, EtcdContainerName, cke.EtcdImage,
 			common.WithOpts(opts),
 			common.WithParams(EtcdBuiltInParams(o.target, initialCluster, "new")),
 			common.WithExtra(o.params.ServiceParams))

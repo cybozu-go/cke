@@ -1,9 +1,10 @@
-package op
+package k8s
 
 import (
 	"context"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -51,7 +52,7 @@ func (o *schedulerBootOp) NextCommand() cke.Commander {
 		return o.files
 	case 4:
 		o.step++
-		return common.RunContainerCommand(o.nodes, kubeSchedulerContainerName, cke.HyperkubeImage,
+		return common.RunContainerCommand(o.nodes, op.KubeSchedulerContainerName, cke.HyperkubeImage,
 			common.WithParams(SchedulerParams()),
 			common.WithExtra(o.params))
 	default:

@@ -1,7 +1,8 @@
-package op
+package k8s
 
 import (
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 )
 
@@ -40,7 +41,7 @@ func (o *kubeProxyRestartOp) NextCommand() cke.Commander {
 			"--tmpfs=/run",
 			"--privileged",
 		}
-		return common.RunContainerCommand(o.nodes, kubeProxyContainerName, cke.HyperkubeImage,
+		return common.RunContainerCommand(o.nodes, op.KubeProxyContainerName, cke.HyperkubeImage,
 			common.WithOpts(opts),
 			common.WithParams(ProxyParams()),
 			common.WithExtra(o.params),

@@ -4,6 +4,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/etcdbackup"
+	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -61,44 +62,44 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus) []cke.Operator {
 
 func riversOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	if nodes := nf.RiversStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.RiversBootOp(nodes, nf.ControlPlane(), c.Options.Rivers))
+		ops = append(ops, k8s.RiversBootOp(nodes, nf.ControlPlane(), c.Options.Rivers))
 	}
 	if nodes := nf.RiversOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.RiversRestartOp(nodes, nf.ControlPlane(), c.Options.Rivers))
+		ops = append(ops, k8s.RiversRestartOp(nodes, nf.ControlPlane(), c.Options.Rivers))
 	}
 	return ops
 }
 
 func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	if nodes := nf.APIServerStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.APIServerBootOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.Kubelet.Domain, c.Options.APIServer))
+		ops = append(ops, k8s.APIServerBootOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.Kubelet.Domain, c.Options.APIServer))
 	}
 	if nodes := nf.APIServerOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.APIServer))
+		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.APIServer))
 	}
 	if nodes := nf.ControllerManagerStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.ControllerManagerBootOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
+		ops = append(ops, k8s.ControllerManagerBootOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
 	}
 	if nodes := nf.ControllerManagerOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.ControllerManagerRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
+		ops = append(ops, k8s.ControllerManagerRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
 	}
 	if nodes := nf.SchedulerStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.SchedulerBootOp(nodes, c.Name, c.Options.Scheduler))
+		ops = append(ops, k8s.SchedulerBootOp(nodes, c.Name, c.Options.Scheduler))
 	}
 	if nodes := nf.SchedulerOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.SchedulerRestartOp(nodes, c.Name, c.Options.Scheduler))
+		ops = append(ops, k8s.SchedulerRestartOp(nodes, c.Name, c.Options.Scheduler))
 	}
 	if nodes := nf.KubeletStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.KubeletBootOp(nodes, nf.KubeletStoppedRegisteredNodes(), nf.HealthyAPIServer(), c.Name, c.PodSubnet, c.Options.Kubelet))
+		ops = append(ops, k8s.KubeletBootOp(nodes, nf.KubeletStoppedRegisteredNodes(), nf.HealthyAPIServer(), c.Name, c.PodSubnet, c.Options.Kubelet))
 	}
 	if nodes := nf.KubeletOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.KubeletRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.Kubelet))
+		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.Kubelet))
 	}
 	if nodes := nf.ProxyStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.KubeProxyBootOp(nodes, c.Name, c.Options.Proxy))
+		ops = append(ops, k8s.KubeProxyBootOp(nodes, c.Name, c.Options.Proxy))
 	}
 	if nodes := nf.ProxyOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, op.KubeProxyRestartOp(nodes, c.Name, c.Options.Proxy))
+		ops = append(ops, k8s.KubeProxyRestartOp(nodes, c.Name, c.Options.Proxy))
 	}
 	return ops
 }

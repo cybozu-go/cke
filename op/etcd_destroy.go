@@ -33,7 +33,7 @@ func (o *etcdDestroyMemberOp) NextCommand() cke.Commander {
 		return removeEtcdMemberCommand{o.endpoints, o.ids}
 	case 1:
 		o.step++
-		return common.KillContainersCommand(o.targets, etcdContainerName)
+		return common.KillContainersCommand(o.targets, EtcdContainerName)
 	case 2:
 		o.step++
 		return common.VolumeRemoveCommand(o.targets, etcdVolumeName(o.params))

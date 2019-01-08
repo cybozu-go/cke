@@ -8,13 +8,13 @@ import (
 const (
 	defaultEtcdVolumeName = "etcd-cke"
 
-	etcdContainerName                  = "etcd"
-	kubeAPIServerContainerName         = "kube-apiserver"
-	kubeControllerManagerContainerName = "kube-controller-manager"
-	kubeProxyContainerName             = "kube-proxy"
-	kubeSchedulerContainerName         = "kube-scheduler"
-	kubeletContainerName               = "kubelet"
-	riversContainerName                = "rivers"
+	EtcdContainerName                  = "etcd"
+	KubeAPIServerContainerName         = "kube-apiserver"
+	KubeControllerManagerContainerName = "kube-controller-manager"
+	KubeProxyContainerName             = "kube-proxy"
+	KubeSchedulerContainerName         = "kube-scheduler"
+	KubeletContainerName               = "kubelet"
+	RiversContainerName                = "rivers"
 
 	rbacRoleName        = "system:kube-apiserver-to-kubelet"
 	rbacRoleBindingName = "system:kube-apiserver"
