@@ -156,6 +156,19 @@ The user name defined in the cluster will be used.
 
 If `COMMAND` is specified, it will be executed on the node.
 
+`ckecli scp [-r] [NODE1:]FILE1 ... [NODE2:]FILE2`
+-------------------------------------------------
+
+Copy files between hosts via scp.
+
+`NODE` is IP address or hostname of the node.
+The node should be defined in the cluster definition.
+The user name defined in the cluster will be used.
+
+Option  | Default value | Description
+------- | ------------- | -----------
+`-r`    | `false`       | Recursively copy entire directories.
+
 `ckecli sabakan`
 ----------------
 

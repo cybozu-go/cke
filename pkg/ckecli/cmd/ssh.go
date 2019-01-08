@@ -37,11 +37,10 @@ func writeToFifo(fifo string, data string) {
 	}
 }
 
-func connectToNode(ctx context.Context, args []string) error {
-	nodeName := args[0]
+func resolveNode(ctx context.Context, nodeName string) (*cke.Node, error) {
 	cluster, err := storage.GetCluster(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var node *cke.Node
 	for _, n := range cluster.Nodes {
@@ -51,34 +50,36 @@ func connectToNode(ctx context.Context, args []string) error {
 		}
 	}
 	if node == nil {
-		return errors.New("the node is not defined in the cluster: " + nodeName)
+		return nil, errors.New("the node is not defined in the cluster: " + nodeName)
 	}
+	return node, nil
+}
 
+func sshPrivateKey(node *cke.Node) (string, error) {
 	usr, err := user.Current()
 	if err != nil {
-		return err
+		return "", err
 	}
 	err = os.MkdirAll(filepath.Join(usr.HomeDir, ".ssh"), 0700)
 	if err != nil {
-		return err
+		return "", err
 	}
 	fifo := filepath.Join(usr.HomeDir, ".ssh", "ckecli-ssh-key-"+strconv.Itoa(os.Getpid()))
 	err = syscall.Mkfifo(fifo, 0600)
 	if err != nil {
-		return err
+		return "", err
 	}
-	defer os.Remove(fifo)
 
 	vc, err := inf.Vault()
 	if err != nil {
-		return err
+		return "", err
 	}
 	secret, err := vc.Logical().Read(cke.SSHSecret)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if secret == nil {
-		return errors.New("no ssh private keys")
+		return "", errors.New("no ssh private keys")
 	}
 	privKeys := secret.Data
 
@@ -87,7 +88,7 @@ func connectToNode(ctx context.Context, args []string) error {
 		mykey = privKeys[""]
 	}
 	if mykey == nil {
-		return errors.New("no ssh private key for " + nodeName)
+		return "", errors.New("no ssh private key for " + node.Address)
 	}
 
 	go func() {
@@ -96,6 +97,21 @@ func connectToNode(ctx context.Context, args []string) error {
 		// OpenSSH reads the private key file twice, it need to write key twice.
 		writeToFifo(fifo, mykey.(string))
 	}()
+
+	return fifo, nil
+}
+
+func ssh(ctx context.Context, args []string) error {
+	nodeName := args[0]
+	node, err := resolveNode(ctx, nodeName)
+	if err != nil {
+		return err
+	}
+	fifo, err := sshPrivateKey(node)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(fifo)
 
 	sshArgs := []string{
 		"-i", fifo,
@@ -111,11 +127,11 @@ func connectToNode(ctx context.Context, args []string) error {
 	return c.Run()
 }
 
-// leaderCmd represents the leader command
+// sshCmd represents the ssh command
 var sshCmd = &cobra.Command{
 	Use:   "ssh NODE [COMMAND...]",
 	Short: "connect to the node via ssh",
-	Long: `connect to the node via ssh.
+	Long: `Connect to the node via ssh.
 
 NODE is IP address or hostname of the node to be connected.
 
@@ -125,7 +141,7 @@ If COMMAND is specified, it will be executed on the node.
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		well.Go(func(ctx context.Context) error {
-			return connectToNode(ctx, args)
+			return ssh(ctx, args)
 		})
 		well.Stop()
 		return well.Wait()
