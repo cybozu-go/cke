@@ -140,7 +140,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 
 	cfg := &kubeletConfiguration{
 		APIVersion:            "kubelet.config.k8s.io/v1beta1",
-		Kind:                  "kubeletConfiguration",
+		Kind:                  "KubeletConfiguration",
 		ReadOnlyPort:          0,
 		TLSCertFile:           tlsCertPath,
 		TLSPrivateKeyFile:     tlsKeyPath,
