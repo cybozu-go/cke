@@ -321,7 +321,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 
 	s := cke.ClusterDNSStatus{}
 
-	_, err = clientset.CoreV1().ServiceAccounts("kube-system").Get(clusterDNSAppName, metav1.GetOptions{})
+	_, err = clientset.CoreV1().ServiceAccounts("kube-system").Get(ClusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.ServiceAccountExists = true
@@ -330,7 +330,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.ClusterDNSStatus{}, err
 	}
 
-	_, err = clientset.RbacV1().ClusterRoles().Get(clusterDNSRBACRoleName, metav1.GetOptions{})
+	_, err = clientset.RbacV1().ClusterRoles().Get(ClusterDNSRBACRoleName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.RBACRoleExists = true
@@ -339,7 +339,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.ClusterDNSStatus{}, err
 	}
 
-	_, err = clientset.RbacV1().ClusterRoleBindings().Get(clusterDNSRBACRoleName, metav1.GetOptions{})
+	_, err = clientset.RbacV1().ClusterRoleBindings().Get(ClusterDNSRBACRoleName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.RBACRoleBindingExists = true
@@ -348,7 +348,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.ClusterDNSStatus{}, err
 	}
 
-	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(clusterDNSAppName, metav1.GetOptions{})
+	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(ClusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.ConfigMap = config
@@ -357,7 +357,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.ClusterDNSStatus{}, err
 	}
 
-	deployment, err := clientset.AppsV1().Deployments("kube-system").Get(clusterDNSAppName, metav1.GetOptions{})
+	deployment, err := clientset.AppsV1().Deployments("kube-system").Get(ClusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.Deployment = deployment
@@ -366,7 +366,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.ClusterDNSStatus{}, err
 	}
 
-	service, err := clientset.CoreV1().Services("kube-system").Get(clusterDNSAppName, metav1.GetOptions{})
+	service, err := clientset.CoreV1().Services("kube-system").Get(ClusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.ServiceExists = true

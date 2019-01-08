@@ -11,9 +11,6 @@ const (
 
 	etcdEndpointsName = "cke-etcd"
 
-	clusterDNSRBACRoleName = "system:cluster-dns"
-	clusterDNSAppName      = "cluster-dns"
-
 	nodeDNSAppName = "node-dns"
 
 	etcdPKIPath = "/etc/etcd/pki"
@@ -35,6 +32,11 @@ const (
 	KubeletContainerName = "kubelet"
 	// RiversContainerName is container name of rivers
 	RiversContainerName = "rivers"
+
+	// ClusterDNSRBACRoleName is role name of cluster DNS
+	ClusterDNSRBACRoleName = "system:cluster-dns"
+	// ClusterDNSAppName is app name of cluster DNS
+	ClusterDNSAppName = "cluster-dns"
 
 	// DefaultEtcdVolumeName is etcd default volume name
 	DefaultEtcdVolumeName = "etcd-cke"

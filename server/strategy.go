@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/clusterdns"
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/etcdbackup"
 	"github.com/cybozu-go/cke/op/k8s"
@@ -197,33 +198,33 @@ func decideClusterDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesC
 	}
 
 	if !ks.ClusterDNS.ServiceAccountExists {
-		ops = append(ops, op.KubeClusterDNSCreateServiceAccountOp(apiServer))
+		ops = append(ops, clusterdns.CreateServiceAccountOp(apiServer))
 	}
 	if !ks.ClusterDNS.RBACRoleExists {
-		ops = append(ops, op.KubeClusterDNSCreateRBACRoleOp(apiServer))
+		ops = append(ops, clusterdns.CreateRBACRoleOp(apiServer))
 	}
 	if !ks.ClusterDNS.RBACRoleBindingExists {
-		ops = append(ops, op.KubeClusterDNSCreateRBACRoleBindingOp(apiServer))
+		ops = append(ops, clusterdns.CreateRBACRoleBindingOp(apiServer))
 	}
 	if ks.ClusterDNS.ConfigMap == nil {
-		ops = append(ops, op.KubeClusterDNSCreateConfigMapOp(apiServer, desiredClusterDomain, desiredDNSServers))
+		ops = append(ops, clusterdns.CreateConfigMapOp(apiServer, desiredClusterDomain, desiredDNSServers))
 	} else {
 		actualConfigData := ks.ClusterDNS.ConfigMap.Data
-		expectedConfig := op.ClusterDNSConfigMap(desiredClusterDomain, desiredDNSServers)
+		expectedConfig := clusterdns.ConfigMap(desiredClusterDomain, desiredDNSServers)
 		if actualConfigData["Corefile"] != expectedConfig.Data["Corefile"] {
-			ops = append(ops, op.KubeClusterDNSUpdateConfigMapOp(apiServer, expectedConfig))
+			ops = append(ops, clusterdns.UpdateConfigMapOp(apiServer, expectedConfig))
 		}
 	}
 	if ks.ClusterDNS.Deployment == nil {
-		ops = append(ops, op.KubeClusterDNSCreateDeploymentOp(apiServer))
+		ops = append(ops, clusterdns.CreateDeploymentOp(apiServer))
 	} else {
 		if ks.ClusterDNS.Deployment.Annotations["cke.cybozu.com/image"] != cke.CoreDNSImage.Name() ||
-			ks.ClusterDNS.Deployment.Annotations["cke.cybozu.com/template-version"] != op.CoreDNSTemplateVersion {
-			ops = append(ops, op.KubeClusterDNSUpdateDeploymentOp(apiServer))
+			ks.ClusterDNS.Deployment.Annotations["cke.cybozu.com/template-version"] != clusterdns.CoreDNSTemplateVersion {
+			ops = append(ops, clusterdns.UpdateDeploymentOp(apiServer))
 		}
 	}
 	if !ks.ClusterDNS.ServiceExists {
-		ops = append(ops, op.KubeClusterDNSCreateOp(apiServer))
+		ops = append(ops, clusterdns.CreateOp(apiServer))
 	}
 
 	return ops
