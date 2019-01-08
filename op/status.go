@@ -284,17 +284,17 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		}
 	}
 
-	s.ClusterDNS, err = GetClusterDNSStatus(ctx, inf, n)
+	s.ClusterDNS, err = getClusterDNSStatus(ctx, inf, n)
 	if err != nil {
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	s.NodeDNS, err = GetNodeDNSStatus(ctx, inf, n)
+	s.NodeDNS, err = getNodeDNSStatus(ctx, inf, n)
 	if err != nil {
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	s.EtcdBackup, err = GetEtcdBackupStatus(ctx, inf, n)
+	s.EtcdBackup, err = getEtcdBackupStatus(ctx, inf, n)
 	if err != nil {
 		return cke.KubernetesClusterStatus{}, err
 	}
@@ -312,8 +312,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	return s, nil
 }
 
-// GetClusterDNSStatus returns ClusterDNSStatus
-func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.ClusterDNSStatus, error) {
+func getClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.ClusterDNSStatus, error) {
 	clientset, err := inf.K8sClient(ctx, n)
 	if err != nil {
 		return cke.ClusterDNSStatus{}, err
@@ -379,8 +378,7 @@ func GetClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	return s, nil
 }
 
-// GetNodeDNSStatus returns NodeDNSStatus
-func GetNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.NodeDNSStatus, error) {
+func getNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.NodeDNSStatus, error) {
 	clientset, err := inf.K8sClient(ctx, n)
 	if err != nil {
 		return cke.NodeDNSStatus{}, err
@@ -409,8 +407,7 @@ func GetNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) 
 	return s, nil
 }
 
-// GetEtcdBackupStatus returns EtcdBackupStatus
-func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.EtcdBackupStatus, error) {
+func getEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.EtcdBackupStatus, error) {
 	clientset, err := inf.K8sClient(ctx, n)
 	if err != nil {
 		return cke.EtcdBackupStatus{}, err
@@ -467,8 +464,8 @@ func GetEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 }
 
 func checkHealthz(ctx context.Context, inf cke.Infrastructure, addr string, port uint16) (bool, error) {
-	url := "http://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
-	req, err := http.NewRequest("GET", url, nil)
+	healthzURL := "http://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
+	req, err := http.NewRequest("GET", healthzURL, nil)
 	if err != nil {
 		return false, err
 	}
@@ -488,8 +485,8 @@ func checkHealthz(ctx context.Context, inf cke.Infrastructure, addr string, port
 }
 
 func checkSecureHealthz(ctx context.Context, inf cke.Infrastructure, addr string, port uint16) (bool, error) {
-	url := "https://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
-	req, err := http.NewRequest("GET", url, nil)
+	healthzURL := "https://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
+	req, err := http.NewRequest("GET", healthzURL, nil)
 	if err != nil {
 		return false, err
 	}
