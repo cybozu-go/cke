@@ -280,29 +280,11 @@ var _ = Describe("Kubernetes", func() {
 		execAtLocal("gunzip", "-c", list[0], ">/tmp/snapshot.db")
 		execAtLocal("env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/tmp/snapshot.db")
 
-		By("confirming etcdbackup job is removed when etcdbackup is disabled")
+		By("confirming etcdbackup CronJob is removed when etcdbackup is disabled")
 		cluster.EtcdBackup.Enabled = false
 		ckecliClusterSet(cluster)
 		Eventually(func() error {
 			return checkCluster(cluster)
-		}).Should(Succeed())
-
-		Eventually(func() error {
-			stdout, _, err := kubectl("-n", "kube-system", "get", "jobs", "-o", "json")
-			if err != nil {
-				return err
-			}
-			var jobs batchv1.JobList
-			err = json.Unmarshal(stdout, &jobs)
-			if err != nil {
-				return err
-			}
-			for _, j := range jobs.Items {
-				if strings.HasPrefix(j.Name, "etcdbackup") {
-					return errors.New("etcdbackup job has not been deleted yet")
-				}
-			}
-			return nil
 		}).Should(Succeed())
 	})
 })
