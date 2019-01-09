@@ -70,7 +70,7 @@ var _ = Describe("Operations", func() {
 		// inject failure into addEtcdMemberCommand to cause leader change
 		firstLeader := strings.TrimSpace(string(ckecli("leader")))
 		Expect(firstLeader).To(Or(Equal("host1"), Equal("host2")))
-		injectFailure("op/etcdAfterMemberAdd")
+		injectFailure("op/etcd/etcdAfterMemberAdd")
 
 		ckecli("constraints", "set", "control-plane-count", "3")
 		cluster = getCluster()
@@ -157,7 +157,7 @@ var _ = Describe("Operations", func() {
 			return nil
 		}).Should(Succeed())
 		// inject failure into EtcdDestroyMemberOp
-		injectFailure("op/etcdAfterMemberRemove")
+		injectFailure("op/etcd/etcdAfterMemberRemove")
 
 		ckecli("constraints", "set", "control-plane-count", "2")
 		cluster = getCluster()
@@ -175,7 +175,7 @@ var _ = Describe("Operations", func() {
 		stopCKE()
 		runCKE()
 
-		By("Chainging options")
+		By("Changing options")
 		// this will run these ops:
 		// - EtcdRestartOp
 		// - ControllerManagerRestartOp
