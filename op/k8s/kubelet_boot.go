@@ -138,7 +138,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		return err
 	}
 
-	cfg := &kubeletConfiguration{
+	cfg := &KubeletConfiguration{
 		APIVersion:            "kubelet.config.k8s.io/v1beta1",
 		Kind:                  "KubeletConfiguration",
 		ReadOnlyPort:          0,

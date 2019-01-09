@@ -520,11 +520,3 @@ func checkAPIServerHealth(ctx context.Context, inf cke.Infrastructure, n *cke.No
 	}
 	return true, nil
 }
-
-// EtcdVolumeName returns etcd volume name
-func EtcdVolumeName(e cke.EtcdParams) string {
-	if len(e.VolumeName) == 0 {
-		return DefaultEtcdVolumeName
-	}
-	return e.VolumeName
-}

@@ -81,7 +81,7 @@ func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastruc
 	tlsCertPath := op.K8sPKIPath("kubelet.crt")
 	tlsKeyPath := op.K8sPKIPath("kubelet.key")
 
-	cfg := &kubeletConfiguration{
+	cfg := &KubeletConfiguration{
 		APIVersion:            "kubelet.config.k8s.io/v1beta1",
 		Kind:                  "KubeletConfiguration",
 		ReadOnlyPort:          0,

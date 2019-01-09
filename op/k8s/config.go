@@ -41,11 +41,11 @@ func kubeletKubeconfig(cluster string, n *cke.Node, caPath, certPath, keyPath st
 	return cfg
 }
 
-// kubeletConfiguration is a simplified version of the struct defined in
+// KubeletConfiguration is a simplified version of the struct defined in
 // https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/apis/config/types.go
 //
 // Rationate: kubernetes repository is too large and not intended for client usage.
-type kubeletConfiguration struct {
+type KubeletConfiguration struct {
 	APIVersion        string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
 	Kind              string `json:"kind,omitempty" yaml:"kind,omitempty"`
 	Address           string `json:"address,omitempty" yaml:"address,omitempty"`
