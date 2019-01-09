@@ -1,4 +1,4 @@
-package op
+package etcd
 
 import (
 	"context"
@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/common"
+	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/common"
 )
 
-type etcdAddMemberOp struct {
+type addMemberOp struct {
 	endpoints  []string
 	targetNode *cke.Node
 	params     cke.EtcdParams
@@ -18,9 +19,9 @@ type etcdAddMemberOp struct {
 	domain     string
 }
 
-// EtcdAddMemberOp returns an Operator to add member to etcd cluster.
-func EtcdAddMemberOp(cp []*cke.Node, targetNode *cke.Node, params cke.EtcdParams, domain string) cke.Operator {
-	return &etcdAddMemberOp{
+// AddMemberOp returns an Operator to add member to etcd cluster.
+func AddMemberOp(cp []*cke.Node, targetNode *cke.Node, params cke.EtcdParams, domain string) cke.Operator {
+	return &addMemberOp{
 		endpoints:  etcdEndpoints(cp),
 		targetNode: targetNode,
 		params:     params,
@@ -29,12 +30,12 @@ func EtcdAddMemberOp(cp []*cke.Node, targetNode *cke.Node, params cke.EtcdParams
 	}
 }
 
-func (o *etcdAddMemberOp) Name() string {
+func (o *addMemberOp) Name() string {
 	return "etcd-add-member"
 }
 
-func (o *etcdAddMemberOp) NextCommand() cke.Commander {
-	volname := etcdVolumeName(o.params)
+func (o *addMemberOp) NextCommand() cke.Commander {
+	volname := op.EtcdVolumeName(o.params)
 	extra := o.params.ServiceParams
 
 	nodes := []*cke.Node{o.targetNode}
@@ -44,7 +45,7 @@ func (o *etcdAddMemberOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(nodes, cke.EtcdImage)
 	case 1:
 		o.step++
-		return common.StopContainerCommand(o.targetNode, etcdContainerName)
+		return common.StopContainerCommand(o.targetNode, op.EtcdContainerName)
 	case 2:
 		o.step++
 		return common.VolumeRemoveCommand(nodes, volname)
@@ -63,7 +64,7 @@ func (o *etcdAddMemberOp) NextCommand() cke.Commander {
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
 		}
-		return addEtcdMemberCommand{o.endpoints, o.targetNode, opts, extra}
+		return addMemberCommand{o.endpoints, o.targetNode, opts, extra}
 	case 7:
 		o.step++
 		return waitEtcdSyncCommand{etcdEndpoints([]*cke.Node{o.targetNode}), false}
@@ -71,21 +72,21 @@ func (o *etcdAddMemberOp) NextCommand() cke.Commander {
 	return nil
 }
 
-type addEtcdMemberCommand struct {
+type addMemberCommand struct {
 	endpoints []string
 	node      *cke.Node
 	opts      []string
 	extra     cke.ServiceParams
 }
 
-func (c addEtcdMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+func (c addMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	cli, err := inf.NewEtcdClient(ctx, c.endpoints)
 	if err != nil {
 		return err
 	}
 	defer cli.Close()
 
-	ct, cancel := context.WithTimeout(ctx, timeoutDuration)
+	ct, cancel := context.WithTimeout(ctx, op.TimeoutDuration)
 	defer cancel()
 	resp, err := cli.MemberList(ct)
 	if err != nil {
@@ -113,7 +114,7 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 		case <-time.After(10 * time.Second):
 		}
 
-		ct, cancel := context.WithTimeout(ctx, timeoutDuration)
+		ct, cancel := context.WithTimeout(ctx, op.TimeoutDuration)
 		defer cancel()
 		resp, err := cli.MemberAdd(ct, []string{fmt.Sprintf("https://%s:2380", c.node.Address)})
 		if err != nil {
@@ -123,11 +124,11 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 	}
 	// gofail: var etcdAfterMemberAdd struct{}
 	ce := inf.Engine(c.node.Address)
-	ss, err := ce.Inspect([]string{etcdContainerName})
+	ss, err := ce.Inspect([]string{op.EtcdContainerName})
 	if err != nil {
 		return err
 	}
-	if ss[etcdContainerName].Running {
+	if ss[op.EtcdContainerName].Running {
 		return nil
 	}
 
@@ -142,10 +143,10 @@ func (c addEtcdMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 		}
 	}
 
-	return ce.RunSystem(etcdContainerName, cke.EtcdImage, c.opts, EtcdBuiltInParams(c.node, initialCluster, "existing"), c.extra)
+	return ce.RunSystem(op.EtcdContainerName, cke.EtcdImage, c.opts, BuiltInParams(c.node, initialCluster, "existing"), c.extra)
 }
 
-func (c addEtcdMemberCommand) Command() cke.Command {
+func (c addMemberCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "add-etcd-member",
 		Target: c.node.Address,

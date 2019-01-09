@@ -1,10 +1,11 @@
-package op
+package k8s
 
 import (
 	"context"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/common"
+	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/common"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -59,7 +60,7 @@ func (o *kubeletRestartOp) NextCommand() cke.Commander {
 		for _, n := range o.nodes {
 			paramsMap[n.Address] = KubeletServiceParams(n)
 		}
-		return common.RunContainerCommand(o.nodes, kubeletContainerName, cke.HyperkubeImage,
+		return common.RunContainerCommand(o.nodes, op.KubeletContainerName, cke.HyperkubeImage,
 			common.WithOpts(opts),
 			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params.ServiceParams),
@@ -76,9 +77,9 @@ type prepareKubeletConfigCommand struct {
 
 func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	const kubeletConfigPath = "/etc/kubernetes/kubelet/config.yml"
-	caPath := K8sPKIPath("ca.crt")
-	tlsCertPath := K8sPKIPath("kubelet.crt")
-	tlsKeyPath := K8sPKIPath("kubelet.key")
+	caPath := op.K8sPKIPath("ca.crt")
+	tlsCertPath := op.K8sPKIPath("kubelet.crt")
+	tlsKeyPath := op.K8sPKIPath("kubelet.key")
 
 	cfg := &KubeletConfiguration{
 		APIVersion:            "kubelet.config.k8s.io/v1beta1",
@@ -87,7 +88,7 @@ func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastruc
 		TLSCertFile:           tlsCertPath,
 		TLSPrivateKeyFile:     tlsKeyPath,
 		Authentication:        KubeletAuthentication{ClientCAFile: caPath},
-		Authorization:         KubeletAuthorization{Mode: "Webhook"},
+		Authorization:         kubeletAuthorization{Mode: "Webhook"},
 		HealthzBindAddress:    "0.0.0.0",
 		ClusterDomain:         c.params.Domain,
 		RuntimeRequestTimeout: "15m",

@@ -1,4 +1,4 @@
-package op
+package etcd
 
 import "github.com/cybozu-go/cke"
 
@@ -7,8 +7,8 @@ type etcdWaitClusterOp struct {
 	executed  bool
 }
 
-// EtcdWaitClusterOp returns an Operator to wait until etcd cluster becomes healthy
-func EtcdWaitClusterOp(nodes []*cke.Node) cke.Operator {
+// WaitClusterOp returns an Operator to wait until etcd cluster becomes healthy
+func WaitClusterOp(nodes []*cke.Node) cke.Operator {
 	return &etcdWaitClusterOp{
 		endpoints: etcdEndpoints(nodes),
 	}

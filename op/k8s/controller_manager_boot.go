@@ -1,10 +1,11 @@
-package op
+package k8s
 
 import (
 	"context"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/common"
+	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/common"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -54,7 +55,7 @@ func (o *controllerManagerBootOp) NextCommand() cke.Commander {
 	case 4:
 		o.step++
 		return common.RunContainerCommand(o.nodes,
-			kubeControllerManagerContainerName, cke.HyperkubeImage,
+			op.KubeControllerManagerContainerName, cke.HyperkubeImage,
 			common.WithParams(ControllerManagerParams(o.cluster, o.serviceSubnet)),
 			common.WithExtra(o.params))
 	default:
@@ -96,7 +97,7 @@ func (c prepareControllerManagerFilesCommand) Run(ctx context.Context, inf cke.I
 	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		return saKeyData, nil
 	}
-	return c.files.AddFile(ctx, K8sPKIPath("service-account.key"), g)
+	return c.files.AddFile(ctx, op.K8sPKIPath("service-account.key"), g)
 }
 
 func (c prepareControllerManagerFilesCommand) Command() cke.Command {
@@ -119,17 +120,17 @@ func ControllerManagerParams(clusterName, serviceSubnet string) cke.ServiceParam
 		// https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/#a-note-to-cluster-administrators
 		// https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/
 		//    Create an intermediate CA under cke/ca-kubernetes?
-		//    or just an certficate/key pair?
+		//    or just an certificate/key pair?
 		// "--cluster-signing-cert-file=..."
 		// "--cluster-signing-key-file=..."
 
 		// for healthz service
-		"--tls-cert-file=" + K8sPKIPath("apiserver.crt"),
-		"--tls-private-key-file=" + K8sPKIPath("apiserver.key"),
+		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),
+		"--tls-private-key-file=" + op.K8sPKIPath("apiserver.key"),
 
 		// for service accounts
-		"--root-ca-file=" + K8sPKIPath("ca.crt"),
-		"--service-account-private-key-file=" + K8sPKIPath("service-account.key"),
+		"--root-ca-file=" + op.K8sPKIPath("ca.crt"),
+		"--service-account-private-key-file=" + op.K8sPKIPath("service-account.key"),
 		"--use-service-account-credentials=true",
 	}
 	return cke.ServiceParams{

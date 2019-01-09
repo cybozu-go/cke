@@ -2,7 +2,7 @@ package op
 
 import (
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/common"
+	"github.com/cybozu-go/cke/op/common"
 )
 
 type containerStopOp struct {
@@ -27,7 +27,7 @@ func (o *containerStopOp) NextCommand() cke.Commander {
 func APIServerStopOp(nodes []*cke.Node) cke.Operator {
 	return &containerStopOp{
 		nodes: nodes,
-		name:  kubeAPIServerContainerName,
+		name:  KubeAPIServerContainerName,
 	}
 }
 
@@ -35,7 +35,7 @@ func APIServerStopOp(nodes []*cke.Node) cke.Operator {
 func ControllerManagerStopOp(nodes []*cke.Node) cke.Operator {
 	return &containerStopOp{
 		nodes: nodes,
-		name:  kubeControllerManagerContainerName,
+		name:  KubeControllerManagerContainerName,
 	}
 }
 
@@ -43,7 +43,7 @@ func ControllerManagerStopOp(nodes []*cke.Node) cke.Operator {
 func SchedulerStopOp(nodes []*cke.Node) cke.Operator {
 	return &containerStopOp{
 		nodes: nodes,
-		name:  kubeSchedulerContainerName,
+		name:  KubeSchedulerContainerName,
 	}
 }
 
@@ -51,6 +51,6 @@ func SchedulerStopOp(nodes []*cke.Node) cke.Operator {
 func EtcdStopOp(nodes []*cke.Node) cke.Operator {
 	return &containerStopOp{
 		nodes: nodes,
-		name:  etcdContainerName,
+		name:  EtcdContainerName,
 	}
 }

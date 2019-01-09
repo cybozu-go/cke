@@ -1,8 +1,9 @@
-package op
+package k8s
 
 import (
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/common"
+	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/common"
 )
 
 type riversRestartOp struct {
@@ -35,7 +36,7 @@ func (o *riversRestartOp) NextCommand() cke.Commander {
 
 	if !o.finished {
 		o.finished = true
-		return common.RunContainerCommand(o.nodes, riversContainerName, cke.ToolsImage,
+		return common.RunContainerCommand(o.nodes, op.RiversContainerName, cke.ToolsImage,
 			common.WithParams(RiversParams(o.upstreams)),
 			common.WithExtra(o.params),
 			common.WithRestart())

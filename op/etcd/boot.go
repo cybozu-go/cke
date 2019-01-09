@@ -1,4 +1,4 @@
-package op
+package etcd
 
 import (
 	"context"
@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/common"
+	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/common"
 )
 
-type etcdBootOp struct {
+type bootOp struct {
 	endpoints []string
 	nodes     []*cke.Node
 	params    cke.EtcdParams
@@ -18,9 +19,9 @@ type etcdBootOp struct {
 	domain    string
 }
 
-// EtcdBootOp returns an Operator to bootstrap etcd cluster.
-func EtcdBootOp(nodes []*cke.Node, params cke.EtcdParams, domain string) cke.Operator {
-	return &etcdBootOp{
+// BootOp returns an Operator to bootstrap etcd cluster.
+func BootOp(nodes []*cke.Node, params cke.EtcdParams, domain string) cke.Operator {
+	return &bootOp{
 		endpoints: etcdEndpoints(nodes),
 		nodes:     nodes,
 		params:    params,
@@ -29,12 +30,12 @@ func EtcdBootOp(nodes []*cke.Node, params cke.EtcdParams, domain string) cke.Ope
 	}
 }
 
-func (o *etcdBootOp) Name() string {
+func (o *bootOp) Name() string {
 	return "etcd-bootstrap"
 }
 
-func (o *etcdBootOp) NextCommand() cke.Commander {
-	volname := etcdVolumeName(o.params)
+func (o *bootOp) NextCommand() cke.Commander {
+	volname := op.EtcdVolumeName(o.params)
 
 	switch o.step {
 	case 0:
@@ -61,9 +62,9 @@ func (o *etcdBootOp) NextCommand() cke.Commander {
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			paramsMap[n.Address] = EtcdBuiltInParams(n, initialCluster, "new")
+			paramsMap[n.Address] = BuiltInParams(n, initialCluster, "new")
 		}
-		return common.RunContainerCommand(o.nodes, etcdContainerName, cke.EtcdImage,
+		return common.RunContainerCommand(o.nodes, op.EtcdContainerName, cke.EtcdImage,
 			common.WithOpts(opts),
 			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params.ServiceParams))

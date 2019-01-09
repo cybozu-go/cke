@@ -1,4 +1,4 @@
-package op
+package k8s
 
 import (
 	"encoding/json"
@@ -55,7 +55,7 @@ type KubeletConfiguration struct {
 	TLSPrivateKeyFile string `json:"tlsPrivateKeyFile" yaml:"tlsPrivateKeyFile"`
 
 	Authentication KubeletAuthentication `json:"authentication" yaml:"authentication"`
-	Authorization  KubeletAuthorization  `json:"authorization" yaml:"authorization"`
+	Authorization  kubeletAuthorization  `json:"authorization" yaml:"authorization"`
 
 	HealthzPort           int32    `json:"healthzPort,omitempty" yaml:"healthzPort,omitempty"`
 	HealthzBindAddress    string   `json:"healthzBindAddress,omitempty" yaml:"healthzBindAddress,omitempty"`
@@ -94,8 +94,8 @@ func (a KubeletAuthentication) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v)
 }
 
-// KubeletAuthorization is a simplified version of the struct defined in
+// kubeletAuthorization is a simplified version of the struct defined in
 // https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/apis/config/types.go
-type KubeletAuthorization struct {
+type kubeletAuthorization struct {
 	Mode string `json:"mode" yaml:"mode"`
 }

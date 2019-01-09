@@ -7,7 +7,10 @@ import (
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/clusterdns"
+	"github.com/cybozu-go/cke/op/etcd"
+	"github.com/cybozu-go/cke/op/k8s"
+	"github.com/cybozu-go/cke/op/nodedns"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -94,7 +97,7 @@ func (d testData) withRivers() testData {
 	for _, v := range d.Status.NodeStatuses {
 		v.Rivers.Running = true
 		v.Rivers.Image = cke.ToolsImage.Name()
-		v.Rivers.BuiltInParams = op.RiversParams(d.ControlPlane())
+		v.Rivers.BuiltInParams = k8s.RiversParams(d.ControlPlane())
 	}
 	return d
 }
@@ -112,7 +115,7 @@ func (d testData) withUnhealthyEtcd() testData {
 		st := &d.NodeStatus(n).Etcd
 		st.Running = true
 		st.Image = cke.EtcdImage.Name()
-		st.BuiltInParams = op.EtcdBuiltInParams(n, nil, "")
+		st.BuiltInParams = etcd.BuiltInParams(n, nil, "")
 	}
 	return d
 }
@@ -139,7 +142,7 @@ func (d testData) withAPIServer(serviceSubnet string) testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.HyperkubeImage.Name()
-		st.BuiltInParams = op.APIServerParams(d.ControlPlane(), n.Address, serviceSubnet)
+		st.BuiltInParams = k8s.APIServerParams(d.ControlPlane(), n.Address, serviceSubnet)
 	}
 	return d
 }
@@ -150,7 +153,7 @@ func (d testData) withControllerManager(name, serviceSubnet string) testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.HyperkubeImage.Name()
-		st.BuiltInParams = op.ControllerManagerParams(name, serviceSubnet)
+		st.BuiltInParams = k8s.ControllerManagerParams(name, serviceSubnet)
 	}
 	return d
 }
@@ -161,7 +164,7 @@ func (d testData) withScheduler() testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.HyperkubeImage.Name()
-		st.BuiltInParams = op.SchedulerParams()
+		st.BuiltInParams = k8s.SchedulerParams()
 	}
 	return d
 }
@@ -172,7 +175,7 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.HyperkubeImage.Name()
-		st.BuiltInParams = op.KubeletServiceParams(n)
+		st.BuiltInParams = k8s.KubeletServiceParams(n)
 		st.Domain = domain
 		st.AllowSwap = allowSwap
 	}
@@ -185,7 +188,7 @@ func (d testData) withProxy() testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.HyperkubeImage.Name()
-		st.BuiltInParams = op.ProxyParams()
+		st.BuiltInParams = k8s.ProxyParams()
 	}
 	return d
 }
@@ -219,12 +222,12 @@ func (d testData) withK8sClusterDNSReady(dnsServers []string, clusterDomain, clu
 	d.Status.Kubernetes.ClusterDNS.ServiceAccountExists = true
 	d.Status.Kubernetes.ClusterDNS.RBACRoleExists = true
 	d.Status.Kubernetes.ClusterDNS.RBACRoleBindingExists = true
-	d.Status.Kubernetes.ClusterDNS.ConfigMap = op.ClusterDNSConfigMap(clusterDomain, dnsServers)
+	d.Status.Kubernetes.ClusterDNS.ConfigMap = clusterdns.ConfigMap(clusterDomain, dnsServers)
 	d.Status.Kubernetes.ClusterDNS.Deployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"cke.cybozu.com/image":            cke.CoreDNSImage.Name(),
-				"cke.cybozu.com/template-version": op.CoreDNSTemplateVersion,
+				"cke.cybozu.com/template-version": clusterdns.CoreDNSTemplateVersion,
 			},
 		},
 	}
@@ -242,11 +245,11 @@ func (d testData) withK8sNodeDNSReady() testData {
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"cke.cybozu.com/image":            cke.UnboundImage.Name(),
-				"cke.cybozu.com/template-version": op.UnboundTemplateVersion,
+				"cke.cybozu.com/template-version": nodedns.UnboundTemplateVersion,
 			},
 		},
 	}
-	d.Status.Kubernetes.NodeDNS.ConfigMap = op.NodeDNSConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
+	d.Status.Kubernetes.NodeDNS.ConfigMap = nodedns.ConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
 	if err != nil {
 		panic(err)
 	}
@@ -1194,22 +1197,22 @@ func TestDecideOps(t *testing.T) {
 			continue
 		}
 		opNames := make([]string, len(ops))
-		for i, op := range ops {
-			opNames[i] = op.Name()
+		for i, o := range ops {
+			opNames[i] = o.Name()
 		}
 		sort.Strings(opNames)
 		if !reflect.DeepEqual(opNames, c.ExpectedOps) {
-			t.Errorf("[%s] op names mismatch: %s != %s", c.Name, opNames, c.ExpectedOps)
+			t.Errorf("[%s] o names mismatch: %s != %s", c.Name, opNames, c.ExpectedOps)
 		}
 	OUT:
-		for _, op := range ops {
+		for _, o := range ops {
 			for i := 0; i < 100; i++ {
-				commander := op.NextCommand()
+				commander := o.NextCommand()
 				if commander == nil {
 					continue OUT
 				}
 			}
-			t.Fatalf("[%s] Operator.NextCommand() never finished: %s", c.Name, op.Name())
+			t.Fatalf("[%s] Operator.NextCommand() never finished: %s", c.Name, o.Name())
 		}
 	}
 }

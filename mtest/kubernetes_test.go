@@ -279,5 +279,12 @@ var _ = Describe("Kubernetes", func() {
 		ckecli("etcd", "backup", "get", list[0])
 		execAtLocal("gunzip", "-c", list[0], ">/tmp/snapshot.db")
 		execAtLocal("env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/tmp/snapshot.db")
+
+		By("confirming etcdbackup CronJob is removed when etcdbackup is disabled")
+		cluster.EtcdBackup.Enabled = false
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
 	})
 })

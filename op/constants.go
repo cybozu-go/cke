@@ -6,33 +6,44 @@ import (
 )
 
 const (
-	defaultEtcdVolumeName = "etcd-cke"
-
-	etcdContainerName                  = "etcd"
-	kubeAPIServerContainerName         = "kube-apiserver"
-	kubeControllerManagerContainerName = "kube-controller-manager"
-	kubeProxyContainerName             = "kube-proxy"
-	kubeSchedulerContainerName         = "kube-scheduler"
-	kubeletContainerName               = "kubelet"
-	riversContainerName                = "rivers"
-
 	rbacRoleName        = "system:kube-apiserver-to-kubelet"
 	rbacRoleBindingName = "system:kube-apiserver"
 
 	etcdEndpointsName = "cke-etcd"
-
-	clusterDNSRBACRoleName = "system:cluster-dns"
-	clusterDNSAppName      = "cluster-dns"
-
-	nodeDNSAppName = "node-dns"
-
-	timeoutDuration = 5 * time.Second
 
 	etcdPKIPath = "/etc/etcd/pki"
 	k8sPKIPath  = "/etc/kubernetes/pki"
 )
 
 const (
+	// EtcdContainerName is container name of etcd
+	EtcdContainerName = "etcd"
+	// KubeAPIServerContainerName is name of kube-apiserver
+	KubeAPIServerContainerName = "kube-apiserver"
+	// KubeControllerManagerContainerName is name of kube-controller-manager
+	KubeControllerManagerContainerName = "kube-controller-manager"
+	// KubeProxyContainerName is container name of kube-proxy
+	KubeProxyContainerName = "kube-proxy"
+	// KubeSchedulerContainerName is container name of kube-scheduler
+	KubeSchedulerContainerName = "kube-scheduler"
+	// KubeletContainerName is container name of kubelet
+	KubeletContainerName = "kubelet"
+	// RiversContainerName is container name of rivers
+	RiversContainerName = "rivers"
+
+	// ClusterDNSRBACRoleName is role name of cluster DNS
+	ClusterDNSRBACRoleName = "system:cluster-dns"
+	// ClusterDNSAppName is app name of cluster DNS
+	ClusterDNSAppName = "cluster-dns"
+	// NodeDNSAppName is app name of node-dns
+	NodeDNSAppName = "node-dns"
+
+	// DefaultEtcdVolumeName is etcd default volume name
+	DefaultEtcdVolumeName = "etcd-cke"
+
+	// TimeoutDuration is default timeout duration
+	TimeoutDuration = 5 * time.Second
+
 	// CKELabelAppName is application name
 	CKELabelAppName = "cke.cybozu.com/appname"
 	// EtcdBackupAppName is application name for etcdbackup

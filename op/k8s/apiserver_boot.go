@@ -1,11 +1,12 @@
-package op
+package k8s
 
 import (
 	"context"
 	"strings"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/common"
+	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/common"
 )
 
 var (
@@ -79,7 +80,7 @@ func (o *apiServerBootOp) NextCommand() cke.Commander {
 		for _, n := range o.nodes {
 			paramsMap[n.Address] = APIServerParams(o.cps, n.Address, o.serviceSubnet)
 		}
-		return common.RunContainerCommand(o.nodes, kubeAPIServerContainerName, cke.HyperkubeImage,
+		return common.RunContainerCommand(o.nodes, op.KubeAPIServerContainerName, cke.HyperkubeImage,
 			common.WithOpts(opts),
 			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params))
@@ -105,7 +106,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		}
 		return []byte(c), []byte(k), nil
 	}
-	err := c.files.AddKeyPair(ctx, K8sPKIPath("apiserver"), f)
+	err := c.files.AddKeyPair(ctx, op.K8sPKIPath("apiserver"), f)
 	if err != nil {
 		return err
 	}
@@ -118,7 +119,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		}
 		return []byte(c), []byte(k), nil
 	}
-	err = c.files.AddKeyPair(ctx, K8sPKIPath("apiserver-etcd-client"), f)
+	err = c.files.AddKeyPair(ctx, op.K8sPKIPath("apiserver-etcd-client"), f)
 	if err != nil {
 		return err
 	}
@@ -132,7 +133,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		return caData, nil
 	}
-	err = c.files.AddFile(ctx, K8sPKIPath("ca.crt"), g)
+	err = c.files.AddFile(ctx, op.K8sPKIPath("ca.crt"), g)
 	if err != nil {
 		return err
 	}
@@ -146,7 +147,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		return etcdCAData, nil
 	}
-	err = c.files.AddFile(ctx, K8sPKIPath("etcd-ca.crt"), g)
+	err = c.files.AddFile(ctx, op.K8sPKIPath("etcd-ca.crt"), g)
 	if err != nil {
 		return err
 	}
@@ -160,7 +161,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		return saCertData, nil
 	}
-	return c.files.AddFile(ctx, K8sPKIPath("service-account.crt"), g)
+	return c.files.AddFile(ctx, op.K8sPKIPath("service-account.crt"), g)
 }
 
 func (c prepareAPIServerFilesCommand) Command() cke.Command {
@@ -180,24 +181,24 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 		"apiserver",
 		"--allow-privileged",
 		"--etcd-servers=" + strings.Join(etcdServers, ","),
-		"--etcd-cafile=" + K8sPKIPath("etcd-ca.crt"),
-		"--etcd-certfile=" + K8sPKIPath("apiserver-etcd-client.crt"),
-		"--etcd-keyfile=" + K8sPKIPath("apiserver-etcd-client.key"),
+		"--etcd-cafile=" + op.K8sPKIPath("etcd-ca.crt"),
+		"--etcd-certfile=" + op.K8sPKIPath("apiserver-etcd-client.crt"),
+		"--etcd-keyfile=" + op.K8sPKIPath("apiserver-etcd-client.key"),
 
 		"--bind-address=0.0.0.0",
 		"--insecure-port=0",
-		"--client-ca-file=" + K8sPKIPath("ca.crt"),
-		"--tls-cert-file=" + K8sPKIPath("apiserver.crt"),
-		"--tls-private-key-file=" + K8sPKIPath("apiserver.key"),
-		"--kubelet-certificate-authority=" + K8sPKIPath("ca.crt"),
-		"--kubelet-client-certificate=" + K8sPKIPath("apiserver.crt"),
-		"--kubelet-client-key=" + K8sPKIPath("apiserver.key"),
+		"--client-ca-file=" + op.K8sPKIPath("ca.crt"),
+		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),
+		"--tls-private-key-file=" + op.K8sPKIPath("apiserver.key"),
+		"--kubelet-certificate-authority=" + op.K8sPKIPath("ca.crt"),
+		"--kubelet-client-certificate=" + op.K8sPKIPath("apiserver.crt"),
+		"--kubelet-client-key=" + op.K8sPKIPath("apiserver.key"),
 		"--kubelet-https=true",
 
 		"--enable-admission-plugins=" + strings.Join(admissionPlugins, ","),
 
 		// for service accounts
-		"--service-account-key-file=" + K8sPKIPath("service-account.crt"),
+		"--service-account-key-file=" + op.K8sPKIPath("service-account.crt"),
 		"--service-account-lookup",
 
 		"--authorization-mode=Node,RBAC",
