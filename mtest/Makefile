@@ -85,11 +85,11 @@ $(OUTPUT)/vault: $(VAULT_ARCHIVE)
 
 $(OUTPUT)/cke $(OUTPUT)/ckecli: FORCE
 	mkdir -p $(OUTPUT)
-	cd ..; gofail enable op && \
+	cd ..; gofail enable op/etcd && \
 		if GOBIN=$(realpath $(OUTPUT)) go install -mod=vendor ./pkg/$(notdir $@); then \
-			gofail disable op; \
+			gofail disable op/etcd; \
 		else \
-			gofail disable op; \
+			gofail disable op/etcd; \
 			exit 1; \
 		fi
 FORCE:
