@@ -7,14 +7,13 @@ import (
 	"net/http"
 	"time"
 
-	"k8s.io/client-go/rest"
-
 	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/well"
 	vault "github.com/hashicorp/vault/api"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 var httpClient = &well.HTTPClient{
