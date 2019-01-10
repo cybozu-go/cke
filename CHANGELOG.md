@@ -5,6 +5,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Backup operator for etcd (#115).
+- Add `ckecli ssh` and `ckecli scp` (#116, #118).
+
+### Changed
+- Improve node local DNS cache resolver configurations (#117).
+- Update HashiCorp Vault client library to 1.0.1 (#120).
+
 ## [0.25] - 2018-12-21
 ### Added
 - `dns_service` to specify Kubernetes Service for upstream DNS servers (#114).
