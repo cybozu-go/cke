@@ -32,6 +32,7 @@ require (
 	github.com/circonus-labs/circonus-gometrics v2.2.1+incompatible // indirect
 	github.com/circonus-labs/circonusllhist v0.0.0-20180430145027-5eb751da55c6 // indirect
 	github.com/containerd/continuity v0.0.0-20180913211902-c2ac4ecc9593 // indirect
+	github.com/coreos/bbolt v1.3.1-coreos.6
 	github.com/coreos/etcd v3.3.9+incompatible
 	github.com/coreos/go-oidc v2.0.0+incompatible // indirect
 	github.com/cybozu-go/etcdutil v1.3.1
