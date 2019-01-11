@@ -5,6 +5,13 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.27] - 2019-01-11
+
+### Changed
+- Fix race in KubeletConfiguration generation (#121).
+
+## [0.26] - 2019-01-10
+
 ### Added
 - Backup operator for etcd (#115).
 - Add `ckecli ssh` and `ckecli scp` (#116, #118).
@@ -160,7 +167,9 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.25...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.27...HEAD
+[0.27]: https://github.com/cybozu-go/cke/compare/v0.26...v0.27
+[0.26]: https://github.com/cybozu-go/cke/compare/v0.25...v0.26
 [0.25]: https://github.com/cybozu-go/cke/compare/v0.24...v0.25
 [0.24]: https://github.com/cybozu-go/cke/compare/v0.23...v0.24
 [0.23]: https://github.com/cybozu-go/cke/compare/v0.22...v0.23
