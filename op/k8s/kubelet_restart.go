@@ -81,7 +81,7 @@ func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastruc
 	tlsCertPath := op.K8sPKIPath("kubelet.crt")
 	tlsKeyPath := op.K8sPKIPath("kubelet.key")
 
-	cfg := &KubeletConfiguration{
+	cfg := KubeletConfiguration{
 		APIVersion:            "kubelet.config.k8s.io/v1beta1",
 		Kind:                  "KubeletConfiguration",
 		ReadOnlyPort:          0,
@@ -95,6 +95,7 @@ func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastruc
 		FailSwapOn:            !c.params.AllowSwap,
 	}
 	g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		cfg := cfg
 		cfg.ClusterDNS = []string{n.Address}
 		return yaml.Marshal(cfg)
 	}

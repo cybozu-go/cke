@@ -138,7 +138,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		return err
 	}
 
-	cfg := &KubeletConfiguration{
+	cfg := KubeletConfiguration{
 		APIVersion:            "kubelet.config.k8s.io/v1beta1",
 		Kind:                  "KubeletConfiguration",
 		ReadOnlyPort:          0,
@@ -152,6 +152,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		FailSwapOn:            !c.params.AllowSwap,
 	}
 	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		cfg := cfg
 		cfg.ClusterDNS = []string{n.Address}
 		return yaml.Marshal(cfg)
 	}
