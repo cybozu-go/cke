@@ -1,11 +1,15 @@
 package mtest
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
+	bolt "github.com/coreos/bbolt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -277,8 +281,24 @@ var _ = Describe("Kubernetes", func() {
 		Expect(list[0]).To(ContainSubstring("snapshot-"))
 
 		ckecli("etcd", "backup", "get", list[0])
-		execAtLocal("gunzip", "-c", list[0], ">/tmp/snapshot.db")
-		execAtLocal("env", "ETCDCTL_API=3", "etcdctl", "snapshot", "status", "/tmp/snapshot.db")
+		gzfile, err := os.Open(list[0])
+		Expect(err).ShouldNot(HaveOccurred())
+		defer gzfile.Close()
+		zr, err := gzip.NewReader(gzfile)
+		Expect(err).ShouldNot(HaveOccurred())
+		defer zr.Close()
+
+		dbfile, err := os.Create("snapshot.db")
+		Expect(err).ShouldNot(HaveOccurred())
+		defer func() {
+			dbfile.Close()
+			os.Remove(dbfile.Name())
+		}()
+		_, err = io.Copy(dbfile, zr)
+		Expect(err).ShouldNot(HaveOccurred())
+		db, err := bolt.Open(dbfile.Name(), 0400, &bolt.Options{ReadOnly: true})
+		Expect(err).ShouldNot(HaveOccurred())
+		defer db.Close()
 
 		By("confirming etcdbackup CronJob is removed when etcdbackup is disabled")
 		cluster.EtcdBackup.Enabled = false
