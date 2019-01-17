@@ -181,6 +181,9 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		log.Error("failed to initialize infrastructure", map[string]interface{}{
 			log.FnError: err,
 		})
+		if c.addon != nil {
+			return c.addon.Do(ctx, leaderKey)
+		}
 		return nil
 	}
 	defer inf.Close()
