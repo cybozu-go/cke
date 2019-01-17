@@ -5,6 +5,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [0.28] - 2019-01-17
+
+### Changed
+- Fix etcdbackup test  (#122).
+- Ask sabakan for the latest status when failed to initialize infrastructure (#123).
+
 ## [0.27] - 2019-01-11
 
 ### Changed
@@ -167,7 +173,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.27...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.28...HEAD
+[0.28]: https://github.com/cybozu-go/cke/compare/v0.27...v0.28
 [0.27]: https://github.com/cybozu-go/cke/compare/v0.26...v0.27
 [0.26]: https://github.com/cybozu-go/cke/compare/v0.25...v0.26
 [0.25]: https://github.com/cybozu-go/cke/compare/v0.24...v0.25
