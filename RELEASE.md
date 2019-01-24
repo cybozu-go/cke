@@ -6,7 +6,11 @@ This document describes how to release a new version of cke.
 Versioning
 ----------
 
+.
 Follow [semantic versioning 2.0.0][semver] to choose the new version number.
+The MAJOR and MINOR version matches that of Kubernetes.
+The patch version is increased with CKE update.
+
 
 Prepare change log entries
 --------------------------
@@ -33,6 +37,12 @@ It should look like:
 Bump version
 ------------
 
+Note:
+If kubernates MINOR version supported by CKE is updated, create a new branch `k8s-x.y`(kubernetes version x.y before update) before master merge.
+   ```console
+   $ git checkout -b k8s-x.y
+   $ git push origin k8s-x.y
+   ```
 1. Determine a new version number.  Let it write `$VERSION`.
 2. Checkout `master` branch.
 3. Update `version.go`.
@@ -43,7 +53,7 @@ Bump version
     $ git commit -a -m "Bump version to $VERSION"
     $ git tag v$VERSION
     $ git push origin master --tags
-    ```
+    ``` 
 
 Publish GitHub release page
 ---------------------------
