@@ -52,7 +52,7 @@ If kubernates MINOR version supported by CKE is updated, create a new branch `k8
     $ git commit -a -m "Bump version to $VERSION"
     $ git tag v$VERSION
     $ git push origin master --tags
-    ``` 
+    ```
 
 Publish GitHub release page
 ---------------------------
