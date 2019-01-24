@@ -5,6 +5,12 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.12.0] - 2019-01-24
+CKE v1.12.0 is identical to v0.28.
+
+### Changed
+- Change versioning (#124).
+
 ## [0.28] - 2019-01-17
 
 ### Changed
@@ -173,7 +179,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v0.28...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.12.0...HEAD
+[1.12.0]: https://github.com/cybozu-go/cke/compare/v0.28...v1.12.0
 [0.28]: https://github.com/cybozu-go/cke/compare/v0.27...v0.28
 [0.27]: https://github.com/cybozu-go/cke/compare/v0.26...v0.27
 [0.26]: https://github.com/cybozu-go/cke/compare/v0.25...v0.26

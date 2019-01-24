@@ -1,4 +1,4 @@
 package cke
 
 // Version represents current cke version
-const Version = "0.28"
+const Version = "1.12.0"
