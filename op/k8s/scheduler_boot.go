@@ -99,7 +99,7 @@ func SchedulerParams() cke.ServiceParams {
 		"--logtostderr=false",
 		// for healthz service
 		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),
-		"--tls-private-key-file="+ op.K8sPKIPath("apiserver.key"),
+		"--tls-private-key-file=" + op.K8sPKIPath("apiserver.key"),
 		"--port=0",
 	}
 	return cke.ServiceParams{
