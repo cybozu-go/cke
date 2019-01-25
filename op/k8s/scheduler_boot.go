@@ -100,7 +100,7 @@ func SchedulerParams() cke.ServiceParams {
 		// for healthz service
 		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),
 		"--tls-private-key-file="+ op.K8sPKIPath("apiserver.key"),
-		"--port=0"
+		"--port=0",
 	}
 	return cke.ServiceParams{
 		ExtraArguments: args,
