@@ -83,7 +83,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		IsHealthy:     false,
 	}
 	if status.Scheduler.Running {
-		status.Scheduler.IsHealthy, err = checkSecureHealthz(ctx, inf, node.Address, 10251)
+		status.Scheduler.IsHealthy, err = checkSecureHealthz(ctx, inf, node.Address, 10259)
 		if err != nil {
 			log.Warn("failed to check scheduler health", map[string]interface{}{
 				log.FnError: err,
