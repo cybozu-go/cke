@@ -97,6 +97,10 @@ func SchedulerParams() cke.ServiceParams {
 		"--kubeconfig=/etc/kubernetes/scheduler/kubeconfig",
 		"--log-dir=/var/log/kubernetes/scheduler",
 		"--logtostderr=false",
+		// for healthz service
+		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),
+		"--tls-private-key-file="+ op.K8sPKIPath("apiserver.key"),
+		"--port=0"
 	}
 	return cke.ServiceParams{
 		ExtraArguments: args,
