@@ -5,6 +5,12 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.0] - 2019-01-25
+
+### Changed
+- Support for kubernetes 1.13 (#125).
+- Update etcd to 3.3.11, CoreDNS to 1.3.1, unbound to 1.8.3.
+
 ## [1.12.0] - 2019-01-24
 CKE v1.12.0 is identical to v0.28.
 
@@ -179,7 +185,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.12.0...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.0...HEAD
+[1.13.0]: https://github.com/cybozu-go/cke/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/cybozu-go/cke/compare/v0.28...v1.12.0
 [0.28]: https://github.com/cybozu-go/cke/compare/v0.27...v0.28
 [0.27]: https://github.com/cybozu-go/cke/compare/v0.26...v0.27
