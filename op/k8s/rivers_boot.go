@@ -35,9 +35,6 @@ func (o *riversBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.ToolsImage)
 	case 1:
 		o.step++
-		return common.MakeDirsCommand(o.nodes, []string{"/var/log/rivers"})
-	case 2:
-		o.step++
 		return common.RunContainerCommand(o.nodes, op.RiversContainerName, cke.ToolsImage,
 			common.WithParams(RiversParams(o.upstreams)),
 			common.WithExtra(o.params))
@@ -57,16 +54,5 @@ func RiversParams(upstreams []*cke.Node) cke.ServiceParams {
 		"--upstreams=" + strings.Join(ups, ","),
 		"--listen=" + "127.0.0.1:16443",
 	}
-	return cke.ServiceParams{
-		ExtraArguments: args,
-		ExtraBinds: []cke.Mount{
-			{
-				Source:      "/var/log/rivers",
-				Destination: "/var/log/rivers",
-				ReadOnly:    false,
-				Propagation: "",
-				Label:       cke.LabelShared,
-			},
-		},
-	}
+	return cke.ServiceParams{ExtraArguments: args}
 }

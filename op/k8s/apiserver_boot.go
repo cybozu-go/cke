@@ -61,17 +61,11 @@ func (o *apiServerBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
-		dirs := []string{
-			"/var/log/kubernetes/apiserver",
-		}
-		return common.MakeDirsCommand(o.nodes, dirs)
+		return prepareAPIServerFilesCommand{o.files, o.serviceSubnet, o.domain}
 	case 2:
 		o.step++
-		return prepareAPIServerFilesCommand{o.files, o.serviceSubnet, o.domain}
-	case 3:
-		o.step++
 		return o.files
-	case 4:
+	case 3:
 		o.step++
 		opts := []string{
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
@@ -203,11 +197,12 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 
 		"--authorization-mode=Node,RBAC",
 
+		// BUG: audit log is not enabled w/o --audit-policy-file
+		// https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy
+		"--audit-log-path=-",
+
 		"--advertise-address=" + advertiseAddress,
 		"--service-cluster-ip-range=" + serviceSubnet,
-		"--audit-log-path=/var/log/kubernetes/apiserver/audit.log",
-		"--log-dir=/var/log/kubernetes/apiserver/",
-		"--logtostderr=false",
 		"--machine-id-file=/etc/machine-id",
 	}
 	return cke.ServiceParams{
@@ -219,13 +214,6 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 				ReadOnly:    true,
 				Propagation: "",
 				Label:       "",
-			},
-			{
-				Source:      "/var/log/kubernetes/apiserver",
-				Destination: "/var/log/kubernetes/apiserver",
-				ReadOnly:    false,
-				Propagation: "",
-				Label:       cke.LabelPrivate,
 			},
 			{
 				Source:      "/etc/kubernetes",

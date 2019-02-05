@@ -40,17 +40,11 @@ func (o *kubeProxyBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
-		dirs := []string{
-			"/var/log/kubernetes/proxy",
-		}
-		return common.MakeDirsCommand(o.nodes, dirs)
+		return prepareProxyFilesCommand{o.cluster, o.files}
 	case 2:
 		o.step++
-		return prepareProxyFilesCommand{o.cluster, o.files}
-	case 3:
-		o.step++
 		return o.files
-	case 4:
+	case 3:
 		o.step++
 		opts := []string{
 			"--tmpfs=/run",
@@ -101,8 +95,6 @@ func ProxyParams() cke.ServiceParams {
 		"proxy",
 		"--proxy-mode=ipvs",
 		"--kubeconfig=/etc/kubernetes/proxy/kubeconfig",
-		"--log-dir=/var/log/kubernetes/proxy",
-		"--logtostderr=false",
 	}
 	return cke.ServiceParams{
 		ExtraArguments: args,
@@ -127,13 +119,6 @@ func ProxyParams() cke.ServiceParams {
 				ReadOnly:    true,
 				Propagation: "",
 				Label:       "",
-			},
-			{
-				Source:      "/var/log/kubernetes/proxy",
-				Destination: "/var/log/kubernetes/proxy",
-				ReadOnly:    false,
-				Propagation: "",
-				Label:       cke.LabelPrivate,
 			},
 		},
 	}

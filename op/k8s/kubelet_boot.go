@@ -61,7 +61,7 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 			cniBinDir,
 			cniConfDir,
 			cniVarDir,
-			"/var/log/kubernetes/kubelet",
+			"/var/lib/dockershim",
 			"/var/log/pods",
 			"/var/log/containers",
 			"/opt/volume/bin",
@@ -84,12 +84,8 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 		fallthrough
 	case 7:
 		o.step++
-		return common.VolumeCreateCommand(o.nodes, "dockershim")
-	case 8:
-		o.step++
 		opts := []string{
 			"--pid=host",
-			"--mount=type=volume,src=dockershim,dst=/var/lib/dockershim",
 			"--privileged",
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
@@ -147,6 +143,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		Authentication:        KubeletAuthentication{ClientCAFile: caPath},
 		Authorization:         kubeletAuthorization{Mode: "Webhook"},
 		HealthzBindAddress:    "0.0.0.0",
+		OOMScoreAdj:           -1000,
 		ClusterDomain:         c.params.Domain,
 		RuntimeRequestTimeout: "15m",
 		FailSwapOn:            !c.params.AllowSwap,
@@ -304,8 +301,6 @@ func KubeletServiceParams(n *cke.Node) cke.ServiceParams {
 		"--allow-privileged=true",
 		"--hostname-override=" + n.Nodename(),
 		"--pod-infra-container-image=" + cke.PauseImage.Name(),
-		"--log-dir=/var/log/kubernetes/kubelet",
-		"--logtostderr=false",
 		"--network-plugin=cni",
 		"--volume-plugin-dir=/opt/volume/bin",
 	}
@@ -350,6 +345,13 @@ func KubeletServiceParams(n *cke.Node) cke.ServiceParams {
 				Label:       cke.LabelShared,
 			},
 			{
+				Source:      "/var/lib/dockershim",
+				Destination: "/var/lib/dockershim",
+				ReadOnly:    false,
+				Propagation: "",
+				Label:       cke.LabelPrivate,
+			},
+			{
 				Source:      "/var/log/pods",
 				Destination: "/var/log/pods",
 				ReadOnly:    false,
@@ -362,13 +364,6 @@ func KubeletServiceParams(n *cke.Node) cke.ServiceParams {
 				ReadOnly:    false,
 				Propagation: "",
 				Label:       cke.LabelShared,
-			},
-			{
-				Source:      "/var/log/kubernetes/kubelet",
-				Destination: "/var/log/kubernetes/kubelet",
-				ReadOnly:    false,
-				Propagation: "",
-				Label:       cke.LabelPrivate,
 			},
 			{
 				Source:      "/run",
