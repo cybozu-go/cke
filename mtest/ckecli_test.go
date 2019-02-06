@@ -59,9 +59,20 @@ var _ = Describe("ckecli", func() {
 		Expect(cmd.Run()).ShouldNot(HaveOccurred())
 	})
 
-	It("should connect to all nodes by ssh", func() {
+	It("should ssh to all nodes", func() {
 		for _, node := range []string{node1, node2, node3, node4, node5, node6} {
 			ckecli("ssh", "cybozu@"+node, "/bin/true")
+		}
+	})
+
+	It("should scp to all nodes", func() {
+		scpData := localTempFile("scpData")
+		for _, node := range []string{node1, node2, node3, node4, node5, node6} {
+			destName := scpData.Name() + node
+			ckecli("scp", scpData.Name(), "cybozu@"+node+":"+destName)
+			ckecli("scp", "cybozu@"+node+":"+destName, "/tmp/")
+			_, err := os.Stat(destName)
+			Expect(err).NotTo(HaveOccurred())
 		}
 	})
 })
