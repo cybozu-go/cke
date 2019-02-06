@@ -8,12 +8,11 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
 
-func detectNode(ctx context.Context, args []string) (*cke.Node, error) {
+func detectNode(ctx context.Context, args []string) (string, error) {
 	var nodeName string
 	for _, arg := range args {
 		if strings.Contains(arg, ":") {
@@ -23,45 +22,18 @@ func detectNode(ctx context.Context, args []string) (*cke.Node, error) {
 	}
 
 	if len(nodeName) == 0 {
-		return nil, errors.New("node name is not specified")
+		return "", errors.New("node name is not specified")
 	}
 
-	cluster, err := storage.GetCluster(ctx)
-	if err != nil {
-		return nil, err
-	}
-	var node *cke.Node
-	for _, n := range cluster.Nodes {
-		if n.Hostname == nodeName || n.Address == nodeName {
-			node = n
-			break
-		}
-	}
-	if node == nil {
-		return nil, errors.New("the node is not defined in the cluster: " + nodeName)
-	}
-	return node, nil
-}
-
-func replaceHostName(node *cke.Node, args []string) []string {
-	replaced := make([]string, len(args))
-	for i, arg := range args {
-		if strings.Contains(arg, ":") {
-			replaced[i] = node.Address + ":" + arg[strings.Index(arg, ":")+1:]
-		} else {
-			replaced[i] = arg
-		}
-	}
-
-	return replaced
+	return nodeName, nil
 }
 
 func scp(ctx context.Context, args []string) error {
-	node, err := detectNode(ctx, args)
+	sshAddress, err := detectNode(ctx, args)
 	if err != nil {
 		return err
 	}
-	fifo, err := sshPrivateKey(node.Address)
+	fifo, err := sshPrivateKey(sshAddress)
 	if err != nil {
 		return err
 	}
@@ -71,13 +43,11 @@ func scp(ctx context.Context, args []string) error {
 		"-i", fifo,
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "StrictHostKeyChecking=no",
-		"-o", "User=" + node.User,
 	}
 	if scpParams.recursive {
 		scpArgs = append(scpArgs, "-r")
 	}
 
-	args = replaceHostName(node, args)
 	scpArgs = append(scpArgs, args...)
 
 	fmt.Println(scpArgs)
