@@ -145,25 +145,21 @@ Option  | Default value | Description
 ------- | ------------- | -----------
 `--ttl` | `2h`          | TTL of the client certificate
 
-`ckecli ssh NODE [COMMAND...]`
+`ckecli ssh [user@]NODE [COMMAND...]`
 ------------------------------
 
 Connect to the node via ssh.
 
 `NODE` is IP address or hostname of the node to be connected.
-The node should be defined in the cluster definition.
-The user name defined in the cluster will be used.
 
 If `COMMAND` is specified, it will be executed on the node.
 
-`ckecli scp [-r] [NODE1:]FILE1 ... [NODE2:]FILE2`
+`ckecli scp [-r] [[user@]NODE1:]FILE1 ... [[user@]NODE2:]FILE2`
 -------------------------------------------------
 
 Copy files between hosts via scp.
 
 `NODE` is IP address or hostname of the node.
-The node should be defined in the cluster definition.
-The user name defined in the cluster will be used.
 
 Option  | Default value | Description
 ------- | ------------- | -----------

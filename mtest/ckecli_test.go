@@ -58,4 +58,11 @@ var _ = Describe("ckecli", func() {
 		cmd.Stderr = os.Stderr
 		Expect(cmd.Run()).ShouldNot(HaveOccurred())
 	})
+
+	It("should connect to all nodes", func() {
+		for _, node := range []string{node1, node2, node3, node4, node5, node6} {
+			ckecli("ssh", node, "/bin/true")
+			ckecli("ssh", "cybozu@"+node, "/bin/true")
+		}
+	})
 })

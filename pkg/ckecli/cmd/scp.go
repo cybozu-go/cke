@@ -61,7 +61,7 @@ func scp(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	fifo, err := sshPrivateKey(node)
+	fifo, err := sshPrivateKey(node.Address)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ var scpParams struct {
 
 // scpCmd represents the scp command
 var scpCmd = &cobra.Command{
-	Use:   "scp [NODE1:]FILE1 ... [NODE2:]FILE2",
+	Use:   "scp [[user@]NODE1:]FILE1 ... [[user@]NODE2:]FILE2",
 	Short: "copy files between hosts via scp",
 	Long: `Copy files between hosts via scp.
 
