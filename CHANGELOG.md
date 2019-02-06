@@ -5,6 +5,11 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.1] - 2019-02-06
+
+### Changed
+- Logs from Kubernetes programs (apiserver, kubelet, ...) and etcd are sent to journald (#126).
+
 ## [1.13.0] - 2019-01-25
 
 ### Changed
@@ -185,7 +190,8 @@ This is the first release.
 ### Added
 - Deploy etcd and kubernetes services.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.0...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.1...HEAD
+[1.13.1]: https://github.com/cybozu-go/cke/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/cybozu-go/cke/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/cybozu-go/cke/compare/v0.28...v1.12.0
 [0.28]: https://github.com/cybozu-go/cke/compare/v0.27...v0.28
