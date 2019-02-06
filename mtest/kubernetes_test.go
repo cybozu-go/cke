@@ -234,11 +234,22 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("getting hostIP of etcdbackup Pod")
-		stdout, stderr, err := kubectl("-n", "kube-system", "get", "pods/etcdbackup", "-o", "json")
-		var pod corev1.Pod
-		err = json.Unmarshal(stdout, &pod)
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-		hostIP := pod.Status.HostIP
+		var hostIP string
+		Eventually(func() error {
+			stdout, _, err := kubectl("-n", "kube-system", "get", "pods/etcdbackup", "-o", "json")
+			if err != nil {
+				return err
+			}
+			var pod corev1.Pod
+			if err := json.Unmarshal(stdout, &pod); err != nil {
+				return err
+			}
+			hostIP = pod.Status.HostIP
+			if hostIP == "" {
+				return errors.New("etcdbackup pod is not scheduled")
+			}
+			return nil
+		}).Should(Succeed())
 
 		By("deploying cluster-dns to etcdbackup Pod running hostIP")
 		clusterDNSPatch := fmt.Sprintf(`{ "spec": { "template": { "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" } } } } } }`, hostIP)
@@ -274,7 +285,7 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("checking etcd snapshot is correct")
-		stdout = ckecli("etcd", "backup", "list")
+		stdout := ckecli("etcd", "backup", "list")
 		var list []string
 		err = json.Unmarshal(stdout, &list)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
