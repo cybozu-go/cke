@@ -40,17 +40,11 @@ func (o *schedulerBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
-		dirs := []string{
-			"/var/log/kubernetes/scheduler",
-		}
-		return common.MakeDirsCommand(o.nodes, dirs)
+		return prepareSchedulerFilesCommand{o.cluster, o.files}
 	case 2:
 		o.step++
-		return prepareSchedulerFilesCommand{o.cluster, o.files}
-	case 3:
-		o.step++
 		return o.files
-	case 4:
+	case 3:
 		o.step++
 		return common.RunContainerCommand(o.nodes, op.KubeSchedulerContainerName, cke.HyperkubeImage,
 			common.WithParams(SchedulerParams()),
@@ -95,8 +89,6 @@ func SchedulerParams() cke.ServiceParams {
 	args := []string{
 		"scheduler",
 		"--kubeconfig=/etc/kubernetes/scheduler/kubeconfig",
-		"--log-dir=/var/log/kubernetes/scheduler",
-		"--logtostderr=false",
 		// for healthz service
 		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),
 		"--tls-private-key-file=" + op.K8sPKIPath("apiserver.key"),
@@ -118,13 +110,6 @@ func SchedulerParams() cke.ServiceParams {
 				ReadOnly:    true,
 				Propagation: "",
 				Label:       cke.LabelShared,
-			},
-			{
-				Source:      "/var/log/kubernetes/scheduler",
-				Destination: "/var/log/kubernetes/scheduler",
-				ReadOnly:    false,
-				Propagation: "",
-				Label:       cke.LabelPrivate,
 			},
 		},
 	}

@@ -59,6 +59,7 @@ type KubeletConfiguration struct {
 
 	HealthzPort           int32    `json:"healthzPort,omitempty" yaml:"healthzPort,omitempty"`
 	HealthzBindAddress    string   `json:"healthzBindAddress,omitempty" yaml:"healthzBindAddress,omitempty"`
+	OOMScoreAdj           int32    `json:"oomScoreAdj" yaml:"oomScoreAdj"`
 	ClusterDomain         string   `json:"clusterDomain,omitempty" yaml:"clusterDomain,omitempty"`
 	ClusterDNS            []string `json:"clusterDNS,omitempty" yaml:"clusterDNS,omitempty"`
 	PodCIDR               string   `json:"podCIDR,omitempty" yaml:"podCIDR,omitempty"`

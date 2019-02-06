@@ -42,17 +42,11 @@ func (o *controllerManagerBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
-		dirs := []string{
-			"/var/log/kubernetes/controller-manager",
-		}
-		return common.MakeDirsCommand(o.nodes, dirs)
+		return prepareControllerManagerFilesCommand{o.cluster, o.files}
 	case 2:
 		o.step++
-		return prepareControllerManagerFilesCommand{o.cluster, o.files}
-	case 3:
-		o.step++
 		return o.files
-	case 4:
+	case 3:
 		o.step++
 		return common.RunContainerCommand(o.nodes,
 			op.KubeControllerManagerContainerName, cke.HyperkubeImage,
@@ -113,8 +107,6 @@ func ControllerManagerParams(clusterName, serviceSubnet string) cke.ServiceParam
 		"--cluster-name=" + clusterName,
 		"--service-cluster-ip-range=" + serviceSubnet,
 		"--kubeconfig=/etc/kubernetes/controller-manager/kubeconfig",
-		"--log-dir=/var/log/kubernetes/controller-manager",
-		"--logtostderr=false",
 
 		// ToDo: cluster signing
 		// https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/#a-note-to-cluster-administrators
@@ -141,19 +133,15 @@ func ControllerManagerParams(clusterName, serviceSubnet string) cke.ServiceParam
 				Destination: "/etc/machine-id",
 				ReadOnly:    true,
 				Propagation: "",
-				Label:       ""},
+				Label:       "",
+			},
 			{
 				Source:      "/etc/kubernetes",
 				Destination: "/etc/kubernetes",
 				ReadOnly:    true,
 				Propagation: "",
-				Label:       cke.LabelShared},
-			{
-				Source:      "/var/log/kubernetes/controller-manager",
-				Destination: "/var/log/kubernetes/controller-manager",
-				ReadOnly:    false,
-				Propagation: "",
-				Label:       cke.LabelPrivate},
+				Label:       cke.LabelShared,
+			},
 		},
 	}
 }

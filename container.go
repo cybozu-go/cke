@@ -83,6 +83,7 @@ func (c docker) Run(img Image, binds []Mount, command string) error {
 	args := []string{
 		"docker",
 		"run",
+		"--log-driver=journald",
 		"--rm",
 		"--network=host",
 		"--uts=host",
@@ -105,6 +106,7 @@ func (c docker) RunWithInput(img Image, binds []Mount, command, input string) er
 	args := []string{
 		"docker",
 		"run",
+		"--log-driver=journald",
 		"--rm",
 		"-i",
 		"--network=host",
@@ -139,6 +141,7 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 	args := []string{
 		"docker",
 		"run",
+		"--log-driver=journald",
 		"-d",
 		"--name=" + name,
 		"--read-only",
