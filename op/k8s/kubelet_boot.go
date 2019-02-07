@@ -302,6 +302,13 @@ func KubeletServiceParams(n *cke.Node) cke.ServiceParams {
 				Label:       "",
 			},
 			{
+				Source:      "/etc/os-release",
+				Destination: "/etc/os-release",
+				ReadOnly:    true,
+				Propagation: "",
+				Label:       "",
+			},
+			{
 				Source:      "/etc/kubernetes",
 				Destination: "/etc/kubernetes",
 				ReadOnly:    true,
@@ -312,7 +319,7 @@ func KubeletServiceParams(n *cke.Node) cke.ServiceParams {
 				Source:      "/var/lib/kubelet",
 				Destination: "/var/lib/kubelet",
 				ReadOnly:    false,
-				Propagation: cke.PropagationShared,
+				Propagation: cke.PropagationRShared,
 				Label:       cke.LabelShared,
 			},
 			// TODO: /var/lib/docker is used by cAdvisor.
