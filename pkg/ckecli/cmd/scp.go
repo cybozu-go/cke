@@ -43,6 +43,7 @@ func scp(ctx context.Context, args []string) error {
 		"-i", fifo,
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "StrictHostKeyChecking=no",
+		"-o", "ConnectTimeout=60",
 	}
 	if scpParams.recursive {
 		scpArgs = append(scpArgs, "-r")

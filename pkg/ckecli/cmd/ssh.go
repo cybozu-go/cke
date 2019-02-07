@@ -104,6 +104,7 @@ func ssh(ctx context.Context, args []string) error {
 		"-i", fifo,
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "StrictHostKeyChecking=no",
+		"-o", "ConnectTimeout=60",
 	}
 	sshArgs = append(sshArgs, args...)
 	c := exec.Command("ssh", sshArgs...)
