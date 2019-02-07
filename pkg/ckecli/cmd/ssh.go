@@ -18,17 +18,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func detectSSHNode(arg string) (string, error) {
+func detectSSHNode(arg string) string {
 	nodeName := arg
 	if strings.Contains(arg, "@") {
 		nodeName = arg[strings.Index(arg, "@")+1:]
 	}
-
-	if len(nodeName) == 0 {
-		return "", errors.New("node name is not specified")
-	}
-
-	return nodeName, nil
+	return nodeName
 }
 
 func writeToFifo(fifo string, data string) {
@@ -98,10 +93,7 @@ func sshPrivateKey(nodeName string) (string, error) {
 }
 
 func ssh(ctx context.Context, args []string) error {
-	node, err := detectSSHNode(args[0])
-	if err != nil {
-		return err
-	}
+	node := detectSSHNode(args[0])
 	fifo, err := sshPrivateKey(node)
 	if err != nil {
 		return err

@@ -16,11 +16,7 @@ func detectSCPNode(args []string) (string, error) {
 	var nodeName string
 	for _, arg := range args {
 		if strings.Contains(arg, ":") {
-			var err error
-			nodeName, err = detectSSHNode(arg[:strings.Index(arg, ":")])
-			if err != nil {
-				return "", err
-			}
+			nodeName = detectSSHNode(arg[:strings.Index(arg, ":")])
 			break
 		}
 	}
