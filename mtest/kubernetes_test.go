@@ -275,10 +275,10 @@ var _ = Describe("Kubernetes", func() {
 			}
 
 			if len(jobs.Items) < 1 {
-				return errors.New("no etcd backup jobs")
+				return fmt.Errorf("no etcd backup jobs, JobList: %v", jobs)
 			}
 			if jobs.Items[0].Status.Succeeded != 1 {
-				return errors.New(".Succeeded is not 1")
+				return fmt.Errorf(".Succeeded is not 1, JobList: %v", jobs)
 			}
 
 			return nil
