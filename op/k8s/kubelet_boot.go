@@ -134,20 +134,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		return err
 	}
 
-	cfg := KubeletConfiguration{
-		APIVersion:            "kubelet.config.k8s.io/v1beta1",
-		Kind:                  "KubeletConfiguration",
-		ReadOnlyPort:          0,
-		TLSCertFile:           tlsCertPath,
-		TLSPrivateKeyFile:     tlsKeyPath,
-		Authentication:        KubeletAuthentication{ClientCAFile: caPath},
-		Authorization:         kubeletAuthorization{Mode: "Webhook"},
-		HealthzBindAddress:    "0.0.0.0",
-		OOMScoreAdj:           -1000,
-		ClusterDomain:         c.params.Domain,
-		RuntimeRequestTimeout: "15m",
-		FailSwapOn:            !c.params.AllowSwap,
-	}
+	cfg := newKubeletConfiguration(tlsCertPath, tlsKeyPath, caPath, c.params.Domain, c.params.AllowSwap)
 	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		cfg := cfg
 		cfg.ClusterDNS = []string{n.Address}

@@ -69,6 +69,23 @@ type KubeletConfiguration struct {
 	FailSwapOn   bool            `json:"failSwapOn" yaml:"failSwapOn"`
 }
 
+func newKubeletConfiguration(cert, key, ca, domain string, allowSwap bool) KubeletConfiguration {
+	return KubeletConfiguration{
+		APIVersion:            "kubelet.config.k8s.io/v1beta1",
+		Kind:                  "KubeletConfiguration",
+		ReadOnlyPort:          0,
+		TLSCertFile:           cert,
+		TLSPrivateKeyFile:     key,
+		Authentication:        KubeletAuthentication{ClientCAFile: ca},
+		Authorization:         kubeletAuthorization{Mode: "Webhook"},
+		HealthzBindAddress:    "0.0.0.0",
+		OOMScoreAdj:           -1000,
+		ClusterDomain:         domain,
+		RuntimeRequestTimeout: "15m",
+		FailSwapOn:            !allowSwap,
+	}
+}
+
 // KubeletAuthentication is a simplified version of the struct defined in
 // https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/apis/config/types.go
 //
