@@ -12,29 +12,36 @@ import (
 
 // NodeFilter filters nodes to
 type NodeFilter struct {
-	cluster *cke.Cluster
-	status  *cke.ClusterStatus
-	nodeMap map[string]*cke.Node
-	cp      []*cke.Node
+	cluster    *cke.Cluster
+	status     *cke.ClusterStatus
+	nodeMap    map[string]*cke.Node
+	addressMap map[string]string
+	cp         []*cke.Node
 }
 
 // NewNodeFilter creates and initializes NodeFilter.
 func NewNodeFilter(cluster *cke.Cluster, status *cke.ClusterStatus) *NodeFilter {
 	nodeMap := make(map[string]*cke.Node)
+	addressMap := make(map[string]string)
 	cp := make([]*cke.Node, 0, 5)
 
 	for _, n := range cluster.Nodes {
 		nodeMap[n.Address] = n
+		if len(n.Hostname) != 0 {
+			addressMap[n.Hostname] = n.Address
+		}
+
 		if n.ControlPlane {
 			cp = append(cp, n)
 		}
 	}
 
 	return &NodeFilter{
-		cluster: cluster,
-		status:  status,
-		nodeMap: nodeMap,
-		cp:      cp,
+		cluster:    cluster,
+		status:     status,
+		nodeMap:    nodeMap,
+		addressMap: addressMap,
+		cp:         cp,
 	}
 }
 
@@ -387,7 +394,11 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 func (nf *NodeFilter) NonClusterNodes() (nodes []*corev1.Node) {
 	members := nf.status.Kubernetes.Nodes
 	for _, member := range members {
-		if nf.InCluster(member.Name) {
+		address, ok := nf.addressMap[member.Name]
+		if !ok {
+			address = member.Name
+		}
+		if nf.InCluster(address) {
 			continue
 		}
 		member := member

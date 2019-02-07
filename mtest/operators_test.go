@@ -271,6 +271,48 @@ var _ = Describe("Operations", func() {
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
+
+		By("adding hostname")
+		cluster = getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		cluster.Nodes[0].Hostname = "node1"
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			err := checkCluster(cluster)
+			if err != nil {
+				return err
+			}
+			status, err := getClusterStatus(cluster)
+			if err != nil {
+				return err
+			}
+
+			var targetNode *corev1.Node
+			for _, n := range status.Kubernetes.Nodes {
+				if n.Name == "node1" {
+					targetNode = &n
+					break
+				}
+			}
+			if targetNode == nil {
+				return errors.New("node1 was not found")
+			}
+
+			nodeReady := false
+			for _, cond := range targetNode.Status.Conditions {
+				if cond.Type == corev1.NodeReady && cond.Status == corev1.ConditionTrue {
+					nodeReady = true
+					break
+				}
+			}
+			if !nodeReady {
+				return errors.New("node1 is not ready")
+			}
+			return nil
+		}).Should(Succeed())
+
 	})
 
 	It("removes all taints", func() {
