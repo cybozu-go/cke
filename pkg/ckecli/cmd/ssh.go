@@ -8,6 +8,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -16,6 +17,14 @@ import (
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
+
+func detectSSHNode(arg string) string {
+	nodeName := arg
+	if strings.Contains(arg, "@") {
+		nodeName = arg[strings.Index(arg, "@")+1:]
+	}
+	return nodeName
+}
 
 func writeToFifo(fifo string, data string) {
 	f, err := os.OpenFile(fifo, os.O_WRONLY, 0600)
@@ -37,25 +46,7 @@ func writeToFifo(fifo string, data string) {
 	}
 }
 
-func resolveNode(ctx context.Context, nodeName string) (*cke.Node, error) {
-	cluster, err := storage.GetCluster(ctx)
-	if err != nil {
-		return nil, err
-	}
-	var node *cke.Node
-	for _, n := range cluster.Nodes {
-		if n.Hostname == nodeName || n.Address == nodeName {
-			node = n
-			break
-		}
-	}
-	if node == nil {
-		return nil, errors.New("the node is not defined in the cluster: " + nodeName)
-	}
-	return node, nil
-}
-
-func sshPrivateKey(node *cke.Node) (string, error) {
+func sshPrivateKey(nodeName string) (string, error) {
 	usr, err := user.Current()
 	if err != nil {
 		return "", err
@@ -83,12 +74,12 @@ func sshPrivateKey(node *cke.Node) (string, error) {
 	}
 	privKeys := secret.Data
 
-	mykey, ok := privKeys[node.Address]
+	mykey, ok := privKeys[nodeName]
 	if !ok {
 		mykey = privKeys[""]
 	}
 	if mykey == nil {
-		return "", errors.New("no ssh private key for " + node.Address)
+		return "", errors.New("no ssh private key for " + nodeName)
 	}
 
 	go func() {
@@ -102,11 +93,7 @@ func sshPrivateKey(node *cke.Node) (string, error) {
 }
 
 func ssh(ctx context.Context, args []string) error {
-	nodeName := args[0]
-	node, err := resolveNode(ctx, nodeName)
-	if err != nil {
-		return err
-	}
+	node := detectSSHNode(args[0])
 	fifo, err := sshPrivateKey(node)
 	if err != nil {
 		return err
@@ -117,9 +104,9 @@ func ssh(ctx context.Context, args []string) error {
 		"-i", fifo,
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "StrictHostKeyChecking=no",
-		node.User + "@" + node.Address,
+		"-o", "ConnectTimeout=60",
 	}
-	sshArgs = append(sshArgs, args[1:]...)
+	sshArgs = append(sshArgs, args...)
 	c := exec.Command("ssh", sshArgs...)
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
@@ -129,7 +116,7 @@ func ssh(ctx context.Context, args []string) error {
 
 // sshCmd represents the ssh command
 var sshCmd = &cobra.Command{
-	Use:   "ssh NODE [COMMAND...]",
+	Use:   "ssh [user@]NODE [COMMAND...]",
 	Short: "connect to the node via ssh",
 	Long: `Connect to the node via ssh.
 

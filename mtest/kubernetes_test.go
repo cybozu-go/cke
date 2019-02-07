@@ -126,11 +126,18 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("resolving domain names")
-		_, stderr, err = kubectl("exec", "-n=mtest", "client", "getent", "hosts", "nginx")
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		Eventually(func() error {
+			_, stderr, err := kubectl("exec", "-n=mtest", "client", "getent", "hosts", "nginx")
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
 
-		_, stderr, err = kubectl("exec", "-n=mtest", "client", "getent", "hosts", "nginx.mtest.svc.cluster.local")
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+			_, stderr, err = kubectl("exec", "-n=mtest", "client", "getent", "hosts", "nginx.mtest.svc.cluster.local")
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+			return nil
+		}).Should(Succeed())
 	})
 
 	It("updates unbound config", func() {
@@ -275,10 +282,10 @@ var _ = Describe("Kubernetes", func() {
 			}
 
 			if len(jobs.Items) < 1 {
-				return errors.New("no etcd backup jobs")
+				return fmt.Errorf("no etcd backup jobs, JobList: %v", jobs)
 			}
 			if jobs.Items[0].Status.Succeeded != 1 {
-				return errors.New(".Succeeded is not 1")
+				return fmt.Errorf(".Succeeded is not 1, JobList: %v", jobs)
 			}
 
 			return nil

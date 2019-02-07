@@ -2,6 +2,7 @@ package mtest
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 
@@ -57,5 +58,42 @@ var _ = Describe("ckecli", func() {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		Expect(cmd.Run()).ShouldNot(HaveOccurred())
+	})
+
+	It("should ssh to all nodes", func() {
+		for _, node := range []string{node1, node2, node3, node4, node5, node6} {
+			Eventually(func() error {
+				_, err := ckecliUnsafe("ssh", "cybozu@"+node, "/bin/true")
+				if err != nil {
+					return err
+				}
+				return nil
+			}).Should(Succeed())
+		}
+	})
+
+	It("should scp to all nodes", func() {
+		scpData := localTempFile("scpData")
+		for _, node := range []string{node1, node2, node3, node4, node5, node6} {
+			destName := scpData.Name() + node
+
+			Eventually(func() error {
+				stdout, err := ckecliUnsafe("scp", scpData.Name(), "cybozu@"+node+":"+destName)
+				if err != nil {
+					return fmt.Errorf("%v: stdout=%s", err, stdout)
+				}
+				stdout, err = ckecliUnsafe("scp", "cybozu@"+node+":"+destName, "/tmp/")
+				if err != nil {
+					return fmt.Errorf("%v: stdout=%s", err, stdout)
+				}
+				_, err = os.Stat(destName)
+				if err != nil {
+					return err
+				}
+				return nil
+			}).Should(Succeed())
+
+			os.Remove(destName)
+		}
 	})
 })
