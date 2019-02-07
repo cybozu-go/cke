@@ -8,6 +8,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -16,6 +17,19 @@ import (
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
+
+func detectSSHNode(arg string) (string, error) {
+	nodeName := arg
+	if strings.Contains(arg, "@") {
+		nodeName = arg[strings.Index(arg, "@")+1:]
+	}
+
+	if len(nodeName) == 0 {
+		return "", errors.New("node name is not specified")
+	}
+
+	return nodeName, nil
+}
 
 func writeToFifo(fifo string, data string) {
 	f, err := os.OpenFile(fifo, os.O_WRONLY, 0600)
@@ -84,8 +98,11 @@ func sshPrivateKey(nodeName string) (string, error) {
 }
 
 func ssh(ctx context.Context, args []string) error {
-	sshAddress := args[0]
-	fifo, err := sshPrivateKey(sshAddress)
+	node, err := detectSSHNode(args[0])
+	if err != nil {
+		return err
+	}
+	fifo, err := sshPrivateKey(node)
 	if err != nil {
 		return err
 	}
@@ -95,9 +112,8 @@ func ssh(ctx context.Context, args []string) error {
 		"-i", fifo,
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "StrictHostKeyChecking=no",
-		sshAddress,
 	}
-	sshArgs = append(sshArgs, args[1:]...)
+	sshArgs = append(sshArgs, args...)
 	c := exec.Command("ssh", sshArgs...)
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout

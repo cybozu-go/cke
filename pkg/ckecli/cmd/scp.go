@@ -12,11 +12,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func detectNode(ctx context.Context, args []string) (string, error) {
+func detectSCPNode(args []string) (string, error) {
 	var nodeName string
 	for _, arg := range args {
 		if strings.Contains(arg, ":") {
-			nodeName = arg[:strings.Index(arg, ":")]
+			var err error
+			nodeName, err = detectSSHNode(arg[:strings.Index(arg, ":")])
+			if err != nil {
+				return "", err
+			}
 			break
 		}
 	}
@@ -29,11 +33,11 @@ func detectNode(ctx context.Context, args []string) (string, error) {
 }
 
 func scp(ctx context.Context, args []string) error {
-	sshAddress, err := detectNode(ctx, args)
+	node, err := detectSCPNode(args)
 	if err != nil {
 		return err
 	}
-	fifo, err := sshPrivateKey(sshAddress)
+	fifo, err := sshPrivateKey(node)
 	if err != nil {
 		return err
 	}

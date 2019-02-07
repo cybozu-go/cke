@@ -73,6 +73,7 @@ var _ = Describe("ckecli", func() {
 			ckecli("scp", "cybozu@"+node+":"+destName, "/tmp/")
 			_, err := os.Stat(destName)
 			Expect(err).NotTo(HaveOccurred())
+			os.Remove(destName)
 		}
 	})
 })
