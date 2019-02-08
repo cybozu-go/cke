@@ -41,7 +41,74 @@ options:
         destination: target1
         read_only: true
         propagation: shared
-        selinux_label: z
+				selinux_label: z
+		audit_log_enabled: true
+		audit_log_policy: |
+			apiVersion: audit.k8s.io/v1 # This is required.
+			kind: Policy
+			# Don't generate audit events for all requests in RequestReceived stage.
+			omitStages:
+				- "RequestReceived"
+			rules:
+				# Log pod changes at RequestResponse level
+				- level: RequestResponse
+					resources:
+					- group: ""
+						# Resource "pods" doesn't match requests to any subresource of pods,
+						# which is consistent with the RBAC policy.
+						resources: ["pods"]
+				# Log "pods/log", "pods/status" at Metadata level
+				- level: Metadata
+					resources:
+					- group: ""
+						resources: ["pods/log", "pods/status"]
+
+				# Don't log requests to a configmap called "controller-leader"
+				- level: None
+					resources:
+					- group: ""
+						resources: ["configmaps"]
+						resourceNames: ["controller-leader"]
+
+				# Don't log watch requests by the "system:kube-proxy" on endpoints or services
+				- level: None
+					users: ["system:kube-proxy"]
+					verbs: ["watch"]
+					resources:
+					- group: "" # core API group
+						resources: ["endpoints", "services"]
+
+				# Don't log authenticated requests to certain non-resource URL paths.
+				- level: None
+					userGroups: ["system:authenticated"]
+					nonResourceURLs:
+					- "/api*" # Wildcard matching.
+					- "/version"
+
+				# Log the request body of configmap changes in kube-system.
+				- level: Request
+					resources:
+					- group: "" # core API group
+						resources: ["configmaps"]
+					# This rule only applies to resources in the "kube-system" namespace.
+					# The empty string "" can be used to select non-namespaced resources.
+					namespaces: ["kube-system"]
+				# Log configmap and secret changes in all other namespaces at the Metadata level.
+				- level: Metadata
+					resources:
+					- group: "" # core API group
+						resources: ["secrets", "configmaps"]
+				# Log all other resources in core and extensions at the Request level.
+				- level: Request
+					resources:
+					- group: "" # core API group
+					- group: "extensions" # Version of group should NOT be included.
+				# A catch-all rule to log all other requests at the Metadata level.
+				- level: Metadata
+					# Long-running requests like watches that fall under this rule will not
+					# generate an audit event in RequestReceived.
+					omitStages:
+						- "RequestReceived"
   kube-controller-manager:
     extra_env:
       env1: val1
@@ -114,6 +181,12 @@ options:
 	}
 	if !reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true, PropagationShared, LabelShared}}) {
 		t.Error(`!reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true}})`)
+	}
+	if c.Options.APIServer.AuditLogEnabled != true {
+		t.Error(`c.Options.APIServer.AuditLogEnabled != true`)
+	}
+	if c.Options.APIServer.AuditLogPolicy == "" {
+		t.Error(`c.Options.APIServer.AuditLogPolicy == ""`)
 	}
 	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
