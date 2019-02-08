@@ -11,13 +11,13 @@ type apiServerRestartOp struct {
 	cps   []*cke.Node
 
 	serviceSubnet string
-	params        cke.ServiceParams
+	params        cke.APIServerParams
 
 	pulled bool
 }
 
 // APIServerRestartOp returns an Operator to restart kube-apiserver
-func APIServerRestartOp(nodes, cps []*cke.Node, serviceSubnet string, params cke.ServiceParams) cke.Operator {
+func APIServerRestartOp(nodes, cps []*cke.Node, serviceSubnet string, params cke.APIServerParams) cke.Operator {
 	return &apiServerRestartOp{
 		nodes:         nodes,
 		cps:           cps,
@@ -49,7 +49,7 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 	return common.RunContainerCommand([]*cke.Node{node},
 		op.KubeAPIServerContainerName, cke.HyperkubeImage,
 		common.WithOpts(opts),
-		common.WithParams(APIServerParams(o.cps, node.Address, o.serviceSubnet)),
-		common.WithExtra(o.params),
+		common.WithParams(APIServerParams(o.cps, node.Address, o.serviceSubnet, o.params.AuditLogEnabled)),
+		common.WithExtra(o.params.ServiceParams),
 		common.WithRestart())
 }

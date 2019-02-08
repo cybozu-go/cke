@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
@@ -46,8 +46,8 @@ options:
     audit_log_policy: |
       apiVersion: audit.k8s.io/v1
       kind: Policy
-      Rules:
-      - Level: Metadata
+      rules:
+      - level: Metadata
   kube-controller-manager:
     extra_env:
       env1: val1
@@ -126,9 +126,9 @@ options:
 	}
 	if c.Options.APIServer.AuditLogPolicy != `apiVersion: audit.k8s.io/v1
 kind: Policy
-Rules:
-- Level: Metadata
-`  {
+rules:
+- level: Metadata
+` {
 		t.Errorf(`wrong c.Options.APIServer.AuditLogPolicy: %s`, c.Options.APIServer.AuditLogPolicy)
 	}
 	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {
@@ -250,7 +250,7 @@ func testClusterValidate(t *testing.T) {
 				Options: Options{
 					APIServer: APIServerParams{
 						AuditLogEnabled: true,
-						AuditLogPolicy:"",
+						AuditLogPolicy:  "",
 					},
 				},
 			},
@@ -265,7 +265,7 @@ func testClusterValidate(t *testing.T) {
 				Options: Options{
 					APIServer: APIServerParams{
 						AuditLogEnabled: true,
-						AuditLogPolicy:"test",
+						AuditLogPolicy:  "test",
 					},
 				},
 			},
@@ -282,8 +282,8 @@ func testClusterValidate(t *testing.T) {
 						AuditLogEnabled: true,
 						AuditLogPolicy: `apiVersion: audit.k8s.io/v1
 kind: Policy
-Rules:
-- Level: Metadata
+rules:
+- level: Metadata
 `,
 					},
 				},
