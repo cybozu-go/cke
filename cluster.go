@@ -2,6 +2,7 @@ package cke
 
 import (
 	"errors"
+	"gopkg.in/yaml.v2"
 	"net"
 	"path/filepath"
 	"strings"
@@ -352,6 +353,18 @@ func validateOptions(opts Options) error {
 	fldPath = fldPath.Child("boot_taints")
 	for i, taint := range opts.Kubelet.BootTaints {
 		err := validateTaint(taint, fldPath.Index(i))
+		if err != nil {
+			return err
+		}
+	}
+
+	if opts.APIServer.AuditLogEnabled && len(opts.APIServer.AuditLogPolicy) == 0 {
+		return errors.New("audit_log_policy should not be empty")
+	}
+
+	if len(opts.APIServer.AuditLogPolicy) != 0 {
+		policy := make(map[string]interface{})
+		err = yaml.Unmarshal([]byte(opts.APIServer.AuditLogPolicy), &policy)
 		if err != nil {
 			return err
 		}

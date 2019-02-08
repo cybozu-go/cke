@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
@@ -41,74 +41,13 @@ options:
         destination: target1
         read_only: true
         propagation: shared
-				selinux_label: z
-		audit_log_enabled: true
-		audit_log_policy: |
-			apiVersion: audit.k8s.io/v1 # This is required.
-			kind: Policy
-			# Don't generate audit events for all requests in RequestReceived stage.
-			omitStages:
-				- "RequestReceived"
-			rules:
-				# Log pod changes at RequestResponse level
-				- level: RequestResponse
-					resources:
-					- group: ""
-						# Resource "pods" doesn't match requests to any subresource of pods,
-						# which is consistent with the RBAC policy.
-						resources: ["pods"]
-				# Log "pods/log", "pods/status" at Metadata level
-				- level: Metadata
-					resources:
-					- group: ""
-						resources: ["pods/log", "pods/status"]
-
-				# Don't log requests to a configmap called "controller-leader"
-				- level: None
-					resources:
-					- group: ""
-						resources: ["configmaps"]
-						resourceNames: ["controller-leader"]
-
-				# Don't log watch requests by the "system:kube-proxy" on endpoints or services
-				- level: None
-					users: ["system:kube-proxy"]
-					verbs: ["watch"]
-					resources:
-					- group: "" # core API group
-						resources: ["endpoints", "services"]
-
-				# Don't log authenticated requests to certain non-resource URL paths.
-				- level: None
-					userGroups: ["system:authenticated"]
-					nonResourceURLs:
-					- "/api*" # Wildcard matching.
-					- "/version"
-
-				# Log the request body of configmap changes in kube-system.
-				- level: Request
-					resources:
-					- group: "" # core API group
-						resources: ["configmaps"]
-					# This rule only applies to resources in the "kube-system" namespace.
-					# The empty string "" can be used to select non-namespaced resources.
-					namespaces: ["kube-system"]
-				# Log configmap and secret changes in all other namespaces at the Metadata level.
-				- level: Metadata
-					resources:
-					- group: "" # core API group
-						resources: ["secrets", "configmaps"]
-				# Log all other resources in core and extensions at the Request level.
-				- level: Request
-					resources:
-					- group: "" # core API group
-					- group: "extensions" # Version of group should NOT be included.
-				# A catch-all rule to log all other requests at the Metadata level.
-				- level: Metadata
-					# Long-running requests like watches that fall under this rule will not
-					# generate an audit event in RequestReceived.
-					omitStages:
-						- "RequestReceived"
+        selinux_label: z
+    audit_log_enabled: true
+    audit_log_policy: |
+      apiVersion: audit.k8s.io/v1
+      kind: Policy
+      Rules:
+      - Level: Metadata
   kube-controller-manager:
     extra_env:
       env1: val1
@@ -185,8 +124,12 @@ options:
 	if c.Options.APIServer.AuditLogEnabled != true {
 		t.Error(`c.Options.APIServer.AuditLogEnabled != true`)
 	}
-	if c.Options.APIServer.AuditLogPolicy == "" {
-		t.Error(`c.Options.APIServer.AuditLogPolicy == ""`)
+	if c.Options.APIServer.AuditLogPolicy != `apiVersion: audit.k8s.io/v1
+kind: Policy
+Rules:
+- Level: Metadata
+`  {
+		t.Errorf(`wrong c.Options.APIServer.AuditLogPolicy: %s`, c.Options.APIServer.AuditLogPolicy)
 	}
 	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
@@ -297,6 +240,55 @@ func testClusterValidate(t *testing.T) {
 				},
 			},
 			true,
+		},
+		{
+			"empty policy",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					APIServer: APIServerParams{
+						AuditLogEnabled: true,
+						AuditLogPolicy:"",
+					},
+				},
+			},
+			true,
+		},
+		{
+			"invalid policy",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					APIServer: APIServerParams{
+						AuditLogEnabled: true,
+						AuditLogPolicy:"test",
+					},
+				},
+			},
+			true,
+		},
+		{
+			"valid policy",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					APIServer: APIServerParams{
+						AuditLogEnabled: true,
+						AuditLogPolicy: `apiVersion: audit.k8s.io/v1
+kind: Policy
+Rules:
+- Level: Metadata
+`,
+					},
+				},
+			},
+			false,
 		},
 		{
 			"invalid domain",
