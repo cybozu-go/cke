@@ -49,7 +49,7 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 	return common.RunContainerCommand([]*cke.Node{node},
 		op.KubeAPIServerContainerName, cke.HyperkubeImage,
 		common.WithOpts(opts),
-		common.WithParams(APIServerParams(o.cps, node.Address, o.serviceSubnet, o.params.AuditLogEnabled)),
+		common.WithParams(APIServerParams(o.cps, node.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy)),
 		common.WithExtra(o.params.ServiceParams),
 		common.WithRestart())
 }

@@ -2,6 +2,8 @@ package k8s
 
 import (
 	"context"
+	"crypto/md5"
+	"fmt"
 	"strings"
 
 	"github.com/cybozu-go/cke"
@@ -26,7 +28,7 @@ var (
 	}
 )
 
-const auditPolicyFilePath = "/etc/kubernetes/apiserver/audit-policy.yaml"
+const auditPolicyBasePath = "/etc/kubernetes/apiserver/audit-policy-%x.yaml"
 
 type apiServerBootOp struct {
 	nodes []*cke.Node
@@ -74,7 +76,7 @@ func (o *apiServerBootOp) NextCommand() cke.Commander {
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			paramsMap[n.Address] = APIServerParams(o.cps, n.Address, o.serviceSubnet, o.params.AuditLogEnabled)
+			paramsMap[n.Address] = APIServerParams(o.cps, n.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy)
 		}
 		return common.RunContainerCommand(o.nodes, op.KubeAPIServerContainerName, cke.HyperkubeImage,
 			common.WithOpts(opts),
@@ -163,7 +165,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		return err
 	}
 	if c.params.AuditLogEnabled {
-		return c.files.AddFile(ctx, auditPolicyFilePath, func(context.Context, *cke.Node) ([]byte, error) {
+		return c.files.AddFile(ctx, auditPolicyFilePath(c.params.AuditLogPolicy), func(context.Context, *cke.Node) ([]byte, error) {
 			return []byte(c.params.AuditLogPolicy), nil
 		})
 	}
@@ -176,8 +178,12 @@ func (c prepareAPIServerFilesCommand) Command() cke.Command {
 	}
 }
 
+func auditPolicyFilePath(policy string) string {
+	return fmt.Sprintf(auditPolicyBasePath, md5.Sum([]byte(policy)))
+}
+
 // APIServerParams returns parameters for API server.
-func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet string, auditLogEnabeled bool) cke.ServiceParams {
+func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet string, auditLogEnabeled bool, auditLogPolicy string) cke.ServiceParams {
 	var etcdServers []string
 	for _, n := range controlPlanes {
 		etcdServers = append(etcdServers, "https://"+n.Address+":2379")
@@ -215,7 +221,7 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 	}
 	if auditLogEnabeled {
 		args = append(args, "--audit-log-path=-")
-		args = append(args, "--audit-policy-file="+auditPolicyFilePath)
+		args = append(args, "--audit-policy-file="+auditPolicyFilePath(auditLogPolicy))
 	}
 
 	return cke.ServiceParams{
