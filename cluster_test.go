@@ -42,6 +42,12 @@ options:
         read_only: true
         propagation: shared
         selinux_label: z
+    audit_log_enabled: true
+    audit_log_policy: |
+      apiVersion: audit.k8s.io/v1
+      kind: Policy
+      rules:
+      - level: Metadata
   kube-controller-manager:
     extra_env:
       env1: val1
@@ -114,6 +120,16 @@ options:
 	}
 	if !reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true, PropagationShared, LabelShared}}) {
 		t.Error(`!reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true}})`)
+	}
+	if c.Options.APIServer.AuditLogEnabled != true {
+		t.Error(`c.Options.APIServer.AuditLogEnabled != true`)
+	}
+	if c.Options.APIServer.AuditLogPolicy != `apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: Metadata
+` {
+		t.Errorf(`wrong c.Options.APIServer.AuditLogPolicy: %s`, c.Options.APIServer.AuditLogPolicy)
 	}
 	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
@@ -224,6 +240,55 @@ func testClusterValidate(t *testing.T) {
 				},
 			},
 			true,
+		},
+		{
+			"empty policy",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					APIServer: APIServerParams{
+						AuditLogEnabled: true,
+						AuditLogPolicy:  "",
+					},
+				},
+			},
+			true,
+		},
+		{
+			"invalid policy",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					APIServer: APIServerParams{
+						AuditLogEnabled: true,
+						AuditLogPolicy:  "test",
+					},
+				},
+			},
+			true,
+		},
+		{
+			"valid policy",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					APIServer: APIServerParams{
+						AuditLogEnabled: true,
+						AuditLogPolicy: `apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: Metadata
+`,
+					},
+				},
+			},
+			false,
 		},
 		{
 			"invalid domain",

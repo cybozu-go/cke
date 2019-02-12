@@ -2,6 +2,7 @@ package cke
 
 import (
 	"errors"
+	"gopkg.in/yaml.v2"
 	"net"
 	"path/filepath"
 	"strings"
@@ -97,6 +98,13 @@ type EtcdParams struct {
 	VolumeName    string `json:"volume_name" yaml:"volume_name"`
 }
 
+// APIServerParams is a set of extra parameters for kube-apiserver.
+type APIServerParams struct {
+	ServiceParams   `yaml:",inline"`
+	AuditLogEnabled bool   `json:"audit_log_enabled" yaml:"audit_log_enabled"`
+	AuditLogPolicy  string `json:"audit_log_policy" yaml:"audit_log_policy"`
+}
+
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
 	ServiceParams `yaml:",inline"`
@@ -115,13 +123,13 @@ type EtcdBackup struct {
 
 // Options is a set of optional parameters for k8s components.
 type Options struct {
-	Etcd              EtcdParams    `json:"etcd"                    yaml:"etcd"`
-	Rivers            ServiceParams `json:"rivers"                  yaml:"rivers"`
-	APIServer         ServiceParams `json:"kube-api"                yaml:"kube-api"`
-	ControllerManager ServiceParams `json:"kube-controller-manager" yaml:"kube-controller-manager"`
-	Scheduler         ServiceParams `json:"kube-scheduler"          yaml:"kube-scheduler"`
-	Proxy             ServiceParams `json:"kube-proxy"              yaml:"kube-proxy"`
-	Kubelet           KubeletParams `json:"kubelet"                 yaml:"kubelet"`
+	Etcd              EtcdParams      `json:"etcd"                    yaml:"etcd"`
+	Rivers            ServiceParams   `json:"rivers"                  yaml:"rivers"`
+	APIServer         APIServerParams `json:"kube-api"                yaml:"kube-api"`
+	ControllerManager ServiceParams   `json:"kube-controller-manager" yaml:"kube-controller-manager"`
+	Scheduler         ServiceParams   `json:"kube-scheduler"          yaml:"kube-scheduler"`
+	Proxy             ServiceParams   `json:"kube-proxy"              yaml:"kube-proxy"`
+	Kubelet           KubeletParams   `json:"kubelet"                 yaml:"kubelet"`
 }
 
 // Cluster is a set of configurations for a etcd/Kubernetes cluster.
@@ -345,6 +353,18 @@ func validateOptions(opts Options) error {
 	fldPath = fldPath.Child("boot_taints")
 	for i, taint := range opts.Kubelet.BootTaints {
 		err := validateTaint(taint, fldPath.Index(i))
+		if err != nil {
+			return err
+		}
+	}
+
+	if opts.APIServer.AuditLogEnabled && len(opts.APIServer.AuditLogPolicy) == 0 {
+		return errors.New("audit_log_policy should not be empty")
+	}
+
+	if len(opts.APIServer.AuditLogPolicy) != 0 {
+		policy := make(map[string]interface{})
+		err = yaml.Unmarshal([]byte(opts.APIServer.AuditLogPolicy), &policy)
 		if err != nil {
 			return err
 		}

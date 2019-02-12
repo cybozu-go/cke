@@ -72,7 +72,7 @@ Name              | Required | Type            | Description
 ----------------- | -------- | --------------- | -----------
 `etcd`            | false    | `EtcdParams`    | Extra arguments for etcd.
 `rivers`          | false    | `ServiceParams` | Extra arguments for Rivers.
-`kube-api`        | false    | `ServiceParams` | Extra arguments for API server.
+`kube-api`        | false    | `APIServerParams` | Extra arguments for API server.
 `kube-controller` | false    | `ServiceParams` | Extra arguments for controller manager.
 `kube-scheduler`  | false    | `ServiceParams` | Extra arguments for scheduler.
 `kube-proxy`      | false    | `ServiceParams` | Extra arguments for kube-proxy.
@@ -110,6 +110,16 @@ Name              | Required | Type   | Description
 `extra_binds`     | false    | array  | Extra bind mounts.  List of `Mount`.
 `extra_env`       | false    | object | Extra environment variables.
 
+### APIServerParams
+
+Name                | Required | Type      | Description
+------------------- | -------- | --------- | -----------
+`extra_args`        | false    | array     | Extra command-line arguments.  List of strings.
+`extra_binds`       | false    | array     | Extra bind mounts.  List of `Mount`.
+`extra_env`         | false    | object    | Extra environment variables.
+`audit_log_enabled` | false    | bool      | If true, audit log will be logged to standard output.
+`audit_log_policy`  | false    | string    | Audit policy configuration in yaml format.
+
 ### KubeletParams
 
 Name              | Required | Type      | Description
@@ -120,6 +130,7 @@ Name              | Required | Type      | Description
 `extra_args`      | false    | array     | Extra command-line arguments.  List of strings.
 `extra_binds`     | false    | array     | Extra bind mounts.  List of `Mount`.
 `extra_env`       | false    | object    | Extra environment variables.
+
 
 Taints in `boot_taints` are added to a Node in the following cases:
 (1) when that Node is registered with Kubernetes by kubelet, or

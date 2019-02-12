@@ -2,6 +2,8 @@ package k8s
 
 import (
 	"context"
+	"crypto/md5"
+	"fmt"
 	"strings"
 
 	"github.com/cybozu-go/cke"
@@ -26,20 +28,22 @@ var (
 	}
 )
 
+const auditPolicyBasePath = "/etc/kubernetes/apiserver/audit-policy-%x.yaml"
+
 type apiServerBootOp struct {
 	nodes []*cke.Node
 	cps   []*cke.Node
 
 	serviceSubnet string
 	domain        string
-	params        cke.ServiceParams
+	params        cke.APIServerParams
 
 	step  int
 	files *common.FilesBuilder
 }
 
 // APIServerBootOp returns an Operator to bootstrap kube-apiserver
-func APIServerBootOp(nodes, cps []*cke.Node, serviceSubnet, domain string, params cke.ServiceParams) cke.Operator {
+func APIServerBootOp(nodes, cps []*cke.Node, serviceSubnet, domain string, params cke.APIServerParams) cke.Operator {
 	return &apiServerBootOp{
 		nodes:         nodes,
 		cps:           cps,
@@ -61,7 +65,7 @@ func (o *apiServerBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
-		return prepareAPIServerFilesCommand{o.files, o.serviceSubnet, o.domain}
+		return prepareAPIServerFilesCommand{o.files, o.serviceSubnet, o.domain, o.params}
 	case 2:
 		o.step++
 		return o.files
@@ -72,12 +76,12 @@ func (o *apiServerBootOp) NextCommand() cke.Commander {
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			paramsMap[n.Address] = APIServerParams(o.cps, n.Address, o.serviceSubnet)
+			paramsMap[n.Address] = APIServerParams(o.cps, n.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy)
 		}
 		return common.RunContainerCommand(o.nodes, op.KubeAPIServerContainerName, cke.HyperkubeImage,
 			common.WithOpts(opts),
 			common.WithParamsMap(paramsMap),
-			common.WithExtra(o.params))
+			common.WithExtra(o.params.ServiceParams))
 	default:
 		return nil
 	}
@@ -87,6 +91,7 @@ type prepareAPIServerFilesCommand struct {
 	files         *common.FilesBuilder
 	serviceSubnet string
 	domain        string
+	params        cke.APIServerParams
 }
 
 func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
@@ -155,7 +160,16 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		return saCertData, nil
 	}
-	return c.files.AddFile(ctx, op.K8sPKIPath("service-account.crt"), g)
+	err = c.files.AddFile(ctx, op.K8sPKIPath("service-account.crt"), g)
+	if err != nil {
+		return err
+	}
+	if c.params.AuditLogEnabled {
+		return c.files.AddFile(ctx, auditPolicyFilePath(c.params.AuditLogPolicy), func(context.Context, *cke.Node) ([]byte, error) {
+			return []byte(c.params.AuditLogPolicy), nil
+		})
+	}
+	return nil
 }
 
 func (c prepareAPIServerFilesCommand) Command() cke.Command {
@@ -164,8 +178,12 @@ func (c prepareAPIServerFilesCommand) Command() cke.Command {
 	}
 }
 
+func auditPolicyFilePath(policy string) string {
+	return fmt.Sprintf(auditPolicyBasePath, md5.Sum([]byte(policy)))
+}
+
 // APIServerParams returns parameters for API server.
-func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet string) cke.ServiceParams {
+func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet string, auditLogEnabeled bool, auditLogPolicy string) cke.ServiceParams {
 	var etcdServers []string
 	for _, n := range controlPlanes {
 		etcdServers = append(etcdServers, "https://"+n.Address+":2379")
@@ -197,14 +215,15 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 
 		"--authorization-mode=Node,RBAC",
 
-		// BUG: audit log is not enabled w/o --audit-policy-file
-		// https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#audit-policy
-		"--audit-log-path=-",
-
 		"--advertise-address=" + advertiseAddress,
 		"--service-cluster-ip-range=" + serviceSubnet,
 		"--machine-id-file=/etc/machine-id",
 	}
+	if auditLogEnabeled {
+		args = append(args, "--audit-log-path=-")
+		args = append(args, "--audit-policy-file="+auditPolicyFilePath(auditLogPolicy))
+	}
+
 	return cke.ServiceParams{
 		ExtraArguments: args,
 		ExtraBinds: []cke.Mount{

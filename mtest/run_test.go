@@ -197,8 +197,10 @@ func ckecli(args ...string) []byte {
 
 func ckecliUnsafe(args ...string) ([]byte, error) {
 	args = append([]string{"--config", ckeConfigPath}, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	var stdout bytes.Buffer
-	command := exec.Command(ckecliPath, args...)
+	command := exec.CommandContext(ctx, ckecliPath, args...)
 	command.Stdout = &stdout
 	command.Stderr = GinkgoWriter
 	err := command.Run()
