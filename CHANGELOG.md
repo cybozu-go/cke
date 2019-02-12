@@ -5,6 +5,14 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.3] - 2019-02-12
+
+### Added
+- Add audit log support (#130).
+
+### Changed
+- Fix removing node resources if hostname in cluster.yaml is specified (#129).
+
 ## [1.13.2] - 2019-02-07
 
 ### Added
@@ -31,7 +39,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.3...HEAD
+[1.13.3]: https://github.com/cybozu-go/cke/compare/v1.13.2...v1.13.3
 [1.13.2]: https://github.com/cybozu-go/cke/compare/v1.13.1...v1.13.2
 [1.13.1]: https://github.com/cybozu-go/cke/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/cybozu-go/cke/compare/v1.12.0...v1.13.0
