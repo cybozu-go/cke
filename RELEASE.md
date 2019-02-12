@@ -10,6 +10,21 @@ Given a version number MAJOR.MINOR.PATCH.
 The MAJOR and MINOR version matches that of Kubernetes.
 The patch version is increased with CKE update.
 
+Maintain old k8s version
+------------------------
+
+If kubernates MINOR version supported by CKE is updated, create a new branch `k8s-x.y`(kubernetes version x.y before update) before master merge.
+   ```console
+   $ git checkout -b k8s-x.y
+   $ git push origin k8s-x.y
+   ```
+Set the branch protected by configuring github repository settings.
+
+1. Go to https://github.com/cybozu-go/cke/settings/branches
+2. Push "Add rule" button
+3. Type the branch name into "Apply rule to"
+4. Push "Create" button
+
 
 Prepare change log entries
 --------------------------
@@ -36,12 +51,6 @@ It should look like:
 Bump version
 ------------
 
-Note:
-If kubernates MINOR version supported by CKE is updated, create a new branch `k8s-x.y`(kubernetes version x.y before update) before master merge.
-   ```console
-   $ git checkout -b k8s-x.y
-   $ git push origin k8s-x.y
-   ```
 1. Determine a new version number.  Let it write `$VERSION`.
 2. Checkout `master` branch.
 3. Update `version.go`.
