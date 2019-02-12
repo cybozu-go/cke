@@ -378,5 +378,13 @@ rules:
 		}
 		Expect(currentPolicyFile).ShouldNot(BeEmpty())
 		Expect(currentPolicyFile).ShouldNot(Equal(policyFile))
+
+		By("disabling audit log")
+		cluster.Options.APIServer.AuditLogEnabled = false
+		cluster.Options.APIServer.AuditLogPolicy = ""
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
 	})
 })
