@@ -17,7 +17,15 @@ to send their logs to `journald`.
 To view logs of a program, use `journalctl` as follows:
 
 ```console
-$ sudo journalctl CONTAINER_NAME=kube-apiserver
+$ sudo journalctl CONTAINER_NAME=kubelet
+```
+
+As kube-apiserver uses both stderr and stdout, filter its logs as follows.
+
+To view general logs of a apiserver, use `journalctl` as follows:
+
+```console
+$ sudo journalctl CONTAINER_NAME=kube-apiserver -p 3
 ```
 
 To view audit-logs of a apiserver, use `journalctl` as follows:

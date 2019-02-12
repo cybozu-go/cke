@@ -325,4 +325,58 @@ var _ = Describe("Kubernetes", func() {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 	})
+
+	It("can output audit log", func() {
+		By("confirming journald does not have audit log")
+		logs, _, err := execAt(node1, "sudo", "journalctl", "CONTAINER_NAME=kube-apiserver", "-p", "6..6", "-q")
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(logs).Should(BeEmpty())
+
+		By("enabling audit log")
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		cluster.Options.APIServer.AuditLogEnabled = true
+		cluster.Options.APIServer.AuditLogPolicy = `apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: Metadata`
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+		logs, _, err = execAt(node1, "sudo", "journalctl", "CONTAINER_NAME=kube-apiserver", "-p", "6..6", "-q")
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(logs).ShouldNot(BeEmpty())
+		status, err := getClusterStatus(cluster)
+		var policyFile string
+		for _, v := range status.NodeStatuses[node1].APIServer.BuiltInParams.ExtraArguments {
+			if strings.HasPrefix(v, "--audit-policy-file=") {
+				policyFile = v
+				break
+			}
+		}
+		Expect(policyFile).ShouldNot(BeEmpty())
+
+		By("changing audit policy")
+		cluster.Options.APIServer.AuditLogPolicy = `apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: Request`
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+		status, err = getClusterStatus(cluster)
+		var currentPolicyFile string
+		for _, v := range status.NodeStatuses[node1].APIServer.BuiltInParams.ExtraArguments {
+			if strings.HasPrefix(v, "--audit-policy-file=") {
+				currentPolicyFile = v
+				break
+			}
+		}
+		Expect(currentPolicyFile).ShouldNot(BeEmpty())
+		Expect(currentPolicyFile).ShouldNot(Equal(policyFile))
+	})
 })
