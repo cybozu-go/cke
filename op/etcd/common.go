@@ -47,6 +47,7 @@ func BuiltInParams(node *cke.Node, initialCluster []string, state string) cke.Se
 		"--name=" + node.Address,
 		"--listen-peer-urls=https://0.0.0.0:2380",
 		"--listen-client-urls=https://0.0.0.0:2379",
+		"--listen-metrics-urls=http://0.0.0.0:2381",
 		"--advertise-client-urls=https://" + node.Address + ":2379",
 		"--cert-file=" + op.EtcdPKIPath("server.crt"),
 		"--key-file=" + op.EtcdPKIPath("server.key"),
