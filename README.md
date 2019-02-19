@@ -3,11 +3,10 @@
 [![GoDoc](https://godoc.org/github.com/cybozu-go/cke?status.svg)][godoc]
 [![Go Report Card](https://goreportcard.com/badge/github.com/cybozu-go/cke)](https://goreportcard.com/report/github.com/cybozu-go/cke)
 
-Cybozu Kubernetes Engine
-========================
+CKE
+===
 
-**CKE** (Cybozu Kubernetes Engine) is a distributed service that automates
-[Kubernetes][] cluster management.
+**CKE** is a distributed service that automates [Kubernetes][] cluster management.
 
 **Project Status**: Most features are implemented.
 

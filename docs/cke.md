@@ -1,5 +1,5 @@
-CKE (Cybozu Kubernetes Engine)
-==============================
+cke command reference
+=====================
 
 Usage
 -----

@@ -1,5 +1,5 @@
-ckecli
-======
+ckecli command reference
+========================
 
 ```console
 $ ckecli [--config FILE] <subcommand> args...
