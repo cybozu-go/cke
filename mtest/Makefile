@@ -18,6 +18,11 @@ MANAGEMENT_ETCD_VERSION = 3.3.11
 VAULT_VERSION = 1.0.2
 K8S_VERSION = 1.13.2
 PLACEMAT_DATADIR = /var/scratch/placemat
+CONTAINERD_VERSION = 1.2.4
+PROTOC_VERSION = 3.5.0
+CRITOOLS_VERSION = 1.13.0
+SUDO = sudo
+PACKAGES = libseccomp-dev
 
 export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO
 
@@ -56,7 +61,15 @@ GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(ETCD_BACKUP) \
 	$(OUTPUT)/setup-local-pv.sh \
 	$(COREOS_IMAGE) \
-	$(GOPATH)/bin/$(DOWNLOADER)
+	$(GOPATH)/bin/$(DOWNLOADER) \
+	$(CONTAINERD_FILES) \
+	$(OUTPUT)/crictl
+
+CONTAINERD_FILES = \
+	$(OUTPUT)/containerd \
+	$(OUTPUT)/containerd-shim \
+	$(OUTPUT)/containerd-shim-runc-v1 \
+	$(OUTPUT)/ctr
 
 all: test
 
@@ -229,6 +242,35 @@ $(OUTPUT)/cke.yml: cke.yml
 	mkdir -p $(OUTPUT)
 	sed -e 's/@HOST1@/$(HOST1)/' $< > $@
 
+build-containerd:
+	rm -rf $(GOPATH)/src/github.com/containerd/containerd
+	mkdir -p $(GOPATH)/src/github.com/containerd/containerd
+	curl -fsSL -o containerd.tar.gz https://github.com/containerd/containerd/archive/v${CONTAINERD_VERSION}.tar.gz
+	tar -x -z --strip-components 1 -f containerd.tar.gz -C $(GOPATH)/src/github.com/containerd/containerd
+	rm -f containerd.tar.gz
+	(cd $(GOPATH)/src/github.com/containerd/containerd; make VERSION=$(CONTAINERD_VERSION))
+
+$(OUTPUT)/containerd: build-containerd
+	mkdir -p $(OUTPUT)
+	cp $(GOPATH)/src/github.com/containerd/containerd/bin/containerd $@
+
+$(OUTPUT)/containerd-shim: build-containerd
+	mkdir -p $(OUTPUT)
+	cp $(GOPATH)/src/github.com/containerd/containerd/bin/containerd-shim $@
+
+$(OUTPUT)/containerd-shim-runc-v1: build-containerd
+	mkdir -p $(OUTPUT)
+	cp $(GOPATH)/src/github.com/containerd/containerd/bin/containerd-shim-runc-v1 $@
+
+$(OUTPUT)/ctr: build-containerd
+	mkdir -p $(OUTPUT)
+	cp $(GOPATH)/src/github.com/containerd/containerd/bin/ctr $@
+
+$(OUTPUT)/crictl:
+	mkdir -p $(OUTPUT)
+	curl -fsSL -o crictl.tar.gz https://github.com/kubernetes-sigs/cri-tools/releases/download/v$(CRITOOLS_VERSION)/crictl-v$(CRITOOLS_VERSION)-linux-amd64.tar.gz
+	tar zxvf crictl.tar.gz -C $(OUTPUT)
+
 test: $(GENERATED_FILES)
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/host1
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/host2
@@ -270,5 +312,9 @@ setup:
 	GO111MODULE=off go get -u \
 		github.com/onsi/ginkgo/ginkgo \
 		github.com/coreos/gofail
+	$(SUDO) apt-get update
+	$(SUDO) apt-get -y install --no-install-recommends $(PACKAGES)
+	curl -fsSL -o protoc.zip https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-linux-x86_64.zip
+	$(SUDO) unzip -o protoc.zip -d /usr/local
 
 .PHONY:	all clean setup test

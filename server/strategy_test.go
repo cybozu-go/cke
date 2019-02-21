@@ -175,7 +175,9 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.HyperkubeImage.Name()
-		st.BuiltInParams = k8s.KubeletServiceParams(n)
+		st.BuiltInParams = k8s.KubeletServiceParams(n, cke.KubeletParams{
+			//TODO:
+		})
 		st.Domain = domain
 		st.AllowSwap = allowSwap
 	}

@@ -23,6 +23,11 @@ options:
     - source: /mnt/disks
       destination: /mnt/disks
       read_only: false
+    container_runtime: remote
+    container_runtime_endpoint: unix:///run/docker/libcontainerd/docker-containerd.sock
+    container_log_max_size: 100
+    container_log_max_files: 10
+
 etcd_backup:
   enabled: false
   pvc_name: etcdbackup-pvc

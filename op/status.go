@@ -15,7 +15,7 @@ import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -118,13 +118,17 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		cfgData, _, err := agent.Run("cat /etc/kubernetes/kubelet/config.yml")
 		if err == nil {
 			v := struct {
-				ClusterDomain string `yaml:"clusterDomain"`
-				FailSwapOn    bool   `yaml:"failSwapOn"`
+				ClusterDomain        string `yaml:"clusterDomain"`
+				FailSwapOn           bool   `yaml:"failSwapOn"`
+				ContainerLogMaxSize  string `yaml:"container-log-max-size"`
+				ContainerLogMaxFiles int32  `yaml:"container-log-max-files"`
 			}{}
 			err = yaml.Unmarshal(cfgData, &v)
 			if err == nil {
 				status.Kubelet.Domain = v.ClusterDomain
 				status.Kubelet.AllowSwap = !v.FailSwapOn
+				status.Kubelet.ContainerLogMaxSize = v.ContainerLogMaxSize
+				status.Kubelet.ContainerLogMaxFiles = v.ContainerLogMaxFiles
 			}
 		}
 	}

@@ -35,6 +35,33 @@
             "verification": {}
         },
         "mode": 420
+      },
+      {
+        "filesystem": "root",
+        "path": "/etc/containerd/config.toml",
+        "contents": {
+          "source": "data:,root%20%3D%20%22%2Fvar%2Flib%2Fcontainerd%22%0Astate%20%3D%20%22%2Frun%2Fcontainerd%22%0Aoom_score%20%3D%200%0A%5Bgrpc%5D%0A%20%20address%20%3D%20%22%2Frun%2Fdocker%2Flibcontainerd%2Fdocker-containerd.sock%22%0A%20%20uid%20%3D%200%0A%20%20gid%20%3D%200%0A%20%20max_recv_message_size%20%3D%2016777216%0A%20%20max_send_message_size%20%3D%2016777216%0A%5Bdebug%5D%0A%20%20address%20%3D%20%22%22%0A%20%20uid%20%3D%200%0A%20%20gid%20%3D%200%0A%20%20level%20%3D%20%22%22%0A%5Bmetrics%5D%0A%20%20address%20%3D%20%22%22%0A%20%20grpc_histogram%20%3D%20false%0A%5Bcgroup%5D%0A%20%20path%20%3D%20%22%22%0A%5Bplugins%5D%0A%20%20%5Bplugins.cgroups%5D%0A%20%20%20%20no_prometheus%20%3D%20false%0A%20%20%5Bplugins.cri%5D%0A%20%20%20%20stream_server_address%20%3D%20%22127.0.0.1%22%0A%20%20%20%20stream_server_port%20%3D%20%2210010%22%0A%20%20%20%20enable_selinux%20%3D%20false%0A%20%20%20%20sandbox_image%20%3D%20%22quay.io%2Fcybozu%2Fpause%3A3.1%22%0A%20%20%20%20stats_collect_period%20%3D%2010%0A%20%20%20%20systemd_cgroup%20%3D%20false%0A%20%20%20%20enable_tls_streaming%20%3D%20false%0A%20%20%20%20max_container_log_line_size%20%3D%2016384%0A%20%20%20%20%5Bplugins.cri.containerd%5D%0A%20%20%20%20%20%20snapshotter%20%3D%20%22overlayfs%22%0A%20%20%20%20%20%20%5Bplugins.cri.containerd.default_runtime%5D%0A%20%20%20%20%20%20%20%20runtime_type%20%3D%20%22io.containerd.runtime.v1.linux%22%0A%20%20%20%20%20%20%20%20runtime_engine%20%3D%20%22%22%0A%20%20%20%20%20%20%20%20runtime_root%20%3D%20%22%22%0A%20%20%20%20%20%20%5Bplugins.cri.containerd.untrusted_workload_runtime%5D%0A%20%20%20%20%20%20%20%20runtime_type%20%3D%20%22%22%0A%20%20%20%20%20%20%20%20runtime_engine%20%3D%20%22%22%0A%20%20%20%20%20%20%20%20runtime_root%20%3D%20%22%22%0A%20%20%20%20%5Bplugins.cri.cni%5D%0A%20%20%20%20%20%20bin_dir%20%3D%20%22%2Fopt%2Fcni%2Fbin%22%0A%20%20%20%20%20%20conf_dir%20%3D%20%22%2Fetc%2Fcni%2Fnet.d%22%0A%20%20%20%20%20%20conf_template%20%3D%20%22%22%0A%20%20%20%20%5Bplugins.cri.registry%5D%0A%20%20%20%20%20%20%5Bplugins.cri.registry.mirrors%5D%0A%20%20%20%20%20%20%20%20%5Bplugins.cri.registry.mirrors.%22docker.io%22%5D%0A%20%20%20%20%20%20%20%20%20%20endpoint%20%3D%20%5B%22http%3A%2F%2Flocalhost%3A5000%22%5D%0A%20%20%20%20%20%20%20%20%5Bplugins.cri.registry.mirrors.%22quay.io%22%5D%0A%20%20%20%20%20%20%20%20%20%20endpoint%20%3D%20%5B%22http%3A%2F%2Flocalhost%3A5000%22%5D%0A%20%20%5Bplugins.diff-service%5D%0A%20%20%20%20default%20%3D%20%5B%22walking%22%5D%0A%20%20%5Bplugins.linux%5D%0A%20%20%20%20shim%20%3D%20%22%2Fopt%2Fbin%2Fcontainerd-shim%22%0A%20%20%20%20runtime%20%3D%20%22runc%22%0A%20%20%20%20runtime_root%20%3D%20%22%22%0A%20%20%20%20no_shim%20%3D%20false%0A%20%20%20%20shim_debug%20%3D%20false%0A%20%20%5Bplugins.scheduler%5D%0A%20%20%20%20pause_threshold%20%3D%200.02%0A%20%20%20%20deletion_threshold%20%3D%200%0A%20%20%20%20mutation_threshold%20%3D%20100%0A%20%20%20%20schedule_delay%20%3D%20%220s%22%0A%20%20%20%20startup_delay%20%3D%20%22100ms%22%0A",
+          "verification": {}
+        },
+        "mode": 420
+      },
+      {
+        "filesystem": "root",
+        "path": "/opt/bin/wait-containerd-socket",
+        "contents": {
+          "source": "data:,%23!%2Fbin%2Fsh%0Awhile%20!%20test%20-S%20%2Frun%2Fdocker%2Flibcontainerd%2Fdocker-containerd.sock%3B%20do%0A%20%20%20%20sleep%201%0Adone%0A",
+          "verification": {}
+        },
+        "mode": 493
+      },
+      {
+        "filesystem": "root",
+        "path": "/opt/bin/setup-containerd",
+        "contents": {
+          "source": "data:,%23!%2Fbin%2Fsh%0Acp%20%2Fdata%2Fcontainerd%20%2Fopt%2Fbin%2Fcontainerd%0Acp%20%2Fdata%2Fcontainerd-shim%20%2Fopt%2Fbin%2Fcontainerd-shim%0Acp%20%2Fdata%2Fcontainerd-shim-runc-v1%20%2Fopt%2Fbin%2Fcontainerd-shim-runc-v1%0Acp%20%2Fdata%2Fctr%20%2Fopt%2Fbin%2Fctr%0Acp%20%2Fdata%2Fcrictl%20%2Fopt%2Fbin%2Fcrictl%0A",
+          "verification": {}
+        },
+        "mode": 493
       }
     ],
     "directories": [
@@ -89,6 +116,26 @@
           "name": "10-docker-opts.conf",
           "contents": "[Service]\nEnvironment=DOCKER_OPTS=\"--storage-driver=overlay2 --bridge=none --iptables=false --ip-masq=false\"\n"
         }]
+      },
+      {
+        "contents": "[Unit]\nDescription=Setup containerd\nWants=data.mount\nAfter=data.mount\n\n[Service]\nType=oneshot\nExecStart=/opt/bin/setup-containerd\nRemainAfterExit=yes\n\n[Install]\nWantedBy=multi-user.target\n",
+        "enable": true,
+        "name": "setup-containerd.service"
+      },
+      {
+        "dropins": [
+          {
+            "contents": "[Unit]\nConditionPathExists=/etc/containerd/config.toml\nWants=setup-containerd.service\nAfter=setup-containerd.service\n\n[Service]\nExecStartPre=/usr/bin/mkdir -p /run/docker/libcontainerd\nExecStart=\nExecStart=/opt/bin/containerd --config /etc/containerd/config.toml\n",
+            "name": "10-opts.conf"
+          }
+        ],
+        "enable": true,
+        "name": "containerd.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=Wait for containerd socket\nWants=containerd.service\nAfter=containerd.service\n\n[Service]\nType=oneshot\nExecStart=/opt/bin/wait-containerd-socket\nRemainAfterExit=yes\n\n[Install]\nWantedBy=multi-user.target\n",
+        "enable": true,
+        "name": "wait-containerd-socket.service"
       }
     ]
   }

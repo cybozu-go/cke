@@ -372,7 +372,7 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 
 	for _, n := range nf.cluster.Nodes {
 		st := nf.nodeStatus(n).Kubelet
-		currentBuiltIn := k8s.KubeletServiceParams(n)
+		currentBuiltIn := k8s.KubeletServiceParams(n, currentOpts)
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
@@ -382,7 +382,12 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 			fallthrough
 		case currentOpts.AllowSwap != st.AllowSwap:
 			fallthrough
+		case currentOpts.ContainerLogMaxSize != st.ContainerLogMaxSize:
+			fallthrough
+		case currentOpts.ContainerLogMaxFiles != st.ContainerLogMaxFiles:
+			fallthrough
 		case !kubeletEqualParams(st.BuiltInParams, currentBuiltIn):
+			//TODO: notify error if container runtime is changed
 			fallthrough
 		case !currentExtra.Equal(st.ExtraParams):
 			nodes = append(nodes, n)

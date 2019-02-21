@@ -103,7 +103,9 @@ type KubeComponentStatus struct {
 // KubeletStatus represents kubelet status and health
 type KubeletStatus struct {
 	ServiceStatus
-	IsHealthy bool
-	Domain    string
-	AllowSwap bool
+	IsHealthy            bool
+	Domain               string
+	AllowSwap            bool
+	ContainerLogMaxSize  string
+	ContainerLogMaxFiles int32
 }
