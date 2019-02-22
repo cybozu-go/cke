@@ -12,6 +12,10 @@ NODE3 = 10.0.0.103
 NODE4 = 10.0.0.104
 NODE5 = 10.0.0.105
 NODE6 = 10.0.0.106
+RUNTIME = remote
+ifeq ($(RUNTIME),remote)
+RUNTIME_ENDPOINT = unix:///var/run/k8s-containerd.sock
+endif
 PLACEMAT = /usr/bin/placemat
 GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo
 MANAGEMENT_ETCD_VERSION = 3.3.11
@@ -240,7 +244,9 @@ $(OUTPUT)/cke-cluster.yml: cke-cluster.yml
 		-e 's/__NODE3__/$(NODE3)/' \
 		-e 's/__NODE4__/$(NODE4)/' \
 		-e 's/__NODE5__/$(NODE5)/' \
-		-e 's/__NODE6__/$(NODE6)/' $< > $@
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__RUNTIME__/$(RUNTIME)/' \
+		-e 's|__RUNTIME_ENDPOINT__|$(RUNTIME_ENDPOINT)|' $< > $@
 
 $(OUTPUT)/cke.yml: cke.yml
 	mkdir -p $(OUTPUT)

@@ -42,7 +42,7 @@ storage:
           state = "/run/k8s-containerd"
           oom_score = 0
           [grpc]
-            address = "/var/run/dockershim.sock"
+            address = "/var/run/k8s-containerd.sock"
             uid = 0
             gid = 0
             max_recv_message_size = 16777216
@@ -110,7 +110,7 @@ storage:
       contents:
         inline: |
           #!/bin/sh
-          while ! test -S /var/run/dockershim.sock; do
+          while ! test -S /var/run/k8s-containerd.sock; do
             sleep 1
           done
       mode: 0755
