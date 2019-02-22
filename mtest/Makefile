@@ -129,122 +129,122 @@ $(OUTPUT)/setup-local-pv.sh: setup-local-pv.sh
 
 $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@COREOS_IMAGE@/$(COREOS_IMAGE)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__COREOS_IMAGE__/$(COREOS_IMAGE)/' $< > $@
 
 $(OUTPUT)/host1.ign: host.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/host1/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@HOST1@/$(HOST1)/' \
-		-e 's/@NODE_ADDRESS@/$(HOST1)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/host1/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__HOST1__/$(HOST1)/' \
+		-e 's/__NODE_ADDRESS__/$(HOST1)/' $< > $@
 
 $(OUTPUT)/host2.ign: host.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/host2/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@HOST1@/$(HOST1)/' \
-		-e 's/@NODE_ADDRESS@/$(HOST2)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/host2/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__HOST1__/$(HOST1)/' \
+		-e 's/__NODE_ADDRESS__/$(HOST2)/' $< > $@
 
 node.ign: node-ign.yml
 	$(CT) -in-file=$< -pretty -out-file=$@
 
 $(OUTPUT)/node1.ign: node.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/node1/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@NODE_ADDRESS@/$(NODE1)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/node1/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__NODE_ADDRESS__/$(NODE1)/' $< > $@
 
 $(OUTPUT)/node2.ign: node.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/node2/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@NODE_ADDRESS@/$(NODE2)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/node2/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__NODE_ADDRESS__/$(NODE2)/' $< > $@
 
 $(OUTPUT)/node3.ign: node.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/node3/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@NODE_ADDRESS@/$(NODE3)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/node3/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__NODE_ADDRESS__/$(NODE3)/' $< > $@
 
 $(OUTPUT)/node4.ign: node.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/node4/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@NODE_ADDRESS@/$(NODE4)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/node4/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__NODE_ADDRESS__/$(NODE4)/' $< > $@
 
 $(OUTPUT)/node5.ign: node.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/node5/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@NODE_ADDRESS@/$(NODE5)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/node5/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__NODE_ADDRESS__/$(NODE5)/' $< > $@
 
 $(OUTPUT)/node6.ign: node.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/node6/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@NODE_ADDRESS@/$(NODE6)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/node6/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__NODE_ADDRESS__/$(NODE6)/' $< > $@
 
 $(OUTPUT)/cke-cluster.yml: cke-cluster.yml
 	mkdir -p $(OUTPUT)
-	sed -e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' $< > $@
+	sed -e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' $< > $@
 
 $(OUTPUT)/cke.yml: cke.yml
 	mkdir -p $(OUTPUT)
-	sed -e 's/@HOST1@/$(HOST1)/' $< > $@
+	sed -e 's/__HOST1__/$(HOST1)/' $< > $@
 
 build-containerd:
 	rm -rf $(GOPATH)/src/github.com/containerd/containerd
@@ -310,7 +310,7 @@ test-light: $(OUTPUT)/cke
 	$(GINKGO) -v -focus="${TARGET}"
 
 clean:
-	rm -rf $(OUTPUT)
+	rm -rf $(OUTPUT) node.ign
 
 setup:
 	GO111MODULE=off go get -u \
@@ -320,8 +320,8 @@ setup:
 	$(SUDO) apt-get -y install --no-install-recommends $(PACKAGES)
 	curl -fsSL -o protoc.zip https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-linux-x86_64.zip
 	$(SUDO) unzip -o protoc.zip -d /usr/local
-	git clone --branch v0.8.0 https://github.com/coreos/container-linux-config-transpiler
-	cd $(GOPATH)/src/github.com/coreos/container-linux-config-transpiler && GO111MODULE=off make
-	$(SUDO) cp $(GOPATH)/src/github.com/coreos/container-linux-config-transpiler/bin/ct $(CT)
+	curl -fsSL -o ct https://github.com/coreos/container-linux-config-transpiler/releases/download/v0.9.0/ct-v0.9.0-x86_64-unknown-linux-gnu
+	chmod +x ct
+	$(SUDO) mv ct /usr/local/bin
 
 .PHONY:	all clean setup test

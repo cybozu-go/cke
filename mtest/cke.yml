@@ -1,2 +1,2 @@
 endpoints:
-  - http://@HOST1@:2379
+  - http://__HOST1__:2379

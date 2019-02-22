@@ -3,7 +3,7 @@ kind: Network
 name: ext-net
 type: external
 use-nat: true
-address: @BRIDGE_ADDRESS@/24
+address: __BRIDGE_ADDRESS__/24
 ---
 kind: DataFolder
 name: data
@@ -39,7 +39,7 @@ files:
 ---
 kind: Image
 name: coreos
-file: ../@COREOS_IMAGE@
+file: ../__COREOS_IMAGE__
 ---
 kind: Image
 name: docker-image

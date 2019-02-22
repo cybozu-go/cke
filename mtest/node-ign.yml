@@ -1,44 +1,48 @@
 storage:
   files:
-    - filesystem: root
-      path: "/etc/hostname"
-      mode: 420
+    - path: "/etc/hostname"
+      filesystem: root
+      mode: 0644
       contents:
         inline: |
-          @NODE_NAME@
-    - filesystem: root
-      path: "/etc/hosts"
-      mode: 420
+          __NODE_NAME__
+
+    - path: "/etc/hosts"
+      filesystem: root
+      mode: 0644
       contents:
         inline: |
           127.0.0.1	localhost
           ::1		localhost
 
-          @NODE1@	node1
-          @NODE2@	node2
-          @NODE3@	node3
-          @NODE4@	node4
-          @NODE5@	node5
-          @NODE6@	node6
-    - filesystem: root
-      path: "/etc/modules-load.d/br_netfilter.conf"
+          __NODE1__	node1
+          __NODE2__	node2
+          __NODE3__	node3
+          __NODE4__	node4
+          __NODE5__	node5
+          __NODE6__	node6
+
+    - path: "/etc/modules-load.d/br_netfilter.conf"
+      filesystem: root
       contents:
         inline: br_netfilter
-      mode: 420
-    - filesystem: root
-      path: "/etc/sysctl.d/br_netfilter.conf"
+      mode: 0644
+
+    - path: "/etc/sysctl.d/br_netfilter.conf"
+      filesystem: root
       contents:
         inline: net.bridge.bridge-nf-call-iptables=1
-      mode: 420
-    - filesystem: root
-      path: "/etc/containerd/config.toml"
+      mode: 0644
+
+    - path: "/etc/k8s-containerd/config.toml"
+      filesystem: root
       contents:
         inline: |
-          root = "/var/lib/containerd"
-          state = "/run/containerd"
+          root = "/var/lib/k8s-containerd"
+          state = "/run/k8s-containerd"
           oom_score = 0
           [grpc]
-            address = "/run/docker/libcontainerd/docker-containerd.sock"
+            address = "/var/run/dockershim.sock"
             uid = 0
             gid = 0
             max_recv_message_size = 16777216
@@ -99,31 +103,35 @@ storage:
               mutation_threshold = 100
               schedule_delay = "0s"
               startup_delay = "100ms"
-      mode: 420
-    - filesystem: root
-      path: "/opt/bin/wait-containerd-socket"
+      mode: 0644
+
+    - path: "/opt/bin/wait-k8s-containerd-socket"
+      filesystem: root
       contents:
         inline: |
           #!/bin/sh
-          while ! test -S /run/docker/libcontainerd/docker-containerd.sock; do
+          while ! test -S /var/run/dockershim.sock; do
             sleep 1
           done
-      mode: 493
-    - filesystem: root
-      path: "/opt/bin/setup-containerd"
+      mode: 0755
+
+    - path: "/opt/bin/setup-k8s-containerd"
+      filesystem: root
       contents:
-        inline:
+        inline: |
           #!/bin/sh
           cp /data/containerd /opt/bin/containerd
           cp /data/containerd-shim /opt/bin/containerd-shim
           cp /data/containerd-shim-runc-v1 /opt/bin/containerd-shim-runc-v1
           cp /data/ctr /opt/bin/ctr
           cp /data/crictl /opt/bin/crictl
-      mode: 493
+      mode: 0755
+
   directories:
     - filesystem: root
       path: "/opt/bin"
-      mode: 493
+      mode: 0755
+
 networkd:
   units:
     - name: 00-eth0.network
@@ -132,10 +140,11 @@ networkd:
         Name=eth0
 
         [Network]
-        Address=@NODE_ADDRESS@/24
-        Gateway=@BRIDGE_ADDRESS@
+        Address=__NODE_ADDRESS__/24
+        Gateway=__BRIDGE_ADDRESS__
         DNS=8.8.8.8
         DNS=1.1.1.1
+
 passwd:
   users:
     - name: cybozu
@@ -145,12 +154,15 @@ passwd:
       groups:
         - docker
         - sudo
+
 systemd:
   units:
-    - mask: true
-      name: update-engine.service
-    - mask: true
-      name: locksmithd.service
+    - name: update-engine.service
+      mask: true
+
+    - name: locksmithd.service
+      mask: true
+
     - name: var-lib-docker.mount
       enable: true
       contents: |
@@ -161,6 +173,7 @@ systemd:
 
         [Install]
         WantedBy=local-fs.target
+
     - name: data.mount
       enable: true
       contents: |
@@ -172,53 +185,68 @@ systemd:
 
         [Install]
         WantedBy=local-fs.target
+
     - name: docker.service
       dropins:
         - name: 10-docker-opts.conf
           contents: |
             [Service]
             Environment=DOCKER_OPTS="--storage-driver=overlay2 --bridge=none --iptables=false --ip-masq=false"
-    - contents: |
+
+    - name: setup-k8s-containerd.service
+      enable: true
+      contents: |
         [Unit]
-        Description=Setup containerd
+        Description=Setup containerd for kubernetes
         Wants=data.mount
         After=data.mount
 
         [Service]
         Type=oneshot
-        ExecStart=/opt/bin/setup-containerd
+        ExecStart=/opt/bin/setup-k8s-containerd
         RemainAfterExit=yes
 
         [Install]
         WantedBy=multi-user.target
-      enable: true
-      name: setup-containerd.service
-    - dropins:
-        - contents: |
-            [Unit]
-            ConditionPathExists=/etc/containerd/config.toml
-            Wants=setup-containerd.service
-            After=setup-containerd.service
 
-            [Service]
-            ExecStartPre=/usr/bin/mkdir -p /run/docker/libcontainerd
-            ExecStart=
-            ExecStart=/opt/bin/containerd --config /etc/containerd/config.toml
-          name: 10-opts.conf
+    - name: k8s-containerd.service
       enable: true
-      name: containerd.service
-    - contents: |
+      contents: |
+        [Unit]
+        Description=containerd container runtime for kubernetes
+        ConditionPathExists=/etc/k8s-containerd/config.toml
+        Wants=setup-k8s-containerd.service
+        After=setup-k8s-containerd.service
+
+        [Service]
+        Delegate=yes
+        KillMode=process
+        Restart=always
+        ExecStartPre=/usr/bin/mkdir -p /var/lib/k8s-containerd
+        ExecStartPre=/usr/bin/mkdir -p /run/k8s-containerd
+        ExecStart=/opt/bin/containerd --config /etc/k8s-containerd/config.toml
+
+        # (lack of) limits from the upstream docker service unit
+        LimitNOFILE=1048576
+        LimitNPROC=infinity
+        LimitCORE=infinity
+        TasksMax=infinity
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: wait-k8s-containerd-socket.service
+      enable: true
+      contents: |
         [Unit]
         Description=Wait for containerd socket
-        Wants=containerd.service
-        After=containerd.service
+        Wants=k8s-containerd.service
+        After=k8s-containerd.service
 
         [Service]
         Type=oneshot
-        ExecStart=/opt/bin/wait-containerd-socket
+        ExecStart=/opt/bin/wait-k8s-containerd-socket
         RemainAfterExit=yes
 
         [Install]
         WantedBy=multi-user.target
-      enable: true
-      name: wait-containerd-socket.service

@@ -6,19 +6,19 @@
         "filesystem": "root",
         "path": "/etc/hostname",
         "mode": 420,
-        "contents": { "source": "data:,@NODE_NAME@" }
+        "contents": { "source": "data:,__NODE_NAME__" }
       },
       {
         "filesystem": "root",
         "path": "/etc/hosts",
         "mode": 420,
-        "contents": { "source": "data:,127.0.0.1%09localhost%0A::1%09%09localhost%0A%0A@NODE1@%09node1%0A@NODE2@%09node2%0A@NODE3@%09node3%0A@NODE4@%09node4%0A@NODE5@%09node5%0A@NODE6@%09node6%0A" }
+        "contents": { "source": "data:,127.0.0.1%09localhost%0A::1%09%09localhost%0A%0A__NODE1__%09node1%0A__NODE2__%09node2%0A__NODE3__%09node3%0A__NODE4__%09node4%0A__NODE5__%09node5%0A__NODE6__%09node6%0A" }
       },
       {
         "filesystem": "root",
         "path": "/etc/cke/config.yml",
         "mode": 420,
-        "contents": { "source": "data:,endpoints%3a%0d%0a%20%20%2d%20http%3a%2f%2f@HOST1@%3a2379%0d%0a" }
+        "contents": { "source": "data:,endpoints%3a%0d%0a%20%20%2d%20http%3a%2f%2f__HOST1__%3a2379%0d%0a" }
       }
     ],
     "directories": [
@@ -32,7 +32,7 @@
   "networkd": {
     "units": [{
       "name": "00-eth0.network",
-      "contents": "[Match]\nName=eth0\n\n[Network]\nAddress=@NODE_ADDRESS@/24\nGateway=@BRIDGE_ADDRESS@\nDNS=8.8.8.8\nDNS=1.1.1.1"
+      "contents": "[Match]\nName=eth0\n\n[Network]\nAddress=__NODE_ADDRESS__/24\nGateway=__BRIDGE_ADDRESS__\nDNS=8.8.8.8\nDNS=1.1.1.1"
     }]
   },
   "passwd": {
