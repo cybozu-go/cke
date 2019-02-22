@@ -74,7 +74,6 @@ GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 CONTAINERD_FILES = \
 	$(OUTPUT)/containerd \
 	$(OUTPUT)/containerd-shim \
-	$(OUTPUT)/containerd-shim-runc-v1 \
 	$(OUTPUT)/ctr
 
 all: test
@@ -268,10 +267,6 @@ $(OUTPUT)/containerd: build-containerd
 $(OUTPUT)/containerd-shim: build-containerd
 	mkdir -p $(OUTPUT)
 	cp $(GOPATH)/src/github.com/containerd/containerd/bin/containerd-shim $@
-
-$(OUTPUT)/containerd-shim-runc-v1: build-containerd
-	mkdir -p $(OUTPUT)
-	cp $(GOPATH)/src/github.com/containerd/containerd/bin/containerd-shim-runc-v1 $@
 
 $(OUTPUT)/ctr: build-containerd
 	mkdir -p $(OUTPUT)

@@ -122,7 +122,6 @@ storage:
           #!/bin/sh
           cp /data/containerd /opt/bin/containerd
           cp /data/containerd-shim /opt/bin/containerd-shim
-          cp /data/containerd-shim-runc-v1 /opt/bin/containerd-shim-runc-v1
           cp /data/ctr /opt/bin/ctr
           cp /data/crictl /opt/bin/crictl
       mode: 0755
