@@ -107,7 +107,7 @@ func ssh(ctx context.Context, args []string) error {
 		"-o", "ConnectTimeout=60",
 	}
 	sshArgs = append(sshArgs, args...)
-	c := exec.Command("ssh", sshArgs...)
+	c := exec.CommandContext(ctx, "ssh", sshArgs...)
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
