@@ -23,6 +23,7 @@ PROTOC_VERSION = 3.5.0
 CRITOOLS_VERSION = 1.13.0
 SUDO = sudo
 PACKAGES = libseccomp-dev
+CT = /usr/local/bin/ct
 
 export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO
 
@@ -156,6 +157,9 @@ $(OUTPUT)/host2.ign: host.ign
 		-e 's/@NODE6@/$(NODE6)/' \
 		-e 's/@HOST1@/$(HOST1)/' \
 		-e 's/@NODE_ADDRESS@/$(HOST2)/' $< > $@
+
+node.ign: node-ign.yml
+	$(CT) -in-file=$< -pretty -out-file=$@
 
 $(OUTPUT)/node1.ign: node.ign
 	mkdir -p $(OUTPUT)
@@ -316,5 +320,8 @@ setup:
 	$(SUDO) apt-get -y install --no-install-recommends $(PACKAGES)
 	curl -fsSL -o protoc.zip https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-linux-x86_64.zip
 	$(SUDO) unzip -o protoc.zip -d /usr/local
+	git clone --branch v0.8.0 https://github.com/coreos/container-linux-config-transpiler
+	cd $(GOPATH)/src/github.com/coreos/container-linux-config-transpiler && GO111MODULE=off make
+	$(SUDO) cp $(GOPATH)/src/github.com/coreos/container-linux-config-transpiler/bin/ct $(CT)
 
 .PHONY:	all clean setup test

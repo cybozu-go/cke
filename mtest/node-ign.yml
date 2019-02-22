@@ -1,0 +1,224 @@
+storage:
+  files:
+    - filesystem: root
+      path: "/etc/hostname"
+      mode: 420
+      contents:
+        inline: |
+          @NODE_NAME@
+    - filesystem: root
+      path: "/etc/hosts"
+      mode: 420
+      contents:
+        inline: |
+          127.0.0.1	localhost
+          ::1		localhost
+
+          @NODE1@	node1
+          @NODE2@	node2
+          @NODE3@	node3
+          @NODE4@	node4
+          @NODE5@	node5
+          @NODE6@	node6
+    - filesystem: root
+      path: "/etc/modules-load.d/br_netfilter.conf"
+      contents:
+        inline: br_netfilter
+      mode: 420
+    - filesystem: root
+      path: "/etc/sysctl.d/br_netfilter.conf"
+      contents:
+        inline: net.bridge.bridge-nf-call-iptables=1
+      mode: 420
+    - filesystem: root
+      path: "/etc/containerd/config.toml"
+      contents:
+        inline: |
+          root = "/var/lib/containerd"
+          state = "/run/containerd"
+          oom_score = 0
+          [grpc]
+            address = "/run/docker/libcontainerd/docker-containerd.sock"
+            uid = 0
+            gid = 0
+            max_recv_message_size = 16777216
+            max_send_message_size = 16777216
+          [debug]
+            address = ""
+            uid = 0
+            gid = 0
+            level = ""
+          [metrics]
+            address = ""
+            grpc_histogram = false
+          [cgroup]
+            path = ""
+          [plugins]
+            [plugins.cgroups]
+              no_prometheus = false
+            [plugins.cri]
+              stream_server_address = "127.0.0.1"
+              stream_server_port = "10010"
+              enable_selinux = false
+              sandbox_image = "quay.io/cybozu/pause:3.1"
+              stats_collect_period = 10
+              systemd_cgroup = false
+              enable_tls_streaming = false
+              max_container_log_line_size = 16384
+              [plugins.cri.containerd]
+                snapshotter = "overlayfs"
+                [plugins.cri.containerd.default_runtime]
+                  runtime_type = "io.containerd.runtime.v1.linux"
+                  runtime_engine = ""
+                  runtime_root = ""
+                [plugins.cri.containerd.untrusted_workload_runtime]
+                  runtime_type = ""
+                  runtime_engine = ""
+                  runtime_root = ""
+              [plugins.cri.cni]
+                bin_dir = "/opt/cni/bin"
+                conf_dir = "/etc/cni/net.d"
+                conf_template = ""
+              [plugins.cri.registry]
+                [plugins.cri.registry.mirrors]
+                  [plugins.cri.registry.mirrors."docker.io"]
+                    endpoint = ["http://localhost:5000"]
+                  [plugins.cri.registry.mirrors."quay.io"]
+                    endpoint = ["http://localhost:5000"]
+            [plugins.diff-service]
+              default = ["walking"]
+            [plugins.linux]
+              shim = "/opt/bin/containerd-shim"
+              runtime = "runc"
+              runtime_root = ""
+              no_shim = false
+              shim_debug = false
+            [plugins.scheduler]
+              pause_threshold = 0.02
+              deletion_threshold = 0
+              mutation_threshold = 100
+              schedule_delay = "0s"
+              startup_delay = "100ms"
+      mode: 420
+    - filesystem: root
+      path: "/opt/bin/wait-containerd-socket"
+      contents:
+        inline: |
+          #!/bin/sh
+          while ! test -S /run/docker/libcontainerd/docker-containerd.sock; do
+            sleep 1
+          done
+      mode: 493
+    - filesystem: root
+      path: "/opt/bin/setup-containerd"
+      contents:
+        inline:
+          #!/bin/sh
+          cp /data/containerd /opt/bin/containerd
+          cp /data/containerd-shim /opt/bin/containerd-shim
+          cp /data/containerd-shim-runc-v1 /opt/bin/containerd-shim-runc-v1
+          cp /data/ctr /opt/bin/ctr
+          cp /data/crictl /opt/bin/crictl
+      mode: 493
+  directories:
+    - filesystem: root
+      path: "/opt/bin"
+      mode: 493
+networkd:
+  units:
+    - name: 00-eth0.network
+      contents: |
+        [Match]
+        Name=eth0
+
+        [Network]
+        Address=@NODE_ADDRESS@/24
+        Gateway=@BRIDGE_ADDRESS@
+        DNS=8.8.8.8
+        DNS=1.1.1.1
+passwd:
+  users:
+    - name: cybozu
+      password_hash: "$6$rounds=4096$m3AVOWeB$EPystoHozf.eJNCm4tWyRHpJzgTDymYuGOONWxRN8uk4amLvxwB4Pc7.tEkZdeXewoVEBEX5ujUon9wSpEf1N."
+      ssh_authorized_keys:
+        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCoYNNrwXDSpa5D/vG+xN0V8/SiqCldTGXwWk4VaklZNQz1mEk2J0F+CVucABDXj/sl+9NQcBCBDtfSKHwgnZnpUMYZn2SvU3jaI3n/XvIwJnCAaBFvC2+P79fiUVRrTNUd792cvGQFDJXaE6+Us78Tt9R5XLvQy3/U12Vm0jXmXUlf/6kklVJb5hovtAXhfhphp349JBTmNFAHkox+FNJrK4AwMlz8UJhwCuqEe8L96HqVvK5DLdaiQjWn5dpFvWCLJt8VbfnKZ9VPcSwYFmOSmyBkYIx+dDkf7Gv0mIi28sTvIB2cFl6/HkPIqasL3m2+MqIMZJQt3yPgiIC+WwAv
+      groups:
+        - docker
+        - sudo
+systemd:
+  units:
+    - mask: true
+      name: update-engine.service
+    - mask: true
+      name: locksmithd.service
+    - name: var-lib-docker.mount
+      enable: true
+      contents: |
+        [Mount]
+        What=/dev/vdb
+        Where=/var/lib/docker
+        Type=ext4
+
+        [Install]
+        WantedBy=local-fs.target
+    - name: data.mount
+      enable: true
+      contents: |
+        [Mount]
+        What=/dev/vdc1
+        Where=/data
+        Type=vfat
+        Options=ro
+
+        [Install]
+        WantedBy=local-fs.target
+    - name: docker.service
+      dropins:
+        - name: 10-docker-opts.conf
+          contents: |
+            [Service]
+            Environment=DOCKER_OPTS="--storage-driver=overlay2 --bridge=none --iptables=false --ip-masq=false"
+    - contents: |
+        [Unit]
+        Description=Setup containerd
+        Wants=data.mount
+        After=data.mount
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/bin/setup-containerd
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=multi-user.target
+      enable: true
+      name: setup-containerd.service
+    - dropins:
+        - contents: |
+            [Unit]
+            ConditionPathExists=/etc/containerd/config.toml
+            Wants=setup-containerd.service
+            After=setup-containerd.service
+
+            [Service]
+            ExecStartPre=/usr/bin/mkdir -p /run/docker/libcontainerd
+            ExecStart=
+            ExecStart=/opt/bin/containerd --config /etc/containerd/config.toml
+          name: 10-opts.conf
+      enable: true
+      name: containerd.service
+    - contents: |
+        [Unit]
+        Description=Wait for containerd socket
+        Wants=containerd.service
+        After=containerd.service
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/bin/wait-containerd-socket
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=multi-user.target
+      enable: true
+      name: wait-containerd-socket.service
