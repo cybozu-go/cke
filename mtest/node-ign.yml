@@ -127,6 +127,16 @@ storage:
           cp /data/crictl /opt/bin/crictl
       mode: 0755
 
+    - path: "/etc/crictl.yaml"
+      filesystem: root
+      contents:
+        inline: |
+          runtime-endpoint: /var/run/k8s-containerd.sock
+          image-endpoint: ""
+          timeout: 0
+          debut: false
+      mode: 0644
+
   directories:
     - filesystem: root
       path: "/opt/bin"
