@@ -12,8 +12,8 @@ NODE3 = 10.0.0.103
 NODE4 = 10.0.0.104
 NODE5 = 10.0.0.105
 NODE6 = 10.0.0.106
-RUNTIME = remote
-ifeq ($(RUNTIME),remote)
+CONTAINER_RUNTIME = remote
+ifeq ($(CONTAINER_RUNTIME),remote)
 RUNTIME_ENDPOINT = unix:///var/run/k8s-containerd.sock
 endif
 PLACEMAT = /usr/bin/placemat
@@ -29,7 +29,7 @@ SUDO = sudo
 PACKAGES = libseccomp-dev
 CT = /usr/local/bin/ct
 
-export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO
+export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO CONTAINER_RUNTIME
 
 # non-configuration variables
 MANAGEMENT_ETCD_ARCHIVE := etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
@@ -245,7 +245,7 @@ $(OUTPUT)/cke-cluster.yml: cke-cluster.yml
 		-e 's/__NODE4__/$(NODE4)/' \
 		-e 's/__NODE5__/$(NODE5)/' \
 		-e 's/__NODE6__/$(NODE6)/' \
-		-e 's/__RUNTIME__/$(RUNTIME)/' \
+		-e 's/__RUNTIME__/$(CONTAINER_RUNTIME)/' \
 		-e 's|__RUNTIME_ENDPOINT__|$(RUNTIME_ENDPOINT)|' $< > $@
 
 $(OUTPUT)/cke.yml: cke.yml

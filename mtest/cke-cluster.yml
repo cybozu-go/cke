@@ -28,8 +28,8 @@ options:
       read_only: false
     container_runtime: __RUNTIME__
     container_runtime_endpoint: __RUNTIME_ENDPOINT__
-    container_log_max_size: 100
-    container_log_max_files: 10
+    container_log_max_size: 1000
+    container_log_max_files: 3
 
 etcd_backup:
   enabled: false
