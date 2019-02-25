@@ -23,6 +23,9 @@ options:
     - source: /mnt/disks
       destination: /mnt/disks
       read_only: false
+    - source: /var/lib/k8s-containerd
+      destination: /var/lib/k8s-containerd
+      read_only: false
     container_runtime: __RUNTIME__
     container_runtime_endpoint: __RUNTIME_ENDPOINT__
     container_log_max_size: 100
