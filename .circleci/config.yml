@@ -23,7 +23,7 @@ jobs:
           paths:
             - create-disk-if-not-exists
             - create-qcow
-  mtest:
+  mtest-docker:
     docker:
       - image: google/cloud-sdk
     steps:
@@ -33,7 +33,18 @@ jobs:
           command: |
             echo $GCLOUD_SERVICE_ACCOUNT > account.json
             gcloud auth activate-service-account --key-file=account.json
-      - run: ./bin/run-mtest.sh
+      - run: ./bin/run-mtest.sh docker
+  mtest-containerd:
+    docker:
+      - image: google/cloud-sdk
+    steps:
+      - checkout
+      - run:
+          name: Store Service Account
+          command: |
+            echo $GCLOUD_SERVICE_ACCOUNT > account.json
+            gcloud auth activate-service-account --key-file=account.json
+      - run: ./bin/run-mtest.sh remote
   var-lib-docker-disk:
     docker:
     - image: google/cloud-sdk
@@ -85,5 +96,6 @@ workflows:
       - var-lib-docker-disk:
           requires:
           - build
-      - mtest
+      - mtest-docker
+      - mtest-containerd
       - compose

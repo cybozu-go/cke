@@ -1,9 +1,11 @@
 #!/bin/sh -ex
 
+CONTAINER_RUNTIME=$1
+
 PROJECT=neco-test
 ZONE=asia-northeast1-c
 SERVICE_ACCOUNT=neco-test@neco-test.iam.gserviceaccount.com
-INSTANCE_NAME=${CIRCLE_PROJECT_REPONAME}-${CIRCLE_BUILD_NUM}
+INSTANCE_NAME=${CIRCLE_PROJECT_REPONAME}-${CIRCLE_BUILD_NUM}-${CONTAINER_RUNTIME}
 IMAGE_NAME=debian-9-stretch-v20180911-vmx-enabled
 MACHINE_TYPE=n1-standard-8
 DISK_TYPE=pd-ssd
@@ -61,7 +63,7 @@ cp /assets/etcd-*.tar.gz .
 cp /assets/ubuntu-*.img .
 cp /assets/coreos_production_qemu_image.img .
 make setup
-exec make test
+exec make test CONTAINER_RUNTIME=${CONTAINER_RUNTIME}
 EOF
 chmod +x run.sh
 
