@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
@@ -199,10 +200,11 @@ func ckecliUnsafe(args ...string) ([]byte, error) {
 	args = append([]string{"--config", ckeConfigPath}, args...)
 	var stdout bytes.Buffer
 	command := exec.Command(ckecliPath, args...)
+	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	command.Stdout = &stdout
 	command.Stderr = GinkgoWriter
 	timer := time.AfterFunc(10*time.Second, func() {
-		command.Process.Signal(os.Interrupt)
+		syscall.Kill(-command.Process.Pid, syscall.SIGKILL)
 	})
 	defer timer.Stop()
 	err := command.Run()
