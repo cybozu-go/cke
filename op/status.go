@@ -120,8 +120,8 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			v := struct {
 				ClusterDomain        string `yaml:"clusterDomain"`
 				FailSwapOn           bool   `yaml:"failSwapOn"`
-				ContainerLogMaxSize  string `yaml:"container-log-max-size"`
-				ContainerLogMaxFiles int32  `yaml:"container-log-max-files"`
+				ContainerLogMaxSize  string `yaml:"containerLogMaxSize"`
+				ContainerLogMaxFiles int32  `yaml:"containerLogMaxFiles"`
 			}{}
 			err = yaml.Unmarshal(cfgData, &v)
 			if err == nil {

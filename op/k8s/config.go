@@ -68,8 +68,8 @@ type KubeletConfiguration struct {
 	FeatureGates map[string]bool `json:"featureGates,omitempty" yaml:"featureGates,omitempty"`
 	FailSwapOn   bool            `json:"failSwapOn" yaml:"failSwapOn"`
 
-	ContainerLogMaxSize  string `json:"container-log-max-size,omitempty" yaml:"container-log-max-size,omitempty"`
-	ContainerLogMaxFiles int32  `json:"container-log-max-files,omitempty" yaml:"container-log-max-files,omitempty"`
+	ContainerLogMaxSize  string `json:"containerLogMaxSize,omitempty" yaml:"containerLogMaxSize,omitempty"`
+	ContainerLogMaxFiles int32  `json:"containerLogMaxFiles,omitempty" yaml:"containerLogMaxFiles,omitempty"`
 }
 
 func newKubeletConfiguration(cert, key, ca, domain, logSize string, logFiles int32, allowSwap bool) KubeletConfiguration {
