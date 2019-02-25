@@ -353,6 +353,14 @@ func validateOptions(opts Options) error {
 				opts.Kubelet.Domain, strings.Join(msgs, ";"))
 		}
 	}
+	if len(opts.Kubelet.ContainerRuntime) > 0 {
+		if opts.Kubelet.ContainerRuntime != "remote" && opts.Kubelet.ContainerRuntime != "docker" {
+			return errors.New("kubelet.container_runtime should be 'docker' or 'remote'")
+		}
+		if opts.Kubelet.ContainerRuntime == "remote" && len(opts.Kubelet.ContainerRuntimeEndpoint) == 0 {
+			return errors.New("kubelet.container_runtime_endpoint should not be empty")
+		}
+	}
 
 	fldPath = fldPath.Child("boot_taints")
 	for i, taint := range opts.Kubelet.BootTaints {

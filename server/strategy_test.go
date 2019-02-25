@@ -73,7 +73,13 @@ func newData() testData {
 		ServiceSubnet: testServiceSubnet,
 		DNSServers:    testDefaultDNSServers,
 	}
-	cluster.Options.Kubelet.Domain = testDefaultDNSDomain
+	cluster.Options.Kubelet = cke.KubeletParams{
+		Domain:                   testDefaultDNSDomain,
+		ContainerRuntime:         "remote",
+		ContainerRuntimeEndpoint: "/var/run/k8s-containerd.sock",
+		ContainerLogMaxFiles:     10,
+		ContainerLogMaxSize:      "10Mi",
+	}
 	status := &cke.ClusterStatus{
 		NodeStatuses: map[string]*cke.NodeStatus{
 			"10.0.0.11": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
@@ -175,8 +181,11 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.HyperkubeImage.Name()
+		st.ContainerLogMaxSize = "10Mi"
+		st.ContainerLogMaxFiles = 10
 		st.BuiltInParams = k8s.KubeletServiceParams(n, cke.KubeletParams{
-			//TODO:
+			ContainerRuntime:         "remote",
+			ContainerRuntimeEndpoint: "/var/run/k8s-containerd.sock",
 		})
 		st.Domain = domain
 		st.AllowSwap = allowSwap
@@ -526,6 +535,42 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []string{
 				"kubelet-restart",
+			},
+		},
+		{
+			Name: "RestartKubelet6",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Kubelet.ContainerLogMaxFiles = 20
+			}),
+			ExpectedOps: []string{
+				"kubelet-restart",
+			},
+		},
+		{
+			Name: "RestartKubelet7",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Kubelet.ContainerLogMaxSize = "1Gi"
+			}),
+			ExpectedOps: []string{
+				"kubelet-restart",
+			},
+		},
+		{
+			Name: "RestartKubelet8",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Kubelet.ContainerRuntime = "docker"
+			}),
+			ExpectedOps: []string{
+				"wait-kubernetes",
+			},
+		},
+		{
+			Name: "RestartKubelet9",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Kubelet.ContainerRuntimeEndpoint = "/var/run/dockershim.sock"
+			}),
+			ExpectedOps: []string{
+				"wait-kubernetes",
 			},
 		},
 		{
