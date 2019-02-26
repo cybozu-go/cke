@@ -3,7 +3,7 @@ kind: Network
 name: ext-net
 type: external
 use-nat: true
-address: @BRIDGE_ADDRESS@/24
+address: __BRIDGE_ADDRESS__/24
 ---
 kind: DataFolder
 name: data
@@ -26,14 +26,18 @@ files:
     file: mtest_key
   - name: setup-local-pv.sh
     file: setup-local-pv.sh
+  - name: containerd
+    file: containerd
+  - name: containerd-shim
+    file: containerd-shim
+  - name: ctr
+    file: ctr
+  - name: crictl
+    file: crictl
 ---
 kind: Image
 name: coreos
-file: ../@COREOS_IMAGE@
----
-kind: Image
-name: docker-image
-file: ../docker.img
+file: ../__COREOS_IMAGE__
 ---
 kind: Node
 name: host1
@@ -79,10 +83,6 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: image
-    name: docker
-    image: docker-image
-    copy-on-write: true
   - kind: vvfat
     name: data
     folder: data
@@ -98,10 +98,6 @@ volumes:
   - kind: image
     name: root
     image: coreos
-    copy-on-write: true
-  - kind: image
-    name: docker
-    image: docker-image
     copy-on-write: true
   - kind: vvfat
     name: data
@@ -119,10 +115,6 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: image
-    name: docker
-    image: docker-image
-    copy-on-write: true
   - kind: vvfat
     name: data
     folder: data
@@ -138,10 +130,6 @@ volumes:
   - kind: image
     name: root
     image: coreos
-    copy-on-write: true
-  - kind: image
-    name: docker
-    image: docker-image
     copy-on-write: true
   - kind: vvfat
     name: data
@@ -159,10 +147,6 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: image
-    name: docker
-    image: docker-image
-    copy-on-write: true
   - kind: vvfat
     name: data
     folder: data
@@ -178,10 +162,6 @@ volumes:
   - kind: image
     name: root
     image: coreos
-    copy-on-write: true
-  - kind: image
-    name: docker
-    image: docker-image
     copy-on-write: true
   - kind: vvfat
     name: data

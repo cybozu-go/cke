@@ -12,14 +12,25 @@ NODE3 = 10.0.0.103
 NODE4 = 10.0.0.104
 NODE5 = 10.0.0.105
 NODE6 = 10.0.0.106
+CONTAINER_RUNTIME = remote
+ifeq ($(CONTAINER_RUNTIME),remote)
+RUNTIME_ENDPOINT = unix:///var/run/k8s-containerd.sock
+endif
 PLACEMAT = /usr/bin/placemat
 GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo
 MANAGEMENT_ETCD_VERSION = 3.3.11
 VAULT_VERSION = 1.0.2
 K8S_VERSION = 1.13.2
 PLACEMAT_DATADIR = /var/scratch/placemat
+CONTAINERD_VERSION = 1.2.4
+PROTOC_VERSION = 3.6.1
+CRITOOLS_VERSION = 1.13.0
+CT_VERSION = 0.9.0
+SUDO = sudo
+PACKAGES = libseccomp-dev
+CT = /usr/local/bin/ct
 
-export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO
+export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO CONTAINER_RUNTIME
 
 # non-configuration variables
 MANAGEMENT_ETCD_ARCHIVE := etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
@@ -32,7 +43,6 @@ CKECLI := $(OUTPUT)/ckecli
 KUBECTL := $(OUTPUT)/kubectl
 CKECLUSTER := $(OUTPUT)/cke-cluster.yml
 CKECONFIG := $(OUTPUT)/cke.yml
-DOWNLOADER := download-disk-if-exists
 
 export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG KUBECTL
 
@@ -56,7 +66,13 @@ GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(ETCD_BACKUP) \
 	$(OUTPUT)/setup-local-pv.sh \
 	$(COREOS_IMAGE) \
-	$(GOPATH)/bin/$(DOWNLOADER)
+	$(CONTAINERD_FILES) \
+	$(OUTPUT)/crictl
+
+CONTAINERD_FILES = \
+	$(OUTPUT)/containerd \
+	$(OUTPUT)/containerd-shim \
+	$(OUTPUT)/ctr
 
 all: test
 
@@ -69,9 +85,6 @@ $(VAULT_ARCHIVE):
 $(COREOS_IMAGE):
 	curl -sSLf -o $@.bz2 https://stable.release.core-os.net/amd64-usr/current/$@.bz2
 	bunzip2 -q $@.bz2
-
-$(GOPATH)/bin/$(DOWNLOADER): ../images.go
-	go install -mod=vendor ./$(DOWNLOADER)/...
 
 $(OUTPUT)/etcd $(OUTPUT)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
 	mkdir -p $(OUTPUT)
@@ -115,119 +128,149 @@ $(OUTPUT)/setup-local-pv.sh: setup-local-pv.sh
 
 $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@COREOS_IMAGE@/$(COREOS_IMAGE)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__COREOS_IMAGE__/$(COREOS_IMAGE)/' $< > $@
 
 $(OUTPUT)/host1.ign: host.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/host1/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@HOST1@/$(HOST1)/' \
-		-e 's/@NODE_ADDRESS@/$(HOST1)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/host1/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__HOST1__/$(HOST1)/' \
+		-e 's/__NODE_ADDRESS__/$(HOST1)/' $< > $@
 
 $(OUTPUT)/host2.ign: host.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/host2/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@HOST1@/$(HOST1)/' \
-		-e 's/@NODE_ADDRESS@/$(HOST2)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/host2/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__HOST1__/$(HOST1)/' \
+		-e 's/__NODE_ADDRESS__/$(HOST2)/' $< > $@
+
+node.ign: node-ign.yml
+	$(CT) -in-file=$< -pretty -out-file=$@
 
 $(OUTPUT)/node1.ign: node.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/node1/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@NODE_ADDRESS@/$(NODE1)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/node1/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__NODE_ADDRESS__/$(NODE1)/' $< > $@
 
 $(OUTPUT)/node2.ign: node.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/node2/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@NODE_ADDRESS@/$(NODE2)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/node2/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__NODE_ADDRESS__/$(NODE2)/' $< > $@
 
 $(OUTPUT)/node3.ign: node.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/node3/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@NODE_ADDRESS@/$(NODE3)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/node3/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__NODE_ADDRESS__/$(NODE3)/' $< > $@
 
 $(OUTPUT)/node4.ign: node.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/node4/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@NODE_ADDRESS@/$(NODE4)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/node4/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__NODE_ADDRESS__/$(NODE4)/' $< > $@
 
 $(OUTPUT)/node5.ign: node.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/node5/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@NODE_ADDRESS@/$(NODE5)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/node5/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__NODE_ADDRESS__/$(NODE5)/' $< > $@
 
 $(OUTPUT)/node6.ign: node.ign
 	mkdir -p $(OUTPUT)
-	sed -e 's/@BRIDGE_ADDRESS@/$(BRIDGE_ADDRESS)/' \
-		-e 's/@NODE_NAME@/node6/' \
-		-e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' \
-		-e 's/@NODE_ADDRESS@/$(NODE6)/' $< > $@
+	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's/__NODE_NAME__/node6/' \
+		-e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__NODE_ADDRESS__/$(NODE6)/' $< > $@
 
 $(OUTPUT)/cke-cluster.yml: cke-cluster.yml
 	mkdir -p $(OUTPUT)
-	sed -e 's/@NODE1@/$(NODE1)/' \
-		-e 's/@NODE2@/$(NODE2)/' \
-		-e 's/@NODE3@/$(NODE3)/' \
-		-e 's/@NODE4@/$(NODE4)/' \
-		-e 's/@NODE5@/$(NODE5)/' \
-		-e 's/@NODE6@/$(NODE6)/' $< > $@
+	sed -e 's/__NODE1__/$(NODE1)/' \
+		-e 's/__NODE2__/$(NODE2)/' \
+		-e 's/__NODE3__/$(NODE3)/' \
+		-e 's/__NODE4__/$(NODE4)/' \
+		-e 's/__NODE5__/$(NODE5)/' \
+		-e 's/__NODE6__/$(NODE6)/' \
+		-e 's/__RUNTIME__/$(CONTAINER_RUNTIME)/' \
+		-e 's|__RUNTIME_ENDPOINT__|$(RUNTIME_ENDPOINT)|' $< > $@
 
 $(OUTPUT)/cke.yml: cke.yml
 	mkdir -p $(OUTPUT)
-	sed -e 's/@HOST1@/$(HOST1)/' $< > $@
+	sed -e 's/__HOST1__/$(HOST1)/' $< > $@
+
+build-containerd:
+	rm -rf $(GOPATH)/src/github.com/containerd/containerd
+	mkdir -p $(GOPATH)/src/github.com/containerd/containerd
+	curl -fsSL -o containerd.tar.gz https://github.com/containerd/containerd/archive/v${CONTAINERD_VERSION}.tar.gz
+	tar -x -z --strip-components 1 -f containerd.tar.gz -C $(GOPATH)/src/github.com/containerd/containerd
+	rm -f containerd.tar.gz
+	(cd $(GOPATH)/src/github.com/containerd/containerd; make VERSION=$(CONTAINERD_VERSION))
+
+$(OUTPUT)/containerd: build-containerd
+	mkdir -p $(OUTPUT)
+	cp $(GOPATH)/src/github.com/containerd/containerd/bin/containerd $@
+
+$(OUTPUT)/containerd-shim: build-containerd
+	mkdir -p $(OUTPUT)
+	cp $(GOPATH)/src/github.com/containerd/containerd/bin/containerd-shim $@
+
+$(OUTPUT)/ctr: build-containerd
+	mkdir -p $(OUTPUT)
+	cp $(GOPATH)/src/github.com/containerd/containerd/bin/ctr $@
+
+$(OUTPUT)/crictl:
+	mkdir -p $(OUTPUT)
+	curl -fsSL -o crictl.tar.gz https://github.com/kubernetes-sigs/cri-tools/releases/download/v$(CRITOOLS_VERSION)/crictl-v$(CRITOOLS_VERSION)-linux-amd64.tar.gz
+	tar zxvf crictl.tar.gz -C $(OUTPUT)
 
 test: $(GENERATED_FILES)
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/host1
@@ -238,7 +281,6 @@ test: $(GENERATED_FILES)
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node4
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node5
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node6
-	$(DOWNLOADER)
 	./test.sh
 
 placemat: $(GENERATED_FILES)
@@ -250,7 +292,6 @@ placemat: $(GENERATED_FILES)
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node4
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node5
 	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node6
-	$(DOWNLOADER)
 	sudo -b $(PLACEMAT) output/cluster.yml
 	@echo 'Placemat is running.  To kill it, do "sudo pkill placemat".'
 
@@ -264,11 +305,18 @@ test-light: $(OUTPUT)/cke
 	$(GINKGO) -v -focus="${TARGET}"
 
 clean:
-	rm -rf $(OUTPUT)
+	rm -rf $(OUTPUT) node.ign
 
 setup:
 	GO111MODULE=off go get -u \
 		github.com/onsi/ginkgo/ginkgo \
 		github.com/coreos/gofail
+	$(SUDO) apt-get update
+	$(SUDO) apt-get -y install --no-install-recommends $(PACKAGES)
+	curl -fsSL -o protoc.zip https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-linux-x86_64.zip
+	$(SUDO) unzip -o protoc.zip -d /usr/local
+	curl -fsSL -o ct https://github.com/coreos/container-linux-config-transpiler/releases/download/v$(CT_VERSION)/ct-v$(CT_VERSION)-x86_64-unknown-linux-gnu
+	chmod +x ct
+	$(SUDO) mv ct /usr/local/bin
 
 .PHONY:	all clean setup test

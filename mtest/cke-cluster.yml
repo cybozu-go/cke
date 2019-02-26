@@ -1,14 +1,14 @@
 name: mtest
 nodes:
-  - address: @NODE1@
+  - address: __NODE1__
     user: cybozu
-  - address: @NODE2@
+  - address: __NODE2__
     user: cybozu
-  - address: @NODE3@
+  - address: __NODE3__
     user: cybozu
-  - address: @NODE4@
+  - address: __NODE4__
     user: cybozu
-  - address: @NODE5@
+  - address: __NODE5__
     user: cybozu
 service_subnet: 10.34.56.0/24
 pod_subnet: 10.1.0.0/16
@@ -23,6 +23,14 @@ options:
     - source: /mnt/disks
       destination: /mnt/disks
       read_only: false
+    - source: /var/lib/k8s-containerd
+      destination: /var/lib/k8s-containerd
+      read_only: false
+    container_runtime: __RUNTIME__
+    container_runtime_endpoint: __RUNTIME_ENDPOINT__
+    container_log_max_size: 1000
+    container_log_max_files: 3
+
 etcd_backup:
   enabled: false
   pvc_name: etcdbackup-pvc

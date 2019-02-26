@@ -372,15 +372,21 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 
 	for _, n := range nf.cluster.Nodes {
 		st := nf.nodeStatus(n).Kubelet
-		currentBuiltIn := k8s.KubeletServiceParams(n)
+		currentBuiltIn := k8s.KubeletServiceParams(n, currentOpts)
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
+		case kubeletRuntimeChanged(st.BuiltInParams, currentBuiltIn):
+			log.Warn("kubelet's container runtime can not be changed", nil)
 		case cke.HyperkubeImage.Name() != st.Image:
 			fallthrough
 		case currentOpts.Domain != st.Domain:
 			fallthrough
 		case currentOpts.AllowSwap != st.AllowSwap:
+			fallthrough
+		case currentOpts.ContainerLogMaxSize != st.ContainerLogMaxSize:
+			fallthrough
+		case currentOpts.ContainerLogMaxFiles != st.ContainerLogMaxFiles:
 			fallthrough
 		case !kubeletEqualParams(st.BuiltInParams, currentBuiltIn):
 			fallthrough
@@ -406,6 +412,41 @@ func (nf *NodeFilter) NonClusterNodes() (nodes []*corev1.Node) {
 		nodes = append(nodes, &member)
 	}
 	return nodes
+}
+
+func kubeletRuntimeChanged(running, current cke.ServiceParams) bool {
+	runningRuntime := ""
+	runningRuntimeEndpoint := ""
+	for _, arg := range running.ExtraArguments {
+		if strings.HasPrefix(arg, "--container-runtime=") {
+			runningRuntime = arg
+			continue
+		}
+		if strings.HasPrefix(arg, "--container-runtime-endpoint=") {
+			runningRuntimeEndpoint = arg
+			continue
+		}
+	}
+
+	currentRuntime := ""
+	currentRuntimeEndpoint := ""
+	for _, arg := range current.ExtraArguments {
+		if strings.HasPrefix(arg, "--container-runtime=") {
+			currentRuntime = arg
+			continue
+		}
+		if strings.HasPrefix(arg, "--container-runtime-endpoint=") {
+			currentRuntimeEndpoint = arg
+			continue
+		}
+	}
+	if runningRuntime != currentRuntime {
+		return true
+	}
+	if runningRuntimeEndpoint != currentRuntimeEndpoint {
+		return true
+	}
+	return false
 }
 
 func kubeletEqualParams(running, current cke.ServiceParams) bool {

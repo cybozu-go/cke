@@ -52,7 +52,7 @@ func scp(ctx context.Context, args []string) error {
 	scpArgs = append(scpArgs, args...)
 
 	fmt.Println(scpArgs)
-	c := exec.Command("scp", scpArgs...)
+	c := exec.CommandContext(ctx, "scp", scpArgs...)
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr

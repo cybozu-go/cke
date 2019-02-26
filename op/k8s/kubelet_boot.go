@@ -90,7 +90,7 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			params := KubeletServiceParams(n)
+			params := KubeletServiceParams(n, o.params)
 			if len(o.params.BootTaints) > 0 {
 				argl := make([]string, len(o.params.BootTaints))
 				for i, t := range o.params.BootTaints {
@@ -134,7 +134,8 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		return err
 	}
 
-	cfg := newKubeletConfiguration(tlsCertPath, tlsKeyPath, caPath, c.params.Domain, c.params.AllowSwap)
+	cfg := newKubeletConfiguration(tlsCertPath, tlsKeyPath, caPath, c.params.Domain,
+		c.params.ContainerLogMaxSize, c.params.ContainerLogMaxFiles, c.params.AllowSwap)
 	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		cfg := cfg
 		cfg.ClusterDNS = []string{n.Address}
@@ -280,7 +281,7 @@ func (c retaintBeforeKubeletBootCommand) Command() cke.Command {
 }
 
 // KubeletServiceParams returns parameters for kubelet.
-func KubeletServiceParams(n *cke.Node) cke.ServiceParams {
+func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServiceParams {
 	args := []string{
 		"kubelet",
 		"--config=/etc/kubernetes/kubelet/config.yml",
@@ -290,6 +291,13 @@ func KubeletServiceParams(n *cke.Node) cke.ServiceParams {
 		"--pod-infra-container-image=" + cke.PauseImage.Name(),
 		"--network-plugin=cni",
 		"--volume-plugin-dir=/opt/volume/bin",
+	}
+	if len(params.ContainerRuntime) != 0 {
+		args = append(args, "--container-runtime="+params.ContainerRuntime)
+		args = append(args, "--runtime-request-timeout=15m")
+	}
+	if len(params.ContainerRuntimeEndpoint) != 0 {
+		args = append(args, "--container-runtime-endpoint="+params.ContainerRuntimeEndpoint)
 	}
 	return cke.ServiceParams{
 		ExtraArguments: args,

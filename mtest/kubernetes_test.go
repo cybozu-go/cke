@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	bolt "github.com/coreos/bbolt"
 	. "github.com/onsi/ginkgo"
@@ -323,6 +325,83 @@ var _ = Describe("Kubernetes", func() {
 		ckecliClusterSet(cluster)
 		Eventually(func() error {
 			return checkCluster(cluster)
+		}).Should(Succeed())
+	})
+
+	It("can rotate pod log", func() {
+		if containerRuntime == "docker" {
+			Skip("docker doesn't support log rotation")
+		}
+
+		By("waiting the default service account gets created")
+		Eventually(func() error {
+			_, stderr, err := kubectl("get", "sa/default", "-o", "json")
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+			return nil
+		}).Should(Succeed())
+
+		By("running nginx")
+		_, stderr, err := kubectl("run", "nginx", "-n=mtest", "--image=nginx",
+			"--generator=run-pod/v1")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+
+		By("checking nginx pod status")
+		var pod corev1.Pod
+		Eventually(func() error {
+			stdout, stderr, err := kubectl("get", "pods/nginx", "-n=mtest", "-o", "json")
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+
+			err = json.Unmarshal(stdout, &pod)
+			if err != nil {
+				return err
+			}
+
+			for _, cond := range pod.Status.Conditions {
+				if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+					return nil
+				}
+			}
+			return errors.New("pod is not yet ready")
+		}).Should(Succeed())
+
+		for i := 0; i < 5; i++ {
+			_, stderr, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP)
+			Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+		}
+
+		logFile := fmt.Sprintf("%d.log", pod.Status.ContainerStatuses[0].RestartCount)
+		logPath := filepath.Join("/var/log/pods", string(pod.ObjectMeta.UID), "nginx", logFile)
+		pattern := fmt.Sprintf("%s.*", logPath)
+
+		Eventually(func() error {
+			_, _, err = execAt(pod.Status.HostIP, "test", "-f", logPath)
+			if err != nil {
+				return fmt.Errorf("log file doesn't exist")
+			}
+			return nil
+		}).Should(Succeed())
+
+		// kubelet rotates logfile every 10 second.
+		time.Sleep(10 * time.Second)
+
+		_, _, err = execAt(pod.Status.HostIP, "test", "-f", pattern)
+		Expect(err).To(HaveOccurred(), "log file is already rotated")
+
+		for i := 0; i < 5; i++ {
+			_, _, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP)
+			Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+		}
+
+		Eventually(func() error {
+			_, _, err = execAt(pod.Status.HostIP, "test", "-f", pattern)
+			if err != nil {
+				return fmt.Errorf("log file isn't rotated")
+			}
+			return nil
 		}).Should(Succeed())
 	})
 

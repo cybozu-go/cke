@@ -97,6 +97,7 @@ Name              | Required | Type   | Description
 `selinux_label`   | false    | string | Relabel the SELinux label of the host directory.
 
 `selinux-label`:
+
 - "z":  The mount content is shared among multiple containers.
 - "Z":  The mount content is private and unshared.
 - This label should not be specified to system directories.
@@ -122,15 +123,18 @@ Name                | Required | Type      | Description
 
 ### KubeletParams
 
-Name              | Required | Type      | Description
------------------ | -------- | --------- | -----------
-`domain`          | false    | string    | The base domain for the cluster.  Default: `cluster.local`.
-`allow_swap`      | false    | bool      | Do not fail even when swap is on.
-`boot_taints`     | false    | `[]Taint` | Bootstrap node taints.
-`extra_args`      | false    | array     | Extra command-line arguments.  List of strings.
-`extra_binds`     | false    | array     | Extra bind mounts.  List of `Mount`.
-`extra_env`       | false    | object    | Extra environment variables.
-
+Name                         | Required | Type      | Description
+-----------------------------| -------- | --------- | -----------
+`domain`                     | false    | string    | The base domain for the cluster.  Default: `cluster.local`.
+`allow_swap`                 | false    | bool      | Do not fail even when swap is on.
+`boot_taints`                | false    | `[]Taint` | Bootstrap node taints.
+`extra_args`                 | false    | array     | Extra command-line arguments.  List of strings.
+`extra_binds`                | false    | array     | Extra bind mounts.  List of `Mount`.
+`extra_env`                  | false    | object    | Extra environment variables.
+`container_runtime`          | false    | string    | Container runtime for Pod. Default: `docker`. You have to choose `docker` or `remote` which supports [CRI][].
+`container_runtime_endpoint` | false    | string    | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/var/run/dockershim.sock`.
+`container_log_max_size`     | false    | string    | Equivalent to the [log rotation for CRI runtime]. Size of log file size. If the file size becomes bigger than given size, the log file is rotated. Default: `10Mi`.
+`container_log_max_files`    | false    | int       | Equivalent to the [log rotation for CRI runtime]. Number of rotated log files for keeping in the storage. Default: `5`.
 
 Taints in `boot_taints` are added to a Node in the following cases:
 (1) when that Node is registered with Kubernetes by kubelet, or
@@ -138,3 +142,6 @@ Taints in `boot_taints` are added to a Node in the following cases:
 Those taints can be removed manually when they are no longer needed.
 Note that the second case happens when the physical node is rebooted without resource manipulation.
 If you want to add taints only at Node registration, use kubelet's `--register-with-taints` options in `extra_args`.
+
+[CRI]: https://github.com/kubernetes/kubernetes/blob/242a97307b34076d5d8f5bbeb154fa4d97c9ef1d/docs/devel/container-runtime-interface.md
+[log rotation for CRI runtime]: https://github.com/kubernetes/kubernetes/issues/58823

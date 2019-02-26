@@ -60,6 +60,10 @@ options:
   kubelet:
     domain: my.domain
     allow_swap: true
+    container_runtime: remote
+    container_runtime_endpoint: /var/run/k8s-containerd.sock
+    container_log_max_size: 10Mi
+    container_log_max_files: 10
     boot_taints:
       - key: taint1
         value: tainted
@@ -139,6 +143,18 @@ rules:
 	}
 	if !c.Options.Kubelet.AllowSwap {
 		t.Error(`!c.Options.Kubelet.AllowSwap`)
+	}
+	if c.Options.Kubelet.ContainerRuntime != "remote" {
+		t.Error(`c.Options.Kubelet.ContainerRuntime != "remote"`)
+	}
+	if c.Options.Kubelet.ContainerRuntimeEndpoint != "/var/run/k8s-containerd.sock" {
+		t.Error(`c.Options.Kubelet.ContainerRuntimeEndpoint != "/var/run/k8s-containerd.sock"`)
+	}
+	if c.Options.Kubelet.ContainerLogMaxSize != "10Mi" {
+		t.Error(`c.Options.Kubelet.ContainerLogMaxSize != "10Mi"`)
+	}
+	if c.Options.Kubelet.ContainerLogMaxFiles != 10 {
+		t.Error(`c.Options.Kubelet.ContainerLogMaxFiles != 10`)
 	}
 	if len(c.Options.Kubelet.BootTaints) != 1 {
 		t.Fatal(`len(c.Options.Kubelet.BootTaints) != 1`)
@@ -299,6 +315,36 @@ rules:
 				Options: Options{
 					Kubelet: KubeletParams{
 						Domain: "a_b.c",
+					},
+				},
+			},
+			true,
+		},
+		{
+			"invalid container_runtime",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					Kubelet: KubeletParams{
+						ContainerRuntime:         "test",
+						ContainerRuntimeEndpoint: "/var/run/dockershim.sock",
+					},
+				},
+			},
+			true,
+		},
+		{
+			"invalid container_runtime_endpoint",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					Kubelet: KubeletParams{
+						ContainerRuntime:         "remote",
+						ContainerRuntimeEndpoint: "",
 					},
 				},
 			},

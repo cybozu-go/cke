@@ -2,11 +2,11 @@ package cke
 
 import (
 	"errors"
-	"gopkg.in/yaml.v2"
 	"net"
 	"path/filepath"
 	"strings"
 
+	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -107,10 +107,14 @@ type APIServerParams struct {
 
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
-	ServiceParams `yaml:",inline"`
-	Domain        string         `json:"domain"      yaml:"domain"`
-	AllowSwap     bool           `json:"allow_swap"  yaml:"allow_swap"`
-	BootTaints    []corev1.Taint `json:"boot_taints"   yaml:"boot_taints"`
+	ServiceParams            `yaml:",inline"`
+	ContainerRuntime         string         `json:"container_runtime"          yaml:"container_runtime"`
+	ContainerRuntimeEndpoint string         `json:"container_runtime_endpoint" yaml:"container_runtime_endpoint"`
+	ContainerLogMaxSize      string         `json:"container_log_max_size"     yaml:"container_log_max_size"`
+	ContainerLogMaxFiles     int32          `json:"container_log_max_files"    yaml:"container_log_max_files"`
+	Domain                   string         `json:"domain"                     yaml:"domain"`
+	AllowSwap                bool           `json:"allow_swap"                 yaml:"allow_swap"`
+	BootTaints               []corev1.Taint `json:"boot_taints"                yaml:"boot_taints"`
 }
 
 // EtcdBackup is a set of configurations for etcdbackup.
@@ -347,6 +351,14 @@ func validateOptions(opts Options) error {
 		if len(msgs) > 0 {
 			return field.Invalid(fldPath.Child("domain"),
 				opts.Kubelet.Domain, strings.Join(msgs, ";"))
+		}
+	}
+	if len(opts.Kubelet.ContainerRuntime) > 0 {
+		if opts.Kubelet.ContainerRuntime != "remote" && opts.Kubelet.ContainerRuntime != "docker" {
+			return errors.New("kubelet.container_runtime should be 'docker' or 'remote'")
+		}
+		if opts.Kubelet.ContainerRuntime == "remote" && len(opts.Kubelet.ContainerRuntimeEndpoint) == 0 {
+			return errors.New("kubelet.container_runtime_endpoint should not be empty")
 		}
 	}
 

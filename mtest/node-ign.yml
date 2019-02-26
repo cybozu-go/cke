@@ -1,0 +1,250 @@
+storage:
+  files:
+    - path: "/etc/hostname"
+      filesystem: root
+      mode: 0644
+      contents:
+        inline: |
+          __NODE_NAME__
+
+    - path: "/etc/hosts"
+      filesystem: root
+      mode: 0644
+      contents:
+        inline: |
+          127.0.0.1	localhost
+          ::1		localhost
+
+          __NODE1__	node1
+          __NODE2__	node2
+          __NODE3__	node3
+          __NODE4__	node4
+          __NODE5__	node5
+          __NODE6__	node6
+
+    - path: "/etc/modules-load.d/br_netfilter.conf"
+      filesystem: root
+      contents:
+        inline: br_netfilter
+      mode: 0644
+
+    - path: "/etc/sysctl.d/br_netfilter.conf"
+      filesystem: root
+      contents:
+        inline: net.bridge.bridge-nf-call-iptables=1
+      mode: 0644
+
+    - path: "/etc/k8s-containerd/config.toml"
+      filesystem: root
+      contents:
+        inline: |
+          root = "/var/lib/k8s-containerd"
+          state = "/run/k8s-containerd"
+          oom_score = 0
+          [grpc]
+            address = "/var/run/k8s-containerd.sock"
+            uid = 0
+            gid = 0
+            max_recv_message_size = 16777216
+            max_send_message_size = 16777216
+          [debug]
+            address = ""
+            uid = 0
+            gid = 0
+            level = ""
+          [metrics]
+            address = ""
+            grpc_histogram = false
+          [cgroup]
+            path = ""
+          [plugins]
+            [plugins.cgroups]
+              no_prometheus = false
+            [plugins.cri]
+              stream_server_address = "127.0.0.1"
+              stream_server_port = "10010"
+              enable_selinux = false
+              sandbox_image = "quay.io/cybozu/pause:3.1"
+              stats_collect_period = 10
+              systemd_cgroup = false
+              enable_tls_streaming = false
+              max_container_log_line_size = 16384
+              [plugins.cri.containerd]
+                snapshotter = "overlayfs"
+                [plugins.cri.containerd.default_runtime]
+                  runtime_type = "io.containerd.runtime.v1.linux"
+                  runtime_engine = ""
+                  runtime_root = ""
+                [plugins.cri.containerd.untrusted_workload_runtime]
+                  runtime_type = ""
+                  runtime_engine = ""
+                  runtime_root = ""
+              [plugins.cri.cni]
+                bin_dir = "/opt/cni/bin"
+                conf_dir = "/etc/cni/net.d"
+                conf_template = ""
+              [plugins.cri.registry]
+                [plugins.cri.registry.mirrors]
+                  [plugins.cri.registry.mirrors."docker.io"]
+                    endpoint = ["http://localhost:5000"]
+                  [plugins.cri.registry.mirrors."quay.io"]
+                    endpoint = ["http://localhost:5000"]
+            [plugins.diff-service]
+              default = ["walking"]
+            [plugins.linux]
+              shim = "/opt/bin/containerd-shim"
+              runtime = "runc"
+              runtime_root = ""
+              no_shim = false
+              shim_debug = false
+            [plugins.scheduler]
+              pause_threshold = 0.02
+              deletion_threshold = 0
+              mutation_threshold = 100
+              schedule_delay = "0s"
+              startup_delay = "100ms"
+      mode: 0644
+
+    - path: "/opt/bin/wait-k8s-containerd-socket"
+      filesystem: root
+      contents:
+        inline: |
+          #!/bin/sh
+          while ! test -S /var/run/k8s-containerd.sock; do
+            sleep 1
+          done
+      mode: 0755
+
+    - path: "/opt/bin/setup-k8s-containerd"
+      filesystem: root
+      contents:
+        inline: |
+          #!/bin/sh
+          cp /data/containerd /opt/bin/containerd
+          cp /data/containerd-shim /opt/bin/containerd-shim
+          cp /data/ctr /opt/bin/ctr
+          cp /data/crictl /opt/bin/crictl
+      mode: 0755
+
+    - path: "/etc/crictl.yaml"
+      filesystem: root
+      contents:
+        inline: |
+          runtime-endpoint: /var/run/k8s-containerd.sock
+          image-endpoint: ""
+          timeout: 0
+          debug: false
+      mode: 0644
+
+  directories:
+    - filesystem: root
+      path: "/opt/bin"
+      mode: 0755
+
+networkd:
+  units:
+    - name: 00-eth0.network
+      contents: |
+        [Match]
+        Name=eth0
+
+        [Network]
+        Address=__NODE_ADDRESS__/24
+        Gateway=__BRIDGE_ADDRESS__
+        DNS=8.8.8.8
+        DNS=1.1.1.1
+
+passwd:
+  users:
+    - name: cybozu
+      password_hash: "$6$rounds=4096$m3AVOWeB$EPystoHozf.eJNCm4tWyRHpJzgTDymYuGOONWxRN8uk4amLvxwB4Pc7.tEkZdeXewoVEBEX5ujUon9wSpEf1N."
+      ssh_authorized_keys:
+        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCoYNNrwXDSpa5D/vG+xN0V8/SiqCldTGXwWk4VaklZNQz1mEk2J0F+CVucABDXj/sl+9NQcBCBDtfSKHwgnZnpUMYZn2SvU3jaI3n/XvIwJnCAaBFvC2+P79fiUVRrTNUd792cvGQFDJXaE6+Us78Tt9R5XLvQy3/U12Vm0jXmXUlf/6kklVJb5hovtAXhfhphp349JBTmNFAHkox+FNJrK4AwMlz8UJhwCuqEe8L96HqVvK5DLdaiQjWn5dpFvWCLJt8VbfnKZ9VPcSwYFmOSmyBkYIx+dDkf7Gv0mIi28sTvIB2cFl6/HkPIqasL3m2+MqIMZJQt3yPgiIC+WwAv
+      groups:
+        - docker
+        - sudo
+
+systemd:
+  units:
+    - name: update-engine.service
+      mask: true
+
+    - name: locksmithd.service
+      mask: true
+
+    - name: data.mount
+      enable: true
+      contents: |
+        [Mount]
+        What=/dev/vdb1
+        Where=/data
+        Type=vfat
+        Options=ro
+
+        [Install]
+        WantedBy=local-fs.target
+
+    - name: docker.service
+      dropins:
+        - name: 10-docker-opts.conf
+          contents: |
+            [Service]
+            Environment=DOCKER_OPTS="--storage-driver=overlay2 --bridge=none --iptables=false --ip-masq=false"
+
+    - name: setup-k8s-containerd.service
+      enable: true
+      contents: |
+        [Unit]
+        Description=Setup containerd for kubernetes
+        Wants=data.mount
+        After=data.mount
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/bin/setup-k8s-containerd
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: k8s-containerd.service
+      enable: true
+      contents: |
+        [Unit]
+        Description=containerd container runtime for kubernetes
+        ConditionPathExists=/etc/k8s-containerd/config.toml
+        Wants=setup-k8s-containerd.service
+        After=setup-k8s-containerd.service
+
+        [Service]
+        Delegate=yes
+        KillMode=process
+        Restart=always
+        ExecStartPre=/usr/bin/mkdir -p /var/lib/k8s-containerd
+        ExecStartPre=/usr/bin/mkdir -p /run/k8s-containerd
+        ExecStart=/opt/bin/containerd --config /etc/k8s-containerd/config.toml
+
+        # (lack of) limits from the upstream docker service unit
+        LimitNOFILE=1048576
+        LimitNPROC=infinity
+        LimitCORE=infinity
+        TasksMax=infinity
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: wait-k8s-containerd-socket.service
+      enable: true
+      contents: |
+        [Unit]
+        Description=Wait for containerd socket
+        Wants=k8s-containerd.service
+        After=k8s-containerd.service
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/bin/wait-k8s-containerd-socket
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=multi-user.target
