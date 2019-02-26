@@ -176,7 +176,7 @@ systemd:
       enable: true
       contents: |
         [Mount]
-        What=/dev/vdc1
+        What=/dev/vdb1
         Where=/data
         Type=vfat
         Options=ro
