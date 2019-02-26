@@ -133,7 +133,7 @@ storage:
           runtime-endpoint: /var/run/k8s-containerd.sock
           image-endpoint: ""
           timeout: 0
-          debut: false
+          debug: false
       mode: 0644
 
   directories:
