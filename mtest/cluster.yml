@@ -39,10 +39,6 @@ kind: Image
 name: coreos
 file: ../__COREOS_IMAGE__
 ---
-kind: Image
-name: docker-image
-file: ../docker.img
----
 kind: Node
 name: host1
 interfaces:
@@ -87,10 +83,6 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: image
-    name: docker
-    image: docker-image
-    copy-on-write: true
   - kind: vvfat
     name: data
     folder: data
@@ -106,10 +98,6 @@ volumes:
   - kind: image
     name: root
     image: coreos
-    copy-on-write: true
-  - kind: image
-    name: docker
-    image: docker-image
     copy-on-write: true
   - kind: vvfat
     name: data
@@ -127,10 +115,6 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: image
-    name: docker
-    image: docker-image
-    copy-on-write: true
   - kind: vvfat
     name: data
     folder: data
@@ -146,10 +130,6 @@ volumes:
   - kind: image
     name: root
     image: coreos
-    copy-on-write: true
-  - kind: image
-    name: docker
-    image: docker-image
     copy-on-write: true
   - kind: vvfat
     name: data
@@ -167,10 +147,6 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: image
-    name: docker
-    image: docker-image
-    copy-on-write: true
   - kind: vvfat
     name: data
     folder: data
@@ -186,10 +162,6 @@ volumes:
   - kind: image
     name: root
     image: coreos
-    copy-on-write: true
-  - kind: image
-    name: docker
-    image: docker-image
     copy-on-write: true
   - kind: vvfat
     name: data

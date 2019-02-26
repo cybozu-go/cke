@@ -172,17 +172,6 @@ systemd:
     - name: locksmithd.service
       mask: true
 
-    - name: var-lib-docker.mount
-      enable: true
-      contents: |
-        [Mount]
-        What=/dev/vdb
-        Where=/var/lib/docker
-        Type=ext4
-
-        [Install]
-        WantedBy=local-fs.target
-
     - name: data.mount
       enable: true
       contents: |
