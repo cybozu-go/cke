@@ -5,6 +5,12 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.4] - 2019-02-26
+
+### Added
+- Support remote runtime for kubernetes pod (#133).
+- Support log rotation of remote runtime for kubelet configuration (#133).
+
 ## [1.13.3] - 2019-02-12
 
 ### Added
@@ -39,7 +45,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.3...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.4...HEAD
+[1.13.4]: https://github.com/cybozu-go/cke/compare/v1.13.3...v1.13.4
 [1.13.3]: https://github.com/cybozu-go/cke/compare/v1.13.2...v1.13.3
 [1.13.2]: https://github.com/cybozu-go/cke/compare/v1.13.1...v1.13.2
 [1.13.1]: https://github.com/cybozu-go/cke/compare/v1.13.0...v1.13.1
