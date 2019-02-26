@@ -97,6 +97,7 @@ Name              | Required | Type   | Description
 `selinux_label`   | false    | string | Relabel the SELinux label of the host directory.
 
 `selinux-label`:
+
 - "z":  The mount content is shared among multiple containers.
 - "Z":  The mount content is private and unshared.
 - This label should not be specified to system directories.
@@ -130,11 +131,10 @@ Name                         | Required | Type      | Description
 `extra_args`                 | false    | array     | Extra command-line arguments.  List of strings.
 `extra_binds`                | false    | array     | Extra bind mounts.  List of `Mount`.
 `extra_env`                  | false    | object    | Extra environment variables.
-`container_runtime`          | true     | string    | Container runtime for Pod. You have to choose `docker` or `remote` which supports [CRI][].
-`container_runtime_endpoint` | false    | string    | Path of the `remote` runtime socket. It is required when `container_runtime` is `remote`.
-`container_log_max_size`     | true     | string    | Equivalent to the [log rotation for CRI runtime]. Size of log file size. If the file size becomes bigger than given size, the log file is rotated.
-`container_log_max_files`    | true     | int       | Equivalent to the [log rotation for CRI runtime]. Number of rotated log files for keeping in the storage.
-
+`container_runtime`          | false    | string    | Container runtime for Pod. Default: `docker`. You have to choose `docker` or `remote` which supports [CRI][].
+`container_runtime_endpoint` | false    | string    | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/var/run/dockershim.sock`.
+`container_log_max_size`     | false    | string    | Equivalent to the [log rotation for CRI runtime]. Size of log file size. If the file size becomes bigger than given size, the log file is rotated. Default: `10Mi`.
+`container_log_max_files`    | false    | int       | Equivalent to the [log rotation for CRI runtime]. Number of rotated log files for keeping in the storage. Default: `5`.
 
 Taints in `boot_taints` are added to a Node in the following cases:
 (1) when that Node is registered with Kubernetes by kubelet, or
