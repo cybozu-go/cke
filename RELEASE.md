@@ -13,18 +13,18 @@ The patch version is increased with CKE update.
 Maintain old k8s version
 ------------------------
 
-If kubernates MINOR version supported by CKE is updated, create a new branch `k8s-x.y`(kubernetes version x.y before update) before master merge.
-   ```console
-   $ git checkout -b k8s-x.y
-   $ git push origin k8s-x.y
-   ```
-Set the branch protected by configuring github repository settings.
+If kubernates MINOR version supported by CKE is updated, create a new branch `release-X.Y`
+where `X` and `Y` are MAJOR and MINOR version of the latest release of CKE.
 
-1. Go to https://github.com/cybozu-go/cke/settings/branches
-2. Push "Add rule" button
-3. Type the branch name into "Apply rule to"
-4. Push "Create" button
+For example, if the last release of CKE was tagged as `v1.12.3` and want to start
+development for Kubernetes 1.13 on master, create `release-1.12` branch as follows:
 
+```console
+$ git checkout -b release-1.12 v1.12.3
+$ git push origin -u release-1.12:release-1.12
+```
+
+`release-*` branches are protected from removal and force push.
 
 Prepare change log entries
 --------------------------
