@@ -53,6 +53,6 @@ $ go get k8s.io/apimachinery@release-1.11
 $ go mod tidy
 $ go mod vendor
 $ git add -f vendor
-$ git add go.mod go.sum
+$ git add go.mod
 $ git commit
 ```
