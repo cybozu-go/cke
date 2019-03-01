@@ -54,9 +54,6 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
-		return common.ImagePullCommand(o.nodes, cke.PauseImage)
-	case 2:
-		o.step++
 		dirs := []string{
 			cniBinDir,
 			cniConfDir,
@@ -67,22 +64,22 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 			"/opt/volume/bin",
 		}
 		return common.MakeDirsCommand(o.nodes, dirs)
-	case 3:
+	case 2:
 		o.step++
 		return prepareKubeletFilesCommand{o.cluster, o.podSubnet, o.params, o.files}
-	case 4:
+	case 3:
 		o.step++
 		return o.files
-	case 5:
+	case 4:
 		o.step++
 		return installCNICommand{o.nodes}
-	case 6:
+	case 5:
 		o.step++
 		if len(o.registeredNodes) > 0 && len(o.params.BootTaints) > 0 {
 			return retaintBeforeKubeletBootCommand{o.registeredNodes, o.apiServer, o.params}
 		}
 		fallthrough
-	case 7:
+	case 6:
 		o.step++
 		opts := []string{
 			"--pid=host",

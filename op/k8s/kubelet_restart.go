@@ -42,14 +42,11 @@ func (o *kubeletRestartOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
-		return common.ImagePullCommand(o.nodes, cke.PauseImage)
+		return prepareKubeletConfigCommand{o.params, o.files}
 	case 2:
 		o.step++
-		return prepareKubeletConfigCommand{o.params, o.files}
-	case 3:
-		o.step++
 		return o.files
-	case 4:
+	case 3:
 		o.step++
 		opts := []string{
 			"--pid=host",
