@@ -5,6 +5,11 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.5] - 2019-03-01
+
+### Changed
+- Remove the step to pull `pause` container image (#135).
+
 ## [1.13.4] - 2019-02-26
 
 ### Added
@@ -45,7 +50,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.4...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.5...HEAD
+[1.13.5]: https://github.com/cybozu-go/cke/compare/v1.13.4...v1.13.5
 [1.13.4]: https://github.com/cybozu-go/cke/compare/v1.13.3...v1.13.4
 [1.13.3]: https://github.com/cybozu-go/cke/compare/v1.13.2...v1.13.3
 [1.13.2]: https://github.com/cybozu-go/cke/compare/v1.13.1...v1.13.2
