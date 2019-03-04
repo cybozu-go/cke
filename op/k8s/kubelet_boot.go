@@ -66,20 +66,23 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 		return common.MakeDirsCommand(o.nodes, dirs)
 	case 2:
 		o.step++
-		return prepareKubeletFilesCommand{o.cluster, o.podSubnet, o.params, o.files}
+		return emptyDirCommand{o.nodes, cniConfDir}
 	case 3:
 		o.step++
-		return o.files
+		return prepareKubeletFilesCommand{o.cluster, o.podSubnet, o.params, o.files}
 	case 4:
 		o.step++
-		return installCNICommand{o.nodes}
+		return o.files
 	case 5:
+		o.step++
+		return installCNICommand{o.nodes}
+	case 6:
 		o.step++
 		if len(o.registeredNodes) > 0 && len(o.params.BootTaints) > 0 {
 			return retaintBeforeKubeletBootCommand{o.registeredNodes, o.apiServer, o.params}
 		}
 		fallthrough
-	case 6:
+	case 7:
 		o.step++
 		opts := []string{
 			"--pid=host",
@@ -107,6 +110,33 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 	}
 }
 
+type emptyDirCommand struct {
+	nodes []*cke.Node
+	dir   string
+}
+
+func (c emptyDirCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+	for _, node := range c.nodes {
+		_, _, err := inf.Agent(node.Address).Run("rm -f " + filepath.Join(c.dir, "*"))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c emptyDirCommand) Command() cke.Command {
+	targets := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		targets[i] = n.Address
+	}
+	return cke.Command{
+		Name:   "empty-dir",
+		Target: strings.Join(targets, ","),
+		Detail: c.dir,
+	}
+}
+
 type prepareKubeletFilesCommand struct {
 	cluster   string
 	podSubnet string
@@ -122,23 +152,25 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 	tlsKeyPath := op.K8sPKIPath("kubelet.key")
 	storage := inf.Storage()
 
-	bridgeConfData := []byte(cniBridgeConfig(c.podSubnet))
-	g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		return bridgeConfData, nil
-	}
-	err := c.files.AddFile(ctx, filepath.Join(cniConfDir, "98-bridge.conf"), g)
-	if err != nil {
-		return err
+	for k, v := range c.params.CNIConfFiles {
+		confData := []byte(v)
+		g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
+			return confData, nil
+		}
+		err := c.files.AddFile(ctx, filepath.Join(cniConfDir, k), g)
+		if err != nil {
+			return err
+		}
 	}
 
 	cfg := newKubeletConfiguration(tlsCertPath, tlsKeyPath, caPath, c.params.Domain,
 		c.params.ContainerLogMaxSize, c.params.ContainerLogMaxFiles, c.params.AllowSwap)
-	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
+	g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		cfg := cfg
 		cfg.ClusterDNS = []string{n.Address}
 		return yaml.Marshal(cfg)
 	}
-	err = c.files.AddFile(ctx, kubeletConfigPath, g)
+	err := c.files.AddFile(ctx, kubeletConfigPath, g)
 	if err != nil {
 		return err
 	}

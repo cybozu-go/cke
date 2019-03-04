@@ -144,5 +144,8 @@ Those taints can be removed manually when they are no longer needed.
 Note that the second case happens when the physical node is rebooted without resource manipulation.
 If you want to add taints only at Node registration, use kubelet's `--register-with-taints` options in `extra_args`.
 
+CNI configuration file specified by `cni_conf_files` will put on the worker node at boot sequence only.
+Dynamic update is not supported.
+
 [CRI]: https://github.com/kubernetes/kubernetes/blob/242a97307b34076d5d8f5bbeb154fa4d97c9ef1d/docs/devel/container-runtime-interface.md
 [log rotation for CRI runtime]: https://github.com/kubernetes/kubernetes/issues/58823

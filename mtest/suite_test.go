@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -11,6 +12,10 @@ import (
 	"github.com/cybozu-go/log"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+)
+
+const (
+	dummyCNIConf = "/etc/cni/net.d/00-dummy.conf"
 )
 
 func TestMtest(t *testing.T) {
@@ -37,6 +42,15 @@ var _ = BeforeSuite(func() {
 		execSafeAt(h, "sync")
 	}
 
+	_, stderr, err := execAt(node1, "sudo", "mkdir", "-p", filepath.Base(dummyCNIConf))
+	if err != nil {
+		Fail("failed to mkdir dummyCNIConf " + string(stderr))
+	}
+	_, stderr, err = execAt(node1, "sudo", "touch", dummyCNIConf)
+	if err != nil {
+		Fail("failed to touch dummyCNIConf " + string(stderr))
+	}
+
 	for _, h := range []string{host1, host2} {
 		_, stderr, err := execAt(h, "/data/setup-cke.sh")
 		if err != nil {
@@ -44,7 +58,7 @@ var _ = BeforeSuite(func() {
 		}
 	}
 
-	_, stderr, err := execAt(node1, "/data/setup-local-pv.sh")
+	_, stderr, err = execAt(node1, "/data/setup-local-pv.sh")
 	if err != nil {
 		Fail("failed to complete setup-local-pv.sh: " + string(stderr))
 	}

@@ -313,6 +313,9 @@ var _ = Describe("Operations", func() {
 			return nil
 		}).Should(Succeed())
 
+		By("clearing CNI configuration file directory")
+		_, _, err = execAt(node1, "test", "-f", dummyCNIConf)
+		Expect(err).Should(HaveOccurred())
 	})
 
 	It("removes all taints", func() {
