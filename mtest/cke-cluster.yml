@@ -45,8 +45,8 @@ options:
               [{"subnet": "10.1.0.0/16"}]
             ],
             "routes": [{"dst": "0.0.0.0/0"}]
+          }
         }
-}
 
 etcd_backup:
   enabled: false

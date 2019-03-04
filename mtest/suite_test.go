@@ -42,7 +42,7 @@ var _ = BeforeSuite(func() {
 		execSafeAt(h, "sync")
 	}
 
-	_, stderr, err := execAt(node1, "sudo", "mkdir", "-p", filepath.Base(dummyCNIConf))
+	_, stderr, err := execAt(node1, "sudo", "mkdir", "-p", filepath.Dir(dummyCNIConf))
 	if err != nil {
 		Fail("failed to mkdir dummyCNIConf " + string(stderr))
 	}
