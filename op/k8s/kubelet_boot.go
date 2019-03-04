@@ -116,13 +116,25 @@ type emptyDirCommand struct {
 }
 
 func (c emptyDirCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
-	for _, node := range c.nodes {
-		_, _, err := inf.Agent(node.Address).Run("rm -rf " + c.dir)
-		if err != nil {
-			return err
-		}
+	dest := filepath.Join("/mnt", c.dir)
+
+	bind := cke.Mount{
+		Source:      c.dir,
+		Destination: dest,
+		Label:       cke.LabelPrivate,
 	}
-	return nil
+
+	arg := "rm -f " + filepath.Join(dest, "*")
+
+	env := well.NewEnvironment(ctx)
+	for _, n := range c.nodes {
+		ce := inf.Engine(n.Address)
+		env.Go(func(ctx context.Context) error {
+			return ce.Run(cke.ToolsImage, []cke.Mount{bind}, arg)
+		})
+	}
+	env.Stop()
+	return env.Wait()
 }
 
 func (c emptyDirCommand) Command() cke.Command {
