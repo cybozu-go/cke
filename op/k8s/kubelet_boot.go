@@ -54,6 +54,9 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
+		return emptyDirCommand{o.nodes, cniConfDir}
+	case 2:
+		o.step++
 		dirs := []string{
 			cniBinDir,
 			cniConfDir,
@@ -64,9 +67,6 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 			"/opt/volume/bin",
 		}
 		return common.MakeDirsCommand(o.nodes, dirs)
-	case 2:
-		o.step++
-		return emptyDirCommand{o.nodes, cniConfDir}
 	case 3:
 		o.step++
 		return prepareKubeletFilesCommand{o.cluster, o.podSubnet, o.params, o.files}
@@ -117,7 +117,7 @@ type emptyDirCommand struct {
 
 func (c emptyDirCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	for _, node := range c.nodes {
-		_, _, err := inf.Agent(node.Address).Run("rm -f " + filepath.Join(c.dir, "*"))
+		_, _, err := inf.Agent(node.Address).Run("rm -f " + c.dir)
 		if err != nil {
 			return err
 		}
