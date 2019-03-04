@@ -108,13 +108,14 @@ type APIServerParams struct {
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
 	ServiceParams            `yaml:",inline"`
-	ContainerRuntime         string         `json:"container_runtime"          yaml:"container_runtime"`
-	ContainerRuntimeEndpoint string         `json:"container_runtime_endpoint" yaml:"container_runtime_endpoint"`
-	ContainerLogMaxSize      string         `json:"container_log_max_size"     yaml:"container_log_max_size"`
-	ContainerLogMaxFiles     int32          `json:"container_log_max_files"    yaml:"container_log_max_files"`
-	Domain                   string         `json:"domain"                     yaml:"domain"`
-	AllowSwap                bool           `json:"allow_swap"                 yaml:"allow_swap"`
-	BootTaints               []corev1.Taint `json:"boot_taints"                yaml:"boot_taints"`
+	ContainerRuntime         string            `json:"container_runtime"          yaml:"container_runtime"`
+	ContainerRuntimeEndpoint string            `json:"container_runtime_endpoint" yaml:"container_runtime_endpoint"`
+	ContainerLogMaxSize      string            `json:"container_log_max_size"     yaml:"container_log_max_size"`
+	ContainerLogMaxFiles     int32             `json:"container_log_max_files"    yaml:"container_log_max_files"`
+	Domain                   string            `json:"domain"                     yaml:"domain"`
+	AllowSwap                bool              `json:"allow_swap"                 yaml:"allow_swap"`
+	BootTaints               []corev1.Taint    `json:"boot_taints"                yaml:"boot_taints"`
+	CNIConfFiles             map[string]string `json:"cni_conf_files"             yaml:"cni_conf_files"`
 }
 
 // EtcdBackup is a set of configurations for etcdbackup.
@@ -359,6 +360,11 @@ func validateOptions(opts Options) error {
 		}
 		if opts.Kubelet.ContainerRuntime == "remote" && len(opts.Kubelet.ContainerRuntimeEndpoint) == 0 {
 			return errors.New("kubelet.container_runtime_endpoint should not be empty")
+		}
+	}
+	for _, v := range opts.Kubelet.CNIConfFiles {
+		if len(v) == 0 {
+			return errors.New("kubelet.cni_conf_files: value should not be empty")
 		}
 	}
 
