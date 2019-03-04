@@ -117,7 +117,7 @@ type emptyDirCommand struct {
 
 func (c emptyDirCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	for _, node := range c.nodes {
-		_, _, err := inf.Agent(node.Address).Run("rm -f " + c.dir)
+		_, _, err := inf.Agent(node.Address).Run("rm -rf " + c.dir)
 		if err != nil {
 			return err
 		}
