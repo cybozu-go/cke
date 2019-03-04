@@ -123,18 +123,19 @@ Name                | Required | Type      | Description
 
 ### KubeletParams
 
-Name                         | Required | Type      | Description
------------------------------| -------- | --------- | -----------
-`domain`                     | false    | string    | The base domain for the cluster.  Default: `cluster.local`.
-`allow_swap`                 | false    | bool      | Do not fail even when swap is on.
-`boot_taints`                | false    | `[]Taint` | Bootstrap node taints.
-`extra_args`                 | false    | array     | Extra command-line arguments.  List of strings.
-`extra_binds`                | false    | array     | Extra bind mounts.  List of `Mount`.
-`extra_env`                  | false    | object    | Extra environment variables.
-`container_runtime`          | false    | string    | Container runtime for Pod. Default: `docker`. You have to choose `docker` or `remote` which supports [CRI][].
-`container_runtime_endpoint` | false    | string    | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/var/run/dockershim.sock`.
-`container_log_max_size`     | false    | string    | Equivalent to the [log rotation for CRI runtime]. Size of log file size. If the file size becomes bigger than given size, the log file is rotated. Default: `10Mi`.
-`container_log_max_files`    | false    | int       | Equivalent to the [log rotation for CRI runtime]. Number of rotated log files for keeping in the storage. Default: `5`.
+Name                         | Required | Type                | Description
+-----------------------------| -------- | ------------------- | -----------
+`domain`                     | false    | string              | The base domain for the cluster.  Default: `cluster.local`.
+`allow_swap`                 | false    | bool                | Do not fail even when swap is on.
+`boot_taints`                | false    | `[]Taint`           | Bootstrap node taints.
+`extra_args`                 | false    | array               | Extra command-line arguments.  List of strings.
+`extra_binds`                | false    | array               | Extra bind mounts.  List of `Mount`.
+`extra_env`                  | false    | object              | Extra environment variables.
+`container_runtime`          | false    | string              | Container runtime for Pod. Default: `docker`. You have to choose `docker` or `remote` which supports [CRI][].
+`container_runtime_endpoint` | false    | string              | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/var/run/dockershim.sock`.
+`container_log_max_size`     | false    | string              | Equivalent to the [log rotation for CRI runtime]. Size of log file size. If the file size becomes bigger than given size, the log file is rotated. Default: `10Mi`.
+`container_log_max_files`    | false    | int                 | Equivalent to the [log rotation for CRI runtime]. Number of rotated log files for keeping in the storage. Default: `5`.
+`cni_conf_files`             | false    | `map[string]string` | CNI configuration files map(key: the file name, value: the file content). The file will put on CNI conf dir(default: `/etc/cni/net.d`) on a worker node.
 
 Taints in `boot_taints` are added to a Node in the following cases:
 (1) when that Node is registered with Kubernetes by kubelet, or
