@@ -3,6 +3,7 @@ package mtest
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -228,22 +229,38 @@ var _ = Describe("Operations", func() {
 		cluster.Nodes[0].Labels = map[string]string{"label2": "value2"}
 		ckecliClusterSet(cluster)
 		Eventually(func() error {
-			return checkCluster(cluster)
+			err := checkCluster(cluster)
+			if err != nil {
+				return err
+			}
+
+			stdout, stderr, err := kubectl("get", "nodes/"+node1, "-o", "json")
+			if err != nil {
+				return fmt.Errorf("stdout:%s, stderr:%s", stdout, stderr)
+			}
+			var node corev1.Node
+			err = json.Unmarshal(stdout, &node)
+			if err != nil {
+				return err
+			}
+			if node.Labels["label1"] != "value" {
+				return fmt.Errorf(`expect node.Labels["label1"] to be "value", but actual: %s`, node.Labels["label1"])
+			}
+			if node.Labels["label2"] != "value2" {
+				return fmt.Errorf(`expect node.Labels["label2"] to be "value2", but actual: %s`, node.Labels["label2"])
+			}
+			if node.Labels["annotation1"] != "value" {
+				return fmt.Errorf(`expect node.Labels["annotation1"] to be "value", but actual: %s`, node.Labels["annotation1"])
+			}
+			if len(node.Spec.Taints) != 1 {
+				return fmt.Errorf(`expect len(node.Spec.Taints) to be 1, but actual: %d`, len(node.Spec.Taints))
+			}
+			taint := node.Spec.Taints[0]
+			if taint.Key != "taint1" {
+				return fmt.Errorf(`expect taint.Key to be "taint1", but actual: %s`, taint.Key)
+			}
+			return nil
 		}).Should(Succeed())
-
-		stdout, stderr, err := kubectl("get", "nodes/"+node1, "-o", "json")
-		Expect(err).NotTo(HaveOccurred(), "stdout:%s, stderr:%s", stdout, stderr)
-
-		var node corev1.Node
-		err = json.Unmarshal(stdout, &node)
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(node.Labels["label1"]).Should(Equal("value"))
-		Expect(node.Labels["label2"]).Should(Equal("value2"))
-		Expect(node.Annotations["annotation1"]).Should(Equal("value"))
-		Expect(node.Spec.Taints).To(HaveLen(1))
-		taint := node.Spec.Taints[0]
-		Expect(taint.Key).Should(Equal("taint1"))
 
 		By("updating existing labels, annotations, and taints")
 		cluster = getCluster()
