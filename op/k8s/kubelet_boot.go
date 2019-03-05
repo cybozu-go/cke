@@ -124,7 +124,7 @@ func (c emptyDirCommand) Run(ctx context.Context, inf cke.Infrastructure) error 
 		Label:       cke.LabelPrivate,
 	}
 
-	arg := "rm -f " + filepath.Join(dest, "*")
+	arg := "sh -c \"rm -f " + filepath.Join(dest, "*") + "\""
 
 	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {

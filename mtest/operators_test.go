@@ -249,8 +249,8 @@ var _ = Describe("Operations", func() {
 			if node.Labels["label2"] != "value2" {
 				return fmt.Errorf(`expect node.Labels["label2"] to be "value2", but actual: %s`, node.Labels["label2"])
 			}
-			if node.Labels["annotation1"] != "value" {
-				return fmt.Errorf(`expect node.Labels["annotation1"] to be "value", but actual: %s`, node.Labels["annotation1"])
+			if node.Annotations["annotation1"] != "value" {
+				return fmt.Errorf(`expect node.Labels["annotation1"] to be "value", but actual: %s`, node.Annotations["annotation1"])
 			}
 			if len(node.Spec.Taints) != 1 {
 				return fmt.Errorf(`expect len(node.Spec.Taints) to be 1, but actual: %d`, len(node.Spec.Taints))
@@ -331,7 +331,7 @@ var _ = Describe("Operations", func() {
 		}).Should(Succeed())
 
 		By("clearing CNI configuration file directory")
-		_, _, err = execAt(node1, "test", "-f", dummyCNIConf)
+		_, _, err := execAt(node1, "test", "-f", dummyCNIConf)
 		Expect(err).Should(HaveOccurred())
 	})
 
