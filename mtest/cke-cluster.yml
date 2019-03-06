@@ -30,8 +30,9 @@ options:
     container_runtime_endpoint: __RUNTIME_ENDPOINT__
     container_log_max_size: 1000
     container_log_max_files: 3
-    cni_conf_files:
-      98-bridge.conf: |
+    cni_conf_file:
+      name: 98-bridge.conf
+      content: |
         {
           "cniVersion": "0.3.1",
           "name": "bridge",

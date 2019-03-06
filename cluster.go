@@ -1,9 +1,12 @@
 package cke
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	yaml "gopkg.in/yaml.v2"
@@ -105,17 +108,23 @@ type APIServerParams struct {
 	AuditLogPolicy  string `json:"audit_log_policy" yaml:"audit_log_policy"`
 }
 
+// CNIConfFile is a config file for CNI plugin deployed on worker nodes by CKE.
+type CNIConfFile struct {
+	Name    string `json:"name"    yaml:"name"`
+	Content string `json:"content" yaml:"content"`
+}
+
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
 	ServiceParams            `yaml:",inline"`
-	ContainerRuntime         string            `json:"container_runtime"          yaml:"container_runtime"`
-	ContainerRuntimeEndpoint string            `json:"container_runtime_endpoint" yaml:"container_runtime_endpoint"`
-	ContainerLogMaxSize      string            `json:"container_log_max_size"     yaml:"container_log_max_size"`
-	ContainerLogMaxFiles     int32             `json:"container_log_max_files"    yaml:"container_log_max_files"`
-	Domain                   string            `json:"domain"                     yaml:"domain"`
-	AllowSwap                bool              `json:"allow_swap"                 yaml:"allow_swap"`
-	BootTaints               []corev1.Taint    `json:"boot_taints"                yaml:"boot_taints"`
-	CNIConfFiles             map[string]string `json:"cni_conf_files"             yaml:"cni_conf_files"`
+	ContainerRuntime         string         `json:"container_runtime"          yaml:"container_runtime"`
+	ContainerRuntimeEndpoint string         `json:"container_runtime_endpoint" yaml:"container_runtime_endpoint"`
+	ContainerLogMaxSize      string         `json:"container_log_max_size"     yaml:"container_log_max_size"`
+	ContainerLogMaxFiles     int32          `json:"container_log_max_files"    yaml:"container_log_max_files"`
+	Domain                   string         `json:"domain"                     yaml:"domain"`
+	AllowSwap                bool           `json:"allow_swap"                 yaml:"allow_swap"`
+	BootTaints               []corev1.Taint `json:"boot_taints"                yaml:"boot_taints"`
+	CNIConfFile              CNIConfFile    `json:"cni_conf_file"              yaml:"cni_conf_file"`
 }
 
 // EtcdBackup is a set of configurations for etcdbackup.
@@ -362,9 +371,22 @@ func validateOptions(opts Options) error {
 			return errors.New("kubelet.container_runtime_endpoint should not be empty")
 		}
 	}
-	for _, v := range opts.Kubelet.CNIConfFiles {
-		if len(v) == 0 {
-			return errors.New("kubelet.cni_conf_files: value should not be empty")
+	if len(opts.Kubelet.CNIConfFile.Content) != 0 && len(opts.Kubelet.CNIConfFile.Name) == 0 {
+		return fmt.Errorf("kubelet.cni_conf_file.name should not be empty when kubelet.cni_conf_file.content is not empty")
+	}
+	if filename := opts.Kubelet.CNIConfFile.Name; len(filename) != 0 {
+		matched, err := regexp.Match(`^[0-9A-Za-z_.-]+$`, []byte(filename))
+		if err != nil {
+			return err
+		}
+		if !matched {
+			return errors.New(filename + " is invalid as file name")
+		}
+
+		var content map[string]interface{}
+		err = json.Unmarshal([]byte(opts.Kubelet.CNIConfFile.Content), &content)
+		if err != nil {
+			return err
 		}
 	}
 

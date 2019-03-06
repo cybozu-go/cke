@@ -70,8 +70,9 @@ options:
         effect: NoExecute
     extra_args:
       - arg1
-    cni_conf_files:
-      99-loopback.conf: |
+    cni_conf_file:
+      name: 99-loopback.conf
+      content: |
         {
             "cniVersion": "0.3.1",
             "type": "loopback"
@@ -178,11 +179,11 @@ rules:
 	if !reflect.DeepEqual(c.Options.Kubelet.ExtraArguments, []string{"arg1"}) {
 		t.Error(`!reflect.DeepEqual(c.Options.Kubelet.ExtraArguments, []string{"arg1"})`)
 	}
-	if len(c.Options.Kubelet.CNIConfFiles) == 0 {
-		t.Error(`len(c.Options.Kubelet.CNIConfFiles) == 0`)
+	if len(c.Options.Kubelet.CNIConfFile.Name) == 0 {
+		t.Error(`len(c.Options.Kubelet.CNIConfFile.Name) == 0`)
 	}
-	if len(c.Options.Kubelet.CNIConfFiles["99-loopback.conf"]) == 0 {
-		t.Error(`len(c.Options.Kubelet.CNIConfFiles["99-loopback.conf"]) == 0`)
+	if len(c.Options.Kubelet.CNIConfFile.Content) == 0 {
+		t.Error(`len(c.Options.Kubelet.CNIConfFile.Content) == 0`)
 	}
 }
 
@@ -443,15 +444,50 @@ rules:
 			true,
 		},
 		{
-			"invalid cni conf file",
+			"filename is invalid",
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
 				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
-						CNIConfFiles: map[string]string{
-							"99.loopback.conf": "",
+						CNIConfFile: CNIConfFile{
+							Name:    "aaa&&.txt",
+							Content: `{"a":"b"}`,
+						},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"CNI conf file content is not empty, but name is empty",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					Kubelet: KubeletParams{
+						CNIConfFile: CNIConfFile{
+							Name:    "",
+							Content: `{"a":"b"}`,
+						},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"CNI conf file is not JSON",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					Kubelet: KubeletParams{
+						CNIConfFile: CNIConfFile{
+							Name:    "99.loopback.conf",
+							Content: "<aaa>",
 						},
 					},
 				},

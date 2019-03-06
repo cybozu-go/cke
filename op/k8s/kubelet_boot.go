@@ -164,12 +164,12 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 	tlsKeyPath := op.K8sPKIPath("kubelet.key")
 	storage := inf.Storage()
 
-	for k, v := range c.params.CNIConfFiles {
-		confData := []byte(v)
+	if len(c.params.CNIConfFile.Name) != 0 {
+		confData := []byte(c.params.CNIConfFile.Content)
 		g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
 			return confData, nil
 		}
-		err := c.files.AddFile(ctx, filepath.Join(cniConfDir, k), g)
+		err := c.files.AddFile(ctx, filepath.Join(cniConfDir, c.params.CNIConfFile.Name), g)
 		if err != nil {
 			return err
 		}
