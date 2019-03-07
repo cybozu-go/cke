@@ -5,6 +5,12 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.6] - 2019-03-07
+
+### Changed
+- Update Kubernetes to 1.13.4 (#137).
+- Apply kube-proxy patch to fix kubernetes/kubernetes#72432 (#137).
+
 ## [1.13.5] - 2019-03-01
 
 ### Changed
@@ -50,7 +56,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.5...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.6...HEAD
+[1.13.6]: https://github.com/cybozu-go/cke/compare/v1.13.5...v1.13.6
 [1.13.5]: https://github.com/cybozu-go/cke/compare/v1.13.4...v1.13.5
 [1.13.4]: https://github.com/cybozu-go/cke/compare/v1.13.3...v1.13.4
 [1.13.3]: https://github.com/cybozu-go/cke/compare/v1.13.2...v1.13.3
