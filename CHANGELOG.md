@@ -5,6 +5,14 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.7] - 2019-03-07
+
+### Added
+- CNI configuration can be specified in `cluster.yml` (#136).
+
+### Changed
+- Fix a bug that prevents kubelet to be restarted cleanly (#138).
+
 ## [1.13.6] - 2019-03-07
 
 ### Changed
@@ -56,7 +64,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.6...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.7...HEAD
+[1.13.7]: https://github.com/cybozu-go/cke/compare/v1.13.6...v1.13.7
 [1.13.6]: https://github.com/cybozu-go/cke/compare/v1.13.5...v1.13.6
 [1.13.5]: https://github.com/cybozu-go/cke/compare/v1.13.4...v1.13.5
 [1.13.4]: https://github.com/cybozu-go/cke/compare/v1.13.3...v1.13.4
