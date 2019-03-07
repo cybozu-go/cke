@@ -50,7 +50,6 @@ func (o *kubeletRestartOp) NextCommand() cke.Commander {
 		o.step++
 		opts := []string{
 			"--pid=host",
-			"--mount=type=volume,src=dockershim,dst=/var/lib/dockershim",
 			"--privileged",
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
