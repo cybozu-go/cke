@@ -117,14 +117,13 @@ type emptyDirCommand struct {
 
 func (c emptyDirCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
 	dest := filepath.Join("/mnt", c.dir)
+	arg := "/usr/local/cke-tools/bin/empty-dir " + dest
 
 	bind := cke.Mount{
 		Source:      c.dir,
 		Destination: dest,
 		Label:       cke.LabelPrivate,
 	}
-
-	arg := "sh -c \"rm -f " + filepath.Join(dest, "*") + "\""
 
 	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {

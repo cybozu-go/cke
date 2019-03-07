@@ -1,7 +1,6 @@
 package cke
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -9,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/containernetworking/cni/libcni"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -383,10 +383,16 @@ func validateOptions(opts Options) error {
 			return errors.New(filename + " is invalid as file name")
 		}
 
-		var content map[string]interface{}
-		err = json.Unmarshal([]byte(opts.Kubelet.CNIConfFile.Content), &content)
-		if err != nil {
-			return err
+		if filepath.Ext(opts.Kubelet.CNIConfFile.Name) == ".conflist" {
+			_, err = libcni.ConfListFromBytes([]byte(opts.Kubelet.CNIConfFile.Content))
+			if err != nil {
+				return err
+			}
+		} else {
+			_, err = libcni.ConfFromBytes([]byte(opts.Kubelet.CNIConfFile.Content))
+			if err != nil {
+				return err
+			}
 		}
 	}
 
