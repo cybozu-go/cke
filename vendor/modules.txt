@@ -1,13 +1,3 @@
-# cloud.google.com/go v0.34.0
-cloud.google.com/go/storage
-cloud.google.com/go/iam
-cloud.google.com/go/internal
-cloud.google.com/go/internal/optional
-cloud.google.com/go/internal/trace
-cloud.google.com/go/internal/version
-cloud.google.com/go/compute/metadata
-# contrib.go.opencensus.io/exporter/stackdriver v0.6.0
-contrib.go.opencensus.io/exporter/stackdriver/propagation
 # github.com/99designs/gqlgen v0.7.1
 github.com/99designs/gqlgen/graphql
 github.com/99designs/gqlgen/graphql/introspection
@@ -15,6 +5,13 @@ github.com/99designs/gqlgen/handler
 github.com/99designs/gqlgen/complexity
 # github.com/agnivade/levenshtein v1.0.1
 github.com/agnivade/levenshtein
+# github.com/containernetworking/cni v0.6.0
+github.com/containernetworking/cni/libcni
+github.com/containernetworking/cni/pkg/invoke
+github.com/containernetworking/cni/pkg/types
+github.com/containernetworking/cni/pkg/version
+github.com/containernetworking/cni/pkg/types/020
+github.com/containernetworking/cni/pkg/types/current
 # github.com/coreos/bbolt v1.3.1-coreos.6
 github.com/coreos/bbolt
 # github.com/coreos/etcd v3.3.9+incompatible
@@ -65,7 +62,6 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
-github.com/golang/protobuf/protoc-gen-go/descriptor
 # github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db
 github.com/golang/snappy
 # github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c
@@ -78,8 +74,6 @@ github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
 # github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf
 github.com/google/gofuzz
-# github.com/googleapis/gax-go v2.0.0+incompatible
-github.com/googleapis/gax-go
 # github.com/googleapis/gnostic v0.2.0
 github.com/googleapis/gnostic/OpenAPIv2
 github.com/googleapis/gnostic/compiler
@@ -211,21 +205,6 @@ github.com/vektah/gqlparser/parser
 github.com/vektah/gqlparser/validator
 github.com/vektah/gqlparser/validator/rules
 github.com/vektah/gqlparser/lexer
-# go.opencensus.io v0.18.1-0.20181204023538-aab39bd6a98b
-go.opencensus.io/trace
-go.opencensus.io/plugin/ochttp
-go.opencensus.io/exemplar
-go.opencensus.io/internal
-go.opencensus.io/trace/internal
-go.opencensus.io/trace/tracestate
-go.opencensus.io/trace/propagation
-go.opencensus.io/plugin/ochttp/propagation/b3
-go.opencensus.io/stats
-go.opencensus.io/stats/view
-go.opencensus.io/tag
-go.opencensus.io
-go.opencensus.io/stats/internal
-go.opencensus.io/internal/tagencoding
 # golang.org/x/crypto v0.0.0-20181015023909-0c41d7ab0a0e
 golang.org/x/crypto/ssh
 golang.org/x/crypto/curve25519
@@ -243,17 +222,14 @@ golang.org/x/net/trace
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
-golang.org/x/net/context/ctxhttp
 golang.org/x/net/internal/timeseries
+golang.org/x/net/context/ctxhttp
 golang.org/x/net/html/charset
 golang.org/x/net/html
 golang.org/x/net/html/atom
 # golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 golang.org/x/oauth2
-golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
-golang.org/x/oauth2/jws
-golang.org/x/oauth2/jwt
 # golang.org/x/sys v0.0.0-20181005133103-4497e2df6f9e
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -278,32 +254,16 @@ golang.org/x/text/runes
 golang.org/x/text/internal/tag
 # golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2
 golang.org/x/time/rate
-# google.golang.org/api v0.0.0-20180910000450-7ca32eb868bf
-google.golang.org/api/option
-google.golang.org/api/googleapi
-google.golang.org/api/iterator
-google.golang.org/api/storage/v1
-google.golang.org/api/transport/http
-google.golang.org/api/internal
-google.golang.org/api/googleapi/internal/uritemplates
-google.golang.org/api/gensupport
-google.golang.org/api/googleapi/transport
 # google.golang.org/appengine v1.1.0
 google.golang.org/appengine/urlfetch
-google.golang.org/appengine
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/urlfetch
-google.golang.org/appengine/internal/app_identity
-google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
 google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 # google.golang.org/genproto v0.0.0-20181004005441-af9cb2a35e7f
-google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/status
-google.golang.org/genproto/googleapis/rpc/code
-google.golang.org/genproto/googleapis/api/annotations
 # google.golang.org/grpc v1.15.0
 google.golang.org/grpc
 google.golang.org/grpc/codes

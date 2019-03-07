@@ -37,18 +37,6 @@ CKE installs and maintains following Kubernetes resources.
 
 `cke-etcd` in `kube-system` namespace is a headless [Service](https://kubernetes.io/docs/concepts/services-networking/service/) and [Endpoints](https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors) to help applications find endpoints of CKE maintained etcd cluster.
 
-Bridge netfilter for `bridge` CNI plugin
-----------------------------------------
-
-CKE enables `bridge` CNI plugin by default.
-To allow TCP connection between Pod and Service completely, you need to set sysctl parameter `net.bridge.bridge-nf-call-iptables=1` in all nodes.
-See [details](https://gravitational.com/blog/troubleshooting-kubernetes-networking/)
-
-```console
-$ modprobe br_netfilter
-$ sysctl -w net.bridge.bridge-nf-call-iptables=1
-```
-
 Unchangeable features
 ---------------------
 

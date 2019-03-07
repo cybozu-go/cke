@@ -70,6 +70,13 @@ options:
         effect: NoExecute
     extra_args:
       - arg1
+    cni_conf_file:
+      name: 99-loopback.conf
+      content: |
+        {
+            "cniVersion": "0.3.1",
+            "type": "loopback"
+        }
 `
 	c := new(Cluster)
 	err := yaml.Unmarshal([]byte(y), c)
@@ -171,6 +178,12 @@ rules:
 	}
 	if !reflect.DeepEqual(c.Options.Kubelet.ExtraArguments, []string{"arg1"}) {
 		t.Error(`!reflect.DeepEqual(c.Options.Kubelet.ExtraArguments, []string{"arg1"})`)
+	}
+	if len(c.Options.Kubelet.CNIConfFile.Name) == 0 {
+		t.Error(`len(c.Options.Kubelet.CNIConfFile.Name) == 0`)
+	}
+	if len(c.Options.Kubelet.CNIConfFile.Content) == 0 {
+		t.Error(`len(c.Options.Kubelet.CNIConfFile.Content) == 0`)
 	}
 }
 
@@ -424,6 +437,57 @@ rules:
 								Value:  "hello",
 								Effect: "NoNoNo",
 							},
+						},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"filename is invalid",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					Kubelet: KubeletParams{
+						CNIConfFile: CNIConfFile{
+							Name:    "aaa&&.txt",
+							Content: `{"a":"b"}`,
+						},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"CNI conf file content is not empty, but name is empty",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					Kubelet: KubeletParams{
+						CNIConfFile: CNIConfFile{
+							Name:    "",
+							Content: `{"a":"b"}`,
+						},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"CNI conf file is not JSON",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					Kubelet: KubeletParams{
+						CNIConfFile: CNIConfFile{
+							Name:    "99.loopback.conf",
+							Content: "<aaa>",
 						},
 					},
 				},

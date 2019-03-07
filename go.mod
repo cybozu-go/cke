@@ -1,7 +1,7 @@
 module github.com/cybozu-go/cke
 
 require (
-	cloud.google.com/go v0.34.0
+	cloud.google.com/go v0.34.0 // indirect
 	contrib.go.opencensus.io/exporter/ocagent v0.4.1 // indirect
 	contrib.go.opencensus.io/exporter/stackdriver v0.6.0 // indirect
 	github.com/99designs/gqlgen v0.7.1
@@ -32,6 +32,7 @@ require (
 	github.com/circonus-labs/circonus-gometrics v2.2.1+incompatible // indirect
 	github.com/circonus-labs/circonusllhist v0.0.0-20180430145027-5eb751da55c6 // indirect
 	github.com/containerd/continuity v0.0.0-20180913211902-c2ac4ecc9593 // indirect
+	github.com/containernetworking/cni v0.6.0
 	github.com/coreos/bbolt v1.3.1-coreos.6
 	github.com/coreos/etcd v3.3.9+incompatible
 	github.com/coreos/go-oidc v2.0.0+incompatible // indirect
@@ -64,7 +65,6 @@ require (
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v0.0.0-20170111101155-53e6ce116135 // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
-	github.com/google/martian v2.1.0+incompatible // indirect
 	github.com/googleapis/gax-go v2.0.0+incompatible // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
@@ -149,7 +149,6 @@ require (
 	github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926 // indirect
 	github.com/vektah/gqlparser v1.0.0
 	golang.org/x/crypto v0.0.0-20181015023909-0c41d7ab0a0e
-	google.golang.org/api v0.0.0-20180910000450-7ca32eb868bf
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/gorethink/gorethink.v4 v4.1.0 // indirect
 	gopkg.in/ldap.v2 v2.5.1 // indirect

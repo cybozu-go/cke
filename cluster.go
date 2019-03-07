@@ -2,10 +2,13 @@ package cke
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"path/filepath"
+	"regexp"
 	"strings"
 
+	"github.com/containernetworking/cni/libcni"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -105,6 +108,12 @@ type APIServerParams struct {
 	AuditLogPolicy  string `json:"audit_log_policy" yaml:"audit_log_policy"`
 }
 
+// CNIConfFile is a config file for CNI plugin deployed on worker nodes by CKE.
+type CNIConfFile struct {
+	Name    string `json:"name"    yaml:"name"`
+	Content string `json:"content" yaml:"content"`
+}
+
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
 	ServiceParams            `yaml:",inline"`
@@ -115,6 +124,7 @@ type KubeletParams struct {
 	Domain                   string         `json:"domain"                     yaml:"domain"`
 	AllowSwap                bool           `json:"allow_swap"                 yaml:"allow_swap"`
 	BootTaints               []corev1.Taint `json:"boot_taints"                yaml:"boot_taints"`
+	CNIConfFile              CNIConfFile    `json:"cni_conf_file"              yaml:"cni_conf_file"`
 }
 
 // EtcdBackup is a set of configurations for etcdbackup.
@@ -359,6 +369,30 @@ func validateOptions(opts Options) error {
 		}
 		if opts.Kubelet.ContainerRuntime == "remote" && len(opts.Kubelet.ContainerRuntimeEndpoint) == 0 {
 			return errors.New("kubelet.container_runtime_endpoint should not be empty")
+		}
+	}
+	if len(opts.Kubelet.CNIConfFile.Content) != 0 && len(opts.Kubelet.CNIConfFile.Name) == 0 {
+		return fmt.Errorf("kubelet.cni_conf_file.name should not be empty when kubelet.cni_conf_file.content is not empty")
+	}
+	if filename := opts.Kubelet.CNIConfFile.Name; len(filename) != 0 {
+		matched, err := regexp.Match(`^[0-9A-Za-z_.-]+$`, []byte(filename))
+		if err != nil {
+			return err
+		}
+		if !matched {
+			return errors.New(filename + " is invalid as file name")
+		}
+
+		if filepath.Ext(opts.Kubelet.CNIConfFile.Name) == ".conflist" {
+			_, err = libcni.ConfListFromBytes([]byte(opts.Kubelet.CNIConfFile.Content))
+			if err != nil {
+				return err
+			}
+		} else {
+			_, err = libcni.ConfFromBytes([]byte(opts.Kubelet.CNIConfFile.Content))
+			if err != nil {
+				return err
+			}
 		}
 	}
 
