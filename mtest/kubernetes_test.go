@@ -255,7 +255,7 @@ var _ = Describe("Kubernetes", func() {
 			}
 			hostIP = pod.Status.HostIP
 			if hostIP == "" {
-				return errors.New("etcdbackup pod is not scheduled")
+				return fmt.Errorf("etcdbackup pod is not scheduled: %s", pod.String())
 			}
 			return nil
 		}).Should(Succeed())
