@@ -5,6 +5,12 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.8] - 2019-03-08
+
+### Changed
+- Correct kube-proxy flags to handle load balancers with `externalTrafficPolicy=Local` (#139).
+- Retry image pulling to be more robust (#140).
+
 ## [1.13.7] - 2019-03-07
 
 ### Added
@@ -64,7 +70,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.7...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.8...HEAD
+[1.13.8]: https://github.com/cybozu-go/cke/compare/v1.13.7...v1.13.8
 [1.13.7]: https://github.com/cybozu-go/cke/compare/v1.13.6...v1.13.7
 [1.13.6]: https://github.com/cybozu-go/cke/compare/v1.13.5...v1.13.6
 [1.13.5]: https://github.com/cybozu-go/cke/compare/v1.13.4...v1.13.5
