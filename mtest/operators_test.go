@@ -104,14 +104,29 @@ var _ = Describe("Operations", func() {
 
 		// check node6 is added
 		var status *cke.ClusterStatus
-		Eventually(func() []corev1.Node {
+		Eventually(func() error {
 			var err error
 			status, err = getClusterStatus(cluster)
 			if err != nil {
-				return nil
+				return err
 			}
-			return status.Kubernetes.Nodes
-		}).Should(HaveLen(len(cluster.Nodes)))
+			for _, n := range status.Kubernetes.Nodes {
+				nodeReady := false
+				for _, cond := range n.Status.Conditions {
+					if cond.Type == corev1.NodeReady && cond.Status == corev1.ConditionTrue {
+						nodeReady = true
+						break
+					}
+				}
+				if !nodeReady {
+					return errors.New("node is not ready: " + n.Name)
+				}
+			}
+			if len(status.Kubernetes.Nodes) != len(cluster.Nodes) {
+				return fmt.Errorf("nodes length should be %d, actual %d", len(cluster.Nodes), len(status.Kubernetes.Nodes))
+			}
+			return nil
+		}).Should(Succeed())
 
 		// check bootstrap taints for node6
 		// also check bootstrap taints for node2 and node4
