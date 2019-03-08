@@ -50,9 +50,14 @@ func (o *kubeProxyBootOp) NextCommand() cke.Commander {
 			"--tmpfs=/run",
 			"--privileged",
 		}
+		paramsMap := make(map[string]cke.ServiceParams)
+		for _, n := range o.nodes {
+			params := ProxyParams(n)
+			paramsMap[n.Address] = params
+		}
 		return common.RunContainerCommand(o.nodes, op.KubeProxyContainerName, cke.HyperkubeImage,
 			common.WithOpts(opts),
-			common.WithParams(ProxyParams()),
+			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params))
 	default:
 		return nil
@@ -90,10 +95,11 @@ func (c prepareProxyFilesCommand) Command() cke.Command {
 }
 
 // ProxyParams returns parameters for kube-proxy.
-func ProxyParams() cke.ServiceParams {
+func ProxyParams(n *cke.Node) cke.ServiceParams {
 	args := []string{
 		"proxy",
 		"--proxy-mode=ipvs",
+		"--hostname-override=" + n.Nodename(),
 		"--kubeconfig=/etc/kubernetes/proxy/kubeconfig",
 	}
 	return cke.ServiceParams{
