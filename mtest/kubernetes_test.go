@@ -112,10 +112,13 @@ var _ = Describe("Kubernetes", func() {
 		_, stderr, err = kubectl("expose", "-n=mtest", "deployments", "nginx", "--port=80")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		overrides := fmt.Sprintf(`{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" }}}`, node)
+		overrides := fmt.Sprintf(`{
+	"apiVersion": "v1",
+	"spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" }}
+}`, node)
 		_, stderr, err = kubectl("run",
-			"-n=mtest", "--image=quay.io/cybozu/ubuntu:18.04", "--overrides="+overrides+"", "--restart=Never", "client", "--",
-			"sleep", "infinity")
+			"-n=mtest", "--image=quay.io/cybozu/ubuntu:18.04", "--overrides="+overrides+"", "--restart=Never",
+			"client", "--", "sleep", "infinity")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		By("waiting pods are ready")
@@ -213,10 +216,13 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("querying www.google.com using node DNS from ubuntu pod")
-		_, stderr, err := kubectl("run", "-it", "--rm", "-n=mtest", "ubuntu",
-			"--image=quay.io/cybozu/ubuntu-debug:18.04", "--generator=run-pod/v1",
-			"--restart=Never", "--command", "--", "host", "-N", "0", "www.google.com")
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+		_, stderr, err := kubectl("run", "-n=mtest", "--image=quay.io/cybozu/ubuntu:18.04", "--restart=Never",
+			"client", "--", "sleep", "infinity")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		Eventually(func() error {
+			_, _, err := kubectl("exec", "-n=mtest", "client", "getent", "hosts", "www.cybozu.com")
+			return err
+		}).Should(Succeed())
 	})
 
 	It("has kube-system/cke-etcd Service and Endpoints", func() {
