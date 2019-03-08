@@ -30,7 +30,7 @@ var _ = BeforeSuite(func() {
 	fmt.Println("Preparing...")
 
 	SetDefaultEventuallyPollingInterval(3 * time.Second)
-	SetDefaultEventuallyTimeout(6 * time.Minute)
+	SetDefaultEventuallyTimeout(10 * time.Minute)
 
 	log.DefaultLogger().SetThreshold(log.LvError)
 
