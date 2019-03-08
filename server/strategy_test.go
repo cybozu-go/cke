@@ -194,12 +194,12 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 }
 
 func (d testData) withProxy() testData {
-	for _, v := range d.Status.NodeStatuses {
-		st := &v.Proxy
+	for _, n := range d.Cluster.Nodes {
+		st := &d.NodeStatus(n).Proxy
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.HyperkubeImage.Name()
-		st.BuiltInParams = k8s.ProxyParams()
+		st.BuiltInParams = k8s.ProxyParams(n)
 	}
 	return d
 }

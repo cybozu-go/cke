@@ -475,11 +475,11 @@ func (nf *NodeFilter) ProxyStoppedNodes() (nodes []*cke.Node) {
 
 // ProxyOutdatedNodes returns nodes that are running kube-proxy with outdated image or params.
 func (nf *NodeFilter) ProxyOutdatedNodes() (nodes []*cke.Node) {
-	currentBuiltIn := k8s.ProxyParams()
 	currentExtra := nf.cluster.Options.Proxy
 
 	for _, n := range nf.cluster.Nodes {
 		st := nf.nodeStatus(n).Proxy
+		currentBuiltIn := k8s.ProxyParams(n)
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
