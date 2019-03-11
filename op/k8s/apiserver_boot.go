@@ -25,9 +25,6 @@ var (
 		"MutatingAdmissionWebhook",
 		"ValidatingAdmissionWebhook",
 		"ResourceQuota",
-
-		// NodeRestriction is not in the list above, but added to restrict kubelet privilege.
-		"NodeRestriction",
 	}
 )
 
