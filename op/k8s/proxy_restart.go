@@ -12,8 +12,8 @@ type kubeProxyRestartOp struct {
 	cluster string
 	params  cke.ServiceParams
 
-	pulled   bool
-	finished bool
+	step  int
+	files *common.FilesBuilder
 }
 
 // KubeProxyRestartOp returns an Operator to restart kube-proxy.
@@ -22,6 +22,7 @@ func KubeProxyRestartOp(nodes []*cke.Node, cluster string, params cke.ServicePar
 		nodes:   nodes,
 		cluster: cluster,
 		params:  params,
+		files:   common.NewFilesBuilder(nodes),
 	}
 }
 
@@ -30,13 +31,18 @@ func (o *kubeProxyRestartOp) Name() string {
 }
 
 func (o *kubeProxyRestartOp) NextCommand() cke.Commander {
-	if !o.pulled {
-		o.pulled = true
+	switch o.step {
+	case 0:
+		o.step++
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
-	}
-
-	if !o.finished {
-		o.finished = true
+	case 1:
+		o.step++
+		return prepareProxyFilesCommand{o.cluster, o.files}
+	case 2:
+		o.step++
+		return o.files
+	case 3:
+		o.step++
 		opts := []string{
 			"--tmpfs=/run",
 			"--privileged",
@@ -51,6 +57,7 @@ func (o *kubeProxyRestartOp) NextCommand() cke.Commander {
 			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params),
 			common.WithRestart())
+	default:
+		return nil
 	}
-	return nil
 }

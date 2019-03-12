@@ -7,6 +7,7 @@ import (
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 	yaml "gopkg.in/yaml.v2"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type kubeletRestartOp struct {
@@ -42,7 +43,7 @@ func (o *kubeletRestartOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
-		return prepareKubeletConfigCommand{o.params, o.files}
+		return prepareKubeletConfigCommand{o.cluster, o.params, o.files}
 	case 2:
 		o.step++
 		return o.files
@@ -67,12 +68,12 @@ func (o *kubeletRestartOp) NextCommand() cke.Commander {
 }
 
 type prepareKubeletConfigCommand struct {
-	params cke.KubeletParams
-	files  *common.FilesBuilder
+	cluster string
+	params  cke.KubeletParams
+	files   *common.FilesBuilder
 }
 
 func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
-	const kubeletConfigPath = "/etc/kubernetes/kubelet/config.yml"
 	caPath := op.K8sPKIPath("ca.crt")
 	tlsCertPath := op.K8sPKIPath("kubelet.crt")
 	tlsKeyPath := op.K8sPKIPath("kubelet.key")
@@ -84,7 +85,28 @@ func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastruc
 		cfg.ClusterDNS = []string{n.Address}
 		return yaml.Marshal(cfg)
 	}
-	return c.files.AddFile(ctx, kubeletConfigPath, g)
+	err := c.files.AddFile(ctx, kubeletConfigPath, g)
+	if err != nil {
+		return err
+	}
+
+	f := func(ctx context.Context, n *cke.Node) (cert, key []byte, err error) {
+		c, k, e := cke.KubernetesCA{}.IssueForKubelet(ctx, inf, n)
+		if e != nil {
+			return nil, nil, e
+		}
+		return []byte(c), []byte(k), nil
+	}
+	err = c.files.AddKeyPair(ctx, op.K8sPKIPath("kubelet"), f)
+	if err != nil {
+		return err
+	}
+
+	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		cfg := kubeletKubeconfig(c.cluster, n, caPath, tlsCertPath, tlsKeyPath)
+		return clientcmd.Write(*cfg)
+	}
+	return c.files.AddFile(ctx, kubeconfigPath, g)
 }
 
 func (c prepareKubeletConfigCommand) Command() cke.Command {

@@ -16,6 +16,11 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
+const (
+	kubeconfigPath    = "/etc/kubernetes/kubelet/kubeconfig"
+	kubeletConfigPath = "/etc/kubernetes/kubelet/config.yml"
+)
+
 type kubeletBootOp struct {
 	nodes []*cke.Node
 
@@ -156,8 +161,6 @@ type prepareKubeletFilesCommand struct {
 }
 
 func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
-	const kubeletConfigPath = "/etc/kubernetes/kubelet/config.yml"
-	const kubeconfigPath = "/etc/kubernetes/kubelet/kubeconfig"
 	caPath := op.K8sPKIPath("ca.crt")
 	tlsCertPath := op.K8sPKIPath("kubelet.crt")
 	tlsKeyPath := op.K8sPKIPath("kubelet.key")
