@@ -250,7 +250,7 @@ build-containerd:
 	curl -fsSL -o containerd.tar.gz https://github.com/containerd/containerd/archive/v${CONTAINERD_VERSION}.tar.gz
 	tar -x -z --strip-components 1 -f containerd.tar.gz -C $(GOPATH)/src/github.com/containerd/containerd
 	rm -f containerd.tar.gz
-	(cd $(GOPATH)/src/github.com/containerd/containerd; make VERSION=$(CONTAINERD_VERSION))
+	(cd $(GOPATH)/src/github.com/containerd/containerd; env GO111MODULE=off make VERSION=$(CONTAINERD_VERSION))
 
 $(OUTPUT)/containerd: build-containerd
 	mkdir -p $(OUTPUT)
