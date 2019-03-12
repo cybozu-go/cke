@@ -23,9 +23,13 @@ VAULT_VERSION = 1.0.2
 K8S_VERSION = 1.13.2
 PLACEMAT_DATADIR = /var/scratch/placemat
 CONTAINERD_VERSION = 1.2.4
+PROTOC_VERSION = 3.6.1
+PROTOC = /usr/local/bin/protoc
 CRITOOLS_VERSION = 1.13.0
-SUDO = sudo
+CT_VERSION = 0.9.0
 CT = /usr/local/bin/ct
+SUDO = sudo
+PACKAGES = libseccomp-dev
 
 export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO CONTAINER_RUNTIME
 
@@ -154,7 +158,12 @@ $(OUTPUT)/host2.ign: host.ign
 		-e 's/__HOST1__/$(HOST1)/' \
 		-e 's/__NODE_ADDRESS__/$(HOST2)/' $< > $@
 
-node.ign: node-ign.yml
+$(CT):
+	curl -fsSL -o ct https://github.com/coreos/container-linux-config-transpiler/releases/download/v$(CT_VERSION)/ct-v$(CT_VERSION)-x86_64-unknown-linux-gnu
+	chmod +x ct
+	$(SUDO) mv ct $@
+
+node.ign: node-ign.yml $(CT)
 	$(CT) -in-file=$< -pretty -out-file=$@
 
 $(OUTPUT)/node1.ign: node.ign
@@ -244,7 +253,11 @@ $(OUTPUT)/cke.yml: cke.yml
 	mkdir -p $(OUTPUT)
 	sed -e 's/__HOST1__/$(HOST1)/' $< > $@
 
-build-containerd:
+$(PROTOC):
+	curl -fsSL -o protoc.zip https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-linux-x86_64.zip
+	$(SUDO) unzip -o protoc.zip -d /usr/local
+
+build-containerd: $(PROTOC)
 	rm -rf $(GOPATH)/src/github.com/containerd/containerd
 	mkdir -p $(GOPATH)/src/github.com/containerd/containerd
 	curl -fsSL -o containerd.tar.gz https://github.com/containerd/containerd/archive/v${CONTAINERD_VERSION}.tar.gz
@@ -308,5 +321,7 @@ setup:
 	GO111MODULE=off go get -u \
 		github.com/onsi/ginkgo/ginkgo \
 		github.com/coreos/gofail
+	$(SUDO) apt-get update
+	$(SUDO) apt-get -y install --no-install-recommends $(PACKAGES)
 
 .PHONY:	all clean setup test
