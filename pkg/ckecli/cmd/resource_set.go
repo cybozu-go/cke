@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/cybozu-go/cke"
-
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
@@ -25,12 +24,12 @@ Supports only the following types of resources.
   * Namespace
   * ServiceAccount
   * PodSecurityPolicy
-  * NetworkPolicy,
+  * NetworkPolicy
   * Role
   * RoleBinding
   * ClusterRole
   * ClusterRoleBinding
-  * ConfigMap,
+  * ConfigMap
   * Deployment
   * DaemonSet
   * CronJob
@@ -53,8 +52,12 @@ Supports only the following types of resources.
 				} else if err != nil {
 					return err
 				}
-				cke.RegisterResource(data)
+				err = cke.ParseResource(data)
+				if err != nil {
+					return err
+				}
 			}
+			return nil
 		})
 		well.Stop()
 		return well.Wait()
