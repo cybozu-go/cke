@@ -62,6 +62,17 @@ Each entry of audit log is stored with this type of key.
 
 The value is JSON defined in [Record](record.md).
 
+`resource/`
+-----------
+
+### `resource/<KIND>[/<NAMESPACE>]/<NAME>`
+
+User defined resource definitions in JSON format.
+
+### `resource-patch/<KIND>[/<NAMESPACE>]/<NAME>/<REVISION>`
+
+Strategic merge patch for a resource at `<REVISION>`.
+
 `sabakan/`
 ----------
 

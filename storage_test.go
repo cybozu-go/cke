@@ -245,17 +245,17 @@ func testStorageResource(t *testing.T) {
 		t.Error(`len(keys) != 0`)
 	}
 
-	_, err = storage.GetResource(ctx, "Namespace/foo")
+	_, _, err = storage.GetResource(ctx, "Namespace/foo")
 	if err != ErrNotFound {
 		t.Error(`err != ErrNotFound,`, err)
 	}
 
-	err = storage.SetResource(ctx, "Namespace/foo", "bar")
+	err = storage.CreateResource(ctx, "Namespace/foo", "bar")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	fooVal, err := storage.GetResource(ctx, "Namespace/foo")
+	fooVal, rev, err := storage.GetResource(ctx, "Namespace/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,7 +263,62 @@ func testStorageResource(t *testing.T) {
 		t.Error(`string(fooVal) != "bar",`, string(fooVal))
 	}
 
-	err = storage.SetResource(ctx, "Pod/foo/pod1", "pod")
+	err = storage.CreateResource(ctx, "Namespace/foo", "bar")
+	if err == nil {
+		t.Error("CreateResource should return error")
+	}
+
+	err = storage.SetResourceWithPatch(ctx, "Namespace/foo", "pod", []byte("patch"), rev-1)
+	if err == nil {
+		t.Error("SetResourceWithPatch should return error")
+	}
+
+	err = storage.SetResourceWithPatch(ctx, "Namespace/foo", "pod", []byte("patch"), rev)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, rev2, err := storage.GetResource(ctx, "Namespace/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = storage.SetResourceWithPatch(ctx, "Namespace/foo", "pod", []byte("newpatch"), rev2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	patches, err := storage.GetPatches(ctx, "Namespace/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedPatches := []Patch{
+		{
+			Revision: rev,
+			Data:     []byte("patch"),
+		},
+		{
+			Revision: rev2,
+			Data:     []byte("newpatch"),
+		},
+	}
+	if !cmp.Equal(expectedPatches, patches) {
+		t.Error("!cmp.Equal(expectedPatches, patches)", cmp.Diff(expectedPatches, patches))
+	}
+
+	err = storage.DeletePatch(ctx, "Namespace/foo", rev)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patches, err = storage.GetPatches(ctx, "Namespace/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(patches) != 1 {
+		t.Error("len(patches) != 1")
+	}
+
+	err = storage.CreateResource(ctx, "Pod/foo/pod1", "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,10 +337,11 @@ func testStorageResource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = storage.GetResource(ctx, "Namespace/foo")
+	_, _, err = storage.GetResource(ctx, "Namespace/foo")
 	if err != ErrNotFound {
 		t.Error(`err != ErrNotFound,`, err)
 	}
+
 }
 
 func testStorageSabakan(t *testing.T) {
