@@ -8,9 +8,10 @@ func TestParseResource(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name string
-		yaml string
-		key  string
+		name        string
+		yaml        string
+		key         string
+		expectError bool
 	}{
 		{
 			"Namespace",
@@ -22,6 +23,7 @@ metadata:
   name: monitoring
 `,
 			"Namespace/monitoring",
+			false,
 		},
 		{
 			"ServiceAccount",
@@ -32,6 +34,7 @@ metadata:
   namespace: kube-system
 `,
 			"ServiceAccount/kube-system/coil-controller",
+			false,
 		},
 		{
 			"ConfigMap",
@@ -48,6 +51,7 @@ data:
     }
 `,
 			"ConfigMap/kube-system/coil-config",
+			false,
 		},
 		{
 			"Service",
@@ -67,6 +71,7 @@ spec:
       targetPort: 3128
 `,
 			"Service/internet-egress/squid",
+			false,
 		},
 		{
 			"PodSecurityPolicy",
@@ -99,6 +104,7 @@ spec:
     rule: 'RunAsAny'
 `,
 			"PodSecurityPolicy/privileged",
+			false,
 		},
 		{
 			"NetworkPolicy",
@@ -138,6 +144,7 @@ spec:
       port: 5978
 `,
 			"NetworkPolicy/default/test-network-policy",
+			false,
 		},
 		{
 			"ClusterNetworkPolicy",
@@ -150,6 +157,7 @@ spec:
   policyTypes:
   - Ingress`,
 			"NetworkPolicy//default-deny",
+			false,
 		},
 		{
 			"Role",
@@ -163,6 +171,7 @@ rules:
   resources: ["pods"]
   verbs: ["get", "watch", "list"]`,
 			"Role/default/pod-reader",
+			false,
 		},
 		{
 			"RoleBinding",
@@ -180,6 +189,7 @@ roleRef:
   name: pod-reader # this must match the name of the Role or ClusterRole you wish to bind to
   apiGroup: rbac.authorization.k8s.io`,
 			"RoleBinding/default/read-pods",
+			false,
 		},
 		{
 			"ClusterRole",
@@ -193,6 +203,7 @@ rules:
   resources: ["secrets"]
   verbs: ["get", "watch", "list"]`,
 			"ClusterRole/secret-reader",
+			false,
 		},
 		{
 			"ClusterRoleBinding",
@@ -210,6 +221,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 `,
 			"ClusterRoleBinding/read-secrets-global",
+			false,
 		},
 		{
 			"Deployment",
@@ -275,6 +287,7 @@ spec:
             defaultMode: 0400
 `,
 			"Deployment/kube-system/coil-controllers",
+			false,
 		},
 		{
 			"DaemonSet",
@@ -359,6 +372,7 @@ spec:
             defaultMode: 0400
 `,
 			"DaemonSet/kube-system/coil-node",
+			false,
 		},
 		{
 			"CronJob",
@@ -384,6 +398,46 @@ spec:
   schedule:  "* 0 0 0 0"
 `,
 			"CronJob/kube-system/etcd-backup",
+			false,
+		},
+		{
+			"StatefulSet",
+			`apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: web
+spec:
+  selector:
+    matchLabels:
+      app: nginx # has to match .spec.template.metadata.labels
+  serviceName: "nginx"
+  replicas: 3 # by default is 1
+  template:
+    metadata:
+      labels:
+        app: nginx # has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: nginx
+        image: k8s.gcr.io/nginx-slim:0.8
+        ports:
+        - containerPort: 80
+          name: web
+        volumeMounts:
+        - name: www
+          mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:
+  - metadata:
+      name: www
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "my-storage-class"
+      resources:
+        requests:
+          storage: 1Gi`,
+			"",
+			true,
 		},
 	}
 
@@ -391,8 +445,15 @@ spec:
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			key, _, err := ParseResource([]byte(c.yaml))
+			if c.expectError {
+				if err == nil {
+					t.Error("error should have occurred")
+				}
+				return
+			}
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
+				return
 			}
 			if key != c.key {
 				t.Error("unexpected key: ", c.key, key)
