@@ -514,7 +514,12 @@ func (s Storage) DeletePatch(ctx context.Context, key string, rev int64) error {
 
 // DeleteResource removes a user resource from etcd.
 func (s Storage) DeleteResource(ctx context.Context, key string) error {
-	_, err := s.Delete(ctx, KeyResourcePrefix+key)
+	_, err := s.Txn(ctx).
+		Then(
+			clientv3.OpDelete(KeyResourcePrefix+key),
+			clientv3.OpDelete(KeyResourcePatchPrefix+key+"/", clientv3.WithPrefix()),
+		).
+		Commit()
 	return err
 }
 

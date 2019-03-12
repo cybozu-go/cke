@@ -13,12 +13,35 @@ import (
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
+func updateResource(ctx context.Context, data []byte) error {
+	key, modified, obj, err := cke.ParseResource(data)
+	if err != nil {
+		return err
+	}
+	original, rev, err := storage.GetResource(ctx, key)
+	if err == cke.ErrNotFound {
+		return storage.CreateResource(ctx, cke.KeyResourcePrefix+key, string(modified))
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// calculate diff
+	patch, err := cke.CreateResourceDiff(original, modified, obj)
+	if err != nil {
+		return err
+	}
+
+	return storage.SetResourceWithPatch(ctx, key, string(modified), patch, rev)
+}
+
 var resourceSetCmd = &cobra.Command{
 	Use:   "set FILE",
-	Short: "register user resources.",
-	Long: `Register user resources.
+	Short: "register user-defined resources.",
+	Long: `Register user-defined resources.
 
-FILE should contain multiple Kubernetes resources in YAML format.
+FILE should contain multiple Kubernetes resources in YAML or JSON format.
 Supports only the following types of resources.
 
   * Namespace
@@ -52,18 +75,8 @@ Supports only the following types of resources.
 				} else if err != nil {
 					return err
 				}
-				key, jd, err := cke.ParseResource(data)
-				if err != nil {
-					return err
-				}
-				_, _, err = storage.GetResource(ctx, key)
-				if err == cke.ErrNotFound {
-					err = storage.CreateResource(ctx, cke.KeyResourcePrefix+key, string(jd))
-					if err != nil {
-						return err
-					}
-					continue
-				}
+
+				err = updateResource(ctx, data)
 				if err != nil {
 					return err
 				}
