@@ -13,26 +13,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-// Kind represents resource types in Kubernetes.
-type Kind string
-
-// List of supported Kinds
-const (
-	KindNamespace          = Kind("Namespace")
-	KindServiceAccount     = Kind("ServiceAccount")
-	KindPodSecurityPolicy  = Kind("PodSecurityPolicy")
-	KindNetworkPolicy      = Kind("NetworkPolicy")
-	KindRole               = Kind("Role")
-	KindRoleBinding        = Kind("RoleBinding")
-	KindClusterRole        = Kind("ClusterRole")
-	KindClusterRoleBinding = Kind("ClusterRoleBinding")
-	KindConfigMap          = Kind("ConfigMap")
-	KindDeployment         = Kind("Deployment")
-	KindDaemonSet          = Kind("DaemonSet")
-	KindCronJob            = Kind("CronJob")
-	KindService            = Kind("Service")
-)
-
 // ParseResource parses YAML string.
 func ParseResource(data []byte) (key string, jsonData []byte, err error) {
 	decode := scheme.Codecs.UniversalDeserializer().Decode
@@ -46,29 +26,41 @@ func ParseResource(data []byte) (key string, jsonData []byte, err error) {
 		data, err := json.Marshal(o)
 		return o.Kind + "/" + o.Name, data, err
 	case *corev1.ServiceAccount:
-		fmt.Println("this is service account")
+		data, err := json.Marshal(o)
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *corev1.ConfigMap:
-		fmt.Println("this is config map")
+		data, err := json.Marshal(o)
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *corev1.Service:
-		fmt.Println("this is service")
+		data, err := json.Marshal(o)
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *policyv1beta1.PodSecurityPolicy:
-		fmt.Println("this is pod security policy")
+		data, err := json.Marshal(o)
+		return o.Kind + "/" + o.Name, data, err
 	case *networkingv1.NetworkPolicy:
-		fmt.Println("this is network policy")
+		data, err := json.Marshal(o)
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *rbacv1.Role:
-		fmt.Println("this is role")
+		data, err := json.Marshal(o)
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *rbacv1.RoleBinding:
-		fmt.Println("this is role binding")
+		data, err := json.Marshal(o)
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *rbacv1.ClusterRole:
-		fmt.Println("this is cluster role")
+		data, err := json.Marshal(o)
+		return o.Kind + "/" + o.Name, data, err
 	case *rbacv1.ClusterRoleBinding:
-		fmt.Println("this is cluster role binding")
+		data, err := json.Marshal(o)
+		return o.Kind + "/" + o.Name, data, err
 	case *appsv1.Deployment:
-		fmt.Println("this is deployment")
+		data, err := json.Marshal(o)
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *appsv1.DaemonSet:
-		fmt.Println("this is daemonset")
+		data, err := json.Marshal(o)
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *batchv2alpha1.CronJob:
-		fmt.Println("this is cron job")
+		data, err := json.Marshal(o)
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	}
 
 	return "", nil, fmt.Errorf("unsupported type: %s", gvk.String())

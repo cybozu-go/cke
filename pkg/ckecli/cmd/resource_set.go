@@ -52,7 +52,18 @@ Supports only the following types of resources.
 				} else if err != nil {
 					return err
 				}
-				err = cke.ParseResource(data)
+				key, jd, err := cke.ParseResource(data)
+				if err != nil {
+					return err
+				}
+				_, _, err = storage.GetResource(ctx, key)
+				if err == cke.ErrNotFound {
+					err = storage.CreateResource(ctx, cke.KeyResourcePrefix+key, string(jd))
+					if err != nil {
+						return err
+					}
+					continue
+				}
 				if err != nil {
 					return err
 				}
