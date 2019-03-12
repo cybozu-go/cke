@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
+	"github.com/google/go-cmp/cmp"
 )
 
 func testStorageCluster(t *testing.T) {
@@ -228,6 +229,65 @@ func testStorageMaint(t *testing.T) {
 	}
 }
 
+func testStorageResource(t *testing.T) {
+	t.Parallel()
+
+	client := newEtcdClient(t)
+	defer client.Close()
+	storage := Storage{client}
+	ctx := context.Background()
+
+	keys, err := storage.ListResources(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(keys) != 0 {
+		t.Error(`len(keys) != 0`)
+	}
+
+	_, err = storage.GetResource(ctx, "Namespace/foo")
+	if err != ErrNotFound {
+		t.Error(`err != ErrNotFound,`, err)
+	}
+
+	err = storage.SetResource(ctx, "Namespace/foo", "bar")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fooVal, err := storage.GetResource(ctx, "Namespace/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(fooVal) != "bar" {
+		t.Error(`string(fooVal) != "bar",`, string(fooVal))
+	}
+
+	err = storage.SetResource(ctx, "Pod/foo/pod1", "pod")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keys, err = storage.ListResources(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedKeys := []string{"Namespace/foo", "Pod/foo/pod1"}
+	if !cmp.Equal(expectedKeys, keys) {
+		t.Error("unexpected list result:", cmp.Diff(expectedKeys, keys))
+	}
+
+	err = storage.DeleteResource(ctx, "Namespace/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = storage.GetResource(ctx, "Namespace/foo")
+	if err != ErrNotFound {
+		t.Error(`err != ErrNotFound,`, err)
+	}
+}
+
 func testStorageSabakan(t *testing.T) {
 	t.Parallel()
 
@@ -353,5 +413,6 @@ func TestStorage(t *testing.T) {
 	t.Run("Constraints", testStorageConstraints)
 	t.Run("Record", testStorageRecord)
 	t.Run("Maint", testStorageMaint)
+	t.Run("Resource", testStorageResource)
 	t.Run("Sabakan", testStorageSabakan)
 }

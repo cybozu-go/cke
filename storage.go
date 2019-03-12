@@ -25,6 +25,7 @@ const (
 	KeyLeader                = "leader/"
 	KeyRecords               = "records/"
 	KeyRecordID              = "records"
+	KeyResourcePrefix        = "resource/"
 	KeySabakanQueryVariables = "sabakan/query-variables"
 	KeySabakanTemplate       = "sabakan/template"
 	KeySabakanURL            = "sabakan/url"
@@ -398,6 +399,54 @@ func (s Storage) GetLeaderHostname(ctx context.Context) (string, error) {
 		return "", errors.New("no leader")
 	}
 	return string(resp.Kvs[0].Value), nil
+}
+
+// ListResources lists keys of registered user resources.
+func (s Storage) ListResources(ctx context.Context) ([]string, error) {
+	resp, err := s.Get(ctx, KeyResourcePrefix,
+		clientv3.WithPrefix(),
+		clientv3.WithKeysOnly(),
+		clientv3.WithSort(clientv3.SortByKey, clientv3.SortAscend),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Count == 0 {
+		return nil, nil
+	}
+
+	keys := make([]string, resp.Count)
+	for i, kv := range resp.Kvs {
+		keys[i] = string(kv.Key[len(KeyResourcePrefix):])
+	}
+	return keys, nil
+}
+
+// GetResource gets a user resource.
+func (s Storage) GetResource(ctx context.Context, key string) ([]byte, error) {
+	resp, err := s.Get(ctx, KeyResourcePrefix+key)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Count == 0 {
+		return nil, ErrNotFound
+	}
+
+	return resp.Kvs[0].Value, nil
+}
+
+// SetResource sets a user resource.
+func (s Storage) SetResource(ctx context.Context, key, value string) error {
+	_, err := s.Put(ctx, KeyResourcePrefix+key, value)
+	return err
+}
+
+// DeleteResource removes a user resource from etcd.
+func (s Storage) DeleteResource(ctx context.Context, key string) error {
+	_, err := s.Delete(ctx, KeyResourcePrefix+key)
+	return err
 }
 
 // SetSabakanQueryVariables sets query variables for Sabakan.
