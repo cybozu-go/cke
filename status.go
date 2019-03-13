@@ -1,6 +1,8 @@
 package cke
 
 import (
+	"strconv"
+
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -53,6 +55,22 @@ type KubernetesClusterStatus struct {
 	NodeDNS               NodeDNSStatus
 	EtcdEndpoints         *corev1.Endpoints
 	EtcdBackup            EtcdBackupStatus
+	ResourceStatuses      map[string]int64
+}
+
+// SetResourceStatus sets status of the resource.
+func (s KubernetesClusterStatus) SetResourceStatus(rkey string, annotations map[string]string) error {
+	a, ok := annotations[AnnotationResourceRevision]
+	if !ok {
+		s.ResourceStatuses[rkey] = 0
+		return nil
+	}
+	rev, err := strconv.ParseInt(a, 10, 64)
+	if err != nil {
+		return err
+	}
+	s.ResourceStatuses[rkey] = rev
+	return nil
 }
 
 // ClusterStatus represents the working cluster status.

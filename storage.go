@@ -425,17 +425,17 @@ func (s Storage) ListResources(ctx context.Context) ([]string, error) {
 }
 
 // GetResource gets a user resource.
-func (s Storage) GetResource(ctx context.Context, key string) ([]byte, error) {
+func (s Storage) GetResource(ctx context.Context, key string) ([]byte, int64, error) {
 	resp, err := s.Get(ctx, KeyResourcePrefix+key)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if resp.Count == 0 {
-		return nil, ErrNotFound
+		return nil, 0, ErrNotFound
 	}
 
-	return resp.Kvs[0].Value, nil
+	return resp.Kvs[0].Value, resp.Kvs[0].ModRevision, nil
 }
 
 // SetResourceWithPatch sets a user resource with patch.

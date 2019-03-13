@@ -245,7 +245,7 @@ func testStorageResource(t *testing.T) {
 		t.Error(`len(keys) != 0`)
 	}
 
-	_, err = storage.GetResource(ctx, "Namespace/foo")
+	_, _, err = storage.GetResource(ctx, "Namespace/foo")
 	if err != ErrNotFound {
 		t.Error(`err != ErrNotFound,`, err)
 	}
@@ -255,7 +255,7 @@ func testStorageResource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fooVal, err := storage.GetResource(ctx, "Namespace/foo")
+	fooVal, _, err := storage.GetResource(ctx, "Namespace/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,7 +282,7 @@ func testStorageResource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = storage.GetResource(ctx, "Namespace/foo")
+	_, _, err = storage.GetResource(ctx, "Namespace/foo")
 	if err != ErrNotFound {
 		t.Error(`err != ErrNotFound,`, err)
 	}

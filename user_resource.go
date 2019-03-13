@@ -15,6 +15,11 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
+const (
+	AnnotationResourceRevision = "cke.cybozu.com/revision"
+	AnnotationResourceOriginal = "cke.cybozu.com/last-applied-configuration"
+)
+
 // ParseResource parses YAML string.
 func ParseResource(data []byte) (key string, jsonData []byte, err error) {
 	decode := scheme.Codecs.UniversalDeserializer().Decode
