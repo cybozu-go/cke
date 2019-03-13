@@ -10,8 +10,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -74,7 +72,11 @@ func ParseResource(data []byte) (key string, jsonData []byte, err error) {
 	return "", nil, fmt.Errorf("unsupported type: %s", gvk.String())
 }
 
-// CreateResourceDiff calculate strategic merge patch between two resources.
-func CreateResourceDiff(original, modified []byte, obj runtime.Object) ([]byte, error) {
-	return strategicpatch.CreateTwoWayMergePatch(original, modified, obj)
+// ResourceDefinition represents a user-defined resource in etcd.
+type ResourceDefinition struct {
+	Kind       string
+	Namespace  string
+	Name       string
+	Revision   int64
+	Definition string
 }

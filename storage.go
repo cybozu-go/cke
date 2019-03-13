@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/clientv3util"
@@ -435,6 +436,41 @@ func (s Storage) GetResource(ctx context.Context, key string) ([]byte, int64, er
 	}
 
 	return resp.Kvs[0].Value, resp.Kvs[0].ModRevision, nil
+}
+
+// GetAllResources gets all user-defined resources.
+func (s Storage) GetAllResources(ctx context.Context) (map[string]ResourceDefinition, error) {
+	resp, err := s.Get(ctx, KeyResourcePrefix, clientv3.WithPrefix())
+	if err != nil {
+		return nil, err
+	}
+
+	rcs := make(map[string]ResourceDefinition)
+	for _, kv := range resp.Kvs {
+		key := string(kv.Key[len(KeyResourcePrefix):])
+		parts := strings.Split(key, "/")
+		kind := parts[0]
+		var namespace, name string
+		switch len(parts) {
+		case 2:
+			name = parts[1]
+		case 3:
+			namespace = parts[1]
+			name = parts[2]
+		default:
+			return nil, errors.New("invalid resource key: " + key)
+		}
+
+		rcs[key] = ResourceDefinition{
+			Kind:       kind,
+			Namespace:  namespace,
+			Name:       name,
+			Revision:   kv.ModRevision,
+			Definition: string(kv.Value),
+		}
+	}
+
+	return rcs, nil
 }
 
 // SetResource sets a user resource.
