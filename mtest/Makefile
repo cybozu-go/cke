@@ -254,7 +254,7 @@ $(OUTPUT)/cke.yml: cke.yml
 	sed -e 's/__HOST1__/$(HOST1)/' $< > $@
 
 $(PROTOC):
-	curl -fSSL -o /tmp/protobuf.tar.gz https://github.com/protocolbuffers/protobuf/archive/v$(PROTOBUF_VERSION).tar.gz
+	curl -fsSL -o /tmp/protobuf.tar.gz https://github.com/protocolbuffers/protobuf/archive/v$(PROTOBUF_VERSION).tar.gz
 	tar -x -z -f /tmp/protobuf.tar.gz -C /tmp
 	(cd /tmp/protobuf-$(PROTOBUF_VERSION); ./autogen.sh && ./configure && make && $(SUDO) make install)
 	$(SUDO) ldconfig
