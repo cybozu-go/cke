@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"strings"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
@@ -43,13 +44,13 @@ func startWatcher(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{}
 			}
 
 			key := string(ev.Kv.Key)
-			switch key {
-			case cke.KeyCluster:
+			switch {
+			case key == cke.KeyCluster || strings.HasPrefix(key, cke.KeyResourcePrefix):
 				select {
 				case ch <- struct{}{}:
 				default:
 				}
-			case cke.KeyVault:
+			case key == cke.KeyVault:
 				err = cke.ConnectVault(ctx, ev.Kv.Value)
 				if err != nil {
 					return err

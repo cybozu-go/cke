@@ -26,7 +26,6 @@ const (
 	KeyRecords               = "records/"
 	KeyRecordID              = "records"
 	KeyResourcePrefix        = "resource/"
-	KeyResourcePatchPrefix   = "resource-patch/"
 	KeySabakanQueryVariables = "sabakan/query-variables"
 	KeySabakanTemplate       = "sabakan/template"
 	KeySabakanURL            = "sabakan/url"
@@ -438,7 +437,7 @@ func (s Storage) GetResource(ctx context.Context, key string) ([]byte, int64, er
 	return resp.Kvs[0].Value, resp.Kvs[0].ModRevision, nil
 }
 
-// SetResourceWithPatch sets a user resource with patch.
+// SetResource sets a user resource.
 func (s Storage) SetResource(ctx context.Context, key, value string) error {
 	_, err := s.Put(ctx, KeyResourcePrefix+key, value)
 	return err

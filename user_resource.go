@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
+// Annotations for user-defined resources.
 const (
 	AnnotationResourceRevision = "cke.cybozu.com/revision"
 	AnnotationResourceOriginal = "cke.cybozu.com/last-applied-configuration"
