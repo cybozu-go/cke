@@ -466,7 +466,7 @@ func (s Storage) GetAllResources(ctx context.Context) (map[string]ResourceDefini
 			Namespace:  namespace,
 			Name:       name,
 			Revision:   kv.ModRevision,
-			Definition: string(kv.Value),
+			Definition: kv.Value,
 		}
 	}
 

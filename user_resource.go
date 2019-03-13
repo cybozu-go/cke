@@ -78,5 +78,13 @@ type ResourceDefinition struct {
 	Namespace  string
 	Name       string
 	Revision   int64
-	Definition string
+	Definition []byte
+}
+
+// String implements fmt.Stringer.
+func (d ResourceDefinition) String() string {
+	if len(d.Namespace) == 0 {
+		return fmt.Sprintf("%s/%s@%d", d.Kind, d.Name, d.Revision)
+	}
+	return fmt.Sprintf("%s/%s/%s@%d", d.Kind, d.Namespace, d.Name, d.Revision)
 }
