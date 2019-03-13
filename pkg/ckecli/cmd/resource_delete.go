@@ -39,7 +39,7 @@ Note that resources in Kubernetes will not be removed automatically.`,
 				} else if err != nil {
 					return err
 				}
-				key, _, _, err := cke.ParseResource(data)
+				key, _, err := cke.ParseResource(data)
 				if err != nil {
 					return err
 				}

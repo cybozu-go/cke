@@ -16,56 +16,56 @@ import (
 )
 
 // ParseResource parses YAML string.
-func ParseResource(data []byte) (key string, jsonData []byte, obj runtime.Object, err error) {
+func ParseResource(data []byte) (key string, jsonData []byte, err error) {
 	decode := scheme.Codecs.UniversalDeserializer().Decode
 	obj, gvk, err := decode(data, nil, nil)
 	if err != nil {
-		return "", nil, nil, err
+		return "", nil, err
 	}
 
 	switch o := obj.(type) {
 	case *corev1.Namespace:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Name, data, err
 	case *corev1.ServiceAccount:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *corev1.ConfigMap:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *corev1.Service:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *policyv1beta1.PodSecurityPolicy:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Name, data, err
 	case *networkingv1.NetworkPolicy:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *rbacv1.Role:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *rbacv1.RoleBinding:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *rbacv1.ClusterRole:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Name, data, err
 	case *rbacv1.ClusterRoleBinding:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Name, data, err
 	case *appsv1.Deployment:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *appsv1.DaemonSet:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *batchv2alpha1.CronJob:
 		data, err := json.Marshal(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, obj, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	}
 
-	return "", nil, obj, fmt.Errorf("unsupported type: %s", gvk.String())
+	return "", nil, fmt.Errorf("unsupported type: %s", gvk.String())
 }
 
 // CreateResourceDiff calculate strategic merge patch between two resources.

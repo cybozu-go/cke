@@ -69,10 +69,6 @@ The value is JSON defined in [Record](record.md).
 
 User defined resource definitions in JSON format.
 
-### `resource-patch/<KIND>[/<NAMESPACE>]/<NAME>/<REVISION>`
-
-Strategic merge patch for a resource at `<REVISION>`.
-
 `sabakan/`
 ----------
 

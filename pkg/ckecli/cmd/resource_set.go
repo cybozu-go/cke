@@ -14,26 +14,12 @@ import (
 )
 
 func updateResource(ctx context.Context, data []byte) error {
-	key, modified, obj, err := cke.ParseResource(data)
-	if err != nil {
-		return err
-	}
-	original, rev, err := storage.GetResource(ctx, key)
-	if err == cke.ErrNotFound {
-		return storage.CreateResource(ctx, cke.KeyResourcePrefix+key, string(modified))
-	}
-
+	key, modified, err := cke.ParseResource(data)
 	if err != nil {
 		return err
 	}
 
-	// calculate diff
-	patch, err := cke.CreateResourceDiff(original, modified, obj)
-	if err != nil {
-		return err
-	}
-
-	return storage.SetResourceWithPatch(ctx, key, string(modified), patch, rev)
+	return storage.SetResource(ctx, key, string(modified))
 }
 
 var resourceSetCmd = &cobra.Command{

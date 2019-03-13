@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
 
 	"github.com/coreos/etcd/clientv3"
@@ -426,100 +425,28 @@ func (s Storage) ListResources(ctx context.Context) ([]string, error) {
 }
 
 // GetResource gets a user resource.
-func (s Storage) GetResource(ctx context.Context, key string) ([]byte, int64, error) {
+func (s Storage) GetResource(ctx context.Context, key string) ([]byte, error) {
 	resp, err := s.Get(ctx, KeyResourcePrefix+key)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if resp.Count == 0 {
-		return nil, 0, ErrNotFound
-	}
-
-	return resp.Kvs[0].Value, resp.Kvs[0].ModRevision, nil
-}
-
-// CreateResource creates a user resource.
-func (s Storage) CreateResource(ctx context.Context, key, value string) error {
-	rkey := KeyResourcePrefix + key
-	resp, err := s.Txn(ctx).
-		If(clientv3util.KeyMissing(rkey)).
-		Then(clientv3.OpPut(rkey, value)).
-		Commit()
-	if err != nil {
-		return err
-	}
-	if !resp.Succeeded {
-		return errors.New("already exists")
-	}
-	return nil
-}
-
-// SetResourceWithPatch sets a user resource with patch.
-func (s Storage) SetResourceWithPatch(ctx context.Context, key, value string, patch []byte, rev int64) error {
-	rkey := KeyResourcePrefix + key
-	pkey := fmt.Sprintf("%s%s/%d", KeyResourcePatchPrefix, key, rev)
-
-	resp, err := s.Txn(ctx).
-		If(clientv3.Compare(clientv3.ModRevision(rkey), "=", rev)).
-		Then(
-			clientv3.OpPut(rkey, value),
-			clientv3.OpPut(pkey, string(patch)),
-		).
-		Commit()
-	if err != nil {
-		return err
-	}
-	if !resp.Succeeded {
-		return errors.New("conflicted")
-	}
-	return nil
-}
-
-// Patch represents a strategic merge patch
-type Patch struct {
-	Revision int64
-	Data     []byte
-}
-
-// GetPatches returns patches.
-func (s Storage) GetPatches(ctx context.Context, key string) ([]Patch, error) {
-	pkey := KeyResourcePatchPrefix + key + "/"
-	resp, err := s.Get(ctx, pkey, clientv3.WithPrefix())
 	if err != nil {
 		return nil, err
 	}
-	patches := make([]Patch, resp.Count)
-	for i, kv := range resp.Kvs {
-		rev, err := strconv.ParseInt(string(kv.Key[len(pkey):]), 10, 64)
-		if err != nil {
-			return nil, err
-		}
-		patches[i].Revision = rev
-		patches[i].Data = kv.Value
-	}
-	sort.Slice(patches, func(i, j int) bool {
-		return patches[i].Revision < patches[j].Revision
-	})
 
-	return patches, nil
+	if resp.Count == 0 {
+		return nil, ErrNotFound
+	}
+
+	return resp.Kvs[0].Value, nil
 }
 
-// DeletePatch deletes a patch.
-func (s Storage) DeletePatch(ctx context.Context, key string, rev int64) error {
-	pkey := fmt.Sprintf("%s%s/%d", KeyResourcePatchPrefix, key, rev)
-	_, err := s.Delete(ctx, pkey)
+// SetResourceWithPatch sets a user resource with patch.
+func (s Storage) SetResource(ctx context.Context, key, value string) error {
+	_, err := s.Put(ctx, KeyResourcePrefix+key, value)
 	return err
 }
 
 // DeleteResource removes a user resource from etcd.
 func (s Storage) DeleteResource(ctx context.Context, key string) error {
-	_, err := s.Txn(ctx).
-		Then(
-			clientv3.OpDelete(KeyResourcePrefix+key),
-			clientv3.OpDelete(KeyResourcePatchPrefix+key+"/", clientv3.WithPrefix()),
-		).
-		Commit()
+	_, err := s.Delete(ctx, KeyResourcePrefix+key)
 	return err
 }
 
