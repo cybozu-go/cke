@@ -23,13 +23,13 @@ VAULT_VERSION = 1.0.2
 K8S_VERSION = 1.13.2
 PLACEMAT_DATADIR = /var/scratch/placemat
 CONTAINERD_VERSION = 1.2.4
-PROTOC_VERSION = 3.6.1
+PROTOBUF_VERSION = 3.7.0
 PROTOC = /usr/local/bin/protoc
 CRITOOLS_VERSION = 1.13.0
 CT_VERSION = 0.9.0
 CT = /usr/local/bin/ct
 SUDO = sudo
-PACKAGES = libseccomp-dev
+PACKAGES = libseccomp-dev automake autoconf libtool
 
 export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO CONTAINER_RUNTIME
 
@@ -254,8 +254,11 @@ $(OUTPUT)/cke.yml: cke.yml
 	sed -e 's/__HOST1__/$(HOST1)/' $< > $@
 
 $(PROTOC):
-	curl -fsSL -o protoc.zip https://github.com/google/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-linux-x86_64.zip
-	$(SUDO) unzip -o protoc.zip -d /usr/local
+	curl -fSSL -o /tmp/protobuf.tar.gz https://github.com/protocolbuffers/protobuf/archive/v$(PROTOBUF_VERSION).tar.gz
+	tar -x -z -f /tmp/protobuf.tar.gz -C /tmp
+	(cd /tmp/protobuf-$(PROTOBUF_VERSION); ./autogen.sh && ./configure && make && $(SUDO) make install)
+	$(SUDO) ldconfig
+	rm -rf /tmp/protobuf.tar.gz /tmp/protobuf-$(PROTOBUF_VERSION)
 
 build-containerd: $(PROTOC)
 	rm -rf $(GOPATH)/src/github.com/containerd/containerd
