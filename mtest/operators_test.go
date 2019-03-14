@@ -106,7 +106,7 @@ var _ = Describe("Operations", func() {
 		var status *cke.ClusterStatus
 		Eventually(func() error {
 			var err error
-			status, err = getClusterStatus(cluster)
+			status, _, err = getClusterStatus(cluster)
 			if err != nil {
 				return err
 			}
@@ -316,7 +316,7 @@ var _ = Describe("Operations", func() {
 			if err != nil {
 				return err
 			}
-			status, err := getClusterStatus(cluster)
+			status, _, err := getClusterStatus(cluster)
 			if err != nil {
 				return err
 			}

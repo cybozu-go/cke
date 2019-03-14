@@ -158,11 +158,14 @@ List registered resources.
 ### `ckecli resource set FILE`
 
 Register user-defined resources listed in `FILE`.
+If `FILE` is "-", then resources are read from stdin.
+
 The registered resources will be synchronized with Kubernetes by CKE.
 
 ### `ckecli resource delete FILE`
 
 Remove user-defined resources listed in `FILE` from etcd.
+If `FILE` is "-", then resources are read from stdin.
 
 Note that Kubernetes resources will not be removed automatically.
 

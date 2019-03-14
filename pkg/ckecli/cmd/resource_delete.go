@@ -19,16 +19,21 @@ var resourceDeleteCmd = &cobra.Command{
 	Long: `Remove user-defined resources.
 
 FILE should contain multiple Kubernetes resources in YAML or JSON format.
+If FILE is "-", then data is read from stdin.
 
 Note that resources in Kubernetes will not be removed automatically.`,
 
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		r, err := os.Open(args[0])
-		if err != nil {
-			return err
+		r := os.Stdin
+		if args[0] != "-" {
+			f, err := os.Open(args[0])
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			r = f
 		}
-		defer r.Close()
 
 		well.Go(func(ctx context.Context) error {
 			y := k8sYaml.NewYAMLReader(bufio.NewReader(r))

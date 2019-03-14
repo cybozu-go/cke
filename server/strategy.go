@@ -14,7 +14,7 @@ import (
 
 // DecideOps returns the next operations to do.
 // This returns nil when no operation need to be done.
-func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources map[string]cke.ResourceDefinition) []cke.Operator {
+func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition) []cke.Operator {
 
 	nf := NewNodeFilter(c, cs)
 
@@ -143,7 +143,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	return nil
 }
 
-func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources map[string]cke.ResourceDefinition, nf *NodeFilter) (ops []cke.Operator) {
+func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition, nf *NodeFilter) (ops []cke.Operator) {
 	ks := cs.Kubernetes
 	apiServer := nf.HealthyAPIServer()
 
@@ -367,19 +367,12 @@ func needUpdateEtcdBackupPod(c *cke.Cluster, ks cke.KubernetesClusterStatus) boo
 	return false
 }
 
-func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, resources map[string]cke.ResourceDefinition) (ops []cke.Operator) {
-	for rkey, res := range resources {
-		rev, ok := ks.ResourceStatuses[rkey]
-		if !ok {
-			ops = append(ops, op.ResourceCreateOp(apiServer, res))
-			continue
+func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, resources []cke.ResourceDefinition) (ops []cke.Operator) {
+	for _, res := range resources {
+		rev, ok := ks.ResourceStatuses[res.Key]
+		if !ok || rev != res.Revision {
+			ops = append(ops, op.ResourceApplyOp(apiServer, res))
 		}
-
-		if rev == res.Revision {
-			continue
-		}
-
-		ops = append(ops, op.ResourcePatchOp(apiServer, res))
 	}
 	return ops
 }

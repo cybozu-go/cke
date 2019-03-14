@@ -5,8 +5,6 @@ import (
 )
 
 func TestParseResource(t *testing.T) {
-	t.Parallel()
-
 	cases := []struct {
 		name        string
 		yaml        string
@@ -163,6 +161,20 @@ spec:
 			"Role",
 			`kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: default
+  name: pod-reader
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]`,
+			"Role/default/pod-reader",
+			false,
+		},
+		{
+			"RoleV1Beta1",
+			`kind: Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   namespace: default
   name: pod-reader
@@ -444,7 +456,9 @@ spec:
 	for _, c := range cases {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
-			key, _, _, err := ParseResource([]byte(c.yaml))
+			t.Parallel()
+
+			key, data, err := ParseResource([]byte(c.yaml))
 			if c.expectError {
 				if err == nil {
 					t.Error("error should have occurred")
@@ -458,44 +472,8 @@ spec:
 			if key != c.key {
 				t.Error("unexpected key: ", c.key, key)
 			}
+
+			t.Log(string(data))
 		})
 	}
-}
-
-func TestCreateResourceDiff(t *testing.T) {
-	t.Parallel()
-
-	y := `apiVersion: v1
-kind: Namespace
-metadata:
-  name: monitoring
-`
-	y2 := `apiVersion: v1
-kind: Namespace
-metadata:
-  labels:
-    app.kubernetes.io/instance: monitoring
-  name: monitoring
-`
-
-	_, jd, obj, err := ParseResource([]byte(y))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, jd2, _, err := ParseResource([]byte(y2))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	patch, err := CreateResourceDiff(jd, jd2, obj)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(patch) == 0 {
-		t.Error("empty patch:", string(patch))
-	}
-
-	t.Log(string(patch))
 }

@@ -439,17 +439,29 @@ func (s Storage) GetResource(ctx context.Context, key string) ([]byte, int64, er
 }
 
 // GetAllResources gets all user-defined resources.
-func (s Storage) GetAllResources(ctx context.Context) (map[string]ResourceDefinition, error) {
+// The returned slice of resources are sorted so that creating resources in order
+// will not fail.
+func (s Storage) GetAllResources(ctx context.Context) ([]ResourceDefinition, error) {
 	resp, err := s.Get(ctx, KeyResourcePrefix, clientv3.WithPrefix())
 	if err != nil {
 		return nil, err
 	}
 
-	rcs := make(map[string]ResourceDefinition)
-	for _, kv := range resp.Kvs {
+	if resp.Count == 0 {
+		return nil, nil
+	}
+
+	rcs := make([]ResourceDefinition, resp.Count)
+	for i, kv := range resp.Kvs {
 		key := string(kv.Key[len(KeyResourcePrefix):])
 		parts := strings.Split(key, "/")
-		kind := parts[0]
+		kind := Kind(parts[0])
+
+		if !kind.IsSupported() {
+			// ignore unsupported resources
+			continue
+		}
+
 		var namespace, name string
 		switch len(parts) {
 		case 2:
@@ -461,15 +473,16 @@ func (s Storage) GetAllResources(ctx context.Context) (map[string]ResourceDefini
 			return nil, errors.New("invalid resource key: " + key)
 		}
 
-		rcs[key] = ResourceDefinition{
-			Kind:       kind,
-			Namespace:  namespace,
-			Name:       name,
-			Revision:   kv.ModRevision,
-			Definition: kv.Value,
-		}
+		rc := &rcs[i]
+		rc.Key = key
+		rc.Kind = kind
+		rc.Namespace = namespace
+		rc.Name = name
+		rc.Revision = kv.ModRevision
+		rc.Definition = kv.Value
 	}
 
+	sortResources(rcs)
 	return rcs, nil
 }
 

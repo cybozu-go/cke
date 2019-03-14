@@ -3,6 +3,8 @@ User-defined resources
 
 CKE can automatically create or update user-defined resources on Kubernetes.
 
+This can be considered as `kubectl apply` automatically executed by CKE.
+
 ## Supported resource types
 
 - Namespace
@@ -23,7 +25,8 @@ Resources are created in the order of this list.
 
 User-defined resources are annotated as follows:
 
-- `cke.cybozu.com/user-resource`: `true`
+- `cke.cybozu.com/revision`: The last applied revision of this resource.
+- `cke.cybozu.com/last-applied-configuration`: The last applied resource definition in JSON.
 
 ## Usage
 

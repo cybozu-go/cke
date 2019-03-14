@@ -234,22 +234,34 @@ func connectEtcd() (*clientv3.Client, error) {
 	return etcdutil.NewClient(etcdConfig)
 }
 
-func getClusterStatus(cluster *cke.Cluster) (*cke.ClusterStatus, error) {
+func getClusterStatus(cluster *cke.Cluster) (*cke.ClusterStatus, []cke.ResourceDefinition, error) {
 	controller := server.NewController(nil, 0, time.Second*2, nil)
 
 	etcd, err := connectEtcd()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer etcd.Close()
 
-	inf, err := cke.NewInfrastructure(context.Background(), cluster, cke.Storage{Client: etcd})
+	st := cke.Storage{Client: etcd}
+	ctx := context.Background()
+	resources, err := st.GetAllResources(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	inf, err := cke.NewInfrastructure(ctx, cluster, st)
+	if err != nil {
+		return nil, nil, err
 	}
 	defer inf.Close()
 
-	return controller.GetClusterStatus(context.Background(), cluster, inf)
+	cs, err := controller.GetClusterStatus(ctx, cluster, inf)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return cs, resources, err
 }
 
 func ckecliClusterSet(cluster *cke.Cluster) error {
@@ -302,7 +314,7 @@ func (e checkError) Error() string {
 }
 
 func checkCluster(c *cke.Cluster) error {
-	status, err := getClusterStatus(c)
+	status, res, err := getClusterStatus(c)
 	if err != nil {
 		return err
 	}
@@ -312,7 +324,7 @@ func checkCluster(c *cke.Cluster) error {
 		return errors.New("etcd cluster is not good")
 	}
 
-	ops := server.DecideOps(c, status)
+	ops := server.DecideOps(c, status, res)
 	if len(ops) == 0 {
 		return nil
 	}

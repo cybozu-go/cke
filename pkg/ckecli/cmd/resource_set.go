@@ -14,12 +14,12 @@ import (
 )
 
 func updateResource(ctx context.Context, data []byte) error {
-	key, modified, err := cke.ParseResource(data)
+	key, parsed, err := cke.ParseResource(data)
 	if err != nil {
 		return err
 	}
 
-	return storage.SetResource(ctx, key, string(modified))
+	return storage.SetResource(ctx, key, string(parsed))
 }
 
 var resourceSetCmd = &cobra.Command{
@@ -28,7 +28,9 @@ var resourceSetCmd = &cobra.Command{
 	Long: `Register user-defined resources.
 
 FILE should contain multiple Kubernetes resources in YAML or JSON format.
-Supports only the following types of resources.
+If FILE is "-", then data is read from stdin.
+
+Only the following resource types can be used:
 
   * Namespace
   * ServiceAccount
@@ -46,19 +48,24 @@ Supports only the following types of resources.
 
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		r, err := os.Open(args[0])
-		if err != nil {
-			return err
+		r := os.Stdin
+		if args[0] != "-" {
+			f, err := os.Open(args[0])
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			r = f
 		}
-		defer r.Close()
 
 		well.Go(func(ctx context.Context) error {
 			y := k8sYaml.NewYAMLReader(bufio.NewReader(r))
 			for {
 				data, err := y.Read()
 				if err == io.EOF {
-					break
-				} else if err != nil {
+					return nil
+				}
+				if err != nil {
 					return err
 				}
 
@@ -67,7 +74,6 @@ Supports only the following types of resources.
 					return err
 				}
 			}
-			return nil
 		})
 		well.Stop()
 		return well.Wait()
