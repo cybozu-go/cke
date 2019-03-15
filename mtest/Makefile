@@ -304,6 +304,15 @@ test-light: $(OUTPUT)/cke
 	done
 	$(GINKGO) -v -focus="${TARGET}"
 
+bootstrap: $(OUTPUT)/cke
+	for h in host-1 host-2; do \
+		./mssh $$h sudo systemctl reset-failed cke.service; \
+		./mssh $$h sudo systemctl stop cke.service; \
+		cat $(OUTPUT)/cke | ./mssh $$h sudo dd of=/opt/bin/cke status=none; \
+		./mssh $$h sudo chmod 755 /opt/bin/cke; \
+	done
+	$(GINKGO) -v -focus="can run Pods"
+
 clean:
 	rm -rf $(OUTPUT) node.ign
 

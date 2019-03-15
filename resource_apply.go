@@ -38,8 +38,8 @@ func applyNamespace(o *corev1.Namespace, data []byte, rev int64, getFunc func(st
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
