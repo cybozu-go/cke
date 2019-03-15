@@ -5,10 +5,10 @@ ckecli command reference
 $ ckecli [--config FILE] <subcommand> args...
 ```
 
-Option      | Default value         | Description
-----------  | --------------------- | -----------
-`--config`  | `/etc/cke/config.yml` | config file path
-`--version` |                       | show ckecli version
+| Option      | Default value         | Description         |
+| ----------- | --------------------- | ------------------- |
+| `--config`  | `/etc/cke/config.yml` | config file path    |
+| `--version` |                       | show ckecli version |
 
 `ckecli cluster set FILE`
 -------------------------
@@ -103,10 +103,10 @@ This subcommand is for programs to operate etcd server.
 
 Create a client certificate for user `NAME`.
 
-Option     | Default value | Description
----------- | ------------- | -----------
-`--ttl`    | `87600h`      | TTL for client certificate
-`--output` | `json`        | output format (`json`,`file`)
+| Option     | Default value | Description                   |
+| ---------- | ------------- | ----------------------------- |
+| `--ttl`    | `87600h`      | TTL for client certificate    |
+| `--output` | `json`        | output format (`json`,`file`) |
 
 ### `ckecli etcd root-issue [--output=FORMAT]`
 
@@ -116,9 +116,9 @@ TTL for this certificate is fixed to 2h.
 
 This subcommand is for human to operate etcd server.
 
-Option     | Default value | Description
----------- | ------------- | -----------
-`--output` | `json`        | output format (`json`,`file`)
+| Option     | Default value | Description                   |
+| ---------- | ------------- | ----------------------------- |
+| `--output` | `json`        | output format (`json`,`file`) |
 
 ### `ckecli etcd backup list`
 
@@ -141,9 +141,33 @@ Write kubeconfig to stdout.
 
 This config file embeds client certificate and can be used with `kubectl` to connect Kubernetes cluster.
 
-Option  | Default value | Description
-------- | ------------- | -----------
-`--ttl` | `2h`          | TTL of the client certificate
+| Option  | Default value | Description                   |
+| ------- | ------------- | ----------------------------- |
+| `--ttl` | `2h`          | TTL of the client certificate |
+
+`ckecli resource`
+-----------------
+
+Edit user-defined resources in Kubernetes.
+See [User-defined resources](user-resources.md) for details.
+
+### `ckecli resource list`
+
+List registered resources.
+
+### `ckecli resource set FILE`
+
+Register user-defined resources listed in `FILE`.
+If `FILE` is "-", then resources are read from stdin.
+
+The registered resources will be synchronized with Kubernetes by CKE.
+
+### `ckecli resource delete FILE`
+
+Remove user-defined resources listed in `FILE` from etcd.
+If `FILE` is "-", then resources are read from stdin.
+
+Note that Kubernetes resources will not be removed automatically.
 
 `ckecli ssh [user@]NODE [COMMAND...]`
 ------------------------------
@@ -161,9 +185,9 @@ Copy files between hosts via scp.
 
 `NODE` is IP address or hostname of the node.
 
-Option  | Default value | Description
-------- | ------------- | -----------
-`-r`    | `false`       | Recursively copy entire directories.
+| Option | Default value | Description                          |
+| ------ | ------------- | ------------------------------------ |
+| `-r`   | `false`       | Recursively copy entire directories. |
 
 `ckecli sabakan`
 ----------------

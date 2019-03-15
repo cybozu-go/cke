@@ -63,7 +63,7 @@ var _ = Describe("ckecli", func() {
 	It("should ssh to all nodes", func() {
 		for _, node := range []string{node1, node2, node3, node4, node5, node6} {
 			Eventually(func() error {
-				_, err := ckecliUnsafe("ssh", "cybozu@"+node, "/bin/true")
+				_, err := ckecliUnsafe("", "ssh", "cybozu@"+node, "/bin/true")
 				if err != nil {
 					return err
 				}
@@ -78,11 +78,11 @@ var _ = Describe("ckecli", func() {
 			destName := scpData.Name() + node
 
 			Eventually(func() error {
-				stdout, err := ckecliUnsafe("scp", scpData.Name(), "cybozu@"+node+":"+destName)
+				stdout, err := ckecliUnsafe("", "scp", scpData.Name(), "cybozu@"+node+":"+destName)
 				if err != nil {
 					return fmt.Errorf("%v: stdout=%s", err, stdout)
 				}
-				stdout, err = ckecliUnsafe("scp", "cybozu@"+node+":"+destName, "/tmp/")
+				stdout, err = ckecliUnsafe("", "scp", "cybozu@"+node+":"+destName, "/tmp/")
 				if err != nil {
 					return fmt.Errorf("%v: stdout=%s", err, stdout)
 				}

@@ -14,7 +14,7 @@ import (
 
 // DecideOps returns the next operations to do.
 // This returns nil when no operation need to be done.
-func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus) []cke.Operator {
+func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition) []cke.Operator {
 
 	nf := NewNodeFilter(c, cs)
 
@@ -51,7 +51,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus) []cke.Operator {
 	}
 
 	// 7. Maintain k8s resources.
-	if ops := k8sMaintOps(c, cs, nf); len(ops) > 0 {
+	if ops := k8sMaintOps(c, cs, resources, nf); len(ops) > 0 {
 		return ops
 	}
 
@@ -143,7 +143,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	return nil
 }
 
-func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []cke.Operator) {
+func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition, nf *NodeFilter) (ops []cke.Operator) {
 	ks := cs.Kubernetes
 	apiServer := nf.HealthyAPIServer()
 
@@ -155,13 +155,9 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 		ops = append(ops, op.KubeRBACRoleInstallOp(apiServer, ks.RBACRoleExists))
 	}
 
-	if dnsOps := decideClusterDNSOps(apiServer, c, ks); len(dnsOps) != 0 {
-		ops = append(ops, dnsOps...)
-	}
+	ops = append(ops, decideClusterDNSOps(apiServer, c, ks)...)
 
-	if nodeDNSOps := decideNodeDNSOps(apiServer, c, ks); len(nodeDNSOps) != 0 {
-		ops = append(ops, nodeDNSOps...)
-	}
+	ops = append(ops, decideNodeDNSOps(apiServer, c, ks)...)
 
 	epOp := decideEpOp(ks.EtcdEndpoints, apiServer, nf.ControlPlane())
 	if epOp != nil {
@@ -176,9 +172,9 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []c
 		ops = append(ops, op.KubeNodeRemoveOp(apiServer, nodes))
 	}
 
-	if etcdBackupOps := decideEtcdBackupOps(apiServer, c, ks); len(etcdBackupOps) != 0 {
-		ops = append(ops, etcdBackupOps...)
-	}
+	ops = append(ops, decideEtcdBackupOps(apiServer, c, ks)...)
+
+	ops = append(ops, decideResourceOps(apiServer, ks, resources)...)
 
 	return ops
 }
@@ -369,6 +365,16 @@ func needUpdateEtcdBackupPod(c *cke.Cluster, ks cke.KubernetesClusterStatus) boo
 		return true
 	}
 	return false
+}
+
+func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, resources []cke.ResourceDefinition) (ops []cke.Operator) {
+	for _, res := range resources {
+		rev, ok := ks.ResourceStatuses[res.Key]
+		if !ok || rev != res.Revision {
+			ops = append(ops, op.ResourceApplyOp(apiServer, res))
+		}
+	}
+	return ops
 }
 
 func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {

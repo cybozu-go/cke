@@ -26,12 +26,12 @@ The default prefix is `/cke/`.
 
 JSON object that has the following fields:
 
-Name        | Required | Type | Description
------------ | -------- | ---- | -----------
-`endpoint`  | true  | string | URL of the Vault server.
-`ca-cert`   | false | string | x509 certificate in PEM format of the endpoint CA.
-`role-id`   | true  | string | AppRole ID to login to Vault.
-`secret-id` | true  | string | AppRole secret to login to Vault.
+| Name        | Required | Type   | Description                                        |
+| ----------- | -------- | ------ | -------------------------------------------------- |
+| `endpoint`  | true     | string | URL of the Vault server.                           |
+| `ca-cert`   | false    | string | x509 certificate in PEM format of the endpoint CA. |
+| `role-id`   | true     | string | AppRole ID to login to Vault.                      |
+| `secret-id` | true     | string | AppRole secret to login to Vault.                  |
 
 CA certificates
 ---------------
@@ -61,6 +61,15 @@ The next ID of the record formatted as a decimal string.
 Each entry of audit log is stored with this type of key.
 
 The value is JSON defined in [Record](record.md).
+
+`resource/`
+-----------
+
+### `resource/<KIND>[/<NAMESPACE>]/<NAME>`
+
+User defined resource definitions in JSON format.
+
+Non-namespace resources omit `/<NAMESPACE>` part.
 
 `sabakan/`
 ----------

@@ -434,7 +434,7 @@ rules:
 		logs, _, err = execAt(node1, "sudo", "journalctl", "CONTAINER_NAME=kube-apiserver", "-p", "6..6", "-q")
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(logs).ShouldNot(BeEmpty())
-		status, err := getClusterStatus(cluster)
+		status, _, err := getClusterStatus(cluster)
 		var policyFile string
 		for _, v := range status.NodeStatuses[node1].APIServer.BuiltInParams.ExtraArguments {
 			if strings.HasPrefix(v, "--audit-policy-file=") {
@@ -453,7 +453,7 @@ rules:
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
-		status, err = getClusterStatus(cluster)
+		status, _, err = getClusterStatus(cluster)
 		var currentPolicyFile string
 		for _, v := range status.NodeStatuses[node1].APIServer.BuiltInParams.ExtraArguments {
 			if strings.HasPrefix(v, "--audit-policy-file=") {

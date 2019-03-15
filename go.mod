@@ -162,6 +162,7 @@ require (
 	k8s.io/apimachinery v0.0.0-20190117220443-572dfc7bdfcb
 	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/klog v0.1.0 // indirect
+	k8s.io/kube-openapi v0.0.0-20190306001800-15615b16d372 // indirect
 	layeh.com/radius v0.0.0-20190109000448-e6d9fd7a048a // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )

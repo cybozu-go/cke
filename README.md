@@ -8,7 +8,7 @@ CKE
 
 **CKE** is a distributed service that automates [Kubernetes][] cluster management.
 
-**Project Status**: Most features are implemented.
+**Project Status**: Testing for production.
 
 Requirements
 ------------
@@ -51,6 +51,12 @@ Features
     * [CoreDNS][] add-on.
     * Node-local DNS cache services.
     * Nodes can be registered with [Taints][].
+
+* User-defined resources:
+
+    CKE automatically creates or updates Kubernetes API resources such as Deployments,
+    Namespaces, or CronJobs that are defined by users.  This feature helps users to
+    automate Kubernetes cluster maintenance.
 
 * Sabakan integration
 

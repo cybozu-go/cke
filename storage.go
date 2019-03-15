@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/clientv3util"
@@ -25,6 +26,7 @@ const (
 	KeyLeader                = "leader/"
 	KeyRecords               = "records/"
 	KeyRecordID              = "records"
+	KeyResourcePrefix        = "resource/"
 	KeySabakanQueryVariables = "sabakan/query-variables"
 	KeySabakanTemplate       = "sabakan/template"
 	KeySabakanURL            = "sabakan/url"
@@ -398,6 +400,103 @@ func (s Storage) GetLeaderHostname(ctx context.Context) (string, error) {
 		return "", errors.New("no leader")
 	}
 	return string(resp.Kvs[0].Value), nil
+}
+
+// ListResources lists keys of registered user resources.
+func (s Storage) ListResources(ctx context.Context) ([]string, error) {
+	resp, err := s.Get(ctx, KeyResourcePrefix,
+		clientv3.WithPrefix(),
+		clientv3.WithKeysOnly(),
+		clientv3.WithSort(clientv3.SortByKey, clientv3.SortAscend),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Count == 0 {
+		return nil, nil
+	}
+
+	keys := make([]string, resp.Count)
+	for i, kv := range resp.Kvs {
+		keys[i] = string(kv.Key[len(KeyResourcePrefix):])
+	}
+	return keys, nil
+}
+
+// GetResource gets a user resource.
+func (s Storage) GetResource(ctx context.Context, key string) ([]byte, int64, error) {
+	resp, err := s.Get(ctx, KeyResourcePrefix+key)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if resp.Count == 0 {
+		return nil, 0, ErrNotFound
+	}
+
+	return resp.Kvs[0].Value, resp.Kvs[0].ModRevision, nil
+}
+
+// GetAllResources gets all user-defined resources.
+// The returned slice of resources are sorted so that creating resources in order
+// will not fail.
+func (s Storage) GetAllResources(ctx context.Context) ([]ResourceDefinition, error) {
+	resp, err := s.Get(ctx, KeyResourcePrefix, clientv3.WithPrefix())
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Count == 0 {
+		return nil, nil
+	}
+
+	rcs := make([]ResourceDefinition, 0, resp.Count)
+	for _, kv := range resp.Kvs {
+		key := string(kv.Key[len(KeyResourcePrefix):])
+		parts := strings.Split(key, "/")
+		kind := Kind(parts[0])
+
+		if !kind.IsSupported() {
+			// ignore unsupported resources
+			continue
+		}
+
+		var namespace, name string
+		switch len(parts) {
+		case 2:
+			name = parts[1]
+		case 3:
+			namespace = parts[1]
+			name = parts[2]
+		default:
+			return nil, errors.New("invalid resource key: " + key)
+		}
+
+		rcs = append(rcs, ResourceDefinition{
+			Key:        key,
+			Kind:       kind,
+			Namespace:  namespace,
+			Name:       name,
+			Revision:   kv.ModRevision,
+			Definition: kv.Value,
+		})
+	}
+
+	sortResources(rcs)
+	return rcs, nil
+}
+
+// SetResource sets a user resource.
+func (s Storage) SetResource(ctx context.Context, key, value string) error {
+	_, err := s.Put(ctx, KeyResourcePrefix+key, value)
+	return err
+}
+
+// DeleteResource removes a user resource from etcd.
+func (s Storage) DeleteResource(ctx context.Context, key string) error {
+	_, err := s.Delete(ctx, KeyResourcePrefix+key)
+	return err
 }
 
 // SetSabakanQueryVariables sets query variables for Sabakan.

@@ -214,7 +214,12 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return nil
 	}
 
-	ops := DecideOps(cluster, status)
+	rcs, err := inf.Storage().GetAllResources(ctx)
+	if err != nil {
+		return err
+	}
+
+	ops := DecideOps(cluster, status, rcs)
 	if len(ops) == 0 {
 		wait = true
 		if c.addon != nil {
