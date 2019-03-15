@@ -135,7 +135,7 @@ Name                         | Required | Type                | Description
 `container_runtime_endpoint` | false    | string              | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/var/run/dockershim.sock`.
 `container_log_max_size`     | false    | string              | Equivalent to the [log rotation for CRI runtime]. Size of log file size. If the file size becomes bigger than given size, the log file is rotated. Default: `10Mi`.
 `container_log_max_files`    | false    | int                 | Equivalent to the [log rotation for CRI runtime]. Number of rotated log files for keeping in the storage. Default: `5`.
-`cni_conf_file`              | false    | CNIConfFile         | CNI configuration file. The file will put on `/etc/cni/net.d` for each worker nodes.
+`cni_conf_file`              | false    | CNIConfFile         | CNI configuration file.
 
 Taints in `boot_taints` are added to a Node in the following cases:
 (1) when that Node is registered with Kubernetes by kubelet, or
@@ -144,8 +144,9 @@ Those taints can be removed manually when they are no longer needed.
 Note that the second case happens when the physical node is rebooted without resource manipulation.
 If you want to add taints only at Node registration, use kubelet's `--register-with-taints` options in `extra_args`.
 
-CNI configuration file specified by `cni_conf_file` will put on the worker node at boot sequence only.
-Dynamic update is not supported.
+CNI configuration file specified by `cni_conf_file` will be put in `/etc/cni/net.d` directory
+on all nodes.  The file is created only when `kubelet` starts on the node; it will *not* be
+updated later on.
 
 ### CNIConfFile
 
@@ -153,6 +154,9 @@ Name                          | Required | Type                | Description
 ----------------------------- | -------- | ------------------- | -----------
 `name`                        | true     | string              | file name
 `content`                     | true     | string              | file content in JSON format
+
+`name` is the filename of CNI configuration file.
+It should end with either `.conf` or `.conflist`.
 
 
 [CRI]: https://github.com/kubernetes/kubernetes/blob/242a97307b34076d5d8f5bbeb154fa4d97c9ef1d/docs/devel/container-runtime-interface.md
