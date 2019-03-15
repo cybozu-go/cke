@@ -38,8 +38,9 @@ var (
 )
 
 type testData struct {
-	Cluster *cke.Cluster
-	Status  *cke.ClusterStatus
+	Cluster   *cke.Cluster
+	Status    *cke.ClusterStatus
+	Resources []cke.ResourceDefinition
 }
 
 func (d testData) ControlPlane() (nodes []*cke.Node) {
@@ -105,11 +106,20 @@ func newData() testData {
 		},
 	}
 
-	return testData{cluster, status}
+	return testData{
+		Cluster:   cluster,
+		Status:    status,
+		Resources: testResources,
+	}
 }
 
 func (d testData) with(f func(data testData)) testData {
 	f(d)
+	return d
+}
+
+func (d testData) withResources(res []cke.ResourceDefinition) testData {
+	d.Resources = res
 	return d
 }
 
@@ -604,7 +614,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"wait-kubernetes"},
 		},
 		{
-			Name:  "RBAC",
+			Name:  "K8sResources",
 			Input: newData().withK8sReady(),
 			ExpectedOps: []string{
 				"create-cluster-dns-configmap",
@@ -708,6 +718,31 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
 			ExpectedOps: []string{"update-etcd-endpoints"},
+		},
+		{
+			Name: "UserResourceAdd",
+			Input: newData().withK8sResourceReady().withResources(
+				append(testResources, cke.ResourceDefinition{
+					Key:        "ConfigMap/foo/bar",
+					Kind:       cke.KindConfigMap,
+					Namespace:  "foo",
+					Name:       "bar",
+					Revision:   1,
+					Definition: []byte(`{"apiversion":"v1","kind":"ConfigMap","metadata":{"namespace":"foo","name":"bar"},"data":{"a":"b"}}`),
+				})),
+			ExpectedOps: []string{"resource-apply"},
+		},
+		{
+			Name: "UserResourceUpdate",
+			Input: newData().withK8sResourceReady().withResources(
+				[]cke.ResourceDefinition{{
+					Key:        "Namespace/foo",
+					Kind:       cke.KindNamespace,
+					Name:       "foo",
+					Revision:   2,
+					Definition: []byte(`{"apiversion":"v1","kind":"Namespace","metadata":{"name":"foo"}}`),
+				}}),
+			ExpectedOps: []string{"resource-apply"},
 		},
 		{
 			Name: "NodeLabel1",
@@ -1210,7 +1245,7 @@ func TestDecideOps(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		ops := DecideOps(c.Input.Cluster, c.Input.Status, testResources)
+		ops := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Resources)
 		if len(ops) == 0 && len(c.ExpectedOps) == 0 {
 			continue
 		}
