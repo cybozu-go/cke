@@ -161,7 +161,7 @@ var _ = Describe("Operations", func() {
 		// - EtcdStopOp
 
 		Eventually(func() error {
-			stdout, err := ckecliUnsafe("leader")
+			stdout, err := ckecliUnsafe("", "leader")
 			if err != nil {
 				return err
 			}
@@ -348,6 +348,74 @@ var _ = Describe("Operations", func() {
 		By("clearing CNI configuration file directory")
 		_, _, err := execAt(node1, "test", "-f", dummyCNIConf)
 		Expect(err).Should(HaveOccurred())
+	})
+
+	It("updates user-defined resources", func() {
+		By("set user-defined resource")
+		resources := `apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: foo
+  name: sa1
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: foo
+  name: pod-reader
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: read-pods
+  namespace: foo
+subjects:
+- kind: ServiceAccount
+  name: sa1
+  namespace: foo
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
+`
+		ckecliWithInput(resources, "resource", "set", "-")
+
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		By("updating user-defined resources")
+		newResources := `apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo
+  labels:
+    test: value
+`
+		ckecliWithInput(newResources, "resource", "set", "-")
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		stdout, _, err := kubectl("get", "namespaces/foo", "-o", "json")
+		Expect(err).ShouldNot(HaveOccurred())
+		var ns corev1.Namespace
+		err = json.Unmarshal(stdout, &ns)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(ns.Labels).Should(HaveKeyWithValue("test", "value"))
 	})
 
 	It("removes all taints", func() {

@@ -191,18 +191,25 @@ func localTempFile(body string) *os.File {
 }
 
 func ckecli(args ...string) []byte {
-	stdout, err := ckecliUnsafe(args...)
+	stdout, err := ckecliUnsafe("", args...)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 	return stdout
 }
 
-func ckecliUnsafe(args ...string) ([]byte, error) {
+func ckecliWithInput(input string, args ...string) []byte {
+	stdout, err := ckecliUnsafe(input, args...)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return stdout
+}
+
+func ckecliUnsafe(input string, args ...string) ([]byte, error) {
 	args = append([]string{"--config", ckeConfigPath}, args...)
 	var stdout bytes.Buffer
 	command := exec.Command(ckecliPath, args...)
 	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	command.Stdout = &stdout
 	command.Stderr = GinkgoWriter
+	command.Stdin = strings.NewReader(input)
 	timer := time.AfterFunc(10*time.Second, func() {
 		syscall.Kill(-command.Process.Pid, syscall.SIGKILL)
 	})
