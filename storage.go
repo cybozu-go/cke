@@ -451,8 +451,8 @@ func (s Storage) GetAllResources(ctx context.Context) ([]ResourceDefinition, err
 		return nil, nil
 	}
 
-	rcs := make([]ResourceDefinition, resp.Count)
-	for i, kv := range resp.Kvs {
+	rcs := make([]ResourceDefinition, 0, resp.Count)
+	for _, kv := range resp.Kvs {
 		key := string(kv.Key[len(KeyResourcePrefix):])
 		parts := strings.Split(key, "/")
 		kind := Kind(parts[0])
@@ -473,13 +473,14 @@ func (s Storage) GetAllResources(ctx context.Context) ([]ResourceDefinition, err
 			return nil, errors.New("invalid resource key: " + key)
 		}
 
-		rc := &rcs[i]
-		rc.Key = key
-		rc.Kind = kind
-		rc.Namespace = namespace
-		rc.Name = name
-		rc.Revision = kv.ModRevision
-		rc.Definition = kv.Value
+		rcs = append(rcs, ResourceDefinition{
+			Key:        key,
+			Kind:       kind,
+			Namespace:  namespace,
+			Name:       name,
+			Revision:   kv.ModRevision,
+			Definition: kv.Value,
+		})
 	}
 
 	sortResources(rcs)
