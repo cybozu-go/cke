@@ -453,6 +453,15 @@ func getClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.ClusterDNSStatus{}, err
 	}
 
+	service, err := clientset.CoreV1().Services("kube-system").Get(ClusterDNSAppName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.ClusterIP = service.Spec.ClusterIP
+	case k8serr.IsNotFound(err):
+	default:
+		return cke.ClusterDNSStatus{}, err
+	}
+
 	return s, nil
 }
 

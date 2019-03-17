@@ -16,9 +16,8 @@ type EtcdClusterStatus struct {
 
 // ClusterDNSStatus contains cluster resolver status.
 type ClusterDNSStatus struct {
-	ConfigMap     *corev1.ConfigMap
-	ClusterDomain string
-	ClusterIP     string
+	ConfigMap *corev1.ConfigMap
+	ClusterIP string
 }
 
 // NodeDNSStatus contains node local resolver status.

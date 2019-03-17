@@ -267,7 +267,6 @@ func (d testData) withK8sResourceReady() testData {
 	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"][cke.AnnotationResourceImage] = cke.CoreDNSImage.Name()
 	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"][cke.AnnotationResourceImage] = cke.UnboundImage.Name()
 	ks.ClusterDNS.ConfigMap = clusterdns.ConfigMap(testDefaultDNSDomain, testDefaultDNSServers)
-	ks.ClusterDNS.ClusterDomain = testDefaultDNSDomain
 	ks.ClusterDNS.ClusterIP = testDefaultDNSAddr
 	ks.NodeDNS.ConfigMap = nodedns.ConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
 
