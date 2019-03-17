@@ -28,8 +28,6 @@ const (
 	// RiversContainerName is container name of rivers
 	RiversContainerName = "rivers"
 
-	// ClusterDNSRBACRoleName is role name of cluster DNS
-	ClusterDNSRBACRoleName = "system:cluster-dns"
 	// ClusterDNSAppName is app name of cluster DNS
 	ClusterDNSAppName = "cluster-dns"
 	// NodeDNSAppName is app name of node-dns

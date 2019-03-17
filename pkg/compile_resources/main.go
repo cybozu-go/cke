@@ -2,12 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -30,9 +32,15 @@ func subMain() error {
 		return err
 	}
 
+	images := make(map[string]string)
+	for _, img := range cke.AllImages() {
+		id := strings.SplitN(path.Base(img), ":", 2)[0]
+		images[id] = img
+	}
+
 	var allResources []cke.ResourceDefinition
 	for _, fname := range files {
-		res, err := loadResources(fname)
+		res, err := loadResources(fname, images)
 		if err != nil {
 			return err
 		}
@@ -43,14 +51,19 @@ func subMain() error {
 	return renderResources(allResources)
 }
 
-func loadResources(fname string) ([]cke.ResourceDefinition, error) {
-	f, err := os.Open(fname)
+func loadResources(fname string, images map[string]string) ([]cke.ResourceDefinition, error) {
+	tmpl, err := template.New(filepath.Base(fname)).ParseFiles(fname)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 
-	y := k8sYaml.NewYAMLReader(bufio.NewReader(f))
+	buf := &bytes.Buffer{}
+	err = tmpl.Execute(buf, images)
+	if err != nil {
+		return nil, err
+	}
+
+	y := k8sYaml.NewYAMLReader(bufio.NewReader(buf))
 	var res []cke.ResourceDefinition
 	for {
 		data, err := y.Read()
@@ -79,7 +92,8 @@ func loadResources(fname string) ([]cke.ResourceDefinition, error) {
 		obj := struct {
 			Metadata struct {
 				Annotations struct {
-					Revision int64 `json:"cke.cybozu.com/revision,string"`
+					Revision int64  `json:"cke.cybozu.com/revision,string"`
+					Image    string `json:"cke.cybozu.com/image"`
 				} `json:"annotations"`
 			} `json:"metadata"`
 		}{}
@@ -98,6 +112,7 @@ func loadResources(fname string) ([]cke.ResourceDefinition, error) {
 			Namespace:  namespace,
 			Name:       name,
 			Revision:   rev,
+			Image:      obj.Metadata.Annotations.Image,
 			Definition: jd,
 		})
 	}
@@ -121,6 +136,7 @@ var Resources = []cke.ResourceDefinition{
 		Namespace: {{ printf "%q" .Namespace }},
 		Name: {{ printf "%q" .Name }},
 		Revision: {{ .Revision }},
+		Image: {{ printf "%q" .Image }},
 		Definition: []byte({{ printf "%q" .Definition }}),
 	},
 	{{ end -}}

@@ -48,8 +48,8 @@ for resources managed by CKE to be ready for enabling [PodSecurityPolicy][].
 
 ### Service accounts
 
-* `node-dns` in `kube-system` is the service account for node-local DNS cache servers.
-* `cluster-dns` in `kube-system` is the service account for CoreDNS.
+* `cke-node-dns` in `kube-system` is the service account for node-local DNS cache servers.
+* `cke-cluster-dns` in `kube-system` is the service account for CoreDNS.
 
 ### RBAC roles
 

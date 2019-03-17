@@ -74,7 +74,7 @@ var _ = Describe("Kubernetes", func() {
 
 	It("has cluster DNS resources", func() {
 		for resource, name := range map[string]string{
-			"serviceaccounts":     "cluster-dns",
+			"serviceaccounts":     "cke-cluster-dns",
 			"clusterroles":        "system:cluster-dns",
 			"clusterrolebindings": "system:cluster-dns",
 			"configmaps":          "cluster-dns",
@@ -190,7 +190,11 @@ var _ = Describe("Kubernetes", func() {
 	})
 
 	It("has node DNS resources", func() {
-		for _, name := range []string{"configmaps/node-dns", "daemonsets/node-dns"} {
+		for _, name := range []string{
+			"configmaps/node-dns",
+			"daemonsets/node-dns",
+			"serviceaccounts/cke-node-dns",
+		} {
 			_, stderr, err := kubectl("-n", "kube-system", "get", name)
 			Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		}

@@ -305,7 +305,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	}
 
 	k8s, err := inf.K8sClient(ctx, n)
-	s.ResourceStatuses = make(map[string]int64)
+	s.ResourceStatuses = make(map[string]map[string]string)
 	for _, rkey := range rkeys {
 		parts := strings.Split(rkey, "/")
 		switch parts[0] {
@@ -317,10 +317,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		case "ServiceAccount":
 			obj, err := k8s.CoreV1().ServiceAccounts(parts[1]).Get(parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
@@ -329,10 +326,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		case "ConfigMap":
 			obj, err := k8s.CoreV1().ConfigMaps(parts[1]).Get(parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
@@ -341,10 +335,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		case "Service":
 			obj, err := k8s.CoreV1().Services(parts[1]).Get(parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
@@ -353,10 +344,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		case "PodSecurityPolicy":
 			obj, err := k8s.PolicyV1beta1().PodSecurityPolicies().Get(parts[1], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
@@ -365,10 +353,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		case "NetworkPolicy":
 			obj, err := k8s.NetworkingV1().NetworkPolicies(parts[1]).Get(parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
@@ -377,10 +362,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		case "Role":
 			obj, err := k8s.RbacV1().Roles(parts[1]).Get(parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
@@ -389,10 +371,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		case "RoleBinding":
 			obj, err := k8s.RbacV1().RoleBindings(parts[1]).Get(parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
@@ -401,10 +380,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		case "ClusterRole":
 			obj, err := k8s.RbacV1().ClusterRoles().Get(parts[1], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
@@ -413,10 +389,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		case "ClusterRoleBinding":
 			obj, err := k8s.RbacV1().ClusterRoleBindings().Get(parts[1], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
@@ -425,10 +398,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		case "Deployment":
 			obj, err := k8s.AppsV1().Deployments(parts[1]).Get(parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
@@ -437,10 +407,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		case "DaemonSet":
 			obj, err := k8s.AppsV1().DaemonSets(parts[1]).Get(parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
@@ -449,10 +416,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		case "CronJob":
 			obj, err := k8s.BatchV2alpha1().CronJobs(parts[1]).Get(parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
@@ -461,10 +425,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			err = s.SetResourceStatus(rkey, obj.Annotations)
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		default:
 			log.Warn("unknown resource kind", map[string]interface{}{
 				"kind": parts[0],
@@ -483,56 +444,10 @@ func getClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 
 	s := cke.ClusterDNSStatus{}
 
-	_, err = clientset.CoreV1().ServiceAccounts("kube-system").Get(ClusterDNSAppName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.ServiceAccountExists = true
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.ClusterDNSStatus{}, err
-	}
-
-	_, err = clientset.RbacV1().ClusterRoles().Get(ClusterDNSRBACRoleName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.RBACRoleExists = true
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.ClusterDNSStatus{}, err
-	}
-
-	_, err = clientset.RbacV1().ClusterRoleBindings().Get(ClusterDNSRBACRoleName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.RBACRoleBindingExists = true
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.ClusterDNSStatus{}, err
-	}
-
 	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(ClusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.ConfigMap = config
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.ClusterDNSStatus{}, err
-	}
-
-	deployment, err := clientset.AppsV1().Deployments("kube-system").Get(ClusterDNSAppName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.Deployment = deployment
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.ClusterDNSStatus{}, err
-	}
-
-	service, err := clientset.CoreV1().Services("kube-system").Get(ClusterDNSAppName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.ServiceExists = true
-		s.ClusterIP = service.Spec.ClusterIP
 	case k8serr.IsNotFound(err):
 	default:
 		return cke.ClusterDNSStatus{}, err
@@ -553,15 +468,6 @@ func getNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) 
 	switch {
 	case err == nil:
 		s.ConfigMap = config
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.NodeDNSStatus{}, err
-	}
-
-	ds, err := clientset.AppsV1().DaemonSets("kube-system").Get(NodeDNSAppName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.DaemonSet = ds
 	case k8serr.IsNotFound(err):
 	default:
 		return cke.NodeDNSStatus{}, err

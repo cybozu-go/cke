@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -20,6 +21,7 @@ import (
 
 // Annotations for CKE-managed resources.
 const (
+	AnnotationResourceImage    = "cke.cybozu.com/image"
 	AnnotationResourceRevision = "cke.cybozu.com/revision"
 	AnnotationResourceOriginal = "cke.cybozu.com/last-applied-configuration"
 )
@@ -225,12 +227,35 @@ type ResourceDefinition struct {
 	Namespace  string
 	Name       string
 	Revision   int64
+	Image      string
 	Definition []byte
 }
 
 // String implements fmt.Stringer.
 func (d ResourceDefinition) String() string {
 	return fmt.Sprintf("%s@%d", d.Key, d.Revision)
+}
+
+// NeedUpdate returns true if annotations of the current resource
+// indicates need for update.
+func (d ResourceDefinition) NeedUpdate(annotations map[string]string) bool {
+	curRev, ok := annotations[AnnotationResourceRevision]
+	if !ok {
+		return true
+	}
+	if curRev != strconv.FormatInt(d.Revision, 10) {
+		return true
+	}
+
+	if d.Image == "" {
+		return false
+	}
+
+	curImage, ok := annotations[AnnotationResourceImage]
+	if !ok {
+		return true
+	}
+	return curImage != d.Image
 }
 
 // SortResources sort resources as defined order of creation.
