@@ -14,6 +14,7 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
 	yaml "gopkg.in/yaml.v2"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
@@ -255,24 +256,6 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	}
 	s.Nodes = resp.Items
 
-	_, err = clientset.RbacV1().ClusterRoles().Get(rbacRoleName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.RBACRoleExists = true
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.KubernetesClusterStatus{}, err
-	}
-
-	_, err = clientset.RbacV1().ClusterRoleBindings().Get(rbacRoleBindingName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.RBACRoleBindingExists = true
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.KubernetesClusterStatus{}, err
-	}
-
 	if len(cluster.DNSService) > 0 {
 		fields := strings.Split(cluster.DNSService, "/")
 		if len(fields) != 2 {
@@ -316,6 +299,9 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	rkeys, err := inf.Storage().ListResources(ctx)
 	if err != nil {
 		return cke.KubernetesClusterStatus{}, err
+	}
+	for _, res := range static.Resources {
+		rkeys = append(rkeys, res.Key)
 	}
 
 	k8s, err := inf.K8sClient(ctx, n)

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"reflect"
 	"sort"
 	"testing"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/op/nodedns"
+	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -247,9 +247,10 @@ func (d testData) withK8sReady() testData {
 
 func (d testData) withK8sResourceReady() testData {
 	d.withK8sReady()
-	d.Status.Kubernetes.RBACRoleExists = true
-	d.Status.Kubernetes.RBACRoleBindingExists = true
-
+	d.Status.Kubernetes.ResourceStatuses["ServiceAccount/kube-system/cluster-dns"] = 1
+	d.Status.Kubernetes.ResourceStatuses["ServiceAccount/kube-system/node-dns"] = 1
+	d.Status.Kubernetes.ResourceStatuses["ClusterRole/system:kube-apiserver-to-kubelet"] = 1
+	d.Status.Kubernetes.ResourceStatuses["ClusterRoleBinding/system:kube-apiserver"] = 1
 	d.Status.Kubernetes.ClusterDNS.ServiceAccountExists = true
 	d.Status.Kubernetes.ClusterDNS.RBACRoleExists = true
 	d.Status.Kubernetes.ClusterDNS.RBACRoleBindingExists = true
@@ -624,7 +625,10 @@ func TestDecideOps(t *testing.T) {
 				"create-cluster-dns-service",
 				"create-cluster-dns-serviceaccount",
 				"create-etcd-endpoints",
-				"install-rbac-role",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
 			},
 		},
 		{
@@ -1245,27 +1249,29 @@ func TestDecideOps(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		ops := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Resources)
-		if len(ops) == 0 && len(c.ExpectedOps) == 0 {
-			continue
-		}
-		opNames := make([]string, len(ops))
-		for i, o := range ops {
-			opNames[i] = o.Name()
-		}
-		sort.Strings(opNames)
-		if !reflect.DeepEqual(opNames, c.ExpectedOps) {
-			t.Errorf("[%s] o names mismatch: %s != %s", c.Name, opNames, c.ExpectedOps)
-		}
-	OUT:
-		for _, o := range ops {
-			for i := 0; i < 100; i++ {
-				commander := o.NextCommand()
-				if commander == nil {
-					continue OUT
-				}
+		t.Run(c.Name, func(t *testing.T) {
+			ops := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Resources)
+			if len(ops) == 0 && len(c.ExpectedOps) == 0 {
+				return
 			}
-			t.Fatalf("[%s] Operator.NextCommand() never finished: %s", c.Name, o.Name())
-		}
+			opNames := make([]string, len(ops))
+			for i, o := range ops {
+				opNames[i] = o.Name()
+			}
+			sort.Strings(opNames)
+			if !cmp.Equal(c.ExpectedOps, opNames) {
+				t.Error("unexpected ops:", cmp.Diff(c.ExpectedOps, opNames))
+			}
+		OUT:
+			for _, o := range ops {
+				for i := 0; i < 100; i++ {
+					commander := o.NextCommand()
+					if commander == nil {
+						continue OUT
+					}
+				}
+				t.Fatalf("[%s] Operator.NextCommand() never finished: %s", c.Name, o.Name())
+			}
+		})
 	}
 }

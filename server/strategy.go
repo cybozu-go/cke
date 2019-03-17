@@ -8,6 +8,7 @@ import (
 	"github.com/cybozu-go/cke/op/etcdbackup"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/op/nodedns"
+	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -151,9 +152,7 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 		return []cke.Operator{op.KubeWaitOp(apiServer)}
 	}
 
-	if !ks.RBACRoleExists || !ks.RBACRoleBindingExists {
-		ops = append(ops, op.KubeRBACRoleInstallOp(apiServer, ks.RBACRoleExists))
-	}
+	ops = append(ops, decideResourceOps(apiServer, ks, resources)...)
 
 	ops = append(ops, decideClusterDNSOps(apiServer, c, ks)...)
 
@@ -173,8 +172,6 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 	}
 
 	ops = append(ops, decideEtcdBackupOps(apiServer, c, ks)...)
-
-	ops = append(ops, decideResourceOps(apiServer, ks, resources)...)
 
 	return ops
 }
@@ -368,6 +365,12 @@ func needUpdateEtcdBackupPod(c *cke.Cluster, ks cke.KubernetesClusterStatus) boo
 }
 
 func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, resources []cke.ResourceDefinition) (ops []cke.Operator) {
+	for _, res := range static.Resources {
+		rev, ok := ks.ResourceStatuses[res.Key]
+		if !ok || rev != res.Revision {
+			ops = append(ops, op.ResourceApplyOp(apiServer, res))
+		}
+	}
 	for _, res := range resources {
 		rev, ok := ks.ResourceStatuses[res.Key]
 		if !ok || rev != res.Revision {

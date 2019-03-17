@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-// Annotations for user-defined resources.
+// Annotations for CKE-managed resources.
 const (
 	AnnotationResourceRevision = "cke.cybozu.com/revision"
 	AnnotationResourceOriginal = "cke.cybozu.com/last-applied-configuration"
@@ -218,7 +218,7 @@ func ParseResource(data []byte) (key string, jsonData []byte, err error) {
 	return "", nil, fmt.Errorf("unsupported type: %s", gvk.String())
 }
 
-// ResourceDefinition represents a user-defined resource in etcd.
+// ResourceDefinition represents a CKE-managed kubernetes resource.
 type ResourceDefinition struct {
 	Key        string
 	Kind       Kind
@@ -233,7 +233,8 @@ func (d ResourceDefinition) String() string {
 	return fmt.Sprintf("%s@%d", d.Key, d.Revision)
 }
 
-func sortResources(res []ResourceDefinition) {
+// SortResources sort resources as defined order of creation.
+func SortResources(res []ResourceDefinition) {
 	less := func(i, j int) bool {
 		a := res[i]
 		b := res[j]

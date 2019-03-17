@@ -46,16 +46,14 @@ type EtcdBackupStatus struct {
 
 // KubernetesClusterStatus contains kubernetes cluster configurations
 type KubernetesClusterStatus struct {
-	IsReady               bool
-	Nodes                 []corev1.Node
-	RBACRoleExists        bool
-	RBACRoleBindingExists bool
-	DNSService            *corev1.Service
-	ClusterDNS            ClusterDNSStatus
-	NodeDNS               NodeDNSStatus
-	EtcdEndpoints         *corev1.Endpoints
-	EtcdBackup            EtcdBackupStatus
-	ResourceStatuses      map[string]int64
+	IsReady          bool
+	Nodes            []corev1.Node
+	DNSService       *corev1.Service
+	ClusterDNS       ClusterDNSStatus
+	NodeDNS          NodeDNSStatus
+	EtcdEndpoints    *corev1.Endpoints
+	EtcdBackup       EtcdBackupStatus
+	ResourceStatuses map[string]int64
 }
 
 // SetResourceStatus sets status of the resource.

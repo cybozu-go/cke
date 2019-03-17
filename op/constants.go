@@ -6,9 +6,6 @@ import (
 )
 
 const (
-	rbacRoleName        = "system:kube-apiserver-to-kubelet"
-	rbacRoleBindingName = "system:kube-apiserver"
-
 	etcdEndpointsName = "cke-etcd"
 
 	etcdPKIPath = "/etc/etcd/pki"
