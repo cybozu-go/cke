@@ -43,9 +43,7 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, stderr, err := kubectl("run", "nginx", "-n=mtest", "--image=nginx",
-			`--overrides={"spec": {"hostNetwork": true}}`,
-			"--generator=run-pod/v1")
+		_, stderr, err := kubectl(``, "apply", "-f", "./nginx.yml")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
@@ -108,10 +106,10 @@ var _ = Describe("Kubernetes", func() {
 		node := pods.Items[0].Spec.NodeName
 
 		By("deploying Service resource")
-		_, stderr, err = kubectl("run", "nginx", "-n=mtest", "--image=nginx")
+		_, stderr, err = kubectl(``, "apply", "-f", "./nginx.yml")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		_, stderr, err = kubectl("expose", "-n=mtest", "deployments", "nginx", "--port=80")
+		_, stderr, err = kubectl("expose", "-n=mtest", "pod", "nginx", "--port=80")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		overrides := fmt.Sprintf(`{
@@ -355,8 +353,7 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, stderr, err := kubectl("run", "nginx", "-n=mtest", "--image=nginx",
-			"--generator=run-pod/v1")
+		_, stderr, err := kubectl(``, "apply", "-f", "./nginx.yml")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
