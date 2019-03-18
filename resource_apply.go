@@ -86,8 +86,8 @@ func applyServiceAccount(o *corev1.ServiceAccount, data []byte, rev int64, getFu
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
@@ -134,8 +134,8 @@ func applyConfigMap(o *corev1.ConfigMap, data []byte, rev int64, getFunc func(st
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
@@ -182,8 +182,8 @@ func applyService(o *corev1.Service, data []byte, rev int64, getFunc func(string
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
@@ -230,8 +230,8 @@ func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, data []byte, rev
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
@@ -278,8 +278,8 @@ func applyNetworkPolicy(o *networkingv1.NetworkPolicy, data []byte, rev int64, g
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
@@ -326,8 +326,8 @@ func applyRole(o *rbacv1.Role, data []byte, rev int64, getFunc func(string, meta
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
@@ -374,8 +374,8 @@ func applyRoleBinding(o *rbacv1.RoleBinding, data []byte, rev int64, getFunc fun
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
@@ -422,8 +422,8 @@ func applyClusterRole(o *rbacv1.ClusterRole, data []byte, rev int64, getFunc fun
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
@@ -470,8 +470,8 @@ func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, data []byte, rev int6
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
@@ -518,8 +518,8 @@ func applyDeployment(o *appsv1.Deployment, data []byte, rev int64, getFunc func(
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
@@ -566,8 +566,8 @@ func applyDaemonSet(o *appsv1.DaemonSet, data []byte, rev int64, getFunc func(st
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
@@ -614,8 +614,8 @@ func applyCronJob(o *batchv2alpha1.CronJob, data []byte, rev int64, getFunc func
 		return err
 	}
 
-	curRevStr, ok := o.Annotations[AnnotationResourceRevision]
-	original := o.Annotations[AnnotationResourceOriginal]
+	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
+	original := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		// overwrite unannotated object
 		_, err = updateFunc(o)
