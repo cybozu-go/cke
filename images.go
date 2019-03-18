@@ -14,7 +14,7 @@ const (
 	HyperkubeImage = Image("quay.io/cybozu/hyperkube:1.13.4.1")
 	ToolsImage     = Image("quay.io/cybozu/cke-tools:1.5.1.1")
 	PauseImage     = Image("quay.io/cybozu/pause:3.1.0.3")
-	CoreDNSImage   = Image("quay.io/cybozu/coredns:1.3.1.1")
+	CoreDNSImage   = Image("quay.io/cybozu/coredns:1.3.1.2")
 	UnboundImage   = Image("quay.io/cybozu/unbound:1.9.0.1")
 )
 
