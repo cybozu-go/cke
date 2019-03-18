@@ -23,6 +23,8 @@ var _ = Describe("Kubernetes", func() {
 	BeforeEach(func() {
 		_, stderr, err := kubectl("create", "namespace", "mtest")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		_, stderr, err = kubectl("apply", "-f", "./mtest-policy.yml")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 	})
 
 	AfterEach(func() {
