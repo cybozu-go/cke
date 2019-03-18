@@ -46,7 +46,8 @@ Features
 * Cluster features:
 
     * HA control plane.
-    * [RBAC][].
+    * [RBAC][] is enabled.
+    * Ready for [PodSecurityPolicy][]
     * [CNI][] network plugins.
     * [CoreDNS][] add-on.
     * Node-local DNS cache services.
@@ -102,6 +103,7 @@ CKE is licensed under MIT license.
 [etcd]: https://github.com/etcd-io/etcd
 [Vault]: https://www.vaultproject.io
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+[PodSecurityPolicy]: https://kubernetes.io/docs/concepts/policy/pod-security-policy/
 [CNI]: https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/
 [CoreDNS]: https://coredns.io/
 [sabakan]: https://github.com/cybozu-go/sabakan

@@ -483,7 +483,7 @@ func (s Storage) GetAllResources(ctx context.Context) ([]ResourceDefinition, err
 		})
 	}
 
-	sortResources(rcs)
+	SortResources(rcs)
 	return rcs, nil
 }
 

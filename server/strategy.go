@@ -8,6 +8,7 @@ import (
 	"github.com/cybozu-go/cke/op/etcdbackup"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/op/nodedns"
+	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -151,9 +152,7 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 		return []cke.Operator{op.KubeWaitOp(apiServer)}
 	}
 
-	if !ks.RBACRoleExists || !ks.RBACRoleBindingExists {
-		ops = append(ops, op.KubeRBACRoleInstallOp(apiServer, ks.RBACRoleExists))
-	}
+	ops = append(ops, decideResourceOps(apiServer, ks, resources)...)
 
 	ops = append(ops, decideClusterDNSOps(apiServer, c, ks)...)
 
@@ -174,8 +173,6 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 
 	ops = append(ops, decideEtcdBackupOps(apiServer, c, ks)...)
 
-	ops = append(ops, decideResourceOps(apiServer, ks, resources)...)
-
 	return ops
 }
 
@@ -194,15 +191,6 @@ func decideClusterDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesC
 		panic("Options.Kubelet.Domain is empty")
 	}
 
-	if !ks.ClusterDNS.ServiceAccountExists {
-		ops = append(ops, clusterdns.CreateServiceAccountOp(apiServer))
-	}
-	if !ks.ClusterDNS.RBACRoleExists {
-		ops = append(ops, clusterdns.CreateRBACRoleOp(apiServer))
-	}
-	if !ks.ClusterDNS.RBACRoleBindingExists {
-		ops = append(ops, clusterdns.CreateRBACRoleBindingOp(apiServer))
-	}
 	if ks.ClusterDNS.ConfigMap == nil {
 		ops = append(ops, clusterdns.CreateConfigMapOp(apiServer, desiredClusterDomain, desiredDNSServers))
 	} else {
@@ -212,17 +200,6 @@ func decideClusterDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesC
 			ops = append(ops, clusterdns.UpdateConfigMapOp(apiServer, expectedConfig))
 		}
 	}
-	if ks.ClusterDNS.Deployment == nil {
-		ops = append(ops, clusterdns.CreateDeploymentOp(apiServer))
-	} else {
-		if ks.ClusterDNS.Deployment.Annotations["cke.cybozu.com/image"] != cke.CoreDNSImage.Name() ||
-			ks.ClusterDNS.Deployment.Annotations["cke.cybozu.com/template-version"] != clusterdns.CoreDNSTemplateVersion {
-			ops = append(ops, clusterdns.UpdateDeploymentOp(apiServer))
-		}
-	}
-	if !ks.ClusterDNS.ServiceExists {
-		ops = append(ops, clusterdns.CreateOp(apiServer))
-	}
 
 	return ops
 }
@@ -230,15 +207,6 @@ func decideClusterDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesC
 func decideNodeDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) (ops []cke.Operator) {
 	if len(ks.ClusterDNS.ClusterIP) == 0 {
 		return nil
-	}
-
-	if ks.NodeDNS.DaemonSet == nil {
-		ops = append(ops, nodedns.CreateDaemonSetOp(apiServer))
-	} else {
-		if ks.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/image"] != cke.UnboundImage.Name() ||
-			ks.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/template-version"] != nodedns.UnboundTemplateVersion {
-			ops = append(ops, nodedns.UpdateDaemonSetOp(apiServer))
-		}
 	}
 
 	desiredDNSServers := c.DNSServers
@@ -368,9 +336,15 @@ func needUpdateEtcdBackupPod(c *cke.Cluster, ks cke.KubernetesClusterStatus) boo
 }
 
 func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, resources []cke.ResourceDefinition) (ops []cke.Operator) {
+	for _, res := range static.Resources {
+		annotations, ok := ks.ResourceStatuses[res.Key]
+		if !ok || res.NeedUpdate(annotations) {
+			ops = append(ops, op.ResourceApplyOp(apiServer, res))
+		}
+	}
 	for _, res := range resources {
-		rev, ok := ks.ResourceStatuses[res.Key]
-		if !ok || rev != res.Revision {
+		annotations, ok := ks.ResourceStatuses[res.Key]
+		if !ok || res.NeedUpdate(annotations) {
 			ops = append(ops, op.ResourceApplyOp(apiServer, res))
 		}
 	}

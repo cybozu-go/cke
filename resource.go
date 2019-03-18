@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,8 +19,9 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-// Annotations for user-defined resources.
+// Annotations for CKE-managed resources.
 const (
+	AnnotationResourceImage    = "cke.cybozu.com/image"
 	AnnotationResourceRevision = "cke.cybozu.com/revision"
 	AnnotationResourceOriginal = "cke.cybozu.com/last-applied-configuration"
 )
@@ -218,13 +220,14 @@ func ParseResource(data []byte) (key string, jsonData []byte, err error) {
 	return "", nil, fmt.Errorf("unsupported type: %s", gvk.String())
 }
 
-// ResourceDefinition represents a user-defined resource in etcd.
+// ResourceDefinition represents a CKE-managed kubernetes resource.
 type ResourceDefinition struct {
 	Key        string
 	Kind       Kind
 	Namespace  string
 	Name       string
 	Revision   int64
+	Image      string
 	Definition []byte
 }
 
@@ -233,7 +236,30 @@ func (d ResourceDefinition) String() string {
 	return fmt.Sprintf("%s@%d", d.Key, d.Revision)
 }
 
-func sortResources(res []ResourceDefinition) {
+// NeedUpdate returns true if annotations of the current resource
+// indicates need for update.
+func (d ResourceDefinition) NeedUpdate(annotations map[string]string) bool {
+	curRev, ok := annotations[AnnotationResourceRevision]
+	if !ok {
+		return true
+	}
+	if curRev != strconv.FormatInt(d.Revision, 10) {
+		return true
+	}
+
+	if d.Image == "" {
+		return false
+	}
+
+	curImage, ok := annotations[AnnotationResourceImage]
+	if !ok {
+		return true
+	}
+	return curImage != d.Image
+}
+
+// SortResources sort resources as defined order of creation.
+func SortResources(res []ResourceDefinition) {
 	less := func(i, j int) bool {
 		a := res[i]
 		b := res[j]

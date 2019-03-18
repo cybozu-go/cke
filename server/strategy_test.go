@@ -1,7 +1,6 @@
 package server
 
 import (
-	"reflect"
 	"sort"
 	"testing"
 
@@ -11,7 +10,8 @@ import (
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/op/nodedns"
-	appsv1 "k8s.io/api/apps/v1"
+	"github.com/cybozu-go/cke/static"
+	"github.com/google/go-cmp/cmp"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -102,7 +102,9 @@ func newData() testData {
 			"10.0.0.16": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
 		},
 		Kubernetes: cke.KubernetesClusterStatus{
-			ResourceStatuses: map[string]int64{"Namespace/foo": 1},
+			ResourceStatuses: map[string]map[string]string{
+				"Namespace/foo": {cke.AnnotationResourceRevision: "1"},
+			},
 		},
 	}
 
@@ -247,36 +249,19 @@ func (d testData) withK8sReady() testData {
 
 func (d testData) withK8sResourceReady() testData {
 	d.withK8sReady()
-	d.Status.Kubernetes.RBACRoleExists = true
-	d.Status.Kubernetes.RBACRoleBindingExists = true
-
-	d.Status.Kubernetes.ClusterDNS.ServiceAccountExists = true
-	d.Status.Kubernetes.ClusterDNS.RBACRoleExists = true
-	d.Status.Kubernetes.ClusterDNS.RBACRoleBindingExists = true
-	d.Status.Kubernetes.ClusterDNS.ConfigMap = clusterdns.ConfigMap(testDefaultDNSDomain, testDefaultDNSServers)
-	d.Status.Kubernetes.ClusterDNS.Deployment = &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"cke.cybozu.com/image":            cke.CoreDNSImage.Name(),
-				"cke.cybozu.com/template-version": clusterdns.CoreDNSTemplateVersion,
-			},
-		},
+	ks := &d.Status.Kubernetes
+	for _, res := range static.Resources {
+		ks.ResourceStatuses[res.Key] = map[string]string{
+			cke.AnnotationResourceRevision: "1",
+		}
 	}
-	d.Status.Kubernetes.ClusterDNS.ServiceExists = true
-	d.Status.Kubernetes.ClusterDNS.ClusterDomain = testDefaultDNSDomain
-	d.Status.Kubernetes.ClusterDNS.ClusterIP = testDefaultDNSAddr
+	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"][cke.AnnotationResourceImage] = cke.CoreDNSImage.Name()
+	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"][cke.AnnotationResourceImage] = cke.UnboundImage.Name()
+	ks.ClusterDNS.ConfigMap = clusterdns.ConfigMap(testDefaultDNSDomain, testDefaultDNSServers)
+	ks.ClusterDNS.ClusterIP = testDefaultDNSAddr
+	ks.NodeDNS.ConfigMap = nodedns.ConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
 
-	d.Status.Kubernetes.NodeDNS.DaemonSet = &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"cke.cybozu.com/image":            cke.UnboundImage.Name(),
-				"cke.cybozu.com/template-version": nodedns.UnboundTemplateVersion,
-			},
-		},
-	}
-	d.Status.Kubernetes.NodeDNS.ConfigMap = nodedns.ConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
-
-	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
+	ks.EtcdEndpoints = &corev1.Endpoints{
 		Subsets: []corev1.EndpointSubset{
 			{
 				Addresses: []corev1.EndpointAddress{
@@ -618,13 +603,23 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sReady(),
 			ExpectedOps: []string{
 				"create-cluster-dns-configmap",
-				"create-cluster-dns-deployment",
-				"create-cluster-dns-rbac-role",
-				"create-cluster-dns-rbac-role-binding",
-				"create-cluster-dns-service",
-				"create-cluster-dns-serviceaccount",
 				"create-etcd-endpoints",
-				"install-rbac-role",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
 			},
 		},
 		{
@@ -672,30 +667,12 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
-			Name: "DNSUpdate4",
-			Input: newData().withK8sResourceReady().with(func(d testData) {
-				d.Status.Kubernetes.ClusterDNS.Deployment.Annotations["cke.cybozu.com/template-version"] = "0"
-			}),
-			ExpectedOps: []string{
-				"update-cluster-dns-deployment",
-			},
-		},
-		{
-			Name: "NodeDNSUpdate1",
+			Name: "NodeDNSUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.ClusterDNS.ClusterIP = "10.0.0.54"
 			}),
 			ExpectedOps: []string{
 				"update-node-dns-configmap",
-			},
-		},
-		{
-			Name: "NodeDNSUpdate2",
-			Input: newData().withK8sResourceReady().with(func(d testData) {
-				d.Status.Kubernetes.NodeDNS.DaemonSet.Annotations["cke.cybozu.com/template-version"] = "0"
-			}),
-			ExpectedOps: []string{
-				"update-node-dns-daemonset",
 			},
 		},
 		{
@@ -1245,27 +1222,29 @@ func TestDecideOps(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		ops := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Resources)
-		if len(ops) == 0 && len(c.ExpectedOps) == 0 {
-			continue
-		}
-		opNames := make([]string, len(ops))
-		for i, o := range ops {
-			opNames[i] = o.Name()
-		}
-		sort.Strings(opNames)
-		if !reflect.DeepEqual(opNames, c.ExpectedOps) {
-			t.Errorf("[%s] o names mismatch: %s != %s", c.Name, opNames, c.ExpectedOps)
-		}
-	OUT:
-		for _, o := range ops {
-			for i := 0; i < 100; i++ {
-				commander := o.NextCommand()
-				if commander == nil {
-					continue OUT
-				}
+		t.Run(c.Name, func(t *testing.T) {
+			ops := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Resources)
+			if len(ops) == 0 && len(c.ExpectedOps) == 0 {
+				return
 			}
-			t.Fatalf("[%s] Operator.NextCommand() never finished: %s", c.Name, o.Name())
-		}
+			opNames := make([]string, len(ops))
+			for i, o := range ops {
+				opNames[i] = o.Name()
+			}
+			sort.Strings(opNames)
+			if !cmp.Equal(c.ExpectedOps, opNames) {
+				t.Error("unexpected ops:", cmp.Diff(c.ExpectedOps, opNames))
+			}
+		OUT:
+			for _, o := range ops {
+				for i := 0; i < 100; i++ {
+					commander := o.NextCommand()
+					if commander == nil {
+						continue OUT
+					}
+				}
+				t.Fatalf("[%s] Operator.NextCommand() never finished: %s", c.Name, o.Name())
+			}
+		})
 	}
 }

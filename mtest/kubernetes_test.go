@@ -23,6 +23,8 @@ var _ = Describe("Kubernetes", func() {
 	BeforeEach(func() {
 		_, stderr, err := kubectl("create", "namespace", "mtest")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		_, stderr, err = kubectl("apply", "-f", "./mtest-policy.yml")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 	})
 
 	AfterEach(func() {
@@ -41,9 +43,7 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, stderr, err := kubectl("run", "nginx", "-n=mtest", "--image=nginx",
-			`--overrides={"spec": {"hostNetwork": true}}`,
-			"--generator=run-pod/v1")
+		_, stderr, err := kubectl("apply", "-f", "./nginx.yml")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
@@ -74,7 +74,7 @@ var _ = Describe("Kubernetes", func() {
 
 	It("has cluster DNS resources", func() {
 		for resource, name := range map[string]string{
-			"serviceaccounts":     "cluster-dns",
+			"serviceaccounts":     "cke-cluster-dns",
 			"clusterroles":        "system:cluster-dns",
 			"clusterrolebindings": "system:cluster-dns",
 			"configmaps":          "cluster-dns",
@@ -106,10 +106,10 @@ var _ = Describe("Kubernetes", func() {
 		node := pods.Items[0].Spec.NodeName
 
 		By("deploying Service resource")
-		_, stderr, err = kubectl("run", "nginx", "-n=mtest", "--image=nginx")
+		_, stderr, err = kubectl("apply", "-f", "./nginx.yml")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		_, stderr, err = kubectl("expose", "-n=mtest", "deployments", "nginx", "--port=80")
+		_, stderr, err = kubectl("expose", "-n=mtest", "pod", "nginx", "--port=80")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		overrides := fmt.Sprintf(`{
@@ -190,7 +190,11 @@ var _ = Describe("Kubernetes", func() {
 	})
 
 	It("has node DNS resources", func() {
-		for _, name := range []string{"configmaps/node-dns", "daemonsets/node-dns"} {
+		for _, name := range []string{
+			"configmaps/node-dns",
+			"daemonsets/node-dns",
+			"serviceaccounts/cke-node-dns",
+		} {
 			_, stderr, err := kubectl("-n", "kube-system", "get", name)
 			Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		}
@@ -349,8 +353,7 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, stderr, err := kubectl("run", "nginx", "-n=mtest", "--image=nginx",
-			"--generator=run-pod/v1")
+		_, stderr, err := kubectl("apply", "-f", "./nginx.yml")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")

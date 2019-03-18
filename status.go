@@ -1,11 +1,8 @@
 package cke
 
 import (
-	"strconv"
-
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 
-	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -19,19 +16,12 @@ type EtcdClusterStatus struct {
 
 // ClusterDNSStatus contains cluster resolver status.
 type ClusterDNSStatus struct {
-	ServiceAccountExists  bool
-	RBACRoleExists        bool
-	RBACRoleBindingExists bool
-	ConfigMap             *corev1.ConfigMap
-	Deployment            *appsv1.Deployment
-	ServiceExists         bool
-	ClusterDomain         string
-	ClusterIP             string
+	ConfigMap *corev1.ConfigMap
+	ClusterIP string
 }
 
 // NodeDNSStatus contains node local resolver status.
 type NodeDNSStatus struct {
-	DaemonSet *appsv1.DaemonSet
 	ConfigMap *corev1.ConfigMap
 }
 
@@ -46,31 +36,19 @@ type EtcdBackupStatus struct {
 
 // KubernetesClusterStatus contains kubernetes cluster configurations
 type KubernetesClusterStatus struct {
-	IsReady               bool
-	Nodes                 []corev1.Node
-	RBACRoleExists        bool
-	RBACRoleBindingExists bool
-	DNSService            *corev1.Service
-	ClusterDNS            ClusterDNSStatus
-	NodeDNS               NodeDNSStatus
-	EtcdEndpoints         *corev1.Endpoints
-	EtcdBackup            EtcdBackupStatus
-	ResourceStatuses      map[string]int64
+	IsReady          bool
+	Nodes            []corev1.Node
+	DNSService       *corev1.Service
+	ClusterDNS       ClusterDNSStatus
+	NodeDNS          NodeDNSStatus
+	EtcdEndpoints    *corev1.Endpoints
+	EtcdBackup       EtcdBackupStatus
+	ResourceStatuses map[string]map[string]string
 }
 
 // SetResourceStatus sets status of the resource.
-func (s KubernetesClusterStatus) SetResourceStatus(rkey string, annotations map[string]string) error {
-	a, ok := annotations[AnnotationResourceRevision]
-	if !ok {
-		s.ResourceStatuses[rkey] = 0
-		return nil
-	}
-	rev, err := strconv.ParseInt(a, 10, 64)
-	if err != nil {
-		return err
-	}
-	s.ResourceStatuses[rkey] = rev
-	return nil
+func (s KubernetesClusterStatus) SetResourceStatus(rkey string, annotations map[string]string) {
+	s.ResourceStatuses[rkey] = annotations
 }
 
 // ClusterStatus represents the working cluster status.

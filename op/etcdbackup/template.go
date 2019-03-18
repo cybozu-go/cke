@@ -41,6 +41,7 @@ metadata:
   labels:
     k8s-app: ` + op.EtcdBackupAppName + `
 spec:
+  serviceAccountName: cke-etcdbackup
   containers:
   - name: etcdbackup
     image: ` + cke.ToolsImage.Name() + `
@@ -57,12 +58,8 @@ spec:
       - mountPath: /config
         name: config
     securityContext:
-      capabilities:
-        add:
-        - NET_BIND_SERVICE
-        drop:
-        - all
       readOnlyRootFilesystem: true
+      fsGroup: 10000
   volumes:
   - name: etcd-certs
     secret:
@@ -89,6 +86,9 @@ spec:
     spec:
       template:
         spec:
+          serviceAccountName: cke-etcdbackup
+          securityContext:
+            runAsUser: 10000
           containers:
             - name: etcdbackup
               image: ` + cke.ToolsImage.Name() + `

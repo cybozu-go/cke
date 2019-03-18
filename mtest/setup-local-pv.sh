@@ -1,4 +1,5 @@
 #!/bin/sh -e
 
-sudo mkdir -p /mnt/disks/etcdbackup
-sudo chown root:root /mnt/disks/etcdbackup
+mkdir -p /mnt/disks/etcdbackup
+chown root:10000 /mnt/disks/etcdbackup
+chmod g+ws /mnt/disks/etcdbackup
