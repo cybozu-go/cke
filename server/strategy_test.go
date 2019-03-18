@@ -10,6 +10,7 @@ import (
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/op/nodedns"
+	"github.com/cybozu-go/cke/static"
 	"github.com/google/go-cmp/cmp"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -249,18 +250,8 @@ func (d testData) withK8sReady() testData {
 func (d testData) withK8sResourceReady() testData {
 	d.withK8sReady()
 	ks := &d.Status.Kubernetes
-	for _, key := range []string{
-		"ServiceAccount/kube-system/cke-cluster-dns",
-		"ServiceAccount/kube-system/cke-node-dns",
-		"ClusterRole/system:kube-apiserver-to-kubelet",
-		"ClusterRoleBinding/system:kube-apiserver",
-		"ClusterRole/system:cluster-dns",
-		"ClusterRoleBinding/system:cluster-dns",
-		"Deployment/kube-system/cluster-dns",
-		"Service/kube-system/cluster-dns",
-		"DaemonSet/kube-system/node-dns",
-	} {
-		ks.ResourceStatuses[key] = map[string]string{
+	for _, res := range static.Resources {
+		ks.ResourceStatuses[res.Key] = map[string]string{
 			cke.AnnotationResourceRevision: "1",
 		}
 	}
@@ -613,6 +604,13 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{
 				"create-cluster-dns-configmap",
 				"create-etcd-endpoints",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
+				"resource-apply",
 				"resource-apply",
 				"resource-apply",
 				"resource-apply",
