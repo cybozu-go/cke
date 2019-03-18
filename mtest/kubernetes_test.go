@@ -43,7 +43,7 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, stderr, err := kubectl(``, "apply", "-f", "./nginx.yml")
+		_, stderr, err := kubectl("apply", "-f", "./nginx.yml")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
@@ -106,7 +106,7 @@ var _ = Describe("Kubernetes", func() {
 		node := pods.Items[0].Spec.NodeName
 
 		By("deploying Service resource")
-		_, stderr, err = kubectl(``, "apply", "-f", "./nginx.yml")
+		_, stderr, err = kubectl("apply", "-f", "./nginx.yml")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		_, stderr, err = kubectl("expose", "-n=mtest", "pod", "nginx", "--port=80")
@@ -353,7 +353,7 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, stderr, err := kubectl(``, "apply", "-f", "./nginx.yml")
+		_, stderr, err := kubectl("apply", "-f", "./nginx.yml")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
