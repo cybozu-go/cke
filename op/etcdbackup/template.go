@@ -86,6 +86,9 @@ spec:
     spec:
       template:
         spec:
+          serviceAccountName: cke-etcdbackup
+          securityContext:
+            runAsUser: 10000
           containers:
             - name: etcdbackup
               image: ` + cke.ToolsImage.Name() + `
