@@ -5,6 +5,11 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.10] - 2019-03-18
+
+### Changed
+- CKE is ready for enabling PodSecurityPolicy (#149).
+
 ## [1.13.9] - 2019-03-15
 
 ### Added
@@ -78,7 +83,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.9...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.10...HEAD
+[1.13.10]: https://github.com/cybozu-go/cke/compare/v1.13.9...v1.13.10
 [1.13.9]: https://github.com/cybozu-go/cke/compare/v1.13.8...v1.13.9
 [1.13.8]: https://github.com/cybozu-go/cke/compare/v1.13.7...v1.13.8
 [1.13.7]: https://github.com/cybozu-go/cke/compare/v1.13.6...v1.13.7
