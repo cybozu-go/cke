@@ -57,12 +57,8 @@ spec:
       - mountPath: /config
         name: config
     securityContext:
-      capabilities:
-        add:
-        - NET_BIND_SERVICE
-        drop:
-        - all
       readOnlyRootFilesystem: true
+      fsGroup: 10000
   volumes:
   - name: etcd-certs
     secret:
