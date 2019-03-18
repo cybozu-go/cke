@@ -41,6 +41,7 @@ metadata:
   labels:
     k8s-app: ` + op.EtcdBackupAppName + `
 spec:
+  serviceAccountName: cke-etcdbackup
   containers:
   - name: etcdbackup
     image: ` + cke.ToolsImage.Name() + `

@@ -13,7 +13,7 @@ import (
 // CoreDNSTemplateVersion is the version of CoreDNS template
 const CoreDNSTemplateVersion = "2"
 
-var clusterDNSTemplate = template.Must(template.New("").Parse(`.:53 {
+var clusterDNSTemplate = template.Must(template.New("").Parse(`.:1053 {
     errors
     health
     log

@@ -7,6 +7,45 @@ metadata:
     cke.cybozu.com/revision: "1"
 ---
 
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: system:node-dns
+  namespace: kube-system
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  annotations:
+    cke.cybozu.com/revision: "1"
+    # turn on auto-reconciliation
+    # https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+rules:
+  - apiGroups: ["policy"]
+    resources: ["podsecuritypolicies"]
+    verbs: ["use"]
+    resourceNames: ["cke:node-dns"]
+---
+
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: system:node-dns
+  namespace: kube-system
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  annotations:
+    cke.cybozu.com/revision: "1"
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: system:node-dns
+subjects:
+- kind: ServiceAccount
+  name: cke-node-dns
+  namespace: kube-system
+---
+
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
