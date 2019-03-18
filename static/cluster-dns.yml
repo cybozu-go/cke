@@ -29,7 +29,7 @@ rules:
   - apiGroups: ["policy"]
     resources: ["podsecuritypolicies"]
     verbs: ["use"]
-    resourceNames: ["cke:restricted"]
+    resourceNames: ["cke-restricted"]
 ---
 
 kind: ClusterRoleBinding

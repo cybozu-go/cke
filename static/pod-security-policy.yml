@@ -1,7 +1,7 @@
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: cke:restricted
+  name: cke-restricted
   annotations:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'docker/default'
     seccomp.security.alpha.kubernetes.io/defaultProfileName:  'docker/default'
@@ -49,7 +49,7 @@ spec:
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: cke:node-dns
+  name: cke-node-dns
   annotations:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'docker/default'
     seccomp.security.alpha.kubernetes.io/defaultProfileName:  'docker/default'

@@ -23,7 +23,7 @@ rules:
   - apiGroups: ["policy"]
     resources: ["podsecuritypolicies"]
     verbs: ["use"]
-    resourceNames: ["cke:node-dns"]
+    resourceNames: ["cke-node-dns"]
 ---
 
 kind: RoleBinding
