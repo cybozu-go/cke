@@ -14,7 +14,8 @@ spec:
     rule: RunAsAny
   volumes:
   - '*'
-  readOnlyRootFilesystem: true
+  readOnlyRootFilesystem: false
+  hostNetwork: true
 ---
 
 kind: Role
