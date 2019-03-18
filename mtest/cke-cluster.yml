@@ -16,7 +16,7 @@ dns_servers: ["8.8.8.8", "1.1.1.1"]
 options:
   kube-api:
     extra_args:
-    - --disable-admission-plugins=Initializers
+    - --enable-admission-plugins=PodSecurityPolicy
   kubelet:
     domain: cluster.local
     extra_binds:
