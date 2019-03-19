@@ -67,10 +67,7 @@ func (s KubernetesClusterStatus) IsReady(cluster *Cluster) bool {
 			}
 		}
 	}
-	if clusterNodesSize/2 < currentReady {
-		return true
-	}
-	return false
+	return clusterNodesSize/2 < currentReady
 }
 
 // SetResourceStatus sets status of the resource.
