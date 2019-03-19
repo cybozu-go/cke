@@ -27,7 +27,7 @@ func annotate(meta *metav1.ObjectMeta, rev int64, data []byte) {
 	meta.Annotations[AnnotationResourceOriginal] = string(data)
 }
 
-func applyNamespace(o *corev1.Namespace, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*corev1.Namespace, error), createFunc, updateFunc func(*corev1.Namespace) (*corev1.Namespace, error), patchFunc func(string, types.PatchType, []byte, ...string) (*corev1.Namespace, error)) error {
+func applyNamespace(o *corev1.Namespace, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*corev1.Namespace, error), createFunc func(*corev1.Namespace) (*corev1.Namespace, error), patchFunc func(string, types.PatchType, []byte, ...string) (*corev1.Namespace, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -38,17 +38,14 @@ func applyNamespace(o *corev1.Namespace, data []byte, rev int64, getFunc func(st
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -58,6 +55,9 @@ func applyNamespace(o *corev1.Namespace, data []byte, rev int64, getFunc func(st
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -75,7 +75,7 @@ func applyNamespace(o *corev1.Namespace, data []byte, rev int64, getFunc func(st
 	return err
 }
 
-func applyServiceAccount(o *corev1.ServiceAccount, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*corev1.ServiceAccount, error), createFunc, updateFunc func(*corev1.ServiceAccount) (*corev1.ServiceAccount, error), patchFunc func(string, types.PatchType, []byte, ...string) (*corev1.ServiceAccount, error)) error {
+func applyServiceAccount(o *corev1.ServiceAccount, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*corev1.ServiceAccount, error), createFunc func(*corev1.ServiceAccount) (*corev1.ServiceAccount, error), patchFunc func(string, types.PatchType, []byte, ...string) (*corev1.ServiceAccount, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -86,17 +86,14 @@ func applyServiceAccount(o *corev1.ServiceAccount, data []byte, rev int64, getFu
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -106,6 +103,9 @@ func applyServiceAccount(o *corev1.ServiceAccount, data []byte, rev int64, getFu
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -123,7 +123,7 @@ func applyServiceAccount(o *corev1.ServiceAccount, data []byte, rev int64, getFu
 	return err
 }
 
-func applyConfigMap(o *corev1.ConfigMap, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*corev1.ConfigMap, error), createFunc, updateFunc func(*corev1.ConfigMap) (*corev1.ConfigMap, error), patchFunc func(string, types.PatchType, []byte, ...string) (*corev1.ConfigMap, error)) error {
+func applyConfigMap(o *corev1.ConfigMap, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*corev1.ConfigMap, error), createFunc func(*corev1.ConfigMap) (*corev1.ConfigMap, error), patchFunc func(string, types.PatchType, []byte, ...string) (*corev1.ConfigMap, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -134,17 +134,14 @@ func applyConfigMap(o *corev1.ConfigMap, data []byte, rev int64, getFunc func(st
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -154,6 +151,9 @@ func applyConfigMap(o *corev1.ConfigMap, data []byte, rev int64, getFunc func(st
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -171,7 +171,7 @@ func applyConfigMap(o *corev1.ConfigMap, data []byte, rev int64, getFunc func(st
 	return err
 }
 
-func applyService(o *corev1.Service, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*corev1.Service, error), createFunc, updateFunc func(*corev1.Service) (*corev1.Service, error), patchFunc func(string, types.PatchType, []byte, ...string) (*corev1.Service, error)) error {
+func applyService(o *corev1.Service, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*corev1.Service, error), createFunc func(*corev1.Service) (*corev1.Service, error), patchFunc func(string, types.PatchType, []byte, ...string) (*corev1.Service, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -182,17 +182,14 @@ func applyService(o *corev1.Service, data []byte, rev int64, getFunc func(string
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -202,6 +199,9 @@ func applyService(o *corev1.Service, data []byte, rev int64, getFunc func(string
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -219,7 +219,7 @@ func applyService(o *corev1.Service, data []byte, rev int64, getFunc func(string
 	return err
 }
 
-func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*policyv1beta1.PodSecurityPolicy, error), createFunc, updateFunc func(*policyv1beta1.PodSecurityPolicy) (*policyv1beta1.PodSecurityPolicy, error), patchFunc func(string, types.PatchType, []byte, ...string) (*policyv1beta1.PodSecurityPolicy, error)) error {
+func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*policyv1beta1.PodSecurityPolicy, error), createFunc func(*policyv1beta1.PodSecurityPolicy) (*policyv1beta1.PodSecurityPolicy, error), patchFunc func(string, types.PatchType, []byte, ...string) (*policyv1beta1.PodSecurityPolicy, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -230,17 +230,14 @@ func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, data []byte, rev
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -250,6 +247,9 @@ func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, data []byte, rev
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -267,7 +267,7 @@ func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, data []byte, rev
 	return err
 }
 
-func applyNetworkPolicy(o *networkingv1.NetworkPolicy, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*networkingv1.NetworkPolicy, error), createFunc, updateFunc func(*networkingv1.NetworkPolicy) (*networkingv1.NetworkPolicy, error), patchFunc func(string, types.PatchType, []byte, ...string) (*networkingv1.NetworkPolicy, error)) error {
+func applyNetworkPolicy(o *networkingv1.NetworkPolicy, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*networkingv1.NetworkPolicy, error), createFunc func(*networkingv1.NetworkPolicy) (*networkingv1.NetworkPolicy, error), patchFunc func(string, types.PatchType, []byte, ...string) (*networkingv1.NetworkPolicy, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -278,17 +278,14 @@ func applyNetworkPolicy(o *networkingv1.NetworkPolicy, data []byte, rev int64, g
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -298,6 +295,9 @@ func applyNetworkPolicy(o *networkingv1.NetworkPolicy, data []byte, rev int64, g
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -315,7 +315,7 @@ func applyNetworkPolicy(o *networkingv1.NetworkPolicy, data []byte, rev int64, g
 	return err
 }
 
-func applyRole(o *rbacv1.Role, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*rbacv1.Role, error), createFunc, updateFunc func(*rbacv1.Role) (*rbacv1.Role, error), patchFunc func(string, types.PatchType, []byte, ...string) (*rbacv1.Role, error)) error {
+func applyRole(o *rbacv1.Role, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*rbacv1.Role, error), createFunc func(*rbacv1.Role) (*rbacv1.Role, error), patchFunc func(string, types.PatchType, []byte, ...string) (*rbacv1.Role, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -326,17 +326,14 @@ func applyRole(o *rbacv1.Role, data []byte, rev int64, getFunc func(string, meta
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -346,6 +343,9 @@ func applyRole(o *rbacv1.Role, data []byte, rev int64, getFunc func(string, meta
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -363,7 +363,7 @@ func applyRole(o *rbacv1.Role, data []byte, rev int64, getFunc func(string, meta
 	return err
 }
 
-func applyRoleBinding(o *rbacv1.RoleBinding, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*rbacv1.RoleBinding, error), createFunc, updateFunc func(*rbacv1.RoleBinding) (*rbacv1.RoleBinding, error), patchFunc func(string, types.PatchType, []byte, ...string) (*rbacv1.RoleBinding, error)) error {
+func applyRoleBinding(o *rbacv1.RoleBinding, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*rbacv1.RoleBinding, error), createFunc func(*rbacv1.RoleBinding) (*rbacv1.RoleBinding, error), patchFunc func(string, types.PatchType, []byte, ...string) (*rbacv1.RoleBinding, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -374,17 +374,14 @@ func applyRoleBinding(o *rbacv1.RoleBinding, data []byte, rev int64, getFunc fun
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -394,6 +391,9 @@ func applyRoleBinding(o *rbacv1.RoleBinding, data []byte, rev int64, getFunc fun
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -411,7 +411,7 @@ func applyRoleBinding(o *rbacv1.RoleBinding, data []byte, rev int64, getFunc fun
 	return err
 }
 
-func applyClusterRole(o *rbacv1.ClusterRole, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*rbacv1.ClusterRole, error), createFunc, updateFunc func(*rbacv1.ClusterRole) (*rbacv1.ClusterRole, error), patchFunc func(string, types.PatchType, []byte, ...string) (*rbacv1.ClusterRole, error)) error {
+func applyClusterRole(o *rbacv1.ClusterRole, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*rbacv1.ClusterRole, error), createFunc func(*rbacv1.ClusterRole) (*rbacv1.ClusterRole, error), patchFunc func(string, types.PatchType, []byte, ...string) (*rbacv1.ClusterRole, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -422,17 +422,14 @@ func applyClusterRole(o *rbacv1.ClusterRole, data []byte, rev int64, getFunc fun
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -442,6 +439,9 @@ func applyClusterRole(o *rbacv1.ClusterRole, data []byte, rev int64, getFunc fun
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -459,7 +459,7 @@ func applyClusterRole(o *rbacv1.ClusterRole, data []byte, rev int64, getFunc fun
 	return err
 }
 
-func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*rbacv1.ClusterRoleBinding, error), createFunc, updateFunc func(*rbacv1.ClusterRoleBinding) (*rbacv1.ClusterRoleBinding, error), patchFunc func(string, types.PatchType, []byte, ...string) (*rbacv1.ClusterRoleBinding, error)) error {
+func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*rbacv1.ClusterRoleBinding, error), createFunc func(*rbacv1.ClusterRoleBinding) (*rbacv1.ClusterRoleBinding, error), patchFunc func(string, types.PatchType, []byte, ...string) (*rbacv1.ClusterRoleBinding, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -470,17 +470,14 @@ func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, data []byte, rev int6
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -490,6 +487,9 @@ func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, data []byte, rev int6
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -507,7 +507,7 @@ func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, data []byte, rev int6
 	return err
 }
 
-func applyDeployment(o *appsv1.Deployment, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*appsv1.Deployment, error), createFunc, updateFunc func(*appsv1.Deployment) (*appsv1.Deployment, error), patchFunc func(string, types.PatchType, []byte, ...string) (*appsv1.Deployment, error)) error {
+func applyDeployment(o *appsv1.Deployment, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*appsv1.Deployment, error), createFunc func(*appsv1.Deployment) (*appsv1.Deployment, error), patchFunc func(string, types.PatchType, []byte, ...string) (*appsv1.Deployment, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -518,17 +518,14 @@ func applyDeployment(o *appsv1.Deployment, data []byte, rev int64, getFunc func(
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -538,6 +535,9 @@ func applyDeployment(o *appsv1.Deployment, data []byte, rev int64, getFunc func(
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -555,7 +555,7 @@ func applyDeployment(o *appsv1.Deployment, data []byte, rev int64, getFunc func(
 	return err
 }
 
-func applyDaemonSet(o *appsv1.DaemonSet, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*appsv1.DaemonSet, error), createFunc, updateFunc func(*appsv1.DaemonSet) (*appsv1.DaemonSet, error), patchFunc func(string, types.PatchType, []byte, ...string) (*appsv1.DaemonSet, error)) error {
+func applyDaemonSet(o *appsv1.DaemonSet, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*appsv1.DaemonSet, error), createFunc func(*appsv1.DaemonSet) (*appsv1.DaemonSet, error), patchFunc func(string, types.PatchType, []byte, ...string) (*appsv1.DaemonSet, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -566,17 +566,14 @@ func applyDaemonSet(o *appsv1.DaemonSet, data []byte, rev int64, getFunc func(st
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -586,6 +583,9 @@ func applyDaemonSet(o *appsv1.DaemonSet, data []byte, rev int64, getFunc func(st
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -603,7 +603,7 @@ func applyDaemonSet(o *appsv1.DaemonSet, data []byte, rev int64, getFunc func(st
 	return err
 }
 
-func applyCronJob(o *batchv2alpha1.CronJob, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*batchv2alpha1.CronJob, error), createFunc, updateFunc func(*batchv2alpha1.CronJob) (*batchv2alpha1.CronJob, error), patchFunc func(string, types.PatchType, []byte, ...string) (*batchv2alpha1.CronJob, error)) error {
+func applyCronJob(o *batchv2alpha1.CronJob, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*batchv2alpha1.CronJob, error), createFunc func(*batchv2alpha1.CronJob) (*batchv2alpha1.CronJob, error), patchFunc func(string, types.PatchType, []byte, ...string) (*batchv2alpha1.CronJob, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -614,17 +614,14 @@ func applyCronJob(o *batchv2alpha1.CronJob, data []byte, rev int64, getFunc func
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -634,6 +631,9 @@ func applyCronJob(o *batchv2alpha1.CronJob, data []byte, rev int64, getFunc func
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {

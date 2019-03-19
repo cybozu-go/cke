@@ -36,7 +36,7 @@ func annotate(meta *metav1.ObjectMeta, rev int64, data []byte) {
 }
 {{- range . }}
 
-func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*{{ .API }}.{{ .Kind }}, error), createFunc, updateFunc func(*{{ .API }}.{{ .Kind }}) (*{{ .API }}.{{ .Kind }}, error), patchFunc func(string, types.PatchType, []byte, ...string) (*{{ .API }}.{{ .Kind }}, error)) error {
+func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*{{ .API }}.{{ .Kind }}, error), createFunc func(*{{ .API }}.{{ .Kind }}) (*{{ .API }}.{{ .Kind }}, error), patchFunc func(string, types.PatchType, []byte, ...string) (*{{ .API }}.{{ .Kind }}, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -47,17 +47,14 @@ func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc
 		return err
 	}
 
+	var curRev int64
 	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
 	original := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		// overwrite unannotated object
-		_, err = updateFunc(o)
-		return err
-	}
-
-	curRev, err := strconv.ParseInt(curRevStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+	if ok {
+		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
+		}
 	}
 
 	if curRev == rev {
@@ -67,6 +64,9 @@ func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		original = string(modified)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
