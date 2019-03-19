@@ -67,6 +67,7 @@ func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", nil)
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
