@@ -243,7 +243,7 @@ func (d testData) withAllServices() testData {
 
 func (d testData) withK8sReady() testData {
 	d.withAllServices()
-	d.Status.Kubernetes.IsReady = true
+	d.Status.Kubernetes.IsControlPlaneReady = true
 	return d
 }
 

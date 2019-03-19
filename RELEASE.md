@@ -13,7 +13,7 @@ The patch version is increased with CKE update.
 Maintain old k8s version
 ------------------------
 
-If kubernates MINOR version supported by CKE is updated, create a new branch `release-X.Y`
+If kubernetes MINOR version supported by CKE is updated, create a new branch `release-X.Y`
 where `X` and `Y` are MAJOR and MINOR version of the latest release of CKE.
 
 For example, if the last release of CKE was tagged as `v1.12.3` and want to start

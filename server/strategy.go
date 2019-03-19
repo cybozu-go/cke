@@ -148,7 +148,7 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 	ks := cs.Kubernetes
 	apiServer := nf.HealthyAPIServer()
 
-	if !ks.IsReady {
+	if !ks.IsReady(c) {
 		return []cke.Operator{op.KubeWaitOp(apiServer)}
 	}
 
