@@ -126,43 +126,43 @@ func ApplyResource(clientset *kubernetes.Clientset, data []byte, rev int64) erro
 	switch o := obj.(type) {
 	case *corev1.Namespace:
 		c := clientset.CoreV1().Namespaces()
-		return applyNamespace(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyNamespace(o, data, rev, c.Get, c.Create, c.Patch)
 	case *corev1.ServiceAccount:
 		c := clientset.CoreV1().ServiceAccounts(o.Namespace)
-		return applyServiceAccount(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyServiceAccount(o, data, rev, c.Get, c.Create, c.Patch)
 	case *corev1.ConfigMap:
 		c := clientset.CoreV1().ConfigMaps(o.Namespace)
-		return applyConfigMap(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyConfigMap(o, data, rev, c.Get, c.Create, c.Patch)
 	case *corev1.Service:
 		c := clientset.CoreV1().Services(o.Namespace)
-		return applyService(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyService(o, data, rev, c.Get, c.Create, c.Patch)
 	case *policyv1beta1.PodSecurityPolicy:
 		c := clientset.PolicyV1beta1().PodSecurityPolicies()
-		return applyPodSecurityPolicy(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyPodSecurityPolicy(o, data, rev, c.Get, c.Create, c.Patch)
 	case *networkingv1.NetworkPolicy:
 		c := clientset.NetworkingV1().NetworkPolicies(o.Namespace)
-		return applyNetworkPolicy(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyNetworkPolicy(o, data, rev, c.Get, c.Create, c.Patch)
 	case *rbacv1.Role:
 		c := clientset.RbacV1().Roles(o.Namespace)
-		return applyRole(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyRole(o, data, rev, c.Get, c.Create, c.Patch)
 	case *rbacv1.RoleBinding:
 		c := clientset.RbacV1().RoleBindings(o.Namespace)
-		return applyRoleBinding(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyRoleBinding(o, data, rev, c.Get, c.Create, c.Patch)
 	case *rbacv1.ClusterRole:
 		c := clientset.RbacV1().ClusterRoles()
-		return applyClusterRole(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyClusterRole(o, data, rev, c.Get, c.Create, c.Patch)
 	case *rbacv1.ClusterRoleBinding:
 		c := clientset.RbacV1().ClusterRoleBindings()
-		return applyClusterRoleBinding(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyClusterRoleBinding(o, data, rev, c.Get, c.Create, c.Patch)
 	case *appsv1.Deployment:
 		c := clientset.AppsV1().Deployments(o.Namespace)
-		return applyDeployment(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyDeployment(o, data, rev, c.Get, c.Create, c.Patch)
 	case *appsv1.DaemonSet:
 		c := clientset.AppsV1().DaemonSets(o.Namespace)
-		return applyDaemonSet(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyDaemonSet(o, data, rev, c.Get, c.Create, c.Patch)
 	case *batchv2alpha1.CronJob:
 		c := clientset.BatchV2alpha1().CronJobs(o.Namespace)
-		return applyCronJob(o, data, rev, c.Get, c.Create, c.Update, c.Patch)
+		return applyCronJob(o, data, rev, c.Get, c.Create, c.Patch)
 	}
 
 	return fmt.Errorf("unsupported type: %s", gvk.String())

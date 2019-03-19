@@ -2,7 +2,7 @@ version: '2'
 services:
   cke:
     container_name: cke
-    image: quay.io/cybozu/cke:0
+    image: quay.io/cybozu/cke:1.13
     user: "${UID}:${GID}"
     volumes:
       - ./cke.config.yml:/etc/cke/config.yml
