@@ -36,14 +36,38 @@ type EtcdBackupStatus struct {
 
 // KubernetesClusterStatus contains kubernetes cluster configurations
 type KubernetesClusterStatus struct {
-	IsReady          bool
-	Nodes            []corev1.Node
-	DNSService       *corev1.Service
-	ClusterDNS       ClusterDNSStatus
-	NodeDNS          NodeDNSStatus
-	EtcdEndpoints    *corev1.Endpoints
-	EtcdBackup       EtcdBackupStatus
-	ResourceStatuses map[string]map[string]string
+	IsControlPlaneReady bool
+	Nodes               []corev1.Node
+	DNSService          *corev1.Service
+	ClusterDNS          ClusterDNSStatus
+	NodeDNS             NodeDNSStatus
+	EtcdEndpoints       *corev1.Endpoints
+	EtcdBackup          EtcdBackupStatus
+	ResourceStatuses    map[string]map[string]string
+}
+
+// IsReady returns the cluster condition whether or not Pod can be scheduled
+func (s KubernetesClusterStatus) IsReady(cluster *Cluster) bool {
+	if !s.IsControlPlaneReady {
+		return false
+	}
+	clusterNodesSize := len(cluster.Nodes)
+	if clusterNodesSize == 0 {
+		return false
+	}
+	currentReady := 0
+	for _, n := range s.Nodes {
+		for _, cond := range n.Status.Conditions {
+			if cond.Type != corev1.NodeReady {
+				continue
+			}
+			if cond.Status == corev1.ConditionTrue {
+				currentReady++
+				break
+			}
+		}
+	}
+	return clusterNodesSize/2 < currentReady
 }
 
 // SetResourceStatus sets status of the resource.

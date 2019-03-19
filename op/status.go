@@ -244,7 +244,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	_, err = clientset.CoreV1().ServiceAccounts("kube-system").Get("default", metav1.GetOptions{})
 	switch {
 	case err == nil:
-		s.IsReady = true
+		s.IsControlPlaneReady = true
 	case k8serr.IsNotFound(err):
 	default:
 		return cke.KubernetesClusterStatus{}, err

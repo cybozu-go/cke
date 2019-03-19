@@ -35,6 +35,14 @@ var (
 			Definition: []byte(`{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"foo"}}`),
 		},
 	}
+	nodeNames = []string{
+		"10.0.0.11",
+		"10.0.0.12",
+		"10.0.0.13",
+		"10.0.0.14",
+		"10.0.0.15",
+		"10.0.0.16",
+	}
 )
 
 type testData struct {
@@ -60,11 +68,11 @@ func newData() testData {
 	cluster := &cke.Cluster{
 		Name: testClusterName,
 		Nodes: []*cke.Node{
-			{Address: "10.0.0.11", ControlPlane: true},
-			{Address: "10.0.0.12", ControlPlane: true},
-			{Address: "10.0.0.13", ControlPlane: true},
+			{Address: nodeNames[0], ControlPlane: true},
+			{Address: nodeNames[1], ControlPlane: true},
+			{Address: nodeNames[2], ControlPlane: true},
 			{
-				Address:     "10.0.0.14",
+				Address:     nodeNames[3],
 				Labels:      map[string]string{"label1": "value"},
 				Annotations: map[string]string{"annotation1": "value"},
 				Taints: []corev1.Taint{
@@ -79,8 +87,8 @@ func newData() testData {
 					},
 				},
 			},
-			{Address: "10.0.0.15"},
-			{Address: "10.0.0.16"},
+			{Address: nodeNames[4]},
+			{Address: nodeNames[5]},
 		},
 		ServiceSubnet: testServiceSubnet,
 		DNSServers:    testDefaultDNSServers,
@@ -92,19 +100,37 @@ func newData() testData {
 		ContainerLogMaxFiles:     10,
 		ContainerLogMaxSize:      "10Mi",
 	}
-	status := &cke.ClusterStatus{
-		NodeStatuses: map[string]*cke.NodeStatus{
-			"10.0.0.11": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
-			"10.0.0.12": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
-			"10.0.0.13": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
-			"10.0.0.14": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
-			"10.0.0.15": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
-			"10.0.0.16": {Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}},
+
+	nodeReadyStatus := corev1.NodeStatus{
+		Conditions: []corev1.NodeCondition{
+			{
+				Type:   corev1.NodeReady,
+				Status: corev1.ConditionTrue,
+			},
 		},
+	}
+
+	nodeStatuses := make(map[string]*cke.NodeStatus)
+	var nodeList []corev1.Node
+	for _, nodeName := range nodeNames {
+		nodeStatuses[nodeName] = &cke.NodeStatus{Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}}
+		nodeList = append(nodeList, corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: nodeName,
+			},
+			Status: nodeReadyStatus,
+		})
+	}
+	nodeList[3].Annotations = cluster.Nodes[3].Annotations
+	nodeList[3].Labels = cluster.Nodes[3].Labels
+	nodeList[3].Spec.Taints = cluster.Nodes[3].Taints
+	status := &cke.ClusterStatus{
+		NodeStatuses: nodeStatuses,
 		Kubernetes: cke.KubernetesClusterStatus{
 			ResourceStatuses: map[string]map[string]string{
 				"Namespace/foo": {cke.AnnotationResourceRevision: "1"},
 			},
+			Nodes: nodeList,
 		},
 	}
 
@@ -242,8 +268,16 @@ func (d testData) withAllServices() testData {
 }
 
 func (d testData) withK8sReady() testData {
+	for i, n := range d.Status.Kubernetes.Nodes {
+		n.Status.Conditions = append(n.Status.Conditions, corev1.NodeCondition{
+			Type:   corev1.NodeReady,
+			Status: corev1.ConditionTrue,
+		})
+		d.Status.Kubernetes.Nodes[i] = n
+	}
+
 	d.withAllServices()
-	d.Status.Kubernetes.IsReady = true
+	d.Status.Kubernetes.IsControlPlaneReady = true
 	return d
 }
 
@@ -325,7 +359,16 @@ etcd:
 
 func (d testData) withNodes(nodes ...corev1.Node) testData {
 	d.withK8sResourceReady()
-	d.Status.Kubernetes.Nodes = nodes
+OUTER:
+	for _, argNode := range nodes {
+		for i, testDataNode := range d.Status.Kubernetes.Nodes {
+			if testDataNode.Name == argNode.Name {
+				d.Status.Kubernetes.Nodes[i] = argNode
+				continue OUTER
+			}
+		}
+		d.Status.Kubernetes.Nodes = append(d.Status.Kubernetes.Nodes, argNode)
+	}
 	return d
 }
 

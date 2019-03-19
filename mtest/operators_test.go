@@ -92,11 +92,26 @@ var _ = Describe("Operations", func() {
 		ckecliClusterSet(cluster)
 
 		// reboot node2 and node4 to check bootstrap taints
+		rebootTime := time.Now()
 		execAt(node2, "sudo", "systemd-run", "reboot", "-f", "-f")
 		execAt(node4, "sudo", "systemd-run", "reboot", "-f", "-f")
-		time.Sleep(5 * time.Second)
-		Expect(reconnectSSH(node2)).NotTo(HaveOccurred())
-		Expect(reconnectSSH(node4)).NotTo(HaveOccurred())
+		Eventually(func() error {
+			for _, n := range []string{node2, node4} {
+				err := reconnectSSH(n)
+				if err != nil {
+					return err
+				}
+				since := fmt.Sprintf("-%dmin", int(time.Since(rebootTime).Minutes()+1.0))
+				stdout, _, err := execAt(n, "last", "reboot", "-s", since)
+				if err != nil {
+					return err
+				}
+				if !strings.Contains(string(stdout), "reboot") {
+					return fmt.Errorf("node: %s is not still reboot", n)
+				}
+			}
+			return nil
+		}).Should(Succeed())
 
 		Eventually(func() error {
 			return checkCluster(cluster)
@@ -138,7 +153,7 @@ var _ = Describe("Operations", func() {
 				continue
 			}
 
-			Expect(n.Spec.Taints).Should(HaveLen(1))
+			Expect(n.Spec.Taints).Should(HaveLen(1), n.Name)
 			taint := n.Spec.Taints[0]
 			Expect(taint.Key).Should(Equal("coil.cybozu.com/bootstrap"))
 			Expect(taint.Value).Should(BeEmpty())
