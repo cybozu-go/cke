@@ -5,6 +5,12 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.11] - 2019-03-19
+
+### Changed
+- Always patch existing resources to avoid update forbidden errors (#151).
+- CKE waits enough number of nodes to be ready before creating resources (#152).
+
 ## [1.13.10] - 2019-03-18
 
 ### Changed
@@ -83,7 +89,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.10...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.11...HEAD
+[1.13.11]: https://github.com/cybozu-go/cke/compare/v1.13.10...v1.13.11
 [1.13.10]: https://github.com/cybozu-go/cke/compare/v1.13.9...v1.13.10
 [1.13.9]: https://github.com/cybozu-go/cke/compare/v1.13.8...v1.13.9
 [1.13.8]: https://github.com/cybozu-go/cke/compare/v1.13.7...v1.13.8
