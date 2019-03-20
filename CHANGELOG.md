@@ -5,6 +5,11 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.12] - 2019-03-20
+
+### Changed
+- Avoid thundering herd problem (#153).
+
 ## [1.13.11] - 2019-03-19
 
 ### Changed
@@ -89,7 +94,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.11...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.12...HEAD
+[1.13.12]: https://github.com/cybozu-go/cke/compare/v1.13.11...v1.13.12
 [1.13.11]: https://github.com/cybozu-go/cke/compare/v1.13.10...v1.13.11
 [1.13.10]: https://github.com/cybozu-go/cke/compare/v1.13.9...v1.13.10
 [1.13.9]: https://github.com/cybozu-go/cke/compare/v1.13.8...v1.13.9
