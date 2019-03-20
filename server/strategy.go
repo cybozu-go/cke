@@ -148,11 +148,11 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 	ks := cs.Kubernetes
 	apiServer := nf.HealthyAPIServer()
 
-	if !ks.IsReady(c) {
+	if !ks.IsControlPlaneReady {
 		return []cke.Operator{op.KubeWaitOp(apiServer)}
 	}
 
-	ops = append(ops, decideResourceOps(apiServer, ks, resources)...)
+	ops = append(ops, decideResourceOps(apiServer, ks, resources, ks.IsReady(c))...)
 
 	ops = append(ops, decideClusterDNSOps(apiServer, c, ks)...)
 
@@ -335,14 +335,21 @@ func needUpdateEtcdBackupPod(c *cke.Cluster, ks cke.KubernetesClusterStatus) boo
 	return false
 }
 
-func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, resources []cke.ResourceDefinition) (ops []cke.Operator) {
+func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, resources []cke.ResourceDefinition, isReady bool) (ops []cke.Operator) {
 	for _, res := range static.Resources {
+		// To avoid thundering herd problem. Deployments need to be created only after enough nodes become ready.
+		if res.Kind == cke.KindDeployment && !isReady {
+			continue
+		}
 		annotations, ok := ks.ResourceStatuses[res.Key]
 		if !ok || res.NeedUpdate(annotations) {
 			ops = append(ops, op.ResourceApplyOp(apiServer, res))
 		}
 	}
 	for _, res := range resources {
+		if res.Kind == cke.KindDeployment && !isReady {
+			continue
+		}
 		annotations, ok := ks.ResourceStatuses[res.Key]
 		if !ok || res.NeedUpdate(annotations) {
 			ops = append(ops, op.ResourceApplyOp(apiServer, res))
