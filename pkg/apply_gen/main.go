@@ -15,11 +15,12 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/cybozu-go/log"
 	appsv1 "k8s.io/api/apps/v1"
-	batchv2alpha1 "k8s.io/api/batch/v2alpha1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -114,7 +115,7 @@ func subMain() error {
 		{"corev1", "ServiceAccount"},
 		{"corev1", "ConfigMap"},
 		{"corev1", "Service"},
-		{"policyv1beta1", "PodSecurityPolicy"},
+		{"extensionsv1beta1", "PodSecurityPolicy"},
 		{"networkingv1", "NetworkPolicy"},
 		{"rbacv1", "Role"},
 		{"rbacv1", "RoleBinding"},
@@ -122,7 +123,7 @@ func subMain() error {
 		{"rbacv1", "ClusterRoleBinding"},
 		{"appsv1", "Deployment"},
 		{"appsv1", "DaemonSet"},
-		{"batchv2alpha1", "CronJob"},
+		{"batchv1beta1", "CronJob"},
 	})
 	if err != nil {
 		return err
