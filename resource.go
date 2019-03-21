@@ -12,8 +12,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -97,7 +99,10 @@ var resourceEncoder runtime.Encoder
 func init() {
 	gvs := runtime.GroupVersioners{
 		runtime.NewMultiGroupVersioner(corev1.SchemeGroupVersion),
-		runtime.NewMultiGroupVersioner(extensionsv1beta1.SchemeGroupVersion),
+		runtime.NewMultiGroupVersioner(extensionsv1beta1.SchemeGroupVersion,
+			schema.GroupKind{Group: extensionsv1beta1.GroupName},
+			schema.GroupKind{Group: policyv1beta1.GroupName},
+		),
 		runtime.NewMultiGroupVersioner(networkingv1.SchemeGroupVersion),
 		runtime.NewMultiGroupVersioner(rbacv1.SchemeGroupVersion),
 		runtime.NewMultiGroupVersioner(appsv1.SchemeGroupVersion),
