@@ -8,12 +8,14 @@ import (
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
-	batchv2alpha1 "k8s.io/api/batch/v2alpha1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -97,11 +99,14 @@ var resourceEncoder runtime.Encoder
 func init() {
 	gvs := runtime.GroupVersioners{
 		runtime.NewMultiGroupVersioner(corev1.SchemeGroupVersion),
-		runtime.NewMultiGroupVersioner(policyv1beta1.SchemeGroupVersion),
+		runtime.NewMultiGroupVersioner(extensionsv1beta1.SchemeGroupVersion,
+			schema.GroupKind{Group: extensionsv1beta1.GroupName},
+			schema.GroupKind{Group: policyv1beta1.GroupName},
+		),
 		runtime.NewMultiGroupVersioner(networkingv1.SchemeGroupVersion),
 		runtime.NewMultiGroupVersioner(rbacv1.SchemeGroupVersion),
 		runtime.NewMultiGroupVersioner(appsv1.SchemeGroupVersion),
-		runtime.NewMultiGroupVersioner(batchv2alpha1.SchemeGroupVersion),
+		runtime.NewMultiGroupVersioner(batchv1beta1.SchemeGroupVersion),
 	}
 	resourceDecoder = scheme.Codecs.DecoderToVersion(scheme.Codecs.UniversalDeserializer(), gvs)
 	resourceEncoder = json.NewSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, false)
@@ -136,8 +141,8 @@ func ApplyResource(clientset *kubernetes.Clientset, data []byte, rev int64) erro
 	case *corev1.Service:
 		c := clientset.CoreV1().Services(o.Namespace)
 		return applyService(o, data, rev, c.Get, c.Create, c.Patch)
-	case *policyv1beta1.PodSecurityPolicy:
-		c := clientset.PolicyV1beta1().PodSecurityPolicies()
+	case *extensionsv1beta1.PodSecurityPolicy:
+		c := clientset.ExtensionsV1beta1().PodSecurityPolicies()
 		return applyPodSecurityPolicy(o, data, rev, c.Get, c.Create, c.Patch)
 	case *networkingv1.NetworkPolicy:
 		c := clientset.NetworkingV1().NetworkPolicies(o.Namespace)
@@ -160,8 +165,8 @@ func ApplyResource(clientset *kubernetes.Clientset, data []byte, rev int64) erro
 	case *appsv1.DaemonSet:
 		c := clientset.AppsV1().DaemonSets(o.Namespace)
 		return applyDaemonSet(o, data, rev, c.Get, c.Create, c.Patch)
-	case *batchv2alpha1.CronJob:
-		c := clientset.BatchV2alpha1().CronJobs(o.Namespace)
+	case *batchv1beta1.CronJob:
+		c := clientset.BatchV1beta1().CronJobs(o.Namespace)
 		return applyCronJob(o, data, rev, c.Get, c.Create, c.Patch)
 	}
 
@@ -188,7 +193,7 @@ func ParseResource(data []byte) (key string, jsonData []byte, err error) {
 	case *corev1.Service:
 		data, err := encodeToJSON(o)
 		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
-	case *policyv1beta1.PodSecurityPolicy:
+	case *extensionsv1beta1.PodSecurityPolicy:
 		data, err := encodeToJSON(o)
 		return o.Kind + "/" + o.Name, data, err
 	case *networkingv1.NetworkPolicy:
@@ -212,7 +217,7 @@ func ParseResource(data []byte) (key string, jsonData []byte, err error) {
 	case *appsv1.DaemonSet:
 		data, err := encodeToJSON(o)
 		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
-	case *batchv2alpha1.CronJob:
+	case *batchv1beta1.CronJob:
 		data, err := encodeToJSON(o)
 		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	}

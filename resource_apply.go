@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/cybozu-go/log"
 	appsv1 "k8s.io/api/apps/v1"
-	batchv2alpha1 "k8s.io/api/batch/v2alpha1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,6 +59,11 @@ func applyNamespace(o *corev1.Namespace, data []byte, rev int64, getFunc func(st
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -106,6 +112,11 @@ func applyServiceAccount(o *corev1.ServiceAccount, data []byte, rev int64, getFu
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -154,6 +165,11 @@ func applyConfigMap(o *corev1.ConfigMap, data []byte, rev int64, getFunc func(st
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -202,6 +218,11 @@ func applyService(o *corev1.Service, data []byte, rev int64, getFunc func(string
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -219,7 +240,7 @@ func applyService(o *corev1.Service, data []byte, rev int64, getFunc func(string
 	return err
 }
 
-func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*policyv1beta1.PodSecurityPolicy, error), createFunc func(*policyv1beta1.PodSecurityPolicy) (*policyv1beta1.PodSecurityPolicy, error), patchFunc func(string, types.PatchType, []byte, ...string) (*policyv1beta1.PodSecurityPolicy, error)) error {
+func applyPodSecurityPolicy(o *extensionsv1beta1.PodSecurityPolicy, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*extensionsv1beta1.PodSecurityPolicy, error), createFunc func(*extensionsv1beta1.PodSecurityPolicy) (*extensionsv1beta1.PodSecurityPolicy, error), patchFunc func(string, types.PatchType, []byte, ...string) (*extensionsv1beta1.PodSecurityPolicy, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -250,6 +271,11 @@ func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, data []byte, rev
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -298,6 +324,11 @@ func applyNetworkPolicy(o *networkingv1.NetworkPolicy, data []byte, rev int64, g
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -346,6 +377,11 @@ func applyRole(o *rbacv1.Role, data []byte, rev int64, getFunc func(string, meta
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -394,6 +430,11 @@ func applyRoleBinding(o *rbacv1.RoleBinding, data []byte, rev int64, getFunc fun
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -442,6 +483,11 @@ func applyClusterRole(o *rbacv1.ClusterRole, data []byte, rev int64, getFunc fun
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -490,6 +536,11 @@ func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, data []byte, rev int6
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -538,6 +589,11 @@ func applyDeployment(o *appsv1.Deployment, data []byte, rev int64, getFunc func(
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -586,6 +642,11 @@ func applyDaemonSet(o *appsv1.DaemonSet, data []byte, rev int64, getFunc func(st
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
@@ -603,7 +664,7 @@ func applyDaemonSet(o *appsv1.DaemonSet, data []byte, rev int64, getFunc func(st
 	return err
 }
 
-func applyCronJob(o *batchv2alpha1.CronJob, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*batchv2alpha1.CronJob, error), createFunc func(*batchv2alpha1.CronJob) (*batchv2alpha1.CronJob, error), patchFunc func(string, types.PatchType, []byte, ...string) (*batchv2alpha1.CronJob, error)) error {
+func applyCronJob(o *batchv1beta1.CronJob, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*batchv1beta1.CronJob, error), createFunc func(*batchv1beta1.CronJob) (*batchv1beta1.CronJob, error), patchFunc func(string, types.PatchType, []byte, ...string) (*batchv1beta1.CronJob, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -634,6 +695,11 @@ func applyCronJob(o *batchv2alpha1.CronJob, data []byte, rev int64, getFunc func
 	}
 	if !ok {
 		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
 	}
 	currentData, err := encodeToJSON(current)
 	if err != nil {
