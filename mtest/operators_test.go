@@ -148,17 +148,28 @@ var _ = Describe("Operations", func() {
 		// node6: case of adding new node
 		// node2: case of rebooting node with prior removal of Node resource
 		// node4: case of rebooting node without prior manipulation on Node resource
-		for _, n := range status.Kubernetes.Nodes {
-			if n.Name != node6 && n.Name != node2 && n.Name != node4 {
-				continue
-			}
+		Eventually(func() error {
+			for _, n := range status.Kubernetes.Nodes {
+				if n.Name != node6 && n.Name != node2 && n.Name != node4 {
+					continue
+				}
 
-			Expect(n.Spec.Taints).Should(HaveLen(1), n.Name)
-			taint := n.Spec.Taints[0]
-			Expect(taint.Key).Should(Equal("coil.cybozu.com/bootstrap"))
-			Expect(taint.Value).Should(BeEmpty())
-			Expect(taint.Effect).Should(Equal(corev1.TaintEffectNoSchedule))
-		}
+				if len(n.Spec.Taints) != 1 {
+					return errors.New("taints length should 1: " + n.Name)
+				}
+				taint := n.Spec.Taints[0]
+				if taint.Key != "coil.cybozu.com/bootstrap" {
+					return errors.New(`taint.Key != "coil.cybozu.com/bootstrap"`)
+				}
+				if taint.Value != "" {
+					return errors.New("taint.Value is not empty: " + taint.Value)
+				}
+				if taint.Effect != corev1.TaintEffectNoSchedule {
+					return errors.New("taint.Effect is not NoSchedule: " + string(taint.Effect))
+				}
+			}
+			return nil
+		}).Should(Succeed())
 
 		// check leader change
 		newLeader := strings.TrimSpace(string(ckecli("leader")))

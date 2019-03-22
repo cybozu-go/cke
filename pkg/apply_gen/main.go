@@ -127,21 +127,21 @@ func subMain() error {
 	err = tmpl.Execute(f, []struct {
 		API             string
 		Kind            string
-		GracefulSeconds string
+		GracefulSeconds int64
 	}{
-		{"corev1", "Namespace", "60"},
-		{"corev1", "ServiceAccount", "0"},
-		{"corev1", "ConfigMap", "0"},
-		{"corev1", "Service", "0"},
-		{"policyv1beta1", "PodSecurityPolicy", "0"},
-		{"networkingv1", "NetworkPolicy", "0"},
-		{"rbacv1", "Role", "0"},
-		{"rbacv1", "RoleBinding", "0"},
-		{"rbacv1", "ClusterRole", "0"},
-		{"rbacv1", "ClusterRoleBinding", "0"},
-		{"appsv1", "Deployment", "60"},
-		{"appsv1", "DaemonSet", "60"},
-		{"batchv1beta1", "CronJob", "60"},
+		{"corev1", "Namespace", 60},
+		{"corev1", "ServiceAccount", 0},
+		{"corev1", "ConfigMap", 0},
+		{"corev1", "Service", 0},
+		{"policyv1beta1", "PodSecurityPolicy", 0},
+		{"networkingv1", "NetworkPolicy", 0},
+		{"rbacv1", "Role", 0},
+		{"rbacv1", "RoleBinding", 0},
+		{"rbacv1", "ClusterRole", 0},
+		{"rbacv1", "ClusterRoleBinding", 0},
+		{"appsv1", "Deployment", 60},
+		{"appsv1", "DaemonSet", 60},
+		{"batchv1beta1", "CronJob", 60},
 	})
 	if err != nil {
 		return err
