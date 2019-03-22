@@ -19,7 +19,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -37,7 +37,7 @@ func annotate(meta *metav1.ObjectMeta, rev int64, data []byte) {
 }
 {{- range . }}
 
-func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*{{ .API }}.{{ .Kind }}, error), createFunc func(*{{ .API }}.{{ .Kind }}) (*{{ .API }}.{{ .Kind }}, error), patchFunc func(string, types.PatchType, []byte, ...string) (*{{ .API }}.{{ .Kind }}, error)) error {
+func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*{{ .API }}.{{ .Kind }}, error), createFunc func(*{{ .API }}.{{ .Kind }}) (*{{ .API }}.{{ .Kind }}, error), patchFunc func(string, types.PatchType, []byte, ...string) (*{{ .API }}.{{ .Kind }}, error), deleteFunc func(string, *metav1.DeleteOptions) error) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -69,9 +69,9 @@ func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind": o.Kind,
+			"kind":      o.Kind,
 			"namespace": o.Namespace,
-			"name": o.Name,
+			"name":      o.Name,
 		})
 	}
 	currentData, err := encodeToJSON(current)
@@ -87,6 +87,23 @@ func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc
 		return err
 	}
 	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	if err == nil {
+		return nil
+	}
+
+	log.Warn("failed to apply patch", map[string]interface{}{
+		"kind":      o.Kind,
+		"namespace": o.Namespace,
+		"name":      o.Name,
+		log.FnError: err,
+	})
+
+	err = deleteFunc(o.Name, metav1.NewDeleteOptions({{ .GracefulSeconds }}))
+	if err != nil {
+		return err
+	}
+	_, err = createFunc(o)
+
 	return err
 }
 {{- end }}
@@ -108,22 +125,23 @@ func subMain() error {
 	defer f.Close()
 
 	err = tmpl.Execute(f, []struct {
-		API  string
-		Kind string
+		API             string
+		Kind            string
+		GracefulSeconds string
 	}{
-		{"corev1", "Namespace"},
-		{"corev1", "ServiceAccount"},
-		{"corev1", "ConfigMap"},
-		{"corev1", "Service"},
-		{"extensionsv1beta1", "PodSecurityPolicy"},
-		{"networkingv1", "NetworkPolicy"},
-		{"rbacv1", "Role"},
-		{"rbacv1", "RoleBinding"},
-		{"rbacv1", "ClusterRole"},
-		{"rbacv1", "ClusterRoleBinding"},
-		{"appsv1", "Deployment"},
-		{"appsv1", "DaemonSet"},
-		{"batchv1beta1", "CronJob"},
+		{"corev1", "Namespace", "60"},
+		{"corev1", "ServiceAccount", "0"},
+		{"corev1", "ConfigMap", "0"},
+		{"corev1", "Service", "0"},
+		{"policyv1beta1", "PodSecurityPolicy", "0"},
+		{"networkingv1", "NetworkPolicy", "0"},
+		{"rbacv1", "Role", "0"},
+		{"rbacv1", "RoleBinding", "0"},
+		{"rbacv1", "ClusterRole", "0"},
+		{"rbacv1", "ClusterRoleBinding", "0"},
+		{"appsv1", "Deployment", "60"},
+		{"appsv1", "DaemonSet", "60"},
+		{"batchv1beta1", "CronJob", "60"},
 	})
 	if err != nil {
 		return err

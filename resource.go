@@ -99,9 +99,9 @@ var resourceEncoder runtime.Encoder
 func init() {
 	gvs := runtime.GroupVersioners{
 		runtime.NewMultiGroupVersioner(corev1.SchemeGroupVersion),
-		runtime.NewMultiGroupVersioner(extensionsv1beta1.SchemeGroupVersion,
-			schema.GroupKind{Group: extensionsv1beta1.GroupName},
+		runtime.NewMultiGroupVersioner(policyv1beta1.SchemeGroupVersion,
 			schema.GroupKind{Group: policyv1beta1.GroupName},
+			schema.GroupKind{Group: extensionsv1beta1.GroupName},
 		),
 		runtime.NewMultiGroupVersioner(networkingv1.SchemeGroupVersion),
 		runtime.NewMultiGroupVersioner(rbacv1.SchemeGroupVersion),
@@ -131,43 +131,43 @@ func ApplyResource(clientset *kubernetes.Clientset, data []byte, rev int64) erro
 	switch o := obj.(type) {
 	case *corev1.Namespace:
 		c := clientset.CoreV1().Namespaces()
-		return applyNamespace(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyNamespace(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
 	case *corev1.ServiceAccount:
 		c := clientset.CoreV1().ServiceAccounts(o.Namespace)
-		return applyServiceAccount(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyServiceAccount(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
 	case *corev1.ConfigMap:
 		c := clientset.CoreV1().ConfigMaps(o.Namespace)
-		return applyConfigMap(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyConfigMap(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
 	case *corev1.Service:
 		c := clientset.CoreV1().Services(o.Namespace)
-		return applyService(o, data, rev, c.Get, c.Create, c.Patch)
-	case *extensionsv1beta1.PodSecurityPolicy:
-		c := clientset.ExtensionsV1beta1().PodSecurityPolicies()
-		return applyPodSecurityPolicy(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyService(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
+	case *policyv1beta1.PodSecurityPolicy:
+		c := clientset.PolicyV1beta1().PodSecurityPolicies()
+		return applyPodSecurityPolicy(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
 	case *networkingv1.NetworkPolicy:
 		c := clientset.NetworkingV1().NetworkPolicies(o.Namespace)
-		return applyNetworkPolicy(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyNetworkPolicy(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
 	case *rbacv1.Role:
 		c := clientset.RbacV1().Roles(o.Namespace)
-		return applyRole(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyRole(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
 	case *rbacv1.RoleBinding:
 		c := clientset.RbacV1().RoleBindings(o.Namespace)
-		return applyRoleBinding(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyRoleBinding(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
 	case *rbacv1.ClusterRole:
 		c := clientset.RbacV1().ClusterRoles()
-		return applyClusterRole(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyClusterRole(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
 	case *rbacv1.ClusterRoleBinding:
 		c := clientset.RbacV1().ClusterRoleBindings()
-		return applyClusterRoleBinding(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyClusterRoleBinding(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
 	case *appsv1.Deployment:
 		c := clientset.AppsV1().Deployments(o.Namespace)
-		return applyDeployment(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyDeployment(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
 	case *appsv1.DaemonSet:
 		c := clientset.AppsV1().DaemonSets(o.Namespace)
-		return applyDaemonSet(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyDaemonSet(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
 	case *batchv1beta1.CronJob:
 		c := clientset.BatchV1beta1().CronJobs(o.Namespace)
-		return applyCronJob(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyCronJob(o, data, rev, c.Get, c.Create, c.Patch, c.Delete)
 	}
 
 	return fmt.Errorf("unsupported type: %s", gvk.String())
@@ -193,7 +193,7 @@ func ParseResource(data []byte) (key string, jsonData []byte, err error) {
 	case *corev1.Service:
 		data, err := encodeToJSON(o)
 		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
-	case *extensionsv1beta1.PodSecurityPolicy:
+	case *policyv1beta1.PodSecurityPolicy:
 		data, err := encodeToJSON(o)
 		return o.Kind + "/" + o.Name, data, err
 	case *networkingv1.NetworkPolicy:
