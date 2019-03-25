@@ -447,18 +447,11 @@ metadata:
 
 	It("recreates user-defined resources", func() {
 		By("setting original resource")
-		originals := `apiVersion: v1
-kind: Namespace
-metadata:
-  name: recreate
-  labels:
-    test: value
----
-apiVersion: apps/v1
+		originals := `apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: busybox
-  namespace: recreate
+  namespace: mtest
   labels:
     run: busybox
 spec:
@@ -496,7 +489,7 @@ spec:
 kind: Deployment
 metadata:
   name: busybox
-  namespace: recreate
+  namespace: mtest
   labels:
     run: busybox
   annotations:
@@ -539,7 +532,7 @@ spec:
 		}).Should(Succeed())
 
 		Eventually(func() error {
-			stdout, _, err := kubectl("get", "-n", "recreate", "deployment", "busybox", "-o", "json")
+			stdout, _, err := kubectl("get", "-n", "mtest", "deployment", "busybox", "-o", "json")
 			if err != nil {
 				return err
 			}
