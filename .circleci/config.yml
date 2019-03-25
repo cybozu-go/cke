@@ -26,12 +26,7 @@ jobs:
     working_directory: /work
     steps:
       - checkout
-      - run: test -z "$(gofmt -s -l . | grep -v '^vendor' | tee /dev/stderr)"
-      - run: test -z "$(golint $(go list -mod=vendor ./... | grep -v /vendor/) | grep -v '/mtest/.*: should not use dot imports' | tee /de
-v/stderr)"
-      - run: go install -mod=vendor ./pkg/...
-      - run: go test -mod=vendor -race -v ./...
-      - run: go vet -mod=vendor ./...
+      - run: make test
   mtest-docker-functions:
     docker:
       - image: google/cloud-sdk
