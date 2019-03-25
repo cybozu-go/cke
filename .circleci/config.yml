@@ -36,24 +36,6 @@ jobs:
           script: run-mtest.sh
           runtime: docker
           suite: ./functions
-  mtest-docker-operators-all:
-    docker:
-      - image: google/cloud-sdk
-    steps:
-      - checkout
-      - mtest-command:
-          script: run-mtest.sh
-          runtime: docker
-          suite: ./operators-all
-  mtest-docker-operators-misc:
-    docker:
-      - image: google/cloud-sdk
-    steps:
-      - checkout
-      - mtest-command:
-          script: run-mtest.sh
-          runtime: docker
-          suite: ./operators-misc
   mtest-containerd-functions:
     docker:
       - image: google/cloud-sdk
@@ -110,8 +92,6 @@ workflows:
     jobs:
       - build
       - mtest-docker-functions
-      - mtest-docker-operators-all
-      - mtest-docker-operators-misc
       - mtest-containerd-functions
       - mtest-containerd-operators-all
       - mtest-containerd-operators-misc
