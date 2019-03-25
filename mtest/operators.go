@@ -13,10 +13,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// TestOperators tests CKE operators
-func TestOperators() {
-	AfterEach(initializeControlPlane)
-
+// TestOperatorsAll tests all CKE operators
+func TestOperatorsAll() {
 	It("run all operators / commanders", func() {
 		By("Preparing the cluster")
 		// these operators ran already:
@@ -237,6 +235,11 @@ func TestOperators() {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 	})
+}
+
+// TestOperatorsMisc tests miscellaneous CKE operators
+func TestOperatorsMisc() {
+	AfterEach(initializeControlPlane)
 
 	It("updates Node resources", func() {
 		By("adding non-existent labels, annotations, and taints")

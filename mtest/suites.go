@@ -8,7 +8,12 @@ var FunctionsSuite = func() {
 	Context("kubernetes", TestKubernetes)
 }
 
-// OperatorsSuite is a test suite that tests CKE operators
-var OperatorsSuite = func() {
-	Context("operators", TestOperators)
+// OperatorsAllSuite is a test suite that tests all CKE operators
+var OperatorsAllSuite = func() {
+	Context("operators all", TestOperatorsAll)
+}
+
+// OperatorsMiscSuite is a test suite that tests miscellaneous CKE operators
+var OperatorsMiscSuite = func() {
+	Context("operators misc", TestOperatorsMisc)
 }

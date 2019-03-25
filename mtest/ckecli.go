@@ -13,8 +13,6 @@ import (
 
 // TestCKECLI tests ckecli command
 func TestCKECLI() {
-	AfterEach(initializeControlPlane)
-
 	It("should create etcd users with limited access rights", func() {
 		By("creating user and role for etcd")
 		userName := "mtest"
