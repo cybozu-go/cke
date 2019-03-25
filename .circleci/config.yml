@@ -45,7 +45,7 @@ jobs:
           script: run-mtest.sh
           runtime: remote
           suite: ./functions
-  mtest-containerd-operators-all:
+  mtest-containerd-operators:
     docker:
       - image: google/cloud-sdk
     steps:
@@ -53,16 +53,7 @@ jobs:
       - mtest-command:
           script: run-mtest.sh
           runtime: remote
-          suite: ./operators-all
-  mtest-containerd-operators-misc:
-    docker:
-      - image: google/cloud-sdk
-    steps:
-      - checkout
-      - mtest-command:
-          script: run-mtest.sh
-          runtime: remote
-          suite: ./operators-misc
+          suite: ./operators
   compose:
     machine:
       image: circleci/classic:edge
@@ -93,6 +84,5 @@ workflows:
       - build
       - mtest-docker-functions
       - mtest-containerd-functions
-      - mtest-containerd-operators-all
-      - mtest-containerd-operators-misc
+      - mtest-containerd-operators
       - compose
