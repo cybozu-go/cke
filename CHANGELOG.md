@@ -5,6 +5,12 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.13] - 2019-03-25
+
+### Changed
+- Fix API versions to be used for resources (#154).
+- Recreate user-defined resource when applying patches fail (#155).
+
 ## [1.13.12] - 2019-03-20
 
 ### Changed
@@ -94,7 +100,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.12...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.13...HEAD
+[1.13.13]: https://github.com/cybozu-go/cke/compare/v1.13.12...v1.13.13
 [1.13.12]: https://github.com/cybozu-go/cke/compare/v1.13.11...v1.13.12
 [1.13.11]: https://github.com/cybozu-go/cke/compare/v1.13.10...v1.13.11
 [1.13.10]: https://github.com/cybozu-go/cke/compare/v1.13.9...v1.13.10
