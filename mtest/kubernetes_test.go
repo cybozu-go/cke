@@ -475,4 +475,186 @@ rules:
 			return checkCluster(cluster)
 		}).Should(Succeed())
 	})
+
+	It("updates user-defined resources", func() {
+		By("set user-defined resource")
+		resources := `apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: foo
+  name: sa1
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: foo
+  name: pod-reader
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: read-pods
+  namespace: foo
+subjects:
+- kind: ServiceAccount
+  name: sa1
+  namespace: foo
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
+`
+		ckecliWithInput(resources, "resource", "set", "-")
+		defer ckecliUnsafe(resources, "resource", "delete", "-")
+
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		By("updating user-defined resources")
+		newResources := `apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo
+  labels:
+    test: value
+`
+		ckecliWithInput(newResources, "resource", "set", "-")
+		defer ckecliUnsafe(newResources, "resource", "delete", "-")
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		stdout, _, err := kubectl("get", "namespaces/foo", "-o", "json")
+		Expect(err).ShouldNot(HaveOccurred())
+		var ns corev1.Namespace
+		err = json.Unmarshal(stdout, &ns)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(ns.Labels).Should(HaveKeyWithValue("test", "value"))
+	})
+
+	It("recreates user-defined resources", func() {
+		By("setting original resource")
+		originals := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox
+  namespace: mtest
+  labels:
+    run: busybox
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      run: busybox
+  template:
+    metadata:
+      labels:
+        run: busybox
+    spec:
+      containers:
+        - name: busybox
+          image: busybox
+          imagePullPolicy: Always
+          args: ["httpd", "-f", "-p", "8000", "-h", "/etc"]
+          ports:
+            - name: target
+              containerPort: 18000
+              protocol: TCP
+            - name: target-udp
+              containerPort: 18000
+              protocol: UDP
+      restartPolicy: Always
+      securityContext:
+        runAsUser: 10000
+`
+
+		_, stderr, err := kubectlWithInput(originals, "apply", "-f", "-")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		By("setting modified resource")
+		modified := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox
+  namespace: mtest
+  labels:
+    run: busybox
+  annotations:
+    cke.cybozu.com/revision: "1"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      run: busybox
+  template:
+    metadata:
+      labels:
+        run: busybox
+    spec:
+      containers:
+        - name: busybox
+          image: busybox
+          imagePullPolicy: Always
+          args: ["httpd", "-f", "-p", "8000", "-h", "/etc"]
+          ports:
+            - name: target
+              containerPort: 18001
+              protocol: TCP
+            - name: target-udp
+              containerPort: 18001
+              protocol: UDP
+      restartPolicy: Always
+      securityContext:
+        runAsUser: 10000
+`
+		ckecliWithInput(modified, "resource", "set", "-")
+		defer ckecliUnsafe(modified, "resource", "delete", "-")
+
+		By("changing containerPort to 18001")
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		Eventually(func() error {
+			stdout, _, err := kubectl("get", "-n", "mtest", "deployment", "busybox", "-o", "json")
+			if err != nil {
+				return err
+			}
+			var dep appsv1.Deployment
+			err = json.Unmarshal(stdout, &dep)
+			if err != nil {
+				return err
+			}
+			ports := dep.Spec.Template.Spec.Containers[0].Ports
+			if len(ports) != 2 {
+				return fmt.Errorf("ports len is not 2: %v", ports)
+			}
+			if ports[0].ContainerPort != 18001 {
+				return fmt.Errorf("port[0] is not 18001: %d", ports[0].ContainerPort)
+			}
+			if ports[1].ContainerPort != 18001 {
+				return fmt.Errorf("port[1] is not 18001: %d", ports[1].ContainerPort)
+			}
+
+			return nil
+		}).Should(Succeed())
+	})
 })

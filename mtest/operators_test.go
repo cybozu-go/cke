@@ -148,17 +148,28 @@ var _ = Describe("Operations", func() {
 		// node6: case of adding new node
 		// node2: case of rebooting node with prior removal of Node resource
 		// node4: case of rebooting node without prior manipulation on Node resource
-		for _, n := range status.Kubernetes.Nodes {
-			if n.Name != node6 && n.Name != node2 && n.Name != node4 {
-				continue
-			}
+		Eventually(func() error {
+			for _, n := range status.Kubernetes.Nodes {
+				if n.Name != node6 && n.Name != node2 && n.Name != node4 {
+					continue
+				}
 
-			Expect(n.Spec.Taints).Should(HaveLen(1), n.Name)
-			taint := n.Spec.Taints[0]
-			Expect(taint.Key).Should(Equal("coil.cybozu.com/bootstrap"))
-			Expect(taint.Value).Should(BeEmpty())
-			Expect(taint.Effect).Should(Equal(corev1.TaintEffectNoSchedule))
-		}
+				if len(n.Spec.Taints) != 1 {
+					return errors.New("taints length should 1: " + n.Name)
+				}
+				taint := n.Spec.Taints[0]
+				if taint.Key != "coil.cybozu.com/bootstrap" {
+					return errors.New(`taint.Key != "coil.cybozu.com/bootstrap"`)
+				}
+				if taint.Value != "" {
+					return errors.New("taint.Value is not empty: " + taint.Value)
+				}
+				if taint.Effect != corev1.TaintEffectNoSchedule {
+					return errors.New("taint.Effect is not NoSchedule: " + string(taint.Effect))
+				}
+			}
+			return nil
+		}).Should(Succeed())
 
 		// check leader change
 		newLeader := strings.TrimSpace(string(ckecli("leader")))
@@ -363,74 +374,6 @@ var _ = Describe("Operations", func() {
 		By("clearing CNI configuration file directory")
 		_, _, err := execAt(node1, "test", "-f", dummyCNIConf)
 		Expect(err).Should(HaveOccurred())
-	})
-
-	It("updates user-defined resources", func() {
-		By("set user-defined resource")
-		resources := `apiVersion: v1
-kind: Namespace
-metadata:
-  name: foo
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  namespace: foo
-  name: sa1
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  namespace: foo
-  name: pod-reader
-rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "watch", "list"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: read-pods
-  namespace: foo
-subjects:
-- kind: ServiceAccount
-  name: sa1
-  namespace: foo
-roleRef:
-  kind: Role
-  name: pod-reader
-  apiGroup: rbac.authorization.k8s.io
-`
-		ckecliWithInput(resources, "resource", "set", "-")
-
-		cluster := getCluster()
-		for i := 0; i < 3; i++ {
-			cluster.Nodes[i].ControlPlane = true
-		}
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
-
-		By("updating user-defined resources")
-		newResources := `apiVersion: v1
-kind: Namespace
-metadata:
-  name: foo
-  labels:
-    test: value
-`
-		ckecliWithInput(newResources, "resource", "set", "-")
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
-
-		stdout, _, err := kubectl("get", "namespaces/foo", "-o", "json")
-		Expect(err).ShouldNot(HaveOccurred())
-		var ns corev1.Namespace
-		err = json.Unmarshal(stdout, &ns)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(ns.Labels).Should(HaveKeyWithValue("test", "value"))
 	})
 
 	It("removes all taints", func() {
