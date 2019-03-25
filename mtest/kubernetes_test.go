@@ -626,6 +626,8 @@ spec:
 		for i := 0; i < 2; i++ {
 			cluster.Nodes[i].ControlPlane = true
 		}
+		err = ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
