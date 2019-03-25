@@ -564,12 +564,19 @@ metadata:
 	})
 
 	It("recreates user-defined resources", func() {
+		By("creating namespace and policy for test")
+		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		_, stderr, err := kubectl("create", "namespace", namespace)
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		_, stderr, err = kubectl("apply", "-f", policyYAMLPath, "-n="+namespace)
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
 		By("setting original resource")
 		originals := `apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: busybox
-  namespace: mtest
+  namespace: ` + namespace + `
   labels:
     run: busybox
 spec:
@@ -599,7 +606,7 @@ spec:
         runAsUser: 10000
 `
 
-		_, stderr, err := kubectlWithInput(originals, "apply", "-f", "-")
+		_, stderr, err = kubectlWithInput(originals, "apply", "-f", "-")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		By("setting modified resource")
@@ -607,7 +614,7 @@ spec:
 kind: Deployment
 metadata:
   name: busybox
-  namespace: mtest
+  namespace: ` + namespace + `
   labels:
     run: busybox
   annotations:
@@ -651,7 +658,7 @@ spec:
 		}).Should(Succeed())
 
 		Eventually(func() error {
-			stdout, _, err := kubectl("get", "-n", "mtest", "deployment", "busybox", "-o", "json")
+			stdout, _, err := kubectl("get", "-n", namespace, "deployment", "busybox", "-o", "json")
 			if err != nil {
 				return err
 			}
