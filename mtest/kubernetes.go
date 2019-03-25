@@ -19,11 +19,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = Describe("Kubernetes", func() {
+// TestKubernetes tests kubernetes workloads on CKE
+func TestKubernetes() {
 	BeforeEach(func() {
 		_, stderr, err := kubectl("create", "namespace", "mtest")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		_, stderr, err = kubectl("apply", "-f", "./mtest-policy.yml")
+		_, stderr, err = kubectl("apply", "-f", policyYAMLPath)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 	})
 
@@ -43,7 +44,7 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, stderr, err := kubectl("apply", "-f", "./nginx.yml")
+		_, stderr, err := kubectl("apply", "-f", nginxYAMLPath)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
@@ -106,7 +107,7 @@ var _ = Describe("Kubernetes", func() {
 		node := pods.Items[0].Spec.NodeName
 
 		By("deploying Service resource")
-		_, stderr, err = kubectl("apply", "-f", "./nginx.yml")
+		_, stderr, err = kubectl("apply", "-f", nginxYAMLPath)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		_, stderr, err = kubectl("expose", "-n=mtest", "pod", "nginx", "--port=80")
@@ -238,7 +239,7 @@ var _ = Describe("Kubernetes", func() {
 
 	It("can backup etcd snapshot", func() {
 		By("deploying local persistent volume")
-		_, stderr, err := kubectl("create", "-f", "local-pv.yml")
+		_, stderr, err := kubectl("create", "-f", localPVYAMLPath)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("enabling etcd backup")
@@ -353,7 +354,7 @@ var _ = Describe("Kubernetes", func() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, stderr, err := kubectl("apply", "-f", "./nginx.yml")
+		_, stderr, err := kubectl("apply", "-f", nginxYAMLPath)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
@@ -657,4 +658,4 @@ spec:
 			return nil
 		}).Should(Succeed())
 	})
-})
+}

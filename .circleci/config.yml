@@ -1,4 +1,23 @@
-version: 2
+version: 2.1
+commands:
+  mtest-command:
+    description: "multi-host test"
+    parameters:
+      script:
+        type: string
+      runtime:
+        type: string
+      suite:
+        type: string
+    steps:
+      - run:
+          name: Store Service Account
+          command: |
+            echo $GCLOUD_SERVICE_ACCOUNT > account.json
+            gcloud auth activate-service-account --key-file=account.json
+      - run:
+          command: |
+            ./bin/<<parameters.script>> <<parameters.runtime>> <<parameters.suite>>
 jobs:
   build:
     docker:
@@ -8,33 +27,47 @@ jobs:
     steps:
       - checkout
       - run: test -z "$(gofmt -s -l . | grep -v '^vendor' | tee /dev/stderr)"
-      - run: golint -set_exit_status $(go list -mod=vendor ./... | grep -v /vendor/)
+      - run: test -z "$(golint $(go list -mod=vendor ./... | grep -v /vendor/) | grep -v '/mtest/.*: should not use dot imports' | tee /de
+v/stderr)"
       - run: go install -mod=vendor ./pkg/...
       - run: go test -mod=vendor -race -v ./...
       - run: go vet -mod=vendor ./...
-  mtest-docker:
+  mtest-docker-functions:
     docker:
       - image: google/cloud-sdk
     steps:
       - checkout
-      - run:
-          name: Store Service Account
-          command: |
-            echo $GCLOUD_SERVICE_ACCOUNT > account.json
-            gcloud auth activate-service-account --key-file=account.json
-      - run: ./bin/run-mtest.sh docker
-  mtest-containerd:
+      - mtest-command:
+          script: run-mtest.sh
+          runtime: docker
+          suite: ./functions
+  mtest-docker-operators:
     docker:
       - image: google/cloud-sdk
     steps:
       - checkout
-      - run:
-          name: Store Service Account
-          command: |
-            echo $GCLOUD_SERVICE_ACCOUNT > account.json
-            gcloud auth activate-service-account --key-file=account.json
-      - run: ./bin/run-mtest.sh remote
-
+      - mtest-command:
+          script: run-mtest.sh
+          runtime: docker
+          suite: ./operators
+  mtest-containerd-functions:
+    docker:
+      - image: google/cloud-sdk
+    steps:
+      - checkout
+      - mtest-command:
+          script: run-mtest.sh
+          runtime: remote
+          suite: ./functions
+  mtest-containerd-operators:
+    docker:
+      - image: google/cloud-sdk
+    steps:
+      - checkout
+      - mtest-command:
+          script: run-mtest.sh
+          runtime: remote
+          suite: ./operators
   compose:
     machine:
       image: circleci/classic:edge
@@ -63,6 +96,8 @@ workflows:
   main:
     jobs:
       - build
-      - mtest-docker
-      - mtest-containerd
+      - mtest-docker-functions
+      - mtest-docker-operators
+      - mtest-containerd-functions
+      - mtest-containerd-operators
       - compose

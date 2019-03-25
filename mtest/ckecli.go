@@ -11,7 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("ckecli", func() {
+// TestCKECLI tests ckecli command
+func TestCKECLI() {
 	AfterEach(initializeControlPlane)
 
 	It("should create etcd users with limited access rights", func() {
@@ -96,4 +97,4 @@ var _ = Describe("ckecli", func() {
 			os.Remove(destName)
 		}
 	})
-})
+}

@@ -23,7 +23,7 @@ fin() {
 }
 trap fin INT TERM HUP 0
 
-$GINKGO -v
+$GINKGO -v $SUITE_PACKAGE
 RET=$?
 
 exit $RET
