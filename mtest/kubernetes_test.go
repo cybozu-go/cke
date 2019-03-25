@@ -514,6 +514,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 `
 		ckecliWithInput(resources, "resource", "set", "-")
+		defer ckecliUnsafe(resources, "resource", "delete", "-")
 
 		cluster := getCluster()
 		for i := 0; i < 3; i++ {
@@ -532,6 +533,7 @@ metadata:
     test: value
 `
 		ckecliWithInput(newResources, "resource", "set", "-")
+		defer ckecliUnsafe(newResources, "resource", "delete", "-")
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
@@ -620,6 +622,7 @@ spec:
         runAsUser: 10000
 `
 		ckecliWithInput(modified, "resource", "set", "-")
+		defer ckecliUnsafe(modified, "resource", "delete", "-")
 
 		By("changing containerPort to 18001")
 		cluster := getCluster()
