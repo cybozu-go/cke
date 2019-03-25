@@ -376,7 +376,6 @@ var _ = Describe("Operations", func() {
 		Expect(err).Should(HaveOccurred())
 	})
 
-
 	It("removes all taints", func() {
 		kubectl("taint", "--all=true", "node", "coil.cybozu.com/bootstrap-")
 		kubectl("taint", "--all=true", "node", "taint1-")

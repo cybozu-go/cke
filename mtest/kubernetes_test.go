@@ -609,10 +609,10 @@ spec:
           imagePullPolicy: Always
           args: ["httpd", "-f", "-p", "8000", "-h", "/etc"]
           ports:
-            - name: target1
+            - name: target
               containerPort: 18001
               protocol: TCP
-            - name: target2
+            - name: target-udp
               containerPort: 18001
               protocol: UDP
       restartPolicy: Always
