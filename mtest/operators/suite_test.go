@@ -23,6 +23,6 @@ var _ = BeforeSuite(func() {
 
 // This must be the only top-level test container.
 // Other tests and test containers must be listed in this.
-var _ = Describe("Test miscellaneous CKE operators", func() {
-	mtest.OperatorsMiscSuite()
+var _ = Describe("Test CKE operators", func() {
+	mtest.OperatorsSuite()
 })
