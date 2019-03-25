@@ -140,7 +140,7 @@ func TestKubernetes() {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
 
-			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "nginx.mtest"+namespace+".svc.cluster.local")
+			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "nginx."+namespace+".svc.cluster.local")
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
