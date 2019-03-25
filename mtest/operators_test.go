@@ -445,8 +445,8 @@ metadata:
 		Expect(ns.Labels).Should(HaveKeyWithValue("test", "value"))
 	})
 
-	It("recreate user-defined resources", func() {
-		By("set original resource")
+	It("recreates user-defined resources", func() {
+		By("setting original resource")
 		originals := `apiVersion: v1
 kind: Namespace
 metadata:
@@ -488,8 +488,10 @@ spec:
         runAsUser: 10000
 `
 
-		kubectlWithInput(originals, "apply", "-f", "-")
+		_, stderr, err := kubectlWithInput(originals, "apply", "-f", "-")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
+		By("setting modified resource")
 		modified := `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -527,6 +529,7 @@ spec:
 `
 		ckecliWithInput(modified, "resource", "set", "-")
 
+		By("changing containerPort to 18001")
 		cluster := getCluster()
 		for i := 0; i < 2; i++ {
 			cluster.Nodes[i].ControlPlane = true
