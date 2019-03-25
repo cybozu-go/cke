@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
@@ -406,4 +407,10 @@ func kubectlWithInput(input string, args ...string) ([]byte, []byte, error) {
 	cmd.Stderr = errBuf
 	err := cmd.Run()
 	return outBuf.Bytes(), errBuf.Bytes(), err
+}
+
+func getRandomNumber() *rand.Rand {
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	return r1
 }

@@ -21,19 +21,14 @@ import (
 
 // TestKubernetes tests kubernetes workloads on CKE
 func TestKubernetes() {
-	BeforeEach(func() {
-		_, stderr, err := kubectl("create", "namespace", "mtest")
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		_, stderr, err = kubectl("apply", "-f", policyYAMLPath)
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-	})
-
-	AfterEach(func() {
-		_, stderr, err := kubectl("delete", "namespace", "mtest")
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-	})
-
 	It("can run Pods", func() {
+		By("creating namespace and policy for test")
+		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		_, stderr, err := kubectl("create", "namespace", namespace)
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		_, stderr, err = kubectl("apply", "-f", policyYAMLPath, "-n="+namespace)
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
 		By("waiting the default service account gets created")
 		Eventually(func() error {
 			_, stderr, err := kubectl("get", "sa/default", "-o", "json")
@@ -44,12 +39,12 @@ func TestKubernetes() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, stderr, err := kubectl("apply", "-f", nginxYAMLPath)
+		_, stderr, err = kubectl("apply", "-f", nginxYAMLPath, "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
 		Eventually(func() error {
-			stdout, stderr, err := kubectl("get", "pods/nginx", "-n=mtest", "-o", "json")
+			stdout, stderr, err := kubectl("get", "pods/nginx", "-n="+namespace, "-o", "json")
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
@@ -95,6 +90,13 @@ func TestKubernetes() {
 	})
 
 	It("resolves Service IP", func() {
+		By("creating namespace and policy for test")
+		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		_, stderr, err := kubectl("create", "namespace", namespace)
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		_, stderr, err = kubectl("apply", "-f", policyYAMLPath, "-n="+namespace)
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
 		By("getting CoreDNS Pods")
 		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=cke.cybozu.com/appname=cluster-dns", "-o=json")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
@@ -107,10 +109,10 @@ func TestKubernetes() {
 		node := pods.Items[0].Spec.NodeName
 
 		By("deploying Service resource")
-		_, stderr, err = kubectl("apply", "-f", nginxYAMLPath)
+		_, stderr, err = kubectl("apply", "-f", nginxYAMLPath, "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		_, stderr, err = kubectl("expose", "-n=mtest", "pod", "nginx", "--port=80")
+		_, stderr, err = kubectl("expose", "-n="+namespace, "pod", "nginx", "--port=80")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		overrides := fmt.Sprintf(`{
@@ -118,13 +120,13 @@ func TestKubernetes() {
 	"spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" }}
 }`, node)
 		_, stderr, err = kubectl("run",
-			"-n=mtest", "--image=quay.io/cybozu/ubuntu:18.04", "--overrides="+overrides+"", "--restart=Never",
+			"-n="+namespace, "--image=quay.io/cybozu/ubuntu:18.04", "--overrides="+overrides+"", "--restart=Never",
 			"client", "--", "sleep", "infinity")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		By("waiting pods are ready")
 		Eventually(func() error {
-			_, stderr, err = kubectl("exec", "-n=mtest", "client", "true")
+			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "true")
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
@@ -133,12 +135,12 @@ func TestKubernetes() {
 
 		By("resolving domain names")
 		Eventually(func() error {
-			_, stderr, err := kubectl("exec", "-n=mtest", "client", "getent", "hosts", "nginx")
+			_, stderr, err := kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "nginx")
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
 
-			_, stderr, err = kubectl("exec", "-n=mtest", "client", "getent", "hosts", "nginx.mtest.svc.cluster.local")
+			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "nginx.mtest"+namespace+".svc.cluster.local")
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
@@ -191,6 +193,13 @@ func TestKubernetes() {
 	})
 
 	It("has node DNS resources", func() {
+		By("creating namespace and policy for test")
+		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		_, stderr, err := kubectl("create", "namespace", namespace)
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		_, stderr, err = kubectl("apply", "-f", policyYAMLPath, "-n="+namespace)
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
 		for _, name := range []string{
 			"configmaps/node-dns",
 			"daemonsets/node-dns",
@@ -221,11 +230,11 @@ func TestKubernetes() {
 		}).Should(Succeed())
 
 		By("querying www.google.com using node DNS from ubuntu pod")
-		_, stderr, err := kubectl("run", "-n=mtest", "--image=quay.io/cybozu/ubuntu:18.04", "--restart=Never",
+		_, stderr, err = kubectl("run", "-n="+namespace, "--image=quay.io/cybozu/ubuntu:18.04", "--restart=Never",
 			"client", "--", "sleep", "infinity")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		Eventually(func() error {
-			_, _, err := kubectl("exec", "-n=mtest", "client", "getent", "hosts", "www.cybozu.com")
+			_, _, err := kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "www.cybozu.com")
 			return err
 		}).Should(Succeed())
 	})
@@ -344,6 +353,13 @@ func TestKubernetes() {
 			Skip("docker doesn't support log rotation")
 		}
 
+		By("creating namespace and policy for test")
+		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		_, stderr, err := kubectl("create", "namespace", namespace)
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		_, stderr, err = kubectl("apply", "-f", policyYAMLPath, "-n="+namespace)
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
 		By("waiting the default service account gets created")
 		Eventually(func() error {
 			_, stderr, err := kubectl("get", "sa/default", "-o", "json")
@@ -354,13 +370,13 @@ func TestKubernetes() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, stderr, err := kubectl("apply", "-f", nginxYAMLPath)
+		_, stderr, err = kubectl("apply", "-f", nginxYAMLPath, "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
 		var pod corev1.Pod
 		Eventually(func() error {
-			stdout, stderr, err := kubectl("get", "pods/nginx", "-n=mtest", "-o", "json")
+			stdout, stderr, err := kubectl("get", "pods/nginx", "-n="+namespace, "-o", "json")
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
