@@ -392,11 +392,16 @@ func etcdctl(crt, key, ca string, args ...string) error {
 }
 
 func kubectl(args ...string) ([]byte, []byte, error) {
+	return kubectlWithInput("", args...)
+}
+
+func kubectlWithInput(input string, args ...string) ([]byte, []byte, error) {
 	outBuf := new(bytes.Buffer)
 	errBuf := new(bytes.Buffer)
 
 	args = append([]string{"--kubeconfig=/tmp/cke-mtest-kubeconfig"}, args...)
 	cmd := exec.Command(kubectlPath, args...)
+	cmd.Stdin = strings.NewReader(input)
 	cmd.Stdout = outBuf
 	cmd.Stderr = errBuf
 	err := cmd.Run()

@@ -10,6 +10,7 @@ import (
 	"github.com/cybozu-go/cke"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -442,6 +443,121 @@ metadata:
 		err = json.Unmarshal(stdout, &ns)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(ns.Labels).Should(HaveKeyWithValue("test", "value"))
+	})
+
+	It("recreate user-defined resources", func() {
+		By("set original resource")
+		originals := `apiVersion: v1
+kind: Namespace
+metadata:
+  name: recreate
+  labels:
+    test: value
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox
+  namespace: recreate
+  labels:
+    run: busybox
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      run: busybox
+  template:
+    metadata:
+      labels:
+        run: busybox
+    spec:
+      containers:
+        - name: busybox
+          image: busybox
+          imagePullPolicy: Always
+          args: ["httpd", "-f", "-p", "8000", "-h", "/etc"]
+          ports:
+            - name: target
+              containerPort: 18000
+              protocol: TCP
+            - name: target-udp
+              containerPort: 18000
+              protocol: UDP
+      restartPolicy: Always
+      securityContext:
+        runAsUser: 10000
+`
+
+		kubectlWithInput(originals, "apply", "-f", "-")
+
+		modified := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox
+  namespace: recreate
+  labels:
+    run: busybox
+  annotations:
+    cke.cybozu.com/revision: "1"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      run: busybox
+  template:
+    metadata:
+      labels:
+        run: busybox
+    spec:
+      containers:
+        - name: busybox
+          image: busybox
+          imagePullPolicy: Always
+          args: ["httpd", "-f", "-p", "8000", "-h", "/etc"]
+          ports:
+            - name: target1
+              containerPort: 18001
+              protocol: TCP
+            - name: target2
+              containerPort: 18001
+              protocol: UDP
+      restartPolicy: Always
+      securityContext:
+        runAsUser: 10000
+`
+		ckecliWithInput(modified, "resource", "set", "-")
+
+		cluster := getCluster()
+		for i := 0; i < 2; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		Eventually(func() error {
+			stdout, _, err := kubectl("get", "-n", "recreate", "deployment", "busybox", "-o", "json")
+			if err != nil {
+				return err
+			}
+			var dep appsv1.Deployment
+			err = json.Unmarshal(stdout, &dep)
+			if err != nil {
+				return err
+			}
+			ports := dep.Spec.Template.Spec.Containers[0].Ports
+			if len(ports) != 2 {
+				return fmt.Errorf("ports len is not 2: %v", ports)
+			}
+			if ports[0].ContainerPort != 18001 {
+				return fmt.Errorf("port[0] is not 18001: %d", ports[0].ContainerPort)
+			}
+			if ports[1].ContainerPort != 18001 {
+				return fmt.Errorf("port[1] is not 18001: %d", ports[1].ContainerPort)
+			}
+
+			return nil
+		}).Should(Succeed())
 	})
 
 	It("removes all taints", func() {
