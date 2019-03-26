@@ -5,6 +5,11 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.14] - 2019-03-26
+
+### Changed
+- Fix API versions to be used for resources (#157).
+
 ## [1.13.13] - 2019-03-25
 
 ### Changed
@@ -100,7 +105,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.13...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.14...HEAD
+[1.13.14]: https://github.com/cybozu-go/cke/compare/v1.13.13...v1.13.14
 [1.13.13]: https://github.com/cybozu-go/cke/compare/v1.13.12...v1.13.13
 [1.13.12]: https://github.com/cybozu-go/cke/compare/v1.13.11...v1.13.12
 [1.13.11]: https://github.com/cybozu-go/cke/compare/v1.13.10...v1.13.11
