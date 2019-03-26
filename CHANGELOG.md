@@ -5,6 +5,12 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.15] - 2019-03-26
+
+### Changed
+- Upgrade CoreDNS to 1.4.0 (#158).
+
+
 ## [1.13.14] - 2019-03-26
 
 ### Changed
@@ -105,7 +111,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.14...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.15...HEAD
+[1.13.15]: https://github.com/cybozu-go/cke/compare/v1.13.14...v1.13.15
 [1.13.14]: https://github.com/cybozu-go/cke/compare/v1.13.13...v1.13.14
 [1.13.13]: https://github.com/cybozu-go/cke/compare/v1.13.12...v1.13.13
 [1.13.12]: https://github.com/cybozu-go/cke/compare/v1.13.11...v1.13.12
