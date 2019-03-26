@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"testing"
 	"time"
 
 	"github.com/cybozu-go/cke"
@@ -18,15 +17,8 @@ const (
 	dummyCNIConf = "/etc/cni/net.d/00-dummy.conf"
 )
 
-func TestMtest(t *testing.T) {
-	if len(sshKeyFile) == 0 {
-		t.Skip("no SSH_PRIVKEY envvar")
-	}
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Multi-host test for cke")
-}
-
-var _ = BeforeSuite(func() {
+// RunBeforeSuite is for Ginkgo BeforeSuite
+func RunBeforeSuite() {
 	fmt.Println("Preparing...")
 
 	SetDefaultEventuallyPollingInterval(3 * time.Second)
@@ -85,4 +77,4 @@ var _ = BeforeSuite(func() {
 	f.Sync()
 
 	fmt.Println("Begin tests...")
-})
+}

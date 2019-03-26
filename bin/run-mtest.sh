@@ -1,6 +1,7 @@
 #!/bin/sh -ex
 
 CONTAINER_RUNTIME=$1
+SUITE=$2
 
 PROJECT=neco-test
 ZONE=asia-northeast1-c
@@ -64,7 +65,7 @@ cp /assets/etcd-*.tar.gz .
 cp /assets/ubuntu-*.img .
 cp /assets/coreos_production_qemu_image.img .
 make setup
-exec make test CONTAINER_RUNTIME=${CONTAINER_RUNTIME}
+exec make test CONTAINER_RUNTIME=${CONTAINER_RUNTIME} SUITE=${SUITE}
 EOF
 chmod +x run.sh
 

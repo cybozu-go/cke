@@ -30,22 +30,32 @@ CT_VERSION = 0.9.0
 CT = /usr/local/bin/ct
 SUDO = sudo
 PACKAGES = libseccomp-dev automake autoconf libtool
+SUITE = ./functions
+ifeq ($(findstring /,$(SUITE)),)
+  SUITE_PACKAGE = ./$(SUITE)
+else
+  SUITE_PACKAGE = $(SUITE)
+endif
 
-export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO CONTAINER_RUNTIME
+export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO CONTAINER_RUNTIME SUITE_PACKAGE
 
 # non-configuration variables
 MANAGEMENT_ETCD_ARCHIVE := etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
 VAULT_ARCHIVE := vault_$(VAULT_VERSION)_linux_amd64.zip
 KUBECTL_URL := https://storage.googleapis.com/kubernetes-release/release/v$(K8S_VERSION)/bin/linux/amd64/kubectl
-SSH_PRIVKEY := ./mtest_key
+SSH_PRIVKEY = $(realpath ./mtest_key)
 OUTPUT := ./output
 COREOS_IMAGE := coreos_production_qemu_image.img
-CKECLI := $(OUTPUT)/ckecli
-KUBECTL := $(OUTPUT)/kubectl
-CKECLUSTER := $(OUTPUT)/cke-cluster.yml
-CKECONFIG := $(OUTPUT)/cke.yml
+CKECLI := $(abspath $(OUTPUT))/ckecli
+KUBECTL := $(abspath $(OUTPUT))/kubectl
+CKECLUSTER := $(abspath $(OUTPUT))/cke-cluster.yml
+CKECONFIG := $(abspath $(OUTPUT))/cke.yml
+ETCDCTL := $(abspath $(OUTPUT))/etcdctl
+POLICYYAML := $(realpath ./mtest-policy.yml)
+NGINXYAML := $(realpath ./nginx.yml)
+LOCALPVYAML := $(realpath ./local-pv.yml)
 
-export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG KUBECTL
+export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG KUBECTL ETCDCTL POLICYYAML NGINXYAML LOCALPVYAML
 
 GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
 	$(OUTPUT)/vault \
@@ -315,7 +325,7 @@ test-light: $(OUTPUT)/cke
 		cat $(OUTPUT)/cke | ./mssh $$h sudo dd of=/opt/bin/cke status=none; \
 		./mssh $$h sudo chmod 755 /opt/bin/cke; \
 	done
-	$(GINKGO) -v -focus="${TARGET}"
+	$(GINKGO) -v -focus="${TARGET}" $(SUITE_PACKAGE)
 
 bootstrap: $(OUTPUT)/cke
 	for h in host-1 host-2; do \
@@ -324,7 +334,7 @@ bootstrap: $(OUTPUT)/cke
 		cat $(OUTPUT)/cke | ./mssh $$h sudo dd of=/opt/bin/cke status=none; \
 		./mssh $$h sudo chmod 755 /opt/bin/cke; \
 	done
-	$(GINKGO) -v -focus="can run Pods"
+	$(GINKGO) -v -focus="can run Pods" ./functions
 
 clean:
 	rm -rf $(OUTPUT) node.ign

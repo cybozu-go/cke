@@ -13,7 +13,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = Describe("Operations", func() {
+// TestOperators tests all CKE operators
+func TestOperators() {
 	AfterEach(initializeControlPlane)
 
 	It("run all operators / commanders", func() {
@@ -381,4 +382,4 @@ var _ = Describe("Operations", func() {
 		kubectl("taint", "--all=true", "node", "taint1-")
 		kubectl("taint", "--all=true", "node", "taint2-")
 	})
-})
+}
