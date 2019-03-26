@@ -25,7 +25,7 @@ var clusterDNSTemplate = template.Must(template.New("").Parse(`.:1053 {
 {{- end }}
     }
 {{- if .Upstreams }}
-    proxy . {{ .Upstreams }}
+    forward . {{ .Upstreams }}
 {{- end }}
     cache 30
     reload
