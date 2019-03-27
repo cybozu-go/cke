@@ -4,7 +4,6 @@
 package cke
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/cybozu-go/log"
@@ -39,24 +38,12 @@ func applyNamespace(o *corev1.Namespace, data []byte, rev int64, getFunc func(st
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -65,6 +52,7 @@ func applyNamespace(o *corev1.Namespace, data []byte, rev int64, getFunc func(st
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
@@ -109,24 +97,12 @@ func applyServiceAccount(o *corev1.ServiceAccount, data []byte, rev int64, getFu
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -135,6 +111,7 @@ func applyServiceAccount(o *corev1.ServiceAccount, data []byte, rev int64, getFu
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
@@ -179,24 +156,12 @@ func applyConfigMap(o *corev1.ConfigMap, data []byte, rev int64, getFunc func(st
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -205,6 +170,7 @@ func applyConfigMap(o *corev1.ConfigMap, data []byte, rev int64, getFunc func(st
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
@@ -249,24 +215,12 @@ func applyService(o *corev1.Service, data []byte, rev int64, getFunc func(string
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -275,6 +229,7 @@ func applyService(o *corev1.Service, data []byte, rev int64, getFunc func(string
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
@@ -319,24 +274,12 @@ func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, data []byte, rev
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -345,6 +288,7 @@ func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, data []byte, rev
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
@@ -389,24 +333,12 @@ func applyNetworkPolicy(o *networkingv1.NetworkPolicy, data []byte, rev int64, g
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -415,6 +347,7 @@ func applyNetworkPolicy(o *networkingv1.NetworkPolicy, data []byte, rev int64, g
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
@@ -459,24 +392,12 @@ func applyRole(o *rbacv1.Role, data []byte, rev int64, getFunc func(string, meta
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -485,6 +406,7 @@ func applyRole(o *rbacv1.Role, data []byte, rev int64, getFunc func(string, meta
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
@@ -529,24 +451,12 @@ func applyRoleBinding(o *rbacv1.RoleBinding, data []byte, rev int64, getFunc fun
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -555,6 +465,7 @@ func applyRoleBinding(o *rbacv1.RoleBinding, data []byte, rev int64, getFunc fun
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
@@ -599,24 +510,12 @@ func applyClusterRole(o *rbacv1.ClusterRole, data []byte, rev int64, getFunc fun
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -625,6 +524,7 @@ func applyClusterRole(o *rbacv1.ClusterRole, data []byte, rev int64, getFunc fun
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
@@ -669,24 +569,12 @@ func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, data []byte, rev int6
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -695,6 +583,7 @@ func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, data []byte, rev int6
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
@@ -739,24 +628,12 @@ func applyDeployment(o *appsv1.Deployment, data []byte, rev int64, getFunc func(
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -765,6 +642,7 @@ func applyDeployment(o *appsv1.Deployment, data []byte, rev int64, getFunc func(
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
@@ -809,24 +687,12 @@ func applyDaemonSet(o *appsv1.DaemonSet, data []byte, rev int64, getFunc func(st
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -835,6 +701,7 @@ func applyDaemonSet(o *appsv1.DaemonSet, data []byte, rev int64, getFunc func(st
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
@@ -879,24 +746,12 @@ func applyCronJob(o *batchv1beta1.CronJob, data []byte, rev int64, getFunc func(
 		return err
 	}
 
-	var curRev int64
-	curRevStr, ok := current.Annotations[AnnotationResourceRevision]
-	original := current.Annotations[AnnotationResourceOriginal]
-	if ok {
-		curRev, err = strconv.ParseInt(curRevStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid revision annotation for %s/%s/%s", o.Kind, o.Namespace, o.Name)
-		}
-	}
-
-	if curRev == rev {
-		return nil
-	}
-
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
 	if !ok {
 		original = string(modified)
 		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
@@ -905,6 +760,7 @@ func applyCronJob(o *batchv1beta1.CronJob, data []byte, rev int64, getFunc func(
 			"name":      o.Name,
 		})
 	}
+
 	currentData, err := encodeToJSON(current)
 	if err != nil {
 		return err
