@@ -5,6 +5,11 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ## [Unreleased]
 
+## [1.13.16] - 2019-03-27
+
+### Changed
+- Fix infinite loop when image is updated for a system resource (#159).
+
 ## [1.13.15] - 2019-03-26
 
 ### Changed
@@ -111,7 +116,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.15...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.16...HEAD
+[1.13.16]: https://github.com/cybozu-go/cke/compare/v1.13.15...v1.13.16
 [1.13.15]: https://github.com/cybozu-go/cke/compare/v1.13.14...v1.13.15
 [1.13.14]: https://github.com/cybozu-go/cke/compare/v1.13.13...v1.13.14
 [1.13.13]: https://github.com/cybozu-go/cke/compare/v1.13.12...v1.13.13
