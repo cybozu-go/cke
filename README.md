@@ -43,11 +43,17 @@ Features
 
     Details are described in [docs/etcd.md](docs/etcd.md).
 
+* CRI runtimes
+
+    In addition to Docker, CRI runtimes such as [containerd][] or [cri-o][]
+    can be used to run Kubernetes Pods.
+
 * Cluster features:
 
     * HA control plane.
     * [RBAC][] is enabled.
     * Ready for [PodSecurityPolicy][]
+    * `Secret` data are [encrypted at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
     * [CNI][] network plugins.
     * [CoreDNS][] add-on.
     * Node-local DNS cache services.
@@ -101,6 +107,8 @@ CKE is licensed under MIT license.
 [godoc]: https://godoc.org/github.com/cybozu-go/cke
 [Kubernetes]: https://kubernetes.io/
 [etcd]: https://github.com/etcd-io/etcd
+[containerd]: https://containerd.io/
+[cri-o]: https://cri-o.io/
 [Vault]: https://www.vaultproject.io
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 [PodSecurityPolicy]: https://kubernetes.io/docs/concepts/policy/pod-security-policy/

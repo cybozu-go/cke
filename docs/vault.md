@@ -27,12 +27,18 @@ Additionally, `kv` secret engine version 1 is mounted at `cke/secrets`.
 
 ## Secrets in `cke/secrets`
 
-Currently, there is only one secret `ssh` to hold SSH private keys
-to logging in to nodes.
+Currently, there are two secrets in `cke/secrets`.
+
+One is `ssh` that holds SSH private keys to logging in to nodes.
+Another is `k8s` that holds cipher keys to [encrypt data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
 
 A secret in Vault can keep arbitrary number of key-value pairs.
+
 Keys in `ssh` are node addresses.  Empty key holds the default SSH
 private key used if matching key for the host is not found.
+
+Keys in `k8s` are provider names such as `aescbc` or `secretbox`.
+Values are JSON data of cipher keys.
 
 ## Policy
 

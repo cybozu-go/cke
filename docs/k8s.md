@@ -36,6 +36,33 @@ CoreDNS.
 For other domain names such as `www.google.com`, node-local DNS cache servers can be
 configured to send queries to upstream DNS servers defined in [cluster.yml](./cluster.md).
 
+Data encryption at rest
+-----------------------
+
+Kubernetes can encrypt data at rest, i.e. data stored in [etcd][].
+For details, take a look at [Encrypting Secret Data at Rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#providers).
+
+CKE automatically encrypts [Secret][] resource data.  The encryption key is generated and
+stored in Vault.  The secret provider is currently `aescbc`.  `kms` provider is not used
+because it does not add extra security compared to other providers.
+
+### Rationale for not using `kms`
+
+`kms` provider delegates encryption key management to a remote key-management service (KMS).
+However, `kms` provider itself connects only to a service that runs on the same host using
+a UNIX domain socket.  The local service then connects to a remote KMS such as Vault.
+
+This means that the local service has credentials to authenticate with remote KMS, and the
+credentials need to be protected from malicious users / programs.
+
+Other providers such as `aescbc` read an encryption key from a configuration file.
+This file need to be protected just as same as KMS credentials.  There are no difference
+with regard to security.
+
+With these in mind, `kms` does not improve security but introduces an extra component.
+As CKE can automatically generate and protect configuration files for `aescbs`, there
+are no reasons to choose `kms`.
+
 Kubernetes resources
 --------------------
 
@@ -72,6 +99,7 @@ Unchangeable features
 * [The latest standard CNI plugins][CNI plugins] are installed and available.
 * [RBAC][] is enabled.
 * [CoreDNS][] is installed.
+* [Secret][] data at rest are encrypted.
 
 Default settings
 ----------------
@@ -81,8 +109,10 @@ Default settings
 
 [rivers]: https://github.com/cybozu-go/cke-tools/tree/master/cmd/rivers
 [unbound]: https://www.nlnetlabs.nl/projects/unbound/
+[etcd]: http://etcd.io/
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 [CoreDNS]: https://github.com/coredns/coredns
+[Secret]: https://kubernetes.io/docs/concepts/configuration/secret/
 [CNI]: https://github.com/containernetworking/cni
 [CNI plugins]: https://github.com/containernetworking/plugins
 [PodSecurityPolicy]: https://kubernetes.io/docs/concepts/policy/pod-security-policy/
