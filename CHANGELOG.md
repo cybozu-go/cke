@@ -1,9 +1,14 @@
 # Change Log
 
 All notable changes to this project will be documented in this file.
-This project adheres to [versioning](RELEASE.md#versioning).
+This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#versioning).
 
 ## [Unreleased]
+
+## [1.13.17] - 2019-03-30
+
+### Added
+- Kubernetes Secrets are encrypted at rest in etcd (#160).
 
 ## [1.13.16] - 2019-03-27
 
@@ -14,7 +19,6 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 ### Changed
 - Upgrade CoreDNS to 1.4.0 (#158).
-
 
 ## [1.13.14] - 2019-03-26
 
@@ -116,7 +120,8 @@ This project adheres to [versioning](RELEASE.md#versioning).
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.16...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.17...HEAD
+[1.13.17]: https://github.com/cybozu-go/cke/compare/v1.13.16...v1.13.17
 [1.13.16]: https://github.com/cybozu-go/cke/compare/v1.13.15...v1.13.16
 [1.13.15]: https://github.com/cybozu-go/cke/compare/v1.13.14...v1.13.15
 [1.13.14]: https://github.com/cybozu-go/cke/compare/v1.13.13...v1.13.14
