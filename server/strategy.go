@@ -79,7 +79,7 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 		ops = append(ops, k8s.APIServerBootOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.Kubelet.Domain, c.Options.APIServer))
 	}
 	if nodes := nf.APIServerOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.APIServer))
+		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.Kubelet.Domain, c.Options.APIServer))
 	}
 	if nodes := nf.ControllerManagerStoppedNodes(); len(nodes) > 0 {
 		ops = append(ops, k8s.ControllerManagerBootOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))

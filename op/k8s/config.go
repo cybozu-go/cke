@@ -122,3 +122,47 @@ func (a KubeletAuthentication) MarshalJSON() ([]byte, error) {
 type kubeletAuthorization struct {
 	Mode string `json:"mode" yaml:"mode"`
 }
+
+// EncryptionConfiguration is a simplified version of the struct defined in
+// https://github.com/kubernetes/apiserver/blob/master/pkg/apis/config/types.go
+//
+// Rationate: kubernetes repository is too large and not intended for client usage.
+type EncryptionConfiguration struct {
+	APIVersion string                  `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
+	Kind       string                  `json:"kind,omitempty" yaml:"kind,omitempty"`
+	Resources  []ResourceConfiguration `json:"resources" yaml:"resources"`
+}
+
+func newEncryptionConfiguration() EncryptionConfiguration {
+	return EncryptionConfiguration{
+		APIVersion: "apiserver.config.k8s.io/v1",
+		Kind:       "EncryptionConfiguration",
+	}
+}
+
+// ResourceConfiguration is a simplified version of the struct defined in
+// https://github.com/kubernetes/apiserver/blob/master/pkg/apis/config/types.go
+type ResourceConfiguration struct {
+	Resources []string                `json:"resources" yaml:"resources"`
+	Providers []ProviderConfiguration `json:"providers" yaml:"providers"`
+}
+
+// ProviderConfiguration is a simplified version of the struct defined in
+// https://github.com/kubernetes/apiserver/blob/master/pkg/apis/config/types.go
+type ProviderConfiguration struct {
+	AESCBC   *AESConfiguration `json:"aescbc,omitempty" yaml:"aescbc,omitempty"`
+	Identity *struct{}         `json:"identity,omitempty" yaml:"identity,omitempty"`
+}
+
+// AESConfiguration is a simplified version of the struct defined in
+// https://github.com/kubernetes/apiserver/blob/master/pkg/apis/config/types.go
+type AESConfiguration struct {
+	Keys []Key `json:"keys" yaml:"keys"`
+}
+
+// Key is a simplified version of the struct defined in
+// https://github.com/kubernetes/apiserver/blob/master/pkg/apis/config/types.go
+type Key struct {
+	Name   string `json:"name" yaml:"name"`
+	Secret string `json:"secret" yaml:"secret"`
+}

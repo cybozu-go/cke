@@ -12,11 +12,17 @@ import (
 type makeDirsCommand struct {
 	nodes []*cke.Node
 	dirs  []string
+	mode  string
 }
 
 // MakeDirsCommand returns a Commander to make directories on nodes.
 func MakeDirsCommand(nodes []*cke.Node, dirs []string) cke.Commander {
-	return makeDirsCommand{nodes, dirs}
+	return makeDirsCommand{nodes, dirs, "755"}
+}
+
+// MakeDirsCommandWithMode returns a Commander to make directories on nodes with given permission mode.
+func MakeDirsCommandWithMode(nodes []*cke.Node, dirs []string, mode string) cke.Commander {
+	return makeDirsCommand{nodes, dirs, mode}
 }
 
 func (c makeDirsCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
@@ -40,7 +46,11 @@ func (c makeDirsCommand) Run(ctx context.Context, inf cke.Infrastructure) error 
 		binds = append(binds, m)
 	}
 
-	arg := "/usr/local/cke-tools/bin/make_directories " + strings.Join(dests, " ")
+	args := append([]string{
+		"/usr/local/cke-tools/bin/make_directories",
+		"--mode=" + c.mode,
+	}, dests...)
+	arg := strings.Join(args, " ")
 
 	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {

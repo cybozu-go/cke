@@ -11,18 +11,22 @@ type apiServerRestartOp struct {
 	cps   []*cke.Node
 
 	serviceSubnet string
+	domain        string
 	params        cke.APIServerParams
 
-	pulled bool
+	step  int
+	files *common.FilesBuilder
 }
 
 // APIServerRestartOp returns an Operator to restart kube-apiserver
-func APIServerRestartOp(nodes, cps []*cke.Node, serviceSubnet string, params cke.APIServerParams) cke.Operator {
+func APIServerRestartOp(nodes, cps []*cke.Node, serviceSubnet, domain string, params cke.APIServerParams) cke.Operator {
 	return &apiServerRestartOp{
 		nodes:         nodes,
 		cps:           cps,
 		serviceSubnet: serviceSubnet,
+		domain:        domain,
 		params:        params,
+		files:         common.NewFilesBuilder(nodes),
 	}
 }
 
@@ -31,25 +35,34 @@ func (o *apiServerRestartOp) Name() string {
 }
 
 func (o *apiServerRestartOp) NextCommand() cke.Commander {
-	if !o.pulled {
-		o.pulled = true
+	switch o.step {
+	case 0:
+		o.step++
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
+	case 1:
+		o.step++
+		return prepareAPIServerFilesCommand{o.files, o.serviceSubnet, o.domain, o.params}
+	case 2:
+		o.step++
+		return o.files
+	case 3:
+		if len(o.nodes) == 0 {
+			return nil
+		}
+
+		// apiserver need to be restarted one by one
+		node := o.nodes[0]
+		o.nodes = o.nodes[1:]
+		opts := []string{
+			"--mount", "type=tmpfs,dst=/run/kubernetes",
+		}
+		return common.RunContainerCommand([]*cke.Node{node},
+			op.KubeAPIServerContainerName, cke.HyperkubeImage,
+			common.WithOpts(opts),
+			common.WithParams(APIServerParams(o.cps, node.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy)),
+			common.WithExtra(o.params.ServiceParams),
+			common.WithRestart())
 	}
 
-	if len(o.nodes) == 0 {
-		return nil
-	}
-
-	// API server should be restarted one by one.
-	node := o.nodes[0]
-	o.nodes = o.nodes[1:]
-	opts := []string{
-		"--mount", "type=tmpfs,dst=/run/kubernetes",
-	}
-	return common.RunContainerCommand([]*cke.Node{node},
-		op.KubeAPIServerContainerName, cke.HyperkubeImage,
-		common.WithOpts(opts),
-		common.WithParams(APIServerParams(o.cps, node.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy)),
-		common.WithExtra(o.params.ServiceParams),
-		common.WithRestart())
+	panic("unreachable")
 }
