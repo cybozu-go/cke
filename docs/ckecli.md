@@ -57,6 +57,22 @@ used as the default key.
 
 FILE should be a SSH private key file.  If FILE is `-`, the contents are read from stdin.
 
+`ckecli vault enckey`
+---------------------
+
+Generate a new cipher key to encrypt Kubernetes [Secrets](https://kubernetes.io/docs/concepts/configuration/secret/).
+
+The current key, if any, is retained for key rotation.  Old keys are removed.
+
+**WARNING**
+
+Key rotation is not automated in the current version.
+You need to restart API servers manually and replace all secrets as follows:
+
+```console
+$ kubectl get secrets --all-namespaces -o json | kubectl replace -f -
+```
+
 `ckecli ca set NAME PEM`
 ------------------------
 
@@ -170,7 +186,7 @@ If `FILE` is "-", then resources are read from stdin.
 Note that Kubernetes resources will not be removed automatically.
 
 `ckecli ssh [user@]NODE [COMMAND...]`
-------------------------------
+-------------------------------------
 
 Connect to the node via ssh.
 
@@ -179,7 +195,7 @@ Connect to the node via ssh.
 If `COMMAND` is specified, it will be executed on the node.
 
 `ckecli scp [-r] [[user@]NODE1:]FILE1 ... [[user@]NODE2:]FILE2`
--------------------------------------------------
+---------------------------------------------------------------
 
 Copy files between hosts via scp.
 

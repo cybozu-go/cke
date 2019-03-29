@@ -178,7 +178,7 @@ func initVault(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	return rotateK8sEncryptionKey(vc2)
 }
 
 func createPKI(ctx context.Context, vc *vault.Client, ca caParams) error {
@@ -247,6 +247,7 @@ Vault will be configured to:
     * have "ca-server", "ca-etcd-peer", "ca-etcd-client", "ca-kubernetes"
       PKI secrets under cke/.
     * creates AppRole for CKE.
+    * have initial encryption key for Kubernetes Secrets.
 
 This command will ask username and password for Vault authentication
 when VAULT_TOKEN environment variable is not set.`,

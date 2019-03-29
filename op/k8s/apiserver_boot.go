@@ -9,6 +9,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var (
@@ -68,11 +69,14 @@ func (o *apiServerBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
-		return prepareAPIServerFilesCommand{o.files, o.serviceSubnet, o.domain, o.params}
+		return common.MakeDirsCommandWithMode(o.nodes, []string{encryptionConfigDir}, "700")
 	case 2:
 		o.step++
-		return o.files
+		return prepareAPIServerFilesCommand{o.files, o.serviceSubnet, o.domain, o.params}
 	case 3:
+		o.step++
+		return o.files
+	case 4:
 		o.step++
 		opts := []string{
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
@@ -167,11 +171,30 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	if err != nil {
 		return err
 	}
+
+	// EncryptionConfiguration
+	enccfg, err := getEncryptionConfiguration(ctx, inf)
+	if err != nil {
+		return err
+	}
+	enccfgData, err := yaml.Marshal(enccfg)
+	if err != nil {
+		return err
+	}
+	err = c.files.AddFile(ctx, encryptionConfigFile, func(ctx context.Context, node *cke.Node) ([]byte, error) {
+		return enccfgData, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// audit log policy
 	if c.params.AuditLogEnabled {
 		return c.files.AddFile(ctx, auditPolicyFilePath(c.params.AuditLogPolicy), func(context.Context, *cke.Node) ([]byte, error) {
 			return []byte(c.params.AuditLogPolicy), nil
 		})
 	}
+
 	return nil
 }
 
@@ -221,6 +244,7 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 		"--advertise-address=" + advertiseAddress,
 		"--service-cluster-ip-range=" + serviceSubnet,
 		"--machine-id-file=/etc/machine-id",
+		"--encryption-provider-config=" + encryptionConfigFile,
 	}
 	if auditLogEnabeled {
 		args = append(args, "--audit-log-path=-")
