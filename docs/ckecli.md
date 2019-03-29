@@ -62,7 +62,7 @@ FILE should be a SSH private key file.  If FILE is `-`, the contents are read fr
 
 Generate a new cipher key to encrypt Kubernetes [Secrets](https://kubernetes.io/docs/concepts/configuration/secret/).
 
-An old key is retained for key rotation.
+The current key, if any, is retained for key rotation.  Old keys are removed.
 
 **WARNING**
 

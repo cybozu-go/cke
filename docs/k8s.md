@@ -40,7 +40,7 @@ Data encryption at rest
 -----------------------
 
 Kubernetes can encrypt data at rest, i.e. data stored in [etcd][].
-For details, take a look at [Encrypting Secret Data at Rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#providers).
+For details, take a look at [Encrypting Secret Data at Rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
 
 CKE automatically encrypts [Secret][] resource data.  The encryption key is generated and
 stored in Vault.  The secret provider is currently `aescbc`.  `kms` provider is not used

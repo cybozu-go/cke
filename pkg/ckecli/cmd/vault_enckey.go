@@ -21,8 +21,8 @@ var vaultEncKeyCmd = &cobra.Command{
 WARNING: Key rotation is not fully implemented in this version!!
 
 This command generates new encryption keys for Kubernetes Secrets and
-rotate old keys.  At most two keys are retained to re-ecnrypt existing
-data.`,
+rotate old keys.  The current key, if any, is retained to decrypt
+existing data.  Other old keys are removed.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		vc, err := inf.Vault()

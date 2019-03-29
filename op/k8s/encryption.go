@@ -10,7 +10,7 @@ import (
 
 const (
 	encryptionConfigDir  = "/etc/kubernetes/apiserver"
-	encryptionConfigFile = "/etc/kubernetes/apiserver" + "/encryption.yml"
+	encryptionConfigFile = encryptionConfigDir + "/encryption.yml"
 )
 
 func getEncryptionSecret(ctx context.Context, inf cke.Infrastructure, key string) (string, error) {

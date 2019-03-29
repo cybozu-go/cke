@@ -246,8 +246,8 @@ Vault will be configured to:
     * have "cke" policy that can use secrets under cke/.
     * have "ca-server", "ca-etcd-peer", "ca-etcd-client", "ca-kubernetes"
       PKI secrets under cke/.
-		* creates AppRole for CKE.
-		* have initial encryption key for Kubernetes Secrets.
+    * creates AppRole for CKE.
+    * have initial encryption key for Kubernetes Secrets.
 
 This command will ask username and password for Vault authentication
 when VAULT_TOKEN environment variable is not set.`,
