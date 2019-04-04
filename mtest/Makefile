@@ -20,7 +20,7 @@ PLACEMAT = /usr/bin/placemat
 GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo
 MANAGEMENT_ETCD_VERSION = 3.3.11
 VAULT_VERSION = 1.0.2
-K8S_VERSION = 1.13.2
+K8S_VERSION = 1.13.4
 PLACEMAT_DATADIR = /var/scratch/placemat
 CONTAINERD_VERSION = 1.2.4
 PROTOBUF_VERSION = 3.7.0
@@ -46,46 +46,62 @@ KUBECTL_URL := https://storage.googleapis.com/kubernetes-release/release/v$(K8S_
 SSH_PRIVKEY = $(realpath ./mtest_key)
 OUTPUT := ./output
 COREOS_IMAGE := coreos_production_qemu_image.img
+CKE := $(abspath $(OUTPUT))/cke
 CKECLI := $(abspath $(OUTPUT))/ckecli
-KUBECTL := $(abspath $(OUTPUT))/kubectl
 CKECLUSTER := $(abspath $(OUTPUT))/cke-cluster.yml
 CKECONFIG := $(abspath $(OUTPUT))/cke.yml
 ETCDCTL := $(abspath $(OUTPUT))/etcdctl
-POLICYYAML := $(realpath ./mtest-policy.yml)
-NGINXYAML := $(realpath ./nginx.yml)
+KUBECTL := $(abspath $(OUTPUT))/kubectl
 LOCALPVYAML := $(realpath ./local-pv.yml)
+NGINXYAML := $(realpath ./nginx.yml)
+POLICYYAML := $(realpath ./mtest-policy.yml)
 
-export SSH_PRIVKEY CKECLI CKECLUSTER CKECONFIG KUBECTL ETCDCTL POLICYYAML NGINXYAML LOCALPVYAML
-
-GENERATED_FILES = $(OUTPUT)/etcd  $(OUTPUT)/etcdctl \
-	$(OUTPUT)/vault \
-	$(OUTPUT)/cke $(OUTPUT)/ckecli \
-	$(OUTPUT)/kubectl \
-	$(OUTPUT)/cluster.yml \
-	$(OUTPUT)/host1.ign \
-	$(OUTPUT)/host2.ign \
-	$(OUTPUT)/node1.ign \
-	$(OUTPUT)/node2.ign \
-	$(OUTPUT)/node3.ign \
-	$(OUTPUT)/node4.ign \
-	$(OUTPUT)/node5.ign \
-	$(OUTPUT)/node6.ign \
-	$(OUTPUT)/cke-cluster.yml \
-	$(OUTPUT)/cke.yml \
-	$(OUTPUT)/setup-cke.sh \
-	$(OUTPUT)/mtest_key \
-	$(ETCD_BACKUP) \
-	$(OUTPUT)/setup-local-pv.sh \
-	$(COREOS_IMAGE) \
-	$(CONTAINERD_FILES) \
-	$(OUTPUT)/crictl
+export SSH_PRIVKEY CKE CKECLI CKECLUSTER CKECONFIG KUBECTL ETCDCTL POLICYYAML NGINXYAML LOCALPVYAML
 
 CONTAINERD_FILES = \
 	$(OUTPUT)/containerd \
 	$(OUTPUT)/containerd-shim \
 	$(OUTPUT)/ctr
 
-all: test
+TEST_DEPS = \
+	$(OUTPUT)/cke \
+	$(OUTPUT)/ckecli
+
+PLACEMAT_DEPS = \
+	$(CONTAINERD_FILES) \
+	$(COREOS_IMAGE) \
+	$(ETCD_BACKUP) \
+	$(OUTPUT)/cke \
+	$(OUTPUT)/cke-cluster.yml \
+	$(OUTPUT)/cke.yml \
+	$(OUTPUT)/ckecli \
+	$(OUTPUT)/cluster.yml \
+	$(OUTPUT)/crictl \
+	$(OUTPUT)/etcd \
+	$(OUTPUT)/etcdctl \
+	$(OUTPUT)/host1.ign \
+	$(OUTPUT)/host2.ign \
+	$(OUTPUT)/kubectl \
+	$(OUTPUT)/mtest_key \
+	$(OUTPUT)/node1.ign \
+	$(OUTPUT)/node2.ign \
+	$(OUTPUT)/node3.ign \
+	$(OUTPUT)/node4.ign \
+	$(OUTPUT)/node5.ign \
+	$(OUTPUT)/node6.ign \
+	$(OUTPUT)/setup-cke.sh \
+	$(OUTPUT)/vault
+
+all:
+	@echo "Specify one of these targets:"
+	@echo
+	@echo "    placemat  - run VMs in placemat."
+	@echo "    stop      - stop placemat."
+	@echo "    test      - run test in placemat env."
+	@echo "    bootstrap - create k8s cluster by CKE but not run all test."
+	@echo "    setup     - install dependencies."
+	@echo
+	@echo "'make test' accepts SUITE."
 
 $(MANAGEMENT_ETCD_ARCHIVE):
 	curl -sSLf -o $@ https://github.com/coreos/etcd/releases/download/v$(MANAGEMENT_ETCD_VERSION)/etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
@@ -132,11 +148,6 @@ $(OUTPUT)/mtest_key: $(SSH_PRIVKEY)
 	mkdir -p $(OUTPUT)
 	cp $< $@
 
-$(OUTPUT)/setup-local-pv.sh: setup-local-pv.sh
-	mkdir -p $(OUTPUT)
-	cp $< $@
-	chmod a+x $@
-
 $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
@@ -173,10 +184,11 @@ $(CT):
 	chmod +x ct
 	$(SUDO) mv ct $@
 
-node.ign: node-ign.yml $(CT)
+$(OUTPUT)/node.ign: node-ign.yml $(CT)
+	mkdir -p $(OUTPUT)
 	$(CT) -in-file=$< -pretty -out-file=$@
 
-$(OUTPUT)/node1.ign: node.ign
+$(OUTPUT)/node1.ign: $(OUTPUT)/node.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's/__NODE_NAME__/node1/' \
@@ -188,7 +200,7 @@ $(OUTPUT)/node1.ign: node.ign
 		-e 's/__NODE6__/$(NODE6)/' \
 		-e 's/__NODE_ADDRESS__/$(NODE1)/' $< > $@
 
-$(OUTPUT)/node2.ign: node.ign
+$(OUTPUT)/node2.ign: $(OUTPUT)/node.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's/__NODE_NAME__/node2/' \
@@ -200,7 +212,7 @@ $(OUTPUT)/node2.ign: node.ign
 		-e 's/__NODE6__/$(NODE6)/' \
 		-e 's/__NODE_ADDRESS__/$(NODE2)/' $< > $@
 
-$(OUTPUT)/node3.ign: node.ign
+$(OUTPUT)/node3.ign: $(OUTPUT)/node.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's/__NODE_NAME__/node3/' \
@@ -212,7 +224,7 @@ $(OUTPUT)/node3.ign: node.ign
 		-e 's/__NODE6__/$(NODE6)/' \
 		-e 's/__NODE_ADDRESS__/$(NODE3)/' $< > $@
 
-$(OUTPUT)/node4.ign: node.ign
+$(OUTPUT)/node4.ign: $(OUTPUT)/node.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's/__NODE_NAME__/node4/' \
@@ -224,7 +236,7 @@ $(OUTPUT)/node4.ign: node.ign
 		-e 's/__NODE6__/$(NODE6)/' \
 		-e 's/__NODE_ADDRESS__/$(NODE4)/' $< > $@
 
-$(OUTPUT)/node5.ign: node.ign
+$(OUTPUT)/node5.ign: $(OUTPUT)/node.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's/__NODE_NAME__/node5/' \
@@ -236,7 +248,7 @@ $(OUTPUT)/node5.ign: node.ign
 		-e 's/__NODE6__/$(NODE6)/' \
 		-e 's/__NODE_ADDRESS__/$(NODE5)/' $< > $@
 
-$(OUTPUT)/node6.ign: node.ign
+$(OUTPUT)/node6.ign: $(OUTPUT)/node.ign
 	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's/__NODE_NAME__/node6/' \
@@ -295,55 +307,32 @@ $(OUTPUT)/crictl:
 	curl -fsSL -o crictl.tar.gz https://github.com/kubernetes-sigs/cri-tools/releases/download/v$(CRITOOLS_VERSION)/crictl-v$(CRITOOLS_VERSION)-linux-amd64.tar.gz
 	tar zxvf crictl.tar.gz -C $(OUTPUT)
 
-test: $(GENERATED_FILES)
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/host1
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/host2
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node1
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node2
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node3
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node4
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node5
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node6
-	./test.sh
+# Targets
+test: $(TEST_DEPS)
+	./test.sh "$(TARGET)"
 
-placemat: $(GENERATED_FILES)
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/host1
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/host2
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node1
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node2
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node3
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node4
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node5
-	sudo rm -rf $(PLACEMAT_DATADIR)/volumes/node6
-	sudo -b $(PLACEMAT) output/cluster.yml
-	@echo 'Placemat is running.  To kill it, do "sudo pkill placemat".'
+bootstrap: $(TEST_DEPS)
+	SUITE_PACKAGE=./functions ./test.sh "can run Pods"
 
-test-light: $(OUTPUT)/cke
-	for h in host-1 host-2; do \
-		./mssh $$h sudo systemctl reset-failed cke.service; \
-		./mssh $$h sudo systemctl stop cke.service; \
-		cat $(OUTPUT)/cke | ./mssh $$h sudo dd of=/opt/bin/cke status=none; \
-		./mssh $$h sudo chmod 755 /opt/bin/cke; \
-	done
-	$(GINKGO) -v -focus="${TARGET}" $(SUITE_PACKAGE)
+placemat: $(PLACEMAT_DEPS) $(TEST_DEPS)
+	sudo rm -rf $(PLACEMAT_DATADIR)
+	sudo rm -rf $(VM_SHARED_DIR)
+	sudo systemd-run --unit=placemat.service $(PLACEMAT) -enable-virtfs $(abspath output/cluster.yml)
+	@echo 'Placemat is running.  To kill it, do "make stop".'
 
-bootstrap: $(OUTPUT)/cke
-	for h in host-1 host-2; do \
-		./mssh $$h sudo systemctl reset-failed cke.service; \
-		./mssh $$h sudo systemctl stop cke.service; \
-		cat $(OUTPUT)/cke | ./mssh $$h sudo dd of=/opt/bin/cke status=none; \
-		./mssh $$h sudo chmod 755 /opt/bin/cke; \
-	done
-	$(GINKGO) -v -focus="can run Pods" ./functions
+stop:
+	sudo systemctl stop placemat.service
+	sudo systemctl disable placemat.service
+	sudo rm /run/systemd/transient/placemat.service
+	sudo systemctl daemon-reload
+	sudo systemctl reset-failed placemat.service
 
 clean:
-	rm -rf $(OUTPUT) node.ign
+	rm -rf $(OUTPUT)
 
 setup:
-	GO111MODULE=off go get -u \
-		github.com/onsi/ginkgo/ginkgo \
-		github.com/coreos/gofail
+	go install github.com/onsi/ginkgo/ginkgo github.com/coreos/gofail
 	$(SUDO) apt-get update
 	$(SUDO) apt-get -y install --no-install-recommends $(PACKAGES)
 
-.PHONY:	all clean setup test
+.PHONY: all test placemat stop clean setup

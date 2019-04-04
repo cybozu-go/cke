@@ -1,14 +1,15 @@
 version: 2.1
 commands:
-  mtest-command:
+  run-mtest:
     description: "multi-host test"
     parameters:
-      script:
-        type: string
       runtime:
         type: string
       suite:
         type: string
+      target:
+        type: string
+        default: ""
     steps:
       - run:
           name: Store Service Account
@@ -17,7 +18,8 @@ commands:
             gcloud auth activate-service-account --key-file=account.json
       - run:
           command: |
-            ./bin/<<parameters.script>> <<parameters.runtime>> <<parameters.suite>>
+            ./bin/run-mtest.sh <<parameters.runtime>> <<parameters.suite>> <<parameters.target>>
+
 jobs:
   build:
     docker:
@@ -77,22 +79,12 @@ jobs:
             BRANCH=$(echo $TAG | cut -d "." -f 1-2)
             docker tag quay.io/cybozu/cke:latest quay.io/cybozu/cke:$BRANCH
             docker push quay.io/cybozu/cke:$BRANCH
-  mtest-docker-functions:
-    docker:
-      - image: google/cloud-sdk
-    steps:
-      - checkout
-      - mtest-command:
-          script: run-mtest.sh
-          runtime: docker
-          suite: ./functions
   mtest-containerd-functions:
     docker:
       - image: google/cloud-sdk
     steps:
       - checkout
-      - mtest-command:
-          script: run-mtest.sh
+      - run-mtest:
           runtime: remote
           suite: ./functions
   mtest-containerd-operators:
@@ -100,10 +92,17 @@ jobs:
       - image: google/cloud-sdk
     steps:
       - checkout
-      - mtest-command:
-          script: run-mtest.sh
+      - run-mtest:
           runtime: remote
           suite: ./operators
+  mtest-docker-functions:
+    docker:
+      - image: google/cloud-sdk
+    steps:
+      - checkout
+      - run-mtest:
+          runtime: docker
+          suite: ./functions
   compose:
     machine:
       image: circleci/classic:edge
@@ -163,4 +162,3 @@ workflows:
               ignore: /.*/
             tags:
               only: /^v.*/
-

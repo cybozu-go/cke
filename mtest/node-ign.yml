@@ -126,6 +126,16 @@ storage:
           cp /data/crictl /opt/bin/crictl
       mode: 0755
 
+    - path: "/opt/bin/setup-local-pv"
+      filesystem: root
+      contents:
+        inline: |
+          #!/bin/sh -e
+          mkdir -p /mnt/disks/etcdbackup
+          chown root:10000 /mnt/disks/etcdbackup
+          chmod g+ws /mnt/disks/etcdbackup
+      mode: 0755
+
     - path: "/etc/crictl.yaml"
       filesystem: root
       contents:
@@ -140,6 +150,13 @@ storage:
     - filesystem: root
       path: "/opt/bin"
       mode: 0755
+    - filesystem: root
+      path: "/mnt/disks/etcdbackup"
+      user:
+        name: root
+      group:
+        id: 10000
+      mode: 2775
 
 networkd:
   units:
@@ -244,6 +261,22 @@ systemd:
         [Service]
         Type=oneshot
         ExecStart=/opt/bin/wait-k8s-containerd-socket
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: setup-local-pv.service
+      enable: true
+      contents: |
+        [Unit]
+        Description=Setup local persistent volume for kubernetes
+        Wants=data.mount
+        After=data.mount
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/bin/setup-local-pv
         RemainAfterExit=yes
 
         [Install]

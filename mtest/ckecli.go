@@ -3,8 +3,6 @@ package mtest
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
 
 	"github.com/cybozu-go/cke"
 	. "github.com/onsi/ginkgo"
@@ -16,53 +14,57 @@ func TestCKECLI() {
 	It("should create etcd users with limited access rights", func() {
 		By("creating user and role for etcd")
 		userName := "mtest"
-		ckecli("etcd", "user-add", userName, "/mtest/")
+		ckecliSafe("etcd", "user-add", userName, "/mtest/")
 
 		By("issuing certificate")
-		stdout := ckecli("etcd", "issue", userName)
+		stdout := ckecliSafe("etcd", "issue", userName)
 		var res cke.IssueResponse
 		err := json.Unmarshal(stdout, &res)
 		Expect(err).NotTo(HaveOccurred())
 
+		By("copying certificate")
+		rc := remoteTempFile(res.Cert)
+		rk := remoteTempFile(res.Key)
+		rca := remoteTempFile(res.CACert)
+
 		By("executing etcdctl")
-		c := localTempFile(res.Cert)
-		k := localTempFile(res.Key)
-		ca := localTempFile(res.CACert)
-		err = etcdctl(c.Name(), k.Name(), ca.Name(), "put", "/mtest/a", "test")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = etcdctl(c.Name(), k.Name(), ca.Name(), "put", "/a", "test")
-		Expect(err).Should(HaveOccurred())
+		stdout, stderr, err := etcdctl(rc, rk, rca, "put", "/mtest/a", "test")
+		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+		stdout, stderr, err = etcdctl(rc, rk, rca, "put", "/a", "test")
+		Expect(err).To(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
 	})
 
 	It("should connect to the CKE managed etcd", func() {
 		By("issuing root certificate")
-		stdout := ckecli("etcd", "root-issue")
+		stdout := ckecliSafe("etcd", "root-issue")
 		var res cke.IssueResponse
 		err := json.Unmarshal(stdout, &res)
 		Expect(err).ShouldNot(HaveOccurred())
 
+		By("copying certificate")
+		rc := remoteTempFile(res.Cert)
+		rk := remoteTempFile(res.Key)
+		rca := remoteTempFile(res.CACert)
+
 		By("executing etcdctl")
-		c := localTempFile(res.Cert)
-		k := localTempFile(res.Key)
-		ca := localTempFile(res.CACert)
-		err = etcdctl(c.Name(), k.Name(), ca.Name(), "endpoint", "health")
-		Expect(err).ShouldNot(HaveOccurred())
+		stdout, stderr, err := etcdctl(rc, rk, rca, "endpoint", "health")
+		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
 	})
 
 	It("should connect to the kube-apiserver", func() {
 		By("using admin certificate")
-		stdout := ckecli("kubernetes", "issue")
-		kubeconfig := localTempFile(string(stdout))
-		cmd := exec.Command(kubectlPath, "--kubeconfig", kubeconfig.Name(), "get", "nodes")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		Expect(cmd.Run()).ShouldNot(HaveOccurred())
+		ckecliSafe("kubernetes", "issue", ">", "/tmp/mtest-kube-config")
+
+		stdout, stderr, err := kubectl("--kubeconfig", "/tmp/mtest-kube-config", "get", "nodes")
+		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+
+		execSafeAt(host1, "rm", "-f", "/tmp/mtest-kube-config")
 	})
 
 	It("should ssh to all nodes", func() {
 		for _, node := range []string{node1, node2, node3, node4, node5, node6} {
 			Eventually(func() error {
-				_, err := ckecliUnsafe("", "ssh", "cybozu@"+node, "/bin/true")
+				_, _, err := ckecli("ssh", "cybozu@"+node, "/bin/true")
 				if err != nil {
 					return err
 				}
@@ -72,27 +74,28 @@ func TestCKECLI() {
 	})
 
 	It("should scp to all nodes", func() {
-		scpData := localTempFile("scpData")
 		for _, node := range []string{node1, node2, node3, node4, node5, node6} {
-			destName := scpData.Name() + node
+			srcFile := "/tmp/scpData-" + node
+			dstFile := srcFile + "-dest"
+			execSafeAt(host1, "touch", srcFile)
 
 			Eventually(func() error {
-				stdout, err := ckecliUnsafe("", "scp", scpData.Name(), "cybozu@"+node+":"+destName)
+				stdout, _, err := ckecli("scp", srcFile, node+":"+dstFile)
 				if err != nil {
 					return fmt.Errorf("%v: stdout=%s", err, stdout)
 				}
-				stdout, err = ckecliUnsafe("", "scp", "cybozu@"+node+":"+destName, "/tmp/")
+				stdout, _, err = ckecli("scp", node+":"+dstFile, "/tmp/")
 				if err != nil {
 					return fmt.Errorf("%v: stdout=%s", err, stdout)
 				}
-				_, err = os.Stat(destName)
+				_, _, err = execAt(host1, "test", "-f", dstFile)
 				if err != nil {
 					return err
 				}
 				return nil
 			}).Should(Succeed())
 
-			os.Remove(destName)
+			execSafeAt(host1, "rm", "-f", srcFile, dstFile)
 		}
 	})
 }
