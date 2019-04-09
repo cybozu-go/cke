@@ -27,6 +27,27 @@ jobs:
     steps:
       - checkout
       - run: make test
+  build-image:
+    docker:
+      - image: docker:stable
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build image
+          command: |
+            docker build -t quay.io/cybozu/cke:latest .
+      - run:
+          name: Push docker image to Quay.io
+          command: |
+            docker login -u $QUAY_USER -p $QUAY_PASSWORD quay.io
+            echo "pushing CKE image ..."
+            TAG=$(echo $CIRCLE_TAG | cut -c 2-)
+            docker tag quay.io/cybozu/cke:latest quay.io/cybozu/cke:$TAG
+            docker push quay.io/cybozu/cke:$TAG
+            BRANCH=$(echo $TAG | cut -d "." -f 1-2)
+            docker tag quay.io/cybozu/cke:latest quay.io/cybozu/cke:$BRANCH
+            docker push quay.io/cybozu/cke:$BRANCH
   mtest-docker-functions:
     docker:
       - image: google/cloud-sdk
@@ -86,3 +107,11 @@ workflows:
       - mtest-containerd-functions
       - mtest-containerd-operators
       - compose
+  release:
+    jobs:
+      - build-image:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
