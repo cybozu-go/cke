@@ -26,17 +26,29 @@ jobs:
     working_directory: /work
     steps:
       - checkout
-      - run: make test
+      - run: make test GOBIN=/tmp/workspace
+      - persist_to_workspace:
+         root: /tmp/workspace
+         paths:
+           - cke
+           - ckecli
   build-image:
     docker:
       - image: docker:stable
     steps:
       - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Copy binaries
+          command: |
+            cp /tmp/workspace/cke docker
+            cp /tmp/workspace/ckecli docker
       - setup_remote_docker
       - run:
           name: Build image
           command: |
-            docker build -t quay.io/cybozu/cke:latest .
+            docker build -t quay.io/cybozu/cke:latest ./docker
       - run:
           name: Push docker image to Quay.io
           command: |
@@ -109,7 +121,15 @@ workflows:
       - compose
   release:
     jobs:
+      - build:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
       - build-image:
+          requires:
+            - build
           filters:
             branches:
               ignore: /.*/
