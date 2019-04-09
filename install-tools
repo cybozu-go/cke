@@ -1,0 +1,7 @@
+#!/bin/sh -e
+
+DEST=/host
+
+cp --remove-destination /usr/local/cke/bin/ckecli $DEST/ckecli
+chmod 755 $DEST/ckecli
+

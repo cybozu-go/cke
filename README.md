@@ -2,6 +2,7 @@
 [![CircleCI](https://circleci.com/gh/cybozu-go/cke.svg?style=svg)](https://circleci.com/gh/cybozu-go/cke)
 [![GoDoc](https://godoc.org/github.com/cybozu-go/cke?status.svg)][godoc]
 [![Go Report Card](https://goreportcard.com/badge/github.com/cybozu-go/cke)](https://goreportcard.com/report/github.com/cybozu-go/cke)
+[![Docker Repository on Quay](https://quay.io/repository/cybozu/cke/status "Docker Repository on Quay")](https://quay.io/repository/cybozu/cke)
 
 CKE
 ===
@@ -97,6 +98,26 @@ Documentation
 -------------
 
 [docs](docs/) directory contains tutorials and specifications.
+
+Usage
+-----
+
+### Run CKE with docker
+
+```console
+$ docker run -d --read-only \
+    --network host --name cke \
+    quay.io/cybozu/cke:1.13 [options...]
+```
+
+### Install `ckecli` to host file system
+
+```console
+$ docker run --rm -u root:root \
+    --entrypoint /usr/local/cke/install-tools \
+    --mount type=bind,src=DIR,target=/host \
+    quay.io/cybozu/cke:1.13
+```
 
 License
 -------
