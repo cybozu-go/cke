@@ -63,21 +63,14 @@ Bump version
     $ git push origin master --tags
     ```
 
+Now the version is bumped up and the latest container image is uploaded to [quay.io](https://quay.io/cybozu/cke).
+
 Publish GitHub release page
 ---------------------------
 
 Go to https://github.com/cybozu-go/cke/releases and edit the tag.
 Finally, press `Publish release` button.
 
-Publish Docker image in quay.io
--------------------------------
-
-The `Dockerfile` for cke is hosted in [github.com/cybozu/neco-containers][].
-
-1. Clone [github.com/cybozu/neco-containers][].
-2. Edit `cke/Dockerfile`, `cke/TAG` and `cke/BRANCH` as in [this commit](https://github.com/cybozu/neco-containers/commit/463415b0430d03e822a3405662ccef3d18bfd213)
-3. Once the change is merged in the master branch, CircleCI builds the container and uploads it to [quay.io](https://quay.io/cybozu/cke).
 
 [example]: https://github.com/cybozu-go/etcdpasswd/commit/77d95384ac6c97e7f48281eaf23cb94f68867f79
 [CircleCI]: https://circleci.com/gh/cybozu-go/etcdpasswd
-[github.com/cybozu/neco-containers]: https://github.com/cybozu/neco-containers
