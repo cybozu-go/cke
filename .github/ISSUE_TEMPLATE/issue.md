@@ -17,6 +17,6 @@ Describe how to address the issue.
 
 ## Checklist
 
-- [ ] Finish implentation of the issue
+- [ ] Finish implementation of the issue
 - [ ] Test all functions
 - [ ] Notify developers of necessary actions
