@@ -163,4 +163,4 @@ $ ckecli etcd backup get snapshot-20181226_054710.db.gz
 [RBAC]: https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/authentication.md
 [Endpoints]: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
 [PersistentVolume]: https://kubernetes.io/docs/concepts/storage/persistent-volumes
-[etcdbackup]: https://github.com/cybozu-go/cke-tools/tree/master/cmd/etcdbackup
+[etcdbackup]: https://github.com/cybozu/neco-containers/tree/master/cke-tools/src/cmd/etcdbackup

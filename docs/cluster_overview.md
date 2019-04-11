@@ -70,6 +70,6 @@ in cluster config.
 
 ![DNS](http://www.plantuml.com/plantuml/svg/bPDDImCn48Rl-HN3djf32qq_3XwaK154A887Brwscq74TAOa6HMa_ztTR4BPfG7Tq-mpxtoyCDdwKBiWHwjKOraCL8zoG4SOq5Vmem0SDg6cDujGxQpuW0xkzi-lDDcnmpQQLb1xQFgK8JyikHThst_FzXDTLB8atLafOjDgNjXzfEHN31UZmKzikkI9pQB0TO4lMpwPGhLdWsbjeGCBcNvjQhaXlr0AOdkOoMbsUy6HwgjqEQPbFxhePrNWwmBV_CsFJdvMmnrrJzTNwMPCp_aa7YZ4Y-W6lATOgUmxbLqEu0Q-upTFQ6wvgMtMwt_gSt-MiPgFWvubZSeqYRA3eMYBPBfNy0i0)
 
-[rivers]: https://github.com/cybozu-go/cke-tools/tree/master/cmd/rivers
+[rivers]: https://github.com/cybozu/neco-containers/tree/master/cke-tools/src/cmd/rivers
 [CoreDNS]: https://github.com/coredns/coredns
 [unbound]: https://nlnetlabs.nl/projects/unbound/

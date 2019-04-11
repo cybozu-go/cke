@@ -107,7 +107,7 @@ Default settings
 * `kube-proxy` runs in IPVS mode.
 * [PodSecurityPolicy][] is not enabled.
 
-[rivers]: https://github.com/cybozu-go/cke-tools/tree/master/cmd/rivers
+[rivers]: https://github.com/cybozu/neco-containers/tree/master/cke-tools/src/cmd/rivers
 [unbound]: https://www.nlnetlabs.nl/projects/unbound/
 [etcd]: http://etcd.io/
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
