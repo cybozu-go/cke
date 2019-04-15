@@ -65,16 +65,14 @@ CONTAINERD_FILES = \
 
 TEST_DEPS = \
 	$(OUTPUT)/cke \
-	$(OUTPUT)/ckecli
+	$(OUTPUT)/ckecli \
+	$(OUTPUT)/cke.yml
 
 PLACEMAT_DEPS = \
 	$(CONTAINERD_FILES) \
 	$(COREOS_IMAGE) \
 	$(ETCD_BACKUP) \
-	$(OUTPUT)/cke \
 	$(OUTPUT)/cke-cluster.yml \
-	$(OUTPUT)/cke.yml \
-	$(OUTPUT)/ckecli \
 	$(OUTPUT)/cluster.yml \
 	$(OUTPUT)/crictl \
 	$(OUTPUT)/etcd \
@@ -189,7 +187,6 @@ $(OUTPUT)/node.ign: node-ign.yml $(CT)
 	$(CT) -in-file=$< -pretty -out-file=$@
 
 $(OUTPUT)/node1.ign: $(OUTPUT)/node.ign
-	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's/__NODE_NAME__/node1/' \
 		-e 's/__NODE1__/$(NODE1)/' \
@@ -201,7 +198,6 @@ $(OUTPUT)/node1.ign: $(OUTPUT)/node.ign
 		-e 's/__NODE_ADDRESS__/$(NODE1)/' $< > $@
 
 $(OUTPUT)/node2.ign: $(OUTPUT)/node.ign
-	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's/__NODE_NAME__/node2/' \
 		-e 's/__NODE1__/$(NODE1)/' \
@@ -213,7 +209,6 @@ $(OUTPUT)/node2.ign: $(OUTPUT)/node.ign
 		-e 's/__NODE_ADDRESS__/$(NODE2)/' $< > $@
 
 $(OUTPUT)/node3.ign: $(OUTPUT)/node.ign
-	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's/__NODE_NAME__/node3/' \
 		-e 's/__NODE1__/$(NODE1)/' \
@@ -225,7 +220,6 @@ $(OUTPUT)/node3.ign: $(OUTPUT)/node.ign
 		-e 's/__NODE_ADDRESS__/$(NODE3)/' $< > $@
 
 $(OUTPUT)/node4.ign: $(OUTPUT)/node.ign
-	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's/__NODE_NAME__/node4/' \
 		-e 's/__NODE1__/$(NODE1)/' \
@@ -237,7 +231,6 @@ $(OUTPUT)/node4.ign: $(OUTPUT)/node.ign
 		-e 's/__NODE_ADDRESS__/$(NODE4)/' $< > $@
 
 $(OUTPUT)/node5.ign: $(OUTPUT)/node.ign
-	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's/__NODE_NAME__/node5/' \
 		-e 's/__NODE1__/$(NODE1)/' \
@@ -249,7 +242,6 @@ $(OUTPUT)/node5.ign: $(OUTPUT)/node.ign
 		-e 's/__NODE_ADDRESS__/$(NODE5)/' $< > $@
 
 $(OUTPUT)/node6.ign: $(OUTPUT)/node.ign
-	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's/__NODE_NAME__/node6/' \
 		-e 's/__NODE1__/$(NODE1)/' \
