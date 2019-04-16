@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
 install_apps() {
   sudo cp /data/{vault,etcd,etcdctl} /opt/bin
