@@ -52,6 +52,7 @@ func (o *kubeletRestartOp) NextCommand() cke.Commander {
 		opts := []string{
 			"--pid=host",
 			"--privileged",
+			"--tmpfs=/tmp",
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
