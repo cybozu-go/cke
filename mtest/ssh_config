@@ -5,26 +5,26 @@ StrictHostKeyChecking no
 UserKnownHostsFile /dev/null
 LogLevel ERROR
 
-Host host-1
+Host host1
 HostName 10.0.0.11
 
-Host host-2
+Host host2
 HostName 10.0.0.12
 
-Host node-1
+Host node1
 HostName 10.0.0.101
 
-Host node-2
+Host node2
 HostName 10.0.0.102
 
-Host node-3
+Host node3
 HostName 10.0.0.103
 
-Host node-4
+Host node4
 HostName 10.0.0.104
 
-Host node-5
+Host node5
 HostName 10.0.0.105
 
-Host node-6
+Host node6
 HostName 10.0.0.106

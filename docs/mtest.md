@@ -6,7 +6,7 @@ Multi-host Test (mtest)
 Type of Test Suites
 -------------------
 
-There are three types of test suites.
+There are following types of test suites.
 
 1. functions
 
@@ -35,15 +35,15 @@ Synopsis
 
 * `make placemat`
 
-    Run `placemat` in background to start virtual machines. To stop placemat, run `sudo pkill placemat`.
+    Run `placemat` in background by systemd-run to start virtual machines.
 
-* `make test-light`
+* `make stop`
 
-    Run mtest on a running `placemat`.  This does not control `placemat` by itself.
+    Stop `placemat`.
 
 * `make test`
 
-    Run `make placemat` then run mtest on a running `placemat`. `placemat` is stopped after finish mtest.
+    Run mtest on a running `placemat`.
 
 * `make bootstrap`
 
@@ -57,7 +57,7 @@ Options
 You can choose the type of test suite by specifying `SUITE` make variable.
 The value can be `functions` (default), or `operators`.
 
-`make test` and `make test-light` accepts this variable.
+`make test` accepts this variable.
 
 The value of `SUITE` is interpreted as a Go package name.  You can write
 a new test suite and specify its package name by `SUITE`.  As a side note,

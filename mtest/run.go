@@ -5,13 +5,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
@@ -25,27 +27,93 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-const sshTimeout = 3 * time.Minute
+const (
+	sshTimeout         = 3 * time.Minute
+	defaultDialTimeout = 30 * time.Second
+	defaultKeepAlive   = 5 * time.Second
 
-var (
-	sshClients = make(map[string]*ssh.Client)
-	httpClient = &well.HTTPClient{Client: &http.Client{}}
+	// DefaultRunTimeout is the timeout value for Agent.Run().
+	DefaultRunTimeout = 10 * time.Minute
 )
 
-func sshTo(address string, sshKey ssh.Signer) (*ssh.Client, error) {
+var (
+	sshClients = make(map[string]*sshAgent)
+	httpClient = &well.HTTPClient{Client: &http.Client{}}
+
+	agentDialer = &net.Dialer{
+		Timeout:   defaultDialTimeout,
+		KeepAlive: defaultKeepAlive,
+	}
+)
+
+type sshAgent struct {
+	client *ssh.Client
+	conn   net.Conn
+}
+
+func sshTo(address string, sshKey ssh.Signer, userName string) (*sshAgent, error) {
+	conn, err := agentDialer.Dial("tcp", address+":22")
+	if err != nil {
+		fmt.Printf("failed to dial: %s\n", address)
+		return nil, err
+	}
 	config := &ssh.ClientConfig{
-		User: "cybozu",
+		User: userName,
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(sshKey),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         5 * time.Second,
 	}
-	return ssh.Dial("tcp", address+":22", config)
+	err = conn.SetDeadline(time.Now().Add(defaultDialTimeout))
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+	clientConn, channelCh, reqCh, err := ssh.NewClientConn(conn, "tcp", config)
+	if err != nil {
+		// conn was already closed in ssh.NewClientConn
+		return nil, err
+	}
+	err = conn.SetDeadline(time.Time{})
+	if err != nil {
+		clientConn.Close()
+		return nil, err
+	}
+	a := sshAgent{
+		client: ssh.NewClient(clientConn, channelCh, reqCh),
+		conn:   conn,
+	}
+	return &a, nil
 }
 
-func parsePrivateKey() (ssh.Signer, error) {
-	f, err := os.Open(os.Getenv("SSH_PRIVKEY"))
+func prepareSSHClients(addresses ...string) error {
+	sshKey, err := parsePrivateKey(sshKeyFile)
+	if err != nil {
+		return err
+	}
+
+	ch := time.After(sshTimeout)
+	for _, a := range addresses {
+	RETRY:
+		select {
+		case <-ch:
+			return errors.New("prepareSSHClients timed out")
+		default:
+		}
+		agent, err := sshTo(a, sshKey, "cybozu")
+		if err != nil {
+			time.Sleep(time.Second)
+			goto RETRY
+		}
+		sshClients[a] = agent
+	}
+
+	return nil
+}
+
+func parsePrivateKey(keyPath string) (ssh.Signer, error) {
+	f, err := os.Open(keyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -59,38 +127,11 @@ func parsePrivateKey() (ssh.Signer, error) {
 	return ssh.ParsePrivateKey(data)
 }
 
-func prepareSSHClients(addresses ...string) error {
-	sshKey, err := parsePrivateKey()
-	if err != nil {
-		return err
-	}
-
-	ch := time.After(sshTimeout)
-	for _, a := range addresses {
-	RETRY:
-		select {
-		case <-ch:
-			return errors.New("timed out")
-		default:
-		}
-		client, err := sshTo(a, sshKey)
-		if err != nil {
-			time.Sleep(5 * time.Second)
-			goto RETRY
-		}
-		sshClients[a] = client
-	}
-
-	return nil
-}
-
 func reconnectSSH(address string) error {
-	if c, ok := sshClients[address]; ok {
-		c.Close()
-		delete(sshClients, address)
-	}
+	sshClients[address].client.Close()
+	delete(sshClients, address)
 
-	sshKey, err := parsePrivateKey()
+	sshKey, err := parsePrivateKey(sshKeyFile)
 	if err != nil {
 		return err
 	}
@@ -101,7 +142,7 @@ RETRY:
 		return errors.New("timed out")
 	default:
 	}
-	c, err := sshTo(address, sshKey)
+	c, err := sshTo(address, sshKey, "cybozu")
 	if err != nil {
 		time.Sleep(5 * time.Second)
 		goto RETRY
@@ -115,8 +156,7 @@ func stopCKE() error {
 	for _, host := range []string{host1, host2} {
 		host2 := host
 		env.Go(func(ctx context.Context) error {
-			c := sshClients[host2]
-			sess, err := c.NewSession()
+			sess, err := sshClients[host2].client.NewSession()
 			if err != nil {
 				return err
 			}
@@ -136,8 +176,7 @@ func runCKE() error {
 	for _, host := range []string{host1, host2} {
 		host2 := host
 		env.Go(func(ctx context.Context) error {
-			c := sshClients[host2]
-			sess, err := c.NewSession()
+			sess, err := sshClients[host2].client.NewSession()
 			if err != nil {
 				return err
 			}
@@ -150,13 +189,41 @@ func runCKE() error {
 }
 
 func execAt(host string, args ...string) (stdout, stderr []byte, e error) {
-	client := sshClients[host]
-	sess, err := client.NewSession()
+	return execAtWithStream(host, nil, args...)
+}
+
+// WARNING: `input` can contain secret data.  Never output `input` to console.
+func execAtWithInput(host string, input []byte, args ...string) (stdout, stderr []byte, e error) {
+	var r io.Reader
+	if input != nil {
+		r = bytes.NewReader(input)
+	}
+	return execAtWithStream(host, r, args...)
+}
+
+// WARNING: `input` can contain secret data.  Never output `input` to console.
+func execAtWithStream(host string, input io.Reader, args ...string) (stdout, stderr []byte, e error) {
+	agent := sshClients[host]
+	return doExec(agent, input, args...)
+}
+
+// WARNING: `input` can contain secret data.  Never output `input` to console.
+func doExec(agent *sshAgent, input io.Reader, args ...string) ([]byte, []byte, error) {
+	err := agent.conn.SetDeadline(time.Now().Add(DefaultRunTimeout))
+	if err != nil {
+		return nil, nil, err
+	}
+	defer agent.conn.SetDeadline(time.Time{})
+
+	sess, err := agent.client.NewSession()
 	if err != nil {
 		return nil, nil, err
 	}
 	defer sess.Close()
 
+	if input != nil {
+		sess.Stdin = input
+	}
 	outBuf := new(bytes.Buffer)
 	errBuf := new(bytes.Buffer)
 	sess.Stdout = outBuf
@@ -165,10 +232,10 @@ func execAt(host string, args ...string) (stdout, stderr []byte, e error) {
 	return outBuf.Bytes(), errBuf.Bytes(), err
 }
 
-func execSafeAt(host string, args ...string) string {
-	stdout, _, err := execAt(host, args...)
-	ExpectWithOffset(1, err).To(Succeed())
-	return string(stdout)
+func execSafeAt(host string, args ...string) []byte {
+	stdout, stderr, err := execAt(host, args...)
+	ExpectWithOffset(1, err).To(Succeed(), "[%s] %v: %s", host, args, stderr)
+	return stdout
 }
 
 func execAtLocal(cmd string, args ...string) ([]byte, error) {
@@ -183,43 +250,43 @@ func execAtLocal(cmd string, args ...string) ([]byte, error) {
 	return stdout.Bytes(), nil
 }
 
+func ckecli(args ...string) ([]byte, []byte, error) {
+	args = append([]string{"/opt/bin/ckecli"}, args...)
+	return execAt(host1, args...)
+}
+
+func ckecliSafe(args ...string) []byte {
+	args = append([]string{"/opt/bin/ckecli"}, args...)
+	return execSafeAt(host1, args...)
+}
+
+func ckecliWithInput(input []byte, args ...string) ([]byte, []byte, error) {
+	args = append([]string{"/opt/bin/ckecli"}, args...)
+	return execAtWithInput(host1, input, args...)
+}
+
 func localTempFile(body string) *os.File {
 	f, err := ioutil.TempFile("", "cke-mtest")
 	Expect(err).NotTo(HaveOccurred())
-	f.WriteString(body)
-	f.Close()
+	_, err = f.WriteString(body)
+	Expect(err).NotTo(HaveOccurred())
+	err = f.Close()
+	Expect(err).NotTo(HaveOccurred())
 	return f
 }
 
-func ckecli(args ...string) []byte {
-	stdout, err := ckecliUnsafe("", args...)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred())
-	return stdout
-}
-
-func ckecliWithInput(input string, args ...string) []byte {
-	stdout, err := ckecliUnsafe(input, args...)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred())
-	return stdout
-}
-
-func ckecliUnsafe(input string, args ...string) ([]byte, error) {
-	args = append([]string{"--config", ckeConfigPath}, args...)
-	var stdout bytes.Buffer
-	command := exec.Command(ckecliPath, args...)
-	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	command.Stdout = &stdout
-	command.Stderr = GinkgoWriter
-	command.Stdin = strings.NewReader(input)
-	timer := time.AfterFunc(10*time.Second, func() {
-		syscall.Kill(-command.Process.Pid, syscall.SIGKILL)
-	})
-	defer timer.Stop()
-	err := command.Run()
-	if err != nil {
-		return nil, err
-	}
-	return stdout.Bytes(), nil
+func remoteTempFile(body string) string {
+	f, err := ioutil.TempFile("", "cke-mtest")
+	Expect(err).NotTo(HaveOccurred())
+	defer f.Close()
+	_, err = f.WriteString(body)
+	Expect(err).NotTo(HaveOccurred())
+	_, err = f.Seek(0, os.SEEK_SET)
+	Expect(err).NotTo(HaveOccurred())
+	remoteFile := filepath.Join("/tmp", filepath.Base(f.Name()))
+	_, _, err = execAtWithStream(host1, f, "dd", "of="+f.Name())
+	Expect(err).NotTo(HaveOccurred())
+	return remoteFile
 }
 
 func getCluster() *cke.Cluster {
@@ -278,9 +345,9 @@ func ckecliClusterSet(cluster *cke.Cluster) error {
 		return err
 	}
 
-	f := localTempFile(string(y))
-	ckecli("cluster", "set", f.Name())
-	return nil
+	rf := remoteTempFile(string(y))
+	_, _, err = ckecli("cluster", "set", rf)
+	return err
 }
 
 func stopManagementEtcd(client *ssh.Client) error {
@@ -344,7 +411,7 @@ func checkCluster(c *cke.Cluster) error {
 }
 
 func initializeControlPlane() {
-	ckecli("constraints", "set", "control-plane-count", "3")
+	ckecliSafe("constraints", "set", "control-plane-count", "3")
 	cluster := getCluster()
 	for i := 0; i < 3; i++ {
 		cluster.Nodes[i].ControlPlane = true
@@ -356,7 +423,7 @@ func initializeControlPlane() {
 }
 
 func setFailurePoint(failurePoint, code string) {
-	leader := strings.TrimSpace(string(ckecli("leader")))
+	leader := strings.TrimSpace(string(ckecliSafe("leader")))
 	Expect(leader).To(Or(Equal("host1"), Equal("host2")))
 	var leaderAddress string
 	if leader == "host1" {
@@ -381,32 +448,20 @@ func deleteFailure(failurePoint string) {
 	setFailurePoint(failurePoint, "")
 }
 
-func etcdctl(crt, key, ca string, args ...string) error {
-	args = append([]string{"--endpoints=https://" + node1 + ":2379,https://" + node2 + ":2379,https://" + node3 + ":2379",
+func etcdctl(crt, key, ca string, args ...string) ([]byte, []byte, error) {
+	args = append([]string{"env", "ETCDCTL_API=3", "/opt/bin/etcdctl", "--endpoints=https://" + node1 + ":2379,https://" + node2 + ":2379,https://" + node3 + ":2379",
 		"--cert=" + crt, "--key=" + key, "--cacert=" + ca}, args...)
-	cmd := exec.Command(etcdctlPath, args...)
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "ETCDCTL_API=3")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return execAt(host1, args...)
 }
 
 func kubectl(args ...string) ([]byte, []byte, error) {
-	return kubectlWithInput("", args...)
+	args = append([]string{"/opt/bin/kubectl"}, args...)
+	return execAt(host1, args...)
 }
 
-func kubectlWithInput(input string, args ...string) ([]byte, []byte, error) {
-	outBuf := new(bytes.Buffer)
-	errBuf := new(bytes.Buffer)
-
-	args = append([]string{"--kubeconfig=/tmp/cke-mtest-kubeconfig"}, args...)
-	cmd := exec.Command(kubectlPath, args...)
-	cmd.Stdin = strings.NewReader(input)
-	cmd.Stdout = outBuf
-	cmd.Stderr = errBuf
-	err := cmd.Run()
-	return outBuf.Bytes(), errBuf.Bytes(), err
+func kubectlWithInput(input []byte, args ...string) ([]byte, []byte, error) {
+	args = append([]string{"/opt/bin/kubectl"}, args...)
+	return execAtWithInput(host1, input, args...)
 }
 
 func getRandomNumber() *rand.Rand {

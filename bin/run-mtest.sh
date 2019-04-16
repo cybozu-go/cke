@@ -2,19 +2,15 @@
 
 CONTAINER_RUNTIME=$1
 SUITE=$2
+TARGET=$3
 
-PROJECT=neco-test
-ZONE=asia-northeast1-c
-SERVICE_ACCOUNT=neco-test@neco-test.iam.gserviceaccount.com
-INSTANCE_NAME=${CIRCLE_PROJECT_REPONAME}-${CIRCLE_BUILD_NUM}-${CONTAINER_RUNTIME}
-IMAGE_NAME=debian-9-stretch-v20180911-vmx-enabled
-MACHINE_TYPE=n1-standard-8
-DISK_TYPE=pd-ssd
-BOOT_DISK_SIZE=20GB
-GCLOUD="gcloud --quiet --account ${SERVICE_ACCOUNT} --project ${PROJECT}"
-
+. $(dirname $0)/env
 
 delete_instance() {
+  if [ $RET -ne 0 ]; then
+    # do not delete GCP instance upon test failure to help debugging.
+    return
+  fi
   $GCLOUD compute instances delete ${INSTANCE_NAME} --zone ${ZONE} || true
 }
 
@@ -28,6 +24,7 @@ $GCLOUD compute instances create ${INSTANCE_NAME} \
   --boot-disk-size ${BOOT_DISK_SIZE} \
   --local-ssd interface=scsi
 
+RET=0
 trap delete_instance INT QUIT TERM 0
 
 # Run multi-host test
@@ -65,9 +62,15 @@ cp /assets/etcd-*.tar.gz .
 cp /assets/ubuntu-*.img .
 cp /assets/coreos_production_qemu_image.img .
 make setup
-exec make test CONTAINER_RUNTIME=${CONTAINER_RUNTIME} SUITE=${SUITE}
+make placemat
+sleep 3
+exec make test CONTAINER_RUNTIME=${CONTAINER_RUNTIME} SUITE=${SUITE} TARGET="${TARGET}"
 EOF
 chmod +x run.sh
 
 $GCLOUD compute scp --zone=${ZONE} run.sh cybozu@${INSTANCE_NAME}:
+set +e
 $GCLOUD compute ssh --zone=${ZONE} cybozu@${INSTANCE_NAME} --command='sudo /home/cybozu/run.sh'
+RET=$?
+
+exit $RET

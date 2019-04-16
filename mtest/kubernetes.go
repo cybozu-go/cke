@@ -1,17 +1,14 @@
 package mtest
 
 import (
-	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"os"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"time"
 
-	bolt "github.com/coreos/bbolt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,7 +23,9 @@ func TestKubernetes() {
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		_, stderr, err = kubectl("apply", "-f", policyYAMLPath, "-n="+namespace)
+		psp, err := ioutil.ReadFile(policyYAMLPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		By("waiting the default service account gets created")
@@ -39,7 +38,9 @@ func TestKubernetes() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, stderr, err = kubectl("apply", "-f", nginxYAMLPath, "-n="+namespace)
+		nginx, err := ioutil.ReadFile(nginxYAMLPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		_, stderr, err = kubectlWithInput(nginx, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
@@ -94,7 +95,9 @@ func TestKubernetes() {
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		_, stderr, err = kubectl("apply", "-f", policyYAMLPath, "-n="+namespace)
+		psp, err := ioutil.ReadFile(policyYAMLPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		By("getting CoreDNS Pods")
@@ -109,7 +112,9 @@ func TestKubernetes() {
 		node := pods.Items[0].Spec.NodeName
 
 		By("deploying Service resource")
-		_, stderr, err = kubectl("apply", "-f", nginxYAMLPath, "-n="+namespace)
+		nginx, err := ioutil.ReadFile(nginxYAMLPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		_, stderr, err = kubectlWithInput(nginx, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		_, stderr, err = kubectl("expose", "-n="+namespace, "pod", "nginx", "--port=80")
@@ -119,8 +124,9 @@ func TestKubernetes() {
 	"apiVersion": "v1",
 	"spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" }}
 }`, node)
+		overrideFile := remoteTempFile(overrides)
 		_, stderr, err = kubectl("run",
-			"-n="+namespace, "--image=quay.io/cybozu/ubuntu:18.04", "--overrides="+overrides+"", "--restart=Never",
+			"-n="+namespace, "--image=quay.io/cybozu/ubuntu:18.04", "--overrides=\"$(cat "+overrideFile+")\"", "--restart=Never",
 			"client", "--", "sleep", "infinity")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
@@ -197,7 +203,9 @@ func TestKubernetes() {
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		_, stderr, err = kubectl("apply", "-f", policyYAMLPath, "-n="+namespace)
+		psp, err := ioutil.ReadFile(policyYAMLPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		for _, name := range []string{
@@ -248,7 +256,9 @@ func TestKubernetes() {
 
 	It("can backup etcd snapshot", func() {
 		By("deploying local persistent volume")
-		_, stderr, err := kubectl("create", "-f", localPVYAMLPath)
+		pv, err := ioutil.ReadFile(localPVYAMLPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		_, stderr, err := kubectlWithInput(pv, "create", "-f", "-")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("enabling etcd backup")
@@ -282,12 +292,14 @@ func TestKubernetes() {
 
 		By("deploying cluster-dns to etcdbackup Pod running hostIP")
 		clusterDNSPatch := fmt.Sprintf(`{ "spec": { "template": { "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" } } } } } }`, hostIP)
-		_, stderr, err = kubectl("patch", "deployment", "cluster-dns", "-n", "kube-system", "--patch="+clusterDNSPatch)
+		patchFile := remoteTempFile(clusterDNSPatch)
+		_, stderr, err = kubectl("patch", "deployment", "cluster-dns", "-n", "kube-system", "--patch=\"$(cat "+patchFile+")\"")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("deploying etcdbackup CronJob to etcdbackup Pod running hostIP")
 		etcdbackupPatch := fmt.Sprintf(`{"spec": { "jobTemplate": { "spec": { "template": { "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" } } } } } } }`, hostIP)
-		_, stderr, err = kubectl("patch", "cronjob", "etcdbackup", "-n", "kube-system", "--patch="+etcdbackupPatch)
+		patchFile = remoteTempFile(etcdbackupPatch)
+		_, stderr, err = kubectl("patch", "cronjob", "etcdbackup", "-n", "kube-system", "--patch=\"$(cat "+patchFile+")\"")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking etcd backup job status")
@@ -314,31 +326,17 @@ func TestKubernetes() {
 		}).Should(Succeed())
 
 		By("checking etcd snapshot is correct")
-		stdout := ckecli("etcd", "backup", "list")
+		stdout := ckecliSafe("etcd", "backup", "list")
 		var list []string
 		err = json.Unmarshal(stdout, &list)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		Expect(list[0]).To(ContainSubstring("snapshot-"))
 
-		ckecli("etcd", "backup", "get", list[0])
-		gzfile, err := os.Open(list[0])
-		Expect(err).ShouldNot(HaveOccurred())
-		defer gzfile.Close()
-		zr, err := gzip.NewReader(gzfile)
-		Expect(err).ShouldNot(HaveOccurred())
-		defer zr.Close()
-
-		dbfile, err := os.Create("snapshot.db")
-		Expect(err).ShouldNot(HaveOccurred())
-		defer func() {
-			dbfile.Close()
-			os.Remove(dbfile.Name())
-		}()
-		_, err = io.Copy(dbfile, zr)
-		Expect(err).ShouldNot(HaveOccurred())
-		db, err := bolt.Open(dbfile.Name(), 0400, &bolt.Options{ReadOnly: true})
-		Expect(err).ShouldNot(HaveOccurred())
-		defer db.Close()
+		ckecliSafe("etcd", "backup", "get", list[0])
+		_, stderr, err = execAt(host1, "gunzip", "snapshot-*.db.gz")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+		stdout, stderr, err = execAt(host1, "env", "ETCDCTL_API=3", "/opt/bin/etcdctl", "snapshot", "status", "snapshot-*.db")
+		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
 
 		By("confirming etcdbackup CronJob is removed when etcdbackup is disabled")
 		cluster.EtcdBackup.Enabled = false
@@ -357,7 +355,9 @@ func TestKubernetes() {
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		_, stderr, err = kubectl("apply", "-f", policyYAMLPath, "-n="+namespace)
+		psp, err := ioutil.ReadFile(policyYAMLPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		By("waiting the default service account gets created")
@@ -370,7 +370,9 @@ func TestKubernetes() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		_, stderr, err = kubectl("apply", "-f", nginxYAMLPath, "-n="+namespace)
+		nginx, err := ioutil.ReadFile(nginxYAMLPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		_, stderr, err = kubectlWithInput(nginx, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
@@ -530,8 +532,8 @@ roleRef:
   name: pod-reader
   apiGroup: rbac.authorization.k8s.io
 `
-		ckecliWithInput(resources, "resource", "set", "-")
-		defer ckecliUnsafe(resources, "resource", "delete", "-")
+		ckecliWithInput([]byte(resources), "resource", "set", "-")
+		defer ckecliWithInput([]byte(resources), "resource", "delete", "-")
 
 		cluster := getCluster()
 		for i := 0; i < 3; i++ {
@@ -549,8 +551,8 @@ metadata:
   labels:
     test: value
 `
-		ckecliWithInput(newResources, "resource", "set", "-")
-		defer ckecliUnsafe(newResources, "resource", "delete", "-")
+		ckecliWithInput([]byte(newResources), "resource", "set", "-")
+		defer ckecliWithInput([]byte(newResources), "resource", "delete", "-")
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
@@ -568,7 +570,9 @@ metadata:
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		_, stderr, err = kubectl("apply", "-f", policyYAMLPath, "-n="+namespace)
+		psp, err := ioutil.ReadFile(policyYAMLPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		By("setting original resource")
@@ -606,7 +610,7 @@ spec:
         runAsUser: 10000
 `
 
-		_, stderr, err = kubectlWithInput(originals, "apply", "-f", "-")
+		_, stderr, err = kubectlWithInput([]byte(originals), "apply", "-f", "-")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		By("setting modified resource")
@@ -645,8 +649,8 @@ spec:
       securityContext:
         runAsUser: 10000
 `
-		ckecliWithInput(modified, "resource", "set", "-")
-		defer ckecliUnsafe(modified, "resource", "delete", "-")
+		ckecliWithInput([]byte(modified), "resource", "set", "-")
+		defer ckecliWithInput([]byte(modified), "resource", "delete", "-")
 
 		By("changing containerPort to 18001")
 		cluster := getCluster()

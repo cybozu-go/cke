@@ -8,10 +8,6 @@ address: __BRIDGE_ADDRESS__/24
 kind: DataFolder
 name: data
 files:
-  - name: cke
-    file: cke
-  - name: ckecli
-    file: ckecli
   - name: cluster.yml
     file: cke-cluster.yml
   - name: etcd
@@ -24,8 +20,6 @@ files:
     file: setup-cke.sh
   - name: mtest_key
     file: mtest_key
-  - name: setup-local-pv.sh
-    file: setup-local-pv.sh
   - name: containerd
     file: containerd
   - name: containerd-shim

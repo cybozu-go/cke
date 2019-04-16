@@ -58,7 +58,7 @@ func TestOperators() {
 		// - APIServerRestartOp
 		// - KubeEtcdEndpointsUpdateOp
 		stopCKE()
-		ckecli("constraints", "set", "control-plane-count", "2")
+		ckecliSafe("constraints", "set", "control-plane-count", "2")
 		cluster.Nodes = append(cluster.Nodes[:1], cluster.Nodes[2:]...)
 		ckecliClusterSet(cluster)
 		runCKE()
@@ -70,11 +70,11 @@ func TestOperators() {
 		// this will run EtcdAddMemberOp as well as other boot/restart ops.
 
 		// inject failure into addEtcdMemberCommand to cause leader change
-		firstLeader := strings.TrimSpace(string(ckecli("leader")))
+		firstLeader := strings.TrimSpace(string(ckecliSafe("leader")))
 		Expect(firstLeader).To(Or(Equal("host1"), Equal("host2")))
 		injectFailure("op/etcd/etcdAfterMemberAdd")
 
-		ckecli("constraints", "set", "control-plane-count", "3")
+		ckecliSafe("constraints", "set", "control-plane-count", "3")
 		cluster = getCluster()
 		for i := 0; i < 3; i++ {
 			cluster.Nodes[i].ControlPlane = true
@@ -173,7 +173,7 @@ func TestOperators() {
 		}).Should(Succeed())
 
 		// check leader change
-		newLeader := strings.TrimSpace(string(ckecli("leader")))
+		newLeader := strings.TrimSpace(string(ckecliSafe("leader")))
 		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
 		Expect(newLeader).NotTo(Equal(firstLeader))
 		stopCKE()
@@ -188,7 +188,7 @@ func TestOperators() {
 		// - EtcdStopOp
 
 		Eventually(func() error {
-			stdout, err := ckecliUnsafe("", "leader")
+			stdout, _, err := ckecli("leader")
 			if err != nil {
 				return err
 			}
@@ -202,7 +202,7 @@ func TestOperators() {
 		// inject failure into EtcdDestroyMemberOp
 		injectFailure("op/etcd/etcdAfterMemberRemove")
 
-		ckecli("constraints", "set", "control-plane-count", "2")
+		ckecliSafe("constraints", "set", "control-plane-count", "2")
 		cluster = getCluster()
 		for i := 0; i < 2; i++ {
 			cluster.Nodes[i].ControlPlane = true
@@ -212,7 +212,7 @@ func TestOperators() {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 		// check leader change
-		newLeader = strings.TrimSpace(string(ckecli("leader")))
+		newLeader = strings.TrimSpace(string(ckecliSafe("leader")))
 		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
 		Expect(newLeader).NotTo(Equal(firstLeader))
 		stopCKE()

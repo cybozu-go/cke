@@ -43,16 +43,47 @@ func RunBeforeSuite() {
 		Fail("failed to touch dummyCNIConf " + string(stderr))
 	}
 
+	By("stopping previous cke.service")
+	for _, host := range []string{host1, host2} {
+		execAt(host, "sudo", "systemctl", "reset-failed", "cke.service")
+		execAt(host, "sudo", "systemctl", "stop", "cke.service")
+	}
+
+	By("copying test files")
+	for _, testFile := range []string{ckePath, ckecliPath, kubectlPath} {
+		f, err := os.Open(testFile)
+		Expect(err).NotTo(HaveOccurred())
+		defer f.Close()
+		remoteFilename := filepath.Join("/tmp", filepath.Base(testFile))
+		for _, host := range []string{host1, host2} {
+			_, err := f.Seek(0, os.SEEK_SET)
+			Expect(err).NotTo(HaveOccurred())
+			stdout, stderr, err := execAtWithStream(host, f, "dd", "of="+remoteFilename)
+			Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+			stdout, stderr, err = execAt(host, "sudo", "mv", remoteFilename, filepath.Join("/opt/bin", filepath.Base(testFile)))
+			Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+			stdout, stderr, err = execAt(host, "sudo", "chmod", "755", filepath.Join("/opt/bin", filepath.Base(testFile)))
+			Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+		}
+	}
+	f, err := os.Open(ckeConfigPath)
+	Expect(err).NotTo(HaveOccurred())
+	defer f.Close()
+	remoteFilename := filepath.Join("/etc/cke", filepath.Base(ckeConfigPath))
+	for _, host := range []string{host1, host2} {
+		execSafeAt(host, "mkdir", "-p", "/etc/cke")
+		_, err := f.Seek(0, os.SEEK_SET)
+		Expect(err).NotTo(HaveOccurred())
+		stdout, stderr, err := execAtWithStream(host, f, "sudo", "dd", "of="+remoteFilename)
+		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+	}
+
+	By("setup cke")
 	for _, h := range []string{host1, host2} {
 		_, stderr, err := execAt(h, "/data/setup-cke.sh")
 		if err != nil {
 			Fail("failed to complete setup-cke.sh: " + string(stderr))
 		}
-	}
-
-	_, stderr, err = execAt(node1, "sudo", "/data/setup-local-pv.sh")
-	if err != nil {
-		Fail("failed to complete setup-local-pv.sh: " + string(stderr))
 	}
 
 	etcd, err := connectEtcd()
@@ -67,14 +98,11 @@ func RunBeforeSuite() {
 
 	setupCKE()
 
+	By("initializing control plane")
 	initializeControlPlane()
 
-	kubeconfig := ckecli("kubernetes", "issue")
-	f, err := os.Create("/tmp/cke-mtest-kubeconfig")
-	Expect(err).NotTo(HaveOccurred())
-	defer f.Close()
-	f.Write(kubeconfig)
-	f.Sync()
+	execSafeAt(host1, "mkdir", "-p", ".kube")
+	ckecliSafe("kubernetes", "issue", ">", ".kube/config")
 
 	fmt.Println("Begin tests...")
 }

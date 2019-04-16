@@ -140,6 +140,13 @@ storage:
     - filesystem: root
       path: "/opt/bin"
       mode: 0755
+    - filesystem: root
+      path: "/mnt/disks/etcdbackup"
+      user:
+        name: root
+      group:
+        id: 10000
+      mode: 2775
 
 networkd:
   units:
