@@ -38,6 +38,12 @@ func (o *etcdBackupPodCreateOp) NextCommand() cke.Commander {
 	return createEtcdBackupPodCommand{o.apiserver, o.pvcname}
 }
 
+func (o *etcdBackupPodCreateOp) Targets() []cke.Node {
+	return []cke.Node{
+		*o.apiserver,
+	}
+}
+
 type createEtcdBackupPodCommand struct {
 	apiserver *cke.Node
 	pvcname   string

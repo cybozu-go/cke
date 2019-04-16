@@ -61,3 +61,11 @@ func (o *kubeProxyRestartOp) NextCommand() cke.Commander {
 		return nil
 	}
 }
+
+func (o *kubeProxyRestartOp) Targets() []cke.Node {
+	nodes := []cke.Node{}
+	for _, v := range o.nodes {
+		nodes = append(nodes, *v)
+	}
+	return nodes
+}

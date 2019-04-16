@@ -39,6 +39,12 @@ func (o *createConfigMapOp) NextCommand() cke.Commander {
 	return createConfigMapCommand{o.apiserver, o.clusterIP, o.domain, o.dnsServers}
 }
 
+func (o *createConfigMapOp) Targets() []cke.Node {
+	return []cke.Node{
+		*o.apiserver,
+	}
+}
+
 type createConfigMapCommand struct {
 	apiserver  *cke.Node
 	clusterIP  string

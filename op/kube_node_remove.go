@@ -32,6 +32,10 @@ func (o *kubeNodeRemove) NextCommand() cke.Commander {
 	return nodeRemoveCommand{o.apiserver, o.nodes}
 }
 
+func (o *kubeNodeRemove) Targets() []cke.Node {
+	return []cke.Node{}
+}
+
 type nodeRemoveCommand struct {
 	apiserver *cke.Node
 	nodes     []*corev1.Node

@@ -115,6 +115,14 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 	}
 }
 
+func (o *kubeletBootOp) Targets() []cke.Node {
+	nodes := []cke.Node{}
+	for _, v := range o.nodes {
+		nodes = append(nodes, *v)
+	}
+	return nodes
+}
+
 type emptyDirCommand struct {
 	nodes []*cke.Node
 	dir   string

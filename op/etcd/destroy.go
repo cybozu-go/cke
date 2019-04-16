@@ -44,3 +44,11 @@ func (o *destroyMemberOp) NextCommand() cke.Commander {
 	}
 	return nil
 }
+
+func (o *destroyMemberOp) Targets() []cke.Node {
+	nodes := []cke.Node{}
+	for _, v := range o.targets {
+		nodes = append(nodes, *v)
+	}
+	return nodes
+}

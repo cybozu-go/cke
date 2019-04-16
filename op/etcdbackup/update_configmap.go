@@ -36,6 +36,12 @@ func (o *etcdBackupConfigMapUpdateOp) NextCommand() cke.Commander {
 	return updateEtcdBackupConfigMapCommand{o.apiserver, o.rotate}
 }
 
+func (o *etcdBackupConfigMapUpdateOp) Targets() []cke.Node {
+	return []cke.Node{
+		*o.apiserver,
+	}
+}
+
 type updateEtcdBackupConfigMapCommand struct {
 	apiserver *cke.Node
 	rotate    int

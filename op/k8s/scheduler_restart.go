@@ -44,3 +44,11 @@ func (o *schedulerRestartOp) NextCommand() cke.Commander {
 	}
 	return nil
 }
+
+func (o *schedulerRestartOp) Targets() []cke.Node {
+	nodes := []cke.Node{}
+	for _, v := range o.nodes {
+		nodes = append(nodes, *v)
+	}
+	return nodes
+}

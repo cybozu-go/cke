@@ -64,6 +64,14 @@ func (o *kubeProxyBootOp) NextCommand() cke.Commander {
 	}
 }
 
+func (o *kubeProxyBootOp) Targets() []cke.Node {
+	nodes := []cke.Node{}
+	for _, v := range o.nodes {
+		nodes = append(nodes, *v)
+	}
+	return nodes
+}
+
 type prepareProxyFilesCommand struct {
 	cluster string
 	files   *common.FilesBuilder

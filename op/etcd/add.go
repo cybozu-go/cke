@@ -72,6 +72,12 @@ func (o *addMemberOp) NextCommand() cke.Commander {
 	return nil
 }
 
+func (o *addMemberOp) Targets() []cke.Node {
+	return []cke.Node{
+		*o.targetNode,
+	}
+}
+
 type addMemberCommand struct {
 	endpoints []string
 	node      *cke.Node

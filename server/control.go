@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"time"
@@ -279,6 +280,20 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		default:
 		}
 
+		record.SetTargets(op.Targets())
+		err = storage.UpdateRecord(ctx, leaderKey, record)
+		if err != nil {
+			return err
+		}
+		nodes, err := json.Marshal(op.Targets())
+		if err != nil {
+			return err
+		}
+		log.Info("record targerts", map[string]interface{}{
+			"op":      op.Name(),
+			"targets": string(nodes),
+		})
+
 		record.SetCommand(commander.Command())
 		err = storage.UpdateRecord(ctx, leaderKey, record)
 		if err != nil {
@@ -292,7 +307,6 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		if err == nil {
 			continue
 		}
-
 		log.Error("command failed", map[string]interface{}{
 			log.FnError: err,
 			"op":        op.Name(),

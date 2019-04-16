@@ -32,6 +32,12 @@ func (o *etcdBackupServiceRemoveOp) NextCommand() cke.Commander {
 	return removeEtcdBackupServiceCommand{o.apiserver}
 }
 
+func (o *etcdBackupServiceRemoveOp) Targets() []cke.Node {
+	return []cke.Node{
+		*o.apiserver,
+	}
+}
+
 type removeEtcdBackupServiceCommand struct {
 	apiserver *cke.Node
 }

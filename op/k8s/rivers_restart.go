@@ -43,3 +43,11 @@ func (o *riversRestartOp) NextCommand() cke.Commander {
 	}
 	return nil
 }
+
+func (o *riversRestartOp) Targets() []cke.Node {
+	nodes := []cke.Node{}
+	for _, v := range o.nodes {
+		nodes = append(nodes, *v)
+	}
+	return nodes
+}

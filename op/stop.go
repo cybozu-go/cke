@@ -23,6 +23,14 @@ func (o *containerStopOp) NextCommand() cke.Commander {
 	return common.KillContainersCommand(o.nodes, o.name)
 }
 
+func (o *containerStopOp) Targets() []cke.Node {
+	nodes := []cke.Node{}
+	for _, v := range o.nodes {
+		nodes = append(nodes, *v)
+	}
+	return nodes
+}
+
 // APIServerStopOp returns an Operator to stop API server
 func APIServerStopOp(nodes []*cke.Node) cke.Operator {
 	return &containerStopOp{

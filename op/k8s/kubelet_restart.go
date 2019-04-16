@@ -67,6 +67,14 @@ func (o *kubeletRestartOp) NextCommand() cke.Commander {
 	}
 }
 
+func (o *kubeletRestartOp) Targets() []cke.Node {
+	nodes := []cke.Node{}
+	for _, v := range o.nodes {
+		nodes = append(nodes, *v)
+	}
+	return nodes
+}
+
 type prepareKubeletConfigCommand struct {
 	cluster string
 	params  cke.KubeletParams

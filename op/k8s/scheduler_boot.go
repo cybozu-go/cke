@@ -54,6 +54,14 @@ func (o *schedulerBootOp) NextCommand() cke.Commander {
 	}
 }
 
+func (o *schedulerBootOp) Targets() []cke.Node {
+	nodes := []cke.Node{}
+	for _, v := range o.nodes {
+		nodes = append(nodes, *v)
+	}
+	return nodes
+}
+
 type prepareSchedulerFilesCommand struct {
 	cluster string
 	files   *common.FilesBuilder

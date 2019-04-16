@@ -36,6 +36,12 @@ func (o *etcdBackupServiceCreateOp) NextCommand() cke.Commander {
 	return createEtcdBackupServiceCommand{o.apiserver}
 }
 
+func (o *etcdBackupServiceCreateOp) Targets() []cke.Node {
+	return []cke.Node{
+		*o.apiserver,
+	}
+}
+
 type createEtcdBackupServiceCommand struct {
 	apiserver *cke.Node
 }

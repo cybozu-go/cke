@@ -79,6 +79,14 @@ func (o *bootOp) NextCommand() cke.Commander {
 	}
 }
 
+func (o *bootOp) Targets() []cke.Node {
+	nodes := []cke.Node{}
+	for _, v := range o.nodes {
+		nodes = append(nodes, *v)
+	}
+	return nodes
+}
+
 type setupEtcdAuthCommand struct {
 	endpoints []string
 }

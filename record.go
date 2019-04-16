@@ -21,6 +21,7 @@ type Record struct {
 	Status    RecordStatus `json:"status"`
 	Operation string       `json:"operation"`
 	Command   Command      `json:"command"`
+	Nodes     []Node       `json:"nodes"`
 	Error     string       `json:"error"`
 	StartAt   time.Time    `json:"start-at"`
 	EndAt     time.Time    `json:"end-at"`
@@ -52,6 +53,11 @@ func (r *Record) Complete() {
 func (r *Record) SetCommand(c Command) {
 	r.Status = StatusRunning
 	r.Command = c
+}
+
+// SetTargets updates the record for the targets
+func (r *Record) SetTargets(n []Node) {
+	r.Nodes = n
 }
 
 // SetError cancels the operation with error information

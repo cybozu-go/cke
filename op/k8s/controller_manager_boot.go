@@ -57,6 +57,14 @@ func (o *controllerManagerBootOp) NextCommand() cke.Commander {
 	}
 }
 
+func (o *controllerManagerBootOp) Targets() []cke.Node {
+	nodes := []cke.Node{}
+	for _, v := range o.nodes {
+		nodes = append(nodes, *v)
+	}
+	return nodes
+}
+
 type prepareControllerManagerFilesCommand struct {
 	cluster string
 	files   *common.FilesBuilder

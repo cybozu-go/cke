@@ -32,6 +32,10 @@ func (o *kubeNodeUpdate) NextCommand() cke.Commander {
 	return nodeUpdateCommand{o.apiserver, o.nodes}
 }
 
+func (o *kubeNodeUpdate) Targets() []cke.Node {
+	return []cke.Node{}
+}
+
 type nodeUpdateCommand struct {
 	apiserver *cke.Node
 	nodes     []*corev1.Node

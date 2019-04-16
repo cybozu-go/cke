@@ -37,6 +37,12 @@ func (o *kubeEtcdEndpointsCreateOp) NextCommand() cke.Commander {
 	return createEtcdEndpointsCommand{o.apiserver, o.endpoints}
 }
 
+func (o *kubeEtcdEndpointsCreateOp) Targets() []cke.Node {
+	return []cke.Node{
+		*o.apiserver,
+	}
+}
+
 type kubeEtcdEndpointsUpdateOp struct {
 	apiserver *cke.Node
 	endpoints []*cke.Node
@@ -62,6 +68,12 @@ func (o *kubeEtcdEndpointsUpdateOp) NextCommand() cke.Commander {
 
 	o.finished = true
 	return updateEtcdEndpointsCommand{o.apiserver, o.endpoints}
+}
+
+func (o *kubeEtcdEndpointsUpdateOp) Targets() []cke.Node {
+	return []cke.Node{
+		*o.apiserver,
+	}
 }
 
 type createEtcdEndpointsCommand struct {

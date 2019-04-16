@@ -94,6 +94,14 @@ func (o *apiServerBootOp) NextCommand() cke.Commander {
 	}
 }
 
+func (o *apiServerBootOp) Targets() []cke.Node {
+	nodes := []cke.Node{}
+	for _, p := range o.nodes {
+		nodes = append(nodes, *p)
+	}
+	return nodes
+}
+
 type prepareAPIServerFilesCommand struct {
 	files         *common.FilesBuilder
 	serviceSubnet string

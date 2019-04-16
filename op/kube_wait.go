@@ -33,6 +33,12 @@ func (o *kubeWaitOp) NextCommand() cke.Commander {
 	return waitKubeCommand{o.apiserver}
 }
 
+func (o *kubeWaitOp) Targets() []cke.Node {
+	return []cke.Node{
+		*o.apiserver,
+	}
+}
+
 type waitKubeCommand struct {
 	apiserver *cke.Node
 }

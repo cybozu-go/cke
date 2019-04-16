@@ -33,6 +33,12 @@ func (o *updateConfigMapOp) NextCommand() cke.Commander {
 	return updateConfigMapCommand{o.apiserver, o.configMap}
 }
 
+func (o *updateConfigMapOp) Targets() []cke.Node {
+	return []cke.Node{
+		*o.apiserver,
+	}
+}
+
 type updateConfigMapCommand struct {
 	apiserver *cke.Node
 	configMap *v1.ConfigMap

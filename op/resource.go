@@ -32,6 +32,12 @@ func (o *resourceApplyOp) NextCommand() cke.Commander {
 	return o
 }
 
+func (o *resourceApplyOp) Targets() []cke.Node {
+	return []cke.Node{
+		*o.apiserver,
+	}
+}
+
 func (o *resourceApplyOp) Run(ctx context.Context, inf cke.Infrastructure) error {
 	cs, err := inf.K8sClient(ctx, o.apiserver)
 	if err != nil {

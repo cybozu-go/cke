@@ -36,6 +36,10 @@ func (o *removeMemberOp) NextCommand() cke.Commander {
 	return removeMemberCommand{o.endpoints, o.ids}
 }
 
+func (o *removeMemberOp) Targets() []cke.Node {
+	return []cke.Node{}
+}
+
 type removeMemberCommand struct {
 	endpoints []string
 	ids       []uint64
