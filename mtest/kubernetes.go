@@ -593,7 +593,6 @@ spec:
         - name: testhttpd
           image: quay.io/cybozu/testhttpd:0
           imagePullPolicy: Always
-          args: ["httpd", "-f", "-p", "8000", "-h", "/etc"]
           ports:
             - name: target
               containerPort: 18000
@@ -633,7 +632,6 @@ spec:
         - name: testhttpd
           image: quay.io/cybozu/testhttpd:0
           imagePullPolicy: Always
-          args: ["httpd", "-f", "-p", "8000", "-h", "/etc"]
           ports:
             - name: target
               containerPort: 18001
