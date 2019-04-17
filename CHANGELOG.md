@@ -5,6 +5,17 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.13.18] - 2019-04-17
+
+### Added
+- Build docker image by this repository instead of github.com/cybozu/neco-containers (#162)
+
+### Changed
+- Fix docker image bug (#163, #168).
+- Run kubelet with docker option `--tmpfs=/tmp` (#167).
+- Improve mtest environment and CI (#161, #164, #166).
+- Update document (#165).
+
 ## [1.13.17] - 2019-03-30
 
 ### Added
