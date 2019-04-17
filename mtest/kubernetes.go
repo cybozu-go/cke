@@ -579,25 +579,24 @@ metadata:
 		originals := `apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: busybox
+  name: testhttpd
   namespace: ` + namespace + `
   labels:
-    run: busybox
+    run: testhttpd
 spec:
   replicas: 2
   selector:
     matchLabels:
-      run: busybox
+      run: testhttpd
   template:
     metadata:
       labels:
-        run: busybox
+        run: testhttpd
     spec:
       containers:
-        - name: busybox
-          image: busybox
+        - name: testhttpd
+          image: quay.io/cybozu/testhttpd:0
           imagePullPolicy: Always
-          args: ["httpd", "-f", "-p", "8000", "-h", "/etc"]
           ports:
             - name: target
               containerPort: 18000
@@ -617,27 +616,26 @@ spec:
 		modified := `apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: busybox
+  name: testhttpd
   namespace: ` + namespace + `
   labels:
-    run: busybox
+    run: testhttpd
   annotations:
     cke.cybozu.com/revision: "1"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      run: busybox
+      run: testhttpd
   template:
     metadata:
       labels:
-        run: busybox
+        run: testhttpd
     spec:
       containers:
-        - name: busybox
-          image: busybox
+        - name: testhttpd
+          image: quay.io/cybozu/testhttpd:0
           imagePullPolicy: Always
-          args: ["httpd", "-f", "-p", "8000", "-h", "/etc"]
           ports:
             - name: target
               containerPort: 18001
@@ -662,7 +660,7 @@ spec:
 		}).Should(Succeed())
 
 		Eventually(func() error {
-			stdout, _, err := kubectl("get", "-n", namespace, "deployment", "busybox", "-o", "json")
+			stdout, _, err := kubectl("get", "-n", namespace, "deployment", "testhttpd", "-o", "json")
 			if err != nil {
 				return err
 			}
