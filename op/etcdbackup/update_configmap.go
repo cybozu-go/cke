@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/cybozu-go/cke"
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
@@ -36,9 +36,9 @@ func (o *etcdBackupConfigMapUpdateOp) NextCommand() cke.Commander {
 	return updateEtcdBackupConfigMapCommand{o.apiserver, o.rotate}
 }
 
-func (o *etcdBackupConfigMapUpdateOp) Targets() []cke.Node {
-	return []cke.Node{
-		*o.apiserver,
+func (o *etcdBackupConfigMapUpdateOp) Nodes() []string {
+	return []string{
+		o.apiserver.Nodename(),
 	}
 }
 

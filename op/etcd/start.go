@@ -58,10 +58,10 @@ func (o *etcdStartOp) NextCommand() cke.Commander {
 	}
 }
 
-func (o *etcdStartOp) Targets() []cke.Node {
-	nodes := []cke.Node{}
-	for _, v := range o.nodes {
-		nodes = append(nodes, *v)
+func (o *etcdStartOp) Nodes() []string {
+	ips := []string{}
+	for _, n := range o.nodes {
+		ips = append(ips, n.Nodename())
 	}
-	return nodes
+	return ips
 }

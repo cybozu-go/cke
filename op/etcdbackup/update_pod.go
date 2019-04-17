@@ -36,9 +36,9 @@ func (o *etcdBackupPodUpdateOp) NextCommand() cke.Commander {
 	return updateEtcdBackupPodCommand{o.apiserver, o.pvcname}
 }
 
-func (o *etcdBackupPodUpdateOp) Targets() []cke.Node {
-	return []cke.Node{
-		*o.apiserver,
+func (o *etcdBackupPodUpdateOp) Nodes() []string {
+	return []string{
+		o.apiserver.Nodename(),
 	}
 }
 

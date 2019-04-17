@@ -67,10 +67,10 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 	panic("unreachable")
 }
 
-func (o *apiServerRestartOp) Targets() []cke.Node {
-	nodes := []cke.Node{}
-	for _, v := range o.nodes {
-		nodes = append(nodes, *v)
+func (o *apiServerRestartOp) Nodes() []string {
+	ips := []string{}
+	for _, n := range o.nodes {
+		ips = append(ips, n.Nodename())
 	}
-	return nodes
+	return ips
 }

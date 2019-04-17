@@ -32,9 +32,9 @@ func (o *etcdBackupConfigMapRemoveOp) NextCommand() cke.Commander {
 	return removeEtcdBackupConfigMapCommand{o.apiserver}
 }
 
-func (o *etcdBackupConfigMapRemoveOp) Targets() []cke.Node {
-	return []cke.Node{
-		*o.apiserver,
+func (o *etcdBackupConfigMapRemoveOp) Nodes() []string {
+	return []string{
+		o.apiserver.Nodename(),
 	}
 }
 

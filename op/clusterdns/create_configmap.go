@@ -37,9 +37,9 @@ func (o *createConfigMapOp) NextCommand() cke.Commander {
 	return createConfigMapCommand{o.apiserver, o.domain, o.dnsServers}
 }
 
-func (o *createConfigMapOp) Targets() []cke.Node {
-	return []cke.Node{
-		*o.apiserver,
+func (o *createConfigMapOp) Nodes() []string {
+	return []string{
+		o.apiserver.Nodename(),
 	}
 }
 

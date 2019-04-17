@@ -6,7 +6,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type createConfigMapOp struct {
@@ -39,9 +39,9 @@ func (o *createConfigMapOp) NextCommand() cke.Commander {
 	return createConfigMapCommand{o.apiserver, o.clusterIP, o.domain, o.dnsServers}
 }
 
-func (o *createConfigMapOp) Targets() []cke.Node {
-	return []cke.Node{
-		*o.apiserver,
+func (o *createConfigMapOp) Nodes() []string {
+	return []string{
+		o.apiserver.Nodename(),
 	}
 }
 

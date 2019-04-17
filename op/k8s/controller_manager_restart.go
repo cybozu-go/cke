@@ -47,10 +47,10 @@ func (o *controllerManagerRestartOp) NextCommand() cke.Commander {
 	return nil
 }
 
-func (o *controllerManagerRestartOp) Targets() []cke.Node {
-	nodes := []cke.Node{}
-	for _, v := range o.nodes {
-		nodes = append(nodes, *v)
+func (o *controllerManagerRestartOp) Nodes() []string {
+	ips := []string{}
+	for _, n := range o.nodes {
+		ips = append(ips, n.Nodename())
 	}
-	return nodes
+	return ips
 }

@@ -94,12 +94,12 @@ func (o *apiServerBootOp) NextCommand() cke.Commander {
 	}
 }
 
-func (o *apiServerBootOp) Targets() []cke.Node {
-	nodes := []cke.Node{}
-	for _, p := range o.nodes {
-		nodes = append(nodes, *p)
+func (o *apiServerBootOp) Nodes() []string {
+	ips := []string{}
+	for _, n := range o.nodes {
+		ips = append(ips, n.Nodename())
 	}
-	return nodes
+	return ips
 }
 
 type prepareAPIServerFilesCommand struct {

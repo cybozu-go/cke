@@ -35,9 +35,9 @@ func (o *etcdBackupCronJobUpdateOp) NextCommand() cke.Commander {
 	return updateEtcdBackupCronJobCommand{o.apiserver, o.schedule}
 }
 
-func (o *etcdBackupCronJobUpdateOp) Targets() []cke.Node {
-	return []cke.Node{
-		*o.apiserver,
+func (o *etcdBackupCronJobUpdateOp) Nodes() []string {
+	return []string{
+		o.apiserver.Nodename(),
 	}
 }
 

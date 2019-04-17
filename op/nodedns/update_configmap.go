@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/cybozu-go/cke"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 type updateConfigMapOp struct {
@@ -33,9 +33,9 @@ func (o *updateConfigMapOp) NextCommand() cke.Commander {
 	return updateConfigMapCommand{o.apiserver, o.configMap}
 }
 
-func (o *updateConfigMapOp) Targets() []cke.Node {
-	return []cke.Node{
-		*o.apiserver,
+func (o *updateConfigMapOp) Nodes() []string {
+	return []string{
+		o.apiserver.Nodename(),
 	}
 }
 

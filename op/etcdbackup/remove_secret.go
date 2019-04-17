@@ -32,9 +32,9 @@ func (o *etcdBackupSecretRemoveOp) NextCommand() cke.Commander {
 	return removeEtcdBackupSecretCommand{o.apiserver}
 }
 
-func (o *etcdBackupSecretRemoveOp) Targets() []cke.Node {
-	return []cke.Node{
-		*o.apiserver,
+func (o *etcdBackupSecretRemoveOp) Nodes() []string {
+	return []string{
+		o.apiserver.Nodename(),
 	}
 }
 

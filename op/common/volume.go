@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"strings"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
@@ -37,8 +36,7 @@ func (c volumeCreateCommand) Command() cke.Command {
 	}
 	return cke.Command{
 		Name:   "volume-create",
-		Target: strings.Join(targets, ","),
-		Detail: c.volname,
+		Target: c.volname,
 	}
 }
 
@@ -78,7 +76,6 @@ func (c volumeRemoveCommand) Command() cke.Command {
 	}
 	return cke.Command{
 		Name:   "volume-remove",
-		Target: strings.Join(targets, ","),
-		Detail: c.volname,
+		Target: c.volname,
 	}
 }

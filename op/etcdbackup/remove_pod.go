@@ -32,9 +32,9 @@ func (o *etcdBackupPodRemoveOp) NextCommand() cke.Commander {
 	return removeEtcdBackupPodCommand{o.apiserver}
 }
 
-func (o *etcdBackupPodRemoveOp) Targets() []cke.Node {
-	return []cke.Node{
-		*o.apiserver,
+func (o *etcdBackupPodRemoveOp) Nodes() []string {
+	return []string{
+		o.apiserver.Nodename(),
 	}
 }
 

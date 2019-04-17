@@ -2,7 +2,6 @@ package op
 
 import (
 	"context"
-	"strings"
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
@@ -37,9 +36,9 @@ func (o *kubeEtcdEndpointsCreateOp) NextCommand() cke.Commander {
 	return createEtcdEndpointsCommand{o.apiserver, o.endpoints}
 }
 
-func (o *kubeEtcdEndpointsCreateOp) Targets() []cke.Node {
-	return []cke.Node{
-		*o.apiserver,
+func (o *kubeEtcdEndpointsCreateOp) Nodes() []string {
+	return []string{
+		o.apiserver.Nodename(),
 	}
 }
 
@@ -70,9 +69,9 @@ func (o *kubeEtcdEndpointsUpdateOp) NextCommand() cke.Commander {
 	return updateEtcdEndpointsCommand{o.apiserver, o.endpoints}
 }
 
-func (o *kubeEtcdEndpointsUpdateOp) Targets() []cke.Node {
-	return []cke.Node{
-		*o.apiserver,
+func (o *kubeEtcdEndpointsUpdateOp) Nodes() []string {
+	return []string{
+		o.apiserver.Nodename(),
 	}
 }
 
@@ -130,14 +129,9 @@ func (c createEtcdEndpointsCommand) Run(ctx context.Context, inf cke.Infrastruct
 }
 
 func (c createEtcdEndpointsCommand) Command() cke.Command {
-	targets := make([]string, len(c.endpoints))
-	for i, n := range c.endpoints {
-		targets[i] = n.Address
-	}
 	return cke.Command{
 		Name:   "createEtcdEndpointsCommand",
-		Target: strings.Join(targets, ","),
-		Detail: "kube-system/" + etcdEndpointsName,
+		Target: "kube-system/" + etcdEndpointsName,
 	}
 }
 
@@ -171,13 +165,8 @@ func (c updateEtcdEndpointsCommand) Run(ctx context.Context, inf cke.Infrastruct
 }
 
 func (c updateEtcdEndpointsCommand) Command() cke.Command {
-	targets := make([]string, len(c.endpoints))
-	for i, n := range c.endpoints {
-		targets[i] = n.Address
-	}
 	return cke.Command{
 		Name:   "updateEtcdEndpointsCommand",
-		Target: strings.Join(targets, ","),
-		Detail: "kube-system/" + etcdEndpointsName,
+		Target: "kube-system/" + etcdEndpointsName,
 	}
 }

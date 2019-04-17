@@ -3,6 +3,7 @@ package server
 import (
 	"strings"
 
+	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
@@ -128,8 +129,8 @@ func (nf *NodeFilter) EtcdStoppedMembers() (nodes []*cke.Node) {
 	return nodes
 }
 
-// EtcdNonClusterMemberIDs returns IDs of etcd members not defined in cluster YAML.
-func (nf *NodeFilter) EtcdNonClusterMemberIDs(healthy bool) (ids []uint64) {
+// EtcdNonClusterMembers returns etcd members whose IDs are not defined in cluster YAML.
+func (nf *NodeFilter) EtcdNonClusterMembers(healthy bool) (members []*etcdserverpb.Member) {
 	st := nf.status.Etcd
 	for k, v := range st.Members {
 		if nf.InCluster(k) {
@@ -138,9 +139,9 @@ func (nf *NodeFilter) EtcdNonClusterMemberIDs(healthy bool) (ids []uint64) {
 		if st.InSyncMembers[k] != healthy {
 			continue
 		}
-		ids = append(ids, v.ID)
+		members = append(members, v)
 	}
-	return ids
+	return members
 }
 
 // EtcdNonCPMembers returns nodes and IDs of etcd members running on

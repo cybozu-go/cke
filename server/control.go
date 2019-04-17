@@ -2,9 +2,9 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
@@ -280,18 +280,14 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		default:
 		}
 
-		record.SetTargets(op.Targets())
+		record.SetNodes(op.Nodes())
 		err = storage.UpdateRecord(ctx, leaderKey, record)
-		if err != nil {
-			return err
-		}
-		nodes, err := json.Marshal(op.Targets())
 		if err != nil {
 			return err
 		}
 		log.Info("record targerts", map[string]interface{}{
 			"op":      op.Name(),
-			"targets": string(nodes),
+			"targets": strings.Join(op.Nodes(), " "),
 		})
 
 		record.SetCommand(commander.Command())
