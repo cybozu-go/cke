@@ -22,8 +22,24 @@ After updating dependencies, run following commands to vendor dependencies:
 $ go mod tidy
 $ go mod vendor
 $ git add -f vendor
-$ git add go.mod go.sum
+$ git add go.mod
 $ git commit
+```
+
+### Maintenance branch
+
+Each CKE release corresponds to a Kubernetes version.
+For example, CKE 1.13.8 corresponds to Kubernetes 1.13.4.
+
+When the `master` branch of CKE is updated for a new Kubernetes minor version (e.g. 1.14),
+we should keep a maintenance branch for old (e.g. 1.13) Kubernetes.
+
+Run following commands to create such a branch:
+
+```console
+$ git fetch origin
+$ git checkout -b release-1.13 origin/master
+$ git push -u origin release-1.13
 ```
 
 ### Update `k8s.io` modules
