@@ -286,8 +286,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	ep, err := clientset.CoreV1().Endpoints("kube-system").Get(etcdEndpointsName,
-		metav1.GetOptions{IncludeUninitialized: true})
+	ep, err := clientset.CoreV1().Endpoints("kube-system").Get(etcdEndpointsName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.EtcdEndpoints = ep

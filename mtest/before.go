@@ -22,7 +22,7 @@ func RunBeforeSuite() {
 	fmt.Println("Preparing...")
 
 	SetDefaultEventuallyPollingInterval(3 * time.Second)
-	SetDefaultEventuallyTimeout(10 * time.Minute)
+	SetDefaultEventuallyTimeout(9 * time.Minute)
 
 	log.DefaultLogger().SetThreshold(log.LvError)
 

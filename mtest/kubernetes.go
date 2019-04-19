@@ -19,8 +19,8 @@ import (
 // TestKubernetes tests kubernetes workloads on CKE
 func TestKubernetes() {
 	It("can run Pods", func() {
-		By("creating namespace and policy for test")
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		psp, err := ioutil.ReadFile(policyYAMLPath)
@@ -91,8 +91,8 @@ func TestKubernetes() {
 	})
 
 	It("resolves Service IP", func() {
-		By("creating namespace and policy for test")
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		psp, err := ioutil.ReadFile(policyYAMLPath)
@@ -199,8 +199,8 @@ func TestKubernetes() {
 	})
 
 	It("has node DNS resources", func() {
-		By("creating namespace and policy for test")
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		psp, err := ioutil.ReadFile(policyYAMLPath)
@@ -351,8 +351,8 @@ func TestKubernetes() {
 			Skip("docker doesn't support log rotation")
 		}
 
-		By("creating namespace and policy for test")
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		psp, err := ioutil.ReadFile(policyYAMLPath)
@@ -402,9 +402,11 @@ func TestKubernetes() {
 		}
 
 		logFile := fmt.Sprintf("%d.log", pod.Status.ContainerStatuses[0].RestartCount)
-		logPath := filepath.Join("/var/log/pods", string(pod.ObjectMeta.UID), "nginx", logFile)
+		subDirName := fmt.Sprintf("%s_%s_%s", namespace, "nginx", string(pod.ObjectMeta.UID))
+		logPath := filepath.Join("/var/log/pods", subDirName, "nginx", logFile)
 		pattern := fmt.Sprintf("%s.*", logPath)
 
+		By("checking log file")
 		Eventually(func() error {
 			_, _, err = execAt(pod.Status.HostIP, "test", "-f", logPath)
 			if err != nil {
@@ -566,8 +568,8 @@ metadata:
 	})
 
 	It("recreates user-defined resources", func() {
-		By("creating namespace and policy for test")
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		psp, err := ioutil.ReadFile(policyYAMLPath)
