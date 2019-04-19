@@ -19,8 +19,8 @@ import (
 // TestKubernetes tests kubernetes workloads on CKE
 func TestKubernetes() {
 	It("can run Pods", func() {
-		By("creating namespace and policy for test")
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		psp, err := ioutil.ReadFile(policyYAMLPath)
@@ -91,8 +91,8 @@ func TestKubernetes() {
 	})
 
 	It("resolves Service IP", func() {
-		By("creating namespace and policy for test")
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		psp, err := ioutil.ReadFile(policyYAMLPath)
@@ -199,8 +199,8 @@ func TestKubernetes() {
 	})
 
 	It("has node DNS resources", func() {
-		By("creating namespace and policy for test")
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		psp, err := ioutil.ReadFile(policyYAMLPath)
@@ -351,8 +351,8 @@ func TestKubernetes() {
 			Skip("docker doesn't support log rotation")
 		}
 
-		By("creating namespace and policy for test")
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		psp, err := ioutil.ReadFile(policyYAMLPath)
@@ -566,8 +566,8 @@ metadata:
 	})
 
 	It("recreates user-defined resources", func() {
-		By("creating namespace and policy for test")
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
+		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		psp, err := ioutil.ReadFile(policyYAMLPath)
