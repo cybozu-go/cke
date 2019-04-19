@@ -59,7 +59,10 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
-		return emptyDirCommand{o.nodes, cniConfDir}
+		if len(o.params.CNIConfFile.Name) != 0 {
+			return emptyDirCommand{o.nodes, cniConfDir}
+		}
+		fallthrough
 	case 2:
 		o.step++
 		dirs := []string{
