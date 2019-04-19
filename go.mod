@@ -70,7 +70,6 @@ require (
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75 // indirect
 	github.com/gotestyourself/gotestyourself v2.1.0+incompatible // indirect
-	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
 	github.com/hashicorp/consul v1.2.3 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.0 // indirect
 	github.com/hashicorp/go-gcp-common v0.0.0-20180425173946-763e39302965 // indirect
@@ -131,7 +130,6 @@ require (
 	github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
-	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
 	github.com/pkg/errors v0.8.0
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
@@ -158,11 +156,12 @@ require (
 	gopkg.in/vmihailenco/msgpack.v2 v2.9.1 // indirect
 	gopkg.in/yaml.v2 v2.2.1
 	gotest.tools v2.1.0+incompatible // indirect
-	k8s.io/api v0.0.0-20181121191454-a61488babbd6
-	k8s.io/apimachinery v0.0.0-20190117220443-572dfc7bdfcb
-	k8s.io/client-go v10.0.0+incompatible
+	k8s.io/api v0.0.0-20190313235455-40a48860b5ab
+	k8s.io/apimachinery v0.0.0-20190404173353-6a84e37a896d
+	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/klog v0.1.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20190306001800-15615b16d372 // indirect
+	k8s.io/utils v0.0.0-20190308190857-21c4ce38f2a7 // indirect
 	layeh.com/radius v0.0.0-20190109000448-e6d9fd7a048a // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )
