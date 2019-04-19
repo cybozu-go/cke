@@ -20,7 +20,6 @@ var clusterDNSTemplate = template.Must(template.New("").Parse(`.:1053 {
     kubernetes {{ .Domain }} in-addr.arpa ip6.arpa {
       pods verified
 {{- if .Upstreams }}
-      upstream
       fallthrough in-addr.arpa ip6.arpa
 {{- end }}
     }
