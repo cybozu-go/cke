@@ -5,6 +5,13 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.0-rc1] - 2019-04-19
+
+### Changed
+- Update kubernetes to 1.14.1
+- Update CoreDNS to 1.5.0
+- Update CNI plugins to 0.7.5
+
 ## [1.13.18] - 2019-04-17
 
 ### Added
@@ -131,7 +138,9 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.13.17...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.0-rc1...HEAD
+[1.14.0-rc1]: https://github.com/cybozu-go/cke/compare/v1.13.18...v1.14.0-rc1
+[1.13.18]: https://github.com/cybozu-go/cke/compare/v1.13.17...v1.13.18
 [1.13.17]: https://github.com/cybozu-go/cke/compare/v1.13.16...v1.13.17
 [1.13.16]: https://github.com/cybozu-go/cke/compare/v1.13.15...v1.13.16
 [1.13.15]: https://github.com/cybozu-go/cke/compare/v1.13.14...v1.13.15
