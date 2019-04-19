@@ -402,9 +402,11 @@ func TestKubernetes() {
 		}
 
 		logFile := fmt.Sprintf("%d.log", pod.Status.ContainerStatuses[0].RestartCount)
-		logPath := filepath.Join("/var/log/pods", string(pod.ObjectMeta.UID), "nginx", logFile)
+		subDirName := fmt.Sprintf("%s_%s_%s", namespace, "nginx", string(pod.ObjectMeta.UID))
+		logPath := filepath.Join("/var/log/pods", subDirName, "nginx", logFile)
 		pattern := fmt.Sprintf("%s.*", logPath)
 
+		By("checking log file")
 		Eventually(func() error {
 			_, _, err = execAt(pod.Status.HostIP, "test", "-f", logPath)
 			if err != nil {
