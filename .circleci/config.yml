@@ -76,6 +76,10 @@ jobs:
             TAG=$(echo $CIRCLE_TAG | cut -c 2-)
             docker tag quay.io/cybozu/cke:latest quay.io/cybozu/cke:$TAG
             docker push quay.io/cybozu/cke:$TAG
+            if echo $TAG | grep -q -e - ; then
+                echo ===== Skip pushing branch tags for pre-release $TAG =====
+                exit 0
+            fi
             BRANCH=$(echo $TAG | cut -d "." -f 1-2)
             docker tag quay.io/cybozu/cke:latest quay.io/cybozu/cke:$BRANCH
             docker push quay.io/cybozu/cke:$BRANCH
