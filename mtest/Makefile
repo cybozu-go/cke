@@ -48,6 +48,8 @@ OUTPUT := ./output
 COREOS_IMAGE := coreos_production_qemu_image.img
 CKE := $(abspath $(OUTPUT))/cke
 CKECLI := $(abspath $(OUTPUT))/ckecli
+CKE_IMAGE := $(abspath $(OUTPUT))/cke.img
+CKE_IMAGE_URL := quay.io/cybozu/cke:dev
 CKECLUSTER := $(abspath $(OUTPUT))/cke-cluster.yml
 CKECONFIG := $(abspath $(OUTPUT))/cke.yml
 ETCDCTL := $(abspath $(OUTPUT))/etcdctl
@@ -56,7 +58,7 @@ LOCALPVYAML := $(realpath ./local-pv.yml)
 NGINXYAML := $(realpath ./nginx.yml)
 POLICYYAML := $(realpath ./mtest-policy.yml)
 
-export SSH_PRIVKEY CKE CKECLI CKECLUSTER CKECONFIG KUBECTL ETCDCTL POLICYYAML NGINXYAML LOCALPVYAML
+export SSH_PRIVKEY CKECLI CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL ETCDCTL POLICYYAML NGINXYAML LOCALPVYAML
 
 CONTAINERD_FILES = \
 	$(OUTPUT)/containerd \
@@ -64,8 +66,7 @@ CONTAINERD_FILES = \
 	$(OUTPUT)/ctr
 
 TEST_DEPS = \
-	$(OUTPUT)/cke \
-	$(OUTPUT)/ckecli \
+	$(OUTPUT)/cke.img \
 	$(OUTPUT)/cke.yml
 
 PLACEMAT_DEPS = \
@@ -130,6 +131,15 @@ $(OUTPUT)/cke $(OUTPUT)/ckecli: FORCE
 			gofail disable op/etcd; \
 			exit 1; \
 		fi
+
+$(OUTPUT)/cke.img: $(OUTPUT)/cke $(OUTPUT)/ckecli
+	cp ../LICENSE $(shell pwd)/../docker
+	cp $(OUTPUT)/cke ../docker/
+	cp $(OUTPUT)/ckecli ../docker/
+	sudo podman build --no-cache --rm=false -t $(CKE_IMAGE_URL) ../docker/
+	mkdir -p $(OUTPUT)
+	sudo podman save -o $@ $(CKE_IMAGE_URL)
+
 FORCE:
 
 $(OUTPUT)/kubectl:
@@ -306,7 +316,7 @@ test: $(TEST_DEPS)
 bootstrap: $(TEST_DEPS)
 	SUITE_PACKAGE=./functions ./test.sh "can run Pods"
 
-placemat: $(PLACEMAT_DEPS) $(TEST_DEPS)
+placemat: $(PLACEMAT_DEPS)
 	sudo rm -rf $(PLACEMAT_DATADIR)
 	sudo rm -rf $(VM_SHARED_DIR)
 	sudo systemd-run --unit=placemat.service $(PLACEMAT) -enable-virtfs $(abspath output/cluster.yml)

@@ -50,11 +50,11 @@ func RunBeforeSuite() {
 	}
 
 	By("copying test files")
-	for _, testFile := range []string{ckePath, ckecliPath, kubectlPath} {
+	for _, testFile := range []string{ckecliPath, kubectlPath} {
 		f, err := os.Open(testFile)
 		Expect(err).NotTo(HaveOccurred())
 		defer f.Close()
-		remoteFilename := filepath.Join("/tmp", filepath.Base(testFile))
+		remoteFilename := filepath.Join("/var/tmp", filepath.Base(testFile))
 		for _, host := range []string{host1, host2} {
 			_, err := f.Seek(0, os.SEEK_SET)
 			Expect(err).NotTo(HaveOccurred())
@@ -66,6 +66,27 @@ func RunBeforeSuite() {
 			Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
 		}
 	}
+	for _, testfile := range []string{ckeImagePath} {
+		f, err := os.Open(testfile)
+		Expect(err).NotTo(HaveOccurred())
+		defer f.Close()
+		remoteFilename := filepath.Join("/var/tmp", filepath.Base(testfile))
+		for _, host := range []string{host1, host2} {
+			_, err := f.Seek(0, os.SEEK_SET)
+			Expect(err).NotTo(HaveOccurred())
+			stdout, stderr, err := execAtWithStream(host, f, "dd", "of="+remoteFilename)
+			Expect(err).NotTo(HaveOccurred(), "stdout=%s, stder=%s", stdout, stderr)
+		}
+	}
+
+	By("loading test image")
+	err = loadImage(filepath.Join("/var/tmp", filepath.Base(ckeImagePath)))
+	Expect(err).NotTo(HaveOccurred())
+
+	By("running install-tools")
+	err = installTools(ckeImageURL)
+	Expect(err).NotTo(HaveOccurred())
+
 	f, err := os.Open(ckeConfigPath)
 	Expect(err).NotTo(HaveOccurred())
 	defer f.Close()
@@ -100,8 +121,8 @@ func RunBeforeSuite() {
 
 	By("initializing control plane")
 	initializeControlPlane()
-
 	execSafeAt(host1, "mkdir", "-p", ".kube")
+
 	ckecliSafe("kubernetes", "issue", ">", ".kube/config")
 
 	fmt.Println("Begin tests...")

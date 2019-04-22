@@ -151,6 +151,45 @@ RETRY:
 	return nil
 }
 
+func loadImage(path string) error {
+	env := well.NewEnvironment(context.Background())
+	for _, host := range []string{host1, host2} {
+		host2 := host
+		env.Go(func(ctx context.Context) error {
+			sess, err := sshClients[host2].client.NewSession()
+			if err != nil {
+				return err
+			}
+			defer func() {
+				sess.Run("rm -f " + path)
+				sess.Close()
+			}()
+			return sess.Run("docker load -i " + path)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func installTools(image string) error {
+	env := well.NewEnvironment(context.Background())
+	for _, host := range []string{host1, host2} {
+		host2 := host
+		env.Go(func(ctx context.Context) error {
+			sess, err := sshClients[host2].client.NewSession()
+			if err != nil {
+				return err
+			}
+			defer sess.Close()
+			return sess.Run("docker run --rm -u root:root " +
+				"--entrypoint /usr/local/cke/install-tools " +
+				"--mount type=bind,src=/opt/bin,target=/host/usr/local/bin " + image)
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
 func stopCKE() error {
 	env := well.NewEnvironment(context.Background())
 	for _, host := range []string{host1, host2} {
@@ -171,7 +210,7 @@ func stopCKE() error {
 	return env.Wait()
 }
 
-func runCKE() error {
+func runCKE(image string) error {
 	env := well.NewEnvironment(context.Background())
 	for _, host := range []string{host1, host2} {
 		host2 := host
@@ -181,7 +220,12 @@ func runCKE() error {
 				return err
 			}
 			defer sess.Close()
-			return sess.Run("sudo systemd-run --unit=cke.service --setenv=GOFAIL_HTTP=0.0.0.0:1234 /opt/bin/cke --interval 3s --session-ttl 5s")
+			return sess.Run("sudo mkdir -p /var/lib/cke && sudo systemd-run --unit=cke.service " +
+				"--setenv=GOFAIL_HTTP=0.0.0.0:1234 " +
+				"docker run --rm --network=host --name cke --cap-drop ALL " +
+				"--mount type=bind,source=/var/lib/cke,target=/var/lib/cke " +
+				"--mount type=bind,source=/etc/cke/,target=/etc/cke/ " +
+				image + " --config /etc/cke/cke.yml --interval 3s --session-ttl 5s")
 		})
 	}
 	env.Stop()
@@ -375,7 +419,7 @@ func stopVault(client *ssh.Client) error {
 func setupCKE() {
 	err := stopCKE()
 	Expect(err).NotTo(HaveOccurred())
-	err = runCKE()
+	err = runCKE(ckeImageURL)
 	Expect(err).NotTo(HaveOccurred())
 }
 
@@ -417,6 +461,7 @@ func initializeControlPlane() {
 		cluster.Nodes[i].ControlPlane = true
 	}
 	ckecliClusterSet(cluster)
+
 	Eventually(func() error {
 		return checkCluster(cluster)
 	}).Should(Succeed())
