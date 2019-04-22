@@ -74,7 +74,7 @@ func (o *addMemberOp) NextCommand() cke.Commander {
 
 func (o *addMemberOp) Nodes() []string {
 	return []string{
-		o.targetNode.Nodename(),
+		o.targetNode.Address,
 	}
 }
 
@@ -153,8 +153,9 @@ func (c addMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) error
 }
 
 func (c addMemberCommand) Command() cke.Command {
+	detail := "add node, " + c.node.Address + ", to etcd members"
 	return cke.Command{
 		Name:   "add-etcd-member",
-		Target: c.node.Address,
+		Detail: detail,
 	}
 }

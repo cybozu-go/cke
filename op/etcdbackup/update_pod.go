@@ -38,7 +38,7 @@ func (o *etcdBackupPodUpdateOp) NextCommand() cke.Commander {
 
 func (o *etcdBackupPodUpdateOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 
@@ -84,5 +84,6 @@ func (c updateEtcdBackupPodCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "update-etcdbackup-pod",
 		Target: "etcdbackup",
+		Detail: "update etcdbackup pods in kube-system",
 	}
 }

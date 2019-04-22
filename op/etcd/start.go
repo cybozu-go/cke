@@ -59,9 +59,9 @@ func (o *etcdStartOp) NextCommand() cke.Commander {
 }
 
 func (o *etcdStartOp) Nodes() []string {
-	ips := []string{}
+	ips := make([]string, len(o.nodes))
 	for _, n := range o.nodes {
-		ips = append(ips, n.Nodename())
+		ips = append(ips, n.Address)
 	}
 	return ips
 }

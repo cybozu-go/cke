@@ -68,9 +68,9 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 }
 
 func (o *apiServerRestartOp) Nodes() []string {
-	ips := []string{}
-	for _, n := range o.nodes {
-		ips = append(ips, n.Nodename())
+	ips := make([]string, len(o.nodes))
+	for i, n := range o.nodes {
+		ips[i] = n.Address
 	}
 	return ips
 }

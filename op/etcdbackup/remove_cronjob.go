@@ -34,7 +34,7 @@ func (o *etcdBackupCronJobRemoveOp) NextCommand() cke.Commander {
 
 func (o *etcdBackupCronJobRemoveOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 
@@ -54,5 +54,6 @@ func (c removeEtcdBackupCronJobCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "remove-etcdbackup-job",
 		Target: "etcdbackup",
+		Detail: "remove etcdbackup cronjob in kube-system",
 	}
 }

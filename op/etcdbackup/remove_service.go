@@ -34,7 +34,7 @@ func (o *etcdBackupServiceRemoveOp) NextCommand() cke.Commander {
 
 func (o *etcdBackupServiceRemoveOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 
@@ -54,5 +54,6 @@ func (c removeEtcdBackupServiceCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "remove-etcdbackup-service",
 		Target: "etcdbackup-service",
+		Detail: "remove etcdbackup service in kube-system",
 	}
 }

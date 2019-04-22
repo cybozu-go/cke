@@ -44,11 +44,7 @@ func (o *removeMemberOp) NextCommand() cke.Commander {
 }
 
 func (o *removeMemberOp) Nodes() []string {
-	ips := []string{}
-	for _, m := range o.members {
-		ips = append(ips, m.Name)
-	}
-	return ips
+	return []string{}
 }
 
 type removeMemberCommand struct {

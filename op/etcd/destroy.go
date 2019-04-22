@@ -46,7 +46,7 @@ func (o *destroyMemberOp) NextCommand() cke.Commander {
 }
 
 func (o *destroyMemberOp) Nodes() []string {
-	ips := []string{}
+	ips := make([]string, len(o.targets))
 	for _, n := range o.targets {
 		ips = append(ips, n.Nodename())
 	}

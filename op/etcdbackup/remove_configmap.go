@@ -34,7 +34,7 @@ func (o *etcdBackupConfigMapRemoveOp) NextCommand() cke.Commander {
 
 func (o *etcdBackupConfigMapRemoveOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 
@@ -54,5 +54,6 @@ func (c removeEtcdBackupConfigMapCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "remove-etcdbackup-configmap",
 		Target: "etcdbackup-configmap",
+		Detail: "remove etcdbackup configmap in kube-system",
 	}
 }

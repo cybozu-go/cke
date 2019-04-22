@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/cybozu-go/cke"
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
@@ -38,7 +38,7 @@ func (o *etcdBackupConfigMapUpdateOp) NextCommand() cke.Commander {
 
 func (o *etcdBackupConfigMapUpdateOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 
@@ -63,7 +63,7 @@ func (c updateEtcdBackupConfigMapCommand) Run(ctx context.Context, inf cke.Infra
 		return err
 	}
 
-	ConfigMap := new(v1.ConfigMap)
+	ConfigMap := new(corev1.ConfigMap)
 	err = k8sYaml.NewYAMLToJSONDecoder(buf).Decode(ConfigMap)
 	if err != nil {
 		return err

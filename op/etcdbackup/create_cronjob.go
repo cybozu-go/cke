@@ -40,7 +40,7 @@ func (o *etcdBackupCronJobCreateOp) NextCommand() cke.Commander {
 
 func (o *etcdBackupCronJobCreateOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 
@@ -89,5 +89,6 @@ func (c createEtcdBackupCronJobCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "create-etcdbackup-job",
 		Target: "etcdbackup",
+		Detail: "create etcdbackup cronjob in kube-system",
 	}
 }

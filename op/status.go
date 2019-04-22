@@ -185,7 +185,7 @@ func getEtcdMembers(ctx context.Context, inf cke.Infrastructure, cli *clientv3.C
 	}
 	members := make(map[string]*etcdserverpb.Member)
 	for _, m := range resp.Members {
-		name, err := guessMemberName(m)
+		name, err := GuessMemberName(m)
 		if err != nil {
 			return nil, err
 		}
@@ -194,7 +194,8 @@ func getEtcdMembers(ctx context.Context, inf cke.Infrastructure, cli *clientv3.C
 	return members, nil
 }
 
-func guessMemberName(m *etcdserverpb.Member) (string, error) {
+// GuessMemberName returns member name
+func GuessMemberName(m *etcdserverpb.Member) (string, error) {
 	if len(m.Name) > 0 {
 		return m.Name, nil
 	}

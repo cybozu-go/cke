@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"strings"
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
@@ -32,9 +33,9 @@ func (o *kubeNodeRemove) NextCommand() cke.Commander {
 }
 
 func (o *kubeNodeRemove) Nodes() []string {
-	ips := []string{}
-	for _, n := range o.nodes {
-		ips = append(ips, n.Name)
+	ips := make([]string, len(o.nodes))
+	for i, n := range o.nodes {
+		ips[i] = n.Name
 	}
 	return ips
 }
@@ -62,7 +63,13 @@ func (c nodeRemoveCommand) Run(ctx context.Context, inf cke.Infrastructure) erro
 }
 
 func (c nodeRemoveCommand) Command() cke.Command {
+	names := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		names[i] = n.Name
+	}
+	detail := "remove nodes, " + strings.Join(names, ",")
 	return cke.Command{
-		Name: "removeNode",
+		Name:   "removeNode",
+		Detail: detail,
 	}
 }

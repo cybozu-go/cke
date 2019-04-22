@@ -80,9 +80,9 @@ func (o *bootOp) NextCommand() cke.Commander {
 }
 
 func (o *bootOp) Nodes() []string {
-	ips := []string{}
-	for _, n := range o.nodes {
-		ips = append(ips, n.Nodename())
+	ips := make([]string, len(o.nodes))
+	for i, n := range o.nodes {
+		ips[i] = n.Address
 	}
 	return ips
 }
@@ -120,8 +120,10 @@ func (c setupEtcdAuthCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 }
 
 func (c setupEtcdAuthCommand) Command() cke.Command {
+	detail := "Add etcd auth setup to the endpoints, " + strings.Join(c.endpoints, ",")
 	return cke.Command{
 		Name:   "setup-etcd-auth",
 		Target: strings.Join(c.endpoints, ","),
+		Detail: detail,
 	}
 }

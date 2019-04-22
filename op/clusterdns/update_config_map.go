@@ -4,17 +4,17 @@ import (
 	"context"
 
 	"github.com/cybozu-go/cke"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type updateConfigMapOp struct {
 	apiserver *cke.Node
-	configmap *v1.ConfigMap
+	configmap *corev1.ConfigMap
 	finished  bool
 }
 
 // UpdateConfigMapOp returns an Operator to update ConfigMap for CoreDNS.
-func UpdateConfigMapOp(apiserver *cke.Node, configmap *v1.ConfigMap) cke.Operator {
+func UpdateConfigMapOp(apiserver *cke.Node, configmap *corev1.ConfigMap) cke.Operator {
 	return &updateConfigMapOp{
 		apiserver: apiserver,
 		configmap: configmap,
@@ -35,13 +35,13 @@ func (o *updateConfigMapOp) NextCommand() cke.Commander {
 
 func (o *updateConfigMapOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 
 type updateConfigMapCommand struct {
 	apiserver *cke.Node
-	configmap *v1.ConfigMap
+	configmap *corev1.ConfigMap
 }
 
 func (c updateConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
@@ -60,5 +60,6 @@ func (c updateConfigMapCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "updateConfigMapCommand",
 		Target: "kube-system",
+		Detail: "update configmap in kube-system",
 	}
 }

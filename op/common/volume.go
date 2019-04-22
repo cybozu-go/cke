@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"strings"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
@@ -30,13 +31,15 @@ func (c volumeCreateCommand) Run(ctx context.Context, inf cke.Infrastructure) er
 }
 
 func (c volumeCreateCommand) Command() cke.Command {
-	targets := make([]string, len(c.nodes))
+	addresses := make([]string, len(c.nodes))
 	for i, n := range c.nodes {
-		targets[i] = n.Address
+		addresses[i] = n.Address
 	}
+	detail := "create " + c.volname + " in " + strings.Join(addresses, ",")
 	return cke.Command{
 		Name:   "volume-create",
 		Target: c.volname,
+		Detail: detail,
 	}
 }
 
@@ -70,12 +73,14 @@ func (c volumeRemoveCommand) Run(ctx context.Context, inf cke.Infrastructure) er
 }
 
 func (c volumeRemoveCommand) Command() cke.Command {
-	targets := make([]string, len(c.nodes))
+	addresses := make([]string, len(c.nodes))
 	for i, n := range c.nodes {
-		targets[i] = n.Address
+		addresses[i] = n.Address
 	}
+	detail := "remove " + c.volname + " in " + strings.Join(addresses, ",")
 	return cke.Command{
 		Name:   "volume-remove",
 		Target: c.volname,
+		Detail: detail,
 	}
 }

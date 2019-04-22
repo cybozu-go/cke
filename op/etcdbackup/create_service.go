@@ -38,7 +38,7 @@ func (o *etcdBackupServiceCreateOp) NextCommand() cke.Commander {
 
 func (o *etcdBackupServiceCreateOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 
@@ -76,5 +76,6 @@ func (c createEtcdBackupServiceCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "create-etcdbackup-service",
 		Target: "etcdbackup",
+		Detail: "create etcdbackup service in kube-system",
 	}
 }

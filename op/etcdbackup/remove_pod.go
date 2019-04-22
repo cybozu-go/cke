@@ -34,7 +34,7 @@ func (o *etcdBackupPodRemoveOp) NextCommand() cke.Commander {
 
 func (o *etcdBackupPodRemoveOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 
@@ -54,5 +54,6 @@ func (c removeEtcdBackupPodCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "remove-etcdbackup-pod",
 		Target: "etcdbackup",
+		Detail: "remove etcdbackup pods in kube-system",
 	}
 }

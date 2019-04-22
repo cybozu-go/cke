@@ -37,7 +37,7 @@ func (o *etcdBackupCronJobUpdateOp) NextCommand() cke.Commander {
 
 func (o *etcdBackupCronJobUpdateOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 
@@ -77,5 +77,6 @@ func (c updateEtcdBackupCronJobCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "update-etcdbackup-job",
 		Target: "etcdbackup",
+		Detail: "update etcdbackup cronjob in kube-system",
 	}
 }

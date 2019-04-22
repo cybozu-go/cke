@@ -35,7 +35,7 @@ func (o *kubeWaitOp) NextCommand() cke.Commander {
 
 func (o *kubeWaitOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 

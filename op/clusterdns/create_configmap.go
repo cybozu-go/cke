@@ -39,7 +39,7 @@ func (o *createConfigMapOp) NextCommand() cke.Commander {
 
 func (o *createConfigMapOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 

@@ -40,7 +40,7 @@ func (o *etcdBackupConfigMapCreateOp) NextCommand() cke.Commander {
 
 func (o *etcdBackupConfigMapCreateOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 
@@ -93,5 +93,6 @@ func (c createEtcdBackupConfigMapCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "create-etcdbackup-configmap",
 		Target: "etcdbackup",
+		Detail: "create etcdbackup configmap in kube-system",
 	}
 }

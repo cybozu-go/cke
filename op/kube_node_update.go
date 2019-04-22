@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"strings"
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
@@ -32,9 +33,9 @@ func (o *kubeNodeUpdate) NextCommand() cke.Commander {
 }
 
 func (o *kubeNodeUpdate) Nodes() []string {
-	ips := []string{}
-	for _, n := range o.nodes {
-		ips = append(ips, n.Name)
+	ips := make([]string, len(o.nodes))
+	for i, n := range o.nodes {
+		ips[i] = n.Name
 	}
 	return ips
 }
@@ -62,7 +63,13 @@ func (c nodeUpdateCommand) Run(ctx context.Context, inf cke.Infrastructure) erro
 }
 
 func (c nodeUpdateCommand) Command() cke.Command {
+	names := make([]string, len(c.nodes))
+	for i, n := range c.nodes {
+		names[i] = n.Name
+	}
+	detail := "update nodes, " + strings.Join(names, ",")
 	return cke.Command{
-		Name: "updateNode",
+		Name:   "updateNode",
+		Detail: detail,
 	}
 }

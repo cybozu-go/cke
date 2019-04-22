@@ -34,7 +34,7 @@ func (o *resourceApplyOp) NextCommand() cke.Commander {
 
 func (o *resourceApplyOp) Nodes() []string {
 	return []string{
-		o.apiserver.Nodename(),
+		o.apiserver.Address,
 	}
 }
 

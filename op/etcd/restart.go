@@ -57,6 +57,6 @@ func (o *etcdRestartOp) NextCommand() cke.Commander {
 
 func (o *etcdRestartOp) Nodes() []string {
 	return []string{
-		o.target.Nodename(),
+		o.target.Address,
 	}
 }
