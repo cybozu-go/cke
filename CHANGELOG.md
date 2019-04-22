@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.0] - 2019-04-22
+
+No user-visible changes since RC 1.
+
 ## [1.14.0-rc1] - 2019-04-19
 
 ### Changed
@@ -138,7 +142,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.0-rc1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.0...HEAD
+[1.14.0]: https://github.com/cybozu-go/cke/compare/v1.14.0-rc1...v1.14.0
 [1.14.0-rc1]: https://github.com/cybozu-go/cke/compare/v1.13.18...v1.14.0-rc1
 [1.13.18]: https://github.com/cybozu-go/cke/compare/v1.13.17...v1.13.18
 [1.13.17]: https://github.com/cybozu-go/cke/compare/v1.13.16...v1.13.17
