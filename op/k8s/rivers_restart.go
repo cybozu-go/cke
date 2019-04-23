@@ -44,7 +44,7 @@ func (o *riversRestartOp) NextCommand() cke.Commander {
 	return nil
 }
 
-func (o *riversRestartOp) Nodes() []string {
+func (o *riversRestartOp) Targets() []string {
 	ips := make([]string, len(o.nodes))
 	for i, n := range o.nodes {
 		ips[i] = n.Address

@@ -67,7 +67,7 @@ func (o *kubeletRestartOp) NextCommand() cke.Commander {
 	}
 }
 
-func (o *kubeletRestartOp) Nodes() []string {
+func (o *kubeletRestartOp) Targets() []string {
 	ips := make([]string, len(o.nodes))
 	for i, n := range o.nodes {
 		ips[i] = n.Address

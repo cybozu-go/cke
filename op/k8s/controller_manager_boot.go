@@ -57,7 +57,7 @@ func (o *controllerManagerBootOp) NextCommand() cke.Commander {
 	}
 }
 
-func (o *controllerManagerBootOp) Nodes() []string {
+func (o *controllerManagerBootOp) Targets() []string {
 	ips := make([]string, len(o.nodes))
 	for i, n := range o.nodes {
 		ips[i] = n.Address

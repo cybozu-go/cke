@@ -23,7 +23,7 @@ func (o *containerStopOp) NextCommand() cke.Commander {
 	return common.KillContainersCommand(o.nodes, o.name)
 }
 
-func (o *containerStopOp) Nodes() []string {
+func (o *containerStopOp) Targets() []string {
 	ips := make([]string, len(o.nodes))
 	for i, n := range o.nodes {
 		ips[i] = n.Address

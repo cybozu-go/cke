@@ -27,6 +27,6 @@ func (o *etcdWaitClusterOp) NextCommand() cke.Commander {
 	return waitEtcdSyncCommand{o.endpoints, false}
 }
 
-func (o *etcdWaitClusterOp) Nodes() []string {
-	return []string{}
+func (o *etcdWaitClusterOp) Targets() []string {
+	return o.endpoints
 }

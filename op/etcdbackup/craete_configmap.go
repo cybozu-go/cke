@@ -38,7 +38,7 @@ func (o *etcdBackupConfigMapCreateOp) NextCommand() cke.Commander {
 	return createEtcdBackupConfigMapCommand{o.apiserver, o.rotate}
 }
 
-func (o *etcdBackupConfigMapCreateOp) Nodes() []string {
+func (o *etcdBackupConfigMapCreateOp) Targets() []string {
 	return []string{
 		o.apiserver.Address,
 	}

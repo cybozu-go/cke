@@ -62,7 +62,7 @@ func (o *kubeProxyRestartOp) NextCommand() cke.Commander {
 	}
 }
 
-func (o *kubeProxyRestartOp) Nodes() []string {
+func (o *kubeProxyRestartOp) Targets() []string {
 	ips := make([]string, len(o.nodes))
 	for i, n := range o.nodes {
 		ips[i] = n.Address

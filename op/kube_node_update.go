@@ -32,7 +32,7 @@ func (o *kubeNodeUpdate) NextCommand() cke.Commander {
 	return nodeUpdateCommand{o.apiserver, o.nodes}
 }
 
-func (o *kubeNodeUpdate) Nodes() []string {
+func (o *kubeNodeUpdate) Targets() []string {
 	ips := make([]string, len(o.nodes))
 	for i, n := range o.nodes {
 		ips[i] = n.Name

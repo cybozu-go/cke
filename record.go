@@ -21,18 +21,19 @@ type Record struct {
 	Status    RecordStatus `json:"status"`
 	Operation string       `json:"operation"`
 	Command   Command      `json:"command"`
-	Nodes     []string     `json:"nodes"`
+	Targets   []string     `json:"targets"`
 	Error     string       `json:"error"`
 	StartAt   time.Time    `json:"start-at"`
 	EndAt     time.Time    `json:"end-at"`
 }
 
 // NewRecord creates new `Record`
-func NewRecord(id int64, op string) *Record {
+func NewRecord(id int64, op string, targets []string) *Record {
 	return &Record{
 		ID:        id,
 		Status:    StatusNew,
 		Operation: op,
+		Targets:   targets,
 		StartAt:   time.Now().UTC(),
 	}
 }
@@ -53,11 +54,6 @@ func (r *Record) Complete() {
 func (r *Record) SetCommand(c Command) {
 	r.Status = StatusRunning
 	r.Command = c
-}
-
-// SetNodes updates the record for the targets
-func (r *Record) SetNodes(n []string) {
-	r.Nodes = n
 }
 
 // SetError cancels the operation with error information

@@ -54,7 +54,7 @@ func (o *schedulerBootOp) NextCommand() cke.Commander {
 	}
 }
 
-func (o *schedulerBootOp) Nodes() []string {
+func (o *schedulerBootOp) Targets() []string {
 	ips := make([]string, len(o.nodes))
 	for i, n := range o.nodes {
 		ips[i] = n.Address

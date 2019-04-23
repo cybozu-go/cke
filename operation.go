@@ -11,8 +11,8 @@ type Operator interface {
 	Name() string
 	// NextCommand returns the next command or nil if completed.
 	NextCommand() Commander
-	// Nodes returns the nodes ip addresses which will be affected by the operation
-	Nodes() []string
+	// Targets returns the nodes ip addresses which will be affected by the operation
+	Targets() []string
 }
 
 // Commander is a single step to proceed an operation

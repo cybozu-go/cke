@@ -250,7 +250,7 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 	if err != nil {
 		return err
 	}
-	record := cke.NewRecord(id, op.Name())
+	record := cke.NewRecord(id, op.Name(), op.Targets())
 	err = storage.RegisterRecord(ctx, leaderKey, record)
 	if err != nil {
 		return err
@@ -280,14 +280,13 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		default:
 		}
 
-		record.SetNodes(op.Nodes())
 		err = storage.UpdateRecord(ctx, leaderKey, record)
 		if err != nil {
 			return err
 		}
 		log.Info("record targerts", map[string]interface{}{
 			"op":      op.Name(),
-			"targets": strings.Join(op.Nodes(), " "),
+			"targets": strings.Join(op.Targets(), " "),
 		})
 
 		record.SetCommand(commander.Command())

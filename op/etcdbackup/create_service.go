@@ -36,7 +36,7 @@ func (o *etcdBackupServiceCreateOp) NextCommand() cke.Commander {
 	return createEtcdBackupServiceCommand{o.apiserver}
 }
 
-func (o *etcdBackupServiceCreateOp) Nodes() []string {
+func (o *etcdBackupServiceCreateOp) Targets() []string {
 	return []string{
 		o.apiserver.Address,
 	}

@@ -72,7 +72,7 @@ func (o *addMemberOp) NextCommand() cke.Commander {
 	return nil
 }
 
-func (o *addMemberOp) Nodes() []string {
+func (o *addMemberOp) Targets() []string {
 	return []string{
 		o.targetNode.Address,
 	}

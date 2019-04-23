@@ -32,7 +32,7 @@ func (o *resourceApplyOp) NextCommand() cke.Commander {
 	return o
 }
 
-func (o *resourceApplyOp) Nodes() []string {
+func (o *resourceApplyOp) Targets() []string {
 	return []string{
 		o.apiserver.Address,
 	}

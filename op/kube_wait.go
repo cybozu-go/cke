@@ -33,7 +33,7 @@ func (o *kubeWaitOp) NextCommand() cke.Commander {
 	return waitKubeCommand{o.apiserver}
 }
 
-func (o *kubeWaitOp) Nodes() []string {
+func (o *kubeWaitOp) Targets() []string {
 	return []string{
 		o.apiserver.Address,
 	}

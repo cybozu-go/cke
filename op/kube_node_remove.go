@@ -32,10 +32,11 @@ func (o *kubeNodeRemove) NextCommand() cke.Commander {
 	return nodeRemoveCommand{o.apiserver, o.nodes}
 }
 
-func (o *kubeNodeRemove) Nodes() []string {
-	ips := make([]string, len(o.nodes))
+func (o *kubeNodeRemove) Targets() []string {
+	ips := make([]string, len(o.nodes)+1)
+	ips[0] = o.apiserver.Address
 	for i, n := range o.nodes {
-		ips[i] = n.Name
+		ips[i+1] = n.GetName()
 	}
 	return ips
 }

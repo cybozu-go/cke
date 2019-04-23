@@ -67,7 +67,7 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 	panic("unreachable")
 }
 
-func (o *apiServerRestartOp) Nodes() []string {
+func (o *apiServerRestartOp) Targets() []string {
 	ips := make([]string, len(o.nodes))
 	for i, n := range o.nodes {
 		ips[i] = n.Address

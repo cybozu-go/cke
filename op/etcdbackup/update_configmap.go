@@ -36,7 +36,7 @@ func (o *etcdBackupConfigMapUpdateOp) NextCommand() cke.Commander {
 	return updateEtcdBackupConfigMapCommand{o.apiserver, o.rotate}
 }
 
-func (o *etcdBackupConfigMapUpdateOp) Nodes() []string {
+func (o *etcdBackupConfigMapUpdateOp) Targets() []string {
 	return []string{
 		o.apiserver.Address,
 	}

@@ -115,7 +115,7 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 	}
 }
 
-func (o *kubeletBootOp) Nodes() []string {
+func (o *kubeletBootOp) Targets() []string {
 	ips := make([]string, len(o.nodes))
 	for i, n := range o.nodes {
 		ips[i] = n.Address
@@ -329,7 +329,7 @@ func (c retaintBeforeKubeletBootCommand) Command() cke.Command {
 	}
 	detail := "retaint node before kubelet boot in " + strings.Join(addresses, ",")
 	return cke.Command{
-		Name: "retaint-before-kubelet-boot",
+		Name:   "retaint-before-kubelet-boot",
 		Detail: detail,
 	}
 }

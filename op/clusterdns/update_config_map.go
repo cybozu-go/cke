@@ -33,7 +33,7 @@ func (o *updateConfigMapOp) NextCommand() cke.Commander {
 	return updateConfigMapCommand{o.apiserver, o.configmap}
 }
 
-func (o *updateConfigMapOp) Nodes() []string {
+func (o *updateConfigMapOp) Targets() []string {
 	return []string{
 		o.apiserver.Address,
 	}

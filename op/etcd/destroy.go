@@ -45,10 +45,10 @@ func (o *destroyMemberOp) NextCommand() cke.Commander {
 	return nil
 }
 
-func (o *destroyMemberOp) Nodes() []string {
+func (o *destroyMemberOp) Targets() []string {
 	ips := make([]string, len(o.targets))
-	for _, n := range o.targets {
-		ips = append(ips, n.Nodename())
+	for i, n := range o.targets {
+		ips[i] = n.Address
 	}
 	return ips
 }

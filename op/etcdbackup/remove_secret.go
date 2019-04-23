@@ -32,7 +32,7 @@ func (o *etcdBackupSecretRemoveOp) NextCommand() cke.Commander {
 	return removeEtcdBackupSecretCommand{o.apiserver}
 }
 
-func (o *etcdBackupSecretRemoveOp) Nodes() []string {
+func (o *etcdBackupSecretRemoveOp) Targets() []string {
 	return []string{
 		o.apiserver.Address,
 	}

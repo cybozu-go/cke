@@ -38,7 +38,7 @@ func (o *etcdBackupCronJobCreateOp) NextCommand() cke.Commander {
 	return createEtcdBackupCronJobCommand{o.apiserver, o.schedule}
 }
 
-func (o *etcdBackupCronJobCreateOp) Nodes() []string {
+func (o *etcdBackupCronJobCreateOp) Targets() []string {
 	return []string{
 		o.apiserver.Address,
 	}
