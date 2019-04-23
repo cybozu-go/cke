@@ -54,6 +54,5 @@ func (c removeEtcdBackupCronJobCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "remove-etcdbackup-job",
 		Target: "etcdbackup",
-		Detail: "remove etcdbackup cronjob in kube-system",
 	}
 }

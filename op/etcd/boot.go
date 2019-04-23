@@ -120,10 +120,8 @@ func (c setupEtcdAuthCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 }
 
 func (c setupEtcdAuthCommand) Command() cke.Command {
-	detail := "Add etcd auth setup to the endpoints, " + strings.Join(c.endpoints, ",")
 	return cke.Command{
 		Name:   "setup-etcd-auth",
 		Target: strings.Join(c.endpoints, ","),
-		Detail: detail,
 	}
 }

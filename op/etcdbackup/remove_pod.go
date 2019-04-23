@@ -54,6 +54,5 @@ func (c removeEtcdBackupPodCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "remove-etcdbackup-pod",
 		Target: "etcdbackup",
-		Detail: "remove etcdbackup pods in kube-system",
 	}
 }

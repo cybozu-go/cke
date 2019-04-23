@@ -60,6 +60,5 @@ func (c updateConfigMapCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "updateConfigMapCommand",
 		Target: "kube-system",
-		Detail: "update configmap in kube-system",
 	}
 }

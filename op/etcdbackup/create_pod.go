@@ -95,6 +95,5 @@ func (c createEtcdBackupPodCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "create-etcdbackup-pod",
 		Target: "etcdbackup",
-		Detail: "create pods for etcdbackup in kube-system",
 	}
 }

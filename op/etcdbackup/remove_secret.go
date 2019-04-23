@@ -54,6 +54,5 @@ func (c removeEtcdBackupSecretCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "remove-etcdbackup-secret",
 		Target: "etcdbackup-secret",
-		Detail: "remove etcdbackup secret in kube-system",
 	}
 }

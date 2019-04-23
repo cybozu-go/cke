@@ -2,7 +2,6 @@ package op
 
 import (
 	"context"
-	"strings"
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
@@ -67,9 +66,7 @@ func (c nodeUpdateCommand) Command() cke.Command {
 	for i, n := range c.nodes {
 		names[i] = n.Name
 	}
-	detail := "update nodes, " + strings.Join(names, ",")
 	return cke.Command{
-		Name:   "updateNode",
-		Detail: detail,
+		Name: "updateNode",
 	}
 }

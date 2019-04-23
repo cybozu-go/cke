@@ -89,6 +89,5 @@ func (c createEtcdBackupCronJobCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "create-etcdbackup-job",
 		Target: "etcdbackup",
-		Detail: "create etcdbackup cronjob in kube-system",
 	}
 }

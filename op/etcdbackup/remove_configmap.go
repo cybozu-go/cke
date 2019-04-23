@@ -54,6 +54,5 @@ func (c removeEtcdBackupConfigMapCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "remove-etcdbackup-configmap",
 		Target: "etcdbackup-configmap",
-		Detail: "remove etcdbackup configmap in kube-system",
 	}
 }

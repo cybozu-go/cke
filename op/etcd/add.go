@@ -153,9 +153,7 @@ func (c addMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) error
 }
 
 func (c addMemberCommand) Command() cke.Command {
-	detail := "add node, " + c.node.Address + ", to etcd members"
 	return cke.Command{
-		Name:   "add-etcd-member",
-		Detail: detail,
+		Name: "add-etcd-member",
 	}
 }

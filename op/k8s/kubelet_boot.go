@@ -150,15 +150,9 @@ func (c emptyDirCommand) Run(ctx context.Context, inf cke.Infrastructure) error 
 }
 
 func (c emptyDirCommand) Command() cke.Command {
-	addresses := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		addresses[i] = n.Address
-	}
-	detail := "empty dir, " + c.dir + ", in " + strings.Join(addresses, ",")
 	return cke.Command{
 		Name:   "empty-dir",
 		Target: c.dir,
-		Detail: detail,
 	}
 }
 
@@ -259,14 +253,8 @@ func (c installCNICommand) Run(ctx context.Context, inf cke.Infrastructure) erro
 }
 
 func (c installCNICommand) Command() cke.Command {
-	addresses := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		addresses[i] = n.Address
-	}
-	detail := "install cni plugin in " + strings.Join(addresses, ",")
 	return cke.Command{
-		Name:   "install-cni",
-		Detail: detail,
+		Name: "install-cni",
 	}
 }
 
@@ -323,14 +311,8 @@ func (c retaintBeforeKubeletBootCommand) Run(ctx context.Context, inf cke.Infras
 }
 
 func (c retaintBeforeKubeletBootCommand) Command() cke.Command {
-	addresses := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		addresses[i] = n.Address
-	}
-	detail := "retaint node before kubelet boot in " + strings.Join(addresses, ",")
 	return cke.Command{
-		Name:   "retaint-before-kubelet-boot",
-		Detail: detail,
+		Name: "retaint-before-kubelet-boot",
 	}
 }
 

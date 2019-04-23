@@ -2,7 +2,6 @@ package op
 
 import (
 	"context"
-	"strings"
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +35,7 @@ func (o *kubeNodeRemove) Targets() []string {
 	ips := make([]string, len(o.nodes)+1)
 	ips[0] = o.apiserver.Address
 	for i, n := range o.nodes {
-		ips[i+1] = n.GetName()
+		ips[i+1] = n.Name
 	}
 	return ips
 }
@@ -68,9 +67,7 @@ func (c nodeRemoveCommand) Command() cke.Command {
 	for i, n := range c.nodes {
 		names[i] = n.Name
 	}
-	detail := "remove nodes, " + strings.Join(names, ",")
 	return cke.Command{
-		Name:   "removeNode",
-		Detail: detail,
+		Name: "removeNode",
 	}
 }

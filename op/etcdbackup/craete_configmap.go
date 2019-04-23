@@ -93,6 +93,5 @@ func (c createEtcdBackupConfigMapCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "create-etcdbackup-configmap",
 		Target: "etcdbackup",
-		Detail: "create etcdbackup configmap in kube-system",
 	}
 }

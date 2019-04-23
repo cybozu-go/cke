@@ -100,6 +100,5 @@ func (c createEtcdBackupSecretCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "create-etcdbackup-secret",
 		Target: "etcdbackup",
-		Detail: "create etcdbackup secret in kube-system",
 	}
 }

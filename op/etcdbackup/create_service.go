@@ -76,6 +76,5 @@ func (c createEtcdBackupServiceCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "create-etcdbackup-service",
 		Target: "etcdbackup",
-		Detail: "create etcdbackup service in kube-system",
 	}
 }

@@ -80,6 +80,5 @@ func (c createConfigMapCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "createConfigMapCommand",
 		Target: "kube-system",
-		Detail: "create configmap in kube-system",
 	}
 }

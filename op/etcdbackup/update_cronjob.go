@@ -77,6 +77,5 @@ func (c updateEtcdBackupCronJobCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "update-etcdbackup-job",
 		Target: "etcdbackup",
-		Detail: "update etcdbackup cronjob in kube-system",
 	}
 }

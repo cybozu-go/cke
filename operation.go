@@ -11,7 +11,7 @@ type Operator interface {
 	Name() string
 	// NextCommand returns the next command or nil if completed.
 	NextCommand() Commander
-	// Targets returns the nodes ip addresses which will be affected by the operation
+	// Targets returns the ip which will be affected by the operation
 	Targets() []string
 }
 
@@ -27,13 +27,9 @@ type Commander interface {
 type Command struct {
 	Name   string `json:"name"`
 	Target string `json:"target"`
-	Detail string `json:"detail"`
 }
 
 // String implements fmt.Stringer
 func (c Command) String() string {
-	if len(c.Detail) > 0 {
-		return fmt.Sprintf("%s %s: %s", c.Name, c.Target, c.Detail)
-	}
 	return fmt.Sprintf("%s %s", c.Name, c.Target)
 }
