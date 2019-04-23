@@ -16,7 +16,6 @@ var (
 
 	ckeClusterPath  = os.Getenv("CKECLUSTER")
 	ckeConfigPath   = os.Getenv("CKECONFIG")
-	ckecliPath      = os.Getenv("CKECLI")
 	ckeImagePath    = os.Getenv("CKE_IMAGE")
 	ckeImageURL     = os.Getenv("CKE_IMAGE_URL")
 	etcdctlPath     = os.Getenv("ETCDCTL")

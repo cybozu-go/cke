@@ -50,7 +50,7 @@ func RunBeforeSuite() {
 	}
 
 	By("copying test files")
-	for _, testFile := range []string{ckecliPath, kubectlPath} {
+	for _, testFile := range []string{kubectlPath} {
 		f, err := os.Open(testFile)
 		Expect(err).NotTo(HaveOccurred())
 		defer f.Close()

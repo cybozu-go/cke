@@ -46,8 +46,6 @@ KUBECTL_URL := https://storage.googleapis.com/kubernetes-release/release/v$(K8S_
 SSH_PRIVKEY = $(realpath ./mtest_key)
 OUTPUT := ./output
 COREOS_IMAGE := coreos_production_qemu_image.img
-CKE := $(abspath $(OUTPUT))/cke
-CKECLI := $(abspath $(OUTPUT))/ckecli
 CKE_IMAGE := $(abspath $(OUTPUT))/cke.img
 CKE_IMAGE_URL := quay.io/cybozu/cke:dev
 CKECLUSTER := $(abspath $(OUTPUT))/cke-cluster.yml
@@ -58,7 +56,7 @@ LOCALPVYAML := $(realpath ./local-pv.yml)
 NGINXYAML := $(realpath ./nginx.yml)
 POLICYYAML := $(realpath ./mtest-policy.yml)
 
-export SSH_PRIVKEY CKECLI CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL ETCDCTL POLICYYAML NGINXYAML LOCALPVYAML
+export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL ETCDCTL POLICYYAML NGINXYAML LOCALPVYAML
 
 CONTAINERD_FILES = \
 	$(OUTPUT)/containerd \

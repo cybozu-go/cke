@@ -183,7 +183,7 @@ func installTools(image string) error {
 			defer sess.Close()
 			return sess.Run("docker run --rm -u root:root " +
 				"--entrypoint /usr/local/cke/install-tools " +
-				"--mount type=bind,src=/opt/bin,target=/host/usr/local/bin " + image)
+				"--mount type=bind,src=/opt/bin,target=/host/ " + image)
 		})
 	}
 	env.Stop()
