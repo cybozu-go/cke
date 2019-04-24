@@ -110,6 +110,7 @@ func (ig integrator) Do(ctx context.Context, leaderKey string) error {
 		log.Warn("sabakan: failed to generate cluster", map[string]interface{}{
 			log.FnError: err,
 		})
+		// return nil
 		return nil
 	}
 

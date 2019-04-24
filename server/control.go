@@ -172,6 +172,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 			log.FnError: err,
 		})
 		wait = true
+		// return nil
 		return nil
 	}
 
@@ -184,6 +185,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		if c.addon != nil {
 			return c.addon.Do(ctx, leaderKey)
 		}
+		// return nil
 		return nil
 	}
 	defer inf.Close()
@@ -211,6 +213,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		log.Warn("failed to get cluster status", map[string]interface{}{
 			log.FnError: err,
 		})
+		// return nil
 		return nil
 	}
 
