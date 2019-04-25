@@ -120,7 +120,7 @@ $(OUTPUT)/vault: $(VAULT_ARCHIVE)
 	unzip $< -d $(OUTPUT)
 	touch $@
 
-$(OUTPUT)/cke $(OUTPUT)/ckecli: FORCE
+$(OUTPUT)/cke $(OUTPUT)/ckecli:
 	mkdir -p $(OUTPUT)
 	cd ..; gofail enable op/etcd && \
 		if GOBIN=$(realpath $(OUTPUT)) go install -mod=vendor ./pkg/$(notdir $@); then \
@@ -137,8 +137,6 @@ $(OUTPUT)/cke.img: $(OUTPUT)/cke $(OUTPUT)/ckecli
 	sudo podman build --no-cache --rm=false -t $(CKE_IMAGE_URL) ../docker/
 	mkdir -p $(OUTPUT)
 	sudo podman save -o $@ $(CKE_IMAGE_URL)
-
-FORCE:
 
 $(OUTPUT)/kubectl:
 	mkdir -p $(OUTPUT)
