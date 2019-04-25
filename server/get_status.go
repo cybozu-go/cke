@@ -54,6 +54,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 			log.Warn("failed to get etcd cluster status", map[string]interface{}{
 				log.FnError: err,
 			})
+			// return nil
 			return cs, nil
 		}
 		cs.Etcd = ecs
