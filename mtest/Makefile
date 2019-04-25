@@ -121,7 +121,7 @@ $(OUTPUT)/vault: $(VAULT_ARCHIVE)
 	unzip $< -d $(OUTPUT)
 	touch $@
 
-$(OUTPUT)/cke $(OUTPUT)/ckecli:
+$(OUTPUT)/cke $(OUTPUT)/ckecli: FORCE
 	mkdir -p $(OUTPUT)
 	cd ..; gofail enable op/etcd && \
 		if GOBIN=$(realpath $(OUTPUT)) go install -mod=vendor ./pkg/$(notdir $@); then \
