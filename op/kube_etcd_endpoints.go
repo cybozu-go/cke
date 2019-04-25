@@ -37,12 +37,9 @@ func (o *kubeEtcdEndpointsCreateOp) NextCommand() cke.Commander {
 }
 
 func (o *kubeEtcdEndpointsCreateOp) Targets() []string {
-	ips := make([]string, len(o.endpoints)+1)
-	ips[0] = o.apiserver.Address
-	for i, e := range o.endpoints {
-		ips[i+1] = e.Address
+	return []string{
+		o.apiserver.Address,
 	}
-	return ips
 }
 
 type kubeEtcdEndpointsUpdateOp struct {
@@ -73,12 +70,9 @@ func (o *kubeEtcdEndpointsUpdateOp) NextCommand() cke.Commander {
 }
 
 func (o *kubeEtcdEndpointsUpdateOp) Targets() []string {
-	ips := make([]string, len(o.endpoints)+1)
-	ips[0] = o.apiserver.Address
-	for i, e := range o.endpoints {
-		ips[i+1] = e.Address
+	return []string{
+		o.apiserver.Address,
 	}
-	return ips
 }
 
 type createEtcdEndpointsCommand struct {

@@ -32,12 +32,12 @@ func (o *kubeNodeRemove) NextCommand() cke.Commander {
 }
 
 func (o *kubeNodeRemove) Targets() []string {
-	ips := make([]string, len(o.nodes)+1)
-	ips[0] = o.apiserver.Address
+	names := make([]string, len(o.nodes)+1)
+	names[0] = o.apiserver.Address
 	for i, n := range o.nodes {
-		ips[i+1] = n.Name
+		names[i+1] = n.Name
 	}
-	return ips
+	return names
 }
 
 type nodeRemoveCommand struct {

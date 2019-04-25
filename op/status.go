@@ -194,7 +194,7 @@ func getEtcdMembers(ctx context.Context, inf cke.Infrastructure, cli *clientv3.C
 	return members, nil
 }
 
-// GuessMemberName returns member name
+// GuessMemberName returns etcd member's ip address
 func GuessMemberName(m *etcdserverpb.Member) (string, error) {
 	if len(m.Name) > 0 {
 		return m.Name, nil

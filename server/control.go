@@ -280,7 +280,6 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		default:
 		}
 
-		err = storage.UpdateRecord(ctx, leaderKey, record)
 		if err != nil {
 			return err
 		}

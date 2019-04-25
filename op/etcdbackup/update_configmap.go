@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"context"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/cybozu-go/cke"
+	corev1 "k8s.io/api/core/v1"
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
