@@ -222,7 +222,7 @@ func runCKE(image string) error {
 			defer sess.Close()
 			return sess.Run("sudo mkdir -p /var/lib/cke && sudo systemd-run --unit=cke.service " +
 				"--setenv=GOFAIL_HTTP=0.0.0.0:1234 " +
-				"docker run --rm --network=host --name cke --cap-drop ALL " +
+				"docker run --rm --network=host --name cke " +
 				"--mount type=bind,source=/var/lib/cke,target=/var/lib/cke " +
 				"--mount type=bind,source=/etc/cke/,target=/etc/cke/ " +
 				image + " --config /etc/cke/cke.yml --interval 3s --session-ttl 5s")
