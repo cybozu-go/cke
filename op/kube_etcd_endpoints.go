@@ -2,6 +2,7 @@ package op
 
 import (
 	"context"
+	"strings"
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
@@ -129,9 +130,13 @@ func (c createEtcdEndpointsCommand) Run(ctx context.Context, inf cke.Infrastruct
 }
 
 func (c createEtcdEndpointsCommand) Command() cke.Command {
+	endpoints := make([]string, len(c.endpoints))
+	for i, e := range c.endpoints {
+		endpoints[i] = e.Address
+	}
 	return cke.Command{
 		Name:   "createEtcdEndpointsCommand",
-		Target: "kube-system/" + etcdEndpointsName,
+		Target: strings.Join(endpoints, ","),
 	}
 }
 
@@ -165,8 +170,12 @@ func (c updateEtcdEndpointsCommand) Run(ctx context.Context, inf cke.Infrastruct
 }
 
 func (c updateEtcdEndpointsCommand) Command() cke.Command {
+	endpoints := make([]string, len(c.endpoints))
+	for i, e := range c.endpoints {
+		endpoints[i] = e.Address
+	}
 	return cke.Command{
 		Name:   "updateEtcdEndpointsCommand",
-		Target: "kube-system/" + etcdEndpointsName,
+		Target: strings.Join(endpoints, ","),
 	}
 }

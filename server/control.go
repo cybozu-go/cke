@@ -280,9 +280,6 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		default:
 		}
 
-		if err != nil {
-			return err
-		}
 		log.Info("record targerts", map[string]interface{}{
 			"op":      op.Name(),
 			"targets": strings.Join(op.Targets(), " "),
