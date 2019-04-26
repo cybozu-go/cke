@@ -221,8 +221,8 @@ func runCKE(image string) error {
 			}
 			defer sess.Close()
 			return sess.Run("sudo mkdir -p /var/lib/cke && sudo systemd-run --unit=cke.service " +
-				"--setenv=GOFAIL_HTTP=0.0.0.0:1234" +
-				"docker run --rm --network=host --name cke -p 1234:1234" +
+				"--setenv=GOFAIL_HTTP=0.0.0.0:1234 " +
+				"docker run --rm --network=host --name cke -p 20000:1234 " +
 				"--mount type=bind,source=/var/lib/cke,target=/var/lib/cke " +
 				"--mount type=bind,source=/etc/cke/,target=/etc/cke/ " +
 				image + " --config /etc/cke/cke.yml --interval 3s --session-ttl 5s")
@@ -477,7 +477,7 @@ func setFailurePoint(failurePoint, code string) {
 		leaderAddress = host2
 	}
 
-	u := fmt.Sprintf("http://%s:1234/github.com/cybozu-go/cke/%s", leaderAddress, failurePoint)
+	u := fmt.Sprintf("http://%s:20000/github.com/cybozu-go/cke/%s", leaderAddress, failurePoint)
 	req, _ := http.NewRequest(http.MethodPut, u, strings.NewReader(code))
 	resp, err := httpClient.Do(req)
 	Expect(err).NotTo(HaveOccurred())
