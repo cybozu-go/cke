@@ -41,7 +41,7 @@ func TestOperators() {
 		execSafeAt(node2, "docker", "rm", "etcd")
 		execSafeAt(node3, "docker", "stop", "etcd")
 		execSafeAt(node3, "docker", "rm", "etcd")
-		runCKE()
+		runCKE(ckeImageURL)
 		cluster := getCluster()
 		for i := 0; i < 3; i++ {
 			cluster.Nodes[i].ControlPlane = true
@@ -61,7 +61,7 @@ func TestOperators() {
 		ckecliSafe("constraints", "set", "control-plane-count", "2")
 		cluster.Nodes = append(cluster.Nodes[:1], cluster.Nodes[2:]...)
 		ckecliClusterSet(cluster)
-		runCKE()
+		runCKE(ckeImageURL)
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
@@ -177,7 +177,7 @@ func TestOperators() {
 		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
 		Expect(newLeader).NotTo(Equal(firstLeader))
 		stopCKE()
-		runCKE()
+		runCKE(ckeImageURL)
 
 		By("Converting a control plane node to a worker node")
 		// this will run these ops:
@@ -216,7 +216,7 @@ func TestOperators() {
 		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
 		Expect(newLeader).NotTo(Equal(firstLeader))
 		stopCKE()
-		runCKE()
+		runCKE(ckeImageURL)
 
 		By("Changing options")
 		// this will run these ops:

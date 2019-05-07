@@ -16,8 +16,8 @@ var (
 
 	ckeClusterPath  = os.Getenv("CKECLUSTER")
 	ckeConfigPath   = os.Getenv("CKECONFIG")
-	ckePath         = os.Getenv("CKE")
-	ckecliPath      = os.Getenv("CKECLI")
+	ckeImagePath    = os.Getenv("CKE_IMAGE")
+	ckeImageURL     = os.Getenv("CKE_IMAGE_URL")
 	etcdctlPath     = os.Getenv("ETCDCTL")
 	kubectlPath     = os.Getenv("KUBECTL")
 	localPVYAMLPath = os.Getenv("LOCALPVYAML")

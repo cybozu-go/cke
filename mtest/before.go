@@ -50,7 +50,7 @@ func RunBeforeSuite() {
 	}
 
 	By("copying test files")
-	for _, testFile := range []string{ckePath, ckecliPath, kubectlPath} {
+	for _, testFile := range []string{kubectlPath} {
 		f, err := os.Open(testFile)
 		Expect(err).NotTo(HaveOccurred())
 		defer f.Close()
@@ -66,6 +66,15 @@ func RunBeforeSuite() {
 			Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
 		}
 	}
+
+	By("loading test image")
+	err = loadImage(ckeImagePath)
+	Expect(err).NotTo(HaveOccurred())
+
+	By("running install-tools")
+	err = installTools(ckeImageURL)
+	Expect(err).NotTo(HaveOccurred())
+
 	f, err := os.Open(ckeConfigPath)
 	Expect(err).NotTo(HaveOccurred())
 	defer f.Close()
@@ -100,8 +109,8 @@ func RunBeforeSuite() {
 
 	By("initializing control plane")
 	initializeControlPlane()
-
 	execSafeAt(host1, "mkdir", "-p", ".kube")
+
 	ckecliSafe("kubernetes", "issue", ">", ".kube/config")
 
 	fmt.Println("Begin tests...")
