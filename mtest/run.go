@@ -154,17 +154,12 @@ RETRY:
 func loadImage(path string) error {
 	env := well.NewEnvironment(context.Background())
 	for _, host := range []string{host1, host2} {
-		host2 := host
+		host := host
+		f, err := os.Open(path)
+		Expect(err).NotTo(HaveOccurred())
 		env.Go(func(ctx context.Context) error {
-			sess, err := sshClients[host2].client.NewSession()
-			if err != nil {
-				return err
-			}
-			defer func() {
-				sess.Run("rm -f " + path)
-				sess.Close()
-			}()
-			return sess.Run("docker load -i " + path)
+			_, _, err := execAtWithStream(host, f, "docker", "load")
+			return err
 		})
 	}
 	env.Stop()
@@ -174,9 +169,9 @@ func loadImage(path string) error {
 func installTools(image string) error {
 	env := well.NewEnvironment(context.Background())
 	for _, host := range []string{host1, host2} {
-		host2 := host
+		host := host
 		env.Go(func(ctx context.Context) error {
-			sess, err := sshClients[host2].client.NewSession()
+			sess, err := sshClients[host].client.NewSession()
 			if err != nil {
 				return err
 			}
@@ -221,8 +216,8 @@ func runCKE(image string) error {
 			}
 			defer sess.Close()
 			return sess.Run("sudo mkdir -p /var/lib/cke && sudo systemd-run --unit=cke.service " +
-				"--setenv=GOFAIL_HTTP=0.0.0.0:1234 " +
-				"docker run --rm --network=host --name cke -p 1234:1234 " +
+				"docker run --rm --network=host --name cke " +
+				"-e GOFAIL_HTTP=0.0.0.0:1234 " +
 				"--mount type=bind,source=/var/lib/cke,target=/var/lib/cke " +
 				"--mount type=bind,source=/etc/cke/,target=/etc/cke/ " +
 				image + " --config /etc/cke/cke.yml --interval 3s --session-ttl 5s")

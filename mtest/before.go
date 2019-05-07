@@ -54,7 +54,7 @@ func RunBeforeSuite() {
 		f, err := os.Open(testFile)
 		Expect(err).NotTo(HaveOccurred())
 		defer f.Close()
-		remoteFilename := filepath.Join("/var/tmp", filepath.Base(testFile))
+		remoteFilename := filepath.Join("/tmp", filepath.Base(testFile))
 		for _, host := range []string{host1, host2} {
 			_, err := f.Seek(0, os.SEEK_SET)
 			Expect(err).NotTo(HaveOccurred())
@@ -66,21 +66,9 @@ func RunBeforeSuite() {
 			Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
 		}
 	}
-	for _, testfile := range []string{ckeImagePath} {
-		f, err := os.Open(testfile)
-		Expect(err).NotTo(HaveOccurred())
-		defer f.Close()
-		remoteFilename := filepath.Join("/var/tmp", filepath.Base(testfile))
-		for _, host := range []string{host1, host2} {
-			_, err := f.Seek(0, os.SEEK_SET)
-			Expect(err).NotTo(HaveOccurred())
-			stdout, stderr, err := execAtWithStream(host, f, "dd", "of="+remoteFilename)
-			Expect(err).NotTo(HaveOccurred(), "stdout=%s, stder=%s", stdout, stderr)
-		}
-	}
 
 	By("loading test image")
-	err = loadImage(filepath.Join("/var/tmp", filepath.Base(ckeImagePath)))
+	err = loadImage(ckeImagePath)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("running install-tools")
