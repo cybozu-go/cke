@@ -109,8 +109,8 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 }
 
 func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
-	if ids := nf.EtcdNonClusterMemberIDs(false); len(ids) > 0 {
-		return etcd.RemoveMemberOp(nf.ControlPlane(), ids)
+	if members := nf.EtcdNonClusterMembers(false); len(members) > 0 {
+		return etcd.RemoveMemberOp(nf.ControlPlane(), members)
 	}
 	if nodes, ids := nf.EtcdNonCPMembers(false); len(nodes) > 0 {
 		return etcd.DestroyMemberOp(nf.ControlPlane(), nodes, ids)
@@ -131,8 +131,8 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	if nodes := nf.EtcdNewMembers(); len(nodes) > 0 {
 		return etcd.AddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)
 	}
-	if ids := nf.EtcdNonClusterMemberIDs(true); len(ids) > 0 {
-		return etcd.RemoveMemberOp(nf.ControlPlane(), ids)
+	if members := nf.EtcdNonClusterMembers(true); len(members) > 0 {
+		return etcd.RemoveMemberOp(nf.ControlPlane(), members)
 	}
 	if nodes, ids := nf.EtcdNonCPMembers(true); len(ids) > 0 {
 		return etcd.DestroyMemberOp(nf.ControlPlane(), nodes, ids)

@@ -57,6 +57,14 @@ func (o *controllerManagerBootOp) NextCommand() cke.Commander {
 	}
 }
 
+func (o *controllerManagerBootOp) Targets() []string {
+	ips := make([]string, len(o.nodes))
+	for i, n := range o.nodes {
+		ips[i] = n.Address
+	}
+	return ips
+}
+
 type prepareControllerManagerFilesCommand struct {
 	cluster string
 	files   *common.FilesBuilder

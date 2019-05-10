@@ -94,6 +94,14 @@ func (o *apiServerBootOp) NextCommand() cke.Commander {
 	}
 }
 
+func (o *apiServerBootOp) Targets() []string {
+	ips := make([]string, len(o.nodes))
+	for i, n := range o.nodes {
+		ips[i] = n.Address
+	}
+	return ips
+}
+
 type prepareAPIServerFilesCommand struct {
 	files         *common.FilesBuilder
 	serviceSubnet string

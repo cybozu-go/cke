@@ -79,6 +79,14 @@ func (o *bootOp) NextCommand() cke.Commander {
 	}
 }
 
+func (o *bootOp) Targets() []string {
+	ips := make([]string, len(o.nodes))
+	for i, n := range o.nodes {
+		ips[i] = n.Address
+	}
+	return ips
+}
+
 type setupEtcdAuthCommand struct {
 	endpoints []string
 }

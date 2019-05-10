@@ -32,6 +32,12 @@ func (o *etcdBackupSecretRemoveOp) NextCommand() cke.Commander {
 	return removeEtcdBackupSecretCommand{o.apiserver}
 }
 
+func (o *etcdBackupSecretRemoveOp) Targets() []string {
+	return []string{
+		o.apiserver.Address,
+	}
+}
+
 type removeEtcdBackupSecretCommand struct {
 	apiserver *cke.Node
 }

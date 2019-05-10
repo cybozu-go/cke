@@ -6,7 +6,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type createConfigMapOp struct {
@@ -39,6 +39,12 @@ func (o *createConfigMapOp) NextCommand() cke.Commander {
 	return createConfigMapCommand{o.apiserver, o.clusterIP, o.domain, o.dnsServers}
 }
 
+func (o *createConfigMapOp) Targets() []string {
+	return []string{
+		o.apiserver.Address,
+	}
+}
+
 type createConfigMapCommand struct {
 	apiserver  *cke.Node
 	clusterIP  string
@@ -54,7 +60,7 @@ func (c createConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure)
 
 	// ConfigMap
 	configs := cs.CoreV1().ConfigMaps("kube-system")
-	_, err = configs.Get(op.NodeDNSAppName, v1.GetOptions{})
+	_, err = configs.Get(op.NodeDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):

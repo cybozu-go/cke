@@ -38,6 +38,12 @@ func (o *etcdBackupCronJobCreateOp) NextCommand() cke.Commander {
 	return createEtcdBackupCronJobCommand{o.apiserver, o.schedule}
 }
 
+func (o *etcdBackupCronJobCreateOp) Targets() []string {
+	return []string{
+		o.apiserver.Address,
+	}
+}
+
 type createEtcdBackupCronJobCommand struct {
 	apiserver *cke.Node
 	schedule  string

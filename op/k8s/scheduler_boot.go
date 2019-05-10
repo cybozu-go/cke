@@ -54,6 +54,14 @@ func (o *schedulerBootOp) NextCommand() cke.Commander {
 	}
 }
 
+func (o *schedulerBootOp) Targets() []string {
+	ips := make([]string, len(o.nodes))
+	for i, n := range o.nodes {
+		ips[i] = n.Address
+	}
+	return ips
+}
+
 type prepareSchedulerFilesCommand struct {
 	cluster string
 	files   *common.FilesBuilder

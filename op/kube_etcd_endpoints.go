@@ -37,6 +37,12 @@ func (o *kubeEtcdEndpointsCreateOp) NextCommand() cke.Commander {
 	return createEtcdEndpointsCommand{o.apiserver, o.endpoints}
 }
 
+func (o *kubeEtcdEndpointsCreateOp) Targets() []string {
+	return []string{
+		o.apiserver.Address,
+	}
+}
+
 type kubeEtcdEndpointsUpdateOp struct {
 	apiserver *cke.Node
 	endpoints []*cke.Node
@@ -62,6 +68,12 @@ func (o *kubeEtcdEndpointsUpdateOp) NextCommand() cke.Commander {
 
 	o.finished = true
 	return updateEtcdEndpointsCommand{o.apiserver, o.endpoints}
+}
+
+func (o *kubeEtcdEndpointsUpdateOp) Targets() []string {
+	return []string{
+		o.apiserver.Address,
+	}
 }
 
 type createEtcdEndpointsCommand struct {
@@ -118,14 +130,13 @@ func (c createEtcdEndpointsCommand) Run(ctx context.Context, inf cke.Infrastruct
 }
 
 func (c createEtcdEndpointsCommand) Command() cke.Command {
-	targets := make([]string, len(c.endpoints))
-	for i, n := range c.endpoints {
-		targets[i] = n.Address
+	endpoints := make([]string, len(c.endpoints))
+	for i, e := range c.endpoints {
+		endpoints[i] = e.Address
 	}
 	return cke.Command{
 		Name:   "createEtcdEndpointsCommand",
-		Target: strings.Join(targets, ","),
-		Detail: "kube-system/" + etcdEndpointsName,
+		Target: strings.Join(endpoints, ","),
 	}
 }
 
@@ -159,13 +170,12 @@ func (c updateEtcdEndpointsCommand) Run(ctx context.Context, inf cke.Infrastruct
 }
 
 func (c updateEtcdEndpointsCommand) Command() cke.Command {
-	targets := make([]string, len(c.endpoints))
-	for i, n := range c.endpoints {
-		targets[i] = n.Address
+	endpoints := make([]string, len(c.endpoints))
+	for i, e := range c.endpoints {
+		endpoints[i] = e.Address
 	}
 	return cke.Command{
 		Name:   "updateEtcdEndpointsCommand",
-		Target: strings.Join(targets, ","),
-		Detail: "kube-system/" + etcdEndpointsName,
+		Target: strings.Join(endpoints, ","),
 	}
 }

@@ -110,7 +110,7 @@ func testStorageRecord(t *testing.T) {
 	}
 
 	leaderKey := e.Key()
-	r := NewRecord(1, "my-operation")
+	r := NewRecord(1, "my-operation", []string{})
 	err = storage.RegisterRecord(ctx, leaderKey, r)
 	if err != nil {
 		t.Fatal(err)
@@ -189,7 +189,7 @@ func testStorageMaint(t *testing.T) {
 
 	leaderKey := e.Key()
 	for i := int64(1); i < 11; i++ {
-		r := NewRecord(i, "my-operation")
+		r := NewRecord(i, "my-operation", []string{})
 		err = storage.RegisterRecord(ctx, leaderKey, r)
 		if err != nil {
 			t.Fatal(err)

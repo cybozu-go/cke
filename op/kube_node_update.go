@@ -2,7 +2,6 @@ package op
 
 import (
 	"context"
-	"strings"
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +29,14 @@ func (o *kubeNodeUpdate) NextCommand() cke.Commander {
 
 	o.done = true
 	return nodeUpdateCommand{o.apiserver, o.nodes}
+}
+
+func (o *kubeNodeUpdate) Targets() []string {
+	ips := make([]string, len(o.nodes))
+	for i, n := range o.nodes {
+		ips[i] = n.Name
+	}
+	return ips
 }
 
 type nodeUpdateCommand struct {
@@ -60,7 +67,6 @@ func (c nodeUpdateCommand) Command() cke.Command {
 		names[i] = n.Name
 	}
 	return cke.Command{
-		Name:   "updateNode",
-		Target: strings.Join(names, ","),
+		Name: "updateNode",
 	}
 }

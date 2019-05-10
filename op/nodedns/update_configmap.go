@@ -4,17 +4,17 @@ import (
 	"context"
 
 	"github.com/cybozu-go/cke"
-	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type updateConfigMapOp struct {
 	apiserver *cke.Node
-	configMap *v1.ConfigMap
+	configMap *corev1.ConfigMap
 	finished  bool
 }
 
 // UpdateConfigMapOp returns an Operator to update unbound as Node local resolver.
-func UpdateConfigMapOp(apiserver *cke.Node, configMap *v1.ConfigMap) cke.Operator {
+func UpdateConfigMapOp(apiserver *cke.Node, configMap *corev1.ConfigMap) cke.Operator {
 	return &updateConfigMapOp{
 		apiserver: apiserver,
 		configMap: configMap,
@@ -33,9 +33,15 @@ func (o *updateConfigMapOp) NextCommand() cke.Commander {
 	return updateConfigMapCommand{o.apiserver, o.configMap}
 }
 
+func (o *updateConfigMapOp) Targets() []string {
+	return []string{
+		o.apiserver.Address,
+	}
+}
+
 type updateConfigMapCommand struct {
 	apiserver *cke.Node
-	configMap *v1.ConfigMap
+	configMap *corev1.ConfigMap
 }
 
 func (c updateConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure) error {

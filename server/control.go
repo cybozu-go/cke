@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
@@ -252,7 +253,7 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 	if err != nil {
 		return err
 	}
-	record := cke.NewRecord(id, op.Name())
+	record := cke.NewRecord(id, op.Name(), op.Targets())
 	err = storage.RegisterRecord(ctx, leaderKey, record)
 	if err != nil {
 		return err
@@ -282,6 +283,11 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		default:
 		}
 
+		log.Info("record targerts", map[string]interface{}{
+			"op":      op.Name(),
+			"targets": strings.Join(op.Targets(), " "),
+		})
+
 		record.SetCommand(commander.Command())
 		err = storage.UpdateRecord(ctx, leaderKey, record)
 		if err != nil {
@@ -295,7 +301,6 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		if err == nil {
 			continue
 		}
-
 		log.Error("command failed", map[string]interface{}{
 			log.FnError: err,
 			"op":        op.Name(),

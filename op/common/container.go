@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/cybozu-go/cke"
@@ -103,14 +102,9 @@ func (c runContainerCommand) Run(ctx context.Context, inf cke.Infrastructure) er
 }
 
 func (c runContainerCommand) Command() cke.Command {
-	targets := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		targets[i] = n.Address
-	}
 	return cke.Command{
 		Name:   "run-container",
-		Target: strings.Join(targets, ","),
-		Detail: c.name,
+		Target: c.name,
 	}
 }
 
@@ -156,8 +150,7 @@ func (c stopContainerCommand) Run(ctx context.Context, inf cke.Infrastructure) e
 func (c stopContainerCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "stop-container",
-		Target: c.node.Address,
-		Detail: c.name,
+		Target: c.name,
 	}
 }
 
@@ -207,13 +200,8 @@ func (c killContainersCommand) Run(ctx context.Context, inf cke.Infrastructure) 
 }
 
 func (c killContainersCommand) Command() cke.Command {
-	addrs := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		addrs[i] = n.Address
-	}
 	return cke.Command{
 		Name:   "kill-containers",
-		Target: strings.Join(addrs, ","),
-		Detail: c.name,
+		Target: c.name,
 	}
 }

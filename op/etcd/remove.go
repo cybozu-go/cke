@@ -5,21 +5,29 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/log"
 )
 
 type removeMemberOp struct {
 	endpoints []string
 	ids       []uint64
+	members   []*etcdserverpb.Member
 	executed  bool
 }
 
 // RemoveMemberOp returns an Operator to remove member from etcd cluster.
-func RemoveMemberOp(cp []*cke.Node, ids []uint64) cke.Operator {
+func RemoveMemberOp(cp []*cke.Node, members []*etcdserverpb.Member) cke.Operator {
+	ids := make([]uint64, len(members))
+	for i, m := range members {
+		ids[i] = m.ID
+	}
 	return &removeMemberOp{
 		endpoints: etcdEndpoints(cp),
 		ids:       ids,
+		members:   members,
 	}
 }
 
@@ -34,6 +42,23 @@ func (o *removeMemberOp) NextCommand() cke.Commander {
 	o.executed = true
 
 	return removeMemberCommand{o.endpoints, o.ids}
+}
+
+func (o *removeMemberOp) Targets() []string {
+	ips := make([]string, len(o.members))
+	for i, m := range o.members {
+		ip, err := op.GuessMemberName(m)
+		if err != nil {
+			log.Warn("missing member name", map[string]interface{}{
+				log.FnError: err,
+				"member_id": string(m.ID),
+			})
+			ips[i] = string(m.ID)
+			continue
+		}
+		ips[i] = ip
+	}
+	return ips
 }
 
 type removeMemberCommand struct {

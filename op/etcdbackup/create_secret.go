@@ -37,6 +37,12 @@ func (o *etcdBackupSecretCreateOp) NextCommand() cke.Commander {
 	return createEtcdBackupSecretCommand{o.apiserver}
 }
 
+func (o *etcdBackupSecretCreateOp) Targets() []string {
+	return []string{
+		o.apiserver.Address,
+	}
+}
+
 type createEtcdBackupSecretCommand struct {
 	apiserver *cke.Node
 }

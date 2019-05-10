@@ -21,17 +21,19 @@ type Record struct {
 	Status    RecordStatus `json:"status"`
 	Operation string       `json:"operation"`
 	Command   Command      `json:"command"`
+	Targets   []string     `json:"targets"`
 	Error     string       `json:"error"`
 	StartAt   time.Time    `json:"start-at"`
 	EndAt     time.Time    `json:"end-at"`
 }
 
 // NewRecord creates new `Record`
-func NewRecord(id int64, op string) *Record {
+func NewRecord(id int64, op string, targets []string) *Record {
 	return &Record{
 		ID:        id,
 		Status:    StatusNew,
 		Operation: op,
+		Targets:   targets,
 		StartAt:   time.Now().UTC(),
 	}
 }

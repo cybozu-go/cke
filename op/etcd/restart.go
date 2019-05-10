@@ -54,3 +54,9 @@ func (o *etcdRestartOp) NextCommand() cke.Commander {
 	}
 	return nil
 }
+
+func (o *etcdRestartOp) Targets() []string {
+	return []string{
+		o.target.Address,
+	}
+}

@@ -119,6 +119,14 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 	}
 }
 
+func (o *kubeletBootOp) Targets() []string {
+	ips := make([]string, len(o.nodes))
+	for i, n := range o.nodes {
+		ips[i] = n.Address
+	}
+	return ips
+}
+
 type emptyDirCommand struct {
 	nodes []*cke.Node
 	dir   string
@@ -146,14 +154,9 @@ func (c emptyDirCommand) Run(ctx context.Context, inf cke.Infrastructure) error 
 }
 
 func (c emptyDirCommand) Command() cke.Command {
-	targets := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		targets[i] = n.Address
-	}
 	return cke.Command{
 		Name:   "empty-dir",
-		Target: strings.Join(targets, ","),
-		Detail: c.dir,
+		Target: c.dir,
 	}
 }
 
@@ -254,13 +257,8 @@ func (c installCNICommand) Run(ctx context.Context, inf cke.Infrastructure) erro
 }
 
 func (c installCNICommand) Command() cke.Command {
-	targets := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		targets[i] = n.Address
-	}
 	return cke.Command{
-		Name:   "install-cni",
-		Target: strings.Join(targets, ","),
+		Name: "install-cni",
 	}
 }
 
@@ -317,13 +315,8 @@ func (c retaintBeforeKubeletBootCommand) Run(ctx context.Context, inf cke.Infras
 }
 
 func (c retaintBeforeKubeletBootCommand) Command() cke.Command {
-	targets := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		targets[i] = n.Address
-	}
 	return cke.Command{
-		Name:   "retaint-before-kubelet-boot",
-		Target: strings.Join(targets, ","),
+		Name: "retaint-before-kubelet-boot",
 	}
 }
 

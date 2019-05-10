@@ -32,6 +32,12 @@ func (o *etcdBackupCronJobRemoveOp) NextCommand() cke.Commander {
 	return removeEtcdBackupCronJobCommand{o.apiserver}
 }
 
+func (o *etcdBackupCronJobRemoveOp) Targets() []string {
+	return []string{
+		o.apiserver.Address,
+	}
+}
+
 type removeEtcdBackupCronJobCommand struct {
 	apiserver *cke.Node
 }

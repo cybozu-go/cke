@@ -72,6 +72,12 @@ func (o *addMemberOp) NextCommand() cke.Commander {
 	return nil
 }
 
+func (o *addMemberOp) Targets() []string {
+	return []string{
+		o.targetNode.Address,
+	}
+}
+
 type addMemberCommand struct {
 	endpoints []string
 	node      *cke.Node
@@ -148,7 +154,6 @@ func (c addMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) error
 
 func (c addMemberCommand) Command() cke.Command {
 	return cke.Command{
-		Name:   "add-etcd-member",
-		Target: c.node.Address,
+		Name: "add-etcd-member",
 	}
 }
