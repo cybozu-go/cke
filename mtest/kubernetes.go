@@ -396,10 +396,15 @@ func TestKubernetes() {
 			return errors.New("pod is not yet ready")
 		}).Should(Succeed())
 
-		for i := 0; i < 5; i++ {
-			_, stderr, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP)
-			Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-		}
+		Eventually(func() error {
+			for i := 0; i < 5; i++ {
+				_, stderr, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP)
+				if err != nil {
+					return fmt.Errorf("%v: stderr=%s", err, stderr)
+				}
+			}
+			return nil
+		}).Should(Succeed())
 
 		logFile := fmt.Sprintf("%d.log", pod.Status.ContainerStatuses[0].RestartCount)
 		subDirName := fmt.Sprintf("%s_%s_%s", namespace, "nginx", string(pod.ObjectMeta.UID))

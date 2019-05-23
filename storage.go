@@ -86,7 +86,7 @@ func (s Storage) GetCluster(ctx context.Context) (*Cluster, error) {
 		return nil, err
 	}
 
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return nil, ErrNotFound
 	}
 
@@ -117,7 +117,7 @@ func (s Storage) GetClusterWithRevision(ctx context.Context) (*Cluster, int64, e
 
 	gresp0 := resp.Responses[0].GetResponseRange()
 	gresp1 := resp.Responses[1].GetResponseRange()
-	if gresp0.Count == 0 {
+	if len(gresp0.Kvs) == 0 {
 		return nil, 0, ErrNotFound
 	}
 
@@ -128,7 +128,7 @@ func (s Storage) GetClusterWithRevision(ctx context.Context) (*Cluster, int64, e
 	}
 
 	var rev int64
-	if gresp1.Count > 0 {
+	if len(gresp1.Kvs) > 0 {
 		rev, err = strconv.ParseInt(string(gresp1.Kvs[0].Value), 10, 64)
 		if err != nil {
 			return nil, 0, err
@@ -157,7 +157,7 @@ func (s Storage) GetConstraints(ctx context.Context) (*Constraints, error) {
 		return nil, err
 	}
 
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return nil, ErrNotFound
 	}
 
@@ -187,7 +187,7 @@ func (s Storage) GetVaultConfig(ctx context.Context) (*VaultConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resp.Count > 1 {
+	if len(resp.Kvs) > 1 {
 		return nil, errors.New("VaultConfig is something wrong")
 	}
 
@@ -205,7 +205,7 @@ func (s Storage) GetCACertificate(ctx context.Context, name string) (string, err
 	if err != nil {
 		return "", err
 	}
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return "", ErrNotFound
 	}
 
@@ -229,7 +229,7 @@ func (s Storage) GetServiceAccountCert(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return "", ErrNotFound
 	}
 
@@ -243,7 +243,7 @@ func (s Storage) GetServiceAccountKey(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return "", ErrNotFound
 	}
 
@@ -282,11 +282,11 @@ func (s Storage) GetRecords(ctx context.Context, count int64) ([]*Record, error)
 		return nil, err
 	}
 
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return nil, nil
 	}
 
-	records := make([]*Record, resp.Count)
+	records := make([]*Record, len(resp.Kvs))
 
 	for i, kv := range resp.Kvs {
 		r := new(Record)
@@ -348,7 +348,7 @@ func (s Storage) NextRecordID(ctx context.Context) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return 1, nil
 	}
 
@@ -369,12 +369,12 @@ func (s Storage) maintRecords(ctx context.Context, leaderKey string, max int64) 
 		return err
 	}
 
-	if resp.Count <= max {
+	if len(resp.Kvs) <= int(max) {
 		return nil
 	}
 
 	startKey := string(resp.Kvs[0].Key)
-	endKey := string(resp.Kvs[resp.Count-max].Key)
+	endKey := string(resp.Kvs[len(resp.Kvs)-int(max)].Key)
 
 	tresp, err := s.Txn(ctx).
 		If(clientv3util.KeyExists(leaderKey)).
@@ -396,7 +396,7 @@ func (s Storage) GetLeaderHostname(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return "", errors.New("no leader")
 	}
 	return string(resp.Kvs[0].Value), nil
@@ -413,11 +413,11 @@ func (s Storage) ListResources(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return nil, nil
 	}
 
-	keys := make([]string, resp.Count)
+	keys := make([]string, len(resp.Kvs))
 	for i, kv := range resp.Kvs {
 		keys[i] = string(kv.Key[len(KeyResourcePrefix):])
 	}
@@ -431,7 +431,7 @@ func (s Storage) GetResource(ctx context.Context, key string) ([]byte, int64, er
 		return nil, 0, err
 	}
 
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return nil, 0, ErrNotFound
 	}
 
@@ -447,11 +447,11 @@ func (s Storage) GetAllResources(ctx context.Context) ([]ResourceDefinition, err
 		return nil, err
 	}
 
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return nil, nil
 	}
 
-	rcs := make([]ResourceDefinition, 0, resp.Count)
+	rcs := make([]ResourceDefinition, 0, len(resp.Kvs))
 	for _, kv := range resp.Kvs {
 		key := string(kv.Key[len(KeyResourcePrefix):])
 		parts := strings.Split(key, "/")
@@ -513,7 +513,7 @@ func (s Storage) GetSabakanQueryVariables(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return nil, ErrNotFound
 	}
 
@@ -540,7 +540,7 @@ func (s Storage) GetSabakanTemplate(ctx context.Context) (*Cluster, int64, error
 		return nil, 0, err
 	}
 
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return nil, 0, ErrNotFound
 	}
 
@@ -567,7 +567,7 @@ func (s Storage) GetSabakanURL(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	if resp.Count == 0 {
+	if len(resp.Kvs) == 0 {
 		return "", ErrNotFound
 	}
 	return string(resp.Kvs[0].Value), nil
