@@ -152,6 +152,21 @@ func testStorageRecord(t *testing.T) {
 		t.Fatalf("got invalid record: %v", got[0])
 	}
 
+	for i := int64(2); i < 30; i++ {
+		r := NewRecord(i, "my-operation", []string{})
+		err = storage.RegisterRecord(ctx, leaderKey, r)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err = storage.GetRecords(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 10 {
+		t.Error("length mismatch", len(got))
+	}
+
 	err = e.Resign(ctx)
 	if err != nil {
 		t.Fatal(err)

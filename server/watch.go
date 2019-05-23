@@ -20,7 +20,7 @@ func initStateless(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{
 	}
 	rev := resp.Header.Revision
 
-	if resp.Count == 1 {
+	if len(resp.Kvs) == 1 {
 		err = cke.ConnectVault(ctx, resp.Kvs[0].Value)
 		if err != nil {
 			return 0, err
