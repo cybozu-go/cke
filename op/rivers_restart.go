@@ -1,31 +1,36 @@
-package etcd
+package op
 
 import (
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 )
 
 type riversRestartOp struct {
-	nodes     []*cke.Node
-	upstreams []*cke.Node
-	params    cke.ServiceParams
+	nodes        []*cke.Node
+	upstreams    []*cke.Node
+	params       cke.ServiceParams
+	name         string
+	upstreamPort int
+	listenPort   int
 
 	pulled   bool
 	finished bool
 }
 
 // RiversRestartOp returns an Operator to restart rivers.
-func RiversRestartOp(nodes, upstreams []*cke.Node, params cke.ServiceParams) cke.Operator {
+func RiversRestartOp(nodes, upstreams []*cke.Node, params cke.ServiceParams, name string, upstreamPort, listenPort int) cke.Operator {
 	return &riversRestartOp{
-		nodes:     nodes,
-		upstreams: upstreams,
-		params:    params,
+		nodes:        nodes,
+		upstreams:    upstreams,
+		params:       params,
+		name:         name,
+		upstreamPort: upstreamPort,
+		listenPort:   listenPort,
 	}
 }
 
 func (o *riversRestartOp) Name() string {
-	return "etcd-rivers-restart"
+	return o.name + "-restart"
 }
 
 func (o *riversRestartOp) NextCommand() cke.Commander {
@@ -36,8 +41,8 @@ func (o *riversRestartOp) NextCommand() cke.Commander {
 
 	if !o.finished {
 		o.finished = true
-		return common.RunContainerCommand(o.nodes, op.EtcdRiversContainerName, cke.ToolsImage,
-			common.WithParams(RiversParams(o.upstreams)),
+		return common.RunContainerCommand(o.nodes, RiversContainerName, cke.ToolsImage,
+			common.WithParams(RiversParams(o.upstreams, o.upstreamPort, o.listenPort)),
 			common.WithExtra(o.params),
 			common.WithRestart())
 	}

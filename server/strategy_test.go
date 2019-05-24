@@ -6,6 +6,7 @@ import (
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/clusterdns"
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
@@ -155,16 +156,17 @@ func (d testData) withRivers() testData {
 	for _, v := range d.Status.NodeStatuses {
 		v.Rivers.Running = true
 		v.Rivers.Image = cke.ToolsImage.Name()
-		v.Rivers.BuiltInParams = k8s.RiversParams(d.ControlPlane())
+		v.Rivers.BuiltInParams = op.RiversParams(d.ControlPlane(), op.RiversUpstreamPort, op.RiversListenPort)
 	}
 	return d
 }
 
 func (d testData) withEtcdRivers() testData {
-	for _, v := range d.Status.NodeStatuses {
-		v.EtcdRivers.Running = true
-		v.EtcdRivers.Image = cke.ToolsImage.Name()
-		v.EtcdRivers.BuiltInParams = etcd.RiversParams(d.ControlPlane())
+	for _, n := range d.ControlPlane() {
+		st := &d.NodeStatus(n).EtcdRivers
+		st.Running = true
+		st.Image = cke.ToolsImage.Name()
+		st.BuiltInParams = op.RiversParams(d.ControlPlane(), op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)
 	}
 	return d
 }
@@ -1295,9 +1297,11 @@ func TestDecideOps(t *testing.T) {
 				st.APIServer.Running = true
 				st.ControllerManager.Running = true
 				st.Scheduler.Running = true
+				st.EtcdRivers.Running = true
 			}),
 			ExpectedOps: []string{
 				"stop-etcd",
+				"stop-etcd-rivers",
 				"stop-kube-apiserver",
 				"stop-kube-controller-manager",
 				"stop-kube-scheduler",

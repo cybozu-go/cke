@@ -5,6 +5,7 @@ import (
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/log"
@@ -73,7 +74,7 @@ func (nf *NodeFilter) RiversStoppedNodes() (nodes []*cke.Node) {
 
 // RiversOutdatedNodes returns nodes that are running rivers with outdated image or params.
 func (nf *NodeFilter) RiversOutdatedNodes() (nodes []*cke.Node) {
-	currentBuiltIn := k8s.RiversParams(nf.cp)
+	currentBuiltIn := op.RiversParams(nf.cp, op.RiversUpstreamPort, op.RiversListenPort)
 	currentExtra := nf.cluster.Options.Rivers
 
 	for _, n := range nf.cluster.Nodes {
@@ -104,7 +105,7 @@ func (nf *NodeFilter) EtcdRiversStoppedNodes() (cps []*cke.Node) {
 
 // EtcdRiversOutdatedNodes returns nodes that are running rivers with outdated image or params.
 func (nf *NodeFilter) EtcdRiversOutdatedNodes() (cps []*cke.Node) {
-	currentBuiltIn := etcd.RiversParams(nf.cp)
+	currentBuiltIn := op.RiversParams(nf.cp, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)
 	currentExtra := nf.cluster.Options.EtcdRivers
 
 	for _, n := range nf.ControlPlane() {
