@@ -30,6 +30,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	ss, err := ce.Inspect([]string{
 		EtcdContainerName,
 		RiversContainerName,
+		EtcdRiversContainerName,
 		KubeAPIServerContainerName,
 		KubeControllerManagerContainerName,
 		KubeSchedulerContainerName,
@@ -50,6 +51,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		HasData:       etcdVolumeExists,
 	}
 	status.Rivers = ss[RiversContainerName]
+	status.EtcdRivers = ss[EtcdRiversContainerName]
 
 	status.APIServer = cke.KubeComponentStatus{
 		ServiceStatus: ss[KubeAPIServerContainerName],

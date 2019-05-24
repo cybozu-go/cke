@@ -89,6 +89,7 @@ type ClusterStatus struct {
 type NodeStatus struct {
 	Etcd              EtcdStatus
 	Rivers            ServiceStatus
+	EtcdRivers        ServiceStatus
 	APIServer         KubeComponentStatus
 	ControllerManager KubeComponentStatus
 	Scheduler         KubeComponentStatus

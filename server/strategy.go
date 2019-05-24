@@ -71,6 +71,12 @@ func riversOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	if nodes := nf.RiversOutdatedNodes(); len(nodes) > 0 {
 		ops = append(ops, k8s.RiversRestartOp(nodes, nf.ControlPlane(), c.Options.Rivers))
 	}
+	if nodes := nf.EtcdRiversStoppedNodes(); len(nodes) > 0 {
+		ops = append(ops, etcd.RiversBootOp(nodes, nf.ControlPlane(), c.Options.EtcdRivers))
+	}
+	if nodes := nf.EtcdRiversOutdatedNodes(); len(nodes) > 0 {
+		ops = append(ops, etcd.RiversRestartOp(nodes, nf.ControlPlane(), c.Options.EtcdRivers))
+	}
 	return ops
 }
 

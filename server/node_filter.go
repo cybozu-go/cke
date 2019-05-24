@@ -92,6 +92,37 @@ func (nf *NodeFilter) RiversOutdatedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
+// EtcdRiversStoppedNodes returns nodes that are not running rivers.
+func (nf *NodeFilter) EtcdRiversStoppedNodes() (cps []*cke.Node) {
+	for _, n := range nf.ControlPlane() {
+		if !nf.nodeStatus(n).EtcdRivers.Running {
+			cps = append(cps, n)
+		}
+	}
+	return cps
+}
+
+// EtcdRiversOutdatedNodes returns nodes that are running rivers with outdated image or params.
+func (nf *NodeFilter) EtcdRiversOutdatedNodes() (cps []*cke.Node) {
+	currentBuiltIn := etcd.RiversParams(nf.cp)
+	currentExtra := nf.cluster.Options.EtcdRivers
+
+	for _, n := range nf.ControlPlane() {
+		st := nf.nodeStatus(n).EtcdRivers
+		switch {
+		case !st.Running:
+			// stopped nodes are excluded
+		case cke.ToolsImage.Name() != st.Image:
+			fallthrough
+		case !currentBuiltIn.Equal(st.BuiltInParams):
+			fallthrough
+		case !currentExtra.Equal(st.ExtraParams):
+			cps = append(cps, n)
+		}
+	}
+	return cps
+}
+
 // EtcdBootstrapped returns true if etcd cluster has been bootstrapped.
 func (nf *NodeFilter) EtcdBootstrapped() bool {
 	for _, n := range nf.cp {
