@@ -160,6 +160,15 @@ func (d testData) withRivers() testData {
 	return d
 }
 
+func (d testData) withEtcdRivers() testData {
+	for _, v := range d.Status.NodeStatuses {
+		v.EtcdRivers.Running = true
+		v.EtcdRivers.Image = cke.ToolsImage.Name()
+		v.EtcdRivers.BuiltInParams = etcd.RiversParams(d.ControlPlane())
+	}
+	return d
+}
+
 func (d testData) withStoppedEtcd() testData {
 	for _, n := range d.ControlPlane() {
 		d.NodeStatus(n).Etcd.HasData = true
@@ -258,6 +267,7 @@ func (d testData) withProxy() testData {
 
 func (d testData) withAllServices() testData {
 	d.withRivers()
+	d.withEtcdRivers()
 	d.withHealthyEtcd()
 	d.withAPIServer(testServiceSubnet)
 	d.withControllerManager(testClusterName, testServiceSubnet)
@@ -383,32 +393,32 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name:        "BootRivers",
 			Input:       newData(),
-			ExpectedOps: []string{"rivers-bootstrap"},
+			ExpectedOps: []string{"etcd-rivers-bootstrap", "rivers-bootstrap"},
 		},
 		{
 			Name:        "BootRivers2",
 			Input:       newData().withHealthyEtcd(),
-			ExpectedOps: []string{"rivers-bootstrap"},
+			ExpectedOps: []string{"etcd-rivers-bootstrap", "rivers-bootstrap"},
 		},
 		{
 			Name: "RestartRivers",
 			Input: newData().withRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.Image = ""
-			}),
+			}).withEtcdRivers(),
 			ExpectedOps: []string{"rivers-restart"},
 		},
 		{
 			Name: "RestartRivers2",
 			Input: newData().withRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.BuiltInParams.ExtraArguments = nil
-			}),
+			}).withEtcdRivers(),
 			ExpectedOps: []string{"rivers-restart"},
 		},
 		{
 			Name: "RestartRivers3",
 			Input: newData().withRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.ExtraParams.ExtraArguments = []string{"foo"}
-			}),
+			}).withEtcdRivers(),
 			ExpectedOps: []string{"rivers-restart"},
 		},
 		{
@@ -416,27 +426,58 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.Running = false
-			}),
+			}).withEtcdRivers(),
 			ExpectedOps: []string{"rivers-bootstrap", "rivers-restart"},
 		},
+
+		{
+			Name: "RestartEtcdRivers",
+			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.Image = ""
+			}),
+			ExpectedOps: []string{"etcd-rivers-restart"},
+		},
+		{
+			Name: "RestartEtcdRivers2",
+			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.BuiltInParams.ExtraArguments = nil
+			}),
+			ExpectedOps: []string{"etcd-rivers-restart"},
+		},
+		{
+			Name: "RestartEtcdRivers3",
+			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.ExtraParams.ExtraArguments = []string{"foo"}
+			}),
+			ExpectedOps: []string{"etcd-rivers-restart"},
+		},
+		{
+			Name: "StartRestartEtcdRivers",
+			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.Image = ""
+				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.Running = false
+			}),
+			ExpectedOps: []string{"etcd-rivers-bootstrap", "etcd-rivers-restart"},
+		},
+
 		{
 			Name:        "EtcdBootstrap",
-			Input:       newData().withRivers(),
+			Input:       newData().withRivers().withEtcdRivers(),
 			ExpectedOps: []string{"etcd-bootstrap"},
 		},
 		{
 			Name:        "EtcdStart",
-			Input:       newData().withRivers().withStoppedEtcd(),
+			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd(),
 			ExpectedOps: []string{"etcd-start"},
 		},
 		{
 			Name:        "WaitEtcd",
-			Input:       newData().withRivers().withUnhealthyEtcd(),
+			Input:       newData().withRivers().withEtcdRivers().withUnhealthyEtcd(),
 			ExpectedOps: []string{"etcd-wait-cluster"},
 		},
 		{
 			Name:  "BootK8s",
-			Input: newData().withHealthyEtcd().withRivers(),
+			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers(),
 			ExpectedOps: []string{
 				"kube-apiserver-bootstrap",
 				"kube-controller-manager-bootstrap",
@@ -447,7 +488,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name:  "BootK8s2",
-			Input: newData().withHealthyEtcd().withRivers().withAPIServer(testServiceSubnet),
+			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withAPIServer(testServiceSubnet),
 			ExpectedOps: []string{
 				"kube-controller-manager-bootstrap",
 				"kube-proxy-bootstrap",
