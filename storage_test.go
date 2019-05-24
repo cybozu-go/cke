@@ -153,8 +153,8 @@ func testStorageRecord(t *testing.T) {
 	}
 
 	for i := int64(2); i < 30; i++ {
-		r := NewRecord(i, "my-operation", []string{})
-		err = storage.RegisterRecord(ctx, leaderKey, r)
+		record := NewRecord(i, "my-operation", []string{})
+		err = storage.RegisterRecord(ctx, leaderKey, record)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -165,6 +165,27 @@ func testStorageRecord(t *testing.T) {
 	}
 	if len(got) != 10 {
 		t.Error("length mismatch", len(got))
+	}
+
+	ch := storage.WatchRecords(ctx)
+
+	for i := int64(30); i < 100; i++ {
+		record := NewRecord(i, "my-operation", []string{})
+		err = storage.RegisterRecord(ctx, leaderKey, record)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	expectID := int64(30)
+	for record := range ch {
+		if record.ID != expectID {
+			t.Fatalf("drop record: %d", expectID)
+		}
+		if record.ID == 99 {
+			break
+		}
+		expectID++
 	}
 
 	err = e.Resign(ctx)

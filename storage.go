@@ -18,8 +18,8 @@ type Storage struct {
 	*clientv3.Client
 }
 
-// RecordChain is a channel for monitoring new operation records.
-type RecordChain <-chan *Record
+// RecordChan is a channel for watching new operation records.
+type RecordChan <-chan *Record
 
 // etcd keys and prefixes
 const (
@@ -40,6 +40,7 @@ const (
 )
 
 const maxRecords = 1000
+const recordChanLength = 100
 
 var (
 	// ErrNotFound may be returned by Storage methods when a key is not found.
@@ -306,9 +307,9 @@ func (s Storage) GetRecords(ctx context.Context, count int64) ([]*Record, error)
 
 // WatchRecords watches new operation records.
 // The watched records will be returned through the returned channel.
-func (s Storage) WatchRecords(ctx context.Context) RecordChain {
+func (s Storage) WatchRecords(ctx context.Context) RecordChan {
 	watchCh := s.Watch(ctx, KeyRecords, clientv3.WithPrefix())
-	recordCh := make(chan *Record, 1)
+	recordCh := make(chan *Record, recordChanLength)
 
 	env := well.NewEnvironment(ctx)
 	env.Go(func(ctx context.Context) error {
