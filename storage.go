@@ -10,12 +10,16 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/clientv3util"
+	"github.com/cybozu-go/well"
 )
 
 // Storage provides operations to store/retrieve CKE data in etcd.
 type Storage struct {
 	*clientv3.Client
 }
+
+// RecordChain is a channel for monitoring new operation records.
+type RecordChain <-chan *Record
 
 // etcd keys and prefixes
 const (
@@ -298,6 +302,42 @@ func (s Storage) GetRecords(ctx context.Context, count int64) ([]*Record, error)
 	}
 
 	return records, nil
+}
+
+// WatchRecords watches new operation records.
+// The watched records will be returned through the returned channel.
+func (s Storage) WatchRecords(ctx context.Context) RecordChain {
+	watchCh := s.Watch(ctx, KeyRecords, clientv3.WithPrefix())
+	recordCh := make(chan *Record, 1)
+
+	env := well.NewEnvironment(ctx)
+	env.Go(func(ctx context.Context) error {
+		defer func() {
+			close(recordCh)
+		}()
+
+		for resp := range watchCh {
+			if resp.Err() != nil {
+				return resp.Err()
+			}
+
+			for _, ev := range resp.Events {
+				if ev.Type != clientv3.EventTypePut || !ev.IsCreate() {
+					continue
+				}
+
+				r := new(Record)
+				err := json.Unmarshal(ev.Kv.Value, r)
+				if err != nil {
+					return err
+				}
+				recordCh <- r
+			}
+		}
+		return nil
+	})
+
+	return recordCh
 }
 
 // RegisterRecord stores *Record if the leaderKey exists
