@@ -2,6 +2,7 @@ package cke
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -170,7 +171,7 @@ func testStorageRecord(t *testing.T) {
 	ch := storage.WatchRecords(ctx)
 
 	for i := int64(30); i < 100; i++ {
-		record := NewRecord(i, "my-operation", []string{})
+		record := NewRecord(i, fmt.Sprintf("my-operation-%d", i), []string{})
 		err = storage.RegisterRecord(ctx, leaderKey, record)
 		if err != nil {
 			t.Fatal(err)
@@ -178,14 +179,33 @@ func testStorageRecord(t *testing.T) {
 	}
 
 	expectID := int64(30)
-	for record := range ch {
-		if record.ID != expectID {
+	for result := range ch {
+		expectOperation := fmt.Sprintf("my-operation-%d", expectID)
+		if result.ID != expectID {
 			t.Fatalf("drop record: %d", expectID)
 		}
-		if record.ID == 99 {
+		if result.Operation != expectOperation {
+			t.Fatalf("invalid record: %v", result)
+		}
+
+		if result.ID == 99 {
 			break
 		}
 		expectID++
+	}
+
+	record := NewRecord(80, "updated", []string{})
+	err = storage.UpdateRecord(ctx, leaderKey, record)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result := <-ch
+	if result.ID != 80 {
+		t.Fatalf("cannot watch updated record: %v", result)
+	}
+	if result.Operation != "updated" {
+		t.Fatalf("invalid record: %v", result)
 	}
 
 	err = e.Resign(ctx)

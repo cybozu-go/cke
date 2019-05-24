@@ -323,7 +323,7 @@ func (s Storage) WatchRecords(ctx context.Context) RecordChan {
 			}
 
 			for _, ev := range resp.Events {
-				if ev.Type != clientv3.EventTypePut || !ev.IsCreate() {
+				if ev.Type != clientv3.EventTypePut {
 					continue
 				}
 
