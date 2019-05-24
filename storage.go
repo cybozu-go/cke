@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -41,6 +42,7 @@ const (
 
 const maxRecords = 1000
 const recordChanLength = 100
+const initialDisplayCount = 20
 
 var (
 	// ErrNotFound may be returned by Storage methods when a key is not found.
@@ -307,8 +309,38 @@ func (s Storage) GetRecords(ctx context.Context, count int64) ([]*Record, error)
 
 // WatchRecords watches new operation records.
 // The watched records will be returned through the returned channel.
-func (s Storage) WatchRecords(ctx context.Context) RecordChan {
-	watchCh := s.Watch(ctx, KeyRecords, clientv3.WithPrefix())
+func (s Storage) WatchRecords(ctx context.Context, initialCount int64) (RecordChan, error) {
+	if initialCount == 0 {
+		initialCount = initialDisplayCount
+	}
+
+	getOpts := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+		clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend),
+		clientv3.WithLimit(initialCount),
+	}
+	getResp, err := s.Get(ctx, KeyRecords, getOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	getRecords := make([]*Record, len(getResp.Kvs))
+	for i, kv := range getResp.Kvs {
+		r := new(Record)
+		err = json.Unmarshal(kv.Value, r)
+		if err != nil {
+			return nil, err
+		}
+		getRecords[i] = r
+	}
+	sort.SliceStable(getRecords, func(i, j int) bool { return getRecords[i].ID < getRecords[j].ID })
+
+	watchOpt := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+		clientv3.WithRev(getResp.Header.Revision + 1),
+	}
+	watchCh := s.Watch(ctx, KeyRecords, watchOpt...)
+
 	recordCh := make(chan *Record, recordChanLength)
 
 	env := well.NewEnvironment(ctx)
@@ -317,12 +349,16 @@ func (s Storage) WatchRecords(ctx context.Context) RecordChan {
 			close(recordCh)
 		}()
 
-		for resp := range watchCh {
-			if resp.Err() != nil {
-				return resp.Err()
+		for _, r := range getRecords {
+			recordCh <- r
+		}
+
+		for watchResp := range watchCh {
+			if watchResp.Err() != nil {
+				return watchResp.Err()
 			}
 
-			for _, ev := range resp.Events {
+			for _, ev := range watchResp.Events {
 				if ev.Type != clientv3.EventTypePut {
 					continue
 				}
@@ -338,7 +374,7 @@ func (s Storage) WatchRecords(ctx context.Context) RecordChan {
 		return nil
 	})
 
-	return recordCh
+	return recordCh, nil
 }
 
 // RegisterRecord stores *Record if the leaderKey exists

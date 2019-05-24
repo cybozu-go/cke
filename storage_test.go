@@ -111,7 +111,7 @@ func testStorageRecord(t *testing.T) {
 	}
 
 	leaderKey := e.Key()
-	r := NewRecord(1, "my-operation", []string{})
+	r := NewRecord(1, "my-operation-1", []string{})
 	err = storage.RegisterRecord(ctx, leaderKey, r)
 	if err != nil {
 		t.Fatal(err)
@@ -153,8 +153,8 @@ func testStorageRecord(t *testing.T) {
 		t.Fatalf("got invalid record: %v", got[0])
 	}
 
-	for i := int64(2); i < 30; i++ {
-		record := NewRecord(i, "my-operation", []string{})
+	for i := int64(2); i <= 400; i++ {
+		record := NewRecord(i, fmt.Sprintf("my-operation-%d", i), []string{})
 		err = storage.RegisterRecord(ctx, leaderKey, record)
 		if err != nil {
 			t.Fatal(err)
@@ -168,9 +168,20 @@ func testStorageRecord(t *testing.T) {
 		t.Error("length mismatch", len(got))
 	}
 
-	ch := storage.WatchRecords(ctx)
+	ch1, err := storage.WatchRecords(ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ch2, err := storage.WatchRecords(ctx, 150)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ch3, err := storage.WatchRecords(ctx, 500)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	for i := int64(30); i < 100; i++ {
+	for i := int64(401); i <= 600; i++ {
 		record := NewRecord(i, fmt.Sprintf("my-operation-%d", i), []string{})
 		err = storage.RegisterRecord(ctx, leaderKey, record)
 		if err != nil {
@@ -178,8 +189,8 @@ func testStorageRecord(t *testing.T) {
 		}
 	}
 
-	expectID := int64(30)
-	for result := range ch {
+	expectID := int64(381)
+	for result := range ch1 {
 		expectOperation := fmt.Sprintf("my-operation-%d", expectID)
 		if result.ID != expectID {
 			t.Fatalf("drop record: %d", expectID)
@@ -188,7 +199,39 @@ func testStorageRecord(t *testing.T) {
 			t.Fatalf("invalid record: %v", result)
 		}
 
-		if result.ID == 99 {
+		if result.ID == 600 {
+			break
+		}
+		expectID++
+	}
+
+	expectID = int64(251)
+	for result := range ch2 {
+		expectOperation := fmt.Sprintf("my-operation-%d", expectID)
+		if result.ID != expectID {
+			t.Fatalf("drop record: %d", expectID)
+		}
+		if result.Operation != expectOperation {
+			t.Fatalf("invalid record: %v", result)
+		}
+
+		if result.ID == 600 {
+			break
+		}
+		expectID++
+	}
+
+	expectID = int64(1)
+	for result := range ch3 {
+		expectOperation := fmt.Sprintf("my-operation-%d", expectID)
+		if result.ID != expectID {
+			t.Fatalf("drop record: %d", expectID)
+		}
+		if result.Operation != expectOperation {
+			t.Fatalf("invalid record: %v", result)
+		}
+
+		if result.ID == 600 {
 			break
 		}
 		expectID++
@@ -200,7 +243,23 @@ func testStorageRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := <-ch
+	result := <-ch1
+	if result.ID != 80 {
+		t.Fatalf("cannot watch updated record: %v", result)
+	}
+	if result.Operation != "updated" {
+		t.Fatalf("invalid record: %v", result)
+	}
+
+	result = <-ch2
+	if result.ID != 80 {
+		t.Fatalf("cannot watch updated record: %v", result)
+	}
+	if result.Operation != "updated" {
+		t.Fatalf("invalid record: %v", result)
+	}
+
+	result = <-ch3
 	if result.ID != 80 {
 		t.Fatalf("cannot watch updated record: %v", result)
 	}
