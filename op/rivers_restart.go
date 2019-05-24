@@ -41,7 +41,7 @@ func (o *riversRestartOp) NextCommand() cke.Commander {
 
 	if !o.finished {
 		o.finished = true
-		return common.RunContainerCommand(o.nodes, RiversContainerName, cke.ToolsImage,
+		return common.RunContainerCommand(o.nodes, o.name, cke.ToolsImage,
 			common.WithParams(RiversParams(o.upstreams, o.upstreamPort, o.listenPort)),
 			common.WithExtra(o.params),
 			common.WithRestart())

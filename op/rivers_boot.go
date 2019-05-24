@@ -41,7 +41,7 @@ func (o *riversBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.ToolsImage)
 	case 1:
 		o.step++
-		return common.RunContainerCommand(o.nodes, RiversContainerName, cke.ToolsImage,
+		return common.RunContainerCommand(o.nodes, o.name, cke.ToolsImage,
 			common.WithParams(RiversParams(o.upstreams, o.upstreamPort, o.listenPort)),
 			common.WithExtra(o.params))
 	default:
