@@ -11,7 +11,6 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/clientv3util"
-	"github.com/cybozu-go/well"
 )
 
 // Storage provides operations to store/retrieve CKE data in etcd.
@@ -344,8 +343,7 @@ func (s Storage) WatchRecords(ctx context.Context, initialCount int64) (RecordCh
 
 	recordCh := make(chan *Record, recordChanLength)
 
-	env := well.NewEnvironment(ctx)
-	env.Go(func(ctx context.Context) error {
+	go func() {
 		defer func() {
 			close(recordCh)
 		}()
@@ -355,21 +353,22 @@ func (s Storage) WatchRecords(ctx context.Context, initialCount int64) (RecordCh
 		}
 
 		for watchResp := range watchCh {
-			if watchResp.Err() != nil {
-				return watchResp.Err()
+			err := watchResp.Err()
+			if err != nil {
+				return
 			}
 
 			for _, ev := range watchResp.Events {
 				r := new(Record)
 				err := json.Unmarshal(ev.Kv.Value, r)
 				if err != nil {
-					return err
+					return
 				}
 				recordCh <- r
 			}
 		}
-		return nil
-	})
+		return
+	}()
 
 	return recordCh, nil
 }
