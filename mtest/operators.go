@@ -21,6 +21,7 @@ func TestOperators() {
 		By("Preparing the cluster")
 		// these operators ran already:
 		// - RiversBootOp
+		// - EtcdRiversBootOp
 		// - EtcdBootOp
 		// - APIServerBootOp
 		// - ControllerManagerBootOp
@@ -55,6 +56,7 @@ func TestOperators() {
 		// - EtcdRemoveMemberOp
 		// - KubeNodeRemoveOp
 		// - RiversRestartOp
+		// - EtcdRiversRestartOp
 		// - APIServerRestartOp
 		// - KubeEtcdEndpointsUpdateOp
 		stopCKE()

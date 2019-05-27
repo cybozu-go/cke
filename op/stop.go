@@ -62,3 +62,11 @@ func EtcdStopOp(nodes []*cke.Node) cke.Operator {
 		name:  EtcdContainerName,
 	}
 }
+
+// EtcdRiversStopOp returns an Operator to stop etcd-rivers
+func EtcdRiversStopOp(nodes []*cke.Node) cke.Operator {
+	return &containerStopOp{
+		nodes: nodes,
+		name:  EtcdRiversContainerName,
+	}
+}

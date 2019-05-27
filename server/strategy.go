@@ -66,10 +66,16 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDe
 
 func riversOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	if nodes := nf.RiversStoppedNodes(); len(nodes) > 0 {
-		ops = append(ops, k8s.RiversBootOp(nodes, nf.ControlPlane(), c.Options.Rivers))
+		ops = append(ops, op.RiversBootOp(nodes, nf.ControlPlane(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
 	}
 	if nodes := nf.RiversOutdatedNodes(); len(nodes) > 0 {
-		ops = append(ops, k8s.RiversRestartOp(nodes, nf.ControlPlane(), c.Options.Rivers))
+		ops = append(ops, op.RiversRestartOp(nodes, nf.ControlPlane(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
+	}
+	if nodes := nf.EtcdRiversStoppedNodes(); len(nodes) > 0 {
+		ops = append(ops, op.RiversBootOp(nodes, nf.ControlPlane(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
+	}
+	if nodes := nf.EtcdRiversOutdatedNodes(); len(nodes) > 0 {
+		ops = append(ops, op.RiversRestartOp(nodes, nf.ControlPlane(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 	}
 	return ops
 }
@@ -359,7 +365,7 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 }
 
 func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
-	var apiServers, controllerManagers, schedulers, etcds []*cke.Node
+	var apiServers, controllerManagers, schedulers, etcds, etcdRivers []*cke.Node
 
 	for _, n := range c.Nodes {
 		if n.ControlPlane {
@@ -379,6 +385,9 @@ func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 		if st.Scheduler.Running {
 			schedulers = append(schedulers, n)
 		}
+		if st.EtcdRivers.Running {
+			etcdRivers = append(etcdRivers, n)
+		}
 	}
 
 	if len(apiServers) > 0 {
@@ -392,6 +401,9 @@ func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	}
 	if len(etcds) > 0 {
 		ops = append(ops, op.EtcdStopOp(etcds))
+	}
+	if len(etcdRivers) > 0 {
+		ops = append(ops, op.EtcdRiversStopOp(etcdRivers))
 	}
 	return ops
 }

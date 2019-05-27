@@ -68,15 +68,16 @@ Options
 
 `Option` is a set of optional parameters for k8s components.
 
-Name              | Required | Type            | Description
------------------ | -------- | --------------- | -----------
-`etcd`            | false    | `EtcdParams`    | Extra arguments for etcd.
-`rivers`          | false    | `ServiceParams` | Extra arguments for Rivers.
+Name              | Required | Type              | Description
+------------------|----------|-------------------|----------------------------------------
+`etcd`            | false    | `EtcdParams`      | Extra arguments for etcd.
+`etcd-rivers`     | false    | `ServiceParams`   | Extra arguments for EtcdRivers.
+`rivers`          | false    | `ServiceParams`   | Extra arguments for Rivers.
 `kube-api`        | false    | `APIServerParams` | Extra arguments for API server.
-`kube-controller` | false    | `ServiceParams` | Extra arguments for controller manager.
-`kube-scheduler`  | false    | `ServiceParams` | Extra arguments for scheduler.
-`kube-proxy`      | false    | `ServiceParams` | Extra arguments for kube-proxy.
-`kubelet`         | false    | `KubeletParams` | Extra arguments for kubelet.
+`kube-controller` | false    | `ServiceParams`   | Extra arguments for controller manager.
+`kube-scheduler`  | false    | `ServiceParams`   | Extra arguments for scheduler.
+`kube-proxy`      | false    | `ServiceParams`   | Extra arguments for kube-proxy.
+`kubelet`         | false    | `KubeletParams`   | Extra arguments for kubelet.
 
 ### ServiceParams
 

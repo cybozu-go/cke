@@ -139,6 +139,7 @@ type EtcdBackup struct {
 type Options struct {
 	Etcd              EtcdParams      `json:"etcd"                    yaml:"etcd"`
 	Rivers            ServiceParams   `json:"rivers"                  yaml:"rivers"`
+	EtcdRivers        ServiceParams   `json:"etcd-rivers"             yaml:"etcd-rivers"`
 	APIServer         APIServerParams `json:"kube-api"                yaml:"kube-api"`
 	ControllerManager ServiceParams   `json:"kube-controller-manager" yaml:"kube-controller-manager"`
 	Scheduler         ServiceParams   `json:"kube-scheduler"          yaml:"kube-scheduler"`

@@ -27,6 +27,17 @@ const (
 	KubeletContainerName = "kubelet"
 	// RiversContainerName is container name of rivers
 	RiversContainerName = "rivers"
+	// EtcdRiversContainerName is container name of etcd-rivers
+	EtcdRiversContainerName = "etcd-rivers"
+
+	// RiversUpstreamPort is upstream port of rivers container
+	RiversUpstreamPort = 6443
+	// RiversListenPort is listen port of rivers container
+	RiversListenPort = 16443
+	// EtcdRiversUpstreamPort is upstream port of etcd-rivers container
+	EtcdRiversUpstreamPort = 2379
+	// EtcdRiversListenPort is listen port of etcd-rivers container
+	EtcdRiversListenPort = 12379
 
 	// ClusterDNSAppName is app name of cluster DNS
 	ClusterDNSAppName = "cluster-dns"

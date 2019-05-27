@@ -218,15 +218,10 @@ func auditPolicyFilePath(policy string) string {
 
 // APIServerParams returns parameters for API server.
 func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet string, auditLogEnabeled bool, auditLogPolicy string) cke.ServiceParams {
-	var etcdServers []string
-	for _, n := range controlPlanes {
-		etcdServers = append(etcdServers, "https://"+n.Address+":2379")
-	}
-
 	args := []string{
 		"apiserver",
 		"--allow-privileged",
-		"--etcd-servers=" + strings.Join(etcdServers, ","),
+		"--etcd-servers=https://127.0.0.1:12379",
 		"--etcd-cafile=" + op.K8sPKIPath("etcd-ca.crt"),
 		"--etcd-certfile=" + op.K8sPKIPath("apiserver-etcd-client.crt"),
 		"--etcd-keyfile=" + op.K8sPKIPath("apiserver-etcd-client.key"),
