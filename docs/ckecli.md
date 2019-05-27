@@ -90,10 +90,15 @@ $ kubectl get secrets --all-namespaces -o json | kubectl replace -f -
 
 Show the host name of the current leader.
 
-`ckecli history [-n COUNT]`
+`ckecli history [OPTION]...`
 ---------------------------
 
 Show operation history.
+
+| Option           | Default value | Description                                                               |
+| ---------------- | ------------- | ------------------------------------------------------------------------- |
+| `-n`, `--count`  | `0`           | The number of the history to show. If `0` is specified, show all history. |
+| `-f`, `--follow` | `false`       | Show the history in a new order, and continuously print new entries.      |
 
 `ckecli images`
 ---------------

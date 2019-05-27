@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -16,6 +17,9 @@ import (
 type Storage struct {
 	*clientv3.Client
 }
+
+// RecordChan is a channel for watching new operation records.
+type RecordChan <-chan *Record
 
 // etcd keys and prefixes
 const (
@@ -36,6 +40,8 @@ const (
 )
 
 const maxRecords = 1000
+const recordChanLength = 100
+const initialDisplayCount = 20
 
 var (
 	// ErrNotFound may be returned by Storage methods when a key is not found.
@@ -298,6 +304,73 @@ func (s Storage) GetRecords(ctx context.Context, count int64) ([]*Record, error)
 	}
 
 	return records, nil
+}
+
+// WatchRecords watches new operation records.
+// The watched records will be returned through the returned channel.
+func (s Storage) WatchRecords(ctx context.Context, initialCount int64) (RecordChan, error) {
+	if initialCount == 0 {
+		initialCount = initialDisplayCount
+	}
+
+	getOpts := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+		clientv3.WithSort(clientv3.SortByKey, clientv3.SortDescend),
+		clientv3.WithLimit(initialCount),
+	}
+	getResp, err := s.Get(ctx, KeyRecords, getOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	getRecords := make([]*Record, len(getResp.Kvs))
+	for i, kv := range getResp.Kvs {
+		r := new(Record)
+		err = json.Unmarshal(kv.Value, r)
+		if err != nil {
+			return nil, err
+		}
+		getRecords[i] = r
+	}
+	sort.SliceStable(getRecords, func(i, j int) bool { return getRecords[i].ID < getRecords[j].ID })
+
+	watchOpt := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+		clientv3.WithRev(getResp.Header.Revision + 1),
+		clientv3.WithFilterDelete(),
+	}
+	watchCh := s.Watch(ctx, KeyRecords, watchOpt...)
+
+	recordCh := make(chan *Record, recordChanLength)
+
+	go func() {
+		defer func() {
+			close(recordCh)
+		}()
+
+		for _, r := range getRecords {
+			recordCh <- r
+		}
+
+		for watchResp := range watchCh {
+			err := watchResp.Err()
+			if err != nil {
+				return
+			}
+
+			for _, ev := range watchResp.Events {
+				r := new(Record)
+				err := json.Unmarshal(ev.Kv.Value, r)
+				if err != nil {
+					return
+				}
+				recordCh <- r
+			}
+		}
+		return
+	}()
+
+	return recordCh, nil
 }
 
 // RegisterRecord stores *Record if the leaderKey exists
