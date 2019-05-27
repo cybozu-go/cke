@@ -338,6 +338,7 @@ func (s Storage) WatchRecords(ctx context.Context, initialCount int64) (RecordCh
 	watchOpt := []clientv3.OpOption{
 		clientv3.WithPrefix(),
 		clientv3.WithRev(getResp.Header.Revision + 1),
+		clientv3.WithFilterDelete(),
 	}
 	watchCh := s.Watch(ctx, KeyRecords, watchOpt...)
 
@@ -359,10 +360,6 @@ func (s Storage) WatchRecords(ctx context.Context, initialCount int64) (RecordCh
 			}
 
 			for _, ev := range watchResp.Events {
-				if ev.Type != clientv3.EventTypePut {
-					continue
-				}
-
 				r := new(Record)
 				err := json.Unmarshal(ev.Kv.Value, r)
 				if err != nil {
