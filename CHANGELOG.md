@@ -5,6 +5,19 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.1] - 2019-05-28
+
+### Added
+- Add `etcd-rivers` as a reverse proxy for k8s etcd (#181).
+- Add `--follow` option to `ckecli history` (#180).
+
+### Changed
+- Apply nilerr and restrictpkg to test (#176).
+- Add a cke container test to mtest (#175).
+- Refine the output of `ckecli history` (#170).
+- Fix handling etcd API `WithLimit` (#177).
+- Fix dockerfile for podman v1.3.2-dev (#182).
+
 ## [1.14.0] - 2019-04-22
 
 No user-visible changes since RC 1.
@@ -142,7 +155,8 @@ No user-visible changes since RC 1.
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.0...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.1...HEAD
+[1.14.1]: https://github.com/cybozu-go/cke/compare/v1.14.0...v1.14.1
 [1.14.0]: https://github.com/cybozu-go/cke/compare/v1.14.0-rc1...v1.14.0
 [1.14.0-rc1]: https://github.com/cybozu-go/cke/compare/v1.13.18...v1.14.0-rc1
 [1.13.18]: https://github.com/cybozu-go/cke/compare/v1.13.17...v1.13.18
