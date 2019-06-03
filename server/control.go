@@ -89,9 +89,13 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 	env.Go(func(ctx context.Context) error {
 		return startWatcher(ctx, c.session.Client(), watchChan)
 	})
-	<-watchChan
 
 	env.Go(func(ctx context.Context) error {
+		select {
+		case <-watchChan:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 		ticker := time.NewTicker(c.interval)
 		defer ticker.Stop()
 		for {
