@@ -5,6 +5,17 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.3] - 2019-06-04
+
+### Action required
+
+- Updating of the existing installation requires re-invocation of `ckecil vault init`
+    to add a new CA to Vault.
+
+### Added
+
+- Enable [API aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/) (#186).
+
 ## [1.14.2] - 2019-06-04
 
 ### Changed
@@ -161,7 +172,8 @@ No user-visible changes since RC 1.
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.3...HEAD
+[1.14.3]: https://github.com/cybozu-go/cke/compare/v1.14.2...v1.14.3
 [1.14.2]: https://github.com/cybozu-go/cke/compare/v1.14.1...v1.14.2
 [1.14.1]: https://github.com/cybozu-go/cke/compare/v1.14.0...v1.14.1
 [1.14.0]: https://github.com/cybozu-go/cke/compare/v1.14.0-rc1...v1.14.0
