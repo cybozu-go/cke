@@ -13,10 +13,10 @@ import (
 
 // CA Keys in Vault
 const (
-	CAServer     = "cke/ca-server"
-	CAEtcdPeer   = "cke/ca-etcd-peer"
-	CAEtcdClient = "cke/ca-etcd-client"
-	CAKubernetes = "cke/ca-kubernetes"
+	CAServer                = "cke/ca-server"
+	CAEtcdPeer              = "cke/ca-etcd-peer"
+	CAEtcdClient            = "cke/ca-etcd-client"
+	CAKubernetes            = "cke/ca-kubernetes"
 	CAKubernetesAggregation = "cke/ca-kubernetes-aggregation"
 )
 
