@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.2] - 2019-06-04
+
+### Changed
+
+- Fix a bug to stop CKE when it fails to connect to vault (#185).
+
 ## [1.14.1] - 2019-05-28
 
 ### Added
@@ -155,7 +161,8 @@ No user-visible changes since RC 1.
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.2...HEAD
+[1.14.2]: https://github.com/cybozu-go/cke/compare/v1.14.1...v1.14.2
 [1.14.1]: https://github.com/cybozu-go/cke/compare/v1.14.0...v1.14.1
 [1.14.0]: https://github.com/cybozu-go/cke/compare/v1.14.0-rc1...v1.14.0
 [1.14.0-rc1]: https://github.com/cybozu-go/cke/compare/v1.13.18...v1.14.0-rc1
