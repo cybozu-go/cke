@@ -136,6 +136,7 @@ $(OUTPUT)/cke.img: $(OUTPUT)/cke $(OUTPUT)/ckecli
 	cp $(OUTPUT)/ckecli ../docker/
 	sudo podman build --no-cache --rm=false -t $(CKE_IMAGE_URL) ../docker/
 	mkdir -p $(OUTPUT)
+	rm -f $@
 	sudo podman save -o $@ $(CKE_IMAGE_URL)
 
 FORCE:
