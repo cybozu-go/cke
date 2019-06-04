@@ -89,27 +89,30 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 	env.Go(func(ctx context.Context) error {
 		return startWatcher(ctx, c.session.Client(), watchChan)
 	})
-	env.Stop()
-	<-watchChan
-	defer func() {
-		env.Cancel(nil)
-		env.Wait()
-	}()
 
-	ticker := time.NewTicker(c.interval)
-	defer ticker.Stop()
-
-	for {
+	env.Go(func(ctx context.Context) error {
 		select {
+		case <-watchChan:
 		case <-ctx.Done():
-			return nil
-		default:
+			return ctx.Err()
 		}
-		err := c.runOnce(ctx, leaderKey, ticker.C, watchChan, addonChan)
-		if err != nil {
-			return err
+		ticker := time.NewTicker(c.interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+			err := c.runOnce(ctx, leaderKey, ticker.C, watchChan, addonChan)
+			if err != nil {
+				return err
+			}
 		}
-	}
+	})
+
+	env.Stop()
+	return env.Wait()
 }
 
 func (c Controller) checkLastOp(ctx context.Context, leaderKey string) error {
