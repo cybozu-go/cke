@@ -17,6 +17,7 @@ const (
 	CAEtcdPeer   = "cke/ca-etcd-peer"
 	CAEtcdClient = "cke/ca-etcd-client"
 	CAKubernetes = "cke/ca-kubernetes"
+	CAKubernetesAggregation = "cke/ca-kubernetes-aggregation"
 )
 
 // IssueResponse is cli output format.

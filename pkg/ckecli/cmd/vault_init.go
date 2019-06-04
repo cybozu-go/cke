@@ -49,6 +49,11 @@ var (
 			commonName: "kubernetes CA",
 			key:        "kubernetes",
 		},
+		{
+			vaultPath:  cke.CAKubernetesAggregation,
+			commonName: "kubernetes aggregation CA",
+			key:        "kubernetes-aggregation",
+		},
 	}
 
 	ckePolicy = `
