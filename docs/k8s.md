@@ -100,6 +100,7 @@ Unchangeable features
 * [RBAC][] is enabled.
 * [CoreDNS][] is installed.
 * [Secret][] data at rest are encrypted.
+* [Aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/) is configured.
 
 Default settings
 ----------------

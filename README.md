@@ -58,6 +58,7 @@ Features
     * [CNI][] network plugins.
     * [CoreDNS][] add-on.
     * Node-local DNS cache services.
+    * [Aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/).
     * Nodes can be registered with [Taints][].
 
 * User-defined resources:
