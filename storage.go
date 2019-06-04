@@ -193,8 +193,9 @@ func (s Storage) GetVaultConfig(ctx context.Context) (*VaultConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(resp.Kvs) > 1 {
-		return nil, errors.New("VaultConfig is something wrong")
+
+	if len(resp.Kvs) == 0 {
+		return nil, ErrNotFound
 	}
 
 	cfg := new(VaultConfig)
