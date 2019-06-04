@@ -180,6 +180,33 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		return err
 	}
 
+	// Aggregation cert.
+	agCert, err := storage.GetCACertificate(ctx, "kubernetes-aggregation")
+	if err != nil {
+		return err
+	}
+	agCertData := []byte(agCert)
+	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		return agCertData, nil
+	}
+	err = c.files.AddFile(ctx, op.K8sPKIPath("aggregation-ca.crt"), g)
+	if err != nil {
+		return err
+	}
+
+	// client certs for Aggregation
+	f = func(ctx context.Context, n *cke.Node) (cert, key []byte, err error) {
+		c, k, e := cke.AggregationCA{}.IssueClientCertificate(ctx, inf)
+		if e != nil {
+			return nil, nil, e
+		}
+		return []byte(c), []byte(k), nil
+	}
+	err = c.files.AddKeyPair(ctx, op.K8sPKIPath("aggregation"), f)
+	if err != nil {
+		return err
+	}
+
 	// EncryptionConfiguration
 	enccfg, err := getEncryptionConfiguration(ctx, inf)
 	if err != nil {
@@ -241,6 +268,15 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 		// for service accounts
 		"--service-account-key-file=" + op.K8sPKIPath("service-account.crt"),
 		"--service-account-lookup",
+
+		// for aggregation
+		"--requestheader-client-ca-file=" + op.K8sPKIPath("aggregation-ca.crt"),
+		"--requestheader-allowed-names=" + cke.CNAPIServer,
+		"--requestheader-extra-headers-prefix=X-Remote-Extra-",
+		"--requestheader-group-headers=X-Remote-Group",
+		"--requestheader-username-headers=X-Remote-User",
+		"--proxy-client-cert-file=" + op.K8sPKIPath("aggregation.crt"),
+		"--proxy-client-key-file=" + op.K8sPKIPath("aggregation.key"),
 
 		"--authorization-mode=Node,RBAC",
 

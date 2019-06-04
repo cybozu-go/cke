@@ -49,6 +49,11 @@ var (
 			commonName: "kubernetes CA",
 			key:        "kubernetes",
 		},
+		{
+			vaultPath:  cke.CAKubernetesAggregation,
+			commonName: "kubernetes aggregation CA",
+			key:        "kubernetes-aggregation",
+		},
 	}
 
 	ckePolicy = `
@@ -129,40 +134,46 @@ func initVault(ctx context.Context) error {
 		return err
 	}
 
-	_, err = vc.Logical().Write("auth/approle/role/cke", map[string]interface{}{
-		"policies": "cke",
-		"period":   "1h",
-	})
-	if err != nil {
-		return err
-	}
-
-	secret, err := vc.Logical().Read("auth/approle/role/cke/role-id")
-	if err != nil {
-		return err
-	}
-	roleID := secret.Data["role_id"].(string)
-
-	secret, err = vc.Logical().Write("auth/approle/role/cke/secret-id", map[string]interface{}{})
-	if err != nil {
-		return err
-	}
-	secretID := secret.Data["secret_id"].(string)
-
-	cfg := new(cke.VaultConfig)
-	cfg.Endpoint = vc.Address()
-	cfg.RoleID = roleID
-	cfg.SecretID = secretID
-	if len(vaultInitCfg.caCertFile) > 0 {
-		data, err := ioutil.ReadFile(vaultInitCfg.caCertFile)
+	cfg, err := storage.GetVaultConfig(ctx)
+	switch err {
+	case nil:
+	case cke.ErrNotFound:
+		_, err = vc.Logical().Write("auth/approle/role/cke", map[string]interface{}{
+			"policies": "cke",
+			"period":   "1h",
+		})
 		if err != nil {
 			return err
 		}
-		cfg.CACert = string(data)
-	}
+		secret, err := vc.Logical().Read("auth/approle/role/cke/role-id")
+		if err != nil {
+			return err
+		}
+		roleID := secret.Data["role_id"].(string)
 
-	err = storage.PutVaultConfig(ctx, cfg)
-	if err != nil {
+		secret, err = vc.Logical().Write("auth/approle/role/cke/secret-id", map[string]interface{}{})
+		if err != nil {
+			return err
+		}
+		secretID := secret.Data["secret_id"].(string)
+
+		cfg = new(cke.VaultConfig)
+		cfg.Endpoint = vc.Address()
+		cfg.RoleID = roleID
+		cfg.SecretID = secretID
+		if len(vaultInitCfg.caCertFile) > 0 {
+			data, err := ioutil.ReadFile(vaultInitCfg.caCertFile)
+			if err != nil {
+				return err
+			}
+			cfg.CACert = string(data)
+		}
+
+		err = storage.PutVaultConfig(ctx, cfg)
+		if err != nil {
+			return err
+		}
+	default:
 		return err
 	}
 
@@ -178,22 +189,23 @@ func initVault(ctx context.Context) error {
 		}
 	}
 
+	secret, err := vc2.Logical().Read(cke.K8sSecret)
+	if err != nil {
+		return err
+	}
+	if secret != nil && secret.Data != nil {
+		return nil
+	}
+
 	return rotateK8sEncryptionKey(vc2)
 }
 
 func createPKI(ctx context.Context, vc *vault.Client, ca caParams) error {
-	mounted := false
 	mounts, err := vc.Sys().ListMounts()
 	if err != nil {
 		return err
 	}
-	for k := range mounts {
-		if k == ca.vaultPath {
-			mounted = true
-			break
-		}
-	}
-	if mounted {
+	if _, ok := mounts[ca.vaultPath]; ok {
 		return nil
 	}
 
@@ -207,6 +219,15 @@ func createPKI(ctx context.Context, vc *vault.Client, ca caParams) error {
 }
 
 func createRootCA(ctx context.Context, vc *vault.Client, ca caParams) error {
+	_, err := storage.GetCACertificate(ctx, ca.key)
+	if err == nil {
+		return nil
+	}
+
+	if err != cke.ErrNotFound {
+		return err
+	}
+
 	secret, err := vc.Logical().Write(path.Join(ca.vaultPath, "/root/generate/internal"), map[string]interface{}{
 		"common_name": ca.commonName,
 		"ttl":         ttl100Year,
@@ -223,6 +244,14 @@ func createRootCA(ctx context.Context, vc *vault.Client, ca caParams) error {
 }
 
 func createKV(ctx context.Context, vc *vault.Client) error {
+	mounts, err := vc.Sys().ListMounts()
+	if err != nil {
+		return err
+	}
+	if _, ok := mounts[cke.CKESecret]; ok {
+		return nil
+	}
+
 	kv1 := &vault.MountInput{
 		Type:    "kv",
 		Options: map[string]string{"version": "1"},

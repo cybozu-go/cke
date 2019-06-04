@@ -13,11 +13,15 @@ import (
 
 // CA Keys in Vault
 const (
-	CAServer     = "cke/ca-server"
-	CAEtcdPeer   = "cke/ca-etcd-peer"
-	CAEtcdClient = "cke/ca-etcd-client"
-	CAKubernetes = "cke/ca-kubernetes"
+	CAServer                = "cke/ca-server"
+	CAEtcdPeer              = "cke/ca-etcd-peer"
+	CAEtcdClient            = "cke/ca-etcd-client"
+	CAKubernetes            = "cke/ca-kubernetes"
+	CAKubernetesAggregation = "cke/ca-kubernetes-aggregation"
 )
+
+// CNAPIServer is the common name of API server for aggregation
+const CNAPIServer = "front-proxy-client"
 
 // IssueResponse is cli output format.
 type IssueResponse struct {
@@ -295,6 +299,24 @@ func (k KubernetesCA) IssueForServiceAccount(ctx context.Context, inf Infrastruc
 		},
 		map[string]interface{}{
 			"common_name":          "service-account",
+			"exclude_cn_from_sans": "true",
+		})
+}
+
+// AggregationCA is a certificate authority for kubernetes aggregation API server
+type AggregationCA struct{}
+
+// IssueClientCertificate issues TLS client certificate for API server
+func (a AggregationCA) IssueClientCertificate(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
+	return issueCertificate(inf, CAKubernetesAggregation, "system",
+		map[string]interface{}{
+			"ttl":            "87600h",
+			"max_ttl":        "87600h",
+			"server_flag":    "false",
+			"allow_any_name": "true",
+		},
+		map[string]interface{}{
+			"common_name":          CNAPIServer,
 			"exclude_cn_from_sans": "true",
 		})
 }
