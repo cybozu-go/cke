@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.4] - 2019-06-05
+
+### Changed
+
+- Fix `ckecli vault init` for newer vault API, and test re-init by mtest (#187).
+
 ## [1.14.3] - 2019-06-04
 
 ### Action required
@@ -172,7 +178,8 @@ No user-visible changes since RC 1.
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.3...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.4...HEAD
+[1.14.4]: https://github.com/cybozu-go/cke/compare/v1.14.3...v1.14.4
 [1.14.3]: https://github.com/cybozu-go/cke/compare/v1.14.2...v1.14.3
 [1.14.2]: https://github.com/cybozu-go/cke/compare/v1.14.1...v1.14.2
 [1.14.1]: https://github.com/cybozu-go/cke/compare/v1.14.0...v1.14.1
