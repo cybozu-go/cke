@@ -208,6 +208,9 @@ func createPKI(ctx context.Context, vc *vault.Client, ca caParams) error {
 	if _, ok := mounts[ca.vaultPath]; ok {
 		return nil
 	}
+	if _, ok := mounts[ca.vaultPath+"/"]; ok {
+		return nil
+	}
 
 	return vc.Sys().Mount(ca.vaultPath, &vault.MountInput{
 		Type: "pki",
@@ -249,6 +252,9 @@ func createKV(ctx context.Context, vc *vault.Client) error {
 		return err
 	}
 	if _, ok := mounts[cke.CKESecret]; ok {
+		return nil
+	}
+	if _, ok := mounts[cke.CKESecret+"/"]; ok {
 		return nil
 	}
 
