@@ -1,5 +1,5 @@
 ---
-name: Issue
+name: Task
 about: Describe this issue
 title: ''
 labels: ''
@@ -17,6 +17,7 @@ Describe how to address the issue.
 
 ## Checklist
 
-- [ ] Finish implementation of the issue
+- [ ] Finish implentation of the issue
 - [ ] Test all functions
+- [ ] Have enough logs to trace activities
 - [ ] Notify developers of necessary actions
