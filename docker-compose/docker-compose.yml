@@ -2,7 +2,7 @@ version: '2'
 services:
   cke:
     container_name: cke
-    image: quay.io/cybozu/cke:1.13
+    image: quay.io/cybozu/cke:1.14
     user: "${UID}:${GID}"
     volumes:
       - ./cke.config.yml:/etc/cke/config.yml
@@ -29,7 +29,7 @@ services:
     command: /opt/setup/setup.sh
   vault:
     container_name: vault
-    image: quay.io/cybozu/vault:0.11
+    image: quay.io/cybozu/vault:1.1
     user: "${UID}:${GID}"
     cap_add:
       - IPC_LOCK
