@@ -103,4 +103,11 @@ func TestCKECLI() {
 			execSafeAt(host1, "rm", "-f", srcFile, dstFile)
 		}
 	})
+
+	It("should invoke sabakan subcommand successfully", func() {
+		ckecliSafe("sabakan", "set-url", "http://localhost:10080")
+		ckecliSafe("sabakan", "disable")
+		ckecliSafe("sabakan", "enable")
+		ckecliSafe("sabakan", "get-url")
+	})
 }

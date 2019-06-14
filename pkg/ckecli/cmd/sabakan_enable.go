@@ -7,14 +7,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var sabakanDisableCmd = &cobra.Command{
-	Use:   "disable",
-	Short: "disable sabakan integration",
-	Long:  `Disable sabakan integration.`,
+var sabakanEnableCmd = &cobra.Command{
+	Use:   "enable",
+	Short: "enable sabakan integration",
+	Long:  `Enable sabakan integration.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		well.Go(func(ctx context.Context) error {
-			return storage.EnableSabakan(ctx, false)
+			return storage.EnableSabakan(ctx, true)
 		})
 		well.Stop()
 		return well.Wait()
@@ -22,5 +22,5 @@ var sabakanDisableCmd = &cobra.Command{
 }
 
 func init() {
-	sabakanCmd.AddCommand(sabakanDisableCmd)
+	sabakanCmd.AddCommand(sabakanEnableCmd)
 }
