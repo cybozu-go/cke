@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.5] - 2019-06-14
+
+### Added
+
+- Add `ckecli sabakan enable` (#190).
+
 ## [1.14.4] - 2019-06-05
 
 ### Changed
@@ -178,7 +184,8 @@ No user-visible changes since RC 1.
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.4...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.5...HEAD
+[1.14.5]: https://github.com/cybozu-go/cke/compare/v1.14.4...v1.14.5
 [1.14.4]: https://github.com/cybozu-go/cke/compare/v1.14.3...v1.14.4
 [1.14.3]: https://github.com/cybozu-go/cke/compare/v1.14.2...v1.14.3
 [1.14.2]: https://github.com/cybozu-go/cke/compare/v1.14.1...v1.14.2
