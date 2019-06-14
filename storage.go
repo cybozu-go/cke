@@ -1,6 +1,7 @@
 package cke
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -31,6 +32,7 @@ const (
 	KeyRecords               = "records/"
 	KeyRecordID              = "records"
 	KeyResourcePrefix        = "resource/"
+	KeySabakanDisabled       = "sabakan/disabled"
 	KeySabakanQueryVariables = "sabakan/query-variables"
 	KeySabakanTemplate       = "sabakan/template"
 	KeySabakanURL            = "sabakan/url"
@@ -573,6 +575,30 @@ func (s Storage) DeleteResource(ctx context.Context, key string) error {
 	return err
 }
 
+// IsSabakanDisabled returns true if sabakan integration is disabled.
+func (s Storage) IsSabakanDisabled(ctx context.Context) (bool, error) {
+	resp, err := s.Get(ctx, KeySabakanDisabled)
+	if err != nil {
+		return false, err
+	}
+	if resp.Count == 0 {
+		return false, nil
+	}
+
+	if bytes.Equal([]byte("true"), resp.Kvs[0].Value) {
+		return true, nil
+	}
+	return false, nil
+}
+
+// EnableSabakan enables sabakan integration when flag is true.
+// When flag is false, sabakan integration is disabled.
+func (s Storage) EnableSabakan(ctx context.Context, flag bool) error {
+	val := fmt.Sprint(!flag)
+	_, err := s.Put(ctx, KeySabakanDisabled, val)
+	return err
+}
+
 // SetSabakanQueryVariables sets query variables for Sabakan.
 // Caller must validate the contents.
 func (s Storage) SetSabakanQueryVariables(ctx context.Context, vars string) error {
@@ -645,10 +671,4 @@ func (s Storage) GetSabakanURL(ctx context.Context) (string, error) {
 		return "", ErrNotFound
 	}
 	return string(resp.Kvs[0].Value), nil
-}
-
-// DeleteSabakanURL deletes URL of sabakan API.
-func (s Storage) DeleteSabakanURL(ctx context.Context) error {
-	_, err := s.Delete(ctx, KeySabakanURL)
-	return err
 }

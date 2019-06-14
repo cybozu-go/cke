@@ -215,17 +215,22 @@ Copy files between hosts via scp.
 
 Control [sabakan integration feature](sabakan-integration.md).
 
+### `ckecli sabakan enable|disable`
+
+Enables/Disables sabakan integration.
+
+The integration will run when:
+- It is *not* disabled, and
+- URL of sabakan is set with `ckecli sabakan set-url`, and
+- Cluster configuration template is set with `ckecli sabakan set-template`.
+
 ### `ckecli sabakan set-url URL`
 
-Set URL of sabakan.  This enables sabakan integration.
+Set URL of sabakan.
 
 ### `ckecli sabakan get-url`
 
 Show stored URL of sabakan.
-
-### `ckecli sabakan disable`
-
-Disables sabakan integration and removes sabakan URL.
 
 ### `ckecli sabakan set-template FILE`
 

@@ -537,14 +537,30 @@ func testStorageSabakan(t *testing.T) {
 		t.Error(`u2 != u`, u2)
 	}
 
-	err = s.DeleteSabakanURL(ctx)
+	disabled, err := s.IsSabakanDisabled(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if disabled {
+		t.Error("sabakan integration should not be disabled by default")
+	}
 
-	_, err = s.GetSabakanURL(ctx)
-	if err != ErrNotFound {
-		t.Error("URL was not removed")
+	err = s.EnableSabakan(ctx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disabled, err = s.IsSabakanDisabled(ctx)
+	if !disabled {
+		t.Error("sabakan integration could not be disabled")
+	}
+
+	err = s.EnableSabakan(ctx, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disabled, err = s.IsSabakanDisabled(ctx)
+	if disabled {
+		t.Error("sabakan integration could not be re-enabled")
 	}
 }
 

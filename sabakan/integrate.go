@@ -51,6 +51,14 @@ func (ig integrator) StartWatch(ctx context.Context, ch chan<- struct{}) error {
 func (ig integrator) Do(ctx context.Context, leaderKey string) error {
 	st := cke.Storage{Client: ig.etcd}
 
+	disabled, err := st.IsSabakanDisabled(ctx)
+	if err != nil {
+		return err
+	}
+	if disabled {
+		return nil
+	}
+
 	tmpl, rev, err := st.GetSabakanTemplate(ctx)
 	switch err {
 	case cke.ErrNotFound:

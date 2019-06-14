@@ -76,6 +76,10 @@ Non-namespace resources omit `/<NAMESPACE>` part.
 
 Configurations for [sabakan integration](sabakan-integration.md).
 
+### `sabakan/disabled`
+
+If this key exists and its value is `true`, sabakan integration is disabled.
+
 ### `sabakan/query-variables`
 
 User-specified variables for the GraphQL query.
