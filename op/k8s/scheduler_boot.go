@@ -49,19 +49,19 @@ func (o *schedulerBootOp) NextCommand() cke.Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		log.Debug("o.step 0->1", nil)
+		log.Info("o.step 0->1", nil)
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
-		log.Debug("o.step 1->2", nil)
+		log.Info("o.step 1->2", nil)
 		return prepareSchedulerFilesCommand{o.cluster, o.files, o.params}
 	case 2:
 		o.step++
-		log.Debug("o.step 2->3", nil)
+		log.Info("o.step 2->3", nil)
 		return o.files
 	case 3:
 		o.step++
-		log.Debug("o.step 3->4", nil)
+		log.Info("o.step 3->4", nil)
 		return common.RunContainerCommand(o.nodes, op.KubeSchedulerContainerName, cke.HyperkubeImage,
 			common.WithParams(SchedulerParams()),
 			common.WithSchedulerExtra(o.params))
@@ -92,7 +92,7 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		return err
 	}
 	g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		_ = log.Debug("add files", map[string]interface{}{
+		_ = log.Info("add files", map[string]interface{}{
 			"node": n.Nodename(),
 		})
 		crt, key, err := cke.KubernetesCA{}.IssueForScheduler(ctx, inf)
@@ -115,12 +115,14 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		  [%s]
 	   }
 	`
-	err = c.files.AddFile(ctx, PolicyConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		policies := strings.Join(c.params.Extenders, ",")
-		return []byte(fmt.Sprintf(policyConfigTmpl, policies)), nil
-	})
-	if err != nil {
-		return err
+	if len(c.params.Extenders) != 0 {
+		err = c.files.AddFile(ctx, PolicyConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+			policies := strings.Join(c.params.Extenders, ",")
+			return []byte(fmt.Sprintf(policyConfigTmpl, policies)), nil
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	// add SchedulerConfig YAML
