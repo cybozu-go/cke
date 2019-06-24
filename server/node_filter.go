@@ -367,6 +367,10 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(withExtender bool) (nodes []*cke.No
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
 		case !currentExtra.Equal(st.ExtraParams):
+			log.Info(
+				"node has been appended",
+				map[string]interface{}{"st": st, "currbltin": currentBuiltIn, "currextra": currentExtra},
+			)
 			nodes = append(nodes, n)
 		}
 	}

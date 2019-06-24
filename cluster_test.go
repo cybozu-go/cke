@@ -521,7 +521,7 @@ rules:
 				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Scheduler: SchedulerParams{
-						Extenders: []string{`urlPrefix: bar`},
+						Extenders: []string{`urlPrefix: http://127.0.0.1:8000`},
 					},
 				},
 			},

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -428,6 +429,12 @@ func validateOptions(opts Options) error {
 		config := ExtenderConfig{}
 		err = ghodssyaml.Unmarshal([]byte(e), &config)
 		if err != nil {
+			return err
+		}
+		if len(config.URLPrefix) == 0 {
+			return errors.New("no urlPrefix is provided")
+		}
+		if _, err = url.Parse(config.URLPrefix); err != nil {
 			return err
 		}
 	}
