@@ -44,7 +44,7 @@ func (o *schedulerRestartOp) NextCommand() cke.Commander {
 	case 3:
 		o.step++
 		return common.RunContainerCommand(o.nodes, op.KubeSchedulerContainerName, cke.HyperkubeImage,
-			common.WithParams(SchedulerParams()),
+			common.WithParams(SchedulerParams(len(o.params.Extenders) > 0)),
 			common.WithSchedulerExtra(o.params),
 			common.WithRestart())
 	default:
