@@ -1,6 +1,7 @@
 package cke
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -418,6 +419,14 @@ func validateOptions(opts Options) error {
 	if len(opts.APIServer.AuditLogPolicy) != 0 {
 		policy := make(map[string]interface{})
 		err = yaml.Unmarshal([]byte(opts.APIServer.AuditLogPolicy), &policy)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, e := range opts.Scheduler.Extenders {
+		config := ExtenderConfig{}
+		err = json.Unmarshal([]byte(e), &config)
 		if err != nil {
 			return err
 		}

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op/k8s"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -238,6 +239,19 @@ func TestOperators() {
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
+
+		By("Adding a scheduler extender")
+		// this will run these ops:
+		// - SchedulerRestartOp
+		cluster.Options.Scheduler.Extenders = []string{"{}"}
+		ckecliClusterSet(cluster)
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		stdout, stderr, err := execAt(node1, "sudo", "jq", "'.extenders[0]'", k8s.PolicyConfigPath)
+		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+		Expect(strings.TrimSpace(string(stdout))).To(Equal("{}"))
 	})
 
 	It("updates Node resources", func() {

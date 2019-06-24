@@ -2,11 +2,22 @@ package k8s
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 	"k8s.io/client-go/tools/clientcmd"
+)
+
+const (
+	// KubeconfigPath is a path for kubeconfig
+	KubeconfigPath = "/etc/kubernetes/scheduler/kubeconfig"
+	// PolicyConfigPath is a path for scheduler extender policy
+	PolicyConfigPath = "/etc/kubernetes/scheduler/policy.cfg.json"
+	// SchedulerConfigPath is a path for scheduler extender config
+	SchedulerConfigPath = "/etc/kubernetes/scheduler/config.yml"
 )
 
 type schedulerBootOp struct {
@@ -40,7 +51,7 @@ func (o *schedulerBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
 	case 1:
 		o.step++
-		return prepareSchedulerFilesCommand{o.cluster, o.files}
+		return prepareSchedulerFilesCommand{o.cluster, o.files, o.params}
 	case 2:
 		o.step++
 		return o.files
@@ -65,10 +76,10 @@ func (o *schedulerBootOp) Targets() []string {
 type prepareSchedulerFilesCommand struct {
 	cluster string
 	files   *common.FilesBuilder
+	params  cke.SchedulerParams
 }
 
 func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
-	const kubeconfigPath = "/etc/kubernetes/scheduler/kubeconfig"
 	storage := inf.Storage()
 
 	ca, err := storage.GetCACertificate(ctx, "kubernetes")
@@ -83,18 +94,44 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
 		return clientcmd.Write(*cfg)
 	}
-	err = c.files.AddFile(ctx, kubeconfigPath, g)
+	err = c.files.AddFile(ctx, KubeconfigPath, g)
 	if err != nil {
 		return err
 	}
 
-	// TODO: add policy config JSON
-	// /etc/kubernetes/scheduler/policy.cfg.json
+	// Add policy config JSON
+	policyConfigTmpl := `{
+		"kind" : "Policy",
+		"apiVersion" : "v1",
+		"extenders" :
+		  [%s]
+	   }
+	`
+	err = c.files.AddFile(ctx, PolicyConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		policies := strings.Join(c.params.Extenders, ",")
+		return []byte(fmt.Sprintf(policyConfigTmpl, policies)), nil
+	})
+	if err != nil {
+		return err
+	}
 
-	// TODO: add SchedulerConfig YAML
-	// /etc/kubernetes/scheduler/config.yml
+	// add SchedulerConfig YAML
+	schedulerConfig := fmt.Sprintf(`apiVersion: kubescheduler.config.k8s.io/v1alpha1
+kind: KubeSchedulerConfiguration
+schedulerName: default-scheduler
+clientConnection:
+  kubeconfig: %s
+algorithmSource:
+policy:
+  file:
+    path: %s
+leaderElection:
+  leaderElect: true
+`, KubeconfigPath, PolicyConfigPath)
 
-	return nil
+	return c.files.AddFile(ctx, SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		return []byte(schedulerConfig), nil
+	})
 }
 
 func (c prepareSchedulerFilesCommand) Command() cke.Command {

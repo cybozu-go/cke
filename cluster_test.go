@@ -500,6 +500,20 @@ rules:
 			true,
 		},
 		{
+			"scheduler extender config JSON is invalid",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					Scheduler: SchedulerParams{
+						Extenders: []string{`{"urlPrefix":0}`},
+					},
+				},
+			},
+			true,
+		},
+		{
 			"valid case",
 			Cluster{
 				Name:          "testcluster",
