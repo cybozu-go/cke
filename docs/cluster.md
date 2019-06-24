@@ -5,16 +5,16 @@ CKE deploys and maintains a Kubernetes cluster and an etcd cluster solely for
 the Kubernetes cluster.  The configurations of the clusters can be defined by
 a YAML or JSON object with these fields:
 
-Name            | Required | Type      | Description
---------------- | -------- | --------- | -----------
-`name`          | true     | string    | The k8s cluster name.
-`nodes`         | true     | array     | `Node` list.
-`service_subnet`| true     | string    | CIDR subnet for k8s `Service`.
-`pod_subnet`    | true     | string    | CIDR subnet for k8s `Pod`.
-`dns_servers`   | false    | array     | List of upstream DNS server IP addresses.
-`dns_service`   | false    | string    | Upstream DNS service name with namespace as `namespace/service`.
-`etcd_backup`   | false    | `EtcdBackup` | See EtcdBackup.
-`options`       | false    | `Options` | See options.
+| Name             | Required | Type         | Description                                                      |
+| ---------------- | -------- | ------------ | ---------------------------------------------------------------- |
+| `name`           | true     | string       | The k8s cluster name.                                            |
+| `nodes`          | true     | array        | `Node` list.                                                     |
+| `service_subnet` | true     | string       | CIDR subnet for k8s `Service`.                                   |
+| `pod_subnet`     | true     | string       | CIDR subnet for k8s `Pod`.                                       |
+| `dns_servers`    | false    | array        | List of upstream DNS server IP addresses.                        |
+| `dns_service`    | false    | string       | Upstream DNS service name with namespace as `namespace/service`. |
+| `etcd_backup`    | false    | `EtcdBackup` | See EtcdBackup.                                                  |
+| `options`        | false    | `Options`    | See options.                                                     |
 
 * IP addresses in `pod_subnet` are only used for host-local communication
   as a fallback CNI plugin.  They are never seen from outside of the cluster.
@@ -28,15 +28,15 @@ Node
 
 A `Node` has these fields:
 
-Name            | Required | Type      | Description
---------------- | -------- | --------- | -----------
-`address`       | true     | string    | IP address of the node.
-`hostname`      | false    | string    | Override the real hostname of the node in k8s.
-`user`          | true     | string    | SSH user name.
-`control_plane` | false    | bool      | If true, the node will be used for k8s control plane and etcd.
-`annotations`   | false    | object    | Node annotations.
-`labels`        | false    | object    | Node labels.
-`taints`        | false    | `[]Taint` | Node taints.
+| Name            | Required | Type      | Description                                                    |
+| --------------- | -------- | --------- | -------------------------------------------------------------- |
+| `address`       | true     | string    | IP address of the node.                                        |
+| `hostname`      | false    | string    | Override the real hostname of the node in k8s.                 |
+| `user`          | true     | string    | SSH user name.                                                 |
+| `control_plane` | false    | bool      | If true, the node will be used for k8s control plane and etcd. |
+| `annotations`   | false    | object    | Node annotations.                                              |
+| `labels`        | false    | object    | Node labels.                                                   |
+| `taints`        | false    | `[]Taint` | Node taints.                                                   |
 
 `annotations`, `labels`, and `taints` are added or updated, but not removed.
 This is because other applications may edit their own annotations, labels, or taints.
@@ -47,55 +47,55 @@ reserved for CKE internal usage, therefore should not be used.
 Taint
 -----
 
-Name     | Required | Type   | Description
--------- | -------- | ------ | -----------
-`key`    | true     | string | The taint key to be applied to a node.
-`value`  | false    | string | The taint value corresponding to the taint key.
-`effect` | true     | string | The effect of the taint on pods that do not tolerate the taint. Valid effects are `NoSchedule`, `PreferNoSchedule` and `NoExecute`.
+| Name     | Required | Type   | Description                                                                                                                         |
+| -------- | -------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `key`    | true     | string | The taint key to be applied to a node.                                                                                              |
+| `value`  | false    | string | The taint value corresponding to the taint key.                                                                                     |
+| `effect` | true     | string | The effect of the taint on pods that do not tolerate the taint. Valid effects are `NoSchedule`, `PreferNoSchedule` and `NoExecute`. |
 
 EtcdBackup
 ----------
 
-Name       | Required | Type   | Description
----------- | -------- | ------ | -----------
-`enabled`  | true     | bool   | If true, periodic etcd backup will be run.
-`pvc_name` | true     | string | The name of `PersistentVolumeClaim` where backup data is stored.
-`schedule` | true     | string | The schedule for etcd backup in Cron format.
-`rotate`   | false    | int    | Keep a number of backup files. Default: 14.
+| Name       | Required | Type   | Description                                                      |
+| ---------- | -------- | ------ | ---------------------------------------------------------------- |
+| `enabled`  | true     | bool   | If true, periodic etcd backup will be run.                       |
+| `pvc_name` | true     | string | The name of `PersistentVolumeClaim` where backup data is stored. |
+| `schedule` | true     | string | The schedule for etcd backup in Cron format.                     |
+| `rotate`   | false    | int    | Keep a number of backup files. Default: 14.                      |
 
 Options
 -------
 
 `Option` is a set of optional parameters for k8s components.
 
-Name              | Required | Type              | Description
-------------------|----------|-------------------|----------------------------------------
-`etcd`            | false    | `EtcdParams`      | Extra arguments for etcd.
-`etcd-rivers`     | false    | `ServiceParams`   | Extra arguments for EtcdRivers.
-`rivers`          | false    | `ServiceParams`   | Extra arguments for Rivers.
-`kube-api`        | false    | `APIServerParams` | Extra arguments for API server.
-`kube-controller` | false    | `ServiceParams`   | Extra arguments for controller manager.
-`kube-scheduler`  | false    | `ServiceParams`   | Extra arguments for scheduler.
-`kube-proxy`      | false    | `ServiceParams`   | Extra arguments for kube-proxy.
-`kubelet`         | false    | `KubeletParams`   | Extra arguments for kubelet.
+| Name              | Required | Type              | Description                             |
+| ----------------- | -------- | ----------------- | --------------------------------------- |
+| `etcd`            | false    | `EtcdParams`      | Extra arguments for etcd.               |
+| `etcd-rivers`     | false    | `ServiceParams`   | Extra arguments for EtcdRivers.         |
+| `rivers`          | false    | `ServiceParams`   | Extra arguments for Rivers.             |
+| `kube-api`        | false    | `APIServerParams` | Extra arguments for API server.         |
+| `kube-controller` | false    | `ServiceParams`   | Extra arguments for controller manager. |
+| `kube-scheduler`  | false    | `SchedulerParams` | Extra arguments for scheduler.          |
+| `kube-proxy`      | false    | `ServiceParams`   | Extra arguments for kube-proxy.         |
+| `kubelet`         | false    | `KubeletParams`   | Extra arguments for kubelet.            |
 
 ### ServiceParams
 
-Name              | Required | Type   | Description
------------------ | -------- | ------ | -----------
-`extra_args`      | false    | array  | Extra command-line arguments.  List of strings.
-`extra_binds`     | false    | array  | Extra bind mounts.  List of `Mount`.
-`extra_env`       | false    | object | Extra environment variables.
+| Name          | Required | Type   | Description                                     |
+| ------------- | -------- | ------ | ----------------------------------------------- |
+| `extra_args`  | false    | array  | Extra command-line arguments.  List of strings. |
+| `extra_binds` | false    | array  | Extra bind mounts.  List of `Mount`.            |
+| `extra_env`   | false    | object | Extra environment variables.                    |
 
 ### Mount
 
-Name              | Required | Type   | Description
------------------ | -------- | ------ | -----------
-`source`          | true     | string | Path in a host to a directory or a file.
-`destination`     | true     | string | Path in the container filesystem.
-`read_only`       | false    | bool   | True to mount the directory or file as read-only.
-`propagation`     | false    | string | Whether mounts can be propagated to replicas.
-`selinux_label`   | false    | string | Relabel the SELinux label of the host directory.
+| Name            | Required | Type   | Description                                       |
+| --------------- | -------- | ------ | ------------------------------------------------- |
+| `source`        | true     | string | Path in a host to a directory or a file.          |
+| `destination`   | true     | string | Path in the container filesystem.                 |
+| `read_only`     | false    | bool   | True to mount the directory or file as read-only. |
+| `propagation`   | false    | string | Whether mounts can be propagated to replicas.     |
+| `selinux_label` | false    | string | Relabel the SELinux label of the host directory.  |
 
 `selinux-label`:
 
@@ -105,38 +105,38 @@ Name              | Required | Type   | Description
 
 ### EtcdParams
 
-Name              | Required | Type   | Description
------------------ | -------- | ------ | -----------
-`volume_name`     | false    | string | Docker volume name for data. Default: `etcd-cke`.
-`extra_args`      | false    | array  | Extra command-line arguments.  List of strings.
-`extra_binds`     | false    | array  | Extra bind mounts.  List of `Mount`.
-`extra_env`       | false    | object | Extra environment variables.
+| Name          | Required | Type   | Description                                       |
+| ------------- | -------- | ------ | ------------------------------------------------- |
+| `volume_name` | false    | string | Docker volume name for data. Default: `etcd-cke`. |
+| `extra_args`  | false    | array  | Extra command-line arguments.  List of strings.   |
+| `extra_binds` | false    | array  | Extra bind mounts.  List of `Mount`.              |
+| `extra_env`   | false    | object | Extra environment variables.                      |
 
 ### APIServerParams
 
-Name                | Required | Type      | Description
-------------------- | -------- | --------- | -----------
-`extra_args`        | false    | array     | Extra command-line arguments.  List of strings.
-`extra_binds`       | false    | array     | Extra bind mounts.  List of `Mount`.
-`extra_env`         | false    | object    | Extra environment variables.
-`audit_log_enabled` | false    | bool      | If true, audit log will be logged to standard output.
-`audit_log_policy`  | false    | string    | Audit policy configuration in yaml format.
+| Name                | Required | Type   | Description                                           |
+| ------------------- | -------- | ------ | ----------------------------------------------------- |
+| `extra_args`        | false    | array  | Extra command-line arguments.  List of strings.       |
+| `extra_binds`       | false    | array  | Extra bind mounts.  List of `Mount`.                  |
+| `extra_env`         | false    | object | Extra environment variables.                          |
+| `audit_log_enabled` | false    | bool   | If true, audit log will be logged to standard output. |
+| `audit_log_policy`  | false    | string | Audit policy configuration in yaml format.            |
 
 ### KubeletParams
 
-Name                         | Required | Type                | Description
------------------------------| -------- | ------------------- | -----------
-`domain`                     | false    | string              | The base domain for the cluster.  Default: `cluster.local`.
-`allow_swap`                 | false    | bool                | Do not fail even when swap is on.
-`boot_taints`                | false    | `[]Taint`           | Bootstrap node taints.
-`extra_args`                 | false    | array               | Extra command-line arguments.  List of strings.
-`extra_binds`                | false    | array               | Extra bind mounts.  List of `Mount`.
-`extra_env`                  | false    | object              | Extra environment variables.
-`container_runtime`          | false    | string              | Container runtime for Pod. Default: `docker`. You have to choose `docker` or `remote` which supports [CRI][].
-`container_runtime_endpoint` | false    | string              | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/var/run/dockershim.sock`.
-`container_log_max_size`     | false    | string              | Equivalent to the [log rotation for CRI runtime]. Size of log file size. If the file size becomes bigger than given size, the log file is rotated. Default: `10Mi`.
-`container_log_max_files`    | false    | int                 | Equivalent to the [log rotation for CRI runtime]. Number of rotated log files for keeping in the storage. Default: `5`.
-`cni_conf_file`              | false    | CNIConfFile         | CNI configuration file.
+| Name                         | Required | Type        | Description                                                                                                                                                         |
+| ---------------------------- | -------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `domain`                     | false    | string      | The base domain for the cluster.  Default: `cluster.local`.                                                                                                         |
+| `allow_swap`                 | false    | bool        | Do not fail even when swap is on.                                                                                                                                   |
+| `boot_taints`                | false    | `[]Taint`   | Bootstrap node taints.                                                                                                                                              |
+| `extra_args`                 | false    | array       | Extra command-line arguments.  List of strings.                                                                                                                     |
+| `extra_binds`                | false    | array       | Extra bind mounts.  List of `Mount`.                                                                                                                                |
+| `extra_env`                  | false    | object      | Extra environment variables.                                                                                                                                        |
+| `container_runtime`          | false    | string      | Container runtime for Pod. Default: `docker`. You have to choose `docker` or `remote` which supports [CRI][].                                                       |
+| `container_runtime_endpoint` | false    | string      | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/var/run/dockershim.sock`.                                               |
+| `container_log_max_size`     | false    | string      | Equivalent to the [log rotation for CRI runtime]. Size of log file size. If the file size becomes bigger than given size, the log file is rotated. Default: `10Mi`. |
+| `container_log_max_files`    | false    | int         | Equivalent to the [log rotation for CRI runtime]. Number of rotated log files for keeping in the storage. Default: `5`.                                             |
+| `cni_conf_file`              | false    | CNIConfFile | CNI configuration file.                                                                                                                                             |
 
 Taints in `boot_taints` are added to a Node in the following cases:
 (1) when that Node is registered with Kubernetes by kubelet, or
@@ -149,12 +149,23 @@ CNI configuration file specified by `cni_conf_file` will be put in `/etc/cni/net
 on all nodes.  The file is created only when `kubelet` starts on the node; it will *not* be
 updated later on.
 
+### SchedulerParams
+
+| Name          | Required | Type               | Description                                     |
+| ------------- | -------- | ------------------ | ----------------------------------------------- |
+| `extenders`   | false    | `[]string`         | Extender parameters                             |
+| `extra_args`  | false    | array              | Extra command-line arguments.  List of strings. |
+| `extra_binds` | false    | array              | Extra bind mounts.  List of `Mount`.            |
+| `extra_env`   | false    | object             | Extra environment variables.                    |
+
+Elements of `extenders` are contents of [`ExtenderConfig`](https://github.com/kubernetes/kubernetes/blob/release-1.14//pkg/scheduler/api/v1/types.go#L183) in JSON format.
+
 ### CNIConfFile
 
-Name                          | Required | Type                | Description
------------------------------ | -------- | ------------------- | -----------
-`name`                        | true     | string              | file name
-`content`                     | true     | string              | file content in JSON format
+| Name      | Required | Type   | Description                 |
+| --------- | -------- | ------ | --------------------------- |
+| `name`    | true     | string | file name                   |
+| `content` | true     | string | file content in JSON format |
 
 `name` is the filename of CNI configuration file.
 It should end with either `.conf` or `.conflist`.

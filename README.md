@@ -60,6 +60,7 @@ Features
     * Node-local DNS cache services.
     * [Aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/).
     * Nodes can be registered with [Taints][].
+    * Preparation of [Scheduler extender](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/scheduling/scheduler_extender.md).
 
 * User-defined resources:
 
