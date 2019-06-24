@@ -13,14 +13,14 @@ type schedulerBootOp struct {
 	nodes []*cke.Node
 
 	cluster string
-	params  cke.ServiceParams
+	params  cke.SchedulerParams
 
 	step  int
 	files *common.FilesBuilder
 }
 
 // SchedulerBootOp returns an Operator to bootstrap kube-scheduler
-func SchedulerBootOp(nodes []*cke.Node, cluster string, params cke.ServiceParams) cke.Operator {
+func SchedulerBootOp(nodes []*cke.Node, cluster string, params cke.SchedulerParams) cke.Operator {
 	return &schedulerBootOp{
 		nodes:   nodes,
 		cluster: cluster,
@@ -48,7 +48,7 @@ func (o *schedulerBootOp) NextCommand() cke.Commander {
 		o.step++
 		return common.RunContainerCommand(o.nodes, op.KubeSchedulerContainerName, cke.HyperkubeImage,
 			common.WithParams(SchedulerParams()),
-			common.WithExtra(o.params))
+			common.WithSchedulerExtra(o.params))
 	default:
 		return nil
 	}
@@ -83,7 +83,18 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
 		return clientcmd.Write(*cfg)
 	}
-	return c.files.AddFile(ctx, kubeconfigPath, g)
+	err = c.files.AddFile(ctx, kubeconfigPath, g)
+	if err != nil {
+		return err
+	}
+
+	// TODO: add policy config JSON
+	// /etc/kubernetes/scheduler/policy.cfg.json
+
+	// TODO: add SchedulerConfig YAML
+	// /etc/kubernetes/scheduler/config.yml
+
+	return nil
 }
 
 func (c prepareSchedulerFilesCommand) Command() cke.Command {
@@ -101,6 +112,7 @@ func SchedulerParams() cke.ServiceParams {
 		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),
 		"--tls-private-key-file=" + op.K8sPKIPath("apiserver.key"),
 		"--port=0",
+		"--config=/etc/kubernetes/scheduler/config.yml",
 	}
 	return cke.ServiceParams{
 		ExtraArguments: args,

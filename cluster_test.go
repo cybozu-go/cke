@@ -52,9 +52,8 @@ options:
     extra_env:
       env1: val1
   kube-scheduler:
-    extenders: 
-      - name: foo
-        config: "{}"
+    extenders:
+      - "{}"
     extra_args:
       - arg1
   kube-proxy:
@@ -148,8 +147,8 @@ rules:
 	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
 	}
-	if !reflect.DeepEqual(c.Options.Scheduler.Extenders, []ExtenderParams{{Name: "foo", Config: "{}"}}) {
-		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Extenders, []ExtenderParams{{Name: "foo", Config: "{}"}})`)
+	if !reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"{}"}) {
+		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"{}"}`)
 	}
 	if c.Options.Kubelet.Domain != "my.domain" {
 		t.Error(`c.Options.Kubelet.Domain != "my.domain"`)
@@ -494,34 +493,6 @@ rules:
 						CNIConfFile: CNIConfFile{
 							Name:    "99.loopback.conf",
 							Content: "<aaa>",
-						},
-					},
-				},
-			},
-			true,
-		},
-		{
-			"duplicate extenders' name",
-			Cluster{
-				Name:          "testcluster",
-				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
-				DNSService:    "kube-system/dns",
-				Options: Options{
-					Scheduler: SchedulerParams{
-						Extenders: []ExtenderParams{
-							{Name: "foo", Config: "{}"},
-							{Name: "foo", Config: "{}"},
-						},
-					},
-					Kubelet: KubeletParams{
-						Domain: "cybozu.com",
-						BootTaints: []corev1.Taint{
-							{
-								Key:    "a.b/c",
-								Value:  "hello",
-								Effect: "NoSchedule",
-							},
 						},
 					},
 				},

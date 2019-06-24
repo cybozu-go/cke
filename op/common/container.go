@@ -10,14 +10,15 @@ import (
 )
 
 type runContainerCommand struct {
-	nodes     []*cke.Node
-	name      string
-	img       cke.Image
-	opts      []string
-	optsMap   map[string][]string
-	params    cke.ServiceParams
-	paramsMap map[string]cke.ServiceParams
-	extra     cke.ServiceParams
+	nodes          []*cke.Node
+	name           string
+	img            cke.Image
+	opts           []string
+	optsMap        map[string][]string
+	params         cke.ServiceParams
+	paramsMap      map[string]cke.ServiceParams
+	extra          cke.ServiceParams
+	schedulerExtra cke.SchedulerParams
 
 	restart bool
 }
@@ -62,6 +63,11 @@ func WithParamsMap(paramsMap map[string]cke.ServiceParams) RunOption {
 // WithExtra returns RunOption to set extra ServiceParams.
 func WithExtra(params cke.ServiceParams) RunOption {
 	return func(c *runContainerCommand) { c.extra = params }
+}
+
+// WithSchedulerExtra returns RunOption to set extra ServiceParams.
+func WithSchedulerExtra(params cke.SchedulerParams) RunOption {
+	return func(c *runContainerCommand) { c.schedulerExtra = params }
 }
 
 func (c runContainerCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
