@@ -114,6 +114,18 @@ type CNIConfFile struct {
 	Content string `json:"content" yaml:"content"`
 }
 
+// SchedulerParams is a set of extra parameters for kube-scheduler.
+type SchedulerParams struct {
+	ServiceParams `yaml:",inline"`
+	Extenders     []ExtenderParams `json:"extenders" yaml:"extenders"`
+}
+
+// ExtenderParams is a parameter for scheduler extender.
+type ExtenderParams struct {
+	Name   string `json:"name"    yaml:"name"`
+	Config string `json:"config"  yaml:"config"`
+}
+
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
 	ServiceParams            `yaml:",inline"`
@@ -142,7 +154,7 @@ type Options struct {
 	EtcdRivers        ServiceParams   `json:"etcd-rivers"             yaml:"etcd-rivers"`
 	APIServer         APIServerParams `json:"kube-api"                yaml:"kube-api"`
 	ControllerManager ServiceParams   `json:"kube-controller-manager" yaml:"kube-controller-manager"`
-	Scheduler         ServiceParams   `json:"kube-scheduler"          yaml:"kube-scheduler"`
+	Scheduler         SchedulerParams `json:"kube-scheduler"          yaml:"kube-scheduler"`
 	Proxy             ServiceParams   `json:"kube-proxy"              yaml:"kube-proxy"`
 	Kubelet           KubeletParams   `json:"kubelet"                 yaml:"kubelet"`
 }
@@ -415,6 +427,14 @@ func validateOptions(opts Options) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	extenders := make(map[string]string)
+	for _, conf := range opts.Scheduler.Extenders {
+		if _, ok := extenders[conf.Name]; ok {
+			return errors.New("extenders' name are duplicated:" + conf.Name)
+		}
+		extenders[conf.Name] = conf.Name
 	}
 
 	return nil
