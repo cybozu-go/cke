@@ -163,12 +163,11 @@ updated later on.
 | Name             | Required | Type   | Description                  |
 | ---------------- | -------- | ------ | ---------------------------- |
 | `name`           | true     | string | Extender name                |
-| `scheduler_conf` | true     | string | `KubeSchedulerConfiguration` |
-| `policy`         | true     | string | `Policy`                     |
+| `config`         | true     | string | ``                           |
 
-`scheduler_conf` is a content of [`k8s.io/component-base/config/v1alpha1.KubeSchedulerConfiguration`](https://github.com/kubernetes/kube-scheduler/blob/b74e9e79538d3a93ad1d1f391b9461c04a20c84e/config/v1alpha1/types.go#L38).
+`name` should be unique.
 
-`policy` is a content of [`k8s.io/kubernetes/pkg/scheduler/api/v1.Policy`](https://github.com/kubernetes/kubernetes/blob/release-1.14/pkg/scheduler/api/v1/types.go#L31).
+`config` is a content of [`ExtenderConfig`](https://github.com/kubernetes/kubernetes/blob/release-1.14//pkg/scheduler/api/v1/types.go#L183) in JSON format.
 
 ### CNIConfFile
 
