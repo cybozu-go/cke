@@ -153,21 +153,12 @@ updated later on.
 
 | Name          | Required | Type               | Description                                     |
 | ------------- | -------- | ------------------ | ----------------------------------------------- |
-| `extenders`   | false    | `[]ExtenderParams` | Extender parameters                             |
+| `extenders`   | false    | `[]string`         | Extender parameters                             |
 | `extra_args`  | false    | array              | Extra command-line arguments.  List of strings. |
 | `extra_binds` | false    | array              | Extra bind mounts.  List of `Mount`.            |
 | `extra_env`   | false    | object             | Extra environment variables.                    |
 
-### ExtenderParams
-
-| Name             | Required | Type   | Description                  |
-| ---------------- | -------- | ------ | ---------------------------- |
-| `name`           | true     | string | Extender name                |
-| `config`         | true     | string | ``                           |
-
-`name` should be unique.
-
-`config` is a content of [`ExtenderConfig`](https://github.com/kubernetes/kubernetes/blob/release-1.14//pkg/scheduler/api/v1/types.go#L183) in JSON format.
+Elements of `extenders` are contents of [`ExtenderConfig`](https://github.com/kubernetes/kubernetes/blob/release-1.14//pkg/scheduler/api/v1/types.go#L183) in JSON format.
 
 ### CNIConfFile
 

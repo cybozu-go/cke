@@ -22,8 +22,7 @@ Example
 options:
   kube-scheduler:
     extenders:
-      - name: topolvm-scheduler
-        config: |
+      - |
           {
             "urlPrefix": "http://127.0.0.1:9251/",
             "filterVerb": "predicate",
