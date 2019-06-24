@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/containernetworking/cni/libcni"
-	"gopkg.in/yaml.v2"
 	ghodssyaml "github.com/ghodss/yaml"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
