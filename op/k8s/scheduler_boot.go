@@ -3,11 +3,12 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
+	ghodssyaml "github.com/ghodss/yaml"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -99,13 +100,27 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		return err
 	}
 
-	policyConfigTmpl := `{
-		"kind" : "Policy",
-		"apiVersion" : "v1",
-		"extenders" :
-		  [%s]
-	   }
-	`
+	if len(c.params.Extenders) == 0 {
+		return nil
+	}
+
+	err = c.files.AddFile(ctx, PolicyConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		var extenders []cke.ExtenderConfig
+		for _, extStr := range c.params.Extenders {
+			conf := cke.ExtenderConfig{}
+			err = ghodssyaml.Unmarshal([]byte(extStr), &conf)
+			if err != nil {
+				return nil, err
+			}
+			extenders = append(extenders, conf)
+		}
+		policy := cke.Policy{TypeMeta: metav1.TypeMeta{Kind: "Policy", APIVersion: "v1"}, ExtenderConfigs: extenders}
+		return ghodssyaml.Marshal(policy)
+	})
+	if err != nil {
+		return err
+	}
+
 	schedulerConfig := fmt.Sprintf(`apiVersion: kubescheduler.config.k8s.io/v1alpha1
 kind: KubeSchedulerConfiguration
 schedulerName: default-scheduler
@@ -119,20 +134,9 @@ leaderElection:
   leaderElect: true
 `, KubeconfigPath, PolicyConfigPath)
 
-	if len(c.params.Extenders) != 0 {
-		err = c.files.AddFile(ctx, PolicyConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
-			policies := strings.Join(c.params.Extenders, ",")
-			return []byte(fmt.Sprintf(policyConfigTmpl, policies)), nil
-		})
-		if err != nil {
-			return err
-		}
-
-		return c.files.AddFile(ctx, SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
-			return []byte(schedulerConfig), nil
-		})
-	}
-	return nil
+	return c.files.AddFile(ctx, SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		return []byte(schedulerConfig), nil
+	})
 }
 
 func (c prepareSchedulerFilesCommand) Command() cke.Command {

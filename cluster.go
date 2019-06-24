@@ -1,7 +1,6 @@
 package cke
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -10,7 +9,8 @@ import (
 	"strings"
 
 	"github.com/containernetworking/cni/libcni"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
+	ghodssyaml "github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -426,7 +426,7 @@ func validateOptions(opts Options) error {
 
 	for _, e := range opts.Scheduler.Extenders {
 		config := ExtenderConfig{}
-		err = json.Unmarshal([]byte(e), &config)
+		err = ghodssyaml.Unmarshal([]byte(e), &config)
 		if err != nil {
 			return err
 		}

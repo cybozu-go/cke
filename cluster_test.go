@@ -507,7 +507,7 @@ rules:
 				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Scheduler: SchedulerParams{
-						Extenders: []string{`{"urlPrefix":0}`},
+						Extenders: []string{`foo: bar`},
 					},
 				},
 			},
@@ -521,7 +521,7 @@ rules:
 				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Scheduler: SchedulerParams{
-						Extenders: []string{`{"urlPrefix":"aaa"}`},
+						Extenders: []string{`urlPrefix: bar`},
 					},
 				},
 			},
