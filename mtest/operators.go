@@ -243,7 +243,7 @@ func TestOperators() {
 		By("Adding a scheduler extender")
 		// this will run these ops:
 		// - SchedulerRestartOp
-		cluster.Options.Scheduler.Extenders = []string{"{}"}
+		cluster.Options.Scheduler.Extenders = []string{"urlPrefix: http://127.0.0.1:8000"}
 		ckecliClusterSet(cluster)
 		Eventually(func() error {
 			return checkCluster(cluster)

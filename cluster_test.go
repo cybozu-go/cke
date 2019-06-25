@@ -53,7 +53,7 @@ options:
       env1: val1
   kube-scheduler:
     extenders:
-      - "{}"
+      - "urlPrefix: http://127.0.0.1:8000"
     extra_args:
       - arg1
   kube-proxy:
@@ -147,8 +147,8 @@ rules:
 	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
 	}
-	if !reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"{}"}) {
-		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"{}"}`)
+	if !reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"urlPrefix: http://127.0.0.1:8000"}) {
+		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"urlPrefix: http://127.0.0.1:8000"}`)
 	}
 	if c.Options.Kubelet.Domain != "my.domain" {
 		t.Error(`c.Options.Kubelet.Domain != "my.domain"`)
