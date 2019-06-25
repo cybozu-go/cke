@@ -86,8 +86,14 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 
 	var policy cke.Policy
 	if hasExtConfigFlag {
-		policyStr, _, err := agent.Run("cat " + PolicyConfigPath)
-		if err == nil {
+		policyStr, stderr, err := agent.Run("cat " + PolicyConfigPath)
+		if err != nil {
+			log.Error("failed to cat "+PolicyConfigPath, map[string]interface{}{
+				log.FnError: err,
+				"stdout":    string(policyStr),
+				"stderr":    string(stderr),
+			})
+		} else {
 			err = ghodssyaml.Unmarshal(policyStr, &policy)
 			if err != nil {
 				log.Warn("failed to unmarshal policy config json", map[string]interface{}{
