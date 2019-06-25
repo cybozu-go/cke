@@ -387,7 +387,7 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.N
 			fallthrough
 		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
 			fallthrough
-		case !reflect.DeepEqual(extConfigs, st.Extenders):
+		case !equalExtenderConfigs(extConfigs, st.Extenders):
 			fallthrough
 		case withExtender != st.HasConfigFlag:
 			log.Info("node has been appended", map[string]interface{}{
@@ -396,16 +396,34 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.N
 				"st_builtin_env":          st.BuiltInParams.ExtraEnvvar,
 				"st_extra_args":           st.ExtraParams.ExtraArguments,
 				"st_extra_env":            st.ExtraParams.ExtraEnvvar,
+				"st_extra_extenders":      st.Extenders,
 				"current_builtin_args":    currentBuiltIn.ExtraArguments,
 				"current_builtin_env":     currentBuiltIn.ExtraEnvvar,
 				"current_extra_args":      currentExtra.ExtraArguments,
 				"current_extra_env":       currentExtra.ExtraEnvvar,
 				"current_extra_extenders": currentExtra.Extenders,
+				"current_ext_configs":     extConfigs,
 			})
 			nodes = append(nodes, n)
 		}
 	}
 	return nodes
+}
+
+func equalExtenderConfigs(configs1, configs2 []cke.ExtenderConfig) bool {
+	if len(configs1) != len(configs2) {
+		return false
+	}
+	dict1 := make(map[string]cke.ExtenderConfig)
+	for _, item1 := range configs1 {
+		dict1[item1.URLPrefix] = item1
+	}
+	for _, item2 := range configs2 {
+		if !reflect.DeepEqual(dict1[item2.URLPrefix], item2) {
+			return false
+		}
+	}
+	return true
 }
 
 // KubeletStoppedNodes returns nodes that are not running kubelet.
