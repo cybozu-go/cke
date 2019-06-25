@@ -92,7 +92,7 @@ type NodeStatus struct {
 	EtcdRivers        ServiceStatus
 	APIServer         KubeComponentStatus
 	ControllerManager KubeComponentStatus
-	Scheduler         KubeComponentStatus
+	Scheduler         SchedulerStatus
 	Proxy             KubeComponentStatus
 	Kubelet           KubeletStatus
 	Labels            map[string]string // are labels for k8s Node resource.
@@ -119,6 +119,13 @@ type EtcdStatus struct {
 type KubeComponentStatus struct {
 	ServiceStatus
 	IsHealthy bool
+}
+
+// SchedulerStatus represents kube-scheduler status and health
+type SchedulerStatus struct {
+	ServiceStatus
+	IsHealthy bool
+	Extenders []ExtenderConfig
 }
 
 // KubeletStatus represents kubelet status and health

@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	// KubeconfigPath is a path for kubeconfig
-	KubeconfigPath = "/etc/kubernetes/scheduler/kubeconfig"
+	// SchedulerKubeconfigPath is a path of kubeconfig for kube-scheduler
+	SchedulerKubeconfigPath = "/etc/kubernetes/scheduler/kubeconfig"
 	// PolicyConfigPath is a path for scheduler extender policy
 	PolicyConfigPath = "/etc/kubernetes/scheduler/policy.cfg.json"
 	// SchedulerConfigPath is a path for scheduler extender config
@@ -60,11 +60,7 @@ func (o *schedulerBootOp) NextCommand() cke.Commander {
 		o.step++
 		return common.RunContainerCommand(o.nodes, op.KubeSchedulerContainerName, cke.HyperkubeImage,
 			common.WithParams(SchedulerParams(len(o.params.Extenders) > 0)),
-			common.WithExtra(cke.ServiceParams{
-				ExtraArguments: o.params.ExtraArguments,
-				ExtraBinds:     o.params.ExtraBinds,
-				ExtraEnvvar:    o.params.ExtraEnvvar,
-			}))
+			common.WithExtra(o.params.ServiceParams))
 	default:
 		return nil
 	}
@@ -99,7 +95,7 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
 		return clientcmd.Write(*cfg)
 	}
-	err = c.files.AddFile(ctx, KubeconfigPath, g)
+	err = c.files.AddFile(ctx, SchedulerKubeconfigPath, g)
 	if err != nil {
 		return err
 	}
@@ -136,7 +132,7 @@ algorithmSource:
       path: %s
 leaderElection:
   leaderElect: true
-`, KubeconfigPath, PolicyConfigPath)
+`, SchedulerKubeconfigPath, PolicyConfigPath)
 
 	return c.files.AddFile(ctx, SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		return []byte(schedulerConfig), nil
@@ -153,14 +149,14 @@ func (c prepareSchedulerFilesCommand) Command() cke.Command {
 func SchedulerParams(withExtender bool) cke.ServiceParams {
 	args := []string{
 		"scheduler",
-		"--kubeconfig=/etc/kubernetes/scheduler/kubeconfig",
+		"--kubeconfig=" + SchedulerKubeconfigPath,
 		// for healthz service
 		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),
 		"--tls-private-key-file=" + op.K8sPKIPath("apiserver.key"),
 		"--port=0",
 	}
 	if withExtender {
-		args = append(args, "--config=/etc/kubernetes/scheduler/config.yml")
+		args = append(args, "--config="+SchedulerConfigPath)
 	}
 	return cke.ServiceParams{
 		ExtraArguments: args,

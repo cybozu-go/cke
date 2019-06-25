@@ -366,7 +366,19 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(withExtender bool) (nodes []*cke.No
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
-		case !currentExtra.Equal(st.ExtraParams):
+		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
+			log.Info("node has been appended", map[string]interface{}{
+				"node":                    n.Nodename(),
+				"st_builtin_args":         st.BuiltInParams.ExtraArguments,
+				"st_builtin_env":          st.BuiltInParams.ExtraEnvvar,
+				"st_extra_args":           st.ExtraParams.ExtraArguments,
+				"st_extra_env":            st.ExtraParams.ExtraEnvvar,
+				"current_builtin_args":    currentBuiltIn.ExtraArguments,
+				"current_builtin_env":     currentBuiltIn.ExtraEnvvar,
+				"current_extra_args":      currentExtra.ExtraArguments,
+				"current_extra_env":       currentExtra.ExtraEnvvar,
+				"current_extra_extenders": currentExtra.Extenders,
+			})
 			nodes = append(nodes, n)
 		}
 	}

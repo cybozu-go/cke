@@ -16,7 +16,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -81,7 +81,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		}
 	}
 
-	status.Scheduler = cke.KubeComponentStatus{
+	status.Scheduler = cke.SchedulerStatus{
 		ServiceStatus: ss[KubeSchedulerContainerName],
 		IsHealthy:     false,
 	}
