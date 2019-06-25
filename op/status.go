@@ -16,6 +16,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
+	ghodssyaml "github.com/ghodss/yaml"
 	"gopkg.in/yaml.v2"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,10 +82,29 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		}
 	}
 
+	hasExtConfigFlag := containCommandOption(ss[KubeSchedulerContainerName].ExtraParams.ExtraArguments, "--config")
+
+	var policy cke.Policy
+	if hasExtConfigFlag {
+		policyStr, _, err := agent.Run("cat " + PolicyConfigPath)
+		if err == nil {
+			err = ghodssyaml.Unmarshal(policyStr, &policy)
+			if err != nil {
+				log.Warn("failed to unmarshal policy config json", map[string]interface{}{
+					log.FnError: err,
+					"string":    policyStr,
+				})
+			}
+		}
+	}
+
 	status.Scheduler = cke.SchedulerStatus{
 		ServiceStatus: ss[KubeSchedulerContainerName],
 		IsHealthy:     false,
+		HasConfigFlag: hasExtConfigFlag,
+		Extenders:     policy.ExtenderConfigs,
 	}
+
 	if status.Scheduler.Running {
 		status.Scheduler.IsHealthy, err = checkSecureHealthz(ctx, inf, node.Address, 10259)
 		if err != nil {
@@ -599,4 +619,18 @@ func checkAPIServerHealth(ctx context.Context, inf cke.Infrastructure, n *cke.No
 		return false, err
 	}
 	return true, nil
+}
+
+func containCommandOption(slice []string, optionName string) bool {
+	for _, v := range slice {
+		switch {
+		case v == optionName:
+			return true
+		case strings.HasPrefix(v, optionName+"="):
+			return true
+		case strings.HasPrefix(v, optionName+" "):
+			return true
+		}
+	}
+	return false
 }

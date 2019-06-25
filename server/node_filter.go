@@ -1,6 +1,7 @@
 package server
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
@@ -9,6 +10,7 @@ import (
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/log"
+	ghodssyaml "github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -353,9 +355,26 @@ func (nf *NodeFilter) SchedulerStoppedNodes() (nodes []*cke.Node) {
 }
 
 // SchedulerOutdatedNodes returns nodes that are running kube-scheduler with outdated image or params.
-func (nf *NodeFilter) SchedulerOutdatedNodes(withExtender bool) (nodes []*cke.Node) {
+func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.Node) {
+	withExtender := len(extenders) > 0
 	currentBuiltIn := k8s.SchedulerParams(withExtender)
 	currentExtra := nf.cluster.Options.Scheduler
+
+	var extConfigs []cke.ExtenderConfig
+	if withExtender {
+		for _, ext := range extenders {
+			conf := cke.ExtenderConfig{}
+			err := ghodssyaml.Unmarshal([]byte(ext), &conf)
+			if err != nil {
+				log.Warn("failed to unmarshal extender config", map[string]interface{}{
+					log.FnError: err,
+					"config":    ext,
+				})
+				continue
+			}
+			extConfigs = append(extConfigs, conf)
+		}
+	}
 
 	for _, n := range nf.cp {
 		st := nf.nodeStatus(n).Scheduler
@@ -367,6 +386,10 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(withExtender bool) (nodes []*cke.No
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
 		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
+			fallthrough
+		case !reflect.DeepEqual(extConfigs, st.Extenders):
+			fallthrough
+		case withExtender != st.HasConfigFlag:
 			log.Info("node has been appended", map[string]interface{}{
 				"node":                    n.Nodename(),
 				"st_builtin_args":         st.BuiltInParams.ExtraArguments,

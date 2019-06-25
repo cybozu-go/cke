@@ -54,6 +54,13 @@ const (
 	CKELabelAppName = "cke.cybozu.com/appname"
 	// EtcdBackupAppName is application name for etcdbackup
 	EtcdBackupAppName = "etcdbackup"
+
+	// SchedulerKubeconfigPath is a path of kubeconfig for kube-scheduler
+	SchedulerKubeconfigPath = "/etc/kubernetes/scheduler/kubeconfig"
+	// PolicyConfigPath is a path for scheduler extender policy
+	PolicyConfigPath = "/etc/kubernetes/scheduler/policy.cfg.json"
+	// SchedulerConfigPath is a path for scheduler extender config
+	SchedulerConfigPath = "/etc/kubernetes/scheduler/config.yml"
 )
 
 // EtcdPKIPath returns a certificate file path for k8s.

@@ -12,15 +12,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-const (
-	// SchedulerKubeconfigPath is a path of kubeconfig for kube-scheduler
-	SchedulerKubeconfigPath = "/etc/kubernetes/scheduler/kubeconfig"
-	// PolicyConfigPath is a path for scheduler extender policy
-	PolicyConfigPath = "/etc/kubernetes/scheduler/policy.cfg.json"
-	// SchedulerConfigPath is a path for scheduler extender config
-	SchedulerConfigPath = "/etc/kubernetes/scheduler/config.yml"
-)
-
 type schedulerBootOp struct {
 	nodes []*cke.Node
 
@@ -95,7 +86,7 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
 		return clientcmd.Write(*cfg)
 	}
-	err = c.files.AddFile(ctx, SchedulerKubeconfigPath, g)
+	err = c.files.AddFile(ctx, op.SchedulerKubeconfigPath, g)
 	if err != nil {
 		return err
 	}
@@ -104,17 +95,17 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		return nil
 	}
 
-	err = c.files.AddFile(ctx, PolicyConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		var extenders []cke.ExtenderConfig
+	err = c.files.AddFile(ctx, op.PolicyConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		var configs []cke.ExtenderConfig
 		for _, extStr := range c.params.Extenders {
 			conf := cke.ExtenderConfig{}
 			err = ghodssyaml.Unmarshal([]byte(extStr), &conf)
 			if err != nil {
 				return nil, err
 			}
-			extenders = append(extenders, conf)
+			configs = append(configs, conf)
 		}
-		policy := cke.Policy{TypeMeta: metav1.TypeMeta{Kind: "Policy", APIVersion: "v1"}, ExtenderConfigs: extenders}
+		policy := cke.Policy{TypeMeta: metav1.TypeMeta{Kind: "Policy", APIVersion: "v1"}, ExtenderConfigs: configs}
 		return ghodssyaml.Marshal(policy)
 	})
 	if err != nil {
@@ -132,9 +123,9 @@ algorithmSource:
       path: %s
 leaderElection:
   leaderElect: true
-`, SchedulerKubeconfigPath, PolicyConfigPath)
+`, op.SchedulerKubeconfigPath, op.PolicyConfigPath)
 
-	return c.files.AddFile(ctx, SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+	return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		return []byte(schedulerConfig), nil
 	})
 }
@@ -149,14 +140,14 @@ func (c prepareSchedulerFilesCommand) Command() cke.Command {
 func SchedulerParams(withExtender bool) cke.ServiceParams {
 	args := []string{
 		"scheduler",
-		"--kubeconfig=" + SchedulerKubeconfigPath,
+		"--kubeconfig=" + op.SchedulerKubeconfigPath,
 		// for healthz service
 		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),
 		"--tls-private-key-file=" + op.K8sPKIPath("apiserver.key"),
 		"--port=0",
 	}
 	if withExtender {
-		args = append(args, "--config="+SchedulerConfigPath)
+		args = append(args, "--config="+op.SchedulerConfigPath)
 	}
 	return cke.ServiceParams{
 		ExtraArguments: args,
