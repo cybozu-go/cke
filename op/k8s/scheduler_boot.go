@@ -60,7 +60,11 @@ func (o *schedulerBootOp) NextCommand() cke.Commander {
 		o.step++
 		return common.RunContainerCommand(o.nodes, op.KubeSchedulerContainerName, cke.HyperkubeImage,
 			common.WithParams(SchedulerParams(len(o.params.Extenders) > 0)),
-			common.WithSchedulerExtra(o.params))
+			common.WithExtra(cke.ServiceParams{
+				ExtraArguments: o.params.ExtraArguments,
+				ExtraBinds:     o.params.ExtraBinds,
+				ExtraEnvvar:    o.params.ExtraEnvvar,
+			}))
 	default:
 		return nil
 	}
