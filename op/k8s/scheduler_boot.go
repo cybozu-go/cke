@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/cybozu-go/cke"
@@ -106,7 +107,7 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 			configs = append(configs, conf)
 		}
 		policy := cke.Policy{TypeMeta: metav1.TypeMeta{Kind: "Policy", APIVersion: "v1"}, ExtenderConfigs: configs}
-		return ghodssyaml.Marshal(policy)
+		return json.Marshal(policy)
 	})
 	if err != nil {
 		return err
