@@ -55,10 +55,8 @@ const (
 	// EtcdBackupAppName is application name for etcdbackup
 	EtcdBackupAppName = "etcdbackup"
 
-	// SchedulerKubeconfigPath is a path of kubeconfig for kube-scheduler
-	SchedulerKubeconfigPath = "/etc/kubernetes/scheduler/kubeconfig"
 	// PolicyConfigPath is a path for scheduler extender policy
-	PolicyConfigPath = "/etc/kubernetes/scheduler/policy.cfg.json"
+	PolicyConfigPath = "/etc/kubernetes/scheduler/policy.cfg"
 	// SchedulerConfigPath is a path for scheduler extender config
 	SchedulerConfigPath = "/etc/kubernetes/scheduler/config.yml"
 )

@@ -2,7 +2,7 @@ package op
 
 import "testing"
 
-func Test_containCommandOption(t *testing.T) {
+func TestContainCommandOption(t *testing.T) {
 	type args struct {
 		slice      []string
 		optionName string

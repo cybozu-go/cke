@@ -356,24 +356,21 @@ func (nf *NodeFilter) SchedulerStoppedNodes() (nodes []*cke.Node) {
 
 // SchedulerOutdatedNodes returns nodes that are running kube-scheduler with outdated image or params.
 func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.Node) {
-	withExtender := len(extenders) > 0
-	currentBuiltIn := k8s.SchedulerParams(withExtender)
+	currentBuiltIn := k8s.SchedulerParams()
 	currentExtra := nf.cluster.Options.Scheduler
 
-	var extConfigs []cke.ExtenderConfig
-	if withExtender {
-		for _, ext := range extenders {
-			conf := cke.ExtenderConfig{}
-			err := ghodssyaml.Unmarshal([]byte(ext), &conf)
-			if err != nil {
-				log.Warn("failed to unmarshal extender config", map[string]interface{}{
-					log.FnError: err,
-					"config":    ext,
-				})
-				continue
-			}
-			extConfigs = append(extConfigs, conf)
+	var extConfigs []*cke.ExtenderConfig
+	for _, ext := range extenders {
+		conf := new(cke.ExtenderConfig)
+		err := ghodssyaml.Unmarshal([]byte(ext), conf)
+		if err != nil {
+			log.Warn("failed to unmarshal extender config", map[string]interface{}{
+				log.FnError: err,
+				"config":    ext,
+			})
+			panic(err)
 		}
+		extConfigs = append(extConfigs, conf)
 	}
 
 	for _, n := range nf.cp {
@@ -388,9 +385,7 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.N
 		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
 			fallthrough
 		case !equalExtenderConfigs(extConfigs, st.Extenders):
-			fallthrough
-		case withExtender != st.HasConfigFlag:
-			log.Info("node has been appended", map[string]interface{}{
+			log.Debug("node has been appended", map[string]interface{}{
 				"node":                    n.Nodename(),
 				"st_builtin_args":         st.BuiltInParams.ExtraArguments,
 				"st_builtin_env":          st.BuiltInParams.ExtraEnvvar,
@@ -410,16 +405,12 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.N
 	return nodes
 }
 
-func equalExtenderConfigs(configs1, configs2 []cke.ExtenderConfig) bool {
+func equalExtenderConfigs(configs1, configs2 []*cke.ExtenderConfig) bool {
 	if len(configs1) != len(configs2) {
 		return false
 	}
-	dict1 := make(map[string]cke.ExtenderConfig)
-	for _, item1 := range configs1 {
-		dict1[item1.URLPrefix] = item1
-	}
-	for _, item2 := range configs2 {
-		if !reflect.DeepEqual(dict1[item2.URLPrefix], item2) {
+	for i := range configs1 {
+		if !reflect.DeepEqual(configs1[i], configs2[i]) {
 			return false
 		}
 	}

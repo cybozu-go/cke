@@ -10,17 +10,17 @@ func TestEqualExtenderConfigs(t *testing.T) {
 	testCases := []struct {
 		message  string
 		expected bool
-		configs1 []cke.ExtenderConfig
-		configs2 []cke.ExtenderConfig
+		configs1 []*cke.ExtenderConfig
+		configs2 []*cke.ExtenderConfig
 	}{
 		{
 			"valid",
 			true,
-			[]cke.ExtenderConfig{{
+			[]*cke.ExtenderConfig{{
 				URLPrefix:  "http://localhost",
 				FilterVerb: "get",
 			}},
-			[]cke.ExtenderConfig{{
+			[]*cke.ExtenderConfig{{
 				URLPrefix:  "http://localhost",
 				FilterVerb: "get",
 			}},
@@ -28,7 +28,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 		{
 			"order is difference",
 			true,
-			[]cke.ExtenderConfig{
+			[]*cke.ExtenderConfig{
 				{
 					URLPrefix:  "http://localhost:8000",
 					FilterVerb: "get",
@@ -38,7 +38,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 					FilterVerb: "post",
 				},
 			},
-			[]cke.ExtenderConfig{
+			[]*cke.ExtenderConfig{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -52,19 +52,19 @@ func TestEqualExtenderConfigs(t *testing.T) {
 		{
 			"empty",
 			true,
-			[]cke.ExtenderConfig{},
-			[]cke.ExtenderConfig{},
+			[]*cke.ExtenderConfig{},
+			[]*cke.ExtenderConfig{},
 		},
 		{
 			"subset",
 			false,
-			[]cke.ExtenderConfig{
+			[]*cke.ExtenderConfig{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
 				},
 			},
-			[]cke.ExtenderConfig{
+			[]*cke.ExtenderConfig{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -78,8 +78,8 @@ func TestEqualExtenderConfigs(t *testing.T) {
 		{
 			"configs1 is empty",
 			false,
-			[]cke.ExtenderConfig{},
-			[]cke.ExtenderConfig{
+			[]*cke.ExtenderConfig{},
+			[]*cke.ExtenderConfig{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -93,7 +93,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 		{
 			"difference",
 			false,
-			[]cke.ExtenderConfig{
+			[]*cke.ExtenderConfig{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -103,7 +103,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 					FilterVerb: "get",
 				},
 			},
-			[]cke.ExtenderConfig{
+			[]*cke.ExtenderConfig{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",

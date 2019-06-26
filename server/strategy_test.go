@@ -233,7 +233,7 @@ func (d testData) withScheduler() testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.HyperkubeImage.Name()
-		st.BuiltInParams = k8s.SchedulerParams(false)
+		st.BuiltInParams = k8s.SchedulerParams()
 	}
 	return d
 }

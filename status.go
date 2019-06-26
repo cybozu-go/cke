@@ -124,9 +124,8 @@ type KubeComponentStatus struct {
 // SchedulerStatus represents kube-scheduler status and health
 type SchedulerStatus struct {
 	ServiceStatus
-	IsHealthy     bool
-	HasConfigFlag bool
-	Extenders     []ExtenderConfig
+	IsHealthy bool
+	Extenders []*ExtenderConfig
 }
 
 // KubeletStatus represents kubelet status and health

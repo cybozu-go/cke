@@ -82,8 +82,9 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		}
 	}
 
-	hasExtConfigFlag := containCommandOption(ss[KubeSchedulerContainerName].ExtraParams.ExtraArguments, "--config")
+	hasExtConfigFlag := containCommandOption(ss[KubeSchedulerContainerName].BuiltInParams.ExtraArguments, "--config")
 
+	// TODO: move cke.Policy to scheduler.Policy
 	var policy cke.Policy
 	if hasExtConfigFlag {
 		policyStr, stderr, err := agent.Run("cat " + PolicyConfigPath)
@@ -93,21 +94,21 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 				"stdout":    string(policyStr),
 				"stderr":    string(stderr),
 			})
-		} else {
-			err = ghodssyaml.Unmarshal(policyStr, &policy)
-			if err != nil {
-				log.Warn("failed to unmarshal policy config json", map[string]interface{}{
-					log.FnError: err,
-					"string":    policyStr,
-				})
-			}
+			return nil, err
+		}
+		err = ghodssyaml.Unmarshal(policyStr, &policy)
+		if err != nil {
+			log.Error("failed to unmarshal policy config json", map[string]interface{}{
+				log.FnError: err,
+				"string":    policyStr,
+			})
+			return nil, err
 		}
 	}
 
 	status.Scheduler = cke.SchedulerStatus{
 		ServiceStatus: ss[KubeSchedulerContainerName],
 		IsHealthy:     false,
-		HasConfigFlag: hasExtConfigFlag,
 		Extenders:     policy.ExtenderConfigs,
 	}
 

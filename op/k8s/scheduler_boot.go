@@ -51,7 +51,7 @@ func (o *schedulerBootOp) NextCommand() cke.Commander {
 	case 3:
 		o.step++
 		return common.RunContainerCommand(o.nodes, op.KubeSchedulerContainerName, cke.HyperkubeImage,
-			common.WithParams(SchedulerParams(len(o.params.Extenders) > 0)),
+			common.WithParams(SchedulerParams()),
 			common.WithExtra(o.params.ServiceParams))
 	default:
 		return nil
@@ -73,6 +73,7 @@ type prepareSchedulerFilesCommand struct {
 }
 
 func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+	const schedulerKubeconfigPath = "/etc/kubernetes/scheduler/kubeconfig"
 	storage := inf.Storage()
 
 	ca, err := storage.GetCACertificate(ctx, "kubernetes")
@@ -87,20 +88,16 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
 		return clientcmd.Write(*cfg)
 	}
-	err = c.files.AddFile(ctx, op.SchedulerKubeconfigPath, g)
+	err = c.files.AddFile(ctx, schedulerKubeconfigPath, g)
 	if err != nil {
 		return err
 	}
 
-	if len(c.params.Extenders) == 0 {
-		return nil
-	}
-
-	err = c.files.AddFile(ctx, op.PolicyConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		var configs []cke.ExtenderConfig
+	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		var configs []*cke.ExtenderConfig
 		for _, extStr := range c.params.Extenders {
-			conf := cke.ExtenderConfig{}
-			err = ghodssyaml.Unmarshal([]byte(extStr), &conf)
+			conf := new(cke.ExtenderConfig)
+			err = ghodssyaml.Unmarshal([]byte(extStr), conf)
 			if err != nil {
 				return nil, err
 			}
@@ -108,7 +105,8 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		}
 		policy := cke.Policy{TypeMeta: metav1.TypeMeta{Kind: "Policy", APIVersion: "v1"}, ExtenderConfigs: configs}
 		return json.Marshal(policy)
-	})
+	}
+	err = c.files.AddFile(ctx, op.PolicyConfigPath, g)
 	if err != nil {
 		return err
 	}
@@ -124,7 +122,7 @@ algorithmSource:
       path: %s
 leaderElection:
   leaderElect: true
-`, op.SchedulerKubeconfigPath, op.PolicyConfigPath)
+`, schedulerKubeconfigPath, op.PolicyConfigPath)
 
 	return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		return []byte(schedulerConfig), nil
@@ -138,17 +136,14 @@ func (c prepareSchedulerFilesCommand) Command() cke.Command {
 }
 
 // SchedulerParams returns parameters for kube-scheduler.
-func SchedulerParams(withExtender bool) cke.ServiceParams {
+func SchedulerParams() cke.ServiceParams {
 	args := []string{
 		"scheduler",
-		"--kubeconfig=" + op.SchedulerKubeconfigPath,
+		"--config=" + op.SchedulerConfigPath,
 		// for healthz service
 		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),
 		"--tls-private-key-file=" + op.K8sPKIPath("apiserver.key"),
 		"--port=0",
-	}
-	if withExtender {
-		args = append(args, "--config="+op.SchedulerConfigPath)
 	}
 	return cke.ServiceParams{
 		ExtraArguments: args,
