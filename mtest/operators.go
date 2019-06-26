@@ -249,9 +249,9 @@ func TestOperators() {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 
-		stdout, stderr, err := execAt(node1, "sudo", "jq", "'.extenders[0]'", op.PolicyConfigPath)
+		stdout, stderr, err := execAt(node1, "sudo", "jq", "-r", "'.extenders[0].urlPrefix'", op.PolicyConfigPath)
 		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
-		Expect(strings.TrimSpace(string(stdout))).To(Equal("{}"))
+		Expect(strings.TrimSpace(string(stdout))).To(Equal("http://127.0.0.1:8000"))
 	})
 
 	It("updates Node resources", func() {
