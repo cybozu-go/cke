@@ -14,6 +14,7 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
 	ghodssyaml "github.com/ghodss/yaml"
@@ -84,8 +85,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 
 	hasExtConfigFlag := containCommandOption(ss[KubeSchedulerContainerName].BuiltInParams.ExtraArguments, "--config")
 
-	// TODO: move cke.Policy to scheduler.Policy
-	var policy cke.Policy
+	var policy scheduler.Policy
 	if hasExtConfigFlag {
 		policyStr, stderr, err := agent.Run("cat " + PolicyConfigPath)
 		if err != nil {

@@ -8,6 +8,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
+	"github.com/cybozu-go/cke/scheduler"
 	ghodssyaml "github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
@@ -94,16 +95,16 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	}
 
 	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		var configs []*cke.ExtenderConfig
+		var configs []*scheduler.ExtenderConfig
 		for _, extStr := range c.params.Extenders {
-			conf := new(cke.ExtenderConfig)
+			conf := new(scheduler.ExtenderConfig)
 			err = ghodssyaml.Unmarshal([]byte(extStr), conf)
 			if err != nil {
 				return nil, err
 			}
 			configs = append(configs, conf)
 		}
-		policy := cke.Policy{TypeMeta: metav1.TypeMeta{Kind: "Policy", APIVersion: "v1"}, ExtenderConfigs: configs}
+		policy := scheduler.Policy{TypeMeta: metav1.TypeMeta{Kind: "Policy", APIVersion: "v1"}, ExtenderConfigs: configs}
 		return json.Marshal(policy)
 	}
 	err = c.files.AddFile(ctx, op.PolicyConfigPath, g)

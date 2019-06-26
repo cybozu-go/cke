@@ -2,6 +2,7 @@ package cke
 
 import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
+	"github.com/cybozu-go/cke/scheduler"
 
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -125,7 +126,7 @@ type KubeComponentStatus struct {
 type SchedulerStatus struct {
 	ServiceStatus
 	IsHealthy bool
-	Extenders []*ExtenderConfig
+	Extenders []*scheduler.ExtenderConfig
 }
 
 // KubeletStatus represents kubelet status and health

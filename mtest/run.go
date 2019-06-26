@@ -220,7 +220,7 @@ func runCKE(image string) error {
 				"-e GOFAIL_HTTP=0.0.0.0:1234 " +
 				"--mount type=bind,source=/var/lib/cke,target=/var/lib/cke " +
 				"--mount type=bind,source=/etc/cke/,target=/etc/cke/ " +
-				image + " --config /etc/cke/cke.yml --interval 3s --session-ttl 5s")
+				image + " --config /etc/cke/cke.yml --interval 3s --session-ttl 5s --loglevel debug")
 		})
 	}
 	env.Stop()
