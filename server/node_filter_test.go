@@ -26,8 +26,8 @@ func TestEqualExtenderConfigs(t *testing.T) {
 			}},
 		},
 		{
-			"order is difference",
-			true,
+			"if order is difference, it should return false",
+			false,
 			[]*scheduler.ExtenderConfig{
 				{
 					URLPrefix:  "http://localhost:8000",
