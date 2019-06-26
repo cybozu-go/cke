@@ -1,5 +1,10 @@
 module github.com/cybozu-go/cke
 
+replace (
+	labix.org/v2/mgo => github.com/globalsign/mgo v0.0.0-20180615134936-113d3961e731
+	launchpad.net/gocheck => github.com/go-check/check v0.0.0-20180628173108-788fd7840127
+)
+
 require (
 	github.com/99designs/gqlgen v0.7.1
 	github.com/DataDog/datadog-go v0.0.0-20180822151419-281ae9f2d895 // indirect
