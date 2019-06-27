@@ -286,7 +286,7 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		default:
 		}
 
-		log.Info("record targerts", map[string]interface{}{
+		log.Info("record targets", map[string]interface{}{
 			"op":      op.Name(),
 			"targets": strings.Join(op.Targets(), " "),
 		})

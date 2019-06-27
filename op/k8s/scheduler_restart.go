@@ -10,18 +10,19 @@ type schedulerRestartOp struct {
 	nodes []*cke.Node
 
 	cluster string
-	params  cke.ServiceParams
+	params  cke.SchedulerParams
 
-	pulled   bool
-	finished bool
+	step  int
+	files *common.FilesBuilder
 }
 
 // SchedulerRestartOp returns an Operator to restart kube-scheduler
-func SchedulerRestartOp(nodes []*cke.Node, cluster string, params cke.ServiceParams) cke.Operator {
+func SchedulerRestartOp(nodes []*cke.Node, cluster string, params cke.SchedulerParams) cke.Operator {
 	return &schedulerRestartOp{
 		nodes:   nodes,
 		cluster: cluster,
 		params:  params,
+		files:   common.NewFilesBuilder(nodes),
 	}
 }
 
@@ -30,19 +31,25 @@ func (o *schedulerRestartOp) Name() string {
 }
 
 func (o *schedulerRestartOp) NextCommand() cke.Commander {
-	if !o.pulled {
-		o.pulled = true
+	switch o.step {
+	case 0:
+		o.step++
 		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
-	}
-
-	if !o.finished {
-		o.finished = true
+	case 1:
+		o.step++
+		return prepareSchedulerFilesCommand{o.cluster, o.files, o.params}
+	case 2:
+		o.step++
+		return o.files
+	case 3:
+		o.step++
 		return common.RunContainerCommand(o.nodes, op.KubeSchedulerContainerName, cke.HyperkubeImage,
 			common.WithParams(SchedulerParams()),
-			common.WithExtra(o.params),
+			common.WithExtra(o.params.ServiceParams),
 			common.WithRestart())
+	default:
+		return nil
 	}
-	return nil
 }
 
 func (o *schedulerRestartOp) Targets() []string {

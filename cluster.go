@@ -4,12 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/containernetworking/cni/libcni"
-	yaml "gopkg.in/yaml.v2"
+	"github.com/cybozu-go/cke/scheduler"
+	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -114,6 +116,12 @@ type CNIConfFile struct {
 	Content string `json:"content" yaml:"content"`
 }
 
+// SchedulerParams is a set of extra parameters for kube-scheduler.
+type SchedulerParams struct {
+	ServiceParams `yaml:",inline"`
+	Extenders     []string `json:"extenders" yaml:"extenders"`
+}
+
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
 	ServiceParams            `yaml:",inline"`
@@ -142,7 +150,7 @@ type Options struct {
 	EtcdRivers        ServiceParams   `json:"etcd-rivers"             yaml:"etcd-rivers"`
 	APIServer         APIServerParams `json:"kube-api"                yaml:"kube-api"`
 	ControllerManager ServiceParams   `json:"kube-controller-manager" yaml:"kube-controller-manager"`
-	Scheduler         ServiceParams   `json:"kube-scheduler"          yaml:"kube-scheduler"`
+	Scheduler         SchedulerParams `json:"kube-scheduler"          yaml:"kube-scheduler"`
 	Proxy             ServiceParams   `json:"kube-proxy"              yaml:"kube-proxy"`
 	Kubelet           KubeletParams   `json:"kubelet"                 yaml:"kubelet"`
 }
@@ -413,6 +421,20 @@ func validateOptions(opts Options) error {
 		policy := make(map[string]interface{})
 		err = yaml.Unmarshal([]byte(opts.APIServer.AuditLogPolicy), &policy)
 		if err != nil {
+			return err
+		}
+	}
+
+	for _, e := range opts.Scheduler.Extenders {
+		config := scheduler.ExtenderConfig{}
+		err = yaml.Unmarshal([]byte(e), &config)
+		if err != nil {
+			return err
+		}
+		if len(config.URLPrefix) == 0 {
+			return errors.New("no urlPrefix is provided")
+		}
+		if _, err = url.Parse(config.URLPrefix); err != nil {
 			return err
 		}
 	}

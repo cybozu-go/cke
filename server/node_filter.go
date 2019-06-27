@@ -1,6 +1,7 @@
 package server
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
@@ -8,7 +9,9 @@ import (
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
+	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/log"
+	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -353,9 +356,23 @@ func (nf *NodeFilter) SchedulerStoppedNodes() (nodes []*cke.Node) {
 }
 
 // SchedulerOutdatedNodes returns nodes that are running kube-scheduler with outdated image or params.
-func (nf *NodeFilter) SchedulerOutdatedNodes() (nodes []*cke.Node) {
+func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.Node) {
 	currentBuiltIn := k8s.SchedulerParams()
 	currentExtra := nf.cluster.Options.Scheduler
+
+	var extConfigs []*scheduler.ExtenderConfig
+	for _, ext := range extenders {
+		conf := new(scheduler.ExtenderConfig)
+		err := yaml.Unmarshal([]byte(ext), conf)
+		if err != nil {
+			log.Warn("failed to unmarshal extender config", map[string]interface{}{
+				log.FnError: err,
+				"config":    ext,
+			})
+			panic(err)
+		}
+		extConfigs = append(extConfigs, conf)
+	}
 
 	for _, n := range nf.cp {
 		st := nf.nodeStatus(n).Scheduler
@@ -366,11 +383,39 @@ func (nf *NodeFilter) SchedulerOutdatedNodes() (nodes []*cke.Node) {
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
-		case !currentExtra.Equal(st.ExtraParams):
+		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
+			fallthrough
+		case !equalExtenderConfigs(extConfigs, st.Extenders):
+			log.Debug("node has been appended", map[string]interface{}{
+				"node":                    n.Nodename(),
+				"st_builtin_args":         st.BuiltInParams.ExtraArguments,
+				"st_builtin_env":          st.BuiltInParams.ExtraEnvvar,
+				"st_extra_args":           st.ExtraParams.ExtraArguments,
+				"st_extra_env":            st.ExtraParams.ExtraEnvvar,
+				"st_extra_extenders":      st.Extenders,
+				"current_builtin_args":    currentBuiltIn.ExtraArguments,
+				"current_builtin_env":     currentBuiltIn.ExtraEnvvar,
+				"current_extra_args":      currentExtra.ExtraArguments,
+				"current_extra_env":       currentExtra.ExtraEnvvar,
+				"current_extra_extenders": currentExtra.Extenders,
+				"current_ext_configs":     extConfigs,
+			})
 			nodes = append(nodes, n)
 		}
 	}
 	return nodes
+}
+
+func equalExtenderConfigs(configs1, configs2 []*scheduler.ExtenderConfig) bool {
+	if len(configs1) != len(configs2) {
+		return false
+	}
+	for i := range configs1 {
+		if !reflect.DeepEqual(configs1[i], configs2[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 // KubeletStoppedNodes returns nodes that are not running kubelet.

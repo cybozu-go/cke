@@ -96,7 +96,7 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	if nodes := nf.SchedulerStoppedNodes(); len(nodes) > 0 {
 		ops = append(ops, k8s.SchedulerBootOp(nodes, c.Name, c.Options.Scheduler))
 	}
-	if nodes := nf.SchedulerOutdatedNodes(); len(nodes) > 0 {
+	if nodes := nf.SchedulerOutdatedNodes(c.Options.Scheduler.Extenders); len(nodes) > 0 {
 		ops = append(ops, k8s.SchedulerRestartOp(nodes, c.Name, c.Options.Scheduler))
 	}
 	if nodes := nf.KubeletStoppedNodes(); len(nodes) > 0 {

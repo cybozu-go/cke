@@ -14,9 +14,10 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
-	yaml "gopkg.in/yaml.v2"
+	"github.com/ghodss/yaml"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -81,10 +82,35 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		}
 	}
 
-	status.Scheduler = cke.KubeComponentStatus{
+	hasExtConfigFlag := containCommandOption(ss[KubeSchedulerContainerName].BuiltInParams.ExtraArguments, "--config")
+
+	var policy scheduler.Policy
+	if hasExtConfigFlag {
+		policyStr, stderr, err := agent.Run("cat " + PolicyConfigPath)
+		if err != nil {
+			log.Error("failed to cat "+PolicyConfigPath, map[string]interface{}{
+				log.FnError: err,
+				"stdout":    string(policyStr),
+				"stderr":    string(stderr),
+			})
+			return nil, err
+		}
+		err = yaml.Unmarshal(policyStr, &policy)
+		if err != nil {
+			log.Error("failed to unmarshal policy config json", map[string]interface{}{
+				log.FnError: err,
+				"string":    policyStr,
+			})
+			return nil, err
+		}
+	}
+
+	status.Scheduler = cke.SchedulerStatus{
 		ServiceStatus: ss[KubeSchedulerContainerName],
 		IsHealthy:     false,
+		Extenders:     policy.ExtenderConfigs,
 	}
+
 	if status.Scheduler.Running {
 		status.Scheduler.IsHealthy, err = checkSecureHealthz(ctx, inf, node.Address, 10259)
 		if err != nil {
@@ -95,7 +121,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		}
 	}
 
-	// TODO: doe to the following bug, health status cannot be checked for proxy.
+	// TODO: due to the following bug, health status cannot be checked for proxy.
 	// https://github.com/kubernetes/kubernetes/issues/65118
 	status.Proxy = cke.KubeComponentStatus{
 		ServiceStatus: ss[KubeProxyContainerName],
@@ -599,4 +625,18 @@ func checkAPIServerHealth(ctx context.Context, inf cke.Infrastructure, n *cke.No
 		return false, err
 	}
 	return true, nil
+}
+
+func containCommandOption(slice []string, optionName string) bool {
+	for _, v := range slice {
+		switch {
+		case v == optionName:
+			return true
+		case strings.HasPrefix(v, optionName+"="):
+			return true
+		case strings.HasPrefix(v, optionName+" "):
+			return true
+		}
+	}
+	return false
 }
