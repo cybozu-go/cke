@@ -2,5 +2,4 @@
 
 CURRENT_DIR=$(cd $(dirname $0);pwd)
 chmod 600 ${CURRENT_DIR}/mtest_key
-sudo chown cybozu:cybozu ${CURRENT_DIR}/mtest_key
 ssh -F ${CURRENT_DIR}/ssh_config $@

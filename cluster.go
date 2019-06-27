@@ -11,8 +11,7 @@ import (
 
 	"github.com/containernetworking/cni/libcni"
 	"github.com/cybozu-go/cke/scheduler"
-	ghodssyaml "github.com/ghodss/yaml"
-	"gopkg.in/yaml.v2"
+	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -428,7 +427,7 @@ func validateOptions(opts Options) error {
 
 	for _, e := range opts.Scheduler.Extenders {
 		config := scheduler.ExtenderConfig{}
-		err = ghodssyaml.Unmarshal([]byte(e), &config)
+		err = yaml.Unmarshal([]byte(e), &config)
 		if err != nil {
 			return err
 		}

@@ -11,6 +11,7 @@ import (
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/op/nodedns"
+	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/cke/static"
 	"github.com/google/go-cmp/cmp"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -570,6 +571,15 @@ func TestDecideOps(t *testing.T) {
 			Name: "RestartScheduler3",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.ExtraParams.ExtraArguments = []string{"foo"}
+			}),
+			ExpectedOps: []string{
+				"kube-scheduler-restart",
+			},
+		},
+		{
+			Name: "RestartScheduler4",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Extenders = []*scheduler.ExtenderConfig{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
 			}),
 			ExpectedOps: []string{
 				"kube-scheduler-restart",

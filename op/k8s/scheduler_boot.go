@@ -9,7 +9,7 @@ import (
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 	"github.com/cybozu-go/cke/scheduler"
-	ghodssyaml "github.com/ghodss/yaml"
+	"github.com/ghodss/yaml"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -74,7 +74,7 @@ type prepareSchedulerFilesCommand struct {
 }
 
 func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
-	const schedulerKubeconfigPath = "/etc/kubernetes/scheduler/kubeconfig"
+	const kubeconfigPath = "/etc/kubernetes/scheduler/kubeconfig"
 	storage := inf.Storage()
 
 	ca, err := storage.GetCACertificate(ctx, "kubernetes")
@@ -89,7 +89,7 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
 		return clientcmd.Write(*cfg)
 	}
-	err = c.files.AddFile(ctx, schedulerKubeconfigPath, g)
+	err = c.files.AddFile(ctx, kubeconfigPath, g)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		var configs []*scheduler.ExtenderConfig
 		for _, extStr := range c.params.Extenders {
 			conf := new(scheduler.ExtenderConfig)
-			err = ghodssyaml.Unmarshal([]byte(extStr), conf)
+			err = yaml.Unmarshal([]byte(extStr), conf)
 			if err != nil {
 				return nil, err
 			}
@@ -123,7 +123,7 @@ algorithmSource:
       path: %s
 leaderElection:
   leaderElect: true
-`, schedulerKubeconfigPath, op.PolicyConfigPath)
+`, kubeconfigPath, op.PolicyConfigPath)
 
 	return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		return []byte(schedulerConfig), nil

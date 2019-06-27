@@ -11,7 +11,7 @@ import (
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/log"
-	ghodssyaml "github.com/ghodss/yaml"
+	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -363,7 +363,7 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.N
 	var extConfigs []*scheduler.ExtenderConfig
 	for _, ext := range extenders {
 		conf := new(scheduler.ExtenderConfig)
-		err := ghodssyaml.Unmarshal([]byte(ext), conf)
+		err := yaml.Unmarshal([]byte(ext), conf)
 		if err != nil {
 			log.Warn("failed to unmarshal extender config", map[string]interface{}{
 				log.FnError: err,

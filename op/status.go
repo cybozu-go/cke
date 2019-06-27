@@ -17,8 +17,7 @@ import (
 	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
-	ghodssyaml "github.com/ghodss/yaml"
-	"gopkg.in/yaml.v2"
+	"github.com/ghodss/yaml"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -96,7 +95,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			})
 			return nil, err
 		}
-		err = ghodssyaml.Unmarshal(policyStr, &policy)
+		err = yaml.Unmarshal(policyStr, &policy)
 		if err != nil {
 			log.Error("failed to unmarshal policy config json", map[string]interface{}{
 				log.FnError: err,
@@ -122,7 +121,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		}
 	}
 
-	// TODO: doe to the following bug, health status cannot be checked for proxy.
+	// TODO: due to the following bug, health status cannot be checked for proxy.
 	// https://github.com/kubernetes/kubernetes/issues/65118
 	status.Proxy = cke.KubeComponentStatus{
 		ServiceStatus: ss[KubeProxyContainerName],
