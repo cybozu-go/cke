@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.7] - 2019-06-28
+
+### Fixed
+
+- Fix bug on getting status.Scheduler (#193)
+
 ## [1.14.6] - 2019-06-27
 
 ### Added
@@ -190,7 +196,8 @@ No user-visible changes since RC 1.
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.6...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.7...HEAD
+[1.14.7]: https://github.com/cybozu-go/cke/compare/v1.14.6...v1.14.7
 [1.14.6]: https://github.com/cybozu-go/cke/compare/v1.14.5...v1.14.6
 [1.14.5]: https://github.com/cybozu-go/cke/compare/v1.14.4...v1.14.5
 [1.14.4]: https://github.com/cybozu-go/cke/compare/v1.14.3...v1.14.4
