@@ -82,10 +82,8 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		}
 	}
 
-	hasExtConfigFlag := containCommandOption(ss[KubeSchedulerContainerName].BuiltInParams.ExtraArguments, "--config")
-
 	var policy scheduler.Policy
-	if hasExtConfigFlag {
+	if _, _, err := agent.Run("test -f " + PolicyConfigPath); err == nil {
 		policyStr, stderr, err := agent.Run("cat " + PolicyConfigPath)
 		if err != nil {
 			log.Error("failed to cat "+PolicyConfigPath, map[string]interface{}{
