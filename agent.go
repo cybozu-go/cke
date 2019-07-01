@@ -156,6 +156,7 @@ func (a sshAgent) RunWithTimeout(command, input string, timeout time.Duration) (
 		log.Error("failed to run command: ", map[string]interface{}{
 			log.FnError: err,
 			"command":   command,
+			"stderr":    string(stderr),
 		})
 		return stdout, stderr, err
 	}
