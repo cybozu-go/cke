@@ -82,31 +82,9 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		}
 	}
 
-	var policy scheduler.Policy
-	if _, _, err := agent.Run("test -f " + PolicyConfigPath); err == nil {
-		policyStr, stderr, err := agent.Run("cat " + PolicyConfigPath)
-		if err != nil {
-			log.Error("failed to cat "+PolicyConfigPath, map[string]interface{}{
-				log.FnError: err,
-				"stdout":    string(policyStr),
-				"stderr":    string(stderr),
-			})
-			return nil, err
-		}
-		err = yaml.Unmarshal(policyStr, &policy)
-		if err != nil {
-			log.Error("failed to unmarshal policy config json", map[string]interface{}{
-				log.FnError: err,
-				"string":    policyStr,
-			})
-			return nil, err
-		}
-	}
-
 	status.Scheduler = cke.SchedulerStatus{
 		ServiceStatus: ss[KubeSchedulerContainerName],
 		IsHealthy:     false,
-		Extenders:     policy.ExtenderConfigs,
 	}
 
 	if status.Scheduler.Running {
@@ -117,6 +95,26 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 				"node":      node.Address,
 			})
 		}
+
+		var policy scheduler.Policy
+		policyStr, _, err := agent.Run("cat " + PolicyConfigPath)
+		if err != nil {
+			log.Error("failed to cat "+PolicyConfigPath, map[string]interface{}{
+				log.FnError: err,
+				"node":      node.Address,
+			})
+			return nil, err
+		}
+		err = yaml.Unmarshal(policyStr, &policy)
+		if err != nil {
+			log.Error("failed to unmarshal policy config json", map[string]interface{}{
+				log.FnError: err,
+				"node":      node.Address,
+				"data":      policyStr,
+			})
+			return nil, err
+		}
+		status.Scheduler.Extenders = policy.ExtenderConfigs
 	}
 
 	// TODO: due to the following bug, health status cannot be checked for proxy.
