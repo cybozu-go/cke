@@ -88,7 +88,7 @@ Expired certificates in cert_store and revoked_certs should be cleaned up by fol
 vault write <target> tidy_cert_store=true tidy_revoked_certs=true
 ```
 
-CKE executes this command for all pki secret engines periodically. 
+CKE executes this command for all pki secret engines periodically.
 
 
 [Vault]: https://www.vaultproject.io/

@@ -21,13 +21,14 @@ var (
 type Controller struct {
 	session  *concurrency.Session
 	interval time.Duration
+	certsGCInterval time.Duration
 	timeout  time.Duration
 	addon    Integrator
 }
 
 // NewController construct controller instance
-func NewController(s *concurrency.Session, interval, timeout time.Duration, addon Integrator) Controller {
-	return Controller{s, interval, timeout, addon}
+func NewController(s *concurrency.Session, interval, gcInterval, timeout time.Duration, addon Integrator) Controller {
+	return Controller{s, interval, gcInterval, timeout, addon}
 }
 
 // Run execute procedures with leader elections
@@ -109,6 +110,28 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 				return err
 			}
 		}
+	})
+
+	env.Go(func(ctx context.Context) error {
+		select {
+		case <-watchChan:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+			ticker := time.NewTicker(c.certsGCInterval)
+		defer ticker.Stop()
+			for {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+			err := c.runTidyExpiredCertificates(ctx, leaderKey, ticker.C, watchChan, addonChan)
+			if err != nil {
+				return err
+			}
+		}
+
 	})
 
 	env.Stop()
@@ -330,3 +353,64 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 	})
 	return nil
 }
+
+func (c Controller) runTidyExpiredCertificates(ctx context.Context, leaderKey string, tick <-chan time.Time, watchChan, addonChan <-chan struct{}) error {
+	wait := false
+	defer func() {
+		if !wait {
+			return
+		}
+		select {
+		case <-watchChan:
+		case <-addonChan:
+		case <-ctx.Done():
+		case <-tick:
+		}
+	}()
+
+	storage := cke.Storage{
+		Client: c.session.Client(),
+	}
+	cluster, err := storage.GetCluster(ctx)
+	switch err {
+	case cke.ErrNotFound:
+		wait = true
+		if c.addon != nil {
+			return c.addon.Do(ctx, leaderKey)
+		}
+		return nil
+	case nil:
+	default:
+		return err
+	}
+
+	err = cluster.Validate()
+	if err != nil {
+		log.Error("invalid cluster configuration", map[string]interface{}{
+			log.FnError: err,
+		})
+		wait = true
+		// return nil
+		return nil
+	}
+
+	inf, err := cke.NewInfrastructure(ctx, cluster, storage)
+	if err != nil {
+		wait = true
+		log.Error("failed to initialize infrastructure", map[string]interface{}{
+			log.FnError: err,
+		})
+		if c.addon != nil {
+			return c.addon.Do(ctx, leaderKey)
+		}
+		// return nil
+		return nil
+	}
+	defer inf.Close()
+
+
+	// TODO: call TidyExpiredCertificates
+
+	return nil
+}
+
