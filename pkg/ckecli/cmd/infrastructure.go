@@ -20,7 +20,7 @@ var httpClient = &well.HTTPClient{
 	Client: &http.Client{},
 }
 
-// cliInfrastructure impelements cke.Infrastructure for CLI usage.
+// cliInfrastructure implements cke.Infrastructure for CLI usage.
 type cliInfrastructure struct {
 	vc   *vault.Client
 	etcd *clientv3.Client

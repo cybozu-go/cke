@@ -9,40 +9,11 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
-	vault "github.com/hashicorp/vault/api"
 )
 
-func addRole(client *vault.Client, ca, role string, data map[string]interface{}) error {
-	l := client.Logical()
-	rpath := path.Join(ca, "roles", role)
-	secret, err := l.Read(rpath)
-	if err != nil {
-		return err
-	}
-	if secret != nil {
-		// already exists
-		return nil
-	}
-
-	_, err = l.Write(rpath, data)
-	if err != nil {
-		log.Error("failed to create vault role", map[string]interface{}{
-			log.FnError: err,
-			"ca":        ca,
-			"role":      role,
-		})
-	}
-	return err
-}
-
 // TidyExpiredCertificates call tidy endpoints of Vault API
-func (c Controller) TidyExpiredCertificates(ctx context.Context, inf cke.Infrastructure, ca, role string, roleOpts map[string]interface{}) error {
+func (c Controller) TidyExpiredCertificates(ctx context.Context, inf cke.Infrastructure, ca string) error {
 	client, err := inf.Vault()
-	if err != nil {
-		return err
-	}
-
-	err = addRole(client, ca, role, roleOpts)
 	if err != nil {
 		return err
 	}
@@ -50,23 +21,37 @@ func (c Controller) TidyExpiredCertificates(ctx context.Context, inf cke.Infrast
 	tidyParams := make(map[string]interface{})
 	tidyParams["tidy_cert_store"] = true
 	tidyParams["tidy_revocation_list"] = true
-	tidyParams["safety_buffer"] = (1 * time.Minute).String()
+	tidyParams["safety_buffer"] = (time.Minute).String()
 	res, err := client.Logical().Write(path.Join(ca, "tidy"), tidyParams)
 	if err != nil {
 		return err
 	}
 
+	// TODO: More appropriate error detection.
+	// Vault client does not provide an interface to detect whether errors have occurred or not.
 	if len(res.Warnings) == 0 {
-		log.Warn("failed to tidy certs without any response message", nil)
-		return errors.New("failed to tidy certs without any response message")
+		log.Warn("may be failed to tidy certs, since an empty message is returned", map[string]interface{}{
+			"ca":         ca,
+			"request_id": res.RequestID,
+		})
+		return errors.New("may be failed to tidy certs, since an empty message is returned")
 	}
-
+	// TODO: More appropriate error detection.
+	// Currently, use this message. https://github.com/hashicorp/vault/blob/975db34faf38f5bf564d13da38e141975d9f0fe3/builtin/credential/approle/path_tidy_user_id.go#L240
 	if res.Warnings[0] != "Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs." {
-		log.Warn("failed to tidy certs: ", map[string]interface{}{
-			"message": strings.Join(res.Warnings, ", "),
+		log.Warn("may be failed to tidy certs, since the expected warning message is not found", map[string]interface{}{
+			"ca":          ca,
+			"request_id":  res.RequestID,
+			log.FnMessage: strings.Join(res.Warnings, ", "),
 		})
 		return errors.New("failed to tidy certs: " + strings.Join(res.Warnings, ", "))
 	}
+
+	log.Info("invoke vault tidy", map[string]interface{}{
+		"ca":          ca,
+		"request_id":  res.RequestID,
+		log.FnMessage: strings.Join(res.Warnings, ", "),
+	})
 
 	return nil
 }

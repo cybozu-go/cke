@@ -19,11 +19,11 @@ var (
 
 // Controller manage operations
 type Controller struct {
-	session  *concurrency.Session
-	interval time.Duration
+	session         *concurrency.Session
+	interval        time.Duration
 	certsGCInterval time.Duration
-	timeout  time.Duration
-	addon    Integrator
+	timeout         time.Duration
+	addon           Integrator
 }
 
 // NewController construct controller instance
@@ -118,9 +118,9 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		}
-			ticker := time.NewTicker(c.certsGCInterval)
+		ticker := time.NewTicker(c.certsGCInterval)
 		defer ticker.Stop()
-			for {
+		for {
 			select {
 			case <-ctx.Done():
 				return nil
@@ -408,9 +408,14 @@ func (c Controller) runTidyExpiredCertificates(ctx context.Context, leaderKey st
 	}
 	defer inf.Close()
 
-
-	// TODO: call TidyExpiredCertificates
+	for _, ca := range cke.CAKeys {
+		if err := c.TidyExpiredCertificates(ctx, inf, ca); err != nil {
+			log.Warn("failed to tidy expired certificates", map[string]interface{}{
+				log.FnError: err,
+				"ca":        ca,
+			})
+		}
+	}
 
 	return nil
 }
-
