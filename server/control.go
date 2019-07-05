@@ -114,9 +114,9 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 
 	env.Go(func(ctx context.Context) error {
 		select {
-		case <-watchChan:
 		case <-ctx.Done():
 			return ctx.Err()
+		default:
 		}
 		ticker := time.NewTicker(c.certsGCInterval)
 		defer ticker.Stop()
@@ -126,12 +126,11 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 				return nil
 			default:
 			}
-			err := c.runTidyExpiredCertificates(ctx, leaderKey, ticker.C, watchChan, addonChan)
+			err := c.runTidyExpiredCertificates(ctx, leaderKey, ticker.C)
 			if err != nil {
 				return err
 			}
 		}
-
 	})
 
 	env.Stop()
@@ -354,15 +353,13 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 	return nil
 }
 
-func (c Controller) runTidyExpiredCertificates(ctx context.Context, leaderKey string, tick <-chan time.Time, watchChan, addonChan <-chan struct{}) error {
+func (c Controller) runTidyExpiredCertificates(ctx context.Context, leaderKey string, tick <-chan time.Time) error {
 	wait := false
 	defer func() {
 		if !wait {
 			return
 		}
 		select {
-		case <-watchChan:
-		case <-addonChan:
 		case <-ctx.Done():
 		case <-tick:
 		}
@@ -371,45 +368,19 @@ func (c Controller) runTidyExpiredCertificates(ctx context.Context, leaderKey st
 	storage := cke.Storage{
 		Client: c.session.Client(),
 	}
-	cluster, err := storage.GetCluster(ctx)
-	switch err {
-	case cke.ErrNotFound:
-		wait = true
-		if c.addon != nil {
-			return c.addon.Do(ctx, leaderKey)
-		}
-		return nil
-	case nil:
-	default:
+
+	cfg, err := storage.GetVaultConfig(ctx)
+	if err != nil {
 		return err
 	}
 
-	err = cluster.Validate()
+	client, _, err := cke.VaultClient(cfg)
 	if err != nil {
-		log.Error("invalid cluster configuration", map[string]interface{}{
-			log.FnError: err,
-		})
-		wait = true
-		// return nil
-		return nil
+		return err
 	}
-
-	inf, err := cke.NewInfrastructure(ctx, cluster, storage)
-	if err != nil {
-		wait = true
-		log.Error("failed to initialize infrastructure", map[string]interface{}{
-			log.FnError: err,
-		})
-		if c.addon != nil {
-			return c.addon.Do(ctx, leaderKey)
-		}
-		// return nil
-		return nil
-	}
-	defer inf.Close()
 
 	for _, ca := range cke.CAKeys {
-		if err := c.TidyExpiredCertificates(ctx, inf, ca); err != nil {
+		if err := c.TidyExpiredCertificates(ctx, client, ca); err != nil {
 			log.Warn("failed to tidy expired certificates", map[string]interface{}{
 				log.FnError: err,
 				"ca":        ca,

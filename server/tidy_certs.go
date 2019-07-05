@@ -7,17 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
+	vault "github.com/hashicorp/vault/api"
 )
 
 // TidyExpiredCertificates call tidy endpoints of Vault API
-func (c Controller) TidyExpiredCertificates(ctx context.Context, inf cke.Infrastructure, ca string) error {
-	client, err := inf.Vault()
-	if err != nil {
-		return err
-	}
-
+func (c Controller) TidyExpiredCertificates(ctx context.Context, client *vault.Client, ca string) error {
 	tidyParams := make(map[string]interface{})
 	tidyParams["tidy_cert_store"] = true
 	tidyParams["tidy_revocation_list"] = true
