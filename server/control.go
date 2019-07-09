@@ -19,15 +19,16 @@ var (
 
 // Controller manage operations
 type Controller struct {
-	session  *concurrency.Session
-	interval time.Duration
-	timeout  time.Duration
-	addon    Integrator
+	session         *concurrency.Session
+	interval        time.Duration
+	certsGCInterval time.Duration
+	timeout         time.Duration
+	addon           Integrator
 }
 
 // NewController construct controller instance
-func NewController(s *concurrency.Session, interval, timeout time.Duration, addon Integrator) Controller {
-	return Controller{s, interval, timeout, addon}
+func NewController(s *concurrency.Session, interval, gcInterval, timeout time.Duration, addon Integrator) Controller {
+	return Controller{s, interval, gcInterval, timeout, addon}
 }
 
 // Run execute procedures with leader elections
@@ -105,6 +106,27 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 			default:
 			}
 			err := c.runOnce(ctx, leaderKey, ticker.C, watchChan, addonChan)
+			if err != nil {
+				return err
+			}
+		}
+	})
+
+	env.Go(func(ctx context.Context) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		ticker := time.NewTicker(c.certsGCInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-ticker.C:
+			}
+			err := c.runTidyExpiredCertificates(ctx)
 			if err != nil {
 				return err
 			}
@@ -328,5 +350,36 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 	log.Info("operation completed", map[string]interface{}{
 		"op": op.Name(),
 	})
+	return nil
+}
+
+func (c Controller) runTidyExpiredCertificates(ctx context.Context) error {
+	storage := cke.Storage{
+		Client: c.session.Client(),
+	}
+
+	cfg, err := storage.GetVaultConfig(ctx)
+	if err != nil {
+		log.Warn("failed to get vault config. skip tidy", map[string]interface{}{
+			log.FnError: err,
+		})
+		// return nil
+		return nil
+	}
+
+	client, _, err := cke.VaultClient(cfg)
+	if err != nil {
+		return err
+	}
+
+	for _, ca := range cke.CAKeys {
+		if err := c.TidyExpiredCertificates(ctx, client, ca); err != nil {
+			log.Warn("failed to tidy expired certificates", map[string]interface{}{
+				log.FnError: err,
+				"ca":        ca,
+			})
+		}
+	}
+
 	return nil
 }

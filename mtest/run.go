@@ -220,7 +220,7 @@ func runCKE(image string) error {
 				"-e GOFAIL_HTTP=0.0.0.0:1234 " +
 				"--mount type=bind,source=/var/lib/cke,target=/var/lib/cke " +
 				"--mount type=bind,source=/etc/cke/,target=/etc/cke/ " +
-				image + " --config /etc/cke/cke.yml --interval 3s --session-ttl 5s --loglevel debug")
+				image + " --config /etc/cke/cke.yml --interval 3s --certs-gc-interval 10s --session-ttl 5s --loglevel debug")
 		})
 	}
 	env.Stop()
@@ -349,7 +349,7 @@ func connectEtcd() (*clientv3.Client, error) {
 }
 
 func getClusterStatus(cluster *cke.Cluster) (*cke.ClusterStatus, []cke.ResourceDefinition, error) {
-	controller := server.NewController(nil, 0, time.Second*2, nil)
+	controller := server.NewController(nil, 0, time.Hour, time.Second*2, nil)
 
 	etcd, err := connectEtcd()
 	if err != nil {

@@ -5,7 +5,9 @@ CKE depends on [Vault][] to issue certificates for etcd and k8s.
 
 This document describes how `ckecli vault init` configures Vault.
 
-## Prerequisites
+## Bootstrapping
+
+### Prerequisites
 
 * `approle` auth method need to be enabled as follows.
 
@@ -13,7 +15,7 @@ This document describes how `ckecli vault init` configures Vault.
 $ vault auth enable approle
 ```
 
-## Secret engines
+### Secret engines
 
 Create following `pki` secret engines and root certificates.
 Root certificates need to be registered with `ckecli`.
@@ -26,7 +28,7 @@ Root certificates need to be registered with `ckecli`.
 
 Additionally, `kv` secret engine version 1 is mounted at `cke/secrets`.
 
-## Secrets in `cke/secrets`
+### Secrets in `cke/secrets`
 
 Currently, there are two secrets in `cke/secrets`.
 
@@ -41,7 +43,7 @@ private key used if matching key for the host is not found.
 Keys in `k8s` are provider names such as `aescbc` or `secretbox`.
 Values are JSON data of cipher keys.
 
-## Policy
+### Policy
 
 Create `cke` policy as follows to allow CKE to manage CAs.
 
@@ -52,7 +54,7 @@ path "cke/*"
 }
 ```
 
-## AppRole
+### AppRole
 
 Create `cke` AppRole to login to Vault as follows:
 
@@ -75,5 +77,18 @@ $ ckecli vault config - <<EOF
 }
 EOF
 ```
+
+## Lifecycle
+
+### Tidy up expired certificates
+
+Expired certificates in cert_store and revoked_certs should be cleaned up by following command:
+
+```console
+vault write <target> tidy_cert_store=true tidy_revoked_certs=true
+```
+
+CKE executes this command for all pki secret engines periodically.
+
 
 [Vault]: https://www.vaultproject.io/

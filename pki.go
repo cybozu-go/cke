@@ -11,7 +11,10 @@ import (
 	vault "github.com/hashicorp/vault/api"
 )
 
-// CA Keys in Vault
+// CNAPIServer is the common name of API server for aggregation
+const CNAPIServer = "front-proxy-client"
+
+// CA keys in Vault
 const (
 	CAServer                = "cke/ca-server"
 	CAEtcdPeer              = "cke/ca-etcd-peer"
@@ -20,8 +23,25 @@ const (
 	CAKubernetesAggregation = "cke/ca-kubernetes-aggregation"
 )
 
-// CNAPIServer is the common name of API server for aggregation
-const CNAPIServer = "front-proxy-client"
+// CAKeys is list of CA keys
+var CAKeys = []string{
+	CAServer,
+	CAEtcdPeer,
+	CAEtcdClient,
+	CAKubernetes,
+	CAKubernetesAggregation,
+}
+
+// Role name in Vault
+const (
+	RoleSystem                = "system"
+	RoleAdmin                 = "admin"
+	RoleKubeScheduler         = "kube-scheduler"
+	RoleKubeControllerManager = "kube-controller-manager"
+	RoleKubelet               = "kubelet"
+	RoleKubeProxy             = "kube-proxy"
+	RoleServiceAccount        = "service-account"
+)
 
 // IssueResponse is cli output format.
 type IssueResponse struct {
@@ -69,7 +89,7 @@ func (e EtcdCA) IssueServerCert(ctx context.Context, inf Infrastructure, node *N
 	for i := range d {
 		altNames = append(altNames, "cke-etcd.kube-system.svc."+strings.Join(d[0:i+1], "."))
 	}
-	return issueCertificate(inf, CAServer, "system",
+	return issueCertificate(inf, CAServer, RoleSystem,
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
@@ -85,7 +105,7 @@ func (e EtcdCA) IssueServerCert(ctx context.Context, inf Infrastructure, node *N
 
 // IssuePeerCert issues TLS certificates for mutual peer authentication.
 func (e EtcdCA) IssuePeerCert(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
-	return issueCertificate(inf, CAEtcdPeer, "system",
+	return issueCertificate(inf, CAEtcdPeer, RoleSystem,
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
@@ -100,7 +120,7 @@ func (e EtcdCA) IssuePeerCert(ctx context.Context, inf Infrastructure, node *Nod
 
 // IssueForAPIServer issues TLC client certificate for Kubernetes.
 func (e EtcdCA) IssueForAPIServer(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
-	return issueCertificate(inf, CAEtcdClient, "system",
+	return issueCertificate(inf, CAEtcdClient, RoleSystem,
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
@@ -115,7 +135,7 @@ func (e EtcdCA) IssueForAPIServer(ctx context.Context, inf Infrastructure, node 
 
 // IssueRoot issues certificate for root user.
 func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
-	return issueCertificate(inf, CAEtcdClient, "admin",
+	return issueCertificate(inf, CAEtcdClient, RoleAdmin,
 		map[string]interface{}{
 			"ttl":            "2h",
 			"max_ttl":        "24h",
@@ -131,7 +151,7 @@ func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key st
 
 // IssueForBackup issues certificate for etcdbackup.
 func (e EtcdCA) IssueForBackup(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
-	return issueCertificate(inf, CAEtcdClient, "admin",
+	return issueCertificate(inf, CAEtcdClient, RoleAdmin,
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
@@ -146,7 +166,7 @@ func (e EtcdCA) IssueForBackup(ctx context.Context, inf Infrastructure) (cert, k
 
 // IssueEtcdClientCertificate issues TLS client certificate for a user.
 func IssueEtcdClientCertificate(inf Infrastructure, username, ttl string) (cert, key string, err error) {
-	return issueCertificate(inf, CAEtcdClient, "system",
+	return issueCertificate(inf, CAEtcdClient, RoleSystem,
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
@@ -165,7 +185,7 @@ type KubernetesCA struct{}
 
 // IssueAdminCert issues client certificate for cluster admin user.
 func (k KubernetesCA) IssueAdminCert(ctx context.Context, inf Infrastructure, ttl string) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "admin",
+	return issueCertificate(inf, CAKubernetes, RoleAdmin,
 		map[string]interface{}{
 			"ttl":               "2h",
 			"max_ttl":           "48h",
@@ -198,7 +218,7 @@ func (k KubernetesCA) IssueForAPIServer(ctx context.Context, inf Infrastructure,
 	}
 	kubeSvcAddr := netutil.IntToIP4(netutil.IP4ToInt(ip) + 1)
 
-	return issueCertificate(inf, CAKubernetes, "system",
+	return issueCertificate(inf, CAKubernetes, RoleSystem,
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
@@ -215,7 +235,7 @@ func (k KubernetesCA) IssueForAPIServer(ctx context.Context, inf Infrastructure,
 
 // IssueForScheduler issues TLS certificate for kube-scheduler.
 func (k KubernetesCA) IssueForScheduler(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "kube-scheduler",
+	return issueCertificate(inf, CAKubernetes, RoleKubeScheduler,
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
@@ -231,7 +251,7 @@ func (k KubernetesCA) IssueForScheduler(ctx context.Context, inf Infrastructure)
 
 // IssueForControllerManager issues TLS certificate for kube-controller-manager.
 func (k KubernetesCA) IssueForControllerManager(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "kube-controller-manager",
+	return issueCertificate(inf, CAKubernetes, RoleKubeControllerManager,
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
@@ -253,7 +273,7 @@ func (k KubernetesCA) IssueForKubelet(ctx context.Context, inf Infrastructure, n
 		altNames = "localhost," + nodename
 	}
 
-	return issueCertificate(inf, CAKubernetes, "kubelet",
+	return issueCertificate(inf, CAKubernetes, RoleKubelet,
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
@@ -271,7 +291,7 @@ func (k KubernetesCA) IssueForKubelet(ctx context.Context, inf Infrastructure, n
 
 // IssueForProxy issues TLS certificate for kube-proxy.
 func (k KubernetesCA) IssueForProxy(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "kube-proxy",
+	return issueCertificate(inf, CAKubernetes, RoleKubeProxy,
 		map[string]interface{}{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
@@ -287,7 +307,7 @@ func (k KubernetesCA) IssueForProxy(ctx context.Context, inf Infrastructure) (cr
 
 // IssueForServiceAccount issues TLS certificate to sign service account tokens.
 func (k KubernetesCA) IssueForServiceAccount(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, "service-account",
+	return issueCertificate(inf, CAKubernetes, RoleServiceAccount,
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
@@ -308,7 +328,7 @@ type AggregationCA struct{}
 
 // IssueClientCertificate issues TLS client certificate for API server
 func (a AggregationCA) IssueClientCertificate(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
-	return issueCertificate(inf, CAKubernetesAggregation, "system",
+	return issueCertificate(inf, CAKubernetesAggregation, RoleSystem,
 		map[string]interface{}{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",

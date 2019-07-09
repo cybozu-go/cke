@@ -241,7 +241,7 @@ func createRootCA(ctx context.Context, vc *vault.Client, ca caParams) error {
 	}
 	_, ok := secret.Data["certificate"]
 	if !ok {
-		return fmt.Errorf("Failed to issue ca: %#v", secret.Warnings)
+		return fmt.Errorf("failed to issue ca: %#v", secret.Warnings)
 	}
 	return storage.PutCACertificate(ctx, ca.key, secret.Data["certificate"].(string))
 }

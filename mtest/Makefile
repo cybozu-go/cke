@@ -137,6 +137,7 @@ $(OUTPUT)/cke.img: $(OUTPUT)/cke $(OUTPUT)/ckecli
 	mkdir -p $(OUTPUT)
 	rm -f $@
 	sudo docker save -o $@ $(CKE_IMAGE_URL)
+	sudo chmod 644 $@
 
 FORCE:
 

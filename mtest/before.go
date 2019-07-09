@@ -51,20 +51,22 @@ func RunBeforeSuite() {
 
 	By("copying test files")
 	for _, testFile := range []string{kubectlPath} {
-		f, err := os.Open(testFile)
-		Expect(err).NotTo(HaveOccurred())
-		defer f.Close()
-		remoteFilename := filepath.Join("/tmp", filepath.Base(testFile))
-		for _, host := range []string{host1, host2} {
-			_, err := f.Seek(0, os.SEEK_SET)
+		func() {
+			f, err := os.Open(testFile)
 			Expect(err).NotTo(HaveOccurred())
-			stdout, stderr, err := execAtWithStream(host, f, "dd", "of="+remoteFilename)
-			Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
-			stdout, stderr, err = execAt(host, "sudo", "mv", remoteFilename, filepath.Join("/opt/bin", filepath.Base(testFile)))
-			Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
-			stdout, stderr, err = execAt(host, "sudo", "chmod", "755", filepath.Join("/opt/bin", filepath.Base(testFile)))
-			Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
-		}
+			defer f.Close()
+			remoteFilename := filepath.Join("/tmp", filepath.Base(testFile))
+			for _, host := range []string{host1, host2} {
+				_, err := f.Seek(0, os.SEEK_SET)
+				Expect(err).NotTo(HaveOccurred())
+				stdout, stderr, err := execAtWithStream(host, f, "dd", "of="+remoteFilename)
+				Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+				stdout, stderr, err = execAt(host, "sudo", "mv", remoteFilename, filepath.Join("/opt/bin", filepath.Base(testFile)))
+				Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+				stdout, stderr, err = execAt(host, "sudo", "chmod", "755", filepath.Join("/opt/bin", filepath.Base(testFile)))
+				Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+			}
+		}()
 	}
 
 	By("loading test image")

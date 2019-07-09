@@ -18,11 +18,12 @@ import (
 )
 
 var (
-	flgHTTP         = pflag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
-	flgConfigPath   = pflag.String("config", "/etc/cke/config.yml", "configuration file path")
-	flgInterval     = pflag.String("interval", "1m", "check interval")
-	flgSessionTTL   = pflag.String("session-ttl", "60s", "leader session's TTL")
-	flgDebugSabakan = pflag.Bool("debug-sabakan", false, "debug sabakan integration")
+	flgHTTP            = pflag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
+	flgConfigPath      = pflag.String("config", "/etc/cke/config.yml", "configuration file path")
+	flgInterval        = pflag.String("interval", "1m", "check interval")
+	flgCertsGCInterval = pflag.String("certs-gc-interval", "1m", "tidy interval for expired certificates")
+	flgSessionTTL      = pflag.String("session-ttl", "60s", "leader session's TTL")
+	flgDebugSabakan    = pflag.Bool("debug-sabakan", false, "debug sabakan integration")
 )
 
 func loadConfig(p string) (*etcdutil.Config, error) {
@@ -62,6 +63,11 @@ func main() {
 		log.ErrorExit(err)
 	}
 
+	gcInterval, err := time.ParseDuration(*flgCertsGCInterval)
+	if err != nil {
+		log.ErrorExit(err)
+	}
+
 	ttl, err := time.ParseDuration(*flgSessionTTL)
 	if err != nil {
 		log.ErrorExit(err)
@@ -92,7 +98,7 @@ func main() {
 	if err != nil {
 		log.ErrorExit(err)
 	}
-	controller := server.NewController(session, interval, timeout, addon)
+	controller := server.NewController(session, interval, gcInterval, timeout, addon)
 
 	well.Go(controller.Run)
 	server := server.Server{
