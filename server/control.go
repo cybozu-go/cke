@@ -124,9 +124,9 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 			select {
 			case <-ctx.Done():
 				return nil
-			default:
+			case <-ticker.C:
 			}
-			err := c.runTidyExpiredCertificates(ctx, leaderKey, ticker.C)
+			err := c.runTidyExpiredCertificates(ctx)
 			if err != nil {
 				return err
 			}
@@ -353,25 +353,18 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 	return nil
 }
 
-func (c Controller) runTidyExpiredCertificates(ctx context.Context, leaderKey string, tick <-chan time.Time) error {
-	wait := false
-	defer func() {
-		if !wait {
-			return
-		}
-		select {
-		case <-ctx.Done():
-		case <-tick:
-		}
-	}()
-
+func (c Controller) runTidyExpiredCertificates(ctx context.Context) error {
 	storage := cke.Storage{
 		Client: c.session.Client(),
 	}
 
 	cfg, err := storage.GetVaultConfig(ctx)
 	if err != nil {
-		return err
+		log.Warn("failed to get vault config. skip tidy", map[string]interface{}{
+			log.FnError: err,
+		})
+		// return nil
+		return nil
 	}
 
 	client, _, err := cke.VaultClient(cfg)

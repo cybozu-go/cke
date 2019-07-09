@@ -26,8 +26,8 @@ func (c Controller) TidyExpiredCertificates(ctx context.Context, client *vault.C
 	// Vault client does not provide an interface to detect whether errors have occurred or not.
 	if len(res.Warnings) == 0 {
 		log.Warn("may be failed to tidy certs, since an empty message is returned", map[string]interface{}{
-			"ca":         ca,
-			"request_id": res.RequestID,
+			"ca":        ca,
+			"requestid": res.RequestID,
 		})
 		return errors.New("may be failed to tidy certs, since an empty message is returned")
 	}
@@ -36,7 +36,7 @@ func (c Controller) TidyExpiredCertificates(ctx context.Context, client *vault.C
 	if res.Warnings[0] != "Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs." {
 		log.Warn("may be failed to tidy certs, since the expected warning message is not found", map[string]interface{}{
 			"ca":          ca,
-			"request_id":  res.RequestID,
+			"requestid":   res.RequestID,
 			log.FnMessage: strings.Join(res.Warnings, ", "),
 		})
 		return errors.New("failed to tidy certs: " + strings.Join(res.Warnings, ", "))
@@ -44,7 +44,7 @@ func (c Controller) TidyExpiredCertificates(ctx context.Context, client *vault.C
 
 	log.Info("invoke vault tidy", map[string]interface{}{
 		"ca":          ca,
-		"request_id":  res.RequestID,
+		"requestid":   res.RequestID,
 		log.FnMessage: strings.Join(res.Warnings, ", "),
 	})
 
