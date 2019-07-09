@@ -5,6 +5,17 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.8] - 2019-07-09
+
+### Added
+
+- Invoke vault tidy periodically (#196).
+
+### Fixed
+
+- [log] be silent when checking scheduler status (#195).
+- [mtest] use docker instead of podman (#194).
+
 ## [1.14.7] - 2019-06-28
 
 ### Fixed
@@ -196,7 +207,8 @@ No user-visible changes since RC 1.
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.7...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.8...HEAD
+[1.14.8]: https://github.com/cybozu-go/cke/compare/v1.14.7...v1.14.8
 [1.14.7]: https://github.com/cybozu-go/cke/compare/v1.14.6...v1.14.7
 [1.14.6]: https://github.com/cybozu-go/cke/compare/v1.14.5...v1.14.6
 [1.14.5]: https://github.com/cybozu-go/cke/compare/v1.14.4...v1.14.5
