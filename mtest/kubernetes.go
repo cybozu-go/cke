@@ -589,16 +589,16 @@ metadata:
   name: testhttpd
   namespace: ` + namespace + `
   labels:
-    run: testhttpd
+    app.kubernetes.io/name: testhttpd
 spec:
   replicas: 2
   selector:
     matchLabels:
-      run: testhttpd
+      app.kubernetes.io/name: testhttpd
   template:
     metadata:
       labels:
-        run: testhttpd
+        app.kubernetes.io/name: testhttpd
     spec:
       containers:
         - name: testhttpd
@@ -626,18 +626,18 @@ metadata:
   name: testhttpd
   namespace: ` + namespace + `
   labels:
-    run: testhttpd
+    app.kubernetes.io/name: testhttpd
   annotations:
     cke.cybozu.com/revision: "1"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      run: testhttpd
+      app.kubernetes.io/name: testhttpd
   template:
     metadata:
       labels:
-        run: testhttpd
+        app.kubernetes.io/name: testhttpd
     spec:
       containers:
         - name: testhttpd

@@ -61,7 +61,7 @@ metadata:
 spec:
   type: NodePort
   selector:
-    k8s-app: squid
+    app.kubernetes.io/name: squid
   ports:
     - protocol: TCP
       nodePort: 30128
@@ -243,13 +243,13 @@ metadata:
   name: coil-controllers
   namespace: kube-system
   labels:
-    k8s-app: coil-controllers
+    app.kubernetes.io/name: coil-controllers
 spec:
   # coil-controller can only have a single active instance.
   replicas: 1
   selector:
     matchLabels:
-      k8s-app: coil-controllers
+      app.kubernetes.io/name: coil-controllers
   strategy:
     type: Recreate
   template:
@@ -257,7 +257,7 @@ spec:
       name: coil-controllers
       namespace: kube-system
       labels:
-        k8s-app: coil-controllers
+        app.kubernetes.io/name: coil-controllers
     spec:
       priorityClassName: system-cluster-critical
       nodeSelector:
@@ -309,11 +309,11 @@ metadata:
   name: coil-node
   namespace: kube-system
   labels:
-    k8s-app: coil-node
+    app.kubernetes.io/name: coil-node
 spec:
   selector:
     matchLabels:
-      k8s-app: coil-node
+      app.kubernetes.io/name: coil-node
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -321,7 +321,7 @@ spec:
   template:
     metadata:
       labels:
-        k8s-app: coil-node
+        app.kubernetes.io/name: coil-node
     spec:
       priorityClassName: system-node-critical
       nodeSelector:
@@ -421,13 +421,13 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: nginx # has to match .spec.template.metadata.labels
+      app.kubernetes.io/name: nginx # has to match .spec.template.metadata.labels
   serviceName: "nginx"
   replicas: 3 # by default is 1
   template:
     metadata:
       labels:
-        app: nginx # has to match .spec.selector.matchLabels
+        app.kubernetes.io/name: nginx # has to match .spec.selector.matchLabels
     spec:
       terminationGracePeriodSeconds: 10
       containers:
