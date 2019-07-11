@@ -97,7 +97,9 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		}
 
 		var policy scheduler.Policy
-		policyStr, _, err := agent.Run("cat " + PolicyConfigPath)
+		// Testing policy file existence is needed for backward compatibility
+		policyStr, _, err := agent.Run(fmt.Sprintf("if [ -f %s ]; then cat %s; fi",
+			PolicyConfigPath, PolicyConfigPath))
 		if err != nil {
 			log.Error("failed to cat "+PolicyConfigPath, map[string]interface{}{
 				log.FnError: err,
