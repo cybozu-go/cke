@@ -39,7 +39,7 @@ metadata:
   name: ` + op.EtcdBackupAppName + `
   namespace: kube-system
   labels:
-    k8s-app: ` + op.EtcdBackupAppName + `
+    app.kubernetes.io/name: ` + op.EtcdBackupAppName + `
 spec:
   serviceAccountName: cke-etcdbackup
   containers:
@@ -106,12 +106,12 @@ metadata:
   name: ` + op.EtcdBackupAppName + `
   namespace: kube-system
   labels:
-    k8s-app: ` + op.EtcdBackupAppName + `
+    app.kubernetes.io/name: ` + op.EtcdBackupAppName + `
 spec:
   ports:
     - port: 8080
       protocol: TCP
       targetPort: 8080
   selector:
-    k8s-app: ` + op.EtcdBackupAppName + `
+    app.kubernetes.io/name: ` + op.EtcdBackupAppName + `
   type: NodePort`

@@ -3,7 +3,7 @@ kind: Pod
 metadata:
   name: nginx
   labels:
-    run: nginx
+    app.kubernetes.io/name: nginx
 spec:
   containers:
     - name: nginx
