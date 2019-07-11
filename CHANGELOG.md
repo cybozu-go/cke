@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.9] - 2019-07-11
+
+### Changed
+
+- Rename to recommended label keys (#197).
+
 ## [1.14.8] - 2019-07-09
 
 ### Added
@@ -207,7 +213,8 @@ No user-visible changes since RC 1.
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.8...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.9...HEAD
+[1.14.9]: https://github.com/cybozu-go/cke/compare/v1.14.8...v1.14.9
 [1.14.8]: https://github.com/cybozu-go/cke/compare/v1.14.7...v1.14.8
 [1.14.7]: https://github.com/cybozu-go/cke/compare/v1.14.6...v1.14.7
 [1.14.6]: https://github.com/cybozu-go/cke/compare/v1.14.5...v1.14.6
