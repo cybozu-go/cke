@@ -18,7 +18,7 @@ In CKE, the control plane of Kubernetes consists of Nodes.  To isolate
 control plane nodes from others, CKE automatically adds `cke.cybozu.com/master: "true"` label.
 
 If `taint_control_plane` is true in `cluster.yml`, CKE taints control
-plane nodes with `cke.cybozu.com/master: NoSchedule`.
+plane nodes with `cke.cybozu.com/master: PreferNoSchedule`.
 
 Node maintenance
 ----------------

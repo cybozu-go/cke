@@ -123,6 +123,9 @@ func newData() testData {
 			Status: nodeReadyStatus,
 		})
 	}
+	for i := 0; i < 3; i++ {
+		nodeList[i].Labels = map[string]string{op.CKELabelMaster: "true"}
+	}
 	nodeList[3].Annotations = cluster.Nodes[3].Annotations
 	nodeList[3].Labels = cluster.Nodes[3].Labels
 	nodeList[3].Spec.Taints = cluster.Nodes[3].Taints
@@ -919,6 +922,36 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"update-node"},
 		},
 		{
+			Name: "NodeLabelCP1",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.11",
+					Labels: map[string]string{},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeLabelCP2",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.14",
+					Labels: map[string]string{op.CKELabelMaster: "true"},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeLabelCP3",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.11",
+					Labels: map[string]string{op.CKELabelMaster: "hoge"},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
 			Name: "NodeAnnotation1",
 			Input: newData().withNodes(corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1087,6 +1120,192 @@ func TestDecideOps(t *testing.T) {
 						{
 							Key:    "cke.cybozu.com/foo",
 							Effect: corev1.TaintEffectNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeTaintCP1",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Cluster.TaintCP = true
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeTaintCP2",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Cluster.TaintCP = true
+			}).withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.11",
+					Labels: map[string]string{op.CKELabelMaster: "true"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    op.CKETaintMaster,
+							Value:  "hoge",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}, corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.12",
+					Labels: map[string]string{op.CKELabelMaster: "true"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    op.CKETaintMaster,
+							Value:  "hoge",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}, corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.13",
+					Labels: map[string]string{op.CKELabelMaster: "true"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    op.CKETaintMaster,
+							Value:  "hoge",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{},
+		},
+		{
+			Name: "NodeTaintCP3",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Cluster.TaintCP = true
+			}).withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.11",
+					Labels: map[string]string{op.CKELabelMaster: "true"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    op.CKETaintMaster,
+							Value:  "hoge",
+							Effect: corev1.TaintEffectNoExecute,
+						},
+					},
+				},
+			}, corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.12",
+					Labels: map[string]string{op.CKELabelMaster: "true"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    op.CKETaintMaster,
+							Value:  "hoge",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}, corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.13",
+					Labels: map[string]string{op.CKELabelMaster: "true"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    op.CKETaintMaster,
+							Value:  "hoge",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeTaintCP4",
+			Input: newData().withK8sResourceReady().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.11",
+					Labels: map[string]string{op.CKELabelMaster: "true"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    op.CKETaintMaster,
+							Value:  "hoge",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeTaintCP5",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Cluster.TaintCP = true
+			}).withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.11",
+					Labels: map[string]string{op.CKELabelMaster: "true"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    op.CKETaintMaster,
+							Value:  "hoge",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}, corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.12",
+					Labels: map[string]string{op.CKELabelMaster: "true"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    op.CKETaintMaster,
+							Value:  "hoge",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}, corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "10.0.0.13",
+					Labels: map[string]string{op.CKELabelMaster: "true"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    op.CKETaintMaster,
+							Value:  "hoge",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}, corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "10.0.0.15",
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    op.CKETaintMaster,
+							Value:  "hoge",
+							Effect: corev1.TaintEffectPreferNoSchedule,
 						},
 					},
 				},

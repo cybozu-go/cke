@@ -157,14 +157,15 @@ type Options struct {
 
 // Cluster is a set of configurations for a etcd/Kubernetes cluster.
 type Cluster struct {
-	Name          string     `json:"name"           yaml:"name"`
-	Nodes         []*Node    `json:"nodes"          yaml:"nodes"`
-	ServiceSubnet string     `json:"service_subnet" yaml:"service_subnet"`
-	PodSubnet     string     `json:"pod_subnet"     yaml:"pod_subnet"`
-	DNSServers    []string   `json:"dns_servers"    yaml:"dns_servers"`
-	DNSService    string     `json:"dns_service"    yaml:"dns_service"`
-	EtcdBackup    EtcdBackup `json:"etcd_backup"    yaml:"etcd_backup"`
-	Options       Options    `json:"options"        yaml:"options"`
+	Name          string     `json:"name"                yaml:"name"`
+	Nodes         []*Node    `json:"nodes"               yaml:"nodes"`
+	TaintCP       bool       `json:"taint_control_plane" yaml:"taint_control_plane"`
+	ServiceSubnet string     `json:"service_subnet"      yaml:"service_subnet"`
+	PodSubnet     string     `json:"pod_subnet"          yaml:"pod_subnet"`
+	DNSServers    []string   `json:"dns_servers"         yaml:"dns_servers"`
+	DNSService    string     `json:"dns_service"         yaml:"dns_service"`
+	EtcdBackup    EtcdBackup `json:"etcd_backup"         yaml:"etcd_backup"`
+	Options       Options    `json:"options"             yaml:"options"`
 }
 
 // Validate validates the cluster definition.

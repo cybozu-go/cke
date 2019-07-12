@@ -613,7 +613,7 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 			continue
 		}
 
-		if nodeIsOutdated(n, current) {
+		if nodeIsOutdated(n, current, nf.cluster.TaintCP) {
 			labels := make(map[string]string)
 			for k, v := range current.Labels {
 				if isInternal(k) {
@@ -623,6 +623,9 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 			}
 			for k, v := range n.Labels {
 				labels[k] = v
+			}
+			if n.ControlPlane {
+				labels[op.CKELabelMaster] = "true"
 			}
 			current.Labels = labels
 
@@ -650,6 +653,12 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 				}
 				taints = append(taints, taint)
 			}
+			if nf.cluster.TaintCP && n.ControlPlane {
+				taints = append(taints, corev1.Taint{
+					Key:    op.CKETaintMaster,
+					Effect: corev1.TaintEffectPreferNoSchedule,
+				})
+			}
 			current.Spec.Taints = taints
 
 			nodes = append(nodes, current)
@@ -659,7 +668,7 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 	return nodes
 }
 
-func nodeIsOutdated(n *cke.Node, current *corev1.Node) bool {
+func nodeIsOutdated(n *cke.Node, current *corev1.Node, taintCP bool) bool {
 	for k, v := range n.Labels {
 		cv, ok := current.Labels[k]
 		if !ok || v != cv {
@@ -672,7 +681,21 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node) bool {
 		if !isInternal(k) {
 			continue
 		}
+		if k == op.CKELabelMaster {
+			continue
+		}
 		if _, ok := n.Labels[k]; !ok {
+			return true
+		}
+	}
+
+	if n.ControlPlane {
+		cv, ok := current.Labels[op.CKELabelMaster]
+		if !ok || cv != "true" {
+			return true
+		}
+	} else {
+		if _, ok := current.Labels[op.CKELabelMaster]; ok {
 			return true
 		}
 	}
@@ -720,7 +743,21 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node) bool {
 		if !isInternal(taint.Key) {
 			continue
 		}
+		if taint.Key == op.CKETaintMaster {
+			continue
+		}
 		if _, ok := nTaints[taint.Key]; !ok {
+			return true
+		}
+	}
+
+	if taintCP && n.ControlPlane {
+		taint, ok := curTaints[op.CKETaintMaster]
+		if !ok || taint.Effect != corev1.TaintEffectPreferNoSchedule {
+			return true
+		}
+	} else {
+		if _, ok := curTaints[op.CKETaintMaster]; ok {
 			return true
 		}
 	}
