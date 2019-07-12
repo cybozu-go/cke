@@ -5,16 +5,17 @@ CKE deploys and maintains a Kubernetes cluster and an etcd cluster solely for
 the Kubernetes cluster.  The configurations of the clusters can be defined by
 a YAML or JSON object with these fields:
 
-| Name             | Required | Type         | Description                                                      |
-| ---------------- | -------- | ------------ | ---------------------------------------------------------------- |
-| `name`           | true     | string       | The k8s cluster name.                                            |
-| `nodes`          | true     | array        | `Node` list.                                                     |
-| `service_subnet` | true     | string       | CIDR subnet for k8s `Service`.                                   |
-| `pod_subnet`     | true     | string       | CIDR subnet for k8s `Pod`.                                       |
-| `dns_servers`    | false    | array        | List of upstream DNS server IP addresses.                        |
-| `dns_service`    | false    | string       | Upstream DNS service name with namespace as `namespace/service`. |
-| `etcd_backup`    | false    | `EtcdBackup` | See EtcdBackup.                                                  |
-| `options`        | false    | `Options`    | See options.                                                     |
+| Name                  | Required | Type         | Description                                                                 |
+| --------------------- | -------- | ------------ | --------------------------------------------------------------------------- |
+| `name`                | true     | string       | The k8s cluster name.                                                       |
+| `nodes`               | true     | array        | `Node` list.                                                                |
+| `taint_control_plane` | false    | bool         | If true, taint contorl plane nodes with `cke.cybozu.com/master: NoSchedule` |
+| `service_subnet`      | true     | string       | CIDR subnet for k8s `Service`.                                              |
+| `pod_subnet`          | true     | string       | CIDR subnet for k8s `Pod`.                                                  |
+| `dns_servers`         | false    | array        | List of upstream DNS server IP addresses.                                   |
+| `dns_service`         | false    | string       | Upstream DNS service name with namespace as `namespace/service`.            |
+| `etcd_backup`         | false    | `EtcdBackup` | See EtcdBackup.                                                             |
+| `options`             | false    | `Options`    | See options.                                                                |
 
 * IP addresses in `pod_subnet` are only used for host-local communication
   as a fallback CNI plugin.  They are never seen from outside of the cluster.
@@ -151,12 +152,12 @@ updated later on.
 
 ### SchedulerParams
 
-| Name          | Required | Type               | Description                                     |
-| ------------- | -------- | ------------------ | ----------------------------------------------- |
-| `extenders`   | false    | `[]string`         | Extender parameters                             |
-| `extra_args`  | false    | array              | Extra command-line arguments.  List of strings. |
-| `extra_binds` | false    | array              | Extra bind mounts.  List of `Mount`.            |
-| `extra_env`   | false    | object             | Extra environment variables.                    |
+| Name          | Required | Type       | Description                                     |
+| ------------- | -------- | ---------- | ----------------------------------------------- |
+| `extenders`   | false    | `[]string` | Extender parameters                             |
+| `extra_args`  | false    | array      | Extra command-line arguments.  List of strings. |
+| `extra_binds` | false    | array      | Extra bind mounts.  List of `Mount`.            |
+| `extra_env`   | false    | object     | Extra environment variables.                    |
 
 Elements of `extenders` are contents of [`ExtenderConfig`](https://github.com/kubernetes/kubernetes/blob/release-1.14//pkg/scheduler/api/v1/types.go#L183) in JSON format.
 
