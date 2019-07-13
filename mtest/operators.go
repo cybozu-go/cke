@@ -34,6 +34,24 @@ func TestOperators() {
 		// - KubeClusterDNSCreateOp
 		// - KubeEtcdEndpointsCreateOp
 
+		By("Testing control plane node labels")
+		for _, n := range []string{node1, node2, node3} {
+			out, _, err := kubectl("get", "-o=json", "node", n)
+			Expect(err).ShouldNot(HaveOccurred())
+			var node corev1.Node
+			err = json.Unmarshal(out, &node)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(node.Labels).Should(HaveKeyWithValue("cke.cybozu.com/master", "true"))
+		}
+		for _, n := range []string{node4, node5} {
+			out, _, err := kubectl("get", "-o=json", "node", n)
+			Expect(err).ShouldNot(HaveOccurred())
+			var node corev1.Node
+			err = json.Unmarshal(out, &node)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(node.Labels).ShouldNot(HaveKey("cke.cybozu.com/master"))
+		}
+
 		By("Stopping etcd servers")
 		// this will run:
 		// - EtcdStartOp
@@ -214,6 +232,15 @@ func TestOperators() {
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
+
+		// check control plane label
+		out, _, err := kubectl("get", "-o=json", "node", node3)
+		Expect(err).ShouldNot(HaveOccurred())
+		var node corev1.Node
+		err = json.Unmarshal(out, &node)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(node.Labels).ShouldNot(HaveKey("cke.cybozu.com/master"))
+
 		// check leader change
 		newLeader = strings.TrimSpace(string(ckecliSafe("leader")))
 		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
@@ -342,10 +369,35 @@ func TestOperators() {
 				Effect: corev1.TaintEffectNoExecute,
 			},
 		}
+		cluster.TaintCP = true
 		ckecliClusterSet(cluster)
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
+
+		By("testing control plane taints")
+		for _, n := range []string{node1, node2, node3} {
+			out, _, err := kubectl("get", "-o=json", "node", n)
+			Expect(err).ShouldNot(HaveOccurred())
+			var node corev1.Node
+			err = json.Unmarshal(out, &node)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(node.Spec.Taints).Should(ContainElement(corev1.Taint{
+				Key:    "cke.cybozu.com/master",
+				Effect: corev1.TaintEffectPreferNoSchedule,
+			}))
+		}
+		for _, n := range []string{node4, node5} {
+			out, _, err := kubectl("get", "-o=json", "node", n)
+			Expect(err).ShouldNot(HaveOccurred())
+			var node corev1.Node
+			err = json.Unmarshal(out, &node)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(node.Spec.Taints).ShouldNot(ContainElement(corev1.Taint{
+				Key:    "cke.cybozu.com/master",
+				Effect: corev1.TaintEffectPreferNoSchedule,
+			}))
+		}
 
 		By("adding hostname")
 		cluster = getCluster()
