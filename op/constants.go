@@ -50,9 +50,9 @@ const (
 	// TimeoutDuration is default timeout duration
 	TimeoutDuration = 5 * time.Second
 
-	// Control plane node label name
+	// CKELabelMaster is the label name added to control plane nodes
 	CKELabelMaster = "cke.cybozu.com/master"
-	// Control plane node taint name
+	// CKETaintMaster is the taint name added to control plane nodes
 	CKETaintMaster = "cke.cybozu.com/master"
 
 	// CKELabelAppName is application name
