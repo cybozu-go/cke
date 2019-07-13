@@ -11,6 +11,15 @@ Every node in Kubernetes cluster runs a TCP reverse proxy called [rivers][]
 for load-balancing requests to API servers.  It will implicitly retry
 connection attempts when some API servers are down.
 
+Control plane
+-------------
+
+In CKE, the control plane of Kubernetes consists of Nodes.  To isolate
+control plane nodes from others, CKE automatically adds `cke.cybozu.com/master: "true"` label.
+
+If `taint_control_plane` is true in `cluster.yml`, CKE taints control
+plane nodes with `cke.cybozu.com/master: PreferNoSchedule`.
+
 Node maintenance
 ----------------
 

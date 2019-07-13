@@ -49,16 +49,16 @@ Features
     In addition to Docker, CRI runtimes such as [containerd][] or [cri-o][]
     can be used to run Kubernetes Pods.
 
-* Cluster features:
+* Kubernetes features:
 
     * HA control plane.
     * [RBAC][] is enabled.
     * Ready for [PodSecurityPolicy][]
+    * Ready for API [aggregation](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/).
     * `Secret` data are [encrypted at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
     * [CNI][] network plugins.
     * [CoreDNS][] add-on.
     * Node-local DNS cache services.
-    * [Aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/).
     * Nodes can be registered with [Taints][].
     * Preparation of [Scheduler extender](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/scheduling/scheduler_extender.md).
 
@@ -109,7 +109,7 @@ Usage
 ```console
 $ docker run -d --read-only \
     --network host --name cke \
-    quay.io/cybozu/cke:1.13 [options...]
+    quay.io/cybozu/cke:1.14 [options...]
 ```
 
 ### Install `ckecli` to host file system
@@ -118,7 +118,7 @@ $ docker run -d --read-only \
 $ docker run --rm -u root:root \
     --entrypoint /usr/local/cke/install-tools \
     --mount type=bind,src=DIR,target=/host \
-    quay.io/cybozu/cke:1.13
+    quay.io/cybozu/cke:1.14
 ```
 
 License

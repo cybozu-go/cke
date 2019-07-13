@@ -25,8 +25,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ### Fixed
 
-- [log] be silent when checking scheduler status (#195).
-- [mtest] use docker instead of podman (#194).
+- log: be silent when checking scheduler status (#195).
+- mtest: use docker instead of podman (#194).
 
 ## [1.14.7] - 2019-06-28
 
