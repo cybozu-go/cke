@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.11] - 2019-07-16
+
+### Added
+
+- Labels and taints for control plane nodes (#199)
+
 ## [1.14.10] - 2019-07-12
 
 ### Changed
@@ -219,7 +225,8 @@ No user-visible changes since RC 1.
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.10...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.11...HEAD
+[1.14.11]: https://github.com/cybozu-go/cke/compare/v1.14.10...v1.14.11
 [1.14.10]: https://github.com/cybozu-go/cke/compare/v1.14.9...v1.14.10
 [1.14.9]: https://github.com/cybozu-go/cke/compare/v1.14.8...v1.14.9
 [1.14.8]: https://github.com/cybozu-go/cke/compare/v1.14.7...v1.14.8
