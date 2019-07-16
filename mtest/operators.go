@@ -104,7 +104,7 @@ func TestOperators() {
 			Address: node6,
 			User:    "cybozu",
 		})
-		Expect(cluster.Validate()).NotTo(HaveOccurred())
+		Expect(cluster.Validate(false)).NotTo(HaveOccurred())
 		cluster.Options.Kubelet.BootTaints = []corev1.Taint{
 			{
 				Key:    "coil.cybozu.com/bootstrap",

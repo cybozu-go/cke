@@ -553,8 +553,8 @@ rules:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := tt.cluster
-			if err := c.Validate(); (err != nil) != tt.wantErr {
-				t.Errorf("Cluster.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			if err := c.Validate(false); (err != nil) != tt.wantErr {
+				t.Errorf("Cluster.Validate(false) error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -679,7 +679,7 @@ func testClusterValidateNode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := tt.cluster
 			n := tt.node
-			if err := c.validateNode(&n, field.NewPath("node")); (err != nil) != tt.wantErr {
+			if err := c.validateNode(&n, false, field.NewPath("node")); (err != nil) != tt.wantErr {
 				t.Errorf("Cluster.validateNode() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

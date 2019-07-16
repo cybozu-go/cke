@@ -336,7 +336,7 @@ func getCluster() *cke.Cluster {
 	var cluster cke.Cluster
 	err = yaml.NewDecoder(f).Decode(&cluster)
 	Expect(err).NotTo(HaveOccurred())
-	err = cluster.Validate()
+	err = cluster.Validate(false)
 	Expect(err).NotTo(HaveOccurred())
 
 	return &cluster

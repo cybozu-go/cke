@@ -90,10 +90,11 @@ func containsTaint(taints []corev1.Taint, target corev1.Taint) bool {
 	return false
 }
 
-func newTestMachineWithIP(rack int, retireDate time.Time, state State, ip string) Machine {
+func newTestMachineWithIP(rack int, retireDate time.Time, state State, ip, role string) Machine {
 	m := Machine{}
 	m.Spec.IPv4 = []string{ip}
 	m.Spec.Rack = rack
+	m.Spec.Role = role
 	m.Spec.RetireDate = retireDate
 	m.Status.State = state
 	m.Status.Duration = DefaultWaitRetiringSeconds * 2
@@ -112,9 +113,13 @@ func testNewGenerator(t *testing.T) {
 			},
 			{
 				ControlPlane: false,
-				Labels:       map[string]string{"foo": "aaa"},
-				Annotations:  map[string]string{"hoge": "bbb"},
-				Taints:       []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoExecute}},
+				Labels: map[string]string{
+					"foo":                   "aaa",
+					"cke.cybozu.com/role":   "cs",
+					"cke.cybozu.com/weight": "3",
+				},
+				Annotations: map[string]string{"hoge": "bbb"},
+				Taints:      []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoExecute}},
 			},
 		},
 	}
@@ -124,23 +129,32 @@ func testNewGenerator(t *testing.T) {
 			{
 				Address:      "10.0.0.1",
 				ControlPlane: true,
-				Labels:       map[string]string{"foo": "bar"},
-				Annotations:  map[string]string{"hoge": "fuga"},
-				Taints:       []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoSchedule}},
+				Labels: map[string]string{
+					"foo":                 "bar",
+					"cke.cybozu.com/role": "cs",
+				},
+				Annotations: map[string]string{"hoge": "fuga"},
+				Taints:      []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoSchedule}},
 			},
 			{
 				Address:      "10.0.0.3",
 				ControlPlane: false,
-				Labels:       map[string]string{"foo": "aaa"},
-				Annotations:  map[string]string{"hoge": "bbb"},
-				Taints:       []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoExecute}},
+				Labels: map[string]string{
+					"foo":                 "aaa",
+					"cke.cybozu.com/role": "ss",
+				},
+				Annotations: map[string]string{"hoge": "bbb"},
+				Taints:      []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoExecute}},
 			},
 			{
 				Address:      "10.0.0.2",
 				ControlPlane: true,
-				Labels:       map[string]string{"foo": "bar"},
-				Annotations:  map[string]string{"hoge": "fuga"},
-				Taints:       []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoSchedule}},
+				Labels: map[string]string{
+					"foo":                 "bar",
+					"cke.cybozu.com/role": "cs",
+				},
+				Annotations: map[string]string{"hoge": "fuga"},
+				Taints:      []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoSchedule}},
 			},
 			{
 				Address:      "10.0.0.100",
@@ -152,10 +166,10 @@ func testNewGenerator(t *testing.T) {
 		},
 	}
 	machines := []Machine{
-		newTestMachineWithIP(0, testFuture250, StateHealthy, "10.0.0.1"),
-		newTestMachineWithIP(1, testFuture250, StateRetired, "10.0.0.2"),
-		newTestMachineWithIP(0, testFuture250, StateUnhealthy, "10.0.0.3"),
-		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4"),
+		newTestMachineWithIP(0, testFuture250, StateHealthy, "10.0.0.1", "cs"),
+		newTestMachineWithIP(1, testFuture250, StateRetired, "10.0.0.2", "cs"),
+		newTestMachineWithIP(0, testFuture250, StateUnhealthy, "10.0.0.3", "ss"),
+		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4", "ss"),
 	}
 	type args struct {
 		current  *cke.Cluster
@@ -179,20 +193,16 @@ func testNewGenerator(t *testing.T) {
 					"10.0.0.4": &machines[3],
 				},
 				unusedMachines: []*Machine{&machines[0], &machines[3]},
-				cpTmpl:         tmpl.Nodes[0],
-				workerTmpl:     tmpl.Nodes[1],
+				cpTmpl:         nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				workerTmpls: []nodeTemplate{
+					{tmpl.Nodes[1], "cs", 3.0},
+				},
 			},
 		},
 		{
 			"Cluster",
 			args{cluster, tmpl, cke.DefaultConstraints(), machines},
 			&Generator{
-				nodeMap: map[string]*cke.Node{
-					"10.0.0.1":   cluster.Nodes[0],
-					"10.0.0.3":   cluster.Nodes[1],
-					"10.0.0.2":   cluster.Nodes[2],
-					"10.0.0.100": cluster.Nodes[3],
-				},
 				controlPlanes: []*cke.Node{
 					cluster.Nodes[0],
 					cluster.Nodes[2],
@@ -203,6 +213,7 @@ func testNewGenerator(t *testing.T) {
 					cluster.Nodes[1],
 					cluster.Nodes[3],
 				},
+				workersByRole:  map[string]int{"ss": 1, "": 1},
 				healthyWorkers: 0,
 				workerRacks:    map[int]int{0: 1},
 				machineMap: map[string]*Machine{
@@ -212,8 +223,10 @@ func testNewGenerator(t *testing.T) {
 					"10.0.0.4": &machines[3],
 				},
 				unusedMachines: []*Machine{&machines[3]},
-				cpTmpl:         tmpl.Nodes[0],
-				workerTmpl:     tmpl.Nodes[1],
+				cpTmpl:         nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				workerTmpls: []nodeTemplate{
+					{tmpl.Nodes[1], "cs", 3.0},
+				},
 			},
 		},
 	}
@@ -223,9 +236,6 @@ func testNewGenerator(t *testing.T) {
 			t.Parallel()
 
 			got := NewGenerator(tt.args.current, tt.args.template, tt.args.cstr, tt.args.machines)
-			if !cmp.Equal(got.nodeMap, tt.want.nodeMap, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
-				t.Errorf("!cmp.Equal(got.nodeMap, tt.want.nodeMap), actual: %#v, want %#v", got.nodeMap, tt.want.nodeMap)
-			}
 			if !cmp.Equal(got.controlPlanes, tt.want.controlPlanes, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.controlPlanes, tt.want.controlPlanes), actual: %v, want %v", got.controlPlanes, tt.want.controlPlanes)
 			}
@@ -237,6 +247,9 @@ func testNewGenerator(t *testing.T) {
 			}
 			if !cmp.Equal(got.workers, tt.want.workers, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.workers, tt.want.workers), actual: %v, want %v", got.workers, tt.want.workers)
+			}
+			if !cmp.Equal(got.workersByRole, tt.want.workersByRole, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
+				t.Error("!cmp.Equal(got.workersByRole, tt.want.workersByRole)", cmp.Diff(got.workersByRole, tt.want.workersByRole, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()))
 			}
 			if got.healthyWorkers != tt.want.healthyWorkers {
 				t.Errorf("!cmp.Equal(got.healthyWorkers, tt.want.healthyWorkers), actual: %v, want %v", got.healthyWorkers, tt.want.healthyWorkers)
@@ -263,8 +276,8 @@ func testNewGenerator(t *testing.T) {
 			if !cmp.Equal(got.cpTmpl, tt.want.cpTmpl, cmpopts.IgnoreUnexported(cke.Node{})) {
 				t.Errorf("!cmp.Equal(got.cpTmpl, tt.want.cpTmpl), actual: %v, want %v", got.cpTmpl, tt.want.cpTmpl)
 			}
-			if !cmp.Equal(got.workerTmpl, tt.want.workerTmpl, cmpopts.IgnoreUnexported(cke.Node{})) {
-				t.Errorf("!cmp.Equal(got.workerTmpl, tt.want.workerTmpl), actual: %v, want %v", got.workerTmpl, tt.want.workerTmpl)
+			if !cmp.Equal(got.workerTmpls, tt.want.workerTmpls, cmpopts.IgnoreUnexported(cke.Node{})) {
+				t.Errorf("!cmp.Equal(got.workerTmpl, tt.want.workerTmpl), actual: %v, want %v", got.workerTmpls, tt.want.workerTmpls)
 			}
 		})
 	}
@@ -294,10 +307,10 @@ func testGenerate(t *testing.T) {
 	generated.Nodes = nil
 
 	machines := []Machine{
-		newTestMachineWithIP(0, testFuture250, StateHealthy, "10.0.0.1"),
-		newTestMachineWithIP(1, testFuture250, StateRetired, "10.0.0.2"),
-		newTestMachineWithIP(0, testFuture250, StateUnhealthy, "10.0.0.3"),
-		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4"),
+		newTestMachineWithIP(0, testFuture250, StateHealthy, "10.0.0.1", "cs"),
+		newTestMachineWithIP(1, testFuture250, StateRetired, "10.0.0.2", "cs"),
+		newTestMachineWithIP(0, testFuture250, StateUnhealthy, "10.0.0.3", "ss"),
+		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4", "ss"),
 	}
 
 	tests := []struct {
@@ -369,10 +382,10 @@ func testGenerate(t *testing.T) {
 
 func testRegenerate(t *testing.T) {
 	machines := []Machine{
-		newTestMachineWithIP(0, testFuture250, StateHealthy, "10.0.0.1"),
-		newTestMachineWithIP(1, testFuture250, StateRetired, "10.0.0.2"),
-		newTestMachineWithIP(0, testFuture250, StateUnhealthy, "10.0.0.3"),
-		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4"),
+		newTestMachineWithIP(0, testFuture250, StateHealthy, "10.0.0.1", "cs"),
+		newTestMachineWithIP(1, testFuture250, StateRetired, "10.0.0.2", "cs"),
+		newTestMachineWithIP(0, testFuture250, StateUnhealthy, "10.0.0.3", "ss"),
+		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4", "ss"),
 	}
 
 	cluster := &cke.Cluster{
@@ -446,15 +459,15 @@ func testRegenerate(t *testing.T) {
 
 func testUpdate(t *testing.T) {
 	machines := []Machine{
-		newTestMachineWithIP(0, testFuture500, StateHealthy, "10.0.0.1"),
-		newTestMachineWithIP(0, testFuture250, StateRetiring, "10.0.0.2"),
-		newTestMachineWithIP(1, testFuture250, StateUnhealthy, "10.0.0.3"),
-		newTestMachineWithIP(1, testFuture250, StateUnreachable, "10.0.0.4"),
-		newTestMachineWithIP(2, testFuture250, StateUnreachable, "10.0.0.5"),
-		newTestMachineWithIP(2, testFuture500, StateHealthy, "10.0.0.6"),
-		newTestMachineWithIP(3, testFuture1000, StateHealthy, "10.0.0.7"),
-		newTestMachineWithIP(3, testFuture500, StateHealthy, "10.0.0.8"),
-		newTestMachineWithIP(4, testFuture500, StateUpdating, "10.0.0.9"),
+		newTestMachineWithIP(0, testFuture500, StateHealthy, "10.0.0.1", "cs"),
+		newTestMachineWithIP(0, testFuture250, StateRetiring, "10.0.0.2", "cs"),
+		newTestMachineWithIP(1, testFuture250, StateUnhealthy, "10.0.0.3", "cs"),
+		newTestMachineWithIP(1, testFuture250, StateUnreachable, "10.0.0.4", "cs"),
+		newTestMachineWithIP(2, testFuture250, StateUnreachable, "10.0.0.5", "cs"),
+		newTestMachineWithIP(2, testFuture500, StateHealthy, "10.0.0.6", "cs"),
+		newTestMachineWithIP(3, testFuture1000, StateHealthy, "10.0.0.7", "cs"),
+		newTestMachineWithIP(3, testFuture500, StateHealthy, "10.0.0.8", "cs"),
+		newTestMachineWithIP(4, testFuture500, StateUpdating, "10.0.0.9", "cs"),
 	}
 	cps := []*cke.Node{
 		{Address: "10.0.0.1", ControlPlane: true},
@@ -842,10 +855,193 @@ func testUpdate(t *testing.T) {
 	}
 }
 
+func testWeighted(t *testing.T) {
+	addresses := []string{
+		"10.0.0.1",
+		"10.0.0.2",
+		"10.0.0.3",
+		"10.0.0.4",
+		"10.0.0.5",
+		"10.0.0.6",
+		"10.0.0.7",
+	}
+	machines := []Machine{
+		newTestMachineWithIP(0, testFuture500, StateHealthy, addresses[0], "cs"),
+		newTestMachineWithIP(0, testFuture250, StateHealthy, addresses[1], "ss"),
+		newTestMachineWithIP(1, testFuture250, StateHealthy, addresses[2], "cs"),
+		newTestMachineWithIP(1, testFuture250, StateHealthy, addresses[3], "ss"),
+		newTestMachineWithIP(2, testFuture250, StateHealthy, addresses[4], "cs"),
+		newTestMachineWithIP(2, testFuture250, StateHealthy, addresses[5], "ss"),
+		newTestMachineWithIP(3, testFuture1000, StateHealthy, addresses[6], "new"),
+	}
+
+	cases := []struct {
+		name        string
+		tmplCP      *cke.Node
+		tmplWorkers []*cke.Node
+		cstr        *cke.Constraints
+
+		expectCPs         []string
+		expectWorkerRoles map[string]int
+	}{
+		{
+			"blank",
+			&cke.Node{},
+			[]*cke.Node{{}},
+			cke.DefaultConstraints(),
+
+			[]string{addresses[6]},
+			map[string]int{"cs": 1},
+		},
+		{
+			"cp-role",
+			&cke.Node{
+				Labels: map[string]string{
+					"cke.cybozu.com/role": "cs",
+				},
+			},
+			[]*cke.Node{{}},
+			cke.DefaultConstraints(),
+
+			[]string{addresses[0]},
+			map[string]int{"new": 1},
+		},
+		{
+			"worker-role",
+			&cke.Node{},
+			[]*cke.Node{{
+				Labels: map[string]string{
+					"cke.cybozu.com/role": "ss",
+				},
+			}},
+			cke.DefaultConstraints(),
+
+			[]string{addresses[6]},
+			map[string]int{"ss": 1},
+		},
+		{
+			"weight1",
+			&cke.Node{},
+			[]*cke.Node{
+				{
+					Labels: map[string]string{
+						"cke.cybozu.com/role":   "cs",
+						"cke.cybozu.com/weight": "3",
+					},
+				},
+				{
+					Labels: map[string]string{
+						"cke.cybozu.com/role": "ss",
+					},
+				},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 1,
+				MinimumWorkers:    2,
+			},
+
+			[]string{addresses[6]},
+			map[string]int{"cs": 1, "ss": 1},
+		},
+		{
+			"weight2",
+			&cke.Node{},
+			[]*cke.Node{
+				{
+					Labels: map[string]string{
+						"cke.cybozu.com/role":   "cs",
+						"cke.cybozu.com/weight": "3",
+					},
+				},
+				{
+					Labels: map[string]string{
+						"cke.cybozu.com/role": "ss",
+					},
+				},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 1,
+				MinimumWorkers:    4,
+			},
+
+			[]string{addresses[6]},
+			map[string]int{"cs": 3, "ss": 1},
+		},
+		{
+			"weight3",
+			&cke.Node{},
+			[]*cke.Node{
+				{
+					Labels: map[string]string{
+						"cke.cybozu.com/role":   "cs",
+						"cke.cybozu.com/weight": "0.1",
+					},
+				},
+				{
+					Labels: map[string]string{
+						"cke.cybozu.com/role":   "ss",
+						"cke.cybozu.com/weight": "0.3",
+					},
+				},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 1,
+				MinimumWorkers:    4,
+			},
+
+			[]string{addresses[6]},
+			map[string]int{"cs": 1, "ss": 3},
+		},
+	}
+
+	for _, tt := range cases {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tt.tmplCP.ControlPlane = true
+			tt.tmplCP.User = "cybozu"
+			for _, w := range tt.tmplWorkers {
+				w.User = "cybozu"
+			}
+			tmpl := &cke.Cluster{
+				Name:  "test",
+				Nodes: append(tt.tmplWorkers, tt.tmplCP),
+			}
+
+			g := NewGenerator(nil, tmpl, tt.cstr, machines)
+			cluster, err := g.Generate()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var cps []string
+			workerRoles := make(map[string]int)
+			for _, n := range cluster.Nodes {
+				if n.ControlPlane {
+					cps = append(cps, n.Address)
+					continue
+				}
+
+				role := n.Labels["cke.cybozu.com/role"]
+				workerRoles[role]++
+			}
+
+			if !cmp.Equal(tt.expectCPs, cps) {
+				t.Error("unexpected CPs", cmp.Diff(tt.expectCPs, cps))
+			}
+			if !cmp.Equal(tt.expectWorkerRoles, workerRoles) {
+				t.Error("unexpected workers", cmp.Diff(tt.expectWorkerRoles, workerRoles))
+			}
+		})
+	}
+}
+
 func TestGenerator(t *testing.T) {
 	t.Run("MachineToNode", testMachineToNode)
 	t.Run("New", testNewGenerator)
 	t.Run("Generate", testGenerate)
 	t.Run("Regenerate", testRegenerate)
 	t.Run("Update", testUpdate)
+	t.Run("Weighted", testWeighted)
 }

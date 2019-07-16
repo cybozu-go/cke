@@ -192,7 +192,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return err
 	}
 
-	err = cluster.Validate()
+	err = cluster.Validate(false)
 	if err != nil {
 		log.Error("invalid cluster configuration", map[string]interface{}{
 			log.FnError: err,
