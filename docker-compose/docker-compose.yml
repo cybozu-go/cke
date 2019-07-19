@@ -3,6 +3,9 @@ services:
   cke:
     container_name: cke
     image: quay.io/cybozu/cke:1.14
+    networks:
+      app_net:
+        ipv4_address: 172.30.0.11
     user: "${UID}:${GID}"
     volumes:
       - ./cke.config.yml:/etc/cke/config.yml
@@ -17,6 +20,9 @@ services:
   setup:
     container_name: setup
     image: quay.io/cybozu/ubuntu-debug:18.04
+    networks:
+      app_net:
+        ipv4_address: 172.30.0.12
     user: "${UID}:${GID}"
     volumes:
       - ./bin:/usr/local/bin
@@ -30,6 +36,9 @@ services:
   vault:
     container_name: vault
     image: quay.io/cybozu/vault:1.1
+    networks:
+      app_net:
+        ipv4_address: 172.30.0.13
     user: "${UID}:${GID}"
     cap_add:
       - IPC_LOCK
@@ -48,6 +57,9 @@ services:
   etcd:
     container_name: etcd
     image: quay.io/cybozu/etcd:3.3
+    networks:
+      app_net:
+        ipv4_address: 172.30.0.14
     user: "${UID}:${GID}"
     volumes:
       - ./etcd-data:/data/etcd
@@ -60,3 +72,10 @@ services:
     restart: always
     entrypoint:
       - /entrypoint.sh
+networks:
+  app_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.30.0.0/24

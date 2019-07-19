@@ -11,7 +11,7 @@ function retry() {
   return $?
 }
  
-retry curl http://etcd:2379/health
+retry curl http://172.30.0.14:2379/health
 
 /usr/local/vault/install-tools
 /usr/local/vault/bin/vault server -config=/etc/vault/config.hcl

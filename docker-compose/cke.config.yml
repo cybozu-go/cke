@@ -1,2 +1,2 @@
 endpoints:
-  - http://etcd:2379
+  - http://172.30.0.14:2379

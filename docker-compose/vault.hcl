@@ -7,7 +7,6 @@ listener "tcp" {
 }
 
 storage "etcd" {
-  address = "http://etcd:2379"
+  address = "http://172.30.0.14:2379"
   etcd_api = "v3"
 }
-
