@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.12] - 2019-07-109
+
+### Added
+
+- sabakan: weighted selection of node roles (#200)
+
 ## [1.14.11] - 2019-07-16
 
 ### Added
@@ -225,7 +231,8 @@ No user-visible changes since RC 1.
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.11...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.12...HEAD
+[1.14.12]: https://github.com/cybozu-go/cke/compare/v1.14.11...v1.14.12
 [1.14.11]: https://github.com/cybozu-go/cke/compare/v1.14.10...v1.14.11
 [1.14.10]: https://github.com/cybozu-go/cke/compare/v1.14.9...v1.14.10
 [1.14.9]: https://github.com/cybozu-go/cke/compare/v1.14.8...v1.14.9
