@@ -1,6 +1,7 @@
 # Quickstart for CKE
 
 ## Overview
+
 This quickstart gets you a single host CKE and Kubernetes cluster.
 
 The CKE deployed by this quickstart is not high availability, and does not use TLS to connect etcd.
@@ -9,15 +10,12 @@ You can use this CKE for testing and development.
 ## Requirements
 
 ### CKE host
+
 * git
 * Docker
 * Docker Compose
-* can connect to the internet
-
-### Kubernetes nodes
-* Docker
-* can be connected from CKE host via SSH
-* can connect to the internet
+* VirtualBox
+* Vagrant
 
 ## Setup CKE host
 
@@ -57,53 +55,47 @@ $ VAULT_ADDR=http://localhost:8200 VAULT_TOKEN=cybozu ./bin/vault status
 Key             Value
 ---             -----
 Seal Type       shamir
+Initialized     true
 Sealed          false
 Total Shares    1
 Threshold       1
-Version         0.11.0
-Cluster Name    vault-cluster-f201e8a4
-Cluster ID      9fcb601f-2e94-31b1-c715-45a3d8164c63
+Version         1.1.2
+Cluster Name    vault-cluster-265801b6
+Cluster ID      4cfb9202-f2d5-ab59-16e4-47a9897a468e
 HA Enabled      false
 
 $ ./bin/ckecli --config=./cke.config leader
 963f0ac4cdee
 ```
 
-## Prepare cluster configuration
+## Setup nodes
 
-Prepare the following file: cluster.yml
-
-```yaml
-name: quickstart
-nodes:
-  - name: node1
-    address: <YOUR NODE1 ADDRESS>
-    user: <SSH USERNAME>
-    control_plane: true
-  - name: node2
-    address: <YOUR NODE2 ADDRESS>
-    user: <SSH USERNAME>
-  - name: node3
-    address: <YOUR NODE3 ADDRESS>
-    user: <SSH USERNAME>
-ssh_key: |-
-  -----BEGIN RSA PRIVATE KEY-----
-  <PUT YOUR SSH PRIVATE KEY TO CONNECT NODES>
-  -----END RSA PRIVATE KEY-----
-service_subnet: 172.16.0.0/16
-pod_subnet: 192.168.0.0/16
-dns_servers: ["8.8.8.8"]
-options:
-  kubelet:
-    allow_swap: true
+```console
+$ vagrant up
 ```
 
-See [CKE docs: Cluster configuration](https://github.com/cybozu-go/cke/blob/master/docs/cluster.md).
+## Set SSH private-key
+
+```console
+$ ./bin/ckecli --config ./cke.config vault ssh-privkey ~/.vagrant.d/insecure_private_key
+```
 
 ## Deploy Kubernetes cluster
 
 ```console
-$ ./bin/ckecli --config=./cke.config cluster set ./cluster.yml
+$ ./bin/ckecli --config ./cke.config constraints set minimum-workers 2
+$ ./bin/ckecli --config ./cke.config constraints set control-plane-count 1
+$ ./bin/ckecli --config=./cke.config cluster set ./cke-cluster.yml
+```
+
+## Ckeck the logs
+
+```console
+$ docker logs cke -f
+```
+
+```console
+$ ./bin/ckecli --config ./cke.config history -f
 ```
 
 ## Operate Kubernetes cluster
@@ -115,17 +107,17 @@ See [Install and Set Up kubectl](https://kubernetes.io/docs/tasks/tools/install-
 ### generate kubectl configuration file
 
 ```console
-$ ./bin/ckecli --config=./cke.config kubernetes issue > $HOME/.kube
+$ ./bin/ckecli --config=./cke.config kubernetes issue > $HOME/.kube/config
 ```
 
 ### use kubectl
 
 ```
-$ kubectl get nodes
-NAME     STATUS    AGE
-node1    Ready     1m
-node2    Ready     1m
-node3    Ready     1m
+$ kubectl get node   
+NAME            STATUS     ROLES    AGE     VERSION
+192.168.1.101   NotReady   <none>   5m11s   v1.14.1
+192.168.1.102   NotReady   <none>   5m12s   v1.14.1
+192.168.1.103   NotReady   <none>   5m12s   v1.14.1
 ```
 
 ## Setup CNI plugin
