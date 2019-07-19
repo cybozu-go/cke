@@ -78,6 +78,12 @@ func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 	return n
 }
 
+type nodeTemplate struct {
+	*cke.Node
+	Role   string
+	Weight float64
+}
+
 // Generator generates cluster configuration.
 type Generator struct {
 	template    *cke.Cluster
@@ -85,24 +91,24 @@ type Generator struct {
 	timestamp   time.Time
 	waitSeconds float64
 
-	nodeMap map[string]*cke.Node
-
 	controlPlanes []*cke.Node
 	healthyCPs    int
 	cpRacks       map[int]int
 
 	workers        []*cke.Node
+	workersByRole  map[string]int
 	healthyWorkers int
 	workerRacks    map[int]int
 
 	machineMap     map[string]*Machine
 	unusedMachines []*Machine
-	cpTmpl         *cke.Node
-	workerTmpl     *cke.Node
+	cpTmpl         nodeTemplate
+	workerTmpls    []nodeTemplate
 }
 
 // NewGenerator creates a new Generator.
 // current can be nil if no cluster configuration has been set.
+// template must have been validated with ValidateTemplate().
 func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machines []Machine) *Generator {
 	g := &Generator{
 		template:    template,
@@ -127,6 +133,7 @@ func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machine
 	nodeMap := make(map[string]*cke.Node)
 	cpRacks := make(map[int]int)
 	workerRacks := make(map[int]int)
+	workersByRole := make(map[string]int)
 	if current != nil {
 		for _, n := range current.Nodes {
 			m := machineMap[n.Address]
@@ -149,11 +156,13 @@ func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machine
 				}
 			}
 			g.workers = append(g.workers, n)
+			role := n.Labels[CKELabelRole]
+			workersByRole[role]++
 		}
 	}
-	g.nodeMap = nodeMap
 	g.cpRacks = cpRacks
 	g.workerRacks = workerRacks
+	g.workersByRole = workersByRole
 
 	for a, m := range machineMap {
 		if _, ok := nodeMap[a]; !ok && m.Status.State == StateHealthy {
@@ -161,40 +170,109 @@ func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machine
 		}
 	}
 
-	// template should have one cp and one worker nodes.
 	for _, n := range template.Nodes {
+		weight := 1.0
+		if val, ok := n.Labels[CKELabelWeight]; ok {
+			weight, _ = strconv.ParseFloat(val, 64)
+		}
+		tmpl := nodeTemplate{
+			Node:   n,
+			Role:   n.Labels[CKELabelRole],
+			Weight: weight,
+		}
+
 		if n.ControlPlane {
-			g.cpTmpl = n
+			g.cpTmpl = tmpl
 		} else {
-			g.workerTmpl = n
+			g.workerTmpls = append(g.workerTmpls, tmpl)
 		}
 	}
 
 	return g
 }
 
+func (g *Generator) chooseWorkerTmpl() nodeTemplate {
+	if len(g.workerTmpls) == 1 {
+		return g.workerTmpls[0]
+	}
+
+	var least float64
+	var leastIndex int
+
+	for i, tmpl := range g.workerTmpls {
+		w := float64(g.workersByRole[tmpl.Role]) / tmpl.Weight
+		if i == 0 {
+			least = w
+			continue
+		}
+		if w < least {
+			least = w
+			leastIndex = i
+		}
+	}
+
+	return g.workerTmpls[leastIndex]
+}
+
+func (g *Generator) getWorkerTmpl(role string) nodeTemplate {
+	if len(g.workerTmpls) == 1 {
+		return g.workerTmpls[0]
+	}
+
+	for _, tmpl := range g.workerTmpls {
+		if tmpl.Role == role {
+			return tmpl
+		}
+	}
+	panic("BUG: instantiating for invalid role: " + role)
+}
+
 // selectMachine selects a healthy unused machine.
 // If there is no such machine, this returns nil.
 func (g *Generator) selectMachine(cp bool) *Machine {
-	if len(g.unusedMachines) == 0 {
+	racks := g.cpRacks
+	tmpl := g.cpTmpl
+	if !cp {
+		racks = g.workerRacks
+		tmpl = g.chooseWorkerTmpl()
+	}
+
+	var unused []*Machine
+	if tmpl.Role == "" {
+		unused = g.unusedMachines
+	} else {
+		for _, m := range g.unusedMachines {
+			if m.Spec.Role == tmpl.Role {
+				unused = append(unused, m)
+			}
+		}
+	}
+	if len(unused) == 0 {
 		return nil
 	}
 
-	racks := g.workerRacks
-	if cp {
-		racks = g.cpRacks
-	}
-
-	sort.Slice(g.unusedMachines, func(i, j int) bool {
-		si := scoreMachine(g.unusedMachines[i], racks, g.timestamp)
-		sj := scoreMachine(g.unusedMachines[j], racks, g.timestamp)
+	sort.Slice(unused, func(i, j int) bool {
+		si := scoreMachine(unused[i], racks, g.timestamp)
+		sj := scoreMachine(unused[j], racks, g.timestamp)
 		// higher first
 		return si > sj
 	})
 
-	m := g.unusedMachines[0]
-	g.unusedMachines = g.unusedMachines[1:]
+	m := unused[0]
 	racks[m.Spec.Rack]++
+
+	newUnused := make([]*Machine, 0, len(g.unusedMachines)-1)
+	for _, mm := range g.unusedMachines {
+		if m == mm {
+			continue
+		}
+		newUnused = append(newUnused, mm)
+	}
+	g.unusedMachines = newUnused
+
+	if !cp {
+		g.workersByRole[tmpl.Role]++
+	}
 	return m
 }
 
@@ -259,10 +337,10 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 
 	nodes := make([]*cke.Node, 0, len(op.cps)+len(op.workers))
 	for _, m := range op.cps {
-		nodes = append(nodes, MachineToNode(m, g.cpTmpl))
+		nodes = append(nodes, MachineToNode(m, g.cpTmpl.Node))
 	}
 	for _, m := range op.workers {
-		nodes = append(nodes, MachineToNode(m, g.workerTmpl))
+		nodes = append(nodes, MachineToNode(m, g.getWorkerTmpl(m.Spec.Role).Node))
 	}
 
 	c := *g.template

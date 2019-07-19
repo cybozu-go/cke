@@ -31,7 +31,7 @@ The file must be either YAML or JSON.`,
 		if err != nil {
 			return err
 		}
-		err = cfg.Validate()
+		err = cfg.Validate(false)
 		if err != nil {
 			return err
 		}

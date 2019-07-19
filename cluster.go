@@ -169,7 +169,7 @@ type Cluster struct {
 }
 
 // Validate validates the cluster definition.
-func (c *Cluster) Validate() error {
+func (c *Cluster) Validate(isTmpl bool) error {
 	if len(c.Name) == 0 {
 		return errors.New("cluster name is empty")
 	}
@@ -185,7 +185,7 @@ func (c *Cluster) Validate() error {
 
 	fldPath := field.NewPath("nodes")
 	for i, n := range c.Nodes {
-		err := c.validateNode(n, fldPath.Index(i))
+		err := c.validateNode(n, isTmpl, fldPath.Index(i))
 		if err != nil {
 			return err
 		}
@@ -217,9 +217,11 @@ func (c *Cluster) Validate() error {
 	return nil
 }
 
-func (c *Cluster) validateNode(n *Node, fldPath *field.Path) error {
-	if net.ParseIP(n.Address) == nil {
-		return errors.New("invalid IP address: " + n.Address)
+func (c *Cluster) validateNode(n *Node, isTmpl bool, fldPath *field.Path) error {
+	if !isTmpl {
+		if net.ParseIP(n.Address) == nil {
+			return errors.New("invalid IP address: " + n.Address)
+		}
 	}
 	if len(n.User) == 0 {
 		return errors.New("user name is empty")
