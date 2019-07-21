@@ -16,7 +16,7 @@ var etcdUserAddCmd = &cobra.Command{
 	Long: `Add a user to etcd managed by CKE (not the one used by CKE).
 
 NAME must not be "root" or "backup".
-PREFIX limits the user's priviledge to keys having the prefix.`,
+PREFIX limits the user's privilege to keys having the prefix.`,
 
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 2 {
