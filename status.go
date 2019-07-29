@@ -1,6 +1,8 @@
 package cke
 
 import (
+	"time"
+
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke/scheduler"
 
@@ -106,6 +108,7 @@ type NodeStatus struct {
 type ServiceStatus struct {
 	Running       bool
 	Image         string
+	StartedAt     time.Time
 	BuiltInParams ServiceParams
 	ExtraParams   ServiceParams
 }

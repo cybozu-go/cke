@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/containernetworking/cni/libcni"
 	"github.com/cybozu-go/cke/scheduler"
@@ -27,6 +28,7 @@ type Node struct {
 	Annotations  map[string]string `json:"annotations"   yaml:"annotations"`
 	Labels       map[string]string `json:"labels"        yaml:"labels"`
 	Taints       []corev1.Taint    `json:"taints"        yaml:"taints"`
+	GeneratedAt  *time.Time
 }
 
 // Nodename returns a hostname or address if hostname is empty

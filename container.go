@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/pkg/errors"
@@ -318,15 +319,25 @@ RETRY:
 		if err != nil {
 			return nil, err
 		}
+		staredAt, err := parseStartedAt(dj.State.StartedAt)
+		if err != nil {
+			return nil, err
+		}
 		statuses[name] = ServiceStatus{
 			Running:       dj.State.Running,
 			Image:         dj.Config.Image,
 			BuiltInParams: params.BuiltInParams,
 			ExtraParams:   params.ExtraParams,
+			StartedAt:     staredAt,
 		}
 	}
 
 	return statuses, nil
+}
+
+func parseStartedAt(raw string) (time.Time, error) {
+	//TODO:impl
+	return time.Now(), nil
 }
 
 func (c docker) VolumeCreate(name string) error {

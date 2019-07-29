@@ -75,6 +75,9 @@ func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 		})
 	}
 
+	now := time.Now()
+	n.GeneratedAt = &now
+
 	return n
 }
 
