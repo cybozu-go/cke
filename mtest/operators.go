@@ -450,4 +450,41 @@ func TestOperators() {
 		kubectl("taint", "--all=true", "node", "taint1-")
 		kubectl("taint", "--all=true", "node", "taint2-")
 	})
+
+	It("should recognize nodes that have recovered", func() {
+		By("removing a worker node")
+		cluster := getCluster()
+		targetNodeAddress := cluster.Nodes[len(cluster.Nodes)-1].Address
+		cluster.Nodes = cluster.Nodes[:len(cluster.Nodes)-1]
+		ckecliClusterSet(cluster)
+
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		By("recovering the cluster")
+		cluster = getCluster()
+		ckecliClusterSet(cluster)
+
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		stdout, stderr, err := kubectl("get", "nodes")
+		Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", stdout, stderr)
+
+		By("confirming that the removed node rejoined the cluster: " + targetNodeAddress)
+		var nodes corev1.NodeList
+		err = json.Unmarshal(stdout, &nodes)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		var isExists bool
+		for _, n := range nodes.Items {
+			if targetNodeAddress == n.Name {
+				isExists = true
+				break
+			}
+		}
+		Expect(isExists).To(BeTrue())
+	})
 }
