@@ -666,6 +666,15 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
+			Name: "RestartKubelet10",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[1:]
+			}),
+			ExpectedOps: []string{
+				"kubelet-restart",
+			},
+		},
+		{
 			Name: "RestartProxy",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.Cluster.Nodes[0]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
