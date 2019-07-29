@@ -454,11 +454,12 @@ func TestOperators() {
 	It("should recognize nodes that have recovered", func() {
 		By("removing a worker node")
 		cluster := getCluster()
-		targetNodeAddress := node4
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		// remove node4
 		cluster.Nodes = append(cluster.Nodes[:3], cluster.Nodes[4:]...)
-		fmt.Println(cluster.Nodes)
-		stdout, stderr, err := ckecliClusterSet(cluster)
-		Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", stdout, stderr)
+		Expect(ckecliClusterSet(cluster)).ShouldNot(HaveOccurred())
 
 		Eventually(func() error {
 			return checkCluster(cluster)
@@ -466,28 +467,30 @@ func TestOperators() {
 
 		By("recovering the cluster")
 		cluster = getCluster()
-		stdout, stderr, err = ckecliClusterSet(cluster)
-		Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", stdout, stderr)
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		Expect(ckecliClusterSet(cluster)).ShouldNot(HaveOccurred())
 
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 
-		stdout, stderr, err = kubectl("get", "nodes")
+		stdout, stderr, err := kubectl("get", "nodes", "-o=json")
 		Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", stdout, stderr)
 
-		By("confirming that the removed node rejoined the cluster: " + targetNodeAddress)
+		By("confirming that the removed node rejoined the cluster: " + node4)
 		var nodes corev1.NodeList
 		err = json.Unmarshal(stdout, &nodes)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		var isExists bool
+		var isFound bool
 		for _, n := range nodes.Items {
-			if targetNodeAddress == n.Name {
-				isExists = true
+			if node4 == n.Name {
+				isFound = true
 				break
 			}
 		}
-		Expect(isExists).To(BeTrue())
+		Expect(isFound).To(BeTrue())
 	})
 }
