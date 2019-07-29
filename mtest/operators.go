@@ -454,16 +454,8 @@ func TestOperators() {
 	It("should recognize nodes that have recovered", func() {
 		By("removing a worker node")
 		cluster := getCluster()
-		targetNodeAddress := ""
-		for i, n := range cluster.Nodes {
-			if n.ControlPlane {
-				continue
-			}
-			targetNodeAddress = cluster.Nodes[i].Address
-			cluster.Nodes = append(cluster.Nodes[:i], cluster.Nodes[i+1:]...)
-			break
-		}
-		fmt.Println("targetNodeAddress: " + targetNodeAddress)
+		targetNodeAddress := node4
+		cluster.Nodes = append(cluster.Nodes[:3], cluster.Nodes[4:]...)
 		fmt.Println(cluster.Nodes)
 		stdout, stderr, err := ckecliClusterSet(cluster)
 		Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", stdout, stderr)
