@@ -454,9 +454,16 @@ func TestOperators() {
 	It("should recognize nodes that have recovered", func() {
 		By("removing a worker node")
 		cluster := getCluster()
-		targetNodeAddress := cluster.Nodes[len(cluster.Nodes)-1].Address
-		cluster.Nodes = cluster.Nodes[:len(cluster.Nodes)-1]
-		ckecliClusterSet(cluster)
+		targetNodeAddress := ""
+		for i, n := range cluster.Nodes {
+			if n.ControlPlane {
+				continue
+			}
+			targetNodeAddress = cluster.Nodes[i].Address
+			cluster.Nodes = append(cluster.Nodes[:i], cluster.Nodes[i+1:]...)
+			break
+		}
+		Expect(ckecliClusterSet(cluster)).ShouldNot(HaveOccurred())
 
 		Eventually(func() error {
 			return checkCluster(cluster)
@@ -464,7 +471,7 @@ func TestOperators() {
 
 		By("recovering the cluster")
 		cluster = getCluster()
-		ckecliClusterSet(cluster)
+		Expect(ckecliClusterSet(cluster)).ShouldNot(HaveOccurred())
 
 		Eventually(func() error {
 			return checkCluster(cluster)
