@@ -378,15 +378,14 @@ func getClusterStatus(cluster *cke.Cluster) (*cke.ClusterStatus, []cke.ResourceD
 	return cs, resources, err
 }
 
-func ckecliClusterSet(cluster *cke.Cluster) error {
+func ckecliClusterSet(cluster *cke.Cluster) ([]byte, []byte, error) {
 	y, err := yaml.Marshal(cluster)
 	if err != nil {
-		return err
+		return []byte(""), []byte(""), err
 	}
 
 	rf := remoteTempFile(string(y))
-	_, _, err = ckecli("cluster", "set", rf)
-	return err
+	return ckecli("cluster", "set", rf)
 }
 
 func stopManagementEtcd(client *ssh.Client) error {

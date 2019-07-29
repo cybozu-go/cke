@@ -463,7 +463,10 @@ func TestOperators() {
 			cluster.Nodes = append(cluster.Nodes[:i], cluster.Nodes[i+1:]...)
 			break
 		}
-		Expect(ckecliClusterSet(cluster)).ShouldNot(HaveOccurred())
+		fmt.Println("targetNodeAddress: " + targetNodeAddress)
+		fmt.Println(cluster.Nodes)
+		stdout, stderr, err := ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", stdout, stderr)
 
 		Eventually(func() error {
 			return checkCluster(cluster)
@@ -471,13 +474,14 @@ func TestOperators() {
 
 		By("recovering the cluster")
 		cluster = getCluster()
-		Expect(ckecliClusterSet(cluster)).ShouldNot(HaveOccurred())
+		stdout, stderr, err = ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", stdout, stderr)
 
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 
-		stdout, stderr, err := kubectl("get", "nodes")
+		stdout, stderr, err = kubectl("get", "nodes")
 		Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", stdout, stderr)
 
 		By("confirming that the removed node rejoined the cluster: " + targetNodeAddress)
