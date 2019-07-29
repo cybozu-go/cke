@@ -3,6 +3,7 @@ package server
 import (
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
@@ -663,6 +664,17 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []string{
 				"wait-kubernetes",
+			},
+		},
+		{
+			Name: "RestartKubelet10",
+			Input: newData().withAllServices().with(func(d testData) {
+				t := time.Now()
+				d.NodeStatus(d.Cluster.Nodes[0]).Kubelet.StartedAt = t.Add(-time.Hour)
+				d.Cluster.Nodes[0].GeneratedAt = &t
+			}),
+			ExpectedOps: []string{
+				"kubelet-restart",
 			},
 		},
 		{

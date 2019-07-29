@@ -319,7 +319,7 @@ RETRY:
 		if err != nil {
 			return nil, err
 		}
-		staredAt, err := parseStartedAt(dj.State.StartedAt)
+		staredAt, err := time.Parse(time.RFC3339Nano, dj.State.StartedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -333,11 +333,6 @@ RETRY:
 	}
 
 	return statuses, nil
-}
-
-func parseStartedAt(raw string) (time.Time, error) {
-	//TODO:impl
-	return time.Now(), nil
 }
 
 func (c docker) VolumeCreate(name string) error {
