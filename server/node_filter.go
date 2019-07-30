@@ -475,6 +475,25 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
+// KubeletUnrecognizedNodes returns nodes of which kubelet is still running but not recognized by k8s.
+func (nf *NodeFilter) KubeletUnrecognizedNodes() (nodes []*cke.Node) {
+	for _, n := range nf.cluster.Nodes {
+		if nf.nodeStatus(n).Kubelet.Running && !nf.existsNodeResource(n.Nodename()) {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
+func (nf *NodeFilter) existsNodeResource(name string) bool {
+	for _, kn := range nf.status.Kubernetes.Nodes {
+		if kn.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 // NonClusterNodes returns nodes not defined in cluster YAML.
 func (nf *NodeFilter) NonClusterNodes() (nodes []*corev1.Node) {
 	members := nf.status.Kubernetes.Nodes

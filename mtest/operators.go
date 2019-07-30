@@ -450,4 +450,47 @@ func TestOperators() {
 		kubectl("taint", "--all=true", "node", "taint1-")
 		kubectl("taint", "--all=true", "node", "taint2-")
 	})
+
+	It("should recognize nodes that have recovered", func() {
+		By("removing a worker node")
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		// remove node4
+		cluster.Nodes = append(cluster.Nodes[:3], cluster.Nodes[4:]...)
+		Expect(ckecliClusterSet(cluster)).ShouldNot(HaveOccurred())
+
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		By("recovering the cluster")
+		cluster = getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		Expect(ckecliClusterSet(cluster)).ShouldNot(HaveOccurred())
+
+		Eventually(func() error {
+			return checkCluster(cluster)
+		}).Should(Succeed())
+
+		stdout, stderr, err := kubectl("get", "nodes", "-o=json")
+		Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", stdout, stderr)
+
+		By("confirming that the removed node rejoined the cluster: " + node4)
+		var nodes corev1.NodeList
+		err = json.Unmarshal(stdout, &nodes)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		var isFound bool
+		for _, n := range nodes.Items {
+			if node4 == n.Name {
+				isFound = true
+				break
+			}
+		}
+		Expect(isFound).To(BeTrue())
+	})
 }
