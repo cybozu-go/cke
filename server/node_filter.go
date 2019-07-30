@@ -478,7 +478,7 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 // KubeletUnrecognizedNodes returns nodes of which kubelet is still running but not recognized by k8s.
 func (nf *NodeFilter) KubeletUnrecognizedNodes() (nodes []*cke.Node) {
 	for _, n := range nf.cluster.Nodes {
-		if nf.nodeStatus(n).Kubelet.Running && !nf.existsNodeResource(n.Address) {
+		if nf.nodeStatus(n).Kubelet.Running && !nf.existsNodeResource(n.Nodename()) {
 			nodes = append(nodes, n)
 		}
 	}
