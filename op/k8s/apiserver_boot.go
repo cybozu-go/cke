@@ -281,6 +281,10 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 		"--authorization-mode=Node,RBAC",
 
 		"--advertise-address=" + advertiseAddress,
+
+		// See https://github.com/cybozu-go/neco/issues/397
+		"--endpoint-reconciler-type=none",
+
 		"--service-cluster-ip-range=" + serviceSubnet,
 		"--machine-id-file=/etc/machine-id",
 		"--encryption-provider-config=" + encryptionConfigFile,

@@ -91,13 +91,13 @@ func (c createEtcdEndpointsCommand) Run(ctx context.Context, inf cke.Infrastruct
 	// If an Endpoints lacks such a Service, it will be removed.
 	// https://github.com/kubernetes/kubernetes/blob/b7c2d923ef4e166b9572d3aa09ca72231b59b28b/pkg/controller/endpoint/endpoints_controller.go#L392-L397
 	services := cs.CoreV1().Services("kube-system")
-	_, err = services.Get(etcdEndpointsName, metav1.GetOptions{})
+	_, err = services.Get(EtcdEndpointsName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
 		_, err = services.Create(&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: etcdEndpointsName,
+				Name: EtcdEndpointsName,
 			},
 			Spec: corev1.ServiceSpec{
 				Ports:     []corev1.ServicePort{{Port: 2379}},
@@ -121,7 +121,7 @@ func (c createEtcdEndpointsCommand) Run(ctx context.Context, inf cke.Infrastruct
 
 	_, err = cs.CoreV1().Endpoints("kube-system").Create(&corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: etcdEndpointsName,
+			Name: EtcdEndpointsName,
 		},
 		Subsets: []corev1.EndpointSubset{subset},
 	})
@@ -161,7 +161,7 @@ func (c updateEtcdEndpointsCommand) Run(ctx context.Context, inf cke.Infrastruct
 
 	_, err = cs.CoreV1().Endpoints("kube-system").Update(&corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: etcdEndpointsName,
+			Name: EtcdEndpointsName,
 		},
 		Subsets: []corev1.EndpointSubset{subset},
 	})

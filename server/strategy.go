@@ -11,6 +11,7 @@ import (
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DecideOps returns the next operations to do.
@@ -167,7 +168,48 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 
 	ops = append(ops, decideNodeDNSOps(apiServer, c, ks)...)
 
-	epOp := decideEpOp(ks.EtcdEndpoints, apiServer, nf.ControlPlane())
+	cpAddresses := make([]corev1.EndpointAddress, len(nf.ControlPlane()))
+	for i, cp := range nf.ControlPlane() {
+		cpAddresses[i] = corev1.EndpointAddress{
+			IP: cp.Address,
+		}
+	}
+
+	masterEP := &corev1.Endpoints{}
+	masterEP.Namespace = metav1.NamespaceDefault
+	masterEP.Name = "kubernetes"
+	masterEP.Subsets = []corev1.EndpointSubset{
+		{
+			Addresses: cpAddresses,
+			Ports: []corev1.EndpointPort{
+				{
+					Name:     "https",
+					Port:     6443,
+					Protocol: corev1.ProtocolTCP,
+				},
+			},
+		},
+	}
+	epOp := decideEpOp(masterEP, ks.MasterEndpoints, apiServer)
+	if epOp != nil {
+		ops = append(ops, epOp)
+	}
+
+	etcdEP := &corev1.Endpoints{}
+	etcdEP.Namespace = metav1.NamespaceSystem
+	etcdEP.Name = op.EtcdEndpointsName
+	etcdEP.Subsets = []corev1.EndpointSubset{
+		{
+			Addresses: cpAddresses,
+			Ports: []corev1.EndpointPort{
+				{
+					Port:     2379,
+					Protocol: corev1.ProtocolTCP,
+				},
+			},
+		},
+	}
+	epOp = decideEpOp(etcdEP, ks.EtcdEndpoints, apiServer)
 	if epOp != nil {
 		ops = append(ops, epOp)
 	}
