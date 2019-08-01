@@ -5,7 +5,13 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
-## [1.14.12] - 2019-07-109
+## [1.14.13] - 2019-08-01
+
+### Changed
+- Fix a bug that prevents Node resource creation in some cases (#203)
+- Maintain default/kubernetes Endpoints by CKE itself (#204)
+
+## [1.14.12] - 2019-07-19
 
 ### Added
 
@@ -231,7 +237,8 @@ No user-visible changes since RC 1.
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.12...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.13...HEAD
+[1.14.13]: https://github.com/cybozu-go/cke/compare/v1.14.12...v1.14.13
 [1.14.12]: https://github.com/cybozu-go/cke/compare/v1.14.11...v1.14.12
 [1.14.11]: https://github.com/cybozu-go/cke/compare/v1.14.10...v1.14.11
 [1.14.10]: https://github.com/cybozu-go/cke/compare/v1.14.9...v1.14.10
