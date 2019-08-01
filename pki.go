@@ -183,19 +183,19 @@ func IssueEtcdClientCertificate(inf Infrastructure, username, ttl string) (cert,
 // KubernetesCA is a certificate authority for k8s cluster.
 type KubernetesCA struct{}
 
-// IssueAdminCert issues client certificate for cluster admin user.
-func (k KubernetesCA) IssueAdminCert(ctx context.Context, inf Infrastructure, ttl string) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, RoleAdmin,
+// IssueUserCert issues client certificate for user.
+func (k KubernetesCA) IssueUserCert(ctx context.Context, inf Infrastructure, userName, groupName string, ttl string) (crt, key string, err error) {
+	return issueCertificate(inf, CAKubernetes, userName,
 		map[string]interface{}{
 			"ttl":               "2h",
 			"max_ttl":           "48h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
-			"organization":      "system:masters",
+			"organization":      groupName,
 		},
 		map[string]interface{}{
 			"ttl":                  ttl,
-			"common_name":          "admin",
+			"common_name":          userName,
 			"exclude_cn_from_sans": "true",
 		})
 }

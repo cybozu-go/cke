@@ -12,14 +12,16 @@ import (
 )
 
 var kubernetesIssueOpts struct {
-	TTL string
+	TTL       string
+	GroupName string
+	UserName  string
 }
 
 // kubernetesIssueCmd represents the "kubernetes issue" command
 var kubernetesIssueCmd = &cobra.Command{
 	Use:   "issue",
-	Short: "issue client certificates for k8s admin",
-	Long:  `Issue TLS client certificates for k8s admin user.`,
+	Short: "issue client certificates for k8s user",
+	Long:  `Issue TLS client certificates for k8s user.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		well.Go(func(ctx context.Context) error {
@@ -32,20 +34,18 @@ var kubernetesIssueCmd = &cobra.Command{
 				return errors.New("no control plane")
 			}
 
-			// TODO: Replace `server` from node IP to Ingress address.
-			// Since there is no Ingress yet, use the node IP.
 			server := "https://" + cpNodes[0].Address + ":6443"
 
 			cacert, err := storage.GetCACertificate(ctx, "kubernetes")
 			if err != nil {
 				return err
 			}
-			cert, key, err := cke.KubernetesCA{}.IssueAdminCert(ctx, inf, kubernetesIssueOpts.TTL)
+
+			cert, key, err := cke.KubernetesCA{}.IssueUserCert(ctx, inf, kubernetesIssueOpts.UserName, kubernetesIssueOpts.GroupName, kubernetesIssueOpts.TTL)
 			if err != nil {
 				return err
 			}
-
-			cfg := cke.AdminKubeconfig(cluster.Name, cacert, cert, key, server)
+			cfg := cke.UserKubeconfig(cluster.Name, kubernetesIssueOpts.UserName, cacert, cert, key, server)
 			src, err := clientcmd.Write(*cfg)
 			if err != nil {
 				return err
@@ -61,5 +61,7 @@ var kubernetesIssueCmd = &cobra.Command{
 func init() {
 	fs := kubernetesIssueCmd.Flags()
 	fs.StringVar(&kubernetesIssueOpts.TTL, "ttl", "2h", "TTL of the certificate")
+	fs.StringVarP(&kubernetesIssueOpts.GroupName, "group", "g", "system:masters", "Group name of the issuing config")
+	fs.StringVarP(&kubernetesIssueOpts.UserName, "user", "u", "admin", "User name of the issuing config")
 	kubernetesCmd.AddCommand(kubernetesIssueCmd)
 }
