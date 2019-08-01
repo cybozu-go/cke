@@ -464,6 +464,7 @@ rules:
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(logs).ShouldNot(BeEmpty())
 		status, _, err := getClusterStatus(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
 		var policyFile string
 		for _, v := range status.NodeStatuses[node1].APIServer.BuiltInParams.ExtraArguments {
 			if strings.HasPrefix(v, "--audit-policy-file=") {
@@ -483,6 +484,7 @@ rules:
 			return checkCluster(cluster)
 		}).Should(Succeed())
 		status, _, err = getClusterStatus(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
 		var currentPolicyFile string
 		for _, v := range status.NodeStatuses[node1].APIServer.BuiltInParams.ExtraArguments {
 			if strings.HasPrefix(v, "--audit-policy-file=") {
