@@ -8,6 +8,8 @@ import (
 const (
 	// EtcdEndpointsName is the resource name for CKE-managed etcd
 	EtcdEndpointsName = "cke-etcd"
+	// EtcdServiceName is the resource name for CKE-managed etcd
+	EtcdServiceName = EtcdEndpointsName
 
 	etcdPKIPath = "/etc/etcd/pki"
 	k8sPKIPath  = "/etc/kubernetes/pki"

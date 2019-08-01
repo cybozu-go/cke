@@ -311,6 +311,25 @@ func (d testData) withK8sResourceReady() testData {
 	ks.ClusterDNS.ClusterIP = testDefaultDNSAddr
 	ks.NodeDNS.ConfigMap = nodedns.ConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
 
+	ks.MasterEndpoints = &corev1.Endpoints{
+		Subsets: []corev1.EndpointSubset{
+			{
+				Addresses: []corev1.EndpointAddress{
+					{IP: "10.0.0.11"},
+					{IP: "10.0.0.12"},
+					{IP: "10.0.0.13"},
+				},
+				Ports: []corev1.EndpointPort{{Name: "https", Port: 6443}},
+			},
+		},
+	}
+	ks.EtcdService = &corev1.Service{
+		Spec: corev1.ServiceSpec{
+			Ports:     []corev1.ServicePort{{Port: 2379}},
+			Type:      corev1.ServiceTypeClusterIP,
+			ClusterIP: corev1.ClusterIPNone,
+		},
+	}
 	ks.EtcdEndpoints = &corev1.Endpoints{
 		Subsets: []corev1.EndpointSubset{
 			{
@@ -711,7 +730,9 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sReady(),
 			ExpectedOps: []string{
 				"create-cluster-dns-configmap",
-				"create-etcd-endpoints",
+				"create-endpoints",
+				"create-endpoints",
+				"create-etcd-service",
 				"resource-apply",
 				"resource-apply",
 				"resource-apply",
@@ -784,25 +805,53 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
+			Name: "MasterEndpointsUpdate1",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.MasterEndpoints.Subsets = []corev1.EndpointSubset{}
+			}),
+			ExpectedOps: []string{"update-endpoints"},
+		},
+		{
+			Name: "MasterEndpointsUpdate2",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Ports = []corev1.EndpointPort{}
+			}),
+			ExpectedOps: []string{"update-endpoints"},
+		},
+		{
+			Name: "MasterEndpointsUpdate3",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
+			}),
+			ExpectedOps: []string{"update-endpoints"},
+		},
+		{
+			Name: "EtcdServiceUpdate",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.EtcdService.Spec.Ports = []corev1.ServicePort{}
+			}),
+			ExpectedOps: []string{"update-etcd-service"},
+		},
+		{
 			Name: "EtcdEndpointsUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets = []corev1.EndpointSubset{}
 			}),
-			ExpectedOps: []string{"update-etcd-endpoints"},
+			ExpectedOps: []string{"update-endpoints"},
 		},
 		{
 			Name: "EtcdEndpointsUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Ports = []corev1.EndpointPort{}
 			}),
-			ExpectedOps: []string{"update-etcd-endpoints"},
+			ExpectedOps: []string{"update-endpoints"},
 		},
 		{
 			Name: "EtcdEndpointsUpdate3",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
-			ExpectedOps: []string{"update-etcd-endpoints"},
+			ExpectedOps: []string{"update-endpoints"},
 		},
 		{
 			Name: "UserResourceAdd",
