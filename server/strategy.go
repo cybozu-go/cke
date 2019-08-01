@@ -11,6 +11,7 @@ import (
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DecideOps returns the next operations to do.
@@ -167,7 +168,56 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 
 	ops = append(ops, decideNodeDNSOps(apiServer, c, ks)...)
 
-	epOp := decideEpOp(ks.EtcdEndpoints, apiServer, nf.ControlPlane())
+	cpAddresses := make([]corev1.EndpointAddress, len(nf.ControlPlane()))
+	for i, cp := range nf.ControlPlane() {
+		cpAddresses[i] = corev1.EndpointAddress{
+			IP: cp.Address,
+		}
+	}
+
+	masterEP := &corev1.Endpoints{}
+	masterEP.Namespace = metav1.NamespaceDefault
+	masterEP.Name = "kubernetes"
+	masterEP.Subsets = []corev1.EndpointSubset{
+		{
+			Addresses: cpAddresses,
+			Ports: []corev1.EndpointPort{
+				{
+					Name:     "https",
+					Port:     6443,
+					Protocol: corev1.ProtocolTCP,
+				},
+			},
+		},
+	}
+	epOp := decideEpOp(masterEP, ks.MasterEndpoints, apiServer)
+	if epOp != nil {
+		ops = append(ops, epOp)
+	}
+
+	// Endpoints needs a corresponding Service.
+	// If an Endpoints lacks such a Service, it will be removed.
+	// https://github.com/kubernetes/kubernetes/blob/b7c2d923ef4e166b9572d3aa09ca72231b59b28b/pkg/controller/endpoint/endpoints_controller.go#L392-L397
+	svcOp := decideEtcdServiceOps(apiServer, ks.EtcdService)
+	if svcOp != nil {
+		ops = append(ops, svcOp)
+	}
+
+	etcdEP := &corev1.Endpoints{}
+	etcdEP.Namespace = metav1.NamespaceSystem
+	etcdEP.Name = op.EtcdEndpointsName
+	etcdEP.Subsets = []corev1.EndpointSubset{
+		{
+			Addresses: cpAddresses,
+			Ports: []corev1.EndpointPort{
+				{
+					Port:     2379,
+					Protocol: corev1.ProtocolTCP,
+				},
+			},
+		},
+	}
+	epOp = decideEpOp(etcdEP, ks.EtcdEndpoints, apiServer)
 	if epOp != nil {
 		ops = append(ops, epOp)
 	}
@@ -240,33 +290,56 @@ func decideNodeDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClus
 	return ops
 }
 
-func decideEpOp(ep *corev1.Endpoints, apiServer *cke.Node, cpNodes []*cke.Node) cke.Operator {
-	if ep == nil {
-		return op.KubeEtcdEndpointsCreateOp(apiServer, cpNodes)
+func decideEpOp(expect, actual *corev1.Endpoints, apiServer *cke.Node) cke.Operator {
+	if actual == nil {
+		return op.KubeEndpointsCreateOp(apiServer, expect)
 	}
 
-	updateOp := op.KubeEtcdEndpointsUpdateOp(apiServer, cpNodes)
-	if len(ep.Subsets) != 1 {
+	updateOp := op.KubeEndpointsUpdateOp(apiServer, expect)
+	if len(actual.Subsets) != 1 {
 		return updateOp
 	}
 
-	subset := ep.Subsets[0]
-	if len(subset.Ports) != 1 || subset.Ports[0].Port != 2379 {
+	subset := actual.Subsets[0]
+	if len(subset.Ports) != 1 || subset.Ports[0].Port != expect.Subsets[0].Ports[0].Port {
 		return updateOp
 	}
 
-	if len(subset.Addresses) != len(cpNodes) {
+	if len(subset.Addresses) != len(expect.Subsets[0].Addresses) {
 		return updateOp
 	}
 
 	endpoints := make(map[string]bool)
-	for _, n := range cpNodes {
-		endpoints[n.Address] = true
+	for _, a := range expect.Subsets[0].Addresses {
+		endpoints[a.IP] = true
 	}
 	for _, a := range subset.Addresses {
 		if !endpoints[a.IP] {
 			return updateOp
 		}
+	}
+
+	return nil
+}
+
+func decideEtcdServiceOps(apiServer *cke.Node, svc *corev1.Service) cke.Operator {
+	if svc == nil {
+		return op.KubeEtcdServiceCreateOp(apiServer)
+	}
+
+	updateOp := op.KubeEtcdServiceUpdateOp(apiServer)
+
+	if len(svc.Spec.Ports) != 1 {
+		return updateOp
+	}
+	if svc.Spec.Ports[0].Port != 2379 {
+		return updateOp
+	}
+	if svc.Spec.Type != corev1.ServiceTypeClusterIP {
+		return updateOp
+	}
+	if svc.Spec.ClusterIP != corev1.ClusterIPNone {
+		return updateOp
 	}
 
 	return nil

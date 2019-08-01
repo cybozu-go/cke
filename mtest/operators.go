@@ -32,7 +32,8 @@ func TestOperators() {
 		// - KubeWaitOp
 		// - KubeRBACRoleInstallOp
 		// - KubeClusterDNSCreateOp
-		// - KubeEtcdEndpointsCreateOp
+		// - KubeEtcdServiceCreateOp
+		// - KubeEndpointsCreateOp
 
 		By("Testing control plane node labels")
 		for _, n := range []string{node1, node2, node3} {
@@ -51,6 +52,19 @@ func TestOperators() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(node.Labels).ShouldNot(HaveKey("cke.cybozu.com/master"))
 		}
+
+		By("Testing default/kubernetes Endpoints")
+		out, _, err := kubectl("get", "-o=json", "endpoints/kubernetes")
+		Expect(err).ShouldNot(HaveOccurred())
+		var ep corev1.Endpoints
+		err = json.Unmarshal(out, &ep)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(ep.Subsets).Should(HaveLen(1))
+		Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+			corev1.EndpointAddress{IP: node1},
+			corev1.EndpointAddress{IP: node2},
+			corev1.EndpointAddress{IP: node3},
+		))
 
 		By("Stopping etcd servers")
 		// this will run:
@@ -77,7 +91,7 @@ func TestOperators() {
 		// - RiversRestartOp
 		// - EtcdRiversRestartOp
 		// - APIServerRestartOp
-		// - KubeEtcdEndpointsUpdateOp
+		// - KubeEndpointsUpdateOp
 		stopCKE()
 		ckecliSafe("constraints", "set", "control-plane-count", "2")
 		cluster.Nodes = append(cluster.Nodes[:1], cluster.Nodes[2:]...)
@@ -86,6 +100,18 @@ func TestOperators() {
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
+
+		By("Testing default/kubernetes Endpoints")
+		out, _, err = kubectl("get", "-o=json", "endpoints/kubernetes")
+		Expect(err).ShouldNot(HaveOccurred())
+		ep = corev1.Endpoints{}
+		err = json.Unmarshal(out, &ep)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(ep.Subsets).Should(HaveLen(1))
+		Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+			corev1.EndpointAddress{IP: node1},
+			corev1.EndpointAddress{IP: node3},
+		))
 
 		By("Adding a new node to the cluster as a control plane")
 		// this will run EtcdAddMemberOp as well as other boot/restart ops.
@@ -234,7 +260,7 @@ func TestOperators() {
 		}).Should(Succeed())
 
 		// check control plane label
-		out, _, err := kubectl("get", "-o=json", "node", node3)
+		out, _, err = kubectl("get", "-o=json", "node", node3)
 		Expect(err).ShouldNot(HaveOccurred())
 		var node corev1.Node
 		err = json.Unmarshal(out, &node)

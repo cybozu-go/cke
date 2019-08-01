@@ -308,17 +308,36 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	s.EtcdBackup, err = getEtcdBackupStatus(ctx, inf, n)
-	if err != nil {
+	epAPI := clientset.CoreV1().Endpoints
+	ep, err := epAPI(metav1.NamespaceDefault).Get("kubernetes", metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.MasterEndpoints = ep
+	case k8serr.IsNotFound(err):
+	default:
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	ep, err := clientset.CoreV1().Endpoints("kube-system").Get(etcdEndpointsName, metav1.GetOptions{})
+	svc, err := clientset.CoreV1().Services(metav1.NamespaceSystem).Get(EtcdServiceName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.EtcdService = svc
+	case k8serr.IsNotFound(err):
+	default:
+		return cke.KubernetesClusterStatus{}, err
+	}
+
+	ep, err = epAPI(metav1.NamespaceSystem).Get(EtcdEndpointsName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.EtcdEndpoints = ep
 	case k8serr.IsNotFound(err):
 	default:
+		return cke.KubernetesClusterStatus{}, err
+	}
+
+	s.EtcdBackup, err = getEtcdBackupStatus(ctx, inf, n)
+	if err != nil {
 		return cke.KubernetesClusterStatus{}, err
 	}
 
