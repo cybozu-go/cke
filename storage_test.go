@@ -550,6 +550,9 @@ func testStorageSabakan(t *testing.T) {
 		t.Fatal(err)
 	}
 	disabled, err = s.IsSabakanDisabled(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !disabled {
 		t.Error("sabakan integration could not be disabled")
 	}
@@ -559,6 +562,9 @@ func testStorageSabakan(t *testing.T) {
 		t.Fatal(err)
 	}
 	disabled, err = s.IsSabakanDisabled(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if disabled {
 		t.Error("sabakan integration could not be re-enabled")
 	}

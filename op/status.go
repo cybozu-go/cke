@@ -350,6 +350,9 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	}
 
 	k8s, err := inf.K8sClient(ctx, n)
+	if err != nil {
+		return cke.KubernetesClusterStatus{}, err
+	}
 	s.ResourceStatuses = make(map[string]map[string]string)
 	for _, rkey := range rkeys {
 		parts := strings.Split(rkey, "/")
