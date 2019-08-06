@@ -32,7 +32,7 @@ github.com/cybozu-go/netutil
 github.com/cybozu-go/well
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/docker/docker v1.13.1
+# github.com/docker/docker v0.0.0-20180522102801-da99009bbb11
 github.com/docker/docker/api/types
 github.com/docker/docker/api/types/container
 github.com/docker/docker/api/types/filters
@@ -43,6 +43,7 @@ github.com/docker/docker/api/types/swarm
 github.com/docker/docker/api/types/blkiodev
 github.com/docker/docker/api/types/strslice
 github.com/docker/docker/api/types/versions
+github.com/docker/docker/api/types/swarm/runtime
 # github.com/docker/go-connections v0.4.0
 github.com/docker/go-connections/nat
 # github.com/docker/go-units v0.3.3
@@ -180,6 +181,11 @@ github.com/onsi/gomega/matchers/support/goraph/bipartitegraph
 github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
+# github.com/opencontainers/go-digest v1.0.0-rc1
+github.com/opencontainers/go-digest
+# github.com/opencontainers/image-spec v1.0.1
+github.com/opencontainers/image-spec/specs-go/v1
+github.com/opencontainers/image-spec/specs-go
 # github.com/pelletier/go-toml v1.2.0
 github.com/pelletier/go-toml
 # github.com/pierrec/lz4 v2.0.5+incompatible
