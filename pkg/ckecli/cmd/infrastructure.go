@@ -102,7 +102,7 @@ func (i *cliInfrastructure) NewEtcdClient(ctx context.Context, endpoints []strin
 }
 
 func (i *cliInfrastructure) K8sClient(ctx context.Context, n *cke.Node) (*kubernetes.Clientset, error) {
-	c, k, err := cke.KubernetesCA{}.IssueUserCert(ctx, i, "admin", "system:masters", "1h")
+	c, k, err := cke.KubernetesCA{}.IssueUserCert(ctx, i, cke.RoleAdmin, cke.AdminGroup, "1h")
 	if err != nil {
 		return nil, err
 	}

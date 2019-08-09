@@ -43,6 +43,9 @@ const (
 	RoleServiceAccount        = "service-account"
 )
 
+// AdminGroup is the group name of cluster admin users
+const AdminGroup = "system:masters"
+
 // IssueResponse is cli output format.
 type IssueResponse struct {
 	Cert   string `json:"certificate"`
@@ -70,6 +73,18 @@ func addRole(client *vault.Client, ca, role string, data map[string]interface{})
 			"ca":        ca,
 			"role":      role,
 		})
+	}
+	return err
+}
+
+// deleteRole deletes a role of CA.
+func deleteRole(client *vault.Client, ca, role string) error {
+	l := client.Logical()
+	rpath := path.Join(ca, "roles", role)
+	l.Delete(rpath)
+	_, err := l.Read(rpath)
+	if err != nil {
+		return err
 	}
 	return err
 }
@@ -341,6 +356,7 @@ func (a AggregationCA) IssueClientCertificate(ctx context.Context, inf Infrastru
 		})
 }
 
+// issueCertificate issues certificates, If the role for which issueCertificate issues is not admin, the certification data is deleted after issuing as that would not be used consistently.
 func issueCertificate(inf Infrastructure, ca, role string, roleOpts, certOpts map[string]interface{}) (crt, key string, err error) {
 	client, err := inf.Vault()
 	if err != nil {
@@ -357,6 +373,12 @@ func issueCertificate(inf Infrastructure, ca, role string, roleOpts, certOpts ma
 		return "", "", err
 	}
 	crt = secret.Data["certificate"].(string)
+	if role != RoleAdmin {
+		err = deleteRole(client, ca, role)
+		if err != nil {
+			return "", "", err
+		}
+	}
 	key = secret.Data["private_key"].(string)
 	return crt, key, err
 }

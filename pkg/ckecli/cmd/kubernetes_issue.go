@@ -61,7 +61,7 @@ var kubernetesIssueCmd = &cobra.Command{
 func init() {
 	fs := kubernetesIssueCmd.Flags()
 	fs.StringVar(&kubernetesIssueOpts.TTL, "ttl", "2h", "TTL of the certificate")
-	fs.StringVarP(&kubernetesIssueOpts.GroupName, "group", "g", "system:masters", "Group name of the issuing config")
-	fs.StringVarP(&kubernetesIssueOpts.UserName, "user", "u", "admin", "User name of the issuing config")
+	fs.StringVarP(&kubernetesIssueOpts.GroupName, "group", "g", cke.AdminGroup, "Group name of the issuing config")
+	fs.StringVarP(&kubernetesIssueOpts.UserName, "user", "u", cke.RoleAdmin, "User name of the issuing config")
 	kubernetesCmd.AddCommand(kubernetesIssueCmd)
 }
