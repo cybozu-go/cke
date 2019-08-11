@@ -200,7 +200,7 @@ type KubernetesCA struct{}
 
 // IssueUserCert issues client certificate for user.
 func (k KubernetesCA) IssueUserCert(ctx context.Context, inf Infrastructure, userName, groupName string, ttl string) (crt, key string, err error) {
-	return issueCertificate(inf, CAKubernetes, userName,
+	return issueCertificate(inf, CAKubernetes, RoleAdmin,
 		map[string]interface{}{
 			"ttl":               "2h",
 			"max_ttl":           "48h",
@@ -356,7 +356,6 @@ func (a AggregationCA) IssueClientCertificate(ctx context.Context, inf Infrastru
 		})
 }
 
-// issueCertificate issues certificates, If the role for which issueCertificate issues is not admin, the certification data is deleted after issuing as that would not be used consistently.
 func issueCertificate(inf Infrastructure, ca, role string, roleOpts, certOpts map[string]interface{}) (crt, key string, err error) {
 	client, err := inf.Vault()
 	if err != nil {
@@ -373,11 +372,9 @@ func issueCertificate(inf Infrastructure, ca, role string, roleOpts, certOpts ma
 		return "", "", err
 	}
 	crt = secret.Data["certificate"].(string)
-	if role != RoleAdmin {
-		err = deleteRole(client, ca, role)
-		if err != nil {
-			return "", "", err
-		}
+	err = deleteRole(client, ca, role)
+	if err != nil {
+		return "", "", err
 	}
 	key = secret.Data["private_key"].(string)
 	return crt, key, err
