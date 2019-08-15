@@ -17,9 +17,9 @@ import (
 	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
-	"github.com/ghodss/yaml"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 // GetNodeStatus returns NodeStatus.
@@ -145,10 +145,10 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		cfgData, _, err := agent.Run("cat /etc/kubernetes/kubelet/config.yml")
 		if err == nil {
 			v := struct {
-				ClusterDomain        string `yaml:"clusterDomain"`
-				FailSwapOn           bool   `yaml:"failSwapOn"`
-				ContainerLogMaxSize  string `yaml:"containerLogMaxSize"`
-				ContainerLogMaxFiles int32  `yaml:"containerLogMaxFiles"`
+				ClusterDomain        string `json:"clusterDomain"`
+				FailSwapOn           bool   `json:"failSwapOn"`
+				ContainerLogMaxSize  string `json:"containerLogMaxSize"`
+				ContainerLogMaxFiles int32  `json:"containerLogMaxFiles"`
 			}{}
 			err = yaml.Unmarshal(cfgData, &v)
 			if err == nil {

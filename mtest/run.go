@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"golang.org/x/crypto/ssh"
-	yaml "gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -329,12 +329,12 @@ func remoteTempFile(body string) string {
 }
 
 func getCluster() *cke.Cluster {
-	f, err := os.Open(ckeClusterPath)
+	b, err := ioutil.ReadFile(ckeClusterPath)
 	Expect(err).NotTo(HaveOccurred())
-	defer f.Close()
 
 	var cluster cke.Cluster
-	err = yaml.NewDecoder(f).Decode(&cluster)
+
+	err = yaml.Unmarshal(b, &cluster)
 	Expect(err).NotTo(HaveOccurred())
 	err = cluster.Validate(false)
 	Expect(err).NotTo(HaveOccurred())

@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"context"
-	"os"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/sabakan"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
+	"io/ioutil"
+	"sigs.k8s.io/yaml"
 )
 
 // sabakanSetTemplateCmd represents the "sabakan set-template" command
@@ -23,14 +23,13 @@ just one control-plane node and one non contorl-plane node.`,
 
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		r, err := os.Open(args[0])
+		b, err := ioutil.ReadFile(args[0])
 		if err != nil {
 			return err
 		}
-		defer r.Close()
 
 		tmpl := cke.NewCluster()
-		err = yaml.NewDecoder(r).Decode(tmpl)
+		err = yaml.Unmarshal(b, tmpl)
 		if err != nil {
 			return err
 		}

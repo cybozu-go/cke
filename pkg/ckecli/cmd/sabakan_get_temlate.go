@@ -6,7 +6,7 @@ import (
 
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 // sabakanGetTemplateCmd represents the "sabakan get-template" command
@@ -22,7 +22,13 @@ var sabakanGetTemplateCmd = &cobra.Command{
 				return err
 			}
 
-			return yaml.NewEncoder(os.Stdout).Encode(tmpl)
+			b, err := yaml.Marshal(tmpl)
+			if err != nil {
+				return nil
+			}
+
+			_, err = os.Stdout.Write(b)
+			return err
 		})
 		well.Stop()
 		return well.Wait()

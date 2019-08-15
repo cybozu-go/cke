@@ -6,7 +6,7 @@ import (
 
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 // clusterGetCmd represents the "cluster get" command
@@ -22,7 +22,13 @@ var clusterGetCmd = &cobra.Command{
 				return err
 			}
 
-			return yaml.NewEncoder(os.Stdout).Encode(cfg)
+			b, err := yaml.Marshal(cfg)
+			if err != nil {
+				return nil
+			}
+
+			_, err = os.Stdout.Write(b)
+			return err
 		})
 		well.Stop()
 		return well.Wait()
