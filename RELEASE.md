@@ -63,7 +63,8 @@ Bump version
     $ git neco review
     ```
 7. Merge this branch.
-8. Add a git tag, then push it.
+8. Checkout `master` branch.
+9. Add a git tag, then push it.
 
     ```console
     $ git tag "v$VERSION"
