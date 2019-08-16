@@ -139,7 +139,7 @@ func (c prepareSchedulerFilesCommand) Command() cke.Command {
 // SchedulerParams returns parameters for kube-scheduler.
 func SchedulerParams() cke.ServiceParams {
 	args := []string{
-		"scheduler",
+		"kube-scheduler",
 		"--config=" + op.SchedulerConfigPath,
 		// for healthz service
 		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),

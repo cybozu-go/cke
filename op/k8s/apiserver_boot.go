@@ -246,7 +246,7 @@ func auditPolicyFilePath(policy string) string {
 // APIServerParams returns parameters for API server.
 func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet string, auditLogEnabeled bool, auditLogPolicy string) cke.ServiceParams {
 	args := []string{
-		"apiserver",
+		"kube-apiserver",
 		"--allow-privileged",
 		"--etcd-servers=https://127.0.0.1:12379",
 		"--etcd-cafile=" + op.K8sPKIPath("etcd-ca.crt"),
