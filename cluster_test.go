@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"testing"
 
-	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"sigs.k8s.io/yaml"
 )
 
 func testClusterYAML(t *testing.T) {

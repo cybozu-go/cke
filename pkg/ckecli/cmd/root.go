@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"os"
+	"io/ioutil"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
@@ -9,7 +9,7 @@ import (
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -20,14 +20,13 @@ var (
 )
 
 func loadConfig(p string) (*etcdutil.Config, error) {
-	f, err := os.Open(p)
+	b, err := ioutil.ReadFile(p)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 
 	cfg := cke.NewEtcdConfig()
-	err = yaml.NewDecoder(f).Decode(cfg)
+	err = yaml.Unmarshal(b, cfg)
 	if err != nil {
 		return nil, err
 	}
