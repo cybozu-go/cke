@@ -109,6 +109,7 @@ func ProxyParams(n *cke.Node) cke.ServiceParams {
 		"--proxy-mode=ipvs",
 		"--hostname-override=" + n.Nodename(),
 		"--kubeconfig=/etc/kubernetes/proxy/kubeconfig",
+		"--ipvs-strict-arp=true",
 	}
 	return cke.ServiceParams{
 		ExtraArguments: args,

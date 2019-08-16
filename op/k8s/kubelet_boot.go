@@ -326,7 +326,6 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 		"kubelet",
 		"--config=/etc/kubernetes/kubelet/config.yml",
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
-		"--allow-privileged=true",
 		"--hostname-override=" + n.Nodename(),
 		"--pod-infra-container-image=" + cke.PauseImage.Name(),
 		"--network-plugin=cni",
