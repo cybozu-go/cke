@@ -72,3 +72,8 @@ $ git add -f vendor
 $ git add go.mod
 $ git commit
 ```
+
+### Update the Kubernetes resource definitions embedded in CKE.
+
+The Kubernetes resource definitions embedded in CKE is defined in `./static/resource.go`.
+This needs to be updated by `make static` whenever `images.go` updates.

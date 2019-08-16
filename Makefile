@@ -19,6 +19,10 @@ test:
 	go test -race -v ./...
 	go vet ./...
 
+static:
+	go generate ./static
+	git add ./static/resources.go
+
 mod:
 	go mod tidy
 	go mod vendor
