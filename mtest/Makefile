@@ -20,7 +20,7 @@ PLACEMAT = /usr/bin/placemat
 GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo
 CURL = curl -fsL
 MANAGEMENT_ETCD_VERSION = 3.3.13
-VAULT_VERSION = 1.1.2
+VAULT_VERSION = 1.2.2
 K8S_VERSION = 1.15.2
 PLACEMAT_DATADIR = /var/scratch/placemat
 CONTAINERD_VERSION = 1.2.7
