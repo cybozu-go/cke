@@ -6,9 +6,7 @@ replace (
 )
 
 require (
-	github.com/99designs/gqlgen v0.7.1
-	github.com/agnivade/levenshtein v1.0.1 // indirect
-	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883 // indirect
+	github.com/99designs/gqlgen v0.9.3
 	github.com/containernetworking/cni v0.6.0
 	github.com/coreos/bbolt v1.3.1-coreos.6 // indirect
 	github.com/coreos/etcd v3.3.13+incompatible
@@ -37,17 +35,17 @@ require (
 	github.com/onsi/gomega v1.4.2
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
-	github.com/pkg/errors v0.8.0
-	github.com/sergi/go-diff v1.0.0 // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3
-	github.com/vektah/gqlparser v1.0.0
+	github.com/vektah/gqlparser v1.1.2
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.10.0 // indirect
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+	google.golang.org/appengine v1.4.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v2 v2.2.1
+	gopkg.in/yaml.v2 v2.2.2
 	gotest.tools v2.2.0+incompatible // indirect
 	k8s.io/api v0.0.0-20190313235455-40a48860b5ab
 	k8s.io/apimachinery v0.0.0-20190404173353-6a84e37a896d

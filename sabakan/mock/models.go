@@ -9,7 +9,7 @@ import (
 )
 
 // BMC represents a Baseboard Management Controller.
-type BMC struct {
+type Bmc struct {
 	BmcType string `json:"bmcType"`
 	Ipv4    string `json:"ipv4"`
 }
@@ -28,13 +28,13 @@ type LabelInput struct {
 
 // Machine represents a physical server in a datacenter rack.
 type Machine struct {
-	Spec   MachineSpec   `json:"spec"`
-	Status MachineStatus `json:"status"`
+	Spec   *MachineSpec   `json:"spec"`
+	Status *MachineStatus `json:"status"`
 }
 
 // MachineParams is a set of input parameters to search machines.
 type MachineParams struct {
-	Labels              []LabelInput   `json:"labels"`
+	Labels              []*LabelInput  `json:"labels"`
 	Racks               []int          `json:"racks"`
 	Roles               []string       `json:"roles"`
 	States              []MachineState `json:"states"`
@@ -44,14 +44,14 @@ type MachineParams struct {
 // MachineSpec represents specifications of a machine.
 type MachineSpec struct {
 	Serial       string   `json:"serial"`
-	Labels       []Label  `json:"labels"`
+	Labels       []*Label `json:"labels"`
 	Rack         int      `json:"rack"`
 	IndexInRack  int      `json:"indexInRack"`
 	Role         string   `json:"role"`
 	Ipv4         []string `json:"ipv4"`
 	RegisterDate string   `json:"registerDate"`
 	RetireDate   string   `json:"retireDate"`
-	Bmc          BMC      `json:"bmc"`
+	Bmc          *Bmc     `json:"bmc"`
 }
 
 // MachineStatus represents status of a Machine.
@@ -73,6 +73,16 @@ const (
 	MachineStateRetiring      MachineState = "RETIRING"
 	MachineStateRetired       MachineState = "RETIRED"
 )
+
+var AllMachineState = []MachineState{
+	MachineStateUninitialized,
+	MachineStateHealthy,
+	MachineStateUnhealthy,
+	MachineStateUnreachable,
+	MachineStateUpdating,
+	MachineStateRetiring,
+	MachineStateRetired,
+}
 
 func (e MachineState) IsValid() bool {
 	switch e {

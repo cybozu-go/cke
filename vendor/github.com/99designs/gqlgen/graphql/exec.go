@@ -16,12 +16,15 @@ type ExecutableSchema interface {
 	Subscription(ctx context.Context, op *ast.OperationDefinition) func() *Response
 }
 
-func CollectFields(ctx context.Context, selSet ast.SelectionSet, satisfies []string) []CollectedField {
-	return collectFields(GetRequestContext(ctx), selSet, satisfies, map[string]bool{})
+// CollectFields returns the set of fields from an ast.SelectionSet where all collected fields satisfy at least one of the GraphQL types
+// passed through satisfies. Providing an empty or nil slice for satisfies will return collect all fields regardless of fragment
+// type conditions.
+func CollectFields(reqCtx *RequestContext, selSet ast.SelectionSet, satisfies []string) []CollectedField {
+	return collectFields(reqCtx, selSet, satisfies, map[string]bool{})
 }
 
 func collectFields(reqCtx *RequestContext, selSet ast.SelectionSet, satisfies []string, visited map[string]bool) []CollectedField {
-	var groupedFields []CollectedField
+	groupedFields := make([]CollectedField, 0, len(selSet))
 
 	for _, sel := range selSet {
 		switch sel := sel.(type) {
@@ -29,17 +32,20 @@ func collectFields(reqCtx *RequestContext, selSet ast.SelectionSet, satisfies []
 			if !shouldIncludeNode(sel.Directives, reqCtx.Variables) {
 				continue
 			}
-			f := getOrCreateField(&groupedFields, sel.Alias, func() CollectedField {
+			f := getOrCreateAndAppendField(&groupedFields, sel.Alias, func() CollectedField {
 				return CollectedField{Field: sel}
 			})
 
 			f.Selections = append(f.Selections, sel.SelectionSet...)
 		case *ast.InlineFragment:
-			if !shouldIncludeNode(sel.Directives, reqCtx.Variables) || !instanceOf(sel.TypeCondition, satisfies) {
+			if !shouldIncludeNode(sel.Directives, reqCtx.Variables) {
+				continue
+			}
+			if len(satisfies) > 0 && !instanceOf(sel.TypeCondition, satisfies) {
 				continue
 			}
 			for _, childField := range collectFields(reqCtx, sel.SelectionSet, satisfies, visited) {
-				f := getOrCreateField(&groupedFields, childField.Name, func() CollectedField { return childField })
+				f := getOrCreateAndAppendField(&groupedFields, childField.Name, func() CollectedField { return childField })
 				f.Selections = append(f.Selections, childField.Selections...)
 			}
 
@@ -59,15 +65,14 @@ func collectFields(reqCtx *RequestContext, selSet ast.SelectionSet, satisfies []
 				panic(fmt.Errorf("missing fragment %s", fragmentName))
 			}
 
-			if !instanceOf(fragment.TypeCondition, satisfies) {
+			if len(satisfies) > 0 && !instanceOf(fragment.TypeCondition, satisfies) {
 				continue
 			}
 
 			for _, childField := range collectFields(reqCtx, fragment.SelectionSet, satisfies, visited) {
-				f := getOrCreateField(&groupedFields, childField.Name, func() CollectedField { return childField })
+				f := getOrCreateAndAppendField(&groupedFields, childField.Name, func() CollectedField { return childField })
 				f.Selections = append(f.Selections, childField.Selections...)
 			}
-
 		default:
 			panic(fmt.Errorf("unsupported %T", sel))
 		}
@@ -91,7 +96,7 @@ func instanceOf(val string, satisfies []string) bool {
 	return false
 }
 
-func getOrCreateField(c *[]CollectedField, name string, creator func() CollectedField) *CollectedField {
+func getOrCreateAndAppendField(c *[]CollectedField, name string, creator func() CollectedField) *CollectedField {
 	for i, cf := range *c {
 		if cf.Alias == name {
 			return &(*c)[i]
@@ -105,6 +110,10 @@ func getOrCreateField(c *[]CollectedField, name string, creator func() Collected
 }
 
 func shouldIncludeNode(directives ast.DirectiveList, variables map[string]interface{}) bool {
+	if len(directives) == 0 {
+		return true
+	}
+
 	skip, include := false, true
 
 	if d := directives.ForName("skip"); d != nil {
