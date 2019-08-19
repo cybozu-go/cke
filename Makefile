@@ -29,4 +29,4 @@ mod:
 	git add -f vendor
 	git add go.mod
 
-.PHONY:	all setup test mod
+.PHONY:	all setup test static mod
