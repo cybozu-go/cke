@@ -5,6 +5,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.14.15] - 2019-08-20
+
+### Changed
+- Backport #219: sabakan: update for gqlgen 0.9+
+
 ## [1.14.14] - 2019-08-15
 
 ### Changed
@@ -245,7 +250,8 @@ No user-visible changes since RC 1.
 
 See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.14...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.14.15...HEAD
+[1.14.15]: https://github.com/cybozu-go/cke/compare/v1.14.14...v1.14.15
 [1.14.14]: https://github.com/cybozu-go/cke/compare/v1.14.13...v1.14.14
 [1.14.13]: https://github.com/cybozu-go/cke/compare/v1.14.12...v1.14.13
 [1.14.12]: https://github.com/cybozu-go/cke/compare/v1.14.11...v1.14.12
