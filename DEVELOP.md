@@ -62,7 +62,7 @@ specified:
 as follows:
 
 ```console
-$ go get k8s.io/client-go@v8.0.0
+$ go get k8s.io/client-go@kubernetes-1.15.2
 $ go get k8s.io/api@release-1.11
 $ go get k8s.io/apimachinery@release-1.11
 
