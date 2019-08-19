@@ -1,4 +1,4 @@
-# github.com/99designs/gqlgen v0.7.1
+# github.com/99designs/gqlgen v0.9.3
 github.com/99designs/gqlgen/graphql
 github.com/99designs/gqlgen/graphql/introspection
 github.com/99designs/gqlgen/handler
@@ -223,7 +223,7 @@ github.com/spf13/jwalterweatherman
 github.com/spf13/pflag
 # github.com/spf13/viper v1.2.1
 github.com/spf13/viper
-# github.com/vektah/gqlparser v1.0.0
+# github.com/vektah/gqlparser v1.1.2
 github.com/vektah/gqlparser
 github.com/vektah/gqlparser/ast
 github.com/vektah/gqlparser/gqlerror

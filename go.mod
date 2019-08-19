@@ -6,9 +6,7 @@ replace (
 )
 
 require (
-	github.com/99designs/gqlgen v0.7.1
-	github.com/agnivade/levenshtein v1.0.1 // indirect
-	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883 // indirect
+	github.com/99designs/gqlgen v0.9.3
 	github.com/containernetworking/cni v0.6.0
 	github.com/coreos/etcd v0.0.0-20190816232144-5cf5d88a18ae
 	github.com/cybozu-go/etcdutil v1.3.2
@@ -30,10 +28,9 @@ require (
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/sergi/go-diff v1.0.0 // indirect
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3
-	github.com/vektah/gqlparser v1.0.0
+	github.com/vektah/gqlparser v1.1.2
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gotest.tools v2.2.0+incompatible // indirect
