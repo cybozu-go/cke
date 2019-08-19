@@ -5,6 +5,16 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.15.0-rc.1] - 2019-08-19
+
+### Changed
+- Update kubernetes to 1.15.2  (#213)
+- Update etcd to 3.3.14  (#213)
+- Update CoreDNS to 0.7.5  (#213)
+- Update Unbound to 1.9.2  (#213)
+- Use `sigs.k8s.io/yaml` library (#212)
+- Fix release document (#211)
+
 ## [1.14.14] - 2019-08-15
 
 ### Changed
