@@ -40,3 +40,54 @@ func TestPromoteWorker(t *testing.T) {
 		t.Error("len(op.changes) != 1")
 	}
 }
+
+func TestCountMachinesByRack(t *testing.T) {
+	{
+		// worker
+		op := &updateOp{workers: []*Machine{}}
+		racks := []int{0, 0, 1}
+		for _, r := range racks {
+			m := &Machine{}
+			m.Spec.Rack = r
+			op.workers = append(op.workers, m)
+		}
+
+		bin := op.countMachinesByRack(false)
+		if bin[0] != 2 || bin[1] != 1 {
+			t.Errorf(
+				"rack0: expect 2 actual %d rack1: expect 1 actual %d",
+				bin[0],
+				bin[1],
+			)
+		}
+	}
+
+	{
+		// control plane
+		op := &updateOp{cps: []*Machine{}}
+		racks := []int{0, 0, 1}
+		for _, r := range racks {
+			m := &Machine{}
+			m.Spec.Rack = r
+			op.cps = append(op.cps, m)
+		}
+
+		bin := op.countMachinesByRack(true)
+		if bin[0] != 2 || bin[1] != 1 {
+			t.Errorf(
+				"rack0: expect 2 actual %d, rack1: expect 1 actual %d",
+				bin[0],
+				bin[1],
+			)
+		}
+	}
+
+	{
+		// empty
+		op := &updateOp{cps: []*Machine{}}
+		bin := op.countMachinesByRack(true)
+		if len(bin) != 0 {
+			t.Errorf("len(bin): expect 0 actual %d", len(bin))
+		}
+	}
+}

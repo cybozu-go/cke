@@ -43,3 +43,16 @@ func (op *updateOp) demoteControlPlane(cp *Machine) {
 	op.record("demote a control plane: " + cp.Spec.IPv4[0])
 	op.workers = append(op.workers, cp)
 }
+
+func (op *updateOp) countMachinesByRack(isCP bool) map[int]int {
+	machines := op.cps
+	if !isCP {
+		machines = op.workers
+	}
+
+	bin := make(map[int]int)
+	for _, m := range machines {
+		bin[m.Spec.Rack]++
+	}
+	return bin
+}
