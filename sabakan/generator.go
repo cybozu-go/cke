@@ -527,14 +527,15 @@ func (g *Generator) decreaseControlPlane() (*updateOp, error) {
 		workers[i] = g.machineMap[n.Address]
 	}
 
-	op := &updateOp{
-		name:    "decrease control plane",
-		workers: workers,
-	}
-
 	cps := make([]*Machine, len(g.controlPlanes))
 	for i, n := range g.controlPlanes {
 		cps[i] = g.machineMap[n.Address]
+	}
+
+	op := &updateOp{
+		name:    "decrease control plane",
+		workers: workers,
+		cps:     cps,
 	}
 
 	for len(cps) != g.constraints.ControlPlaneCount {
@@ -601,7 +602,7 @@ func (g *Generator) replaceControlPlane() (*updateOp, error) {
 			// higher first
 			return si > sj
 		})
-		if op.promoteWorker(op.workers[0]) {
+		if op.workers[0].Status.State == StateHealthy && op.promoteWorker(op.workers[0]) {
 			op.demoteControlPlane(demote)
 		} else {
 			op.record("remove bad control plane: " + demote.Spec.IPv4[0])
