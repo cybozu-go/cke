@@ -635,18 +635,18 @@ func testUpdate(t *testing.T) {
 		{
 			"ReplaceCPPromoteDemote",
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[2], cps[7], workers[5]},
+				Nodes: []*cke.Node{cps[2], cps[5], cps[6], workers[7], workers[0]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 3,
-				MinimumWorkers:    1,
-				MaximumWorkers:    1,
+				MinimumWorkers:    2,
+				MaximumWorkers:    2,
 			},
 			machines,
 
 			nil,
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[2]},
+				Nodes: []*cke.Node{cps[5], cps[6], cps[0], workers[7], workers[2]},
 			},
 		},
 		{
