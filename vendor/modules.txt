@@ -12,7 +12,7 @@ github.com/containernetworking/cni/pkg/types
 github.com/containernetworking/cni/pkg/version
 github.com/containernetworking/cni/pkg/types/020
 github.com/containernetworking/cni/pkg/types/current
-# github.com/coreos/etcd v0.0.0-20190816232144-5cf5d88a18ae
+# github.com/coreos/etcd v3.3.15+incompatible
 github.com/coreos/etcd/clientv3
 github.com/coreos/etcd/clientv3/clientv3util
 github.com/coreos/etcd/etcdserver/etcdserverpb
@@ -35,7 +35,7 @@ github.com/coreos/etcd/raft/raftpb
 github.com/coreos/go-systemd/journal
 # github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
 github.com/coreos/pkg/capnslog
-# github.com/cybozu-go/etcdutil v1.3.2
+# github.com/cybozu-go/etcdutil v1.3.3
 github.com/cybozu-go/etcdutil
 # github.com/cybozu-go/log v1.5.0
 github.com/cybozu-go/log
