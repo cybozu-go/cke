@@ -8,8 +8,8 @@ replace (
 require (
 	github.com/99designs/gqlgen v0.9.3
 	github.com/containernetworking/cni v0.6.0
-	github.com/coreos/etcd v0.0.0-20190816232144-5cf5d88a18ae
-	github.com/cybozu-go/etcdutil v1.3.2
+	github.com/coreos/etcd v3.3.15+incompatible
+	github.com/cybozu-go/etcdutil v1.3.3
 	github.com/cybozu-go/log v1.5.0
 	github.com/cybozu-go/netutil v1.2.0
 	github.com/cybozu-go/well v1.8.1
@@ -23,6 +23,7 @@ require (
 	github.com/hashicorp/vault/api v1.0.2
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c
 	github.com/imdario/mergo v0.3.6 // indirect
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
