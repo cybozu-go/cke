@@ -30,9 +30,9 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## Ancient changes
 
-See [CHANGELOG-1.14](./CHANGELOG-1.14.md).
-See [CHANGELOG-1.13](./CHANGELOG-1.13.md).
-See [CHANGELOG-1.12](./CHANGELOG-1.12.md).
+* See [release-1.14/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.14/CHANGELOG.md) for changes in CKE 1.14.
+* See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
+* See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
 [Unreleased]: https://github.com/cybozu-go/cke/compare/v1.15.0-rc.2...HEAD
 [1.15.0-rc.2]: https://github.com/cybozu-go/cke/compare/v1.15.0-rc.1...v1.15.0-rc.2
