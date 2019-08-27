@@ -2,9 +2,11 @@ package k8s
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
@@ -114,6 +116,9 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 			common.WithOpts(opts),
 			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params.ServiceParams))
+	case 8:
+		o.step++
+		return waitForKubeletReadyCommand{o.nodes}
 	default:
 		return nil
 	}
@@ -317,6 +322,46 @@ func (c retaintBeforeKubeletBootCommand) Run(ctx context.Context, inf cke.Infras
 func (c retaintBeforeKubeletBootCommand) Command() cke.Command {
 	return cke.Command{
 		Name: "retaint-before-kubelet-boot",
+	}
+}
+
+type waitForKubeletReadyCommand struct {
+	nodes []*cke.Node
+}
+
+func (c waitForKubeletReadyCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+	for i := 0; i < 9; i++ {
+		err := c.try(ctx, inf)
+		if err == nil {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(5 * time.Second):
+		}
+	}
+
+	// last try
+	return c.try(ctx, inf)
+}
+
+func (c waitForKubeletReadyCommand) try(ctx context.Context, inf cke.Infrastructure) error {
+	for _, node := range c.nodes {
+		isReady, err := op.CheckKubeletHealthz(ctx, inf, node.Address, 10248)
+		if err != nil {
+			return err
+		}
+		if !isReady {
+			return errors.New("node is not ready: " + node.Address)
+		}
+	}
+	return nil
+}
+
+func (c waitForKubeletReadyCommand) Command() cke.Command {
+	return cke.Command{
+		Name: "wait-for-kubelet-ready",
 	}
 }
 
