@@ -134,7 +134,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		AllowSwap:     false,
 	}
 	if status.Kubelet.Running {
-		status.Kubelet.IsHealthy, err = checkHealthz(ctx, inf, node.Address, 10248)
+		status.Kubelet.IsHealthy, err = CheckKubeletHealthz(ctx, inf, node.Address, 10248)
 		if err != nil {
 			log.Warn("failed to check kubelet health", map[string]interface{}{
 				log.FnError: err,
@@ -589,7 +589,8 @@ func getEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	return s, nil
 }
 
-func checkHealthz(ctx context.Context, inf cke.Infrastructure, addr string, port uint16) (bool, error) {
+// CheckKubeletHealthz checks that Kubelet is healthy
+func CheckKubeletHealthz(ctx context.Context, inf cke.Infrastructure, addr string, port uint16) (bool, error) {
 	healthzURL := "http://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
 	req, err := http.NewRequest("GET", healthzURL, nil)
 	if err != nil {

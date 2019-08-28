@@ -63,6 +63,9 @@ func (o *kubeletRestartOp) NextCommand() cke.Commander {
 			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params.ServiceParams),
 			common.WithRestart())
+	case 4:
+		o.step++
+		return waitForKubeletReadyCommand{o.nodes}
 	default:
 		return nil
 	}
