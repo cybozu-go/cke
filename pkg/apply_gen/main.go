@@ -36,7 +36,7 @@ func annotate(meta *metav1.ObjectMeta, rev int64, data []byte) {
 }
 {{- range . }}
 
-func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*{{ .API }}.{{ .Kind }}, error), createFunc func(*{{ .API }}.{{ .Kind }}) (*{{ .API }}.{{ .Kind }}, error), patchFunc func(string, types.PatchType, []byte, ...string) (*{{ .API }}.{{ .Kind }}, error), deleteFunc func(string, *metav1.DeleteOptions) error) error {
+func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*{{ .API }}.{{ .Kind }}, error), createFunc func(*{{ .API }}.{{ .Kind }}) (*{{ .API }}.{{ .Kind }}, error), patchFunc func(string, types.PatchType, []byte, ...string) (*{{ .API }}.{{ .Kind }}, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
@@ -75,24 +75,17 @@ func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc
 		return err
 	}
 	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
-	if err == nil {
-		return nil
-	}
-
-	log.Warn("failed to apply patch", map[string]interface{}{
-		"kind":      o.Kind,
-		"namespace": o.Namespace,
-		"name":      o.Name,
-		log.FnError: err,
-	})
-
-	err = deleteFunc(o.Name, metav1.NewDeleteOptions({{ .GracefulSeconds }}))
 	if err != nil {
+		log.Error("failed to apply patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+			log.FnError: err,
+		})
 		return err
 	}
-	_, err = createFunc(o)
 
-	return err
+	return nil
 }
 {{- end }}
 `))
