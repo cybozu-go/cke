@@ -96,6 +96,11 @@ This repository contains these programs:
 
 To see their usage, run them with `-h` option.
 
+Getting started
+---------------
+
+A demonstration of CKE running on docker is available at [example](example/) directory.
+
 Documentation
 -------------
 
