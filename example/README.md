@@ -4,7 +4,7 @@
 
 This demonstration gets you a single host CKE and Kubernetes cluster.
 
-The CKE deployed by this demo is not high availability, and does not use TLS to connect etcd.
+Be warned that `etcd` and `vault` deployed by this example is not durable nor secure.
 You can use this CKE for testing and development.
 
 ## Requirements
