@@ -114,7 +114,6 @@ $ ./bin/ckecli --config=./cke.config kubernetes issue > $HOME/.kube/config
 
 CKE itself does not install any network plugins.
 To implement the [Kubernetes networking model](https://kubernetes.io/docs/concepts/cluster-administration/networking/), you have to install [a plugin](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/).
-In the initial state, communication between pods is not available, because CNI plugin is not installed.
 
 You can deploy calico on Kubernetes cluster with the following command.
 
