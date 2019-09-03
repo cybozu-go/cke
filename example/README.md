@@ -94,7 +94,7 @@ You can also see the logs of CKE.
 $ docker logs cke -f
 ```
 
-After a few minutes, the building of Kubernetes cluster will be complete.
+CKE will finish installation of Kubernetes components in a few minutes.
 
 ## Operating Kubernetes cluster
 
