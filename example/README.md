@@ -123,7 +123,7 @@ $ kubectl apply -f calico.yaml
 
 See [Calico Documantation](https://docs.projectcalico.org/v3.8/getting-started/kubernetes/installation/calico) for details.
 
-After a few minutes, Kubernetes cluster will be ready.
+After a few minutes, Kubernetes cluster will become ready.
 
 ```console
 $ kubectl get nodes
