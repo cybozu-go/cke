@@ -80,7 +80,7 @@ $ ./bin/ckecli --config=./cke.config cluster set ./cke-cluster.yml
 
 ## Checking the logs
 
-Kubernetes cluster construction will begin.
+Once the cluster configuration is set, CKE will soon install Kubernetes.
 
 You can see the operation history with the following command.
 
