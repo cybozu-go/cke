@@ -72,6 +72,7 @@ spec:
     metadata:
       labels:
         cke.cybozu.com/appname: cluster-dns
+        k8s-app: coredns # sonobuoy requires
     spec:
       priorityClassName: system-cluster-critical
       serviceAccountName: cke-cluster-dns

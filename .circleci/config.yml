@@ -110,7 +110,7 @@ jobs:
   compose:
     machine:
       image: circleci/classic:edge
-    working_directory: ~/work/docker-compose
+    working_directory: ~/work/example
     steps:
       - checkout:
           path: ~/work
