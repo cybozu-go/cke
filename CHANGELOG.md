@@ -11,6 +11,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Disable etcd compaction by apiserver (#227)
 - Do not recreate resources when CKE failed to patch (#228)
 - Serialize Vault role creation (#231)
+- Enable reverse DNS for private IP-adresses (#230)
 
 ## [1.15.0] - 2019-08-30
 
