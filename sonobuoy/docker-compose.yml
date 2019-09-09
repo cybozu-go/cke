@@ -1,0 +1,80 @@
+version: '2'
+services:
+  cke:
+    container_name: cke
+    image: quay.io/cybozu/ubuntu:18.04
+    networks:
+      app_net:
+        ipv4_address: 172.30.0.11
+    user: "${UID}:${GID}"
+    volumes:
+      - ./cke.config.yml:/etc/cke/config.yml
+      - ./bin:/usr/local/bin
+    depends_on:
+      - etcd
+      - vault
+    restart: always
+    entrypoint:
+      - /usr/local/bin/cke
+  setup:
+    container_name: setup
+    image: quay.io/cybozu/ubuntu-debug:18.04
+    networks:
+      app_net:
+        ipv4_address: 172.30.0.12
+    user: "${UID}:${GID}"
+    volumes:
+      - ./bin:/usr/local/bin
+      - ./setup:/opt/setup
+      - ./cke.config.yml:/etc/cke/config.yml
+    depends_on:
+      - vault
+      - etcd
+      - cke
+    command: /opt/setup/setup.sh
+  vault:
+    container_name: vault
+    image: quay.io/cybozu/vault:1.1
+    networks:
+      app_net:
+        ipv4_address: 172.30.0.13
+    user: "${UID}:${GID}"
+    cap_add:
+      - IPC_LOCK
+    depends_on:
+      - etcd
+    volumes:
+      - ./vault.hcl:/etc/vault/config.hcl
+      - ./bin:/host
+      - ./vault-entrypoint.sh:/entrypoint.sh
+    ports:
+      - "8200:8200"
+      - "8201:8201"
+    restart: always
+    entrypoint:
+      - /entrypoint.sh
+  etcd:
+    container_name: etcd
+    image: quay.io/cybozu/etcd:3.3
+    networks:
+      app_net:
+        ipv4_address: 172.30.0.14
+    user: "${UID}:${GID}"
+    volumes:
+      - ./etcd-data:/data/etcd
+      - ./etcd.conf.yml:/etc/etcd/etcd.conf.yml
+      - ./bin:/host
+      - ./etcd-entrypoint.sh:/entrypoint.sh
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    restart: always
+    entrypoint:
+      - /entrypoint.sh
+networks:
+  app_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.30.0.0/24

@@ -2,10 +2,10 @@
 
 ## Overview
 
-This demonstration gets you a single host CKE and Kubernetes cluster.
+This demonstration gets you a three-node Kubernetes cluster installed by CKE.
 
-Be warned that `etcd` and `vault` deployed by this example is not durable nor secure.
-You can use this CKE for testing and development.
+**Be warned that `etcd` and `vault` deployed by this example is not durable nor secure.**
+Use this only for testing and development.
 
 ## Requirements
 
@@ -26,7 +26,7 @@ $ git clone https://github.com/cybozu-go/cke.git
 $ cd ./cke/example/
 $ mkdir bin
 $ mkdir etcd-data
-$ docker-compose up
+$ docker-compose up -d
 ```
 
 `bin` is the directory where the cli tools are installed.
@@ -65,7 +65,7 @@ $ vagrant ssh worker-1
 Register SSH private-key to log in to the VMs.
 
 ```console
-$ ./bin/ckecli --config ./cke.config vault ssh-privkey ~/.vagrant.d/insecure_private_key
+$ ./bin/ckecli --config=./cke.config vault ssh-privkey ~/.vagrant.d/insecure_private_key
 ```
 
 ## Declare Kubernetes Cluster Configuration
@@ -73,8 +73,8 @@ $ ./bin/ckecli --config ./cke.config vault ssh-privkey ~/.vagrant.d/insecure_pri
 Declares the number of control planes and workers of Kubernetes cluster and configuration.
 
 ```console
-$ ./bin/ckecli --config ./cke.config constraints set minimum-workers 2
-$ ./bin/ckecli --config ./cke.config constraints set control-plane-count 1
+$ ./bin/ckecli --config=./cke.config constraints set minimum-workers 2
+$ ./bin/ckecli --config=./cke.config constraints set control-plane-count 1
 $ ./bin/ckecli --config=./cke.config cluster set ./cke-cluster.yml
 ```
 
@@ -85,7 +85,7 @@ Once the cluster configuration is set, CKE will soon install Kubernetes.
 You can see the operation history with the following command.
 
 ```console
-$ ./bin/ckecli --config ./cke.config history -f
+$ ./bin/ckecli --config=./cke.config history -f
 ```
 
 You can also see the logs of CKE.

@@ -1,0 +1,5 @@
+/bin
+/etcd-data
+/.vagrant
+/.kubeconfig
+/sonobuoy.tar.gz
