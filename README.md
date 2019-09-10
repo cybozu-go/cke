@@ -4,10 +4,13 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/cybozu-go/cke)](https://goreportcard.com/report/github.com/cybozu-go/cke)
 [![Docker Repository on Quay](https://quay.io/repository/cybozu/cke/status "Docker Repository on Quay")](https://quay.io/repository/cybozu/cke)
 
-CKE
-===
 
-**CKE** is a distributed service that automates [Kubernetes][] cluster management.
+<img alt="Kubernetes 1.15 certification logo" src="https://raw.githubusercontent.com/cncf/artwork/master/projects/kubernetes/certified-kubernetes/1.15/color/certified-kubernetes-1.15-color.png" width="150px">
+
+Cybozu Kubernetes Engine
+========================
+
+**CKE** (Cybozu Kubernetes Engine) is a distributed service that automates [Kubernetes][] cluster management.
 
 **Project Status**: Testing for production.
 
