@@ -129,6 +129,47 @@ jobs:
       - run:
           name: docker-compose down
           command: docker-compose down
+  sonobuoy:
+    docker:
+      - image: google/cloud-sdk
+    steps:
+      - checkout
+      - run:
+          name: Store Service Account
+          command: |
+            echo $GCLOUD_SERVICE_ACCOUNT > account.json
+            gcloud auth activate-service-account --key-file=account.json
+      - run:
+          name: Run Sonobuoy
+          command: ./bin/run-sonobuoy.sh
+          no_output_timeout: 200m
+      - persist_to_workspace:
+         root: /tmp
+         paths:
+          - sonobuoy.tar.gz
+  github-release:
+    docker:
+      - image: quay.io/cybozu/golang:1.12-bionic
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Prepare files
+          command: |
+            mkdir /tmp/upload
+            cp /tmp/workspace/sonobuoy.tar.gz /tmp/upload
+            tar xzf /tmp/workspace/sonobuoy.tar.gz -C /tmp/upload --strip-components=4 plugins/e2e/results/global/e2e.log plugins/e2e/results/global/junit_01.xml
+            sed "s/vX\.Y\.Z/${CIRCLE_TAG}/" sonobuoy/README.md > /tmp/upload/README.md
+            sed "s/vX\.Y\.Z/${CIRCLE_TAG}/" sonobuoy/PRODUCT.yaml > /tmp/upload/PRODUCT.yaml
+      - run:
+          name: Release to GitHub
+          command: |
+            prrelease=
+            if echo ${CIRCLE_TAG} | grep -q -e -; then
+              prerelease="-prerelease"
+            fi
+            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -n ${CIRCLE_TAG} $prerelease ${CIRCLE_TAG} /tmp/upload
 
 workflows:
   version: 2
@@ -142,7 +183,14 @@ workflows:
       - mtest-containerd-functions
       - mtest-containerd-operators
       - compose
-  release:
+  conformance:
+    jobs:
+      - hold:
+          type: approval
+      - sonobuoy:
+          requires:
+            - hold
+  release-image:
     jobs:
       - build:
           filters:
@@ -161,6 +209,22 @@ workflows:
       - push-image:
           requires:
             - build-image
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
+  release-github:
+    jobs:
+      - sonobuoy:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
+      - github-release:
+          requires:
+            - sonobuoy
           filters:
             branches:
               ignore: /.*/
