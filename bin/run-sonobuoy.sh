@@ -48,7 +48,8 @@ git checkout -qf ${CIRCLE_SHA1}
 cd sonobuoy
 make setup
 make run
-exec make sonobuoy
+make sonobuoy
+mv sonobuoy.tar.gz /tmp
 EOF
 chmod +x run.sh
 
@@ -57,7 +58,7 @@ set +e
 $GCLOUD compute ssh --zone=${ZONE} cybozu@${INSTANCE_NAME} --command='sudo -H /home/cybozu/run.sh'
 RET=$?
 if [ "$RET" -eq 0 ]; then
-  $GCLOUD compute scp --zone=${ZONE} cybozu@${INSTANCE_NAME}:/home/cybozu/go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/sonobuoy/sonobuoy.tar.gz /tmp/sonobuoy.tar.gz
+  $GCLOUD compute scp --zone=${ZONE} cybozu@${INSTANCE_NAME}:/tmp/sonobuoy.tar.gz /tmp/sonobuoy.tar.gz
 fi
 
 exit $RET
