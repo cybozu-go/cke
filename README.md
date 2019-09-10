@@ -5,10 +5,11 @@
 [![Docker Repository on Quay](https://quay.io/repository/cybozu/cke/status "Docker Repository on Quay")](https://quay.io/repository/cybozu/cke)
 
 
-<img alt="Kubernetes 1.15 certification logo" src="https://raw.githubusercontent.com/cncf/artwork/master/projects/kubernetes/certified-kubernetes/1.15/color/certified-kubernetes-1.15-color.png" width="150px">
 
 Cybozu Kubernetes Engine
 ========================
+
+<img src="https://raw.githubusercontent.com/cncf/artwork/master/projects/kubernetes/certified-kubernetes/versionless/color/certified-kubernetes-color.svg?sanitize=true" align="right" width="120px" alt="Kubernetes certification logo">
 
 **CKE** (Cybozu Kubernetes Engine) is a distributed service that automates [Kubernetes][] cluster management.
 
