@@ -9,7 +9,7 @@
 Cybozu Kubernetes Engine
 ========================
 
-<img src="https://raw.githubusercontent.com/cncf/artwork/master/projects/kubernetes/certified-kubernetes/versionless/color/certified-kubernetes-color.svg?sanitize=true" align="right" width="120px" alt="Kubernetes certification logo">
+<a href="https://landscape.cncf.io/format=card-mode&grouping=category&organization=cybozu&selected=cybozu-kubernetes-engine"><img src="https://raw.githubusercontent.com/cncf/artwork/master/projects/kubernetes/certified-kubernetes/versionless/color/certified-kubernetes-color.svg?sanitize=true" align="right" width="120px" alt="Kubernetes certification logo"></a>
 
 **CKE** (Cybozu Kubernetes Engine) is a distributed service that automates [Kubernetes][] cluster management.
 
