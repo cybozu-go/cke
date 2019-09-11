@@ -28,6 +28,12 @@ jobs:
     working_directory: /work
     steps:
       - checkout
+      - run:
+          name: Check static resources
+          command: |
+            cp ./static/resources.go /tmp/resources.go
+            make static
+            cmp /tmp/resources.go ./static/resources.go
       - run: make test GOBIN=/tmp/workspace
       - persist_to_workspace:
          root: /tmp/workspace
