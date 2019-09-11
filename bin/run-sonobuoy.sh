@@ -17,8 +17,7 @@ $GCLOUD compute instances create ${INSTANCE_NAME} \
   --machine-type ${MACHINE_TYPE} \
   --image vmx-enabled \
   --boot-disk-type ${DISK_TYPE} \
-  --boot-disk-size ${BOOT_DISK_SIZE} \
-  --local-ssd interface=scsi
+  --boot-disk-size ${BOOT_DISK_SIZE}
 
 RET=0
 trap delete_instance INT QUIT TERM 0
@@ -36,12 +35,6 @@ $GCLOUD compute instances add-metadata ${INSTANCE_NAME} --zone ${ZONE} \
 
 cat >run.sh <<EOF
 #!/bin/sh -e
-
-# mkfs and mount local SSD on \$HOME/.vagrant.d
-mkfs -t ext4 -F /dev/disk/by-id/google-local-ssd-0
-mkdir -p \$HOME/.vagrant.d
-mount -t ext4 /dev/disk/by-id/google-local-ssd-0 \$HOME/.vagrant.d
-chmod 755 \$HOME/.vagrant.d
 
 # Run mtest
 GOPATH=\$HOME/go
