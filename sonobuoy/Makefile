@@ -41,7 +41,7 @@ bin/sonobuoy:
 	mkdir -p bin
 	$(CURL) $(SONOBUOY_URL) | tar xzf - -C bin sonobuoy
 
-run: bin/cke bin/ckecli
+run: bin/cke bin/ckecli bin/kubectl
 	mkdir -p etcd-data
 	/usr/local/bin/docker-compose up -d
 	vagrant up
@@ -50,13 +50,14 @@ run: bin/cke bin/ckecli
 	$(CKECLI) constraints set minimum-workers 2
 	$(CKECLI) constraints set control-plane-count 1
 	$(CKECLI) cluster set ./cke-cluster.yml
-
-sonobuoy: bin/kubectl bin/sonobuoy
-	$(CKECLI) kubernetes issue --ttl=10h > .kubeconfig
+	$(CKECLI) kubernetes issue > .kubeconfig
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system ds/node-dns -o json | jq .status.numberReady)" = 3 ]; then break; fi; done
 	./bin/kubectl apply -f ../example/calico.yaml
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get nodes --no-headers | grep Ready | wc -l)" = 3 ]; then break; fi; done
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system deployments/cluster-dns -o json | jq .status.readyReplicas)" = 2 ]; then break; fi; done
+
+sonobuoy: bin/sonobuoy
+	$(CKECLI) kubernetes issue --ttl=10h > .kubeconfig
 	time ./bin/sonobuoy run --wait
 	outfile=$$(./bin/sonobuoy retrieve) && mv $$outfile sonobuoy.tar.gz
 	./bin/sonobuoy delete
