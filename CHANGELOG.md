@@ -11,8 +11,6 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Automatically mark deleting Node unschedulable (#238)
 - Update hyperkube to 1.15.4 (#239)
 
-### Changed
-
 ## [1.15.1] - 2019-09-04
 
 ### Changed
