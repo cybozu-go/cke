@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.15.2] - 2019-09-19
+
+### Changed
+- Automatically mark deleting Node unschedulable (#238)
+- Update hyperkube to 1.15.4 (#239)
+
 ## [1.15.1] - 2019-09-04
 
 ### Changed
@@ -56,7 +62,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 * See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 * See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.15.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.15.2...HEAD
+[1.15.2]: https://github.com/cybozu-go/cke/compare/v1.15.1...v1.15.2
 [1.15.1]: https://github.com/cybozu-go/cke/compare/v1.15.0...v1.15.1
 [1.15.0]: https://github.com/cybozu-go/cke/compare/v1.15.0-rc.4...v1.15.0
 [1.15.0-rc.4]: https://github.com/cybozu-go/cke/compare/v1.15.0-rc.3...v1.15.0-rc.4
