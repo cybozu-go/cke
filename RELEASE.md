@@ -77,7 +77,7 @@ Bump version
     $ git push origin "v$VERSION"
     ```
 
-Now the version is bumped up and the latest container image is uploaded to [quay.io](https://quay.io/cybozu/cke).
+Then CircleCI automatically builds and pushes the tagged container image to [quay.io](https://quay.io/cybozu/cke).
 
 CircleCI also creates a GitHub release automatically after running [sonobuoy](./sonobuoy) tests.
 So, **DO NOT MANUALLY CREATE GITHUB RELEASES**.  The test results will be attached to the GitHub
