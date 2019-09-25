@@ -474,6 +474,15 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 				return cke.KubernetesClusterStatus{}, err
 			}
 			s.SetResourceStatus(rkey, obj.Annotations)
+		case "PodDisruptionBudgets":
+			obj, err := k8s.PolicyV1beta1().PodDisruptionBudgets(parts[1]).Get(parts[2], metav1.GetOptions{})
+			if k8serr.IsNotFound(err) {
+				continue
+			}
+			if err != nil {
+				return cke.KubernetesClusterStatus{}, err
+			}
+			s.SetResourceStatus(rkey, obj.Annotations)
 		default:
 			log.Warn("unknown resource kind", map[string]interface{}{
 				"kind": parts[0],

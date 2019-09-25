@@ -153,4 +153,13 @@ var Resources = []cke.ResourceDefinition{
 		Image:      "",
 		Definition: []byte("{\"kind\":\"Service\",\"apiVersion\":\"v1\",\"metadata\":{\"name\":\"cluster-dns\",\"namespace\":\"kube-system\",\"creationTimestamp\":null,\"labels\":{\"cke.cybozu.com/appname\":\"cluster-dns\"},\"annotations\":{\"cke.cybozu.com/revision\":\"1\"}},\"spec\":{\"ports\":[{\"name\":\"dns\",\"protocol\":\"UDP\",\"port\":53,\"targetPort\":1053},{\"name\":\"dns-tcp\",\"protocol\":\"TCP\",\"port\":53,\"targetPort\":1053}],\"selector\":{\"cke.cybozu.com/appname\":\"cluster-dns\"}},\"status\":{\"loadBalancer\":{}}}\n"),
 	},
+	{
+		Key:        "PodDisruptionBudget/kube-system/cluster-dns-pdb",
+		Kind:       "PodDisruptionBudget",
+		Namespace:  "kube-system",
+		Name:       "cluster-dns-pdb",
+		Revision:   1,
+		Image:      "",
+		Definition: []byte("{\"kind\":\"PodDisruptionBudget\",\"apiVersion\":\"policy/v1beta1\",\"metadata\":{\"name\":\"cluster-dns-pdb\",\"namespace\":\"kube-system\",\"creationTimestamp\":null,\"annotations\":{\"cke.cybozu.com/revision\":\"1\"}},\"spec\":{\"selector\":{\"matchLabels\":{\"cke.cybozu.com/appname\":\"cluster-dns\"}},\"maxUnavailable\":1},\"status\":{\"disruptionsAllowed\":0,\"currentHealthy\":0,\"desiredHealthy\":0,\"expectedPods\":0}}\n"),
+	},
 }

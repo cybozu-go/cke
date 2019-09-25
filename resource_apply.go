@@ -702,3 +702,55 @@ func applyCronJob(o *batchv1beta1.CronJob, data []byte, rev int64, getFunc func(
 
 	return nil
 }
+
+func applyPodDisruptionBudgets(o *policyv1beta1.PodDisruptionBudget, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*policyv1beta1.PodDisruptionBudget, error), createFunc func(*policyv1beta1.PodDisruptionBudget) (*policyv1beta1.PodDisruptionBudget, error), patchFunc func(string, types.PatchType, []byte, ...string) (*policyv1beta1.PodDisruptionBudget, error)) error {
+	annotate(&o.ObjectMeta, rev, data)
+	current, err := getFunc(o.Name, metav1.GetOptions{})
+	if errors.IsNotFound(err) {
+		_, err = createFunc(o)
+		return err
+	}
+	if err != nil {
+		return err
+	}
+
+	modified, err := encodeToJSON(o)
+	if err != nil {
+		return err
+	}
+
+	original, ok := current.Annotations[AnnotationResourceOriginal]
+	if !ok {
+		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
+	}
+
+	currentData, err := encodeToJSON(current)
+	if err != nil {
+		return err
+	}
+	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
+	if err != nil {
+		return err
+	}
+	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
+	if err != nil {
+		return err
+	}
+	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	if err != nil {
+		log.Error("failed to apply patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+			log.FnError: err,
+		})
+		return err
+	}
+
+	return nil
+}
