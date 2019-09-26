@@ -133,6 +133,7 @@ type KubeletParams struct {
 	AllowSwap                bool           `json:"allow_swap"`
 	BootTaints               []corev1.Taint `json:"boot_taints"`
 	CNIConfFile              CNIConfFile    `json:"cni_conf_file"`
+	ReadOnlyPort             int32          `json:"read_only_port"`
 }
 
 // EtcdBackup is a set of configurations for etcdbackup.

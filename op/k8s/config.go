@@ -72,11 +72,11 @@ type KubeletConfiguration struct {
 	ContainerLogMaxFiles int32  `json:"containerLogMaxFiles,omitempty"`
 }
 
-func newKubeletConfiguration(cert, key, ca, domain, logSize string, logFiles int32, allowSwap bool) KubeletConfiguration {
+func newKubeletConfiguration(cert, key, ca, domain, logSize string, logFiles, readOnlyPort int32, allowSwap bool) KubeletConfiguration {
 	return KubeletConfiguration{
 		APIVersion:            "kubelet.config.k8s.io/v1beta1",
 		Kind:                  "KubeletConfiguration",
-		ReadOnlyPort:          10255,
+		ReadOnlyPort:          readOnlyPort,
 		TLSCertFile:           cert,
 		TLSPrivateKeyFile:     key,
 		Authentication:        KubeletAuthentication{ClientCAFile: ca},

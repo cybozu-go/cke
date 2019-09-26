@@ -149,6 +149,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 				FailSwapOn           bool   `json:"failSwapOn"`
 				ContainerLogMaxSize  string `json:"containerLogMaxSize"`
 				ContainerLogMaxFiles int32  `json:"containerLogMaxFiles"`
+				ReadOnlyPort         int32  `json:"readOnlyPort"`
 			}{}
 			err = yaml.Unmarshal(cfgData, &v)
 			if err == nil {
@@ -156,6 +157,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 				status.Kubelet.AllowSwap = !v.FailSwapOn
 				status.Kubelet.ContainerLogMaxSize = v.ContainerLogMaxSize
 				status.Kubelet.ContainerLogMaxFiles = v.ContainerLogMaxFiles
+				status.Kubelet.ReadOnlyPort = v.ReadOnlyPort
 			}
 		}
 	}

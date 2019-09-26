@@ -137,6 +137,7 @@ Options
 | `container_runtime_endpoint` | false    | string      | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/var/run/dockershim.sock`.                                               |
 | `container_log_max_size`     | false    | string      | Equivalent to the [log rotation for CRI runtime]. Size of log file size. If the file size becomes bigger than given size, the log file is rotated. Default: `10Mi`. |
 | `container_log_max_files`    | false    | int         | Equivalent to the [log rotation for CRI runtime]. Number of rotated log files for keeping in the storage. Default: `5`.                                             |
+| `read_only_port`             | false    | int         | The read-only port for the Kubelet to serve on with no authentication/authorization (set to 0 to disable).  Default: `0`.                                           |
 | `cni_conf_file`              | false    | CNIConfFile | CNI configuration file.                                                                                                                                             |
 
 Taints in `boot_taints` are added to a Node in the following cases:

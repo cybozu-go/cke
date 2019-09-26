@@ -139,4 +139,5 @@ type KubeletStatus struct {
 	AllowSwap            bool
 	ContainerLogMaxSize  string
 	ContainerLogMaxFiles int32
+	ReadOnlyPort         int32
 }

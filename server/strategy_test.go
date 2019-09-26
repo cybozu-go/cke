@@ -694,6 +694,15 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
+			Name: "RestartKubelet11",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Kubelet.ReadOnlyPort = 10255
+			}),
+			ExpectedOps: []string{
+				"kubelet-restart",
+			},
+		},
+		{
 			Name: "RestartProxy",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.Cluster.Nodes[0]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}

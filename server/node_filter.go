@@ -466,6 +466,8 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 			fallthrough
 		case currentOpts.ContainerLogMaxFiles != st.ContainerLogMaxFiles:
 			fallthrough
+		case currentOpts.ReadOnlyPort != st.ReadOnlyPort:
+			fallthrough
 		case !kubeletEqualParams(st.BuiltInParams, currentBuiltIn):
 			fallthrough
 		case !currentExtra.Equal(st.ExtraParams):
