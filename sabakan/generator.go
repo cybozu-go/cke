@@ -109,11 +109,11 @@ type Generator struct {
 // NewGenerator creates a new Generator.
 // current can be nil if no cluster configuration has been set.
 // template must have been validated with ValidateTemplate().
-func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machines []Machine) *Generator {
+func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machines []Machine, currentTime time.Time) *Generator {
 	g := &Generator{
 		template:    template,
 		constraints: cstr,
-		timestamp:   time.Now(),
+		timestamp:   currentTime,
 		waitSeconds: DefaultWaitRetiringSeconds,
 	}
 
