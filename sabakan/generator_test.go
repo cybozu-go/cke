@@ -235,7 +235,7 @@ func testNewGenerator(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := NewGenerator(tt.args.current, tt.args.template, tt.args.cstr, tt.args.machines)
+			got := NewGenerator(tt.args.current, tt.args.template, tt.args.cstr, tt.args.machines, testBaseTS)
 			if !cmp.Equal(got.controlPlanes, tt.want.controlPlanes, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.controlPlanes, tt.want.controlPlanes), actual: %v, want %v", got.controlPlanes, tt.want.controlPlanes)
 			}
@@ -342,8 +342,7 @@ func testGenerate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			g := NewGenerator(nil, tt.template, tt.cstr, tt.machines)
-			g.timestamp = testBaseTS
+			g := NewGenerator(nil, tt.template, tt.cstr, tt.machines, testBaseTS)
 			cluster, err := g.Generate()
 			if err != nil {
 				if !tt.expectErr {
@@ -420,8 +419,7 @@ func testRegenerate(t *testing.T) {
 	generated := *tmpl
 	generated.Nodes = nil
 
-	g := NewGenerator(cluster, tmpl, cke.DefaultConstraints(), machines)
-	g.timestamp = testBaseTS
+	g := NewGenerator(cluster, tmpl, cke.DefaultConstraints(), machines, testBaseTS)
 	regenerated, err := g.Regenerate()
 	if err != nil {
 		t.Fatal(err)
@@ -801,8 +799,7 @@ func testUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			g := NewGenerator(tt.current, tmpl, tt.cstr, tt.machines)
-			g.timestamp = testBaseTS
+			g := NewGenerator(tt.current, tmpl, tt.cstr, tt.machines, testBaseTS)
 			got, err := g.Update()
 
 			if err != tt.expectErr {
@@ -1009,8 +1006,7 @@ func testWeighted(t *testing.T) {
 				Nodes: append(tt.tmplWorkers, tt.tmplCP),
 			}
 
-			g := NewGenerator(nil, tmpl, tt.cstr, machines)
-			g.timestamp = testBaseTS
+			g := NewGenerator(nil, tmpl, tt.cstr, machines, testBaseTS)
 			cluster, err := g.Generate()
 			if err != nil {
 				t.Fatal(err)
