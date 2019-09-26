@@ -76,7 +76,7 @@ func newKubeletConfiguration(cert, key, ca, domain, logSize string, logFiles int
 	return KubeletConfiguration{
 		APIVersion:            "kubelet.config.k8s.io/v1beta1",
 		Kind:                  "KubeletConfiguration",
-		ReadOnlyPort:          0,
+		ReadOnlyPort:          10255,
 		TLSCertFile:           cert,
 		TLSPrivateKeyFile:     key,
 		Authentication:        KubeletAuthentication{ClientCAFile: ca},
