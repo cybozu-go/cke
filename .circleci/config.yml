@@ -35,11 +35,12 @@ jobs:
             make static
             cmp /tmp/resources.go ./static/resources.go
       - run:
-          name: Check user-defined resources
+          name: Check resource_apply.go
           command: |
             go install -mod=vendor ./pkg/apply_gen/
-            apply_gen > /tmp/resource.go
-            diff -u resource.go /tmp/resource.go
+            cp resource_apply.go /tmp/resource_apply.go
+            apply_gen
+            diff -u /tmp/resource_apply.go resource_apply.go
       - run: make test GOBIN=/tmp/workspace
       - persist_to_workspace:
          root: /tmp/workspace
