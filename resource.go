@@ -168,7 +168,7 @@ func ApplyResource(clientset *kubernetes.Clientset, data []byte, rev int64) erro
 		return applyCronJob(o, data, rev, c.Get, c.Create, c.Patch)
 	case *policyv1beta1.PodDisruptionBudget:
 		c := clientset.PolicyV1beta1().PodDisruptionBudgets(o.Namespace)
-		return applyPodDisruptionBudgets(o, data, rev, c.Get, c.Create, c.Patch)
+		return applyPodDisruptionBudget(o, data, rev, c.Get, c.Create, c.Patch)
 	}
 	return fmt.Errorf("unsupported type: %s", gvk.String())
 }

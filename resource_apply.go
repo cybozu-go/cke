@@ -703,7 +703,7 @@ func applyCronJob(o *batchv1beta1.CronJob, data []byte, rev int64, getFunc func(
 	return nil
 }
 
-func applyPodDisruptionBudgets(o *policyv1beta1.PodDisruptionBudget, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*policyv1beta1.PodDisruptionBudget, error), createFunc func(*policyv1beta1.PodDisruptionBudget) (*policyv1beta1.PodDisruptionBudget, error), patchFunc func(string, types.PatchType, []byte, ...string) (*policyv1beta1.PodDisruptionBudget, error)) error {
+func applyPodDisruptionBudget(o *policyv1beta1.PodDisruptionBudget, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*policyv1beta1.PodDisruptionBudget, error), createFunc func(*policyv1beta1.PodDisruptionBudget) (*policyv1beta1.PodDisruptionBudget, error), patchFunc func(string, types.PatchType, []byte, ...string) (*policyv1beta1.PodDisruptionBudget, error)) error {
 	annotate(&o.ObjectMeta, rev, data)
 	current, err := getFunc(o.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {

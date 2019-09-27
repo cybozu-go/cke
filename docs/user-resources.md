@@ -18,6 +18,7 @@ This can be considered as `kubectl apply` automatically executed by CKE.
 - DaemonSet
 - CronJob
 - Service
+- PodDisruptionBudget
 
 Resources are created in the order of this list.
 
