@@ -165,9 +165,7 @@ CKE generates cluster configuration with the following conditions.
 * The number of servers for each role should be proportional to the given weights in the template.
 * Newer machines should be preferred than old ones.
 * Healthy machines should be preferred than non-healthy ones.
-* Unreachable machines should be removed from the cluster.  
-    This is because CKE cannot work if the cluster configuration contains dead nodes.
-* Unhealthy machines in the cluster should be [tainted][taint] with `NoSchedule`.
+* Unhealthy and unreachable machines in the cluster should be [tainted][taint] with `NoSchedule`.
 * Retiring machines should be [tainted][taint] with `NoExecute`.
 * Rebooting machines should not be removed from the cluster nor be tainted.
 * Each change of the cluster configuration should be made as small as possible.
@@ -240,11 +238,11 @@ sabakan then compares the list with _the current cluster_ configuration.
 
 Then it selects one of the following actions if the condition matches.
 
-#### Remove unreachable nodes
+#### Remove non-existent nodes
 
 If the current cluster contains nodes that no longer exist in the list,
-or if it contains unreachable nodes, they are removed.  This algorithm
-should be chosen first as unreachable nodes block CKE.
+they are removed.  This algorithm should be work first because non-existent
+nodes block CKE.
 
 New nodes may be added to satisfy constraints.
 
@@ -296,11 +294,12 @@ If a worker node is either retiring or retired for a while,
 CKE adds  [taints][taint] to nodes as follows.
 The taint key is `cke.cybozu.com/state`.
 
-| Machine state | Taint value | Taint effect |
-| ------------- | ----------- | ------------ |
-| Unhealthy     | `unhealthy` | `NoSchedule` |
-| Retiring      | `retiring`  | `NoExecute`  |
-| Retired       | `retired`   | `NoExecute`  |
+| Machine state | Taint value   | Taint effect |
+| ------------- | ------------- | ------------ |
+| Unhealthy     | `unhealthy`   | `NoSchedule` |
+| Unreachable   | `unreachable` | `NoSchedule` |
+| Retiring      | `retiring`    | `NoExecute`  |
+| Retired       | `retired`     | `NoExecute`  |
 
 For other machine states, the taint is removed.
 
