@@ -538,7 +538,7 @@ func testUpdate(t *testing.T) {
 			},
 		},
 		{
-			"TooManyUnreachable",
+			"TooManyNonExistent",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[3], cps[4], workers[5]},
 			},
@@ -548,7 +548,7 @@ func testUpdate(t *testing.T) {
 			},
 			machines,
 
-			errTooManyUnreachable,
+			errTooManyNonExistent,
 			nil,
 		},
 		{
