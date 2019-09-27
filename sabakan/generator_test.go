@@ -1010,6 +1010,7 @@ func testWeighted(t *testing.T) {
 			}
 
 			g := NewGenerator(nil, tmpl, tt.cstr, machines)
+			g.timestamp = testBaseTS
 			cluster, err := g.Generate()
 			if err != nil {
 				t.Fatal(err)
