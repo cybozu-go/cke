@@ -123,6 +123,7 @@ func subMain() error {
 		{"appsv1", "Deployment", 60},
 		{"appsv1", "DaemonSet", 60},
 		{"batchv1beta1", "CronJob", 60},
+		{"policyv1beta1", "PodDisruptionBudget", 0},
 	})
 	if err != nil {
 		return err
