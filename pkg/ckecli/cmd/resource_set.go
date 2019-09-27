@@ -44,7 +44,8 @@ Only the following resource types can be used:
   * Deployment
   * DaemonSet
   * CronJob
-  * Service`,
+  * Service
+  * PodDisruptionBudget`,
 
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

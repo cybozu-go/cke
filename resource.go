@@ -31,19 +31,20 @@ type Kind string
 
 // Supported resource kinds
 const (
-	KindNamespace          = "Namespace"
-	KindServiceAccount     = "ServiceAccount"
-	KindPodSecurityPolicy  = "PodSecurityPolicy"
-	KindNetworkPolicy      = "NetworkPolicy"
-	KindClusterRole        = "ClusterRole"
-	KindRole               = "Role"
-	KindClusterRoleBinding = "ClusterRoleBinding"
-	KindRoleBinding        = "RoleBinding"
-	KindConfigMap          = "ConfigMap"
-	KindDeployment         = "Deployment"
-	KindDaemonSet          = "DaemonSet"
-	KindCronJob            = "CronJob"
-	KindService            = "Service"
+	KindNamespace           = "Namespace"
+	KindServiceAccount      = "ServiceAccount"
+	KindPodSecurityPolicy   = "PodSecurityPolicy"
+	KindNetworkPolicy       = "NetworkPolicy"
+	KindClusterRole         = "ClusterRole"
+	KindRole                = "Role"
+	KindClusterRoleBinding  = "ClusterRoleBinding"
+	KindRoleBinding         = "RoleBinding"
+	KindConfigMap           = "ConfigMap"
+	KindDeployment          = "Deployment"
+	KindDaemonSet           = "DaemonSet"
+	KindCronJob             = "CronJob"
+	KindService             = "Service"
+	KindPodDisruptionBudget = "PodDisruptionBudget"
 )
 
 // IsSupported returns true if k is supported by CKE.
@@ -52,7 +53,7 @@ func (k Kind) IsSupported() bool {
 	case KindNamespace, KindServiceAccount,
 		KindPodSecurityPolicy, KindNetworkPolicy,
 		KindClusterRole, KindRole, KindClusterRoleBinding, KindRoleBinding,
-		KindConfigMap, KindDeployment, KindDaemonSet, KindCronJob, KindService:
+		KindConfigMap, KindDeployment, KindDaemonSet, KindCronJob, KindService, KindPodDisruptionBudget:
 		return true
 	}
 	return false
@@ -87,6 +88,8 @@ func (k Kind) Order() int {
 		return 12
 	case KindService:
 		return 13
+	case KindPodDisruptionBudget:
+		return 14
 	}
 	panic("unknown kind: " + string(k))
 }
@@ -163,8 +166,10 @@ func ApplyResource(clientset *kubernetes.Clientset, data []byte, rev int64) erro
 	case *batchv1beta1.CronJob:
 		c := clientset.BatchV1beta1().CronJobs(o.Namespace)
 		return applyCronJob(o, data, rev, c.Get, c.Create, c.Patch)
+	case *policyv1beta1.PodDisruptionBudget:
+		c := clientset.PolicyV1beta1().PodDisruptionBudgets(o.Namespace)
+		return applyPodDisruptionBudgets(o, data, rev, c.Get, c.Create, c.Patch)
 	}
-
 	return fmt.Errorf("unsupported type: %s", gvk.String())
 }
 
@@ -213,6 +218,9 @@ func ParseResource(data []byte) (key string, jsonData []byte, err error) {
 		data, err := encodeToJSON(o)
 		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	case *batchv1beta1.CronJob:
+		data, err := encodeToJSON(o)
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
+	case *policyv1beta1.PodDisruptionBudget:
 		data, err := encodeToJSON(o)
 		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
 	}
