@@ -474,7 +474,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 				return cke.KubernetesClusterStatus{}, err
 			}
 			s.SetResourceStatus(rkey, obj.Annotations)
-		case "PodDisruptionBudgets":
+		case "PodDisruptionBudget":
 			obj, err := k8s.PolicyV1beta1().PodDisruptionBudgets(parts[1]).Get(parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
