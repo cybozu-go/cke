@@ -457,47 +457,48 @@ func testRegenerate(t *testing.T) {
 
 func testUpdate(t *testing.T) {
 	machines := []Machine{
-		newTestMachineWithIP(0, testFuture500, StateHealthy, "10.0.0.1", "cs"),
-		newTestMachineWithIP(0, testFuture250, StateRetiring, "10.0.0.2", "cs"),
-		newTestMachineWithIP(1, testFuture250, StateUnhealthy, "10.0.0.3", "cs"),
-		newTestMachineWithIP(1, testFuture250, StateUnreachable, "10.0.0.4", "cs"),
-		newTestMachineWithIP(2, testFuture250, StateUnreachable, "10.0.0.5", "cs"),
-		newTestMachineWithIP(2, testFuture500, StateHealthy, "10.0.0.6", "cs"),
-		newTestMachineWithIP(3, testFuture1000, StateHealthy, "10.0.0.7", "cs"),
-		newTestMachineWithIP(3, testFuture500, StateHealthy, "10.0.0.8", "cs"),
-		newTestMachineWithIP(4, testFuture500, StateUpdating, "10.0.0.9", "cs"),
+		newTestMachineWithIP(0, testFuture500, StateHealthy, "10.0.0.1", "cs"),     // [0]
+		newTestMachineWithIP(0, testFuture250, StateRetiring, "10.0.0.2", "cs"),    // [1]
+		newTestMachineWithIP(1, testFuture250, StateUnhealthy, "10.0.0.3", "cs"),   // [2]
+		newTestMachineWithIP(1, testFuture250, StateUnreachable, "10.0.0.4", "cs"), // [3]
+		newTestMachineWithIP(2, testFuture250, StateUnreachable, "10.0.0.5", "cs"), // [4]
+		newTestMachineWithIP(2, testFuture500, StateHealthy, "10.0.0.6", "cs"),     // [5]
+		newTestMachineWithIP(3, testFuture1000, StateHealthy, "10.0.0.7", "cs"),    // [6]
+		newTestMachineWithIP(3, testFuture500, StateHealthy, "10.0.0.8", "cs"),     // [7]
+		newTestMachineWithIP(4, testFuture500, StateUpdating, "10.0.0.9", "cs"),    // [8]
 	}
 	cps := []*cke.Node{
-		{Address: "10.0.0.1", ControlPlane: true},
-		{Address: "10.0.0.2", ControlPlane: true},
-		{Address: "10.0.0.3", ControlPlane: true},
-		{Address: "10.0.0.4", ControlPlane: true},
-		{Address: "10.0.0.5", ControlPlane: true},
-		{Address: "10.0.0.6", ControlPlane: true},
-		{Address: "10.0.0.7", ControlPlane: true},
-		{Address: "10.0.0.8", ControlPlane: true},
-		{Address: "10.0.0.9", ControlPlane: true},
-		{Address: "10.100.0.10", ControlPlane: true},
-		{Address: "10.100.0.11", ControlPlane: true},
+		{Address: "10.0.0.1", ControlPlane: true},    // [0]
+		{Address: "10.0.0.2", ControlPlane: true},    // [1]
+		{Address: "10.0.0.3", ControlPlane: true},    // [2]
+		{Address: "10.0.0.4", ControlPlane: true},    // [3]
+		{Address: "10.0.0.5", ControlPlane: true},    // [4]
+		{Address: "10.0.0.6", ControlPlane: true},    // [5]
+		{Address: "10.0.0.7", ControlPlane: true},    // [6]
+		{Address: "10.0.0.8", ControlPlane: true},    // [7]
+		{Address: "10.0.0.9", ControlPlane: true},    // [8]
+		{Address: "10.100.0.10", ControlPlane: true}, // [9]  non-existent
+		{Address: "10.100.0.11", ControlPlane: true}, // [10] non-existent
 	}
 	workers := []*cke.Node{
-		{Address: "10.0.0.1"},
-		{Address: "10.0.0.2", Taints: []corev1.Taint{
-			{
-				Key:    "cke.cybozu.com/state",
-				Value:  "retiring",
-				Effect: corev1.TaintEffectNoExecute,
-			},
-		}},
-		{Address: "10.0.0.3"},
-		{Address: "10.0.0.4"},
-		{Address: "10.0.0.5"},
-		{Address: "10.0.0.6"},
-		{Address: "10.0.0.7"},
-		{Address: "10.0.0.8"},
-		{Address: "10.0.0.9"},
-		{Address: "10.100.0.10"},
-		{Address: "10.100.0.11"},
+		{Address: "10.0.0.1"}, // [0]
+		{Address: "10.0.0.2", // [1]
+			Taints: []corev1.Taint{
+				{
+					Key:    "cke.cybozu.com/state",
+					Value:  "retiring",
+					Effect: corev1.TaintEffectNoExecute,
+				},
+			}},
+		{Address: "10.0.0.3"},    // [2]
+		{Address: "10.0.0.4"},    // [3]
+		{Address: "10.0.0.5"},    // [4]
+		{Address: "10.0.0.6"},    // [5]
+		{Address: "10.0.0.7"},    // [6]
+		{Address: "10.0.0.8"},    // [7]
+		{Address: "10.0.0.9"},    // [8]
+		{Address: "10.100.0.10"}, // [9]  non-existent
+		{Address: "10.100.0.11"}, // [10] non-existent
 	}
 
 	tmpl := &cke.Cluster{
@@ -522,7 +523,7 @@ func testUpdate(t *testing.T) {
 		expected  *cke.Cluster
 	}{
 		{
-			"RemoveUnreachable",
+			"RemoveNonExistent",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[1], cps[9], workers[2], workers[3], workers[10]},
 			},
@@ -534,7 +535,7 @@ func testUpdate(t *testing.T) {
 
 			nil,
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[1], cps[6], workers[2]},
+				Nodes: []*cke.Node{cps[0], cps[1], cps[6], workers[2], workers[3]},
 			},
 		},
 		{
@@ -546,7 +547,7 @@ func testUpdate(t *testing.T) {
 				ControlPlaneCount: 3,
 				MinimumWorkers:    1,
 			},
-			machines,
+			[]Machine{machines[3], machines[5]},
 
 			errTooManyNonExistent,
 			nil,
@@ -560,7 +561,7 @@ func testUpdate(t *testing.T) {
 				ControlPlaneCount: 3,
 				MinimumWorkers:    1,
 			},
-			[]Machine{machines[0], machines[3], machines[5], machines[6]},
+			[]Machine{machines[0], machines[3], machines[6]},
 
 			errNotAvailable,
 			nil,
