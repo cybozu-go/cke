@@ -19,6 +19,10 @@ commands:
       - run:
           command: |
             ./bin/run-mtest.sh <<parameters.runtime>> <<parameters.suite>> <<parameters.target>>
+      - run:
+          name: Show cke logs
+          command: |
+             ./bin/show_log
 
 jobs:
   build:
