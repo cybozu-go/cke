@@ -111,7 +111,7 @@ $(COREOS_IMAGE):
 
 $(OUTPUT)/etcd $(OUTPUT)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
 	mkdir -p $(OUTPUT)
-	tar -C $(OUTPUT) -x -z --wildcards --strip-components 1 -f $< '*/$(notdir $@)'
+	tar -C $(OUTPUT) -x -z --wildcards --strip-components 1 -f $< '*/$(notdir $@)' --warning=no-unknown-keyword
 	touch $@
 
 $(OUTPUT)/vault: $(VAULT_ARCHIVE)
@@ -279,14 +279,14 @@ $(OUTPUT)/cke.yml: cke.yml
 unpack-containerd:
 	mkdir -p $(OUTPUT)
 	$(CURL) https://github.com/containerd/containerd/releases/download/v$(CONTAINERD_VERSION)/containerd-$(CONTAINERD_VERSION).linux-amd64.tar.gz | \
-	tar xzf - --strip-components=1 -C $(OUTPUT) bin/containerd bin/containerd-shim bin/ctr
+	tar xzf - --strip-components=1 -C $(OUTPUT) bin/containerd bin/containerd-shim bin/ctr --warning=no-unknown-keyword
 
 $(CONTAINERD_FILES): unpack-containerd
 
 $(OUTPUT)/crictl:
 	mkdir -p $(OUTPUT)
 	$(CURL) -o crictl.tar.gz https://github.com/kubernetes-sigs/cri-tools/releases/download/v$(CRITOOLS_VERSION)/crictl-v$(CRITOOLS_VERSION)-linux-amd64.tar.gz
-	tar zxvf crictl.tar.gz -C $(OUTPUT)
+	tar zxvf crictl.tar.gz -C $(OUTPUT) --warning=no-unknown-keyword
 
 # Targets
 test: $(TEST_DEPS)
