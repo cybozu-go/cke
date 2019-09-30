@@ -5,6 +5,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.15.3] - 2019-09-30
+
+### Changed
+- Add PodDisruptionBudget for cluster-dns (#241, #243)
+
 ## [1.15.2] - 2019-09-19
 
 ### Changed
@@ -62,7 +67,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 * See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 * See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.15.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.15.3...HEAD
+[1.15.3]: https://github.com/cybozu-go/cke/compare/v1.15.2...v1.15.3
 [1.15.2]: https://github.com/cybozu-go/cke/compare/v1.15.1...v1.15.2
 [1.15.1]: https://github.com/cybozu-go/cke/compare/v1.15.0...v1.15.1
 [1.15.0]: https://github.com/cybozu-go/cke/compare/v1.15.0-rc.4...v1.15.0
