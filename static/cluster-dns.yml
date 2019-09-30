@@ -103,6 +103,8 @@ spec:
         - containerPort: 1053
           name: dns-tcp
           protocol: TCP
+        - containerPort: 9153
+          name: metrics
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
