@@ -6,14 +6,6 @@ TARGET=$3
 
 . $(dirname $0)/env
 
-delete_instance() {
-  if [ $RET -ne 0 ]; then
-    # do not delete GCP instance upon test failure to help debugging.
-    return
-  fi
-  $GCLOUD compute instances delete ${INSTANCE_NAME} --zone ${ZONE} || true
-}
-
 # Create GCE instance
 $GCLOUD compute instances delete ${INSTANCE_NAME} --zone ${ZONE} || true
 $GCLOUD compute instances create ${INSTANCE_NAME} \
@@ -23,9 +15,6 @@ $GCLOUD compute instances create ${INSTANCE_NAME} \
   --boot-disk-type ${DISK_TYPE} \
   --boot-disk-size ${BOOT_DISK_SIZE} \
   --local-ssd interface=scsi
-
-RET=0
-trap delete_instance INT QUIT TERM 0
 
 # Run multi-host test
 for i in $(seq 300); do
