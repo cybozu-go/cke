@@ -186,7 +186,10 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 			}
 			a, err := SSHAgent(node, mykey.(string))
 			if err != nil {
-				return errors.Wrap(err, node.Address)
+				a = sshAgent{
+					node:   node,
+					client: nil,
+				}
 			}
 
 			mu.Lock()

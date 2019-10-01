@@ -44,6 +44,9 @@ type Agent interface {
 	// RunWithTimeout run command with given timeout.
 	// If timeout is 0, the command will run indefinitely.
 	RunWithTimeout(command, input string, timeout time.Duration) (stdout, stderr []byte, err error)
+
+	// SSHConnected check wether SSH is connected or not
+	SSHConnected() bool
 }
 
 type sshAgent struct {
@@ -161,4 +164,11 @@ func (a sshAgent) RunWithTimeout(command, input string, timeout time.Duration) (
 		return stdout, stderr, err
 	}
 	return stdout, stderr, nil
+}
+
+func (a sshAgent) SSHConnected() bool {
+	if a.client != nil {
+		return true
+	}
+	return false
 }

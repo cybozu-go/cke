@@ -18,6 +18,12 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 
 	env := well.NewEnvironment(ctx)
 	for _, n := range cluster.Nodes {
+		if !inf.Agent(n.Address).SSHConnected() {
+			statuses[n.Address] = &cke.NodeStatus{
+				SSHConnected: false,
+			}
+		}
+
 		n := n
 		env.Go(func(ctx context.Context) error {
 			ns, err := op.GetNodeStatus(ctx, inf, n, cluster)
@@ -42,7 +48,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 	var etcdRunning bool
 	for _, n := range cke.ControlPlanes(cluster.Nodes) {
 		ns := statuses[n.Address]
-		if ns.Etcd.HasData {
+		if ns.SSHConnected && ns.Etcd.HasData {
 			etcdRunning = true
 			break
 		}
@@ -63,7 +69,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 	var livingMaster *cke.Node
 	for _, n := range cke.ControlPlanes(cluster.Nodes) {
 		ns := statuses[n.Address]
-		if ns.APIServer.Running {
+		if ns.SSHConnected && ns.APIServer.Running {
 			livingMaster = n
 			break
 		}
