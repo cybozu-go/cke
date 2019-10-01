@@ -73,6 +73,8 @@ spec:
       labels:
         cke.cybozu.com/appname: cluster-dns
         k8s-app: coredns # sonobuoy requires
+      annotations:
+        prometheus.io/port: "9153"
     spec:
       priorityClassName: system-cluster-critical
       serviceAccountName: cke-cluster-dns
