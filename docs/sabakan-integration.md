@@ -241,7 +241,7 @@ Then it selects one of the following actions if the condition matches.
 #### Remove non-existent nodes
 
 If the current cluster contains nodes that no longer exist in the list,
-they are removed.  This algorithm should be work first because non-existent
+they are removed. This should be executed at the beginning because non-existent
 nodes block CKE.
 
 New nodes may be added to satisfy constraints.

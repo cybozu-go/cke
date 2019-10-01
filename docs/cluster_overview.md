@@ -49,7 +49,7 @@ CKE deploys following components to control plane nodes:
 - kube-apiserver
 - kube-scheduler
 - kube-controller-manager
-- revers (works as a load balancer to kube-apiserver)
+- rivers (works as a load balancer to kube-apiserver)
 
 CKE constructs etcd cluster before it construct Kubernetes cluster.  Then CKE
 deploys Kubernetes components with rivers.
