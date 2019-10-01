@@ -18,18 +18,13 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 
 	env := well.NewEnvironment(ctx)
 	for _, n := range cluster.Nodes {
-		if !inf.Agent(n.Address).SSHConnected() {
-			statuses[n.Address] = &cke.NodeStatus{
-				SSHConnected: false,
-			}
-		}
-
 		n := n
 		env.Go(func(ctx context.Context) error {
 			ns, err := op.GetNodeStatus(ctx, inf, n, cluster)
 			if err != nil {
 				return fmt.Errorf("%s: %v", n.Address, err)
 			}
+
 			mu.Lock()
 			statuses[n.Address] = ns
 			mu.Unlock()

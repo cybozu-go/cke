@@ -27,6 +27,9 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	status := &cke.NodeStatus{}
 	agent := inf.Agent(node.Address)
 	ce := inf.Engine(node.Address)
+	if status.SSHConnected = agent.SSHConnected(); !status.SSHConnected {
+		return status, nil
+	}
 
 	ss, err := ce.Inspect([]string{
 		EtcdContainerName,
