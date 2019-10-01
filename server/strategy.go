@@ -21,7 +21,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDe
 	nf := NewNodeFilter(c, cs)
 
 	// 0. Skip this iteration, if Etcd is not available and one or more CP node(s) are not connected
-	if !cs.Etcd.IsHealthy && len(nf.SSHNotConnectedNodes(nil, true, false)) > 0 {
+	if !cs.Etcd.IsHealthy && len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, false)) > 0 {
 		return nil
 	}
 
@@ -33,7 +33,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDe
 	}
 
 	// Etcd boot/start operations run only when all CPs are SSH reachable
-	if len(nf.SSHNotConnectedNodes(nil, true, false)) == 0 {
+	if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, false)) == 0 {
 		// 2. Bootstrap etcd cluster, if not yet.
 		if !nf.EtcdBootstrapped() {
 			return []cke.Operator{etcd.BootOp(nf.ControlPlane(), c.Options.Etcd, c.Options.Kubelet.Domain)}

@@ -787,9 +787,6 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node, taintCP bool) bool {
 // SSHNotConnectedNodes returns nodes which are not connected via SSH from targets
 // If targets is nil, it is set as all Nodes in cluster
 func (nf *NodeFilter) SSHNotConnectedNodes(targets []*cke.Node, isCp, isWorker bool) (nodes []*cke.Node) {
-	if targets == nil {
-		targets = nf.cluster.Nodes
-	}
 	for _, n := range targets {
 		if n.ControlPlane && !isCp {
 			continue
@@ -809,9 +806,6 @@ func (nf *NodeFilter) SSHNotConnectedNodes(targets []*cke.Node, isCp, isWorker b
 // SSHConnectedNodes returns nodes which are not connected via SSH from targets
 // If targets is nil, it is set as all Nodes in cluster
 func (nf *NodeFilter) SSHConnectedNodes(targets []*cke.Node, isCp, isWorker bool) (nodes []*cke.Node) {
-	if targets == nil {
-		targets = nf.cluster.Nodes
-	}
 	for _, n := range targets {
 		if n.ControlPlane && !isCp {
 			continue

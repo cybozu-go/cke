@@ -115,7 +115,10 @@ func newData() testData {
 	nodeStatuses := make(map[string]*cke.NodeStatus)
 	var nodeList []corev1.Node
 	for _, nodeName := range nodeNames {
-		nodeStatuses[nodeName] = &cke.NodeStatus{Etcd: cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false}}
+		nodeStatuses[nodeName] = &cke.NodeStatus{
+			Etcd:         cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false},
+			SSHConnected: true,
+		}
 		nodeList = append(nodeList, corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: nodeName,
@@ -624,7 +627,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet3",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[0]).Kubelet.Image = ""
+				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.Image = ""
 			}),
 			ExpectedOps: []string{
 				"kubelet-restart",
@@ -633,7 +636,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet4",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[0]).Kubelet.ExtraParams.ExtraArguments = []string{"foo"}
+				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.ExtraParams.ExtraArguments = []string{"foo"}
 			}),
 			ExpectedOps: []string{
 				"kubelet-restart",
@@ -642,7 +645,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet5",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[0]).Kubelet.Domain = "neco.local"
+				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.Domain = "neco.local"
 			}),
 			ExpectedOps: []string{
 				"kubelet-restart",
@@ -687,7 +690,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet10",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[1:]
+				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[:4]
 			}),
 			ExpectedOps: []string{
 				"kubelet-restart",
@@ -696,7 +699,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartProxy",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[0]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
+				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
 			}),
 			ExpectedOps: []string{
 				"kube-proxy-restart",
@@ -705,7 +708,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartProxy2",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[0]).Proxy.Image = ""
+				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.Image = ""
 			}),
 			ExpectedOps: []string{
 				"kube-proxy-restart",
@@ -714,7 +717,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartProxy3",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[0]).Proxy.ExtraParams.ExtraArguments = []string{"foo"}
+				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.ExtraParams.ExtraArguments = []string{"foo"}
 			}),
 			ExpectedOps: []string{
 				"kube-proxy-restart",
