@@ -414,10 +414,18 @@ func TestDecideOps(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		Name        string
-		Input       testData
-		ExpectedOps []string
+		Name               string
+		Input              testData
+		ExpectedOps        []string
+		ExpectedTargetNums []int
 	}{
+		{
+			Name: "NoStart",
+			Input: newData().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).SSHConnected = false
+			}),
+			ExpectedOps: []string{},
+		},
 		{
 			Name:        "BootRivers",
 			Input:       newData(),
@@ -1607,12 +1615,17 @@ func TestDecideOps(t *testing.T) {
 				return
 			}
 			opNames := make([]string, len(ops))
+			opTargetNums := make([]int, len(ops))
 			for i, o := range ops {
 				opNames[i] = o.Name()
+				opTargetNums[i] = len(o.Targets())
 			}
 			sort.Strings(opNames)
 			if !cmp.Equal(c.ExpectedOps, opNames) {
 				t.Error("unexpected ops:", cmp.Diff(c.ExpectedOps, opNames))
+			}
+			if c.ExpectedTargetNums != nil && !cmp.Equal(c.ExpectedTargetNums, opTargetNums) {
+				t.Error("unmatched targets:", cmp.Diff(c.ExpectedTargetNums, opTargetNums))
 			}
 		OUT:
 			for _, o := range ops {
