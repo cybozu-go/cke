@@ -110,20 +110,20 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 		ops = append(ops, k8s.SchedulerRestartOp(nodes, c.Name, c.Options.Scheduler))
 	}
 
-	// For worker nodes
-	if nodes := nf.SSHConnectedNodes(nf.KubeletUnrecognizedNodes(), false, true); len(nodes) > 0 {
+	// For all nodes
+	if nodes := nf.SSHConnectedNodes(nf.KubeletUnrecognizedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.Kubelet))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.KubeletStoppedNodes(), false, true); len(nodes) > 0 {
+	if nodes := nf.SSHConnectedNodes(nf.KubeletStoppedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeletBootOp(nodes, nf.KubeletStoppedRegisteredNodes(), nf.HealthyAPIServer(), c.Name, c.PodSubnet, c.Options.Kubelet))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.KubeletOutdatedNodes(), false, true); len(nodes) > 0 {
+	if nodes := nf.SSHConnectedNodes(nf.KubeletOutdatedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.Kubelet))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.ProxyStoppedNodes(), false, true); len(nodes) > 0 {
+	if nodes := nf.SSHConnectedNodes(nf.ProxyStoppedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeProxyBootOp(nodes, c.Name, c.Options.Proxy))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.ProxyOutdatedNodes(), false, true); len(nodes) > 0 {
+	if nodes := nf.SSHConnectedNodes(nf.ProxyOutdatedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeProxyRestartOp(nodes, c.Name, c.Options.Proxy))
 	}
 	return ops
