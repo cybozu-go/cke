@@ -455,7 +455,7 @@ func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	var apiServers, controllerManagers, schedulers, etcds, etcdRivers []*cke.Node
 
 	for _, n := range c.Nodes {
-		if !nf.status.NodeStatuses[n.Nodename()].SSHConnected || n.ControlPlane {
+		if !nf.status.NodeStatuses[n.Address].SSHConnected || n.ControlPlane {
 			continue
 		}
 
