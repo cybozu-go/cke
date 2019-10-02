@@ -62,6 +62,15 @@ func (d testData) ControlPlane() (nodes []*cke.Node) {
 	return nodes
 }
 
+func (d testData) NonCPWorkers() (nodes []*cke.Node) {
+	for _, n := range d.Cluster.Nodes {
+		if !n.ControlPlane {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
 func (d testData) NodeStatus(n *cke.Node) *cke.NodeStatus {
 	return d.Status.NodeStatuses[n.Address]
 }
@@ -410,6 +419,29 @@ OUTER:
 	return d
 }
 
+func (d testData) withUnreachableCP() testData {
+	st := d.NodeStatus(d.ControlPlane()[0])
+	st.SSHConnected = false
+
+	return d
+}
+
+func (d testData) withUnreachableNonCPWorker(num int) testData {
+	// If num is larger than num of non-cp worker, all of them treat as unreachable
+	if num > len(d.NonCPWorkers()) {
+		num = len(d.NonCPWorkers())
+	}
+
+	for i, n := range d.NonCPWorkers() {
+		if i > num-1 {
+			break
+		}
+		d.NodeStatus(n).SSHConnected = false
+	}
+
+	return d
+}
+
 func TestDecideOps(t *testing.T) {
 	t.Parallel()
 
@@ -417,7 +449,7 @@ func TestDecideOps(t *testing.T) {
 		Name               string
 		Input              testData
 		ExpectedOps        []string
-		ExpectedTargetNums []int
+		ExpectedTargetNums map[string]int
 	}{
 		{
 			Name: "NoStart",
@@ -1615,10 +1647,10 @@ func TestDecideOps(t *testing.T) {
 				return
 			}
 			opNames := make([]string, len(ops))
-			opTargetNums := make([]int, len(ops))
+			opTargetNums := make(map[string]int)
 			for i, o := range ops {
 				opNames[i] = o.Name()
-				opTargetNums[i] = len(o.Targets())
+				opTargetNums[o.Name()] = len(o.Targets())
 			}
 			sort.Strings(opNames)
 			if !cmp.Equal(c.ExpectedOps, opNames) {
