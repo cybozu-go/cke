@@ -55,9 +55,11 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDe
 		return ops
 	}
 
-	// 6. Maintain etcd cluster.
-	if o := etcdMaintOp(c, nf); o != nil {
-		return []cke.Operator{o}
+	// 6. Maintain etcd cluster, only when all CPs are SSH reachable.
+	if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, false)) == 0 {
+		if o := etcdMaintOp(c, nf); o != nil {
+			return []cke.Operator{o}
+		}
 	}
 
 	// 7. Maintain k8s resources.

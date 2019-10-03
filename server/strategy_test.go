@@ -419,14 +419,14 @@ OUTER:
 	return d
 }
 
-func (d testData) withUnreachableCP() testData {
+func (d testData) withSSHNotConnectedCP() testData {
 	st := d.NodeStatus(d.ControlPlane()[0])
 	st.SSHConnected = false
 
 	return d
 }
 
-func (d testData) withUnreachableNonCPWorker(num int) testData {
+func (d testData) withSSHNotConnecteNonCPWorker(num int) testData {
 	// If num is larger than num of non-cp worker, all of them treat as unreachable
 	if num > len(d.NonCPWorkers()) {
 		num = len(d.NonCPWorkers())
@@ -442,6 +442,12 @@ func (d testData) withUnreachableNonCPWorker(num int) testData {
 	return d
 }
 
+func (d testData) withSSHNotConnectedNodes() testData {
+	d.withSSHNotConnectedCP()
+	d.withSSHNotConnecteNonCPWorker(1)
+	return d
+}
+
 func TestDecideOps(t *testing.T) {
 	t.Parallel()
 
@@ -452,42 +458,48 @@ func TestDecideOps(t *testing.T) {
 		ExpectedTargetNums map[string]int
 	}{
 		{
-			Name: "NoStart",
-			Input: newData().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).SSHConnected = false
-			}),
+			Name:        "NoStart",
+			Input:       newData().withSSHNotConnectedNodes(),
 			ExpectedOps: []string{},
 		},
 		{
-			Name:        "BootRivers",
-			Input:       newData(),
-			ExpectedOps: []string{"etcd-rivers-bootstrap", "rivers-bootstrap"},
+			Name:               "BootRivers",
+			Input:              newData(),
+			ExpectedOps:        []string{"etcd-rivers-bootstrap", "rivers-bootstrap"},
+			ExpectedTargetNums: map[string]int{"etcd-rivers-bootstrap": 3, "rivers-bootstrap": 6},
 		},
 		{
-			Name:        "BootRivers2",
-			Input:       newData().withHealthyEtcd(),
-			ExpectedOps: []string{"etcd-rivers-bootstrap", "rivers-bootstrap"},
+			Name:               "BootRivers2",
+			Input:              newData().withHealthyEtcd().withSSHNotConnectedNodes(),
+			ExpectedOps:        []string{"etcd-rivers-bootstrap", "rivers-bootstrap"},
+			ExpectedTargetNums: map[string]int{"etcd-rivers-bootstrap": 2, "rivers-bootstrap": 4},
 		},
 		{
 			Name: "RestartRivers",
 			Input: newData().withRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.Image = ""
-			}).withEtcdRivers(),
-			ExpectedOps: []string{"rivers-restart"},
+				d.NodeStatus(d.ControlPlane()[1]).Rivers.Image = ""
+			}).withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes(),
+			ExpectedOps:        []string{"rivers-restart"},
+			ExpectedTargetNums: map[string]int{"rivers-restart": 1},
 		},
 		{
 			Name: "RestartRivers2",
 			Input: newData().withRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.BuiltInParams.ExtraArguments = nil
-			}).withEtcdRivers(),
-			ExpectedOps: []string{"rivers-restart"},
+				d.NodeStatus(d.ControlPlane()[1]).Rivers.BuiltInParams.ExtraArguments = nil
+			}).withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes(),
+			ExpectedOps:        []string{"rivers-restart"},
+			ExpectedTargetNums: map[string]int{"rivers-restart": 1},
 		},
 		{
 			Name: "RestartRivers3",
 			Input: newData().withRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.ExtraParams.ExtraArguments = []string{"foo"}
-			}).withEtcdRivers(),
-			ExpectedOps: []string{"rivers-restart"},
+				d.NodeStatus(d.ControlPlane()[1]).Rivers.ExtraParams.ExtraArguments = []string{"foo"}
+			}).withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes(),
+			ExpectedOps:        []string{"rivers-restart"},
+			ExpectedTargetNums: map[string]int{"rivers-restart": 1},
 		},
 		{
 			Name: "StartRestartRivers",
@@ -495,29 +507,35 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.Running = false
 			}).withEtcdRivers(),
-			ExpectedOps: []string{"rivers-bootstrap", "rivers-restart"},
+			ExpectedOps:        []string{"rivers-bootstrap", "rivers-restart"},
+			ExpectedTargetNums: map[string]int{"rivers-bootstrap": 1, "rivers-restart": 1},
 		},
-
 		{
 			Name: "RestartEtcdRivers",
 			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.Image = ""
-			}),
-			ExpectedOps: []string{"etcd-rivers-restart"},
+				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.Image = ""
+			}).withHealthyEtcd().withSSHNotConnectedNodes(),
+			ExpectedOps:        []string{"etcd-rivers-restart"},
+			ExpectedTargetNums: map[string]int{"etcd-rivers-restart": 1},
 		},
 		{
 			Name: "RestartEtcdRivers2",
 			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.BuiltInParams.ExtraArguments = nil
-			}),
-			ExpectedOps: []string{"etcd-rivers-restart"},
+				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.BuiltInParams.ExtraArguments = nil
+			}).withHealthyEtcd().withSSHNotConnectedNodes(),
+			ExpectedOps:        []string{"etcd-rivers-restart"},
+			ExpectedTargetNums: map[string]int{"etcd-rivers-restart": 1},
 		},
 		{
 			Name: "RestartEtcdRivers3",
 			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.ExtraParams.ExtraArguments = []string{"foo"}
-			}),
-			ExpectedOps: []string{"etcd-rivers-restart"},
+				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.ExtraParams.ExtraArguments = []string{"foo"}
+			}).withHealthyEtcd().withSSHNotConnectedNodes(),
+			ExpectedOps:        []string{"etcd-rivers-restart"},
+			ExpectedTargetNums: map[string]int{"etcd-rivers-restart": 1},
 		},
 		{
 			Name: "StartRestartEtcdRivers",
@@ -525,9 +543,9 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.Running = false
 			}),
-			ExpectedOps: []string{"etcd-rivers-bootstrap", "etcd-rivers-restart"},
+			ExpectedOps:        []string{"etcd-rivers-bootstrap", "etcd-rivers-restart"},
+			ExpectedTargetNums: map[string]int{"etcd-rivers-bootstrap": 1, "etcd-rivers-restart": 1},
 		},
-
 		{
 			Name:        "EtcdBootstrap",
 			Input:       newData().withRivers().withEtcdRivers(),
@@ -539,13 +557,10 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"etcd-start"},
 		},
 		{
-			Name:        "WaitEtcd",
-			Input:       newData().withRivers().withEtcdRivers().withUnhealthyEtcd(),
-			ExpectedOps: []string{"etcd-wait-cluster"},
-		},
-		{
-			Name:  "BootK8s",
-			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers(),
+			Name: "SkipEtcdStoppedMembers",
+			Input: newData().withRivers().withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).Etcd.Running = false
+			}),
 			ExpectedOps: []string{
 				"kube-apiserver-bootstrap",
 				"kube-controller-manager-bootstrap",
@@ -553,9 +568,39 @@ func TestDecideOps(t *testing.T) {
 				"kube-scheduler-bootstrap",
 				"kubelet-bootstrap",
 			},
+			ExpectedTargetNums: map[string]int{
+				"kube-apiserver-bootstrap":          2,
+				"kube-controller-manager-bootstrap": 2,
+				"kube-proxy-bootstrap":              4,
+				"kube-scheduler-bootstrap":          2,
+				"kubelet-bootstrap":                 4,
+			},
 		},
 		{
-			Name:  "BootK8s2",
+			Name:        "WaitEtcd",
+			Input:       newData().withRivers().withEtcdRivers().withUnhealthyEtcd(),
+			ExpectedOps: []string{"etcd-wait-cluster"},
+		},
+		{
+			Name:  "BootK8s",
+			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withSSHNotConnectedNodes(),
+			ExpectedOps: []string{
+				"kube-apiserver-bootstrap",
+				"kube-controller-manager-bootstrap",
+				"kube-proxy-bootstrap",
+				"kube-scheduler-bootstrap",
+				"kubelet-bootstrap",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-apiserver-bootstrap":          2,
+				"kube-controller-manager-bootstrap": 2,
+				"kube-proxy-bootstrap":              4,
+				"kube-scheduler-bootstrap":          2,
+				"kubelet-bootstrap":                 4,
+			},
+		},
+		{
+			Name:  "BootK8sFromPartiallyRunning",
 			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withAPIServer(testServiceSubnet),
 			ExpectedOps: []string{
 				"kube-controller-manager-bootstrap",
@@ -566,154 +611,216 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name:  "RestartAPIServer",
-			Input: newData().withAllServices().withAPIServer("11.22.33.0/24"),
+			Input: newData().withAllServices().withAPIServer("11.22.33.0/24").withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-apiserver-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-apiserver-restart": 2,
 			},
 		},
 		{
 			Name: "RestartAPIServer2",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).APIServer.Image = ""
-			}),
+				d.NodeStatus(d.ControlPlane()[1]).APIServer.Image = ""
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-apiserver-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-apiserver-restart": 1,
 			},
 		},
 		{
 			Name: "RestartAPIServer3",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).APIServer.ExtraParams.ExtraArguments = []string{"foo"}
-			}),
+				d.NodeStatus(d.ControlPlane()[1]).APIServer.ExtraParams.ExtraArguments = []string{"foo"}
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-apiserver-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-apiserver-restart": 1,
 			},
 		},
 		{
 			Name:  "RestartControllerManager",
-			Input: newData().withAllServices().withControllerManager("another", testServiceSubnet),
+			Input: newData().withAllServices().withControllerManager("another", testServiceSubnet).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-controller-manager-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-controller-manager-restart": 2,
 			},
 		},
 		{
 			Name: "RestartControllerManager2",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).ControllerManager.Image = ""
-			}),
+				d.NodeStatus(d.ControlPlane()[1]).ControllerManager.Image = ""
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-controller-manager-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-controller-manager-restart": 1,
 			},
 		},
 		{
 			Name: "RestartControllerManager3",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).ControllerManager.ExtraParams.ExtraArguments = []string{"foo"}
-			}),
+				d.NodeStatus(d.ControlPlane()[1]).ControllerManager.ExtraParams.ExtraArguments = []string{"foo"}
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-controller-manager-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-controller-manager-restart": 1,
 			},
 		},
 		{
 			Name: "RestartScheduler",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.BuiltInParams.ExtraArguments = []string{"foo"}
-			}),
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.BuiltInParams.ExtraArguments = []string{"foo"}
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-scheduler-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-scheduler-restart": 1,
 			},
 		},
 		{
 			Name: "RestartScheduler2",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Image = ""
-			}),
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Image = ""
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-scheduler-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-scheduler-restart": 1,
 			},
 		},
 		{
 			Name: "RestartScheduler3",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.ExtraParams.ExtraArguments = []string{"foo"}
-			}),
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.ExtraParams.ExtraArguments = []string{"foo"}
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-scheduler-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-scheduler-restart": 1,
 			},
 		},
 		{
 			Name: "RestartScheduler4",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Extenders = []*scheduler.ExtenderConfig{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
-			}),
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Extenders = []*scheduler.ExtenderConfig{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-scheduler-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-scheduler-restart": 1,
 			},
 		},
 		{
 			Name:  "RestartKubelet",
-			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false),
+			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kubelet-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kubelet-restart": 4,
 			},
 		},
 		{
 			Name:  "RestartKubelet2",
-			Input: newData().withAllServices().withKubelet("", "10.0.0.53", true),
+			Input: newData().withAllServices().withKubelet("", "10.0.0.53", true).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kubelet-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kubelet-restart": 4,
 			},
 		},
 		{
 			Name: "RestartKubelet3",
 			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.Cluster.Nodes[3]).Kubelet.Image = ""
 				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.Image = ""
-			}),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kubelet-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kubelet-restart": 1,
 			},
 		},
 		{
 			Name: "RestartKubelet4",
 			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.Cluster.Nodes[3]).Kubelet.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.ExtraParams.ExtraArguments = []string{"foo"}
-			}),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kubelet-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kubelet-restart": 1,
 			},
 		},
 		{
 			Name: "RestartKubelet5",
 			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.Cluster.Nodes[3]).Kubelet.Domain = "neco.local"
 				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.Domain = "neco.local"
-			}),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kubelet-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kubelet-restart": 1,
 			},
 		},
 		{
 			Name: "RestartKubelet6",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Cluster.Options.Kubelet.ContainerLogMaxFiles = 20
-			}),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kubelet-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kubelet-restart": 4,
 			},
 		},
 		{
 			Name: "RestartKubelet7",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Cluster.Options.Kubelet.ContainerLogMaxSize = "1Gi"
-			}),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kubelet-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kubelet-restart": 4,
 			},
 		},
 		{
 			Name: "RestartKubelet8",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Cluster.Options.Kubelet.ContainerRuntime = "docker"
-			}),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"wait-kubernetes",
 			},
@@ -722,7 +829,7 @@ func TestDecideOps(t *testing.T) {
 			Name: "RestartKubelet9",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Cluster.Options.Kubelet.ContainerRuntimeEndpoint = "/var/run/dockershim.sock"
-			}),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"wait-kubernetes",
 			},
@@ -730,37 +837,52 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet10",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[:4]
-			}),
+				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[:3]
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kubelet-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kubelet-restart": 2,
 			},
 		},
 		{
 			Name: "RestartProxy",
 			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
-			}),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-proxy-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-proxy-restart": 1,
 			},
 		},
 		{
 			Name: "RestartProxy2",
 			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.Image = ""
 				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.Image = ""
-			}),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-proxy-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-proxy-restart": 1,
 			},
 		},
 		{
 			Name: "RestartProxy3",
 			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.ExtraParams.ExtraArguments = []string{"foo"}
-			}),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-proxy-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-proxy-restart": 1,
 			},
 		},
 		{
@@ -1489,6 +1611,13 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"etcd-remove-member"},
 		},
 		{
+			Name: "SkipEtcdRemoveNonClusterMember",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Status.Etcd.Members["10.0.0.100"] = &etcdserverpb.Member{Name: "10.0.0.100", ID: 3}
+			}).withSSHNotConnectedNodes(),
+			ExpectedOps: []string{"wait-kubernetes"},
+		},
+		{
 			Name: "EtcdDestroyNonCPMember",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 3}
@@ -1622,20 +1751,29 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "Clean",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
-				st := d.Status.NodeStatuses["10.0.0.14"]
-				st.Etcd.Running = true
-				st.Etcd.HasData = true
-				st.APIServer.Running = true
-				st.ControllerManager.Running = true
-				st.Scheduler.Running = true
-				st.EtcdRivers.Running = true
-			}),
+				for _, node := range []string{"10.0.0.14", "10.0.0.15"} {
+					st := d.Status.NodeStatuses[node]
+					st.Etcd.Running = true
+					st.Etcd.HasData = true
+					st.APIServer.Running = true
+					st.ControllerManager.Running = true
+					st.Scheduler.Running = true
+					st.EtcdRivers.Running = true
+				}
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"stop-etcd",
 				"stop-etcd-rivers",
 				"stop-kube-apiserver",
 				"stop-kube-controller-manager",
 				"stop-kube-scheduler",
+			},
+			ExpectedTargetNums: map[string]int{
+				"stop-etcd":                    1,
+				"stop-etcd-rivers":             1,
+				"stop-kube-apiserver":          1,
+				"stop-kube-controller-manager": 1,
+				"stop-kube-scheduler":          1,
 			},
 		},
 	}
