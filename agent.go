@@ -2,6 +2,7 @@ package cke
 
 import (
 	"bytes"
+	"fmt"
 	"net"
 	"strings"
 	"time"
@@ -111,6 +112,9 @@ func SSHAgent(node *Node, privkey string) (Agent, error) {
 }
 
 func (a sshAgent) Close() error {
+	if a.client == nil {
+		return nil
+	}
 	err := a.client.Close()
 	a.client = nil
 	return err
@@ -126,6 +130,9 @@ func (a sshAgent) RunWithInput(command, input string) error {
 }
 
 func (a sshAgent) RunWithTimeout(command, input string, timeout time.Duration) ([]byte, []byte, error) {
+	if a.client == nil {
+		return nil, nil, fmt.Errorf("sshAgent for %s is not connected", a.node.Nodename())
+	}
 	if timeout > 0 {
 		err := a.conn.SetDeadline(time.Now().Add(timeout))
 		if err != nil {

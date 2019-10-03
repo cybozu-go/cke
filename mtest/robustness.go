@@ -8,5 +8,8 @@ import (
 // TestStopCP stops 1 control plane for succeeding tests
 func TestStopCP() {
 	It("should stop CP", func() {
+		Eventually(func() error {
+			return nil
+		}).Should(Succeed())
 	})
 }
