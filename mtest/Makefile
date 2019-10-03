@@ -271,6 +271,9 @@ $(OUTPUT)/cke-cluster.yml: cke-cluster.yml
 		-e 's/__NODE6__/$(NODE6)/' \
 		-e 's/__RUNTIME__/$(CONTAINER_RUNTIME)/' \
 		-e 's|__RUNTIME_ENDPOINT__|$(RUNTIME_ENDPOINT)|' $< > $@
+ifeq ($(notdir $(SUITE_PACKAGE)),robustness)
+	sed -i -e '/address: $(NODE5)/a\    user: cybozu\n  - address: 10.0.0.107' $@
+endif
 
 $(OUTPUT)/cke.yml: cke.yml
 	mkdir -p $(OUTPUT)
