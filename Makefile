@@ -6,8 +6,8 @@ export GOFLAGS
 all: test
 
 setup:
-	go install github.com/gostaticanalysis/nilerr/cmd/nilerr
-	go install github.com/cybozu/neco-containers/golang/restrictpkg/cmd/restrictpkg
+	GO111MODULE=off go install github.com/gostaticanalysis/nilerr/cmd/nilerr
+	GO111MODULE=off go install github.com/cybozu/neco-containers/golang/restrictpkg/cmd/restrictpkg
 
 test:
 	test -z "$$(gofmt -s -l . | grep -v '^vendor' | tee /dev/stderr)"
