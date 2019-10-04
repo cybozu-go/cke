@@ -262,7 +262,7 @@ func TestOperators(isDegraded bool) {
 			firstLeader = leader
 			return nil
 		}).Should(Succeed())
-		// inject failure into EtcdDestroyMemberOp
+		// inject failure into RemoveMemberOp
 		injectFailure("op/etcd/etcdAfterMemberRemove")
 
 		ckecliSafe("constraints", "set", "control-plane-count", "2")
@@ -284,11 +284,14 @@ func TestOperators(isDegraded bool) {
 		Expect(node.Labels).ShouldNot(HaveKey("cke.cybozu.com/master"))
 
 		// check leader change
-		newLeader = strings.TrimSpace(string(ckecliSafe("leader")))
-		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
-		Expect(newLeader).NotTo(Equal(firstLeader))
-		stopCKE()
-		runCKE(ckeImageURL)
+		// RemoveMemberOp will not be called if degraded, and leader will not change
+		if !isDegraded {
+			newLeader = strings.TrimSpace(string(ckecliSafe("leader")))
+			Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
+			Expect(newLeader).NotTo(Equal(firstLeader))
+			stopCKE()
+			runCKE(ckeImageURL)
+		}
 
 		By("Changing options")
 		// this will run these ops:
@@ -419,22 +422,22 @@ func TestOperators(isDegraded bool) {
 
 		By("testing control plane taints")
 		for _, n := range []string{node1, node2, node3} {
-			out, _, err := kubectl("get", "-o=json", "node", n)
-			Expect(err).ShouldNot(HaveOccurred())
+			out, stderr, err := kubectl("get", "-o=json", "node", n)
+			Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", out, stderr)
 			var node corev1.Node
 			err = json.Unmarshal(out, &node)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).ShouldNot(HaveOccurred(), "stdout: %s", out)
 			Expect(node.Spec.Taints).Should(ContainElement(corev1.Taint{
 				Key:    "cke.cybozu.com/master",
 				Effect: corev1.TaintEffectPreferNoSchedule,
 			}))
 		}
 		for _, n := range []string{node4, node5} {
-			out, _, err := kubectl("get", "-o=json", "node", n)
-			Expect(err).ShouldNot(HaveOccurred())
+			out, stderr, err := kubectl("get", "-o=json", "node", n)
+			Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", out, stderr)
 			var node corev1.Node
 			err = json.Unmarshal(out, &node)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).ShouldNot(HaveOccurred(), "stdout: %s", out)
 			Expect(node.Spec.Taints).ShouldNot(ContainElement(corev1.Taint{
 				Key:    "cke.cybozu.com/master",
 				Effect: corev1.TaintEffectPreferNoSchedule,
