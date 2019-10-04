@@ -13,7 +13,7 @@ func TestStopCP() {
 
 		execAt(node2, "sudo", "systemd-run", "halt", "-f", "-f")
 		Eventually(func() error {
-			_, _, err := execAt(node2, "true")
+			_, err := execAtLocal("ping", "-c", "1", "-W", "1", node2)
 			return err
 		}).ShouldNot(Succeed())
 

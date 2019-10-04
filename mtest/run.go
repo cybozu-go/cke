@@ -432,9 +432,11 @@ func checkCluster(c *cke.Cluster) error {
 	if err != nil {
 		return err
 	}
+	for k, v := range status.NodeStatuses {
+		fmt.Printf("NodeStatus of %s: %#v\n", k, v)
+	}
 
 	nf := server.NewNodeFilter(c, status)
-	fmt.Printf("nf: %#v\n", nf)
 	if !nf.EtcdIsGood() {
 		return errors.New("etcd cluster is not good")
 	}
