@@ -424,7 +424,14 @@ func TestOperators(isDegraded bool) {
 		}).Should(Succeed())
 
 		By("testing control plane taints")
-		for _, n := range []string{node1, node2, node3} {
+		var runningCPs []string
+		if isDegraded {
+			// node2 has been removed from cluster once, and it cannot be restored in degraded mode
+			runningCPs = []string{node1, node3}
+		} else {
+			runningCPs = []string{node1, node2, node3}
+		}
+		for _, n := range runningCPs {
 			out, stderr, err := kubectl("get", "-o=json", "node", n)
 			Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", out, stderr)
 			var node corev1.Node
