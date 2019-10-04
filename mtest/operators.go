@@ -60,18 +60,11 @@ func TestOperators(isDegraded bool) {
 		err = json.Unmarshal(out, &ep)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(ep.Subsets).Should(HaveLen(1))
-		if isDegraded {
-			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-				corev1.EndpointAddress{IP: node1},
-				corev1.EndpointAddress{IP: node3},
-			))
-		} else {
-			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-				corev1.EndpointAddress{IP: node1},
-				corev1.EndpointAddress{IP: node2},
-				corev1.EndpointAddress{IP: node3},
-			))
-		}
+		Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+			corev1.EndpointAddress{IP: node1},
+			corev1.EndpointAddress{IP: node2},
+			corev1.EndpointAddress{IP: node3},
+		))
 
 		By("Stopping etcd servers")
 		// this will run:
