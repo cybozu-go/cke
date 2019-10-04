@@ -2,14 +2,12 @@ package mtest
 
 import (
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 // TestStopCP stops 1 control plane for succeeding tests
 func TestStopCP() {
 	It("should stop CP", func() {
-		Eventually(func() error {
-			return nil
-		}).Should(Succeed())
+		execAt(node2, "sudo", "systemd-run", "halt", "-f", "-f")
+		execAt(node3, "sudo", "systemctl", "stop", "sshd.socket")
 	})
 }

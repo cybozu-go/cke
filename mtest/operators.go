@@ -15,7 +15,7 @@ import (
 )
 
 // TestOperators tests all CKE operators
-func TestOperators() {
+func TestOperators(isDegraded bool) {
 	AfterEach(initializeControlPlane)
 
 	It("run all operators / commanders", func() {
@@ -60,29 +60,39 @@ func TestOperators() {
 		err = json.Unmarshal(out, &ep)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(ep.Subsets).Should(HaveLen(1))
-		Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-			corev1.EndpointAddress{IP: node1},
-			corev1.EndpointAddress{IP: node2},
-			corev1.EndpointAddress{IP: node3},
-		))
+		if isDegraded {
+			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node1},
+				corev1.EndpointAddress{IP: node3},
+			))
+		} else {
+			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node1},
+				corev1.EndpointAddress{IP: node2},
+				corev1.EndpointAddress{IP: node3},
+			))
+		}
 
 		By("Stopping etcd servers")
 		// this will run:
 		// - EtcdStartOp
 		// - EtcdWaitClusterOp
-		stopCKE()
-		execSafeAt(node2, "docker", "stop", "etcd")
-		execSafeAt(node2, "docker", "rm", "etcd")
-		execSafeAt(node3, "docker", "stop", "etcd")
-		execSafeAt(node3, "docker", "rm", "etcd")
-		runCKE(ckeImageURL)
-		cluster := getCluster()
-		for i := 0; i < 3; i++ {
-			cluster.Nodes[i].ControlPlane = true
+		var cluster *cke.Cluster
+		if !isDegraded {
+			stopCKE()
+			execSafeAt(node2, "docker", "stop", "etcd")
+			execSafeAt(node2, "docker", "rm", "etcd")
+			execSafeAt(node3, "docker", "stop", "etcd")
+			execSafeAt(node3, "docker", "rm", "etcd")
+			runCKE(ckeImageURL)
+			cluster = getCluster()
+			for i := 0; i < 3; i++ {
+				cluster.Nodes[i].ControlPlane = true
+			}
+			Eventually(func() error {
+				return checkCluster(cluster)
+			}).Should(Succeed())
 		}
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
 
 		By("Removing a control plane node from the cluster")
 		// this will run:
@@ -141,10 +151,17 @@ func TestOperators() {
 
 		// reboot node2 and node4 to check bootstrap taints
 		rebootTime := time.Now()
-		execAt(node2, "sudo", "systemd-run", "reboot", "-f", "-f")
-		execAt(node4, "sudo", "systemd-run", "reboot", "-f", "-f")
+		var rebootedNodes []string
+		if isDegraded {
+			rebootedNodes = []string{node4}
+		} else {
+			rebootedNodes = []string{node2, node4}
+		}
+		for _, n := range rebootedNodes {
+			execAt(n, "sudo", "systemd-run", "reboot", "-f", "-f")
+		}
 		Eventually(func() error {
-			for _, n := range []string{node2, node4} {
+			for _, n := range rebootedNodes {
 				err := reconnectSSH(n)
 				if err != nil {
 					return err
@@ -185,8 +202,14 @@ func TestOperators() {
 					return errors.New("node is not ready: " + n.Name)
 				}
 			}
-			if len(status.Kubernetes.Nodes) != len(cluster.Nodes) {
-				return fmt.Errorf("nodes length should be %d, actual %d", len(cluster.Nodes), len(status.Kubernetes.Nodes))
+			var numKubernetesNodes int
+			if isDegraded {
+				numKubernetesNodes = len(cluster.Nodes) - 2 // 2 == (dummy 7th node) + (halted 2nd node)
+			} else {
+				numKubernetesNodes = len(cluster.Nodes)
+			}
+			if len(status.Kubernetes.Nodes) != numKubernetesNodes {
+				return fmt.Errorf("nodes length should be %d, actual %d", numKubernetesNodes, (status.Kubernetes.Nodes))
 			}
 			return nil
 		}).Should(Succeed())
