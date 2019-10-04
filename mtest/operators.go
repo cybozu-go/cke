@@ -66,11 +66,15 @@ func TestOperators(isDegraded bool) {
 			corev1.EndpointAddress{IP: node3},
 		))
 
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+
 		By("Stopping etcd servers")
 		// this will run:
 		// - EtcdStartOp
 		// - EtcdWaitClusterOp
-		cluster := getCluster()
 		if !isDegraded {
 			stopCKE()
 			execSafeAt(node2, "docker", "stop", "etcd")
@@ -78,9 +82,6 @@ func TestOperators(isDegraded bool) {
 			execSafeAt(node3, "docker", "stop", "etcd")
 			execSafeAt(node3, "docker", "rm", "etcd")
 			runCKE(ckeImageURL)
-			for i := 0; i < 3; i++ {
-				cluster.Nodes[i].ControlPlane = true
-			}
 			Eventually(func() error {
 				return checkCluster(cluster)
 			}).Should(Succeed())
