@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -141,12 +140,9 @@ func (nf *NodeFilter) EtcdBootstrapped() bool {
 // EtcdIsGood returns true if etcd cluster is responding and all members are in sync.
 func (nf *NodeFilter) EtcdIsGood() bool {
 	st := nf.status.Etcd
-	fmt.Printf("st: %#v\n", st)
 	if !st.IsHealthy {
-		fmt.Printf("st.IsHealthy is %v\n", st.IsHealthy)
 		return false
 	}
-	fmt.Printf("st.Members: %d, st.InSyncMembers: %d\n", len(st.Members), len(st.InSyncMembers))
 	return len(st.Members) == len(st.InSyncMembers)
 }
 
