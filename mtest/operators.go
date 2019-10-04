@@ -117,9 +117,9 @@ func TestOperators(isDegraded bool) {
 		))
 
 		By("Adding a new node to the cluster as a control plane")
-		// this will run EtcdAddMemberOp as well as other boot/restart ops.
+		// this will run AddMemberOp as well as other boot/restart ops.
 
-		// inject failure into addEtcdMemberCommand to cause leader change
+		// inject failure into AddMemberOp to cause leader change
 		firstLeader := strings.TrimSpace(string(ckecliSafe("leader")))
 		Expect(firstLeader).To(Or(Equal("host1"), Equal("host2")))
 		injectFailure("op/etcd/etcdAfterMemberAdd")
@@ -236,11 +236,14 @@ func TestOperators(isDegraded bool) {
 		}).Should(Succeed())
 
 		// check leader change
-		newLeader := strings.TrimSpace(string(ckecliSafe("leader")))
-		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
-		Expect(newLeader).NotTo(Equal(firstLeader))
-		stopCKE()
-		runCKE(ckeImageURL)
+		// AddMemberOp will not be called if degraded, and leader will not change
+		if !isDegraded {
+			newLeader := strings.TrimSpace(string(ckecliSafe("leader")))
+			Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
+			Expect(newLeader).NotTo(Equal(firstLeader))
+			stopCKE()
+			runCKE(ckeImageURL)
+		}
 
 		By("Converting a control plane node to a worker node")
 		// this will run these ops:
@@ -286,7 +289,7 @@ func TestOperators(isDegraded bool) {
 		// check leader change
 		// RemoveMemberOp will not be called if degraded, and leader will not change
 		if !isDegraded {
-			newLeader = strings.TrimSpace(string(ckecliSafe("leader")))
+			newLeader := strings.TrimSpace(string(ckecliSafe("leader")))
 			Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
 			Expect(newLeader).NotTo(Equal(firstLeader))
 			stopCKE()
