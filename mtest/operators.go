@@ -209,7 +209,7 @@ func TestOperators(isDegraded bool) {
 				numKubernetesNodes = len(cluster.Nodes)
 			}
 			if len(status.Kubernetes.Nodes) != numKubernetesNodes {
-				return fmt.Errorf("nodes length should be %d, actual %d", numKubernetesNodes, (status.Kubernetes.Nodes))
+				return fmt.Errorf("nodes length should be %d, actual %d", numKubernetesNodes, len(status.Kubernetes.Nodes))
 			}
 			return nil
 		}).Should(Succeed())
