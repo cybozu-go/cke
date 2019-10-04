@@ -70,7 +70,7 @@ func TestOperators(isDegraded bool) {
 		// this will run:
 		// - EtcdStartOp
 		// - EtcdWaitClusterOp
-		var cluster *cke.Cluster
+		cluster := getCluster()
 		if !isDegraded {
 			stopCKE()
 			execSafeAt(node2, "docker", "stop", "etcd")
@@ -78,7 +78,6 @@ func TestOperators(isDegraded bool) {
 			execSafeAt(node3, "docker", "stop", "etcd")
 			execSafeAt(node3, "docker", "rm", "etcd")
 			runCKE(ckeImageURL)
-			cluster = getCluster()
 			for i := 0; i < 3; i++ {
 				cluster.Nodes[i].ControlPlane = true
 			}
