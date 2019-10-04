@@ -434,6 +434,7 @@ func checkCluster(c *cke.Cluster) error {
 	}
 
 	nf := server.NewNodeFilter(c, status)
+	fmt.Printf("nf: %#v\n", nf)
 	if !nf.EtcdIsGood() {
 		return errors.New("etcd cluster is not good")
 	}
