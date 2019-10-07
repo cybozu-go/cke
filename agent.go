@@ -2,7 +2,6 @@ package cke
 
 import (
 	"bytes"
-	"fmt"
 	"net"
 	"strings"
 	"time"
@@ -45,9 +44,6 @@ type Agent interface {
 	// RunWithTimeout run command with given timeout.
 	// If timeout is 0, the command will run indefinitely.
 	RunWithTimeout(command, input string, timeout time.Duration) (stdout, stderr []byte, err error)
-
-	// SSHConnected check wether SSH is connected or not
-	SSHConnected() bool
 }
 
 type sshAgent struct {
@@ -112,9 +108,6 @@ func SSHAgent(node *Node, privkey string) (Agent, error) {
 }
 
 func (a sshAgent) Close() error {
-	if a.client == nil {
-		return nil
-	}
 	err := a.client.Close()
 	a.client = nil
 	return err
@@ -130,9 +123,6 @@ func (a sshAgent) RunWithInput(command, input string) error {
 }
 
 func (a sshAgent) RunWithTimeout(command, input string, timeout time.Duration) ([]byte, []byte, error) {
-	if a.client == nil {
-		return nil, nil, fmt.Errorf("sshAgent for %s is not connected", a.node.Nodename())
-	}
 	if timeout > 0 {
 		err := a.conn.SetDeadline(time.Now().Add(timeout))
 		if err != nil {
@@ -171,11 +161,4 @@ func (a sshAgent) RunWithTimeout(command, input string, timeout time.Duration) (
 		return stdout, stderr, err
 	}
 	return stdout, stderr, nil
-}
-
-func (a sshAgent) SSHConnected() bool {
-	if a.client != nil {
-		return true
-	}
-	return false
 }

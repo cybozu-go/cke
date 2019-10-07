@@ -11,6 +11,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/etcdutil"
+	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
@@ -186,10 +187,10 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 			}
 			a, err := SSHAgent(node, mykey.(string))
 			if err != nil {
-				a = sshAgent{
-					node:   node,
-					client: nil,
-				}
+				log.Warn("failed to create SSHAgent for "+node.Address, map[string]interface{}{
+					log.FnError: err,
+				})
+				return nil // return nil
 			}
 
 			mu.Lock()
@@ -212,6 +213,7 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 }
 
 func (i *ckeInfrastructure) Agent(addr string) Agent {
+	// This returns nil if addr is not connected.
 	return i.agents[addr]
 }
 
