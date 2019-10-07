@@ -45,14 +45,16 @@ Control Plane Nodes
 CKE deploys following components to control plane nodes:
 
 - etcd
+- etcd-rivers (works as a load balancer to etcd)
 - kube-apiserver
 - kube-scheduler
 - kube-controller-manager
+- rivers (works as a load balancer to kube-apiserver)
 
 CKE constructs etcd cluster before it construct Kubernetes cluster.  Then CKE
 deploys Kubernetes components with rivers.
 
-![Control Plane Nodes](http://www.plantuml.com/plantuml/svg/dPF1ReCm44Jl_eeLf_P09E_UgqZz4Ci5Aura2B9DBrN_lTIccA0r8hbvPyQpyLCu-w1T63ihd6c2xY_MGFL-wuExMHYixaq5saEJ51KL2Ty2eDL1VsW_nKresfZwEyZ9MbNfuUgD-p8k1fPfa_BDfsb7EwUMQPEQVyHar9tkzMMEPrb5ETrxUONANQTLFeRIKQeT2oTBm6exrEDGlwslShkOL7vcClE67_40PzpZZ8Suuo7E-2HdBC549Q7ieLXZnZk0o6DcKXdprdoKC-rnfaESwH1dUf8pbLYIaaLhWvdk616FcKbbp5ipOOxVF9nE4HR64Vz74cBvwyztOvnLaLLfLf5jGBO1sGPY6uXj8BP1AfdKZ4IMBInR-L5y8MzXsSflv0jv2yiMYRFfsx6plm00)
+![Control Plane Nodes](http://www.plantuml.com/plantuml/svg/dP11RiCW44Ntd09brIuSYPbz5Qa7iQYDqaZOiG1tK_NkjJ4E43A9avs7__qOti4wQTpOQMPKusH_r8hlFi-zCsVD1orxjUFIycOvgVs9uB-CyrOw-INjL5UkQNrh_X1JbA3aSBBA_2ZZ2vVfgcMRRzMEEhJ2LBJ24bDGTRANnr2FnxK_NlvxUryMgynfkizUzgkNUQqaQGmOJtRWrJXK7p4jxoixyQ4Xog_-Oq_OXdksOPDjs6GRNhGDZsq3PHjOwXeoZt3JTTc9ponTmtEkyPvhtEGQDxd65rtZOzT8kSRCDMOUyQRhiXEVMRh6sVKy2xxV-m3y2Ek8Z2LraH045G0LO1e0XG8A1HGAAHHIACnGsQPHbw02e88L1HGAA1HGAAHGIA6mH1rKtuwT_WS0)
 
 DNS
 ---
