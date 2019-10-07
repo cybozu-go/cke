@@ -69,6 +69,13 @@ Implementation policies
     the given configuration.  
     If anything is different, `cke` will updates the cluster.
 
+    * If not all control plane nodes are operational, `cke` does not
+        start initial setup nor modify etcd cluster configuration.
+        This is to avoid disruption of the cluster.
+
+    * Even if some worker nodes are not operational, `cke` continues
+        to check and update the cluster.
+
 * Assets are compiled into Docker images.
 
     * Third-party docker images should be mirrored on `quay.io/cybozu`.
@@ -109,7 +116,7 @@ For example, if the current Kubernetes cluster has the following differences fro
 the desired configuration:
 
 * A control plane node exists only in the configuration.
-* Two worker nodes is running in the cluster but not defined in the configuration.
+* Two worker nodes are running in the cluster but not defined in the configuration.
 
 `cke` updates the cluster with these three operations.
 Note that each operation may invoke several commands.

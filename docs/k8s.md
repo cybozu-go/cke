@@ -97,6 +97,11 @@ for resources managed by CKE to be ready for enabling [PodSecurityPolicy][].
 
 `psp:cluster-dns` is a Role in `kube-system` to associate pod security policy with `cluster-dns` service account.
 
+### Kubernetes endpoints
+
+`kubernetes` endpoint object in `default` namespace represents the endpoints of the API servers.
+CKE maintains this endpoint object on behalf of the API servers.
+
 ### Etcd endpoints
 
 `cke-etcd` in `kube-system` namespace is a headless [Service](https://kubernetes.io/docs/concepts/services-networking/service/) and [Endpoints](https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors) to help applications find endpoints of CKE maintained etcd cluster.
