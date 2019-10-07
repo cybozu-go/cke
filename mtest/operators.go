@@ -76,6 +76,7 @@ func TestOperators(isDegraded bool) {
 			))
 			Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
 		}
+
 		cluster := getCluster()
 		for i := 0; i < 3; i++ {
 			cluster.Nodes[i].ControlPlane = true
