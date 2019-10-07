@@ -181,11 +181,17 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 
 	ops = append(ops, decideNodeDNSOps(apiServer, c, ks)...)
 
-	cpAddresses := make([]corev1.EndpointAddress, len(nf.ControlPlane()))
-	for i, cp := range nf.ControlPlane() {
-		cpAddresses[i] = corev1.EndpointAddress{
-			IP: cp.Address,
-		}
+	var epAddresses []corev1.EndpointAddress
+	for _, n := range nf.HealthyAPIServerNodes() {
+		epAddresses = append(epAddresses, corev1.EndpointAddress{
+			IP: n.Address,
+		})
+	}
+	var epNotReadyAddresses []corev1.EndpointAddress
+	for _, n := range nf.UnhealthyAPIServerNodes() {
+		epNotReadyAddresses = append(epNotReadyAddresses, corev1.EndpointAddress{
+			IP: n.Address,
+		})
 	}
 
 	masterEP := &corev1.Endpoints{}
@@ -193,7 +199,8 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 	masterEP.Name = "kubernetes"
 	masterEP.Subsets = []corev1.EndpointSubset{
 		{
-			Addresses: cpAddresses,
+			Addresses:         epAddresses,
+			NotReadyAddresses: epNotReadyAddresses,
 			Ports: []corev1.EndpointPort{
 				{
 					Name:     "https",
@@ -216,6 +223,12 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 		ops = append(ops, svcOp)
 	}
 
+	cpAddresses := make([]corev1.EndpointAddress, len(nf.ControlPlane()))
+	for i, cp := range nf.ControlPlane() {
+		cpAddresses[i] = corev1.EndpointAddress{
+			IP: cp.Address,
+		}
+	}
 	etcdEP := &corev1.Endpoints{}
 	etcdEP.Namespace = metav1.NamespaceSystem
 	etcdEP.Name = op.EtcdEndpointsName
@@ -318,7 +331,7 @@ func decideEpOp(expect, actual *corev1.Endpoints, apiServer *cke.Node) cke.Opera
 		return updateOp
 	}
 
-	if len(subset.Addresses) != len(expect.Subsets[0].Addresses) {
+	if len(subset.Addresses) != len(expect.Subsets[0].Addresses) || len(subset.NotReadyAddresses) != len(expect.Subsets[0].NotReadyAddresses) {
 		return updateOp
 	}
 
@@ -327,6 +340,16 @@ func decideEpOp(expect, actual *corev1.Endpoints, apiServer *cke.Node) cke.Opera
 		endpoints[a.IP] = true
 	}
 	for _, a := range subset.Addresses {
+		if !endpoints[a.IP] {
+			return updateOp
+		}
+	}
+
+	endpoints = make(map[string]bool)
+	for _, a := range expect.Subsets[0].NotReadyAddresses {
+		endpoints[a.IP] = true
+	}
+	for _, a := range subset.NotReadyAddresses {
 		if !endpoints[a.IP] {
 			return updateOp
 		}

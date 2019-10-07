@@ -60,12 +60,22 @@ func TestOperators(isDegraded bool) {
 		err = json.Unmarshal(out, &ep)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(ep.Subsets).Should(HaveLen(1))
-		Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-			corev1.EndpointAddress{IP: node1},
-			corev1.EndpointAddress{IP: node2},
-			corev1.EndpointAddress{IP: node3},
-		))
-
+		if isDegraded {
+			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node1},
+			))
+			Expect(ep.Subsets[0].NotReadyAddresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node2},
+				corev1.EndpointAddress{IP: node3},
+			))
+		} else {
+			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node1},
+				corev1.EndpointAddress{IP: node2},
+				corev1.EndpointAddress{IP: node3},
+			))
+			Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
+		}
 		cluster := getCluster()
 		for i := 0; i < 3; i++ {
 			cluster.Nodes[i].ControlPlane = true
@@ -111,10 +121,20 @@ func TestOperators(isDegraded bool) {
 		err = json.Unmarshal(out, &ep)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(ep.Subsets).Should(HaveLen(1))
-		Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-			corev1.EndpointAddress{IP: node1},
-			corev1.EndpointAddress{IP: node3},
-		))
+		if isDegraded {
+			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node1},
+			))
+			Expect(ep.Subsets[0].NotReadyAddresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node3},
+			))
+		} else {
+			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node1},
+				corev1.EndpointAddress{IP: node3},
+			))
+			Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
+		}
 
 		By("Adding a new node to the cluster as a control plane")
 		// this will run AddMemberOp as well as other boot/restart ops.

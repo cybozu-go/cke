@@ -604,6 +604,26 @@ func (nf *NodeFilter) HealthyAPIServer() *cke.Node {
 	return node
 }
 
+// HealthyAPIServerNodes returns nodes which have healthy API servers
+func (nf *NodeFilter) HealthyAPIServerNodes() (nodes []*cke.Node) {
+	for _, n := range nf.ControlPlane() {
+		if nf.nodeStatus(n).APIServer.IsHealthy {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
+// UnhealthyAPIServerNodes returns nodes which have unhealthy API servers
+func (nf *NodeFilter) UnhealthyAPIServerNodes() (nodes []*cke.Node) {
+	for _, n := range nf.ControlPlane() {
+		if !nf.nodeStatus(n).APIServer.IsHealthy {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
 func isInternal(name string) bool {
 	if strings.HasPrefix(name, "cke.cybozu.com/") {
 		return true
