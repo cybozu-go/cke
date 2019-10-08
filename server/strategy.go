@@ -220,9 +220,9 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 		ops = append(ops, svcOp)
 	}
 
-	cpReadyAddresses = make([]corev1.EndpointAddress, len(nf.ControlPlane()))
+	cpAddresses := make([]corev1.EndpointAddress, len(nf.ControlPlane()))
 	for i, cp := range nf.ControlPlane() {
-		cpReadyAddresses[i] = corev1.EndpointAddress{
+		cpAddresses[i] = corev1.EndpointAddress{
 			IP: cp.Address,
 		}
 	}
@@ -231,7 +231,7 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 	etcdEP.Name = op.EtcdEndpointsName
 	etcdEP.Subsets = []corev1.EndpointSubset{
 		{
-			Addresses: cpReadyAddresses,
+			Addresses: cpAddresses,
 			Ports: []corev1.EndpointPort{
 				{
 					Port:     2379,
