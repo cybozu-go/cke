@@ -420,13 +420,16 @@ OUTER:
 }
 
 func (d testData) withSSHNotConnectedCP() testData {
-	st := d.NodeStatus(d.ControlPlane()[0])
-	st.SSHConnected = false
+	n := d.ControlPlane()[0]
+	st := d.NodeStatus(n)
+	d.Status.NodeStatuses[n.Address] = &cke.NodeStatus{
+		Labels: st.Labels,
+	}
 
 	return d
 }
 
-func (d testData) withSSHNotConnecteNonCPWorker(num int) testData {
+func (d testData) withSSHNotConnectedNonCPWorker(num int) testData {
 	// If num is larger than num of non-cp worker, all of them treat as unreachable
 	if num > len(d.NonCPWorkers()) {
 		num = len(d.NonCPWorkers())
@@ -436,7 +439,10 @@ func (d testData) withSSHNotConnecteNonCPWorker(num int) testData {
 		if i > num-1 {
 			break
 		}
-		d.NodeStatus(n).SSHConnected = false
+		st := d.NodeStatus(n)
+		d.Status.NodeStatuses[n.Address] = &cke.NodeStatus{
+			Labels: st.Labels,
+		}
 	}
 
 	return d
@@ -444,7 +450,7 @@ func (d testData) withSSHNotConnecteNonCPWorker(num int) testData {
 
 func (d testData) withSSHNotConnectedNodes() testData {
 	d.withSSHNotConnectedCP()
-	d.withSSHNotConnecteNonCPWorker(1)
+	d.withSSHNotConnectedNonCPWorker(1)
 	return d
 }
 
@@ -457,11 +463,6 @@ func TestDecideOps(t *testing.T) {
 		ExpectedOps        []string
 		ExpectedTargetNums map[string]int
 	}{
-		{
-			Name:        "NoStart",
-			Input:       newData().withSSHNotConnectedNodes(),
-			ExpectedOps: []string{},
-		},
 		{
 			Name:               "BootRivers",
 			Input:              newData(),
@@ -552,28 +553,26 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"etcd-bootstrap"},
 		},
 		{
+			Name:        "SkipEtcdBootstrap",
+			Input:       newData().withRivers().withEtcdRivers().withSSHNotConnectedNodes(),
+			ExpectedOps: nil,
+		},
+		{
 			Name:        "EtcdStart",
 			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd(),
 			ExpectedOps: []string{"etcd-start"},
 		},
 		{
-			Name: "SkipEtcdStoppedMembers",
+			Name: "EtcdStart2",
 			Input: newData().withRivers().withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Etcd.Running = false
+				d.NodeStatus(d.ControlPlane()[1]).Etcd.Running = false
 			}),
 			ExpectedOps: []string{
-				"kube-apiserver-bootstrap",
-				"kube-controller-manager-bootstrap",
-				"kube-proxy-bootstrap",
-				"kube-scheduler-bootstrap",
-				"kubelet-bootstrap",
+				"etcd-start",
 			},
 			ExpectedTargetNums: map[string]int{
-				"kube-apiserver-bootstrap":          2,
-				"kube-controller-manager-bootstrap": 2,
-				"kube-proxy-bootstrap":              4,
-				"kube-scheduler-bootstrap":          2,
-				"kubelet-bootstrap":                 4,
+				"etcd-start": 1,
 			},
 		},
 		{
@@ -1760,7 +1759,7 @@ func TestDecideOps(t *testing.T) {
 					st.Scheduler.Running = true
 					st.EtcdRivers.Running = true
 				}
-			}).withSSHNotConnectedNodes(),
+			}).withSSHNotConnectedNonCPWorker(1),
 			ExpectedOps: []string{
 				"stop-etcd",
 				"stop-etcd-rivers",

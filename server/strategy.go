@@ -30,7 +30,6 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDe
 	// 2. Bootstrap etcd cluster, if not yet.
 	if !nf.EtcdBootstrapped() {
 		// Etcd boot operations run only when all CPs are SSH reachable
-
 		if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, false)) > 0 {
 			log.Warn("cannot boot etcd since there are ssh-unconnectable control planes", nil)
 			return nil
@@ -179,15 +178,15 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 
 	ops = append(ops, decideNodeDNSOps(apiServer, c, ks)...)
 
-	var epAddresses []corev1.EndpointAddress
+	var cpReadyAddresses []corev1.EndpointAddress
 	for _, n := range nf.HealthyAPIServerNodes() {
-		epAddresses = append(epAddresses, corev1.EndpointAddress{
+		cpReadyAddresses = append(cpReadyAddresses, corev1.EndpointAddress{
 			IP: n.Address,
 		})
 	}
-	var epNotReadyAddresses []corev1.EndpointAddress
+	var cpNotReadyAddresses []corev1.EndpointAddress
 	for _, n := range nf.UnhealthyAPIServerNodes() {
-		epNotReadyAddresses = append(epNotReadyAddresses, corev1.EndpointAddress{
+		cpNotReadyAddresses = append(cpNotReadyAddresses, corev1.EndpointAddress{
 			IP: n.Address,
 		})
 	}
@@ -197,8 +196,8 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 	masterEP.Name = "kubernetes"
 	masterEP.Subsets = []corev1.EndpointSubset{
 		{
-			Addresses:         epAddresses,
-			NotReadyAddresses: epNotReadyAddresses,
+			Addresses:         cpReadyAddresses,
+			NotReadyAddresses: cpNotReadyAddresses,
 			Ports: []corev1.EndpointPort{
 				{
 					Name:     "https",
@@ -221,9 +220,9 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 		ops = append(ops, svcOp)
 	}
 
-	cpAddresses := make([]corev1.EndpointAddress, len(nf.ControlPlane()))
+	cpReadyAddresses = make([]corev1.EndpointAddress, len(nf.ControlPlane()))
 	for i, cp := range nf.ControlPlane() {
-		cpAddresses[i] = corev1.EndpointAddress{
+		cpReadyAddresses[i] = corev1.EndpointAddress{
 			IP: cp.Address,
 		}
 	}
@@ -232,7 +231,7 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 	etcdEP.Name = op.EtcdEndpointsName
 	etcdEP.Subsets = []corev1.EndpointSubset{
 		{
-			Addresses: cpAddresses,
+			Addresses: cpReadyAddresses,
 			Ports: []corev1.EndpointPort{
 				{
 					Port:     2379,

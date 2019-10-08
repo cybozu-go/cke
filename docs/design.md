@@ -70,11 +70,12 @@ Implementation policies
     If anything is different, `cke` will updates the cluster.
 
     * If not all control plane nodes are operational, `cke` does not
-        start initial setup nor modify etcd cluster configuration.
+        execute the bootstrap nor maintenance of the etcd cluster.
         This is to avoid disruption of the cluster.
 
-    * Even if some worker nodes are not operational, `cke` continues
-        to check and update the cluster.
+    * As for other operations than etcd cluster bootstrap and maintenance,
+        `cke` continues to check and update the cluster even if some nodes
+        are not operational.
 
 * Assets are compiled into Docker images.
 
