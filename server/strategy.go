@@ -20,11 +20,6 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDe
 
 	nf := NewNodeFilter(c, cs)
 
-	// 0. Skip this iteration, if Etcd is not available and one or more CP node(s) are not connected
-	if !cs.Etcd.IsHealthy && len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, false)) > 0 {
-		return nil
-	}
-
 	// 1. Run or restart rivers.  This guarantees:
 	// - CKE tools image is pulled on all nodes.
 	// - Rivers runs on all nodes and will proxy requests only to control plane nodes.
@@ -32,17 +27,20 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDe
 		return ops
 	}
 
-	// Etcd boot/start operations run only when all CPs are SSH reachable
-	if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, false)) == 0 {
-		// 2. Bootstrap etcd cluster, if not yet.
-		if !nf.EtcdBootstrapped() {
-			return []cke.Operator{etcd.BootOp(nf.ControlPlane(), c.Options.Etcd, c.Options.Kubelet.Domain)}
-		}
+	// 2. Bootstrap etcd cluster, if not yet.
+	if !nf.EtcdBootstrapped() {
+		// Etcd boot operations run only when all CPs are SSH reachable
 
-		// 3. Start etcd containers.
-		if nodes := nf.EtcdStoppedMembers(); len(nodes) > 0 {
-			return []cke.Operator{etcd.StartOp(nodes, c.Options.Etcd, c.Options.Kubelet.Domain)}
+		if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, false)) > 0 {
+			log.Warn("cannot boot etcd since there are ssh-unconnectable control planes", nil)
+			return nil
 		}
+		return []cke.Operator{etcd.BootOp(nf.ControlPlane(), c.Options.Etcd, c.Options.Kubelet.Domain)}
+	}
+
+	// 3. Start etcd containers.
+	if nodes := nf.SSHConnectedNodes(nf.EtcdStoppedMembers(), true, false); len(nodes) > 0 {
+		return []cke.Operator{etcd.StartOp(nodes, c.Options.Etcd, c.Options.Kubelet.Domain)}
 	}
 
 	// 4. Wait for etcd cluster to become ready

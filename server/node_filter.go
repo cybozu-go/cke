@@ -804,14 +804,13 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node, taintCP bool) bool {
 	return false
 }
 
-// SSHNotConnectedNodes returns nodes which are not connected via SSH from targets
-// If targets is nil, it is set as all Nodes in cluster
-func (nf *NodeFilter) SSHNotConnectedNodes(targets []*cke.Node, isCp, isWorker bool) (nodes []*cke.Node) {
+// SSHNotConnectedNodes returns nodes that are not connected via SSH out of targets.
+func (nf *NodeFilter) SSHNotConnectedNodes(targets []*cke.Node, includeControlPlane, includeWorker bool) (nodes []*cke.Node) {
 	for _, n := range targets {
-		if n.ControlPlane && !isCp {
+		if n.ControlPlane && !includeControlPlane {
 			continue
 		}
-		if !n.ControlPlane && !isWorker {
+		if !n.ControlPlane && !includeWorker {
 			continue
 		}
 		if nf.status.NodeStatuses[n.Address].SSHConnected {
@@ -823,14 +822,13 @@ func (nf *NodeFilter) SSHNotConnectedNodes(targets []*cke.Node, isCp, isWorker b
 	return nodes
 }
 
-// SSHConnectedNodes returns nodes which are not connected via SSH from targets
-// If targets is nil, it is set as all Nodes in cluster
-func (nf *NodeFilter) SSHConnectedNodes(targets []*cke.Node, isCp, isWorker bool) (nodes []*cke.Node) {
+// SSHConnectedNodes returns nodes that are connected via SSH out of targets
+func (nf *NodeFilter) SSHConnectedNodes(targets []*cke.Node, includeControlPlane, includeWorker bool) (nodes []*cke.Node) {
 	for _, n := range targets {
-		if n.ControlPlane && !isCp {
+		if n.ControlPlane && !includeControlPlane {
 			continue
 		}
-		if !n.ControlPlane && !isWorker {
+		if !n.ControlPlane && !includeWorker {
 			continue
 		}
 		if !nf.status.NodeStatuses[n.Address].SSHConnected {

@@ -43,7 +43,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 	var etcdRunning bool
 	for _, n := range cke.ControlPlanes(cluster.Nodes) {
 		ns := statuses[n.Address]
-		if ns.SSHConnected && ns.Etcd.HasData {
+		if ns.Etcd.HasData {
 			etcdRunning = true
 			break
 		}
@@ -64,7 +64,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 	var livingMaster *cke.Node
 	for _, n := range cke.ControlPlanes(cluster.Nodes) {
 		ns := statuses[n.Address]
-		if ns.SSHConnected && ns.APIServer.Running {
+		if ns.APIServer.Running {
 			livingMaster = n
 			break
 		}

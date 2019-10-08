@@ -72,6 +72,8 @@ func getVaultClient() (*vault.Client, error) {
 // Infrastructure presents an interface for infrastructure on CKE
 type Infrastructure interface {
 	Close()
+
+	// Agent returns the agent corresponding to addr and returns nil if addr is not connected.
 	Agent(addr string) Agent
 	Engine(addr string) ContainerEngine
 	Vault() (*vault.Client, error)
@@ -213,7 +215,6 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 }
 
 func (i *ckeInfrastructure) Agent(addr string) Agent {
-	// This returns nil if addr is not connected.
 	return i.agents[addr]
 }
 
