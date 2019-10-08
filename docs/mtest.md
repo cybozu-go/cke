@@ -12,11 +12,16 @@ There are following types of test suites.
 
     This suite tests `ckecli` command and kubernetes workloads deployments which
     related cluster configuration such as etcdbackup.
+    It also tests user defined kubernetes resources.
 
 2. operators
 
-    This suite tests CKE operators user defined resources, labels and taints management.
+    This suite tests CKE operators and management of labels and taints.
     If you implement a new operator(Op) in CKE, you have to write test cases in this suite.
+
+3. robustness
+
+    This suite runs much the same set of tests as operators with unreachable/halted nodes.
 
 Each test suite has an entry point of test as `<suite>/suite_test.go`.
 
@@ -55,10 +60,10 @@ Options
 ### `SUITE`
 
 You can choose the type of test suite by specifying `SUITE` make variable.
-The value can be `functions` (default), or `operators`.
+The value can be `functions` (default), `operators`, or `robustness`.
 
 `make test` accepts this variable.
 
 The value of `SUITE` is interpreted as a Go package name.  You can write
 a new test suite and specify its package name by `SUITE`.  As a side note,
-the forms of `./functions`, and `./operators` are more proper.
+the forms of `./functions`, `./operators`, and `./robustness` are more proper.

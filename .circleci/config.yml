@@ -128,6 +128,14 @@ jobs:
       - run-mtest:
           runtime: remote
           suite: ./operators
+  mtest-containerd-robustness:
+    docker:
+      - image: google/cloud-sdk
+    steps:
+      - checkout
+      - run-mtest:
+          runtime: remote
+          suite: ./robustness
   mtest-docker-functions:
     docker:
       - image: google/cloud-sdk
@@ -211,6 +219,7 @@ workflows:
       - mtest-docker-functions
       - mtest-containerd-functions
       - mtest-containerd-operators
+      - mtest-containerd-robustness
       - compose
   conformance:
     jobs:

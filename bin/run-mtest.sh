@@ -51,7 +51,7 @@ cp /assets/etcd-*.tar.gz .
 cp /assets/ubuntu-*.img .
 cp /assets/coreos_production_qemu_image.img .
 make setup
-make placemat
+make placemat SUITE=${SUITE}
 sleep 3
 exec make test CONTAINER_RUNTIME=${CONTAINER_RUNTIME} SUITE=${SUITE} TARGET="${TARGET}"
 EOF

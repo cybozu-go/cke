@@ -15,7 +15,7 @@ import (
 )
 
 // TestOperators tests all CKE operators
-func TestOperators() {
+func TestOperators(isDegraded bool) {
 	AfterEach(initializeControlPlane)
 
 	It("run all operators / commanders", func() {
@@ -60,29 +60,43 @@ func TestOperators() {
 		err = json.Unmarshal(out, &ep)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(ep.Subsets).Should(HaveLen(1))
-		Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-			corev1.EndpointAddress{IP: node1},
-			corev1.EndpointAddress{IP: node2},
-			corev1.EndpointAddress{IP: node3},
-		))
+		if isDegraded {
+			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node1},
+			))
+			Expect(ep.Subsets[0].NotReadyAddresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node2},
+				corev1.EndpointAddress{IP: node3},
+			))
+		} else {
+			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node1},
+				corev1.EndpointAddress{IP: node2},
+				corev1.EndpointAddress{IP: node3},
+			))
+			Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
+		}
+
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
 
 		By("Stopping etcd servers")
 		// this will run:
 		// - EtcdStartOp
 		// - EtcdWaitClusterOp
-		stopCKE()
-		execSafeAt(node2, "docker", "stop", "etcd")
-		execSafeAt(node2, "docker", "rm", "etcd")
-		execSafeAt(node3, "docker", "stop", "etcd")
-		execSafeAt(node3, "docker", "rm", "etcd")
-		runCKE(ckeImageURL)
-		cluster := getCluster()
-		for i := 0; i < 3; i++ {
-			cluster.Nodes[i].ControlPlane = true
+		if !isDegraded {
+			stopCKE()
+			execSafeAt(node2, "docker", "stop", "etcd")
+			execSafeAt(node2, "docker", "rm", "etcd")
+			execSafeAt(node3, "docker", "stop", "etcd")
+			execSafeAt(node3, "docker", "rm", "etcd")
+			runCKE(ckeImageURL)
+			Eventually(func() error {
+				return checkCluster(cluster)
+			}).Should(Succeed())
 		}
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
 
 		By("Removing a control plane node from the cluster")
 		// this will run:
@@ -108,15 +122,25 @@ func TestOperators() {
 		err = json.Unmarshal(out, &ep)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(ep.Subsets).Should(HaveLen(1))
-		Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-			corev1.EndpointAddress{IP: node1},
-			corev1.EndpointAddress{IP: node3},
-		))
+		if isDegraded {
+			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node1},
+			))
+			Expect(ep.Subsets[0].NotReadyAddresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node3},
+			))
+		} else {
+			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node1},
+				corev1.EndpointAddress{IP: node3},
+			))
+			Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
+		}
 
 		By("Adding a new node to the cluster as a control plane")
-		// this will run EtcdAddMemberOp as well as other boot/restart ops.
+		// this will run AddMemberOp as well as other boot/restart ops.
 
-		// inject failure into addEtcdMemberCommand to cause leader change
+		// inject failure into AddMemberOp to cause leader change
 		firstLeader := strings.TrimSpace(string(ckecliSafe("leader")))
 		Expect(firstLeader).To(Or(Equal("host1"), Equal("host2")))
 		injectFailure("op/etcd/etcdAfterMemberAdd")
@@ -141,10 +165,17 @@ func TestOperators() {
 
 		// reboot node2 and node4 to check bootstrap taints
 		rebootTime := time.Now()
-		execAt(node2, "sudo", "systemd-run", "reboot", "-f", "-f")
-		execAt(node4, "sudo", "systemd-run", "reboot", "-f", "-f")
+		var rebootedNodes []string
+		if isDegraded {
+			rebootedNodes = []string{node4}
+		} else {
+			rebootedNodes = []string{node2, node4}
+		}
+		for _, n := range rebootedNodes {
+			execAt(n, "sudo", "systemd-run", "reboot", "-f", "-f")
+		}
 		Eventually(func() error {
-			for _, n := range []string{node2, node4} {
+			for _, n := range rebootedNodes {
 				err := reconnectSSH(n)
 				if err != nil {
 					return err
@@ -185,8 +216,14 @@ func TestOperators() {
 					return errors.New("node is not ready: " + n.Name)
 				}
 			}
-			if len(status.Kubernetes.Nodes) != len(cluster.Nodes) {
-				return fmt.Errorf("nodes length should be %d, actual %d", len(cluster.Nodes), len(status.Kubernetes.Nodes))
+			var numKubernetesNodes int
+			if isDegraded {
+				numKubernetesNodes = len(cluster.Nodes) - 2 // 2 == (dummy 7th node) + (halted 2nd node)
+			} else {
+				numKubernetesNodes = len(cluster.Nodes)
+			}
+			if len(status.Kubernetes.Nodes) != numKubernetesNodes {
+				return fmt.Errorf("nodes length should be %d, actual %d", numKubernetesNodes, len(status.Kubernetes.Nodes))
 			}
 			return nil
 		}).Should(Succeed())
@@ -220,11 +257,14 @@ func TestOperators() {
 		}).Should(Succeed())
 
 		// check leader change
-		newLeader := strings.TrimSpace(string(ckecliSafe("leader")))
-		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
-		Expect(newLeader).NotTo(Equal(firstLeader))
-		stopCKE()
-		runCKE(ckeImageURL)
+		// AddMemberOp will not be called if degraded, and leader will not change
+		if !isDegraded {
+			newLeader := strings.TrimSpace(string(ckecliSafe("leader")))
+			Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
+			Expect(newLeader).NotTo(Equal(firstLeader))
+			stopCKE()
+			runCKE(ckeImageURL)
+		}
 
 		By("Converting a control plane node to a worker node")
 		// this will run these ops:
@@ -246,7 +286,7 @@ func TestOperators() {
 			firstLeader = leader
 			return nil
 		}).Should(Succeed())
-		// inject failure into EtcdDestroyMemberOp
+		// inject failure into RemoveMemberOp
 		injectFailure("op/etcd/etcdAfterMemberRemove")
 
 		ckecliSafe("constraints", "set", "control-plane-count", "2")
@@ -268,11 +308,14 @@ func TestOperators() {
 		Expect(node.Labels).ShouldNot(HaveKey("cke.cybozu.com/master"))
 
 		// check leader change
-		newLeader = strings.TrimSpace(string(ckecliSafe("leader")))
-		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
-		Expect(newLeader).NotTo(Equal(firstLeader))
-		stopCKE()
-		runCKE(ckeImageURL)
+		// RemoveMemberOp will not be called if degraded, and leader will not change
+		if !isDegraded {
+			newLeader := strings.TrimSpace(string(ckecliSafe("leader")))
+			Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
+			Expect(newLeader).NotTo(Equal(firstLeader))
+			stopCKE()
+			runCKE(ckeImageURL)
+		}
 
 		By("Changing options")
 		// this will run these ops:
@@ -402,23 +445,30 @@ func TestOperators() {
 		}).Should(Succeed())
 
 		By("testing control plane taints")
-		for _, n := range []string{node1, node2, node3} {
-			out, _, err := kubectl("get", "-o=json", "node", n)
-			Expect(err).ShouldNot(HaveOccurred())
+		var runningCPs []string
+		if isDegraded {
+			// node2 has been removed from cluster once, and it cannot be restored in degraded mode
+			runningCPs = []string{node1, node3}
+		} else {
+			runningCPs = []string{node1, node2, node3}
+		}
+		for _, n := range runningCPs {
+			out, stderr, err := kubectl("get", "-o=json", "node", n)
+			Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", out, stderr)
 			var node corev1.Node
 			err = json.Unmarshal(out, &node)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).ShouldNot(HaveOccurred(), "stdout: %s", out)
 			Expect(node.Spec.Taints).Should(ContainElement(corev1.Taint{
 				Key:    "cke.cybozu.com/master",
 				Effect: corev1.TaintEffectPreferNoSchedule,
 			}))
 		}
 		for _, n := range []string{node4, node5} {
-			out, _, err := kubectl("get", "-o=json", "node", n)
-			Expect(err).ShouldNot(HaveOccurred())
+			out, stderr, err := kubectl("get", "-o=json", "node", n)
+			Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", out, stderr)
 			var node corev1.Node
 			err = json.Unmarshal(out, &node)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).ShouldNot(HaveOccurred(), "stdout: %s", out)
 			Expect(node.Spec.Taints).ShouldNot(ContainElement(corev1.Taint{
 				Key:    "cke.cybozu.com/master",
 				Effect: corev1.TaintEffectPreferNoSchedule,
