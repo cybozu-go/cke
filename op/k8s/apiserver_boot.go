@@ -9,7 +9,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
-	yaml "gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -26,6 +26,7 @@ var (
 		"MutatingAdmissionWebhook",
 		"ValidatingAdmissionWebhook",
 		"ResourceQuota",
+		"StorageObjectInUseProtection",
 
 		// NodeRestriction is not in the list above, but added to restrict kubelet privilege.
 		"NodeRestriction",
@@ -246,12 +247,14 @@ func auditPolicyFilePath(policy string) string {
 // APIServerParams returns parameters for API server.
 func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet string, auditLogEnabeled bool, auditLogPolicy string) cke.ServiceParams {
 	args := []string{
-		"apiserver",
+		"kube-apiserver",
 		"--allow-privileged",
 		"--etcd-servers=https://127.0.0.1:12379",
 		"--etcd-cafile=" + op.K8sPKIPath("etcd-ca.crt"),
 		"--etcd-certfile=" + op.K8sPKIPath("apiserver-etcd-client.crt"),
 		"--etcd-keyfile=" + op.K8sPKIPath("apiserver-etcd-client.key"),
+		// disable compaction by apisever as it cannot do it.
+		"--etcd-compaction-interval=0",
 
 		"--bind-address=0.0.0.0",
 		"--insecure-port=0",
@@ -281,6 +284,10 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 		"--authorization-mode=Node,RBAC",
 
 		"--advertise-address=" + advertiseAddress,
+
+		// See https://github.com/cybozu-go/neco/issues/397
+		"--endpoint-reconciler-type=none",
+
 		"--service-cluster-ip-range=" + serviceSubnet,
 		"--machine-id-file=/etc/machine-id",
 		"--encryption-provider-config=" + encryptionConfigFile,

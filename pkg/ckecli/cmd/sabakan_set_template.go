@@ -2,29 +2,14 @@ package cmd
 
 import (
 	"context"
-	"errors"
-	"os"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/sabakan"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
+	"io/ioutil"
+	"sigs.k8s.io/yaml"
 )
-
-func validateTemplate(tmpl *cke.Cluster) error {
-	switch {
-	case len(tmpl.Nodes) != 2:
-		fallthrough
-	case tmpl.Nodes[0].ControlPlane && tmpl.Nodes[1].ControlPlane:
-		fallthrough
-	case !tmpl.Nodes[0].ControlPlane && !tmpl.Nodes[1].ControlPlane:
-		return errors.New("template must contain one control-plane and one non-control-plane nodes")
-	}
-
-	tmpl.Nodes[0].Address = "10.0.0.1"
-	tmpl.Nodes[1].Address = "10.0.0.2"
-	return tmpl.Validate()
-}
 
 // sabakanSetTemplateCmd represents the "sabakan set-template" command
 var sabakanSetTemplateCmd = &cobra.Command{
@@ -38,18 +23,17 @@ just one control-plane node and one non contorl-plane node.`,
 
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		r, err := os.Open(args[0])
+		b, err := ioutil.ReadFile(args[0])
 		if err != nil {
 			return err
 		}
-		defer r.Close()
 
 		tmpl := cke.NewCluster()
-		err = yaml.NewDecoder(r).Decode(tmpl)
+		err = yaml.Unmarshal(b, tmpl)
 		if err != nil {
 			return err
 		}
-		err = validateTemplate(tmpl)
+		err = sabakan.ValidateTemplate(tmpl)
 		if err != nil {
 			return err
 		}

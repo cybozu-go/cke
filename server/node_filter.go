@@ -11,8 +11,8 @@ import (
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/log"
-	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/yaml"
 )
 
 // NodeFilter filters nodes to
@@ -475,6 +475,25 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
+// KubeletUnrecognizedNodes returns nodes of which kubelet is still running but not recognized by k8s.
+func (nf *NodeFilter) KubeletUnrecognizedNodes() (nodes []*cke.Node) {
+	for _, n := range nf.cluster.Nodes {
+		if nf.nodeStatus(n).Kubelet.Running && !nf.existsNodeResource(n.Nodename()) {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
+func (nf *NodeFilter) existsNodeResource(name string) bool {
+	for _, kn := range nf.status.Kubernetes.Nodes {
+		if kn.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 // NonClusterNodes returns nodes not defined in cluster YAML.
 func (nf *NodeFilter) NonClusterNodes() (nodes []*corev1.Node) {
 	members := nf.status.Kubernetes.Nodes
@@ -583,6 +602,26 @@ func (nf *NodeFilter) HealthyAPIServer() *cke.Node {
 		}
 	}
 	return node
+}
+
+// HealthyAPIServerNodes returns nodes which have healthy API servers
+func (nf *NodeFilter) HealthyAPIServerNodes() (nodes []*cke.Node) {
+	for _, n := range nf.ControlPlane() {
+		if nf.nodeStatus(n).APIServer.IsHealthy {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
+// UnhealthyAPIServerNodes returns nodes which have unhealthy API servers
+func (nf *NodeFilter) UnhealthyAPIServerNodes() (nodes []*cke.Node) {
+	for _, n := range nf.ControlPlane() {
+		if !nf.nodeStatus(n).APIServer.IsHealthy {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
 }
 
 func isInternal(name string) bool {
@@ -763,4 +802,40 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node, taintCP bool) bool {
 	}
 
 	return false
+}
+
+// SSHNotConnectedNodes returns nodes that are not connected via SSH out of targets.
+func (nf *NodeFilter) SSHNotConnectedNodes(targets []*cke.Node, includeControlPlane, includeWorker bool) (nodes []*cke.Node) {
+	for _, n := range targets {
+		if n.ControlPlane && !includeControlPlane {
+			continue
+		}
+		if !n.ControlPlane && !includeWorker {
+			continue
+		}
+		if nf.status.NodeStatuses[n.Address].SSHConnected {
+			continue
+		}
+
+		nodes = append(nodes, n)
+	}
+	return nodes
+}
+
+// SSHConnectedNodes returns nodes that are connected via SSH out of targets
+func (nf *NodeFilter) SSHConnectedNodes(targets []*cke.Node, includeControlPlane, includeWorker bool) (nodes []*cke.Node) {
+	for _, n := range targets {
+		if n.ControlPlane && !includeControlPlane {
+			continue
+		}
+		if !n.ControlPlane && !includeWorker {
+			continue
+		}
+		if !nf.status.NodeStatuses[n.Address].SSHConnected {
+			continue
+		}
+
+		nodes = append(nodes, n)
+	}
+	return nodes
 }

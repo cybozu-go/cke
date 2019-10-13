@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"context"
-	"os"
+	"io/ioutil"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 // clusterSetCmd represents the "cluster set" command
@@ -20,18 +20,17 @@ The file must be either YAML or JSON.`,
 
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		r, err := os.Open(args[0])
+		b, err := ioutil.ReadFile(args[0])
 		if err != nil {
 			return err
 		}
-		defer r.Close()
 
 		cfg := cke.NewCluster()
-		err = yaml.NewDecoder(r).Decode(cfg)
+		err = yaml.Unmarshal(b, cfg)
 		if err != nil {
 			return err
 		}
-		err = cfg.Validate()
+		err = cfg.Validate(false)
 		if err != nil {
 			return err
 		}

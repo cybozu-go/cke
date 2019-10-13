@@ -19,12 +19,12 @@ endif
 PLACEMAT = /usr/bin/placemat
 GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo
 CURL = curl -fsL
-MANAGEMENT_ETCD_VERSION = 3.3.13
-VAULT_VERSION = 1.1.2
-K8S_VERSION = 1.14.1
+MANAGEMENT_ETCD_VERSION = 3.3.15
+VAULT_VERSION = 1.2.2
+K8S_VERSION = 1.15.3
 PLACEMAT_DATADIR = /var/scratch/placemat
 CONTAINERD_VERSION = 1.2.7
-CRITOOLS_VERSION = 1.14.0
+CRITOOLS_VERSION = 1.15.0
 CT_VERSION = 0.9.0
 CT = /usr/local/bin/ct
 SUDO = sudo
@@ -111,7 +111,7 @@ $(COREOS_IMAGE):
 
 $(OUTPUT)/etcd $(OUTPUT)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
 	mkdir -p $(OUTPUT)
-	tar -C $(OUTPUT) -x -z --wildcards --strip-components 1 -f $< '*/$(notdir $@)'
+	tar -C $(OUTPUT) -x -z --wildcards --strip-components 1 -f $< '*/$(notdir $@)' --warning=no-unknown-keyword
 	touch $@
 
 $(OUTPUT)/vault: $(VAULT_ARCHIVE)
@@ -271,6 +271,9 @@ $(OUTPUT)/cke-cluster.yml: cke-cluster.yml
 		-e 's/__NODE6__/$(NODE6)/' \
 		-e 's/__RUNTIME__/$(CONTAINER_RUNTIME)/' \
 		-e 's|__RUNTIME_ENDPOINT__|$(RUNTIME_ENDPOINT)|' $< > $@
+ifeq ($(notdir $(SUITE_PACKAGE)),robustness)
+	sed -i -e '/address: $(NODE5)/a\    user: cybozu\n  - address: 10.0.0.107' $@
+endif
 
 $(OUTPUT)/cke.yml: cke.yml
 	mkdir -p $(OUTPUT)
@@ -279,14 +282,14 @@ $(OUTPUT)/cke.yml: cke.yml
 unpack-containerd:
 	mkdir -p $(OUTPUT)
 	$(CURL) https://github.com/containerd/containerd/releases/download/v$(CONTAINERD_VERSION)/containerd-$(CONTAINERD_VERSION).linux-amd64.tar.gz | \
-	tar xzf - --strip-components=1 -C $(OUTPUT) bin/containerd bin/containerd-shim bin/ctr
+	tar xzf - --strip-components=1 -C $(OUTPUT) bin/containerd bin/containerd-shim bin/ctr --warning=no-unknown-keyword
 
 $(CONTAINERD_FILES): unpack-containerd
 
 $(OUTPUT)/crictl:
 	mkdir -p $(OUTPUT)
 	$(CURL) -o crictl.tar.gz https://github.com/kubernetes-sigs/cri-tools/releases/download/v$(CRITOOLS_VERSION)/crictl-v$(CRITOOLS_VERSION)-linux-amd64.tar.gz
-	tar zxvf crictl.tar.gz -C $(OUTPUT)
+	tar zxvf crictl.tar.gz -C $(OUTPUT) --warning=no-unknown-keyword
 
 # Targets
 test: $(TEST_DEPS)

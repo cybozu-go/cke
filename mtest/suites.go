@@ -10,5 +10,15 @@ var FunctionsSuite = func() {
 
 // OperatorsSuite is a test suite that tests CKE operators
 var OperatorsSuite = func() {
-	Context("operators", TestOperators)
+	Context("operators", func() {
+		TestOperators(false)
+	})
+}
+
+// RobustnessSuite is a test suite that tests CKE operators with SSH-not-connected nodes
+var RobustnessSuite = func() {
+	Context("operators", func() {
+		TestStopCP()
+		TestOperators(true)
+	})
 }

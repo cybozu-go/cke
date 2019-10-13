@@ -24,8 +24,92 @@ translated into Kubernetes Node labels.
 To keep Kubernetes and etcd cluster stable, CKE deliberately changes the
 cluster configuration.  Details are described in the following sections.
 
+Cluster template
+----------------
+
+Sabakan integration generates the cluster definition from a user-defined template.
+The template syntax is the same as [cluster.yml](cluster.md).
+
+The difference is that the template must have at least one control plane node
+and one non-control plane node.
+
+A minimal template looks like:
+
+```yaml
+name: cluster
+nodes:
+- user: cybozu
+  control_plane: true
+- user: cybozu
+  control_plane: false
+service_subnet: 10.68.0.0/16
+pod_subnet: 10.64.0.0/14
+```
+
 When the configuration template is updated, CKE will soon regenerate
 the cluster configuration from the new template.
+
+Roles and weights
+-----------------
+
+In general, servers in data centers can be classified into several types.
+For example, _compute_ servers are typically used to run VM or container workloads
+while _storage_ servers are used to store large persistent data.
+
+Servers defined in sabakan have a mandatory attribute "role" for this classification.
+
+To support a Kubernetes cluster consisting of multiple roles such as
+"compute", "storage", and "gpu", sabakan integration of CKE allows users to
+specify node templates for each server role and its weight (ratio) in the
+cluster.
+
+The node role is specified with `cke.cybozu.com/role` label value.
+The weight (ratio) in the cluster is specified with `cke.cybozu.com/weight` label value.
+
+An example to specify the ratio between compute/storage/gpu to 6:3:1 looks like:
+
+```yaml
+name: cluster
+nodes:
+- user: cybozu
+  control_plane: true
+  labels:
+    # Use compute servers for control plane nodes
+    cke.cybozu.com/role: "compute"
+- user: cybozu
+  labels:
+    cke.cybozu.com/role: "compute"
+    cke.cybozu.com/weight: "6.0"
+- user: cybozu
+  labels:
+    cke.cybozu.com/role: "storage"
+    cke.cybozu.com/weight: "3.0"
+  taints:
+  - key: cke.cybozu.com/role
+    value: storage
+    effect: NoExecute
+- user: cybozu
+  labels:
+    cke.cybozu.com/role: "gpu"
+    cke.cybozu.com/weight: "1.0"
+  taints:
+  - key: cke.cybozu.com/role
+    value: gpu
+    effect: PreferNoSchedule
+service_subnet: 10.68.0.0/16
+pod_subnet: 10.64.0.0/14
+```
+
+### Node template without role
+
+If a node template lacks `cke.cybozu.com/role` label, any servers can match it.
+
+If there are more than two templates for non-control plane nodes, they must have
+`cke.cybozu.com/role` label.
+
+### Node template without weight
+
+If a non-control plane node template lacks `cke.cybozu.com/weight` label, its weight becomes "1.0".
 
 Query and variables
 -------------------
@@ -76,11 +160,12 @@ CKE generates cluster configuration with the following conditions.
 
 *Shoulds*:
 
+* If the template node for control plane has `cke.cybozu.com/role` label,
+    servers of control plane nodes should be the specified role.
+* The number of servers for each role should be proportional to the given weights in the template.
 * Newer machines should be preferred than old ones.
 * Healthy machines should be preferred than non-healthy ones.
-* Unreachable machines should be removed from the cluster.  
-    This is because CKE cannot work if the cluster configuration contains dead nodes.
-* Unhealthy machines in the cluster should be [tainted][taint] with `NoSchedule`.
+* Unhealthy and unreachable machines in the cluster should be [tainted][taint] with `NoSchedule`.
 * Retiring machines should be [tainted][taint] with `NoExecute`.
 * Rebooting machines should not be removed from the cluster nor be tainted.
 * Each change of the cluster configuration should be made as small as possible.
@@ -98,8 +183,12 @@ When a new node need to be added to the cluster configuration, the algorithm
 select a machine as follows:
 
 1. Deselect non-healthy machines.
-1. Deselect machines used in the current cluster configuration.
-1. Add scores to each machine as follows:
+2. Deselect machines used in the current cluster configuration.
+3. Select machines of preferred roles.
+    - If the new node will be a control plane and a role is specified, select servers of the same role.
+    - Otherwise, choose a node template with the smallest number of servers than the specified weight,
+        and use the role specified for the template.
+4. Add scores to each machine as follows:
     - If the machine's lifetime is > 250 days, +10.
     - If the machine's lifetime is > 500 days, +10 (+20 in total).
     - If the machine's lifetime is > 1000 days, +10 (+30 in total).
@@ -107,7 +196,7 @@ select a machine as follows:
     - If the machine's lifetime is < -500 days, -10 (-20 in total).
     - If the machine's lifetime is < -1000 days, -10 (-30 in total).
     - If the cluster contains `n` machines in the same rack, - `min(n, 10)`.
-1. Select the highest scored machine.
+5. Select the highest scored machine.
 
 When an existing node need to be removed from the cluster configuration,
 the algorithm select one as follows:
@@ -121,7 +210,7 @@ the algorithm select one as follows:
     - If the machine's lifetime is < -1000 days, -10 (-30 in total).
     - If the machine is not healthy, -30.
     - If the cluster contains `n` machines in the same rack, - `min(n, 10)`.
-1. Select the lowest scored machine.
+2. Select the lowest scored machine.
 
 Note that node selection should be done separately for control plane nodes
 and non-control plane nodes.
@@ -132,8 +221,8 @@ The first time CKE generates cluster configuration from a template, it works
 as follows:
 
 1. Search sabakan to acquire the list of available machines.
-1. Select `control-plane-count` nodes for Kubernetes/etcd control plane.
-1. Select `minimum-workers` nodes.
+2. Select `control-plane-count` nodes for Kubernetes/etcd control plane.
+3. Select `minimum-workers` nodes.
 
 The algorithm fails when available healthy nodes are not enough to
 satisfy constraints.
@@ -149,11 +238,11 @@ sabakan then compares the list with _the current cluster_ configuration.
 
 Then it selects one of the following actions if the condition matches.
 
-#### Remove unreachable nodes
+#### Remove non-existent nodes
 
 If the current cluster contains nodes that no longer exist in the list,
-or if it contains unreachable nodes, they are removed.  This algorithm
-should be chosen first as unreachable nodes block CKE.
+they are removed. This should be executed at the beginning because non-existent
+nodes block CKE.
 
 New nodes may be added to satisfy constraints.
 
@@ -205,11 +294,12 @@ If a worker node is either retiring or retired for a while,
 CKE adds  [taints][taint] to nodes as follows.
 The taint key is `cke.cybozu.com/state`.
 
-Machine state | Taint value | Taint effect
-------------- | ----------- | ------------
-Unhealthy     | `unhealthy` | `NoSchedule`
-Retiring      | `retiring`  | `NoExecute`
-Retired       | `retired`   | `NoExecute`
+| Machine state | Taint value   | Taint effect |
+| ------------- | ------------- | ------------ |
+| Unhealthy     | `unhealthy`   | `NoSchedule` |
+| Unreachable   | `unreachable` | `NoSchedule` |
+| Retiring      | `retiring`    | `NoExecute`  |
+| Retired       | `retired`     | `NoExecute`  |
 
 For other machine states, the taint is removed.
 
@@ -221,22 +311,22 @@ The label key will be prefixed by `sabakan.cke.cybozu.com/`.
 
 Other Machine fields are also translated to labels as follows.
 
-Field              | Label key                      | Value
------------------- | ------------------------------ | -----
-`spec.rack`        | `cke.cybozu.com/rack`          | `spec.rack` converted to string.
-`spec.indexInRack` | `cke.cybozu.com/index-in-rack` | `spec.indexInRack` converted to string.
-`spec.role`        | `cke.cybozu.com/role`          | The same as `spec.role`.
+| Field              | Label key                      | Value                                   |
+| ------------------ | ------------------------------ | --------------------------------------- |
+| `spec.rack`        | `cke.cybozu.com/rack`          | `spec.rack` converted to string.        |
+| `spec.indexInRack` | `cke.cybozu.com/index-in-rack` | `spec.indexInRack` converted to string. |
+| `spec.role`        | `cke.cybozu.com/role`          | The same as `spec.role`.                |
 
 Node annotations
 ----------------
 
 Following Machine fields are translated to Node annotations:
 
-Field               | Annotation key                 | Value
-------------------- | ------------------------------ | -----
-`spec.serial`       | `cke.cybozu.com/serial`        | The same as `spec.serial`.
-`spec.registerDate` | `cke.cybozu.com/register-date` | `spec.registerDate` in RFC3339 format.
-`spec.retireDate`   | `cke.cybozu.com/retire-date`   | `spec.retireDate` in RFC3339 format.
+| Field               | Annotation key                 | Value                                  |
+| ------------------- | ------------------------------ | -------------------------------------- |
+| `spec.serial`       | `cke.cybozu.com/serial`        | The same as `spec.serial`.             |
+| `spec.registerDate` | `cke.cybozu.com/register-date` | `spec.registerDate` in RFC3339 format. |
+| `spec.retireDate`   | `cke.cybozu.com/retire-date`   | `spec.retireDate` in RFC3339 format.   |
 
 
 [sabakan]: https://github.com/cybozu-go/sabakan

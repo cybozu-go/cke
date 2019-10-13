@@ -14,7 +14,7 @@ import (
 var (
 	errNotAvailable       = errors.New("no healthy machine is available")
 	errMissingMachine     = errors.New("failed to apply new template due to missing machines")
-	errTooManyUnreachable = errors.New("too many unreachable/non-existent control plane nodes")
+	errTooManyNonExistent = errors.New("too many non-existent control plane nodes")
 
 	// DefaultWaitRetiringSeconds before removing retiring nodes from the cluster.
 	DefaultWaitRetiringSeconds = 300.0
@@ -61,6 +61,12 @@ func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 			Value:  "unhealthy",
 			Effect: corev1.TaintEffectNoSchedule,
 		})
+	case StateUnreachable:
+		n.Taints = append(n.Taints, corev1.Taint{
+			Key:    "cke.cybozu.com/state",
+			Value:  "unreachable",
+			Effect: corev1.TaintEffectNoSchedule,
+		})
 	case StateRetiring:
 		n.Taints = append(n.Taints, corev1.Taint{
 			Key:    "cke.cybozu.com/state",
@@ -78,6 +84,12 @@ func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 	return n
 }
 
+type nodeTemplate struct {
+	*cke.Node
+	Role   string
+	Weight float64
+}
+
 // Generator generates cluster configuration.
 type Generator struct {
 	template    *cke.Cluster
@@ -85,29 +97,29 @@ type Generator struct {
 	timestamp   time.Time
 	waitSeconds float64
 
-	nodeMap map[string]*cke.Node
-
 	controlPlanes []*cke.Node
 	healthyCPs    int
 	cpRacks       map[int]int
 
 	workers        []*cke.Node
+	workersByRole  map[string]int
 	healthyWorkers int
 	workerRacks    map[int]int
 
 	machineMap     map[string]*Machine
 	unusedMachines []*Machine
-	cpTmpl         *cke.Node
-	workerTmpl     *cke.Node
+	cpTmpl         nodeTemplate
+	workerTmpls    []nodeTemplate
 }
 
 // NewGenerator creates a new Generator.
 // current can be nil if no cluster configuration has been set.
-func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machines []Machine) *Generator {
+// template must have been validated with ValidateTemplate().
+func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machines []Machine, currentTime time.Time) *Generator {
 	g := &Generator{
 		template:    template,
 		constraints: cstr,
-		timestamp:   time.Now(),
+		timestamp:   currentTime,
 		waitSeconds: DefaultWaitRetiringSeconds,
 	}
 
@@ -127,6 +139,7 @@ func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machine
 	nodeMap := make(map[string]*cke.Node)
 	cpRacks := make(map[int]int)
 	workerRacks := make(map[int]int)
+	workersByRole := make(map[string]int)
 	if current != nil {
 		for _, n := range current.Nodes {
 			m := machineMap[n.Address]
@@ -149,11 +162,13 @@ func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machine
 				}
 			}
 			g.workers = append(g.workers, n)
+			role := n.Labels[CKELabelRole]
+			workersByRole[role]++
 		}
 	}
-	g.nodeMap = nodeMap
 	g.cpRacks = cpRacks
 	g.workerRacks = workerRacks
+	g.workersByRole = workersByRole
 
 	for a, m := range machineMap {
 		if _, ok := nodeMap[a]; !ok && m.Status.State == StateHealthy {
@@ -161,40 +176,106 @@ func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machine
 		}
 	}
 
-	// template should have one cp and one worker nodes.
 	for _, n := range template.Nodes {
+		weight := 1.0
+		if val, ok := n.Labels[CKELabelWeight]; ok {
+			weight, _ = strconv.ParseFloat(val, 64)
+		}
+		tmpl := nodeTemplate{
+			Node:   n,
+			Role:   n.Labels[CKELabelRole],
+			Weight: weight,
+		}
+
 		if n.ControlPlane {
-			g.cpTmpl = n
+			g.cpTmpl = tmpl
 		} else {
-			g.workerTmpl = n
+			g.workerTmpls = append(g.workerTmpls, tmpl)
 		}
 	}
 
 	return g
 }
 
+func (g *Generator) chooseWorkerTmpl() nodeTemplate {
+	if len(g.workerTmpls) == 1 {
+		return g.workerTmpls[0]
+	}
+
+	var least float64
+	var leastIndex int
+
+	for i, tmpl := range g.workerTmpls {
+		w := float64(g.workersByRole[tmpl.Role]) / tmpl.Weight
+		if i == 0 {
+			least = w
+			continue
+		}
+		if w < least {
+			least = w
+			leastIndex = i
+		}
+	}
+
+	return g.workerTmpls[leastIndex]
+}
+
+func (g *Generator) getWorkerTmpl(role string) nodeTemplate {
+	if len(g.workerTmpls) == 1 {
+		return g.workerTmpls[0]
+	}
+
+	for _, tmpl := range g.workerTmpls {
+		if tmpl.Role == role {
+			return tmpl
+		}
+	}
+	panic("BUG: instantiating for invalid role: " + role)
+}
+
 // selectMachine selects a healthy unused machine.
 // If there is no such machine, this returns nil.
-func (g *Generator) selectMachine(cp bool) *Machine {
-	if len(g.unusedMachines) == 0 {
+func (g *Generator) selectMachineFromUnused(cp bool, numMachinesByRack map[int]int) *Machine {
+	tmpl := g.cpTmpl
+	if !cp {
+		tmpl = g.chooseWorkerTmpl()
+	}
+
+	var unused []*Machine
+	if tmpl.Role == "" {
+		unused = g.unusedMachines
+	} else {
+		for _, m := range g.unusedMachines {
+			if m.Spec.Role == tmpl.Role {
+				unused = append(unused, m)
+			}
+		}
+	}
+	if len(unused) == 0 {
 		return nil
 	}
 
-	racks := g.workerRacks
-	if cp {
-		racks = g.cpRacks
-	}
-
-	sort.Slice(g.unusedMachines, func(i, j int) bool {
-		si := scoreMachine(g.unusedMachines[i], racks, g.timestamp)
-		sj := scoreMachine(g.unusedMachines[j], racks, g.timestamp)
+	sort.Slice(unused, func(i, j int) bool {
+		si := scoreMachine(unused[i], numMachinesByRack, g.timestamp)
+		sj := scoreMachine(unused[j], numMachinesByRack, g.timestamp)
 		// higher first
 		return si > sj
 	})
 
-	m := g.unusedMachines[0]
-	g.unusedMachines = g.unusedMachines[1:]
-	racks[m.Spec.Rack]++
+	m := unused[0]
+
+	newUnused := make([]*Machine, 0, len(g.unusedMachines)-1)
+	for _, mm := range g.unusedMachines {
+		if m == mm {
+			continue
+		}
+		newUnused = append(newUnused, mm)
+	}
+	g.unusedMachines = newUnused
+
+	if !cp {
+		g.workersByRole[tmpl.Role]++
+	}
 	return m
 }
 
@@ -204,25 +285,19 @@ func (g *Generator) SetWaitSeconds(secs float64) {
 }
 
 // deselectMachine selects the lowest scored machine and remove it.
-func (g *Generator) deselectMachine(cp bool, machines []*Machine) (*Machine, []*Machine) {
+func (g *Generator) deselectMachine(cp bool, machines []*Machine, numMachinesByRack map[int]int) (*Machine, []*Machine) {
 	if len(machines) == 0 {
 		panic("empty machines")
 	}
 
-	racks := g.workerRacks
-	if cp {
-		racks = g.cpRacks
-	}
-
 	sort.Slice(machines, func(i, j int) bool {
-		si := scoreMachine(machines[i], racks, g.timestamp)
-		sj := scoreMachine(machines[j], racks, g.timestamp)
+		si := scoreMachine(machines[i], numMachinesByRack, g.timestamp)
+		sj := scoreMachine(machines[j], numMachinesByRack, g.timestamp)
 		// lower first
 		return si < sj
 	})
 
 	m := machines[0]
-	racks[m.Spec.Rack]--
 	return m, machines[1:]
 }
 
@@ -230,19 +305,29 @@ func (g *Generator) deselectMachine(cp bool, machines []*Machine) (*Machine, []*
 // to satisfy given constraints, then generate cluster configuration.
 func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 	for i := len(op.cps); i < g.constraints.ControlPlaneCount; i++ {
-		m := g.selectMachine(true)
+		numCPs := op.countMachinesByRack(true)
+		m := g.selectMachineFromUnused(true, numCPs)
 		if m != nil {
 			op.addControlPlane(m)
 			continue
 		}
-		if len(op.workers) > g.constraints.MinimumWorkers && op.promoteWorker() {
-			continue
+		if len(op.workers) > g.constraints.MinimumWorkers {
+			sort.Slice(op.workers, func(i, j int) bool {
+				si := scoreMachine(op.workers[i], numCPs, g.timestamp)
+				sj := scoreMachine(op.workers[j], numCPs, g.timestamp)
+				// higher first
+				return si > sj
+			})
+			if op.promoteWorker(op.workers[0]) {
+				continue
+			}
 		}
 		return nil, errNotAvailable
 	}
 
 	for i := len(op.workers); i < g.constraints.MinimumWorkers; i++ {
-		m := g.selectMachine(false)
+		numWorkers := op.countMachinesByRack(false)
+		m := g.selectMachineFromUnused(false, numWorkers)
 		if m == nil {
 			return nil, errNotAvailable
 		}
@@ -259,10 +344,10 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 
 	nodes := make([]*cke.Node, 0, len(op.cps)+len(op.workers))
 	for _, m := range op.cps {
-		nodes = append(nodes, MachineToNode(m, g.cpTmpl))
+		nodes = append(nodes, MachineToNode(m, g.cpTmpl.Node))
 	}
 	for _, m := range op.workers {
-		nodes = append(nodes, MachineToNode(m, g.workerTmpl))
+		nodes = append(nodes, MachineToNode(m, g.getWorkerTmpl(m.Spec.Role).Node))
 	}
 
 	c := *g.template
@@ -311,7 +396,7 @@ func (g *Generator) Regenerate() (*cke.Cluster, error) {
 // Update updates the current configuration when necessary.
 // If the generator decides no updates are necessary, it returns (nil, nil).
 func (g *Generator) Update() (*cke.Cluster, error) {
-	op, err := g.removeUnreachable()
+	op, err := g.removeNonExistentNode()
 	if err != nil {
 		return nil, err
 	}
@@ -370,9 +455,9 @@ func (g *Generator) Update() (*cke.Cluster, error) {
 	return nil, nil
 }
 
-func (g *Generator) removeUnreachable() (*updateOp, error) {
+func (g *Generator) removeNonExistentNode() (*updateOp, error) {
 	op := &updateOp{
-		name: "remove unreachable",
+		name: "remove non-existent node",
 	}
 
 	for _, n := range g.controlPlanes {
@@ -381,27 +466,19 @@ func (g *Generator) removeUnreachable() (*updateOp, error) {
 			op.record("remove non-existent control plane: " + n.Address)
 			continue
 		}
-		if m.Status.State == StateUnreachable {
-			op.record("remove unreachable control plane: " + n.Address)
-			continue
-		}
 		op.cps = append(op.cps, m)
 	}
 
 	if len(op.cps)*2 <= len(g.controlPlanes) {
 		// Replacing more than half of control plane nodes would destroy
 		// etcd cluster.  We cannot do anything in this case.
-		return nil, errTooManyUnreachable
+		return nil, errTooManyNonExistent
 	}
 
 	for _, n := range g.workers {
 		m := g.machineMap[n.Address]
 		if m == nil {
 			op.record("remove non-existent worker: " + n.Address)
-			continue
-		}
-		if m.Status.State == StateUnreachable {
-			op.record("remove unreachable worker: " + n.Address)
 			continue
 		}
 		op.workers = append(op.workers, m)
@@ -448,19 +525,21 @@ func (g *Generator) decreaseControlPlane() (*updateOp, error) {
 		workers[i] = g.machineMap[n.Address]
 	}
 
-	op := &updateOp{
-		name:    "decrease control plane",
-		workers: workers,
-	}
-
 	cps := make([]*Machine, len(g.controlPlanes))
 	for i, n := range g.controlPlanes {
 		cps[i] = g.machineMap[n.Address]
 	}
 
+	op := &updateOp{
+		name:    "decrease control plane",
+		workers: workers,
+		cps:     cps,
+	}
+
 	for len(cps) != g.constraints.ControlPlaneCount {
 		var m *Machine
-		m, cps = g.deselectMachine(true, cps)
+		numCPs := op.countMachinesByRack(true)
+		m, cps = g.deselectMachine(true, cps, numCPs)
 
 		if g.constraints.MaximumWorkers == 0 || len(op.workers) < g.constraints.MaximumWorkers {
 			op.demoteControlPlane(m)
@@ -514,7 +593,14 @@ func (g *Generator) replaceControlPlane() (*updateOp, error) {
 	if g.constraints.MaximumWorkers == 0 || len(op.workers) < g.constraints.MaximumWorkers {
 		op.demoteControlPlane(demote)
 	} else {
-		if op.promoteWorker() {
+		numCPs := op.countMachinesByRack(true)
+		sort.Slice(op.workers, func(i, j int) bool {
+			si := scoreMachine(op.workers[i], numCPs, g.timestamp)
+			sj := scoreMachine(op.workers[j], numCPs, g.timestamp)
+			// higher first
+			return si > sj
+		})
+		if op.workers[0].Status.State == StateHealthy && op.promoteWorker(op.workers[0]) {
 			op.demoteControlPlane(demote)
 		} else {
 			op.record("remove bad control plane: " + demote.Spec.IPv4[0])
@@ -548,7 +634,8 @@ func (g *Generator) increaseWorker() (*updateOp, error) {
 		if g.constraints.MaximumWorkers != 0 && len(op.workers) >= g.constraints.MaximumWorkers {
 			break
 		}
-		m := g.selectMachine(false)
+		numWorkers := op.countMachinesByRack(false)
+		m := g.selectMachineFromUnused(false, numWorkers)
 		if m == nil {
 			break
 		}
@@ -604,7 +691,8 @@ func (g *Generator) decreaseWorker() (*updateOp, error) {
 		return op, nil
 	}
 
-	m := g.selectMachine(false)
+	numWorkers := op.countMachinesByRack(false)
+	m := g.selectMachineFromUnused(false, numWorkers)
 	if m != nil {
 		op.record("remove retiring worker: " + retiring.Spec.IPv4[0])
 		op.addWorker(m)
@@ -626,6 +714,10 @@ func hasValidTaint(n *cke.Node, m *Machine) bool {
 	switch m.Status.State {
 	case StateUnhealthy:
 		if ckeTaint.Value != "unhealthy" || ckeTaint.Effect != corev1.TaintEffectNoSchedule {
+			return false
+		}
+	case StateUnreachable:
+		if ckeTaint.Value != "unreachable" || ckeTaint.Effect != corev1.TaintEffectNoSchedule {
 			return false
 		}
 	case StateRetiring:

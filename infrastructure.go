@@ -11,6 +11,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/etcdutil"
+	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/pkg/errors"
@@ -71,6 +72,8 @@ func getVaultClient() (*vault.Client, error) {
 // Infrastructure presents an interface for infrastructure on CKE
 type Infrastructure interface {
 	Close()
+
+	// Agent returns the agent corresponding to addr and returns nil if addr is not connected.
 	Agent(addr string) Agent
 	Engine(addr string) ContainerEngine
 	Vault() (*vault.Client, error)
@@ -133,7 +136,7 @@ func (i *ckeInfrastructure) init(ctx context.Context) error {
 
 	i.once.Do(func() {
 		issue := func() (cert, key []byte, err error) {
-			c, k, e := KubernetesCA{}.IssueAdminCert(ctx, i, "25h")
+			c, k, e := KubernetesCA{}.IssueUserCert(ctx, i, RoleAdmin, AdminGroup, "25h")
 			if e != nil {
 				return nil, nil, e
 			}
@@ -186,7 +189,10 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 			}
 			a, err := SSHAgent(node, mykey.(string))
 			if err != nil {
-				return errors.Wrap(err, node.Address)
+				log.Warn("failed to create SSHAgent for "+node.Address, map[string]interface{}{
+					log.FnError: err,
+				})
+				return nil // return nil
 			}
 
 			mu.Lock()

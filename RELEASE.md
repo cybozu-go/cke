@@ -24,6 +24,10 @@ $ git checkout -b release-1.12 v1.12.3
 $ git push origin -u release-1.12:release-1.12
 ```
 
+Remove old changes from `CHANGELOG.md` of master branch.
+The `CHANGELOG.md` of master branch should only describe changes related to the latest release-X.Y.
+Changes in the old versions are described in each branch's CHANGELOG.md.
+
 `release-*` branches are protected from removal and force push.
 
 Prepare change log entries
@@ -51,26 +55,32 @@ It should look like:
 Bump version
 ------------
 
-1. Determine a new version number.  Let it write `$VERSION`.
+1. Determine a new version number.  Let it write `$VERSION` as `VERSION=x.y.z`.
 2. Checkout `master` branch.
-3. Update `version.go`.
-4. Edit `CHANGELOG.md` for the new version ([example][]).
-5. Commit the change and add a git tag, then push them.
+3. Make a branch to release, for example by `git neco dev "$VERSION"`
+4. Update `version.go`.
+5. Edit `CHANGELOG.md` for the new version ([example][]).
+6. Commit the change and create a pull request.
 
     ```console
     $ git commit -a -m "Bump version to $VERSION"
-    $ git tag v$VERSION
-    $ git push origin master v$VERSION
+    $ git neco review
+    ```
+7. Make sure that Sonobuoy test has been passed.
+8. Merge the pull request.
+9. Make a tag and push it.
+
+    ```console
+    $ git checkout master
+    $ git pull
+    $ git tag "v$VERSION"
+    $ git push origin "v$VERSION"
     ```
 
-Now the version is bumped up and the latest container image is uploaded to [quay.io](https://quay.io/cybozu/cke).
+Then CircleCI automatically builds and pushes the tagged container image to [quay.io](https://quay.io/cybozu/cke).
 
-Publish GitHub release page
----------------------------
-
-Go to https://github.com/cybozu-go/cke/releases and edit the tag.
-Finally, press `Publish release` button.
-
+CircleCI also creates a GitHub release automatically after running [sonobuoy](./sonobuoy) tests.
+So, **DO NOT MANUALLY CREATE GITHUB RELEASES**.  The test results will be attached to the GitHub
+release that can be submitted to [cncf/k8s-conformance](https://github.com/cncf/k8s-conformance).
 
 [example]: https://github.com/cybozu-go/etcdpasswd/commit/77d95384ac6c97e7f48281eaf23cb94f68867f79
-[CircleCI]: https://circleci.com/gh/cybozu-go/etcdpasswd

@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"io/ioutil"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
@@ -14,7 +14,7 @@ import (
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/pflag"
-	yaml "gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -27,14 +27,12 @@ var (
 )
 
 func loadConfig(p string) (*etcdutil.Config, error) {
-	f, err := os.Open(p)
+	b, err := ioutil.ReadFile(p)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-
 	cfg := cke.NewEtcdConfig()
-	err = yaml.NewDecoder(f).Decode(cfg)
+	err = yaml.Unmarshal(b, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +92,8 @@ func main() {
 	if err != nil {
 		log.ErrorExit(err)
 	}
+	defer session.Close()
+
 	timeout, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {
 		log.ErrorExit(err)

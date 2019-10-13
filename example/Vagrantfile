@@ -1,0 +1,34 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "coreos-stable"
+  config.vm.box_url = "https://storage.googleapis.com/stable.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json"
+  config.vm.provider "virtualbox" do |vb|
+    vb.customize ["modifyvm", :id, "--paravirtprovider", "kvm"]
+  end
+
+  config.vm.define "worker-1" do |machine|
+    machine.vm.network "private_network", ip: "192.168.1.101"
+    machine.vm.provider "virtualbox" do |vb|
+      vb.memory = "4096"
+      vb.cpus = 4
+    end
+  end
+
+  config.vm.define "worker-2" do |machine|
+    machine.vm.network "private_network", ip: "192.168.1.102"
+    machine.vm.provider "virtualbox" do |vb|
+      vb.memory = "4096"
+      vb.cpus = 4
+    end
+  end
+
+  config.vm.define "worker-3" do |machine|
+    machine.vm.network "private_network", ip: "192.168.1.103"
+    machine.vm.provider "virtualbox" do |vb|
+      vb.memory = "4096"
+      vb.cpus = 4
+    end
+  end
+end

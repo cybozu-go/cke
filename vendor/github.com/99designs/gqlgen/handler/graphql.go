@@ -2,16 +2,24 @@ package handler
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"mime"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/99designs/gqlgen/complexity"
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/gorilla/websocket"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/vektah/gqlparser/ast"
 	"github.com/vektah/gqlparser/gqlerror"
 	"github.com/vektah/gqlparser/parser"
@@ -22,18 +30,46 @@ type params struct {
 	Query         string                 `json:"query"`
 	OperationName string                 `json:"operationName"`
 	Variables     map[string]interface{} `json:"variables"`
+	Extensions    *extensions            `json:"extensions"`
 }
 
+type extensions struct {
+	PersistedQuery *persistedQuery `json:"persistedQuery"`
+}
+
+type persistedQuery struct {
+	Sha256  string `json:"sha256Hash"`
+	Version int64  `json:"version"`
+}
+
+const (
+	errPersistedQueryNotSupported = "PersistedQueryNotSupported"
+	errPersistedQueryNotFound     = "PersistedQueryNotFound"
+)
+
+type PersistedQueryCache interface {
+	Add(ctx context.Context, hash string, query string)
+	Get(ctx context.Context, hash string) (string, bool)
+}
+
+type websocketInitFunc func(ctx context.Context, initPayload InitPayload) error
+
 type Config struct {
-	cacheSize            int
-	upgrader             websocket.Upgrader
-	recover              graphql.RecoverFunc
-	errorPresenter       graphql.ErrorPresenterFunc
-	resolverHook         graphql.FieldMiddleware
-	requestHook          graphql.RequestMiddleware
-	tracer               graphql.Tracer
-	complexityLimit      int
-	disableIntrospection bool
+	cacheSize                       int
+	upgrader                        websocket.Upgrader
+	recover                         graphql.RecoverFunc
+	errorPresenter                  graphql.ErrorPresenterFunc
+	resolverHook                    graphql.FieldMiddleware
+	requestHook                     graphql.RequestMiddleware
+	tracer                          graphql.Tracer
+	complexityLimit                 int
+	complexityLimitFunc             graphql.ComplexityLimitFunc
+	websocketInitFunc               websocketInitFunc
+	disableIntrospection            bool
+	connectionKeepAlivePingInterval time.Duration
+	uploadMaxMemory                 int64
+	uploadMaxSize                   int64
+	apqCache                        PersistedQueryCache
 }
 
 func (c *Config) newRequestContext(es graphql.ExecutableSchema, doc *ast.QueryDocument, op *ast.OperationDefinition, query string, variables map[string]interface{}) *graphql.RequestContext {
@@ -58,11 +94,9 @@ func (c *Config) newRequestContext(es graphql.ExecutableSchema, doc *ast.QueryDo
 
 	if hook := c.tracer; hook != nil {
 		reqCtx.Tracer = hook
-	} else {
-		reqCtx.Tracer = &graphql.NopTracer{}
 	}
 
-	if c.complexityLimit > 0 {
+	if c.complexityLimit > 0 || c.complexityLimitFunc != nil {
 		reqCtx.ComplexityLimit = c.complexityLimit
 		operationComplexity := complexity.Calculate(es, op, variables)
 		reqCtx.OperationComplexity = operationComplexity
@@ -107,6 +141,15 @@ func IntrospectionEnabled(enabled bool) Option {
 func ComplexityLimit(limit int) Option {
 	return func(cfg *Config) {
 		cfg.complexityLimit = limit
+	}
+}
+
+// ComplexityLimitFunc allows you to define a function to dynamically set the maximum query complexity that is allowed
+// to be executed.
+// If a query is submitted that exceeds the limit, a 422 status code will be returned.
+func ComplexityLimitFunc(complexityLimitFunc graphql.ComplexityLimitFunc) Option {
+	return func(cfg *Config) {
+		cfg.complexityLimitFunc = complexityLimitFunc
 	}
 }
 
@@ -233,6 +276,14 @@ func (tw *tracerWrapper) EndOperationExecution(ctx context.Context) {
 	tw.tracer1.EndOperationExecution(ctx)
 }
 
+// WebsocketInitFunc is called when the server receives connection init message from the client.
+// This can be used to check initial payload to see whether to accept the websocket connection.
+func WebsocketInitFunc(websocketInitFunc func(ctx context.Context, initPayload InitPayload) error) Option {
+	return func(cfg *Config) {
+		cfg.websocketInitFunc = websocketInitFunc
+	}
+}
+
 // CacheSize sets the maximum size of the query cache.
 // If size is less than or equal to 0, the cache is disabled.
 func CacheSize(size int) Option {
@@ -241,11 +292,58 @@ func CacheSize(size int) Option {
 	}
 }
 
+// UploadMaxSize sets the maximum number of bytes used to parse a request body
+// as multipart/form-data.
+func UploadMaxSize(size int64) Option {
+	return func(cfg *Config) {
+		cfg.uploadMaxSize = size
+	}
+}
+
+// UploadMaxMemory sets the maximum number of bytes used to parse a request body
+// as multipart/form-data in memory, with the remainder stored on disk in
+// temporary files.
+func UploadMaxMemory(size int64) Option {
+	return func(cfg *Config) {
+		cfg.uploadMaxMemory = size
+	}
+}
+
+// WebsocketKeepAliveDuration allows you to reconfigure the keepalive behavior.
+// By default, keepalive is enabled with a DefaultConnectionKeepAlivePingInterval
+// duration. Set handler.connectionKeepAlivePingInterval = 0 to disable keepalive
+// altogether.
+func WebsocketKeepAliveDuration(duration time.Duration) Option {
+	return func(cfg *Config) {
+		cfg.connectionKeepAlivePingInterval = duration
+	}
+}
+
+// Add cache that will hold queries for automatic persisted queries (APQ)
+func EnablePersistedQueryCache(cache PersistedQueryCache) Option {
+	return func(cfg *Config) {
+		cfg.apqCache = cache
+	}
+}
+
 const DefaultCacheSize = 1000
+const DefaultConnectionKeepAlivePingInterval = 25 * time.Second
+
+// DefaultUploadMaxMemory is the maximum number of bytes used to parse a request body
+// as multipart/form-data in memory, with the remainder stored on disk in
+// temporary files.
+const DefaultUploadMaxMemory = 32 << 20
+
+// DefaultUploadMaxSize is maximum number of bytes used to parse a request body
+// as multipart/form-data.
+const DefaultUploadMaxSize = 32 << 20
 
 func GraphQL(exec graphql.ExecutableSchema, options ...Option) http.HandlerFunc {
 	cfg := &Config{
-		cacheSize: DefaultCacheSize,
+		cacheSize:                       DefaultCacheSize,
+		uploadMaxMemory:                 DefaultUploadMaxMemory,
+		uploadMaxSize:                   DefaultUploadMaxSize,
+		connectionKeepAlivePingInterval: DefaultConnectionKeepAlivePingInterval,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
@@ -259,7 +357,7 @@ func GraphQL(exec graphql.ExecutableSchema, options ...Option) http.HandlerFunc 
 	var cache *lru.Cache
 	if cfg.cacheSize > 0 {
 		var err error
-		cache, err = lru.New(DefaultCacheSize)
+		cache, err = lru.New(cfg.cacheSize)
 		if err != nil {
 			// An error is only returned for non-positive cache size
 			// and we already checked for that.
@@ -287,6 +385,11 @@ type graphqlHandler struct {
 	exec  graphql.ExecutableSchema
 }
 
+func computeQueryHash(query string) string {
+	b := sha256.Sum256([]byte(query))
+	return hex.EncodeToString(b[:])
+}
+
 func (gh *graphqlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		w.Header().Set("Allow", "OPTIONS, GET, POST")
@@ -295,10 +398,11 @@ func (gh *graphqlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.Contains(r.Header.Get("Upgrade"), "websocket") {
-		connectWs(gh.exec, w, r, gh.cfg)
+		connectWs(gh.exec, w, r, gh.cfg, gh.cache)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	var reqParams params
 	switch r.Method {
 	case http.MethodGet:
@@ -311,18 +415,87 @@ func (gh *graphqlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+
+		if extensions := r.URL.Query().Get("extensions"); extensions != "" {
+			if err := jsonDecode(strings.NewReader(extensions), &reqParams.Extensions); err != nil {
+				sendErrorf(w, http.StatusBadRequest, "extensions could not be decoded")
+				return
+			}
+		}
 	case http.MethodPost:
-		if err := jsonDecode(r.Body, &reqParams); err != nil {
-			sendErrorf(w, http.StatusBadRequest, "json body could not be decoded: "+err.Error())
+		mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		if err != nil {
+			sendErrorf(w, http.StatusBadRequest, "error parsing request Content-Type")
+			return
+		}
+
+		switch mediaType {
+		case "application/json":
+			if err := jsonDecode(r.Body, &reqParams); err != nil {
+				sendErrorf(w, http.StatusBadRequest, "json body could not be decoded: "+err.Error())
+				return
+			}
+
+		case "multipart/form-data":
+			var closers []io.Closer
+			var tmpFiles []string
+			defer func() {
+				for i := len(closers) - 1; 0 <= i; i-- {
+					_ = closers[i].Close()
+				}
+				for _, tmpFile := range tmpFiles {
+					_ = os.Remove(tmpFile)
+				}
+			}()
+			if err := processMultipart(w, r, &reqParams, &closers, &tmpFiles, gh.cfg.uploadMaxSize, gh.cfg.uploadMaxMemory); err != nil {
+				sendErrorf(w, http.StatusBadRequest, "multipart body could not be decoded: "+err.Error())
+				return
+			}
+		default:
+			sendErrorf(w, http.StatusBadRequest, "unsupported Content-Type: "+mediaType)
 			return
 		}
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
 
 	ctx := r.Context()
+
+	var queryHash string
+	apqRegister := false
+	apq := reqParams.Extensions != nil && reqParams.Extensions.PersistedQuery != nil
+	if apq {
+		// client has enabled apq
+		queryHash = reqParams.Extensions.PersistedQuery.Sha256
+		if gh.cfg.apqCache == nil {
+			// server has disabled apq
+			sendErrorf(w, http.StatusOK, errPersistedQueryNotSupported)
+			return
+		}
+		if reqParams.Extensions.PersistedQuery.Version != 1 {
+			sendErrorf(w, http.StatusOK, "Unsupported persisted query version")
+			return
+		}
+		if reqParams.Query == "" {
+			// client sent optimistic query hash without query string
+			query, ok := gh.cfg.apqCache.Get(ctx, queryHash)
+			if !ok {
+				sendErrorf(w, http.StatusOK, errPersistedQueryNotFound)
+				return
+			}
+			reqParams.Query = query
+		} else {
+			if computeQueryHash(reqParams.Query) != queryHash {
+				sendErrorf(w, http.StatusOK, "provided sha does not match query")
+				return
+			}
+			apqRegister = true
+		}
+	} else if reqParams.Query == "" {
+		sendErrorf(w, http.StatusUnprocessableEntity, "Must provide query string")
+		return
+	}
 
 	var doc *ast.QueryDocument
 	var cacheHit bool
@@ -369,9 +542,18 @@ func (gh *graphqlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	if gh.cfg.complexityLimitFunc != nil {
+		reqCtx.ComplexityLimit = gh.cfg.complexityLimitFunc(ctx)
+	}
+
 	if reqCtx.ComplexityLimit > 0 && reqCtx.OperationComplexity > reqCtx.ComplexityLimit {
 		sendErrorf(w, http.StatusUnprocessableEntity, "operation has complexity %d, which exceeds the limit of %d", reqCtx.OperationComplexity, reqCtx.ComplexityLimit)
 		return
+	}
+
+	if apqRegister && gh.cfg.apqCache != nil {
+		// Add to persisted query cache
+		gh.cfg.apqCache.Add(ctx, queryHash, reqParams.Query)
 	}
 
 	switch op.Operation {
@@ -466,4 +648,155 @@ func sendError(w http.ResponseWriter, code int, errors ...*gqlerror.Error) {
 
 func sendErrorf(w http.ResponseWriter, code int, format string, args ...interface{}) {
 	sendError(w, code, &gqlerror.Error{Message: fmt.Sprintf(format, args...)})
+}
+
+type bytesReader struct {
+	s        *[]byte
+	i        int64 // current reading index
+	prevRune int   // index of previous rune; or < 0
+}
+
+func (r *bytesReader) Read(b []byte) (n int, err error) {
+	if r.s == nil {
+		return 0, errors.New("byte slice pointer is nil")
+	}
+	if r.i >= int64(len(*r.s)) {
+		return 0, io.EOF
+	}
+	r.prevRune = -1
+	n = copy(b, (*r.s)[r.i:])
+	r.i += int64(n)
+	return
+}
+
+func processMultipart(w http.ResponseWriter, r *http.Request, request *params, closers *[]io.Closer, tmpFiles *[]string, uploadMaxSize, uploadMaxMemory int64) error {
+	var err error
+	if r.ContentLength > uploadMaxSize {
+		return errors.New("failed to parse multipart form, request body too large")
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, uploadMaxSize)
+	if err = r.ParseMultipartForm(uploadMaxMemory); err != nil {
+		if strings.Contains(err.Error(), "request body too large") {
+			return errors.New("failed to parse multipart form, request body too large")
+		}
+		return errors.New("failed to parse multipart form")
+	}
+	*closers = append(*closers, r.Body)
+
+	if err = jsonDecode(strings.NewReader(r.Form.Get("operations")), &request); err != nil {
+		return errors.New("operations form field could not be decoded")
+	}
+
+	var uploadsMap = map[string][]string{}
+	if err = json.Unmarshal([]byte(r.Form.Get("map")), &uploadsMap); err != nil {
+		return errors.New("map form field could not be decoded")
+	}
+
+	var upload graphql.Upload
+	for key, paths := range uploadsMap {
+		if len(paths) == 0 {
+			return fmt.Errorf("invalid empty operations paths list for key %s", key)
+		}
+		file, header, err := r.FormFile(key)
+		if err != nil {
+			return fmt.Errorf("failed to get key %s from form", key)
+		}
+		*closers = append(*closers, file)
+
+		if len(paths) == 1 {
+			upload = graphql.Upload{
+				File:     file,
+				Size:     header.Size,
+				Filename: header.Filename,
+			}
+			err = addUploadToOperations(request, upload, key, paths[0])
+			if err != nil {
+				return err
+			}
+		} else {
+			if r.ContentLength < uploadMaxMemory {
+				fileBytes, err := ioutil.ReadAll(file)
+				if err != nil {
+					return fmt.Errorf("failed to read file for key %s", key)
+				}
+				for _, path := range paths {
+					upload = graphql.Upload{
+						File:     &bytesReader{s: &fileBytes, i: 0, prevRune: -1},
+						Size:     header.Size,
+						Filename: header.Filename,
+					}
+					err = addUploadToOperations(request, upload, key, path)
+					if err != nil {
+						return err
+					}
+				}
+			} else {
+				tmpFile, err := ioutil.TempFile(os.TempDir(), "gqlgen-")
+				if err != nil {
+					return fmt.Errorf("failed to create temp file for key %s", key)
+				}
+				tmpName := tmpFile.Name()
+				*tmpFiles = append(*tmpFiles, tmpName)
+				_, err = io.Copy(tmpFile, file)
+				if err != nil {
+					if err := tmpFile.Close(); err != nil {
+						return fmt.Errorf("failed to copy to temp file and close temp file for key %s", key)
+					}
+					return fmt.Errorf("failed to copy to temp file for key %s", key)
+				}
+				if err := tmpFile.Close(); err != nil {
+					return fmt.Errorf("failed to close temp file for key %s", key)
+				}
+				for _, path := range paths {
+					pathTmpFile, err := os.Open(tmpName)
+					if err != nil {
+						return fmt.Errorf("failed to open temp file for key %s", key)
+					}
+					*closers = append(*closers, pathTmpFile)
+					upload = graphql.Upload{
+						File:     pathTmpFile,
+						Size:     header.Size,
+						Filename: header.Filename,
+					}
+					err = addUploadToOperations(request, upload, key, path)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func addUploadToOperations(request *params, upload graphql.Upload, key, path string) error {
+	if !strings.HasPrefix(path, "variables.") {
+		return fmt.Errorf("invalid operations paths for key %s", key)
+	}
+
+	var ptr interface{} = request.Variables
+	parts := strings.Split(path, ".")
+
+	// skip the first part (variables) because we started there
+	for i, p := range parts[1:] {
+		last := i == len(parts)-2
+		if ptr == nil {
+			return fmt.Errorf("path is missing \"variables.\" prefix, key: %s, path: %s", key, path)
+		}
+		if index, parseNbrErr := strconv.Atoi(p); parseNbrErr == nil {
+			if last {
+				ptr.([]interface{})[index] = upload
+			} else {
+				ptr = ptr.([]interface{})[index]
+			}
+		} else {
+			if last {
+				ptr.(map[string]interface{})[p] = upload
+			} else {
+				ptr = ptr.(map[string]interface{})[p]
+			}
+		}
+	}
+
+	return nil
 }

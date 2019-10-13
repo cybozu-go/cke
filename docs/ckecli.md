@@ -156,15 +156,17 @@ BACKUP_NAME is the name of backup file.
 
 Control CKE managed kubernetes.
 
-### `ckecli kubernetes issue [--ttl=TTL]`
+### `ckecli kubernetes issue [--ttl=TTL] [--group=GROUPNAME] [--user=USERNAME]`
 
 Write kubeconfig to stdout.
 
 This config file embeds client certificate and can be used with `kubectl` to connect Kubernetes cluster.
 
-| Option  | Default value | Description                   |
-| ------- | ------------- | ----------------------------- |
-| `--ttl` | `2h`          | TTL of the client certificate |
+| Option    | Default value    | Description                                 |
+| --------- | ---------------- | ------------------------------------------- |
+| `--ttl`   | `2h`             | TTL of the client certificate               |
+| `--group` | `system:masters` | organization name of the client certificate |
+| `--user`  | `admin`          | user name of the client certificate         |
 
 `ckecli resource`
 -----------------

@@ -42,6 +42,8 @@ type KubernetesClusterStatus struct {
 	DNSService          *corev1.Service
 	ClusterDNS          ClusterDNSStatus
 	NodeDNS             NodeDNSStatus
+	MasterEndpoints     *corev1.Endpoints
+	EtcdService         *corev1.Service
 	EtcdEndpoints       *corev1.Endpoints
 	EtcdBackup          EtcdBackupStatus
 	ResourceStatuses    map[string]map[string]string
@@ -88,6 +90,7 @@ type ClusterStatus struct {
 
 // NodeStatus status of a node.
 type NodeStatus struct {
+	SSHConnected      bool
 	Etcd              EtcdStatus
 	Rivers            ServiceStatus
 	EtcdRivers        ServiceStatus

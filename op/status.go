@@ -17,17 +17,21 @@ import (
 	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
-	"github.com/ghodss/yaml"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 // GetNodeStatus returns NodeStatus.
 func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, cluster *cke.Cluster) (*cke.NodeStatus, error) {
 	status := &cke.NodeStatus{}
 	agent := inf.Agent(node.Address)
-	ce := inf.Engine(node.Address)
+	status.SSHConnected = agent != nil
+	if !status.SSHConnected {
+		return status, nil
+	}
 
+	ce := inf.Engine(node.Address)
 	ss, err := ce.Inspect([]string{
 		EtcdContainerName,
 		RiversContainerName,
@@ -134,7 +138,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		AllowSwap:     false,
 	}
 	if status.Kubelet.Running {
-		status.Kubelet.IsHealthy, err = checkHealthz(ctx, inf, node.Address, 10248)
+		status.Kubelet.IsHealthy, err = CheckKubeletHealthz(ctx, inf, node.Address, 10248)
 		if err != nil {
 			log.Warn("failed to check kubelet health", map[string]interface{}{
 				log.FnError: err,
@@ -145,10 +149,10 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		cfgData, _, err := agent.Run("cat /etc/kubernetes/kubelet/config.yml")
 		if err == nil {
 			v := struct {
-				ClusterDomain        string `yaml:"clusterDomain"`
-				FailSwapOn           bool   `yaml:"failSwapOn"`
-				ContainerLogMaxSize  string `yaml:"containerLogMaxSize"`
-				ContainerLogMaxFiles int32  `yaml:"containerLogMaxFiles"`
+				ClusterDomain        string `json:"clusterDomain"`
+				FailSwapOn           bool   `json:"failSwapOn"`
+				ContainerLogMaxSize  string `json:"containerLogMaxSize"`
+				ContainerLogMaxFiles int32  `json:"containerLogMaxFiles"`
 			}{}
 			err = yaml.Unmarshal(cfgData, &v)
 			if err == nil {
@@ -308,17 +312,36 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	s.EtcdBackup, err = getEtcdBackupStatus(ctx, inf, n)
-	if err != nil {
+	epAPI := clientset.CoreV1().Endpoints
+	ep, err := epAPI(metav1.NamespaceDefault).Get("kubernetes", metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.MasterEndpoints = ep
+	case k8serr.IsNotFound(err):
+	default:
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	ep, err := clientset.CoreV1().Endpoints("kube-system").Get(etcdEndpointsName, metav1.GetOptions{})
+	svc, err := clientset.CoreV1().Services(metav1.NamespaceSystem).Get(EtcdServiceName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.EtcdService = svc
+	case k8serr.IsNotFound(err):
+	default:
+		return cke.KubernetesClusterStatus{}, err
+	}
+
+	ep, err = epAPI(metav1.NamespaceSystem).Get(EtcdEndpointsName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.EtcdEndpoints = ep
 	case k8serr.IsNotFound(err):
 	default:
+		return cke.KubernetesClusterStatus{}, err
+	}
+
+	s.EtcdBackup, err = getEtcdBackupStatus(ctx, inf, n)
+	if err != nil {
 		return cke.KubernetesClusterStatus{}, err
 	}
 
@@ -331,6 +354,9 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	}
 
 	k8s, err := inf.K8sClient(ctx, n)
+	if err != nil {
+		return cke.KubernetesClusterStatus{}, err
+	}
 	s.ResourceStatuses = make(map[string]map[string]string)
 	for _, rkey := range rkeys {
 		parts := strings.Split(rkey, "/")
@@ -445,6 +471,15 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			s.SetResourceStatus(rkey, obj.Annotations)
 		case "CronJob":
 			obj, err := k8s.BatchV2alpha1().CronJobs(parts[1]).Get(parts[2], metav1.GetOptions{})
+			if k8serr.IsNotFound(err) {
+				continue
+			}
+			if err != nil {
+				return cke.KubernetesClusterStatus{}, err
+			}
+			s.SetResourceStatus(rkey, obj.Annotations)
+		case "PodDisruptionBudget":
+			obj, err := k8s.PolicyV1beta1().PodDisruptionBudgets(parts[1]).Get(parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -567,7 +602,8 @@ func getEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 	return s, nil
 }
 
-func checkHealthz(ctx context.Context, inf cke.Infrastructure, addr string, port uint16) (bool, error) {
+// CheckKubeletHealthz checks that Kubelet is healthy
+func CheckKubeletHealthz(ctx context.Context, inf cke.Infrastructure, addr string, port uint16) (bool, error) {
 	healthzURL := "http://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
 	req, err := http.NewRequest("GET", healthzURL, nil)
 	if err != nil {
