@@ -5,6 +5,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.15.5] - 2019-10-25
+
+### Changed
+- Support golang v1.13(#251)
+
 ## [1.15.4] - 2019-10-08
 
 ### Added
@@ -76,7 +81,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 * See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 * See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.15.4...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.15.5...HEAD
+[1.15.5]: https://github.com/cybozu-go/cke/compare/v1.15.4...v1.15.5
 [1.15.4]: https://github.com/cybozu-go/cke/compare/v1.15.3...v1.15.4
 [1.15.3]: https://github.com/cybozu-go/cke/compare/v1.15.2...v1.15.3
 [1.15.2]: https://github.com/cybozu-go/cke/compare/v1.15.1...v1.15.2
