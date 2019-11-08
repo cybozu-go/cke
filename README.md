@@ -4,8 +4,6 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/cybozu-go/cke)](https://goreportcard.com/report/github.com/cybozu-go/cke)
 [![Docker Repository on Quay](https://quay.io/repository/cybozu/cke/status "Docker Repository on Quay")](https://quay.io/repository/cybozu/cke)
 
-
-
 Cybozu Kubernetes Engine
 ========================
 
@@ -25,10 +23,7 @@ Requirements
 
 ### Node OS Requirements
 
-* Docker
-
-    Data in Docker volumes must persist between reboots.
-
+* Docker: etcd data is stored in Docker volumes.
 * A user who belongs to `docker` group
 * SSH access for the user
 
@@ -39,6 +34,16 @@ Features
 
     CKE can bootstrap a Kubernetes and [etcd][] cluster from scratch.
     CKE can also add or remove nodes to/from the Kubernetes and etcd cluster.
+
+* In-place and fast upgrade of Kubernetes
+
+    A version of CKE corresponds strictly to a single version of Kubernetes.
+    Therefore, upgrading CKE will upgrade the managed Kubernetes.
+
+    Unlike [kubeadm][] or similar tools, CKE can automatically upgrade
+    its managed Kubernetes without draining nodes.  The time taken for
+    the upgrade is not proportional to the number of nodes, so it is
+    very fast.
 
 * Managed etcd cluster
 
@@ -139,6 +144,7 @@ CKE is licensed under MIT license.
 [godoc]: https://godoc.org/github.com/cybozu-go/cke
 [Kubernetes]: https://kubernetes.io/
 [etcd]: https://github.com/etcd-io/etcd
+[kubeadm]: https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm/
 [containerd]: https://containerd.io/
 [cri-o]: https://cri-o.io/
 [Vault]: https://www.vaultproject.io
