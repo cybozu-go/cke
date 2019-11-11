@@ -123,7 +123,7 @@ Usage
 ```console
 $ docker run -d --read-only \
     --network host --name cke \
-    quay.io/cybozu/cke:1.14 [options...]
+    quay.io/cybozu/cke:1.15 [options...]
 ```
 
 ### Install `ckecli` to host file system
@@ -132,8 +132,15 @@ $ docker run -d --read-only \
 $ docker run --rm -u root:root \
     --entrypoint /usr/local/cke/install-tools \
     --mount type=bind,src=DIR,target=/host \
-    quay.io/cybozu/cke:1.14
+    quay.io/cybozu/cke:1.15
 ```
+
+Feedback
+--------
+
+Please report bugs / issues to [GitHub issues](https://github.com/cybozu-go/cke/issues).
+
+Feel free to send your pull requests!
 
 License
 -------
