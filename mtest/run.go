@@ -432,6 +432,8 @@ func checkCluster(c *cke.Cluster) error {
 	if err != nil {
 		return err
 	}
+	time := time.Now()
+	fmt.Printf("%s etcd members: %v\n", time.String(), status.Etcd.Members)
 
 	nf := server.NewNodeFilter(c, status)
 	if !nf.EtcdIsGood() {
