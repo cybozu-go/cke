@@ -8,7 +8,7 @@ replace (
 require (
 	github.com/99designs/gqlgen v0.9.3
 	github.com/containernetworking/cni v0.6.0
-	github.com/coreos/etcd v3.3.15+incompatible
+	github.com/coreos/etcd v3.3.18+incompatible
 	github.com/cybozu-go/etcdutil v1.3.4
 	github.com/cybozu-go/log v1.5.0
 	github.com/cybozu-go/netutil v1.2.0
