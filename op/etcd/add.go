@@ -8,6 +8,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
+	"github.com/cybozu-go/log"
 )
 
 type addMemberOp struct {
@@ -99,6 +100,9 @@ func (c addMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) error
 		return err
 	}
 	members := resp.Members
+	log.Debug("members in MemberList response", map[string]interface{}{
+		"members": members,
+	})
 
 	inMember := false
 	for _, m := range members {
@@ -127,6 +131,9 @@ func (c addMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) error
 			return err
 		}
 		members = resp.Members
+		log.Debug("members in MemberAdd response", map[string]interface{}{
+			"members": members,
+		})
 	}
 	// gofail: var etcdAfterMemberAdd struct{}
 	ce := inf.Engine(c.node.Address)
