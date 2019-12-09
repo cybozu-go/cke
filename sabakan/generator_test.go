@@ -28,8 +28,8 @@ func testMachineToNode(t *testing.T) {
 
 	node := &cke.Node{
 		ControlPlane: true,
-		Labels:       map[string]string{"foo": "bar", "rack": "{{ .Spec.Rack }}"},
-		Annotations:  map[string]string{"hoge": "fuga", "role": "{{ .Spec.Role }}"},
+		Labels:       map[string]string{"foo": "bar", "rack": "{{ .Rack }}"},
+		Annotations:  map[string]string{"hoge": "fuga", "role": "{{ .Role }}"},
 		Taints:       []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoSchedule}},
 	}
 	res1, err := MachineToNode(machine, node)

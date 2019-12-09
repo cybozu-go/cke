@@ -42,7 +42,7 @@ func MachineToNode(m *Machine, tmpl *cke.Node) (*cke.Node, error) {
 			return nil, err
 		}
 		buf := &bytes.Buffer{}
-		err = t.Execute(buf, m)
+		err = t.Execute(buf, m.Spec)
 		if err != nil {
 			return nil, err
 		}
@@ -61,7 +61,7 @@ func MachineToNode(m *Machine, tmpl *cke.Node) (*cke.Node, error) {
 			return nil, err
 		}
 		buf := &bytes.Buffer{}
-		err = t.Execute(buf, m)
+		err = t.Execute(buf, m.Spec)
 		if err != nil {
 			return nil, err
 		}
