@@ -28,8 +28,8 @@ func testMachineToNode(t *testing.T) {
 
 	node := &cke.Node{
 		ControlPlane: true,
-		Labels:       map[string]string{"foo": "bar"},
-		Annotations:  map[string]string{"hoge": "fuga"},
+		Labels:       map[string]string{"foo": "bar", "rack": "{{ .Spec.Rack }}"},
+		Annotations:  map[string]string{"hoge": "fuga", "role": "{{ .Spec.Role }}"},
 		Taints:       []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoSchedule}},
 	}
 	res1, err := MachineToNode(machine, node)
@@ -40,6 +40,9 @@ func testMachineToNode(t *testing.T) {
 	domain := "cke.cybozu.com"
 	if res1.Annotations["hoge"] != "fuga" {
 		t.Error(`res1.Annotations["hoge"] != "fuga", actual:`, res1.Annotations)
+	}
+	if res1.Annotations["role"] != "worker" {
+		t.Error(`res1.Annotations["role"] != "worker", actual:`, res1.Annotations)
 	}
 	if res1.Annotations[domain+"/serial"] != machine.Spec.Serial {
 		t.Error(`res1.Annotations[domain + "/serial"] != "test", actual:`, res1.Annotations)
@@ -52,6 +55,9 @@ func testMachineToNode(t *testing.T) {
 	}
 	if res1.Labels["foo"] != "bar" {
 		t.Error(`res1.Labels["foo"] != "bar", actual:`, res1.Labels)
+	}
+	if res1.Labels["rack"] != "0" {
+		t.Error(`res1.Labels["rack"] != "0", actual:`, res1.Labels)
 	}
 	if res1.Labels["sabakan."+domain+"/foo"] != "foobar" {
 		t.Error(`res1.Labels["sabakan."+domain+"/foo"] != "foobar"`, res1.Labels)
