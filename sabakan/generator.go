@@ -25,7 +25,7 @@ var (
 //  - https://github.com/cybozu-go/cke/blob/master/docs/sabakan-integration.md#taint-nodes
 //  - https://github.com/cybozu-go/cke/blob/master/docs/sabakan-integration.md#node-labels
 //  - https://github.com/cybozu-go/cke/blob/master/docs/sabakan-integration.md#node-annotations
-func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
+func MachineToNode(m *Machine, tmpl *cke.Node) (*cke.Node, error) {
 	n := &cke.Node{
 		Address:      m.Spec.IPv4[0],
 		User:         tmpl.User,
@@ -81,7 +81,7 @@ func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 		})
 	}
 
-	return n
+	return n, nil
 }
 
 type nodeTemplate struct {
@@ -344,10 +344,18 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 
 	nodes := make([]*cke.Node, 0, len(op.cps)+len(op.workers))
 	for _, m := range op.cps {
-		nodes = append(nodes, MachineToNode(m, g.cpTmpl.Node))
+		n, err := MachineToNode(m, g.cpTmpl.Node)
+		if err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, n)
 	}
 	for _, m := range op.workers {
-		nodes = append(nodes, MachineToNode(m, g.getWorkerTmpl(m.Spec.Role).Node))
+		n, err := MachineToNode(m, g.getWorkerTmpl(m.Spec.Role).Node)
+		if err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, n)
 	}
 
 	c := *g.template

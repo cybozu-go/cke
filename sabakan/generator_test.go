@@ -32,7 +32,10 @@ func testMachineToNode(t *testing.T) {
 		Annotations:  map[string]string{"hoge": "fuga"},
 		Taints:       []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoSchedule}},
 	}
-	res1 := MachineToNode(machine, node)
+	res1, err := MachineToNode(machine, node)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	domain := "cke.cybozu.com"
 	if res1.Annotations["hoge"] != "fuga" {
@@ -70,12 +73,18 @@ func testMachineToNode(t *testing.T) {
 	}
 
 	machine.Status.State = StateRetiring
-	res2 := MachineToNode(machine, node)
+	res2, err := MachineToNode(machine, node)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !containsTaint(res2.Taints, corev1.Taint{Key: domain + "/state", Value: "retiring", Effect: corev1.TaintEffectNoExecute}) {
 		t.Error(`res2.Taints do not have corev1.Taint{Key: "cke.cybozu.com/state", Value: "retiring", Effect: "NoExecute"}, actual:`, res2.Taints)
 	}
 	machine.Status.State = StateRetired
-	res3 := MachineToNode(machine, node)
+	res3, err := MachineToNode(machine, node)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !containsTaint(res3.Taints, corev1.Taint{Key: domain + "/state", Value: "retired", Effect: corev1.TaintEffectNoExecute}) {
 		t.Error(`res3.Taints do not have corev1.Taint{Key: "cke.cybozu.com/state", Value: "retired", Effect: "NoExecute"}, actual:`, res3.Taints)
 	}
