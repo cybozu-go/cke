@@ -48,7 +48,6 @@ func (o *etcdStartOp) NextCommand() cke.Commander {
 			"--mount",
 			"type=volume,src=" + op.EtcdVolumeName(o.params) + ",dst=/var/lib/etcd",
 		}
-
 		return startEtcdCommand{o.endpoints, o.nodes, opts, o.params.ServiceParams}
 	case 3:
 		o.step++

@@ -100,9 +100,6 @@ func (c addMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) error
 		return err
 	}
 	members := resp.Members
-	log.Debug("members in MemberList response", map[string]interface{}{
-		"members": members,
-	})
 
 	inMember := false
 	for _, m := range members {
@@ -131,10 +128,11 @@ func (c addMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) error
 			return err
 		}
 		members = resp.Members
-		log.Debug("members in MemberAdd response", map[string]interface{}{
-			"members": members,
-		})
 	}
+	log.Debug("retrieved memgers from etcd", map[string]interface{}{
+		"members": members,
+	})
+
 	// gofail: var etcdAfterMemberAdd struct{}
 	ce := inf.Engine(c.node.Address)
 	ss, err := ce.Inspect([]string{op.EtcdContainerName})
