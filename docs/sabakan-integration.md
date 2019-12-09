@@ -303,8 +303,10 @@ The taint key is `cke.cybozu.com/state`.
 
 For other machine states, the taint is removed.
 
-Node labels
------------
+Static Node Labels and Annotations
+----------------------------------
+
+#### Labels
 
 Sabakan [`Machine`][schema] `labels` are translated to Kubernetes Node labels.
 The label key will be prefixed by `sabakan.cke.cybozu.com/`.
@@ -317,8 +319,7 @@ Other Machine fields are also translated to labels as follows.
 | `spec.indexInRack` | `cke.cybozu.com/index-in-rack` | `spec.indexInRack` converted to string. |
 | `spec.role`        | `cke.cybozu.com/role`          | The same as `spec.role`.                |
 
-Node annotations
-----------------
+#### Annotations
 
 Following Machine fields are translated to Node annotations:
 
@@ -327,6 +328,13 @@ Following Machine fields are translated to Node annotations:
 | `spec.serial`       | `cke.cybozu.com/serial`        | The same as `spec.serial`.             |
 | `spec.registerDate` | `cke.cybozu.com/register-date` | `spec.registerDate` in RFC3339 format. |
 | `spec.retireDate`   | `cke.cybozu.com/retire-date`   | `spec.retireDate` in RFC3339 format.   |
+
+Dynamic Node Labels and Annotations
+-----------------------------------
+
+CKE can also create labels in combination with fields under Sabakan [`Machine`][schema] `Spec`.
+Only values of the labels are created with go-template (e.g. `rack: {{ .Rack }}` ).
+The available fields can be referenced in [Labels](#labels) and [Annotations](#annotations).
 
 
 [sabakan]: https://github.com/cybozu-go/sabakan
