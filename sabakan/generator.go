@@ -1,9 +1,11 @@
 package sabakan
 
 import (
+	"bytes"
 	"errors"
 	"sort"
 	"strconv"
+	"text/template"
 	"time"
 
 	"github.com/cybozu-go/cke"
@@ -35,7 +37,16 @@ func MachineToNode(m *Machine, tmpl *cke.Node) (*cke.Node, error) {
 	}
 
 	for k, v := range tmpl.Annotations {
-		n.Annotations[k] = v
+		t, err := template.New(k).Parse(v)
+		if err != nil {
+			return nil, err
+		}
+		buf := &bytes.Buffer{}
+		err = t.Execute(buf, m)
+		if err != nil {
+			return nil, err
+		}
+		n.Annotations[k] = buf.String()
 	}
 	n.Annotations["cke.cybozu.com/serial"] = m.Spec.Serial
 	n.Annotations["cke.cybozu.com/register-date"] = m.Spec.RegisterDate.Format(time.RFC3339)
@@ -45,7 +56,16 @@ func MachineToNode(m *Machine, tmpl *cke.Node) (*cke.Node, error) {
 		n.Labels["sabakan.cke.cybozu.com/"+label.Name] = label.Value
 	}
 	for k, v := range tmpl.Labels {
-		n.Labels[k] = v
+		t, err := template.New(k).Parse(v)
+		if err != nil {
+			return nil, err
+		}
+		buf := &bytes.Buffer{}
+		err = t.Execute(buf, m)
+		if err != nil {
+			return nil, err
+		}
+		n.Labels[k] = buf.String()
 	}
 	n.Labels["cke.cybozu.com/rack"] = strconv.Itoa(m.Spec.Rack)
 	n.Labels["cke.cybozu.com/index-in-rack"] = strconv.Itoa(m.Spec.IndexInRack)
