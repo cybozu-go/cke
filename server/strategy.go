@@ -37,6 +37,10 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDe
 		return []cke.Operator{etcd.BootOp(nf.ControlPlane(), c.Options.Etcd, c.Options.Kubelet.Domain)}
 	}
 
+	if nodes := nf.EtcdUnstartedMembers(); len(nodes) > 0 {
+		return []cke.Operator{etcd.AddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)}
+	}
+
 	// 3. Start etcd containers.
 	if nodes := nf.SSHConnectedNodes(nf.EtcdStoppedMembers(), true, false); len(nodes) > 0 {
 		return []cke.Operator{etcd.StartOp(nodes, c.Options.Etcd, c.Options.Kubelet.Domain)}
@@ -134,9 +138,6 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	}
 	if nodes, ids := nf.EtcdNonCPMembers(false); len(nodes) > 0 {
 		return etcd.DestroyMemberOp(nf.ControlPlane(), nodes, ids)
-	}
-	if nodes := nf.EtcdUnstartedMembers(); len(nodes) > 0 {
-		return etcd.AddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)
 	}
 
 	if !nf.EtcdIsGood() {
