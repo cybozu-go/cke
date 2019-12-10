@@ -152,6 +152,9 @@ func (nf *NodeFilter) EtcdStoppedMembers() (nodes []*cke.Node) {
 		if _, ok := nf.status.Etcd.Members[n.Address]; !ok && nf.status.Etcd.IsHealthy {
 			continue
 		}
+		if !nf.status.Etcd.IsAddedMember[n.Address] {
+			continue
+		}
 		st := nf.nodeStatus(n).Etcd
 		if st.Running {
 			continue

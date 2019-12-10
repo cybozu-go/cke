@@ -13,6 +13,7 @@ type EtcdClusterStatus struct {
 	IsHealthy     bool
 	Members       map[string]*etcdserverpb.Member
 	InSyncMembers map[string]bool
+	IsAddedMember map[string]bool
 }
 
 // ClusterDNSStatus contains cluster resolver status.

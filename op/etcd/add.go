@@ -69,6 +69,9 @@ func (o *addMemberOp) NextCommand() cke.Commander {
 	case 7:
 		o.step++
 		return waitEtcdSyncCommand{etcdEndpoints([]*cke.Node{o.targetNode}), false}
+	case 8:
+		o.step++
+		return common.VolumeCreateCommand(nodes, op.EtcdAddedMemberVolumeName)
 	}
 	return nil
 }
