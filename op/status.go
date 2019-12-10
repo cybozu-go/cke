@@ -180,6 +180,9 @@ func GetEtcdClusterStatus(ctx context.Context, inf cke.Infrastructure, nodes []*
 		}
 		clusterStatus.IsAddedMember[n.Address] = isAdded
 	}
+	log.Debug("isAdded", map[string]interface{}{
+		"IsAddedMember": clusterStatus.IsAddedMember,
+	})
 
 	var endpoints []string
 	for _, n := range nodes {
