@@ -39,7 +39,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDe
 
 	// 3. Start etcd containers.
 	if nodes := nf.SSHConnectedNodes(nf.EtcdStoppedMembers(), true, false); len(nodes) > 0 {
-		return []cke.Operator{etcd.StartOp(nf.ControlPlane(), nodes, c.Options.Etcd, c.Options.Kubelet.Domain)}
+		return []cke.Operator{etcd.StartOp(nodes, c.Options.Etcd, c.Options.Kubelet.Domain)}
 	}
 
 	// 4. Wait for etcd cluster to become ready
