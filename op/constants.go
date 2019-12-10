@@ -49,7 +49,7 @@ const (
 
 	// DefaultEtcdVolumeName is etcd default volume name
 	DefaultEtcdVolumeName = "etcd-cke"
-	// EtcdAddedMemberVolumeName is flag of add-etcd-member has completed or not
+	// EtcdAddedMemberVolumeName is volume name for flag of add-etcd-member has completed or not
 	EtcdAddedMemberVolumeName = "etcd-added-member"
 
 	// TimeoutDuration is default timeout duration

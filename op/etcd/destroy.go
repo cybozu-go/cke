@@ -31,13 +31,13 @@ func (o *destroyMemberOp) NextCommand() cke.Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return removeMemberCommand{o.endpoints, o.ids}
+		return common.VolumeRemoveCommand(o.targets, op.EtcdAddedMemberVolumeName)
 	case 1:
 		o.step++
-		return common.KillContainersCommand(o.targets, op.EtcdContainerName)
+		return removeMemberCommand{o.endpoints, o.ids}
 	case 2:
 		o.step++
-		return common.VolumeRemoveCommand(o.targets, op.EtcdAddedMemberVolumeName)
+		return common.KillContainersCommand(o.targets, op.EtcdContainerName)
 	case 3:
 		o.step++
 		return common.VolumeRemoveCommand(o.targets, op.EtcdVolumeName(o.params))

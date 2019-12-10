@@ -188,18 +188,15 @@ func (d testData) withEtcdRivers() testData {
 }
 
 func (d testData) withStoppedEtcd() testData {
-	st := &d.Status.Etcd
-	st.IsAddedMember = make(map[string]bool)
 	for _, n := range d.ControlPlane() {
 		d.NodeStatus(n).Etcd.HasData = true
-		st.IsAddedMember[n.Address] = true
+		d.NodeStatus(n).Etcd.IsAddedMember = true
 	}
 	return d
 }
 
 func (d testData) withNotAddedStoppedEtcd() testData {
-	st := &d.Status.Etcd
-	st.IsAddedMember[d.ControlPlane()[0].Address] = false
+	d.NodeStatus(d.ControlPlane()[0]).Etcd.IsAddedMember = false
 	return d
 }
 

@@ -13,7 +13,6 @@ type EtcdClusterStatus struct {
 	IsHealthy     bool
 	Members       map[string]*etcdserverpb.Member
 	InSyncMembers map[string]bool
-	IsAddedMember map[string]bool
 }
 
 // ClusterDNSStatus contains cluster resolver status.
@@ -117,7 +116,8 @@ type ServiceStatus struct {
 // EtcdStatus is the status of kubelet.
 type EtcdStatus struct {
 	ServiceStatus
-	HasData bool
+	HasData       bool
+	IsAddedMember bool
 }
 
 // KubeComponentStatus represents service status and endpoint's health

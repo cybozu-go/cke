@@ -51,9 +51,15 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		return nil, err
 	}
 
+	isAddedmember, err := ce.VolumeExists(EtcdAddedMemberVolumeName)
+	if err != nil {
+		return nil, err
+	}
+
 	status.Etcd = cke.EtcdStatus{
 		ServiceStatus: ss[EtcdContainerName],
 		HasData:       etcdVolumeExists,
+		IsAddedMember: isAddedmember,
 	}
 	status.Rivers = ss[RiversContainerName]
 	status.EtcdRivers = ss[EtcdRiversContainerName]
@@ -170,19 +176,6 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 // GetEtcdClusterStatus returns EtcdClusterStatus
 func GetEtcdClusterStatus(ctx context.Context, inf cke.Infrastructure, nodes []*cke.Node) (cke.EtcdClusterStatus, error) {
 	clusterStatus := cke.EtcdClusterStatus{}
-
-	clusterStatus.IsAddedMember = make(map[string]bool)
-	for _, n := range nodes {
-		ce := inf.Engine(n.Address)
-		isAdded, err := ce.VolumeExists(EtcdAddedMemberVolumeName)
-		if err != nil {
-			return clusterStatus, err
-		}
-		clusterStatus.IsAddedMember[n.Address] = isAdded
-	}
-	log.Debug("isAdded", map[string]interface{}{
-		"IsAddedMember": clusterStatus.IsAddedMember,
-	})
 
 	var endpoints []string
 	for _, n := range nodes {
