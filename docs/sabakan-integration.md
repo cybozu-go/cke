@@ -310,12 +310,15 @@ Sabakan [`Machine`][schema] `labels` are translated to Kubernetes Node labels.
 The label key will be prefixed by `sabakan.cke.cybozu.com/`.
 
 Other Machine fields are also translated to labels as follows.
+`topology.kubernetes.io/zone` and `failure-domain.beta.kubernetes.io/zone`(deprecated) are well-known labels.
 
-| Field              | Label key                      | Value                                   |
-| ------------------ | ------------------------------ | --------------------------------------- |
-| `spec.rack`        | `cke.cybozu.com/rack`          | `spec.rack` converted to string.        |
-| `spec.indexInRack` | `cke.cybozu.com/index-in-rack` | `spec.indexInRack` converted to string. |
-| `spec.role`        | `cke.cybozu.com/role`          | The same as `spec.role`.                |
+| Field              | Label key                                | Value                                   |
+| ------------------ | ---------------------------------------- | --------------------------------------- |
+| `spec.rack`        | `cke.cybozu.com/rack`                    | `spec.rack` converted to string.        |
+| `spec.rack`        | `topology.kubernetes.io/zone`            | `spec.rack` converted to string.        |
+| `spec.rack`        | `failure-domain.beta.kubernetes.io/zone` | `spec.rack` converted to string.        |
+| `spec.indexInRack` | `cke.cybozu.com/index-in-rack`           | `spec.indexInRack` converted to string. |
+| `spec.role`        | `cke.cybozu.com/role`                    | The same as `spec.role`.                |
 
 Node annotations
 ----------------
