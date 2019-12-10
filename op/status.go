@@ -14,7 +14,6 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
@@ -172,9 +171,10 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 func GetEtcdClusterStatus(ctx context.Context, inf cke.Infrastructure, nodes []*cke.Node) (cke.EtcdClusterStatus, error) {
 	clusterStatus := cke.EtcdClusterStatus{}
 
+	clusterStatus.IsAddedMember = make(map[string]bool)
 	for _, n := range nodes {
 		ce := inf.Engine(n.Address)
-		isAdded, err := ce.VolumeExists(op.EtcdAddedMemberVolumeName)
+		isAdded, err := ce.VolumeExists(EtcdAddedMemberVolumeName)
 		if err != nil {
 			return clusterStatus, err
 		}
