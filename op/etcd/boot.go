@@ -74,6 +74,9 @@ func (o *bootOp) NextCommand() cke.Commander {
 	case 6:
 		o.step++
 		return setupEtcdAuthCommand{o.endpoints}
+	case 7:
+		o.step++
+		return common.VolumeCreateCommand(o.nodes, op.EtcdAddedMemberVolumeName)
 	default:
 		return nil
 	}

@@ -194,6 +194,11 @@ func (d testData) withStoppedEtcd() testData {
 	return d
 }
 
+func (d testData) withNotHasDataStoppedEtcd() testData {
+	d.NodeStatus(d.ControlPlane()[0]).Etcd.HasData = false
+	return d
+}
+
 func (d testData) withUnhealthyEtcd() testData {
 	d.withStoppedEtcd()
 	for _, n := range d.ControlPlane() {
@@ -573,6 +578,14 @@ func TestDecideOps(t *testing.T) {
 			},
 			ExpectedTargetNums: map[string]int{
 				"etcd-start": 1,
+			},
+		},
+		{
+			Name:        "EtcdStart3",
+			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd().withNotHasDataStoppedEtcd(),
+			ExpectedOps: []string{"etcd-start"},
+			ExpectedTargetNums: map[string]int{
+				"etcd-start": 2,
 			},
 		},
 		{

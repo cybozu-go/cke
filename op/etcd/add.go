@@ -8,6 +8,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
+	"github.com/cybozu-go/log"
 )
 
 type addMemberOp struct {
@@ -68,6 +69,9 @@ func (o *addMemberOp) NextCommand() cke.Commander {
 	case 7:
 		o.step++
 		return waitEtcdSyncCommand{etcdEndpoints([]*cke.Node{o.targetNode}), false}
+	case 8:
+		o.step++
+		return common.VolumeCreateCommand(nodes, op.EtcdAddedMemberVolumeName)
 	}
 	return nil
 }
@@ -128,6 +132,10 @@ func (c addMemberCommand) Run(ctx context.Context, inf cke.Infrastructure) error
 		}
 		members = resp.Members
 	}
+	log.Debug("retrieved memgers from etcd", map[string]interface{}{
+		"members": members,
+	})
+
 	// gofail: var etcdAfterMemberAdd struct{}
 	ce := inf.Engine(c.node.Address)
 	ss, err := ce.Inspect([]string{op.EtcdContainerName})
