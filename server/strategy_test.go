@@ -190,13 +190,12 @@ func (d testData) withEtcdRivers() testData {
 func (d testData) withStoppedEtcd() testData {
 	for _, n := range d.ControlPlane() {
 		d.NodeStatus(n).Etcd.HasData = true
-		d.NodeStatus(n).Etcd.IsAddedMember = true
 	}
 	return d
 }
 
-func (d testData) withNotAddedStoppedEtcd() testData {
-	d.NodeStatus(d.ControlPlane()[0]).Etcd.IsAddedMember = false
+func (d testData) withNotHasDataStoppedEtcd() testData {
+	d.NodeStatus(d.ControlPlane()[0]).Etcd.HasData = false
 	return d
 }
 
@@ -583,7 +582,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name:        "EtcdStart3",
-			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd().withNotAddedStoppedEtcd(),
+			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd().withNotHasDataStoppedEtcd(),
 			ExpectedOps: []string{"etcd-start"},
 			ExpectedTargetNums: map[string]int{
 				"etcd-start": 2,

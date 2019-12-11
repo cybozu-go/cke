@@ -159,9 +159,6 @@ func (nf *NodeFilter) EtcdStoppedMembers() (nodes []*cke.Node) {
 		if !st.HasData {
 			continue
 		}
-		if !st.IsAddedMember {
-			continue
-		}
 		nodes = append(nodes, n)
 	}
 	return nodes
