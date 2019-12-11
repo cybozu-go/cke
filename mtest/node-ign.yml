@@ -82,14 +82,6 @@ storage:
                 bin_dir = "/opt/cni/bin"
                 conf_dir = "/etc/cni/net.d"
                 conf_template = ""
-              [plugins.cri.registry]
-                [plugins.cri.registry.mirrors]
-                  [plugins.cri.registry.mirrors."docker.io"]
-                    endpoint = ["http://localhost:5000"]
-                  [plugins.cri.registry.mirrors."quay.io"]
-                    endpoint = ["http://localhost:5000"]
-                  [plugins.cri.registry.mirrors."localhost:5000"]
-                    endpoint = ["http://localhost:5000"]
             [plugins.diff-service]
               default = ["walking"]
             [plugins.linux]
