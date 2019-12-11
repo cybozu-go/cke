@@ -58,6 +58,9 @@ storage:
           [cgroup]
             path = ""
           [plugins]
+            [plugins."io.containerd.grpc.v1.cri"]
+              [plugins."io.containerd.grpc.v1.cri".containerd]
+                runtime_type = "io.containerd.runtime.v1.linux"
             [plugins.cgroups]
               no_prometheus = false
             [plugins.cri]
@@ -71,10 +74,6 @@ storage:
               max_container_log_line_size = 16384
               [plugins.cri.containerd]
                 snapshotter = "overlayfs"
-                [plugins.cri.containerd.default_runtime]
-                  runtime_type = "io.containerd.runtime.v1.linux"
-                  runtime_engine = ""
-                  runtime_root = ""
                 [plugins.cri.containerd.untrusted_workload_runtime]
                   runtime_type = ""
                   runtime_engine = ""
