@@ -88,6 +88,8 @@ storage:
                     endpoint = ["http://localhost:5000"]
                   [plugins.cri.registry.mirrors."quay.io"]
                     endpoint = ["http://localhost:5000"]
+                  [plugins.cri.registry.mirrors."localhost:5000"]
+                    endpoint = ["http://localhost:5000"]
             [plugins.diff-service]
               default = ["walking"]
             [plugins.linux]
@@ -121,6 +123,7 @@ storage:
           #!/bin/sh
           cp /data/containerd /opt/bin/containerd
           cp /data/containerd-shim /opt/bin/containerd-shim
+          cp /data/containerd-shim-runc-v1 /opt/bin/containerd-shim-runc-v1
           cp /data/ctr /opt/bin/ctr
           cp /data/crictl /opt/bin/crictl
       mode: 0755

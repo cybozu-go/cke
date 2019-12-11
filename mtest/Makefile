@@ -60,6 +60,7 @@ export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL ETCDCTL 
 CONTAINERD_FILES = \
 	$(OUTPUT)/containerd \
 	$(OUTPUT)/containerd-shim \
+	$(OUTPUT)/containerd-shim-runc-v1 \
 	$(OUTPUT)/ctr
 
 TEST_DEPS = \
@@ -282,7 +283,7 @@ $(OUTPUT)/cke.yml: cke.yml
 unpack-containerd:
 	mkdir -p $(OUTPUT)
 	$(CURL) https://github.com/containerd/containerd/releases/download/v$(CONTAINERD_VERSION)/containerd-$(CONTAINERD_VERSION).linux-amd64.tar.gz | \
-	tar xzf - --strip-components=1 -C $(OUTPUT) bin/containerd bin/containerd-shim bin/ctr --warning=no-unknown-keyword
+	tar xzf - --strip-components=1 -C $(OUTPUT) bin/containerd bin/containerd-shim bin/containerd-shim-runc-v1 bin/ctr --warning=no-unknown-keyword
 
 $(CONTAINERD_FILES): unpack-containerd
 

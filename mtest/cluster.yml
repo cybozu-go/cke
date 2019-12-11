@@ -24,6 +24,8 @@ files:
     file: containerd
   - name: containerd-shim
     file: containerd-shim
+  - name: containerd-shim-runc-v1
+    file: containerd-shim-runc-v1
   - name: ctr
     file: ctr
   - name: crictl
