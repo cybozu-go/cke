@@ -17,7 +17,7 @@ ifeq ($(CONTAINER_RUNTIME),remote)
 RUNTIME_ENDPOINT = unix:///var/run/k8s-containerd.sock
 endif
 PLACEMAT = /usr/bin/placemat
-GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo
+GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo --failFast -v
 CURL = curl -fsL
 MANAGEMENT_ETCD_VERSION = 3.3.15
 VAULT_VERSION = 1.2.2

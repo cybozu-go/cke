@@ -49,27 +49,30 @@ func (o *addMemberOp) NextCommand() cke.Commander {
 		return common.StopContainerCommand(o.targetNode, op.EtcdContainerName)
 	case 2:
 		o.step++
-		return common.VolumeRemoveCommand(nodes, volname)
+		return common.VolumeRemoveCommand(nodes, op.EtcdAddedMemberVolumeName)
 	case 3:
 		o.step++
-		return common.VolumeCreateCommand(nodes, volname)
+		return common.VolumeRemoveCommand(nodes, volname)
 	case 4:
 		o.step++
-		return prepareEtcdCertificatesCommand{o.files, o.domain}
+		return common.VolumeCreateCommand(nodes, volname)
 	case 5:
 		o.step++
-		return o.files
+		return prepareEtcdCertificatesCommand{o.files, o.domain}
 	case 6:
+		o.step++
+		return o.files
+	case 7:
 		o.step++
 		opts := []string{
 			"--mount",
 			"type=volume,src=" + volname + ",dst=/var/lib/etcd",
 		}
 		return addMemberCommand{o.endpoints, o.targetNode, opts, extra}
-	case 7:
+	case 8:
 		o.step++
 		return waitEtcdSyncCommand{etcdEndpoints([]*cke.Node{o.targetNode}), false}
-	case 8:
+	case 9:
 		o.step++
 		return common.VolumeCreateCommand(nodes, op.EtcdAddedMemberVolumeName)
 	}
