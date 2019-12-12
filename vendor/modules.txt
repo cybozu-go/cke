@@ -67,7 +67,7 @@ github.com/etcd-io/gofail/code
 github.com/etcd-io/gofail/runtime
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
-# github.com/gogo/protobuf v1.2.1
+# github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
@@ -90,7 +90,7 @@ github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
 # github.com/google/gofuzz v1.0.0
 github.com/google/gofuzz
-# github.com/google/uuid v1.0.0
+# github.com/google/uuid v1.1.1
 github.com/google/uuid
 # github.com/googleapis/gnostic v0.2.0
 github.com/googleapis/gnostic/OpenAPIv2
@@ -210,7 +210,7 @@ github.com/pierrec/lz4/internal/xxh32
 github.com/pkg/errors
 # github.com/ryanuber/go-glob v1.0.0
 github.com/ryanuber/go-glob
-# github.com/spf13/afero v1.1.2
+# github.com/spf13/afero v1.2.2
 github.com/spf13/afero
 github.com/spf13/afero/mem
 # github.com/spf13/cast v1.2.0
@@ -242,7 +242,7 @@ go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
-# golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+# golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8
 golang.org/x/crypto/curve25519
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
@@ -265,14 +265,14 @@ golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 golang.org/x/net/netutil
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
+# golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.0.0-20190403152447-81d4e9dc473e
+# golang.org/x/sys v0.0.0-20190616124812-15dcb6c0061f
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db
+# golang.org/x/text v0.3.2
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex
@@ -303,7 +303,7 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107
+# google.golang.org/genproto v0.0.0-20190418145605-e7d98fc518a7
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.23.0
@@ -351,9 +351,10 @@ gopkg.in/square/go-jose.v2/json
 gopkg.in/square/go-jose.v2/jwt
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 gopkg.in/tomb.v1
-# gopkg.in/yaml.v2 v2.2.2
+# gopkg.in/yaml.v2 v2.2.4
 gopkg.in/yaml.v2
-# k8s.io/api v0.0.0-20190805141119-fdd30b57c827
+# k8s.io/api v0.16.4
+k8s.io/api/admissionregistration/v1
 k8s.io/api/admissionregistration/v1beta1
 k8s.io/api/apps/v1
 k8s.io/api/apps/v1beta1
@@ -373,6 +374,7 @@ k8s.io/api/certificates/v1beta1
 k8s.io/api/coordination/v1
 k8s.io/api/coordination/v1beta1
 k8s.io/api/core/v1
+k8s.io/api/discovery/v1alpha1
 k8s.io/api/events/v1beta1
 k8s.io/api/extensions/v1beta1
 k8s.io/api/networking/v1
@@ -390,7 +392,7 @@ k8s.io/api/settings/v1alpha1
 k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719
+# k8s.io/apimachinery v0.16.5-beta.0
 k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/api/meta
 k8s.io/apimachinery/pkg/api/resource
@@ -430,10 +432,11 @@ k8s.io/apimachinery/pkg/version
 k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/third_party/forked/golang/reflect
-# k8s.io/client-go v0.0.0-20190805141520-2fe0317bcee0
+# k8s.io/client-go v0.16.4
 k8s.io/client-go/discovery
 k8s.io/client-go/kubernetes
 k8s.io/client-go/kubernetes/scheme
+k8s.io/client-go/kubernetes/typed/admissionregistration/v1
 k8s.io/client-go/kubernetes/typed/admissionregistration/v1beta1
 k8s.io/client-go/kubernetes/typed/apps/v1
 k8s.io/client-go/kubernetes/typed/apps/v1beta1
@@ -453,6 +456,7 @@ k8s.io/client-go/kubernetes/typed/certificates/v1beta1
 k8s.io/client-go/kubernetes/typed/coordination/v1
 k8s.io/client-go/kubernetes/typed/coordination/v1beta1
 k8s.io/client-go/kubernetes/typed/core/v1
+k8s.io/client-go/kubernetes/typed/discovery/v1alpha1
 k8s.io/client-go/kubernetes/typed/events/v1beta1
 k8s.io/client-go/kubernetes/typed/extensions/v1beta1
 k8s.io/client-go/kubernetes/typed/networking/v1
@@ -491,11 +495,11 @@ k8s.io/client-go/util/flowcontrol
 k8s.io/client-go/util/homedir
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
-# k8s.io/klog v0.3.1
+# k8s.io/klog v0.4.0
 k8s.io/klog
-# k8s.io/kube-openapi v0.0.0-20190306001800-15615b16d372
+# k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf
 k8s.io/kube-openapi/pkg/util/proto
-# k8s.io/utils v0.0.0-20190308190857-21c4ce38f2a7
+# k8s.io/utils v0.0.0-20190801114015-581e00157fb1
 k8s.io/utils/integer
 # sigs.k8s.io/yaml v1.1.0
 sigs.k8s.io/yaml
