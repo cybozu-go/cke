@@ -62,6 +62,12 @@ func testMachineToNode(t *testing.T) {
 	if res1.Labels[domain+"/role"] != "worker" {
 		t.Error(`res1.Labels["cke.cybozu.com/worker"] != "worker", actual:`, res1.Labels)
 	}
+	if res1.Labels["topology.kubernetes.io/zone"] != "rack0" {
+		t.Error(`res1.Labels["topology.kubernetes.io/zone"] != "rack0", actual:`, res1.Labels)
+	}
+	if res1.Labels["failure-domain.beta.kubernetes.io/zone"] != "rack0" {
+		t.Error(`res1.Labels["failure-domain.beta.kubernetes.io/zone"] != "rack0", actual:`, res1.Labels)
+	}
 	if !containsTaint(res1.Taints, corev1.Taint{Key: "foo", Effect: corev1.TaintEffectNoSchedule}) {
 		t.Error(`res1.Taints do not have corev1.Taint{Key"foo", Effect: corev1.TaintEffectNoSchedule}, actual:`, res1.Taints)
 	}
