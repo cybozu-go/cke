@@ -5,6 +5,16 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.15.6] - 2019-12-12
+
+### Changed
+- Update etcd from 3.3.15 to 3.3.18. (#257)
+- Add flag volume to prevent start-etcd without initial-cluster (#259)
+- Add flag deletion to etcd-add-member (#264)
+
+### Added
+- Add topology labels to Nodes (#261)
+
 ## [1.15.5] - 2019-10-25
 
 ### Changed
@@ -81,7 +91,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 * See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 * See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.15.5...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.15.6...HEAD
+[1.15.6]: https://github.com/cybozu-go/cke/compare/v1.15.5...v1.15.6
 [1.15.5]: https://github.com/cybozu-go/cke/compare/v1.15.4...v1.15.5
 [1.15.4]: https://github.com/cybozu-go/cke/compare/v1.15.3...v1.15.4
 [1.15.3]: https://github.com/cybozu-go/cke/compare/v1.15.2...v1.15.3
