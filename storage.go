@@ -25,6 +25,7 @@ type RecordChan <-chan *Record
 // etcd keys and prefixes
 const (
 	KeyCA                    = "ca/"
+	KeyConfigVersion         = "config-version"
 	KeyCluster               = "cluster"
 	KeyClusterRevision       = "cluster-revision"
 	KeyConstraints           = "constraints"
@@ -51,6 +52,37 @@ var (
 	// ErrNoLeader is returned when the session lost leadership.
 	ErrNoLeader = errors.New("lost leadership")
 )
+
+// GetConfigVersion retrieves the configuration version of the Kubernetes cluster.
+func (s Storage) GetConfigVersion(ctx context.Context) (string, error) {
+	resp, err := s.Get(ctx, KeyConfigVersion)
+	if err != nil {
+		return "", err
+	}
+
+	if len(resp.Kvs) == 0 {
+		return "1", nil
+	}
+
+	return string(resp.Kvs[0].Value), nil
+}
+
+// PutConfigVersion sets the current configuration version of the Kubernetes cluster.
+func (s Storage) PutConfigVersion(ctx context.Context, leaderKey string) error {
+	resp, err := s.Txn(ctx).
+		If(clientv3util.KeyExists(leaderKey)).
+		Then(
+			clientv3.OpPut(KeyConfigVersion, ConfigVersion),
+		).Commit()
+	if err != nil {
+		return err
+	}
+
+	if !resp.Succeeded {
+		return ErrNoLeader
+	}
+	return nil
+}
 
 // PutCluster stores *Cluster into etcd.
 func (s Storage) PutCluster(ctx context.Context, c *Cluster) error {

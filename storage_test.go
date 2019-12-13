@@ -10,6 +10,45 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func testConfigVersion(t *testing.T) {
+	client := newEtcdClient(t)
+	defer client.Close()
+	storage := Storage{client}
+
+	ctx := context.Background()
+	version, err := storage.GetConfigVersion(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != "1" {
+		t.Errorf("version is not 1: version %s", version)
+	}
+
+	s, err := concurrency.NewSession(client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	e := concurrency.NewElection(s, KeyLeader)
+	err = e.Campaign(ctx, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	leaderKey := e.Key()
+	err = storage.PutConfigVersion(ctx, leaderKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	version, err = storage.GetConfigVersion(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != ConfigVersion {
+		t.Errorf("version is not %s: version %s", ConfigVersion, version)
+	}
+}
+
 func testStorageCluster(t *testing.T) {
 	t.Parallel()
 
@@ -571,6 +610,7 @@ func testStorageSabakan(t *testing.T) {
 }
 
 func TestStorage(t *testing.T) {
+	t.Run("ConfigVersion", testConfigVersion)
 	t.Run("Cluster", testStorageCluster)
 	t.Run("Constraints", testStorageConstraints)
 	t.Run("Record", testStorageRecord)
