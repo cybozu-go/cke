@@ -44,6 +44,8 @@ var (
 		Timeout:   defaultDialTimeout,
 		KeepAlive: defaultKeepAlive,
 	}
+
+	looseCheck = false
 )
 
 type sshAgent struct {
@@ -411,10 +413,10 @@ func stopVault(client *ssh.Client) error {
 	return nil
 }
 
-func setupCKE() {
+func setupCKE(img string) {
 	err := stopCKE()
 	Expect(err).NotTo(HaveOccurred())
-	err = runCKE(ckeImageURL)
+	err = runCKE(img)
 	Expect(err).NotTo(HaveOccurred())
 }
 
@@ -431,6 +433,10 @@ func checkCluster(c *cke.Cluster) error {
 	status, res, err := getClusterStatus(c)
 	if err != nil {
 		return err
+	}
+
+	if looseCheck && status.Kubernetes.IsControlPlaneReady {
+		return nil
 	}
 
 	nf := server.NewNodeFilter(c, status)
