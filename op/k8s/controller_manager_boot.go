@@ -70,7 +70,7 @@ type prepareControllerManagerFilesCommand struct {
 	files   *common.FilesBuilder
 }
 
-func (c prepareControllerManagerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+func (c prepareControllerManagerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	const kubeconfigPath = "/etc/kubernetes/controller-manager/kubeconfig"
 	storage := inf.Storage()
 

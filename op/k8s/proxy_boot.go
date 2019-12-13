@@ -77,7 +77,7 @@ type prepareProxyFilesCommand struct {
 	files   *common.FilesBuilder
 }
 
-func (c prepareProxyFilesCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+func (c prepareProxyFilesCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	const kubeconfigPath = "/etc/kubernetes/proxy/kubeconfig"
 	storage := inf.Storage()
 

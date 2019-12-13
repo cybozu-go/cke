@@ -20,7 +20,7 @@ Get health information of this CKE instance.
 **Example**
 
 ```console
-$ curl localhost:10180/health
+$ curl http://localhost:10180/health
 {"health":"healthy"}
 ```
 
@@ -37,6 +37,6 @@ Get current CKE version.
 **Example**
 
 ```console
-$ curl localhost:10180/version
-{"version":"0.1"}
+$ curl http://localhost:10180/version
+{"version":"1.15.5"}
 ```

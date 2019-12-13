@@ -10,6 +10,15 @@ Prefix
 Keys are prefixed by a constant string.
 The default prefix is `/cke/`.
 
+`config-version`
+----------------
+
+This represents the configuration version of the constructed
+Kubernetes cluster.  If this key does not exist, the version
+is considered as "1".
+
+See [cluster_overview.md](cluster_overview.md#config-version) for details.
+
 `cluster`
 ---------
 

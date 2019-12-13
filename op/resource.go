@@ -38,7 +38,7 @@ func (o *resourceApplyOp) Targets() []string {
 	}
 }
 
-func (o *resourceApplyOp) Run(ctx context.Context, inf cke.Infrastructure) error {
+func (o *resourceApplyOp) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	cs, err := inf.K8sClient(ctx, o.apiserver)
 	if err != nil {
 		return err

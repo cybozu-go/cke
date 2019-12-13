@@ -73,7 +73,7 @@ type prepareSchedulerFilesCommand struct {
 	params  cke.SchedulerParams
 }
 
-func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	const kubeconfigPath = "/etc/kubernetes/scheduler/kubeconfig"
 	storage := inf.Storage()
 

@@ -81,8 +81,9 @@ func (s KubernetesClusterStatus) SetResourceStatus(rkey string, annotations map[
 // ClusterStatus represents the working cluster status.
 // The structure reflects Cluster, of course.
 type ClusterStatus struct {
-	Name         string
-	NodeStatuses map[string]*NodeStatus // keys are IP address strings.
+	ConfigVersion string
+	Name          string
+	NodeStatuses  map[string]*NodeStatus // keys are IP address strings.
 
 	Etcd       EtcdClusterStatus
 	Kubernetes KubernetesClusterStatus

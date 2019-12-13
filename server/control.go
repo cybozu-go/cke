@@ -322,7 +322,7 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 			"op":      op.Name(),
 			"command": commander.Command().String(),
 		})
-		err = commander.Run(ctx, inf)
+		err = commander.Run(ctx, inf, leaderKey)
 		if err == nil {
 			continue
 		}

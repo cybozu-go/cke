@@ -1,9 +1,10 @@
-package mtest
+package upgrade
 
 import (
 	"os"
 	"testing"
 
+	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/mtest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,11 +19,11 @@ func TestMtest(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	mtest.RunBeforeSuite("")
+	mtest.RunBeforeSuite("quay.io/cybozu/cke:" + cke.Version)
 })
 
 // This must be the only top-level test container.
 // Other tests and test containers must be listed in this.
-var _ = Describe("Test CKE functions", func() {
-	mtest.FunctionsSuite()
+var _ = Describe("Test CKE functions with upgrade", func() {
+	mtest.UpgradeSuite()
 })
