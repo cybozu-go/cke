@@ -32,12 +32,14 @@ require (
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3
 	github.com/vektah/gqlparser v1.1.2
-	golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8
+	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gotest.tools v2.2.0+incompatible // indirect
-	k8s.io/api v0.16.4
-	k8s.io/apimachinery v0.16.5-beta.0
-	k8s.io/client-go v0.16.4
+	k8s.io/api v0.0.0-20190805141119-fdd30b57c827
+	k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719
+	k8s.io/client-go v0.0.0-20190805141520-2fe0317bcee0
+	k8s.io/kube-openapi v0.0.0-20190306001800-15615b16d372 // indirect
+	k8s.io/utils v0.0.0-20190308190857-21c4ce38f2a7 // indirect
 	sigs.k8s.io/yaml v1.1.0
 )
 

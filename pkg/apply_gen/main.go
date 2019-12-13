@@ -21,35 +21,60 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
-func annotate(meta *metav1.ObjectMeta, rev int64) {
+func annotate(meta *metav1.ObjectMeta, rev int64, data []byte) {
 	if meta.Annotations == nil {
 		meta.Annotations = make(map[string]string)
 	}
 	meta.Annotations[AnnotationResourceRevision] = strconv.FormatInt(rev, 10)
+	meta.Annotations[AnnotationResourceOriginal] = string(data)
 }
 {{- range . }}
 
-func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, rev int64, client rest.Interface, isNamespaced bool) error {
-	annotate(&o.ObjectMeta, rev)
+func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*{{ .API }}.{{ .Kind }}, error), createFunc func(*{{ .API }}.{{ .Kind }}) (*{{ .API }}.{{ .Kind }}, error), patchFunc func(string, types.PatchType, []byte, ...string) (*{{ .API }}.{{ .Kind }}, error)) error {
+	annotate(&o.ObjectMeta, rev, data)
+	current, err := getFunc(o.Name, metav1.GetOptions{})
+	if errors.IsNotFound(err) {
+		_, err = createFunc(o)
+		return err
+	}
+	if err != nil {
+		return err
+	}
+
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
 
-	_, err = client.
-		Patch(types.ApplyPatchType).
-		Resource("{{ .Resource }}").
-		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("fieldManager", "cke").
-		Body(modified).
-		Do().
-		Get()
+	original, ok := current.Annotations[AnnotationResourceOriginal]
+	if !ok {
+		original = string(modified)
+		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
+			"kind":      o.Kind,
+			"namespace": o.Namespace,
+			"name":      o.Name,
+		})
+	}
+
+	currentData, err := encodeToJSON(current)
+	if err != nil {
+		return err
+	}
+	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
+	if err != nil {
+		return err
+	}
+	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
+	if err != nil {
+		return err
+	}
+	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
@@ -83,23 +108,22 @@ func subMain() error {
 	err = tmpl.Execute(f, []struct {
 		API             string
 		Kind            string
-		Resource        string
 		GracefulSeconds int64
 	}{
-		{"corev1", "Namespace", "namespaces", 60},
-		{"corev1", "ServiceAccount", "serviceaccounts", 0},
-		{"corev1", "ConfigMap", "configmaps", 0},
-		{"corev1", "Service", "services", 0},
-		{"policyv1beta1", "PodSecurityPolicy", "podsecuritypolicies", 0},
-		{"networkingv1", "NetworkPolicy", "networkpolicies", 0},
-		{"rbacv1", "Role", "roles", 0},
-		{"rbacv1", "RoleBinding", "rolebindings", 0},
-		{"rbacv1", "ClusterRole", "clusterrole", 0},
-		{"rbacv1", "ClusterRoleBinding", "clusterrolebindings", 0},
-		{"appsv1", "Deployment", "deployments", 60},
-		{"appsv1", "DaemonSet", "daemonsets", 60},
-		{"batchv1beta1", "CronJob", "cronjobs", 60},
-		{"policyv1beta1", "PodDisruptionBudget", "poddisruptionbudgets", 0},
+		{"corev1", "Namespace", 60},
+		{"corev1", "ServiceAccount", 0},
+		{"corev1", "ConfigMap", 0},
+		{"corev1", "Service", 0},
+		{"policyv1beta1", "PodSecurityPolicy", 0},
+		{"networkingv1", "NetworkPolicy", 0},
+		{"rbacv1", "Role", 0},
+		{"rbacv1", "RoleBinding", 0},
+		{"rbacv1", "ClusterRole", 0},
+		{"rbacv1", "ClusterRoleBinding", 0},
+		{"appsv1", "Deployment", 60},
+		{"appsv1", "DaemonSet", 60},
+		{"batchv1beta1", "CronJob", 60},
+		{"policyv1beta1", "PodDisruptionBudget", 0},
 	})
 	if err != nil {
 		return err
