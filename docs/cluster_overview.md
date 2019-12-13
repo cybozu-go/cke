@@ -6,21 +6,15 @@ How CKE works
 
 ![How CKE works](http://www.plantuml.com/plantuml/svg/PO-nQiGm38PtFOMWiuScwTAXf9HEXOxTLKi9eOvTRFdkzS--S11i3yRVzsEXVqvAKVFk88fLygiJ_FZwH4fe_mIVc9ToJk4FPQSrljG7C2dzKX8KjGnaDKHyvttpMz98bIWXLG7W0mj-rwku2i-z6derzchgrGj0NTZaV_Ds36zuQ7XiU6huCP33rPkZtecFzd1lXiR9ekLRoL_H1hziQuw2rkMa4c4MptbtDm00)
 
-CKE constructs and maintains Kubernetes cluster from cluster configuration
-defined by user (administrator).  CKE also deploys some components to nodes
-and onto Kubernetes.
+CKE constructs and maintains Kubernetes cluster according to [a cluster
+configuration](cluster.md) supplied by a user (administrator).
 
-User defines two type of nodes to cluster configuration:
+There are two types of nodes in the cluster configuration, that is,
+workers and control planes.  A worker node runs only `kubelet` and `kube-proxy`.
+A control plane runs `etcd`, `kube-apiserver`, `kube-controller-manager`,
+`kube-scheduler` as well as `kubelet` and `kube-proxy`.
 
-- Worker node: kubelet and kube-proxy
-- Control plane node: Etcd, Kubernetes control plane components.
-
-Worker node is a worker for Kubernetes cluster where containers are running.
-Control plane node works as a master node for the cluster.  It also contains
-etcd server used by kube-apiservers.  The number of the control plane nodes is
-typically three or five.  Control plane node also has a feature of a worker
-nodes.  Therefore, Kubernetes worker components (kubelet and kube-proxy) are
-deployed to every node, and only a few nodes have control plane components.
+The number of the control plane nodes must be at least 1.
 
 Worker Nodes
 ------------
