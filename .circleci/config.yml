@@ -231,7 +231,7 @@ workflows:
       - mtest-upgrade:
           filters:
             branches:
-              ignore: /master|release-/
+              ignore: /master|release-|bump-/
       - compose
   conformance:
     jobs:
