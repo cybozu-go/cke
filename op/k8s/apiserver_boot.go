@@ -110,7 +110,7 @@ type prepareAPIServerFilesCommand struct {
 	params        cke.APIServerParams
 }
 
-func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	storage := inf.Storage()
 
 	// server (and client) certs of API server.

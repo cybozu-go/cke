@@ -85,7 +85,7 @@ type prepareKubeletConfigCommand struct {
 	files   *common.FilesBuilder
 }
 
-func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastructure) error {
+func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	caPath := op.K8sPKIPath("ca.crt")
 	tlsCertPath := op.K8sPKIPath("kubelet.crt")
 	tlsKeyPath := op.K8sPKIPath("kubelet.key")

@@ -142,7 +142,8 @@ func newData() testData {
 	nodeList[3].Labels = cluster.Nodes[3].Labels
 	nodeList[3].Spec.Taints = cluster.Nodes[3].Taints
 	status := &cke.ClusterStatus{
-		NodeStatuses: nodeStatuses,
+		ConfigVersion: cke.ConfigVersion,
+		NodeStatuses:  nodeStatuses,
 		Kubernetes: cke.KubernetesClusterStatus{
 			ResourceStatuses: map[string]map[string]string{
 				"Namespace/foo": {cke.AnnotationResourceRevision: "1"},
@@ -1787,6 +1788,32 @@ func TestDecideOps(t *testing.T) {
 				"stop-kube-controller-manager": 1,
 				"stop-kube-scheduler":          1,
 			},
+		},
+		{
+			Name: "Upgrade",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "10.0.0.14",
+					Labels:      map[string]string{"label1": "value"},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}).with(func(data testData) {
+				data.Status.ConfigVersion = "1"
+			}),
+			ExpectedOps: []string{"upgrade"},
 		},
 	}
 

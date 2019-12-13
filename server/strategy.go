@@ -20,6 +20,11 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDe
 
 	nf := NewNodeFilter(c, cs)
 
+	// 0. Execute upgrade opeartion if necessary
+	if cs.ConfigVersion != cke.ConfigVersion {
+		return []cke.Operator{op.UpgradeOp(cs.ConfigVersion, nf.ControlPlane())}
+	}
+
 	// 1. Run or restart rivers.  This guarantees:
 	// - CKE tools image is pulled on all nodes.
 	// - Rivers runs on all nodes and will proxy requests only to control plane nodes.

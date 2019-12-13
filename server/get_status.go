@@ -38,6 +38,11 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 	}
 
 	cs := new(cke.ClusterStatus)
+	version, err := inf.Storage().GetConfigVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cs.ConfigVersion = version
 	cs.NodeStatuses = statuses
 
 	var etcdRunning bool
