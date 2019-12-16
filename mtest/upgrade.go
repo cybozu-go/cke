@@ -1,7 +1,6 @@
 package mtest
 
 import (
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -14,22 +13,6 @@ func TestUpgrade() {
 		Eventually(func() error {
 			_, _, err := kubectl("get", "sa/default")
 			return err
-		}).Should(Succeed())
-		Eventually(func() error {
-			for resource, name := range map[string]string{
-				"serviceaccounts":     "cke-cluster-dns",
-				"clusterroles":        "system:cluster-dns",
-				"clusterrolebindings": "system:cluster-dns",
-				"configmaps":          "cluster-dns",
-				"deployments":         "cluster-dns",
-				"services":            "cluster-dns",
-			} {
-				_, stderr, err := kubectl("-n", "kube-system", "get", resource+"/"+name)
-				if err != nil {
-					return fmt.Errorf("stderr: %s, err: %s", stderr, err)
-				}
-			}
-			return nil
 		}).Should(Succeed())
 	})
 
@@ -64,5 +47,9 @@ func TestUpgrade() {
 		Eventually(func() error {
 			return checkCluster(cluster)
 		}).Should(Succeed())
+	})
+
+	It("removes kubectl cache", func() {
+		execSafeAt(host1, "rm", "-rf", "~/.kube/cache")
 	})
 }
