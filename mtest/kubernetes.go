@@ -79,7 +79,7 @@ func TestKubernetes() {
 			"services":            "cluster-dns",
 		} {
 			_, stderr, err := kubectl("-n", "kube-system", "get", resource+"/"+name)
-			Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+			Expect(err).NotTo(HaveOccurred(), "resource=%s/%s, stderr=%s", resource, name, stderr)
 		}
 
 		stdout, stderr, err := kubectl("-n", "kube-system", "get", "configmaps/cluster-dns", "-o=json")
