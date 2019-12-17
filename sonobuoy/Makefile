@@ -1,6 +1,6 @@
 ### Configurable variables
-SONOBUOY_VERSION = 0.15.3
-KUBECTL_VERSION = 1.15.3
+SONOBUOY_VERSION = 0.16.5
+KUBECTL_VERSION = 1.16.4
 DOCKER_COMPOSE_VERSION = 1.24.1
 
 ### Unconfigurable
@@ -13,7 +13,8 @@ endif
 GO111MODULE = on
 GOFLAGS = -mod=vendor
 export GO111MODULE GOFLAGS
-SONOBUOY_URL =  https://github.com/heptio/sonobuoy/releases/download/v$(SONOBUOY_VERSION)/sonobuoy_$(SONOBUOY_VERSION)_linux_amd64.tar.gz
+
+SONOBUOY_URL = https://github.com/vmware-tanzu/sonobuoy/releases/download/v$(SONOBUOY_VERSION)/sonobuoy_$(SONOBUOY_VERSION)_linux_amd64.tar.gz
 KUBECTL_URL = https://storage.googleapis.com/kubernetes-release/release/v$(KUBECTL_VERSION)/bin/linux/amd64/kubectl
 DOCKER_COMPOSE_URL = https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-Linux-x86_64
 PACKAGES = virtualbox vagrant

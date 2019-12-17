@@ -40,6 +40,6 @@ Stop and clean Vagrant VMs and Docker containers as follows:
 $ make clean
 ```
 
-[Sonobuoy]: https://github.com/heptio/sonobuoy
-[Docker]: https://docs.docker.com/install/linux/docker-ce/ubuntu/
+[Sonobuoy]: https://github.com/vmware-tanzu/sonobuoy
+[Docker CE]: https://docs.docker.com/install/linux/docker-ce/ubuntu/
 [Go]: https://golang.org/doc/install#install

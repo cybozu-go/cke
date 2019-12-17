@@ -36,7 +36,7 @@ $GCLOUD compute instances add-metadata ${INSTANCE_NAME} --zone ${ZONE} \
 cat >run.sh <<EOF
 #!/bin/sh -e
 
-# Run mtest
+# Run sonobuoy
 GOPATH=\$HOME/go
 export GOPATH
 GO111MODULE=on

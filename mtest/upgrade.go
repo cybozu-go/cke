@@ -48,4 +48,8 @@ func TestUpgrade() {
 			return checkCluster(cluster)
 		}).Should(Succeed())
 	})
+
+	It("removes kubectl cache", func() {
+		execSafeAt(host1, "rm", "-rf", "~/.kube/cache")
+	})
 }
