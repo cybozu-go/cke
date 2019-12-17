@@ -17,7 +17,11 @@ $GCLOUD compute instances create ${INSTANCE_NAME} \
   --machine-type ${MACHINE_TYPE} \
   --image vmx-enabled \
   --boot-disk-type ${DISK_TYPE} \
-  --boot-disk-size ${BOOT_DISK_SIZE}
+  --boot-disk-size ${BOOT_DISK_SIZE} \
+  --local-ssd interface=nvme \
+  --local-ssd interface=nvme \
+  --local-ssd interface=nvme \
+  --local-ssd interface=nvme
 
 RET=0
 trap delete_instance INT QUIT TERM 0
@@ -31,10 +35,17 @@ done
 
 # Extend instance life to complete sonobuoy test
 $GCLOUD compute instances add-metadata ${INSTANCE_NAME} --zone ${ZONE} \
-  --metadata extended=$(date -Iseconds -d+3hours)
+  --metadata extended=$(date -Iseconds -d+4hours)
 
 cat >run.sh <<EOF
 #!/bin/sh -e
+
+# mkfs and mount local SSD on /var/scratch
+mkfs -t ext4 -F /dev/nvme0n1
+mkdir -p /var/scratch
+mount -t ext4 /dev/nvme0n1 /var/scratch
+chmod 1777 /var/scratch
+mkdir /var/scratch/vbox /var/scratch/vagrant
 
 # Run sonobuoy
 GOPATH=\$HOME/go
@@ -43,6 +54,8 @@ GO111MODULE=on
 export GO111MODULE
 PATH=/usr/local/go/bin:\$GOPATH/bin:\$PATH
 export PATH
+ln -s /var/scratch/vbox \$HOME/'VirtualBox VMs'
+ln -s /var/scratch/vagrant \$HOME/.vagrant.d
 
 git clone https://github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME} \
     \$HOME/go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
