@@ -187,7 +187,7 @@ jobs:
       - run:
           name: Run Sonobuoy
           command: ./bin/run-sonobuoy.sh
-          no_output_timeout: 200m
+          no_output_timeout: 240m
       - persist_to_workspace:
          root: /tmp
          paths:
