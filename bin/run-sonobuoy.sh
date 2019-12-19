@@ -67,6 +67,17 @@ make setup
 make run
 make sonobuoy
 tar tzf sonobuoy.tar.gz
+
+set +e
+tar tzf sonobuoy.tar.gz plugins/e2e/results/global/e2e.log plugins/e2e/results/global/junit_01.xml
+RET=\$?
+
+if [ "\$RET" -ne 0 ]; then
+  bin/sonobuoy e2e sonobuoy.tar.gz
+  exit 1
+fi
+set -e
+
 mv sonobuoy.tar.gz /tmp
 EOF
 chmod +x run.sh
