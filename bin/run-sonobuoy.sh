@@ -38,7 +38,7 @@ $GCLOUD compute instances add-metadata ${INSTANCE_NAME} --zone ${ZONE} \
   --metadata extended=$(date -Iseconds -d+4hours)
 
 cat >run.sh <<EOF
-#!/bin/sh -e
+#!/bin/sh -ex
 
 # mkfs and mount local SSD on /var/scratch
 mkfs -t ext4 -F /dev/nvme0n1
@@ -66,6 +66,7 @@ cd sonobuoy
 make setup
 make run
 make sonobuoy
+tar tzf sonobuoy.tar.gz
 mv sonobuoy.tar.gz /tmp
 EOF
 chmod +x run.sh
