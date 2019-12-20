@@ -66,7 +66,6 @@ cd sonobuoy
 make setup
 make run
 make sonobuoy
-tar tzf sonobuoy.tar.gz
 mv sonobuoy.tar.gz /tmp
 EOF
 chmod +x run.sh

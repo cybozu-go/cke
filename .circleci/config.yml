@@ -189,9 +189,11 @@ jobs:
           command: ./bin/run-sonobuoy.sh
           no_output_timeout: 240m
       - persist_to_workspace:
-         root: /tmp
-         paths:
-          - sonobuoy.tar.gz
+          root: /tmp
+          paths:
+            - sonobuoy.tar.gz
+      - store_artifacts:
+          path: /tmp/sonobuoy.tar.gz
   github-release:
     docker:
       - image: quay.io/cybozu/golang:1.13-bionic
@@ -204,7 +206,7 @@ jobs:
           command: |
             mkdir /tmp/upload
             cp /tmp/workspace/sonobuoy.tar.gz /tmp/upload
-            tar xzf /tmp/workspace/sonobuoy.tar.gz -C /tmp/upload --strip-components=4 ./plugins/e2e/results/global/e2e.log ./plugins/e2e/results/global/junit_01.xml
+            tar xzf /tmp/workspace/sonobuoy.tar.gz -C /tmp/upload --strip-components=4 plugins/e2e/results/global/e2e.log plugins/e2e/results/global/junit_01.xml
             sed "s/vX\.Y\.Z/${CIRCLE_TAG}/" sonobuoy/README.md > /tmp/upload/README.md
             sed "s/vX\.Y\.Z/${CIRCLE_TAG}/" sonobuoy/PRODUCT.yaml > /tmp/upload/PRODUCT.yaml
       - run:
