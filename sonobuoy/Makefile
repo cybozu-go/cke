@@ -59,7 +59,7 @@ run: bin/cke bin/ckecli bin/kubectl
 
 sonobuoy: bin/sonobuoy
 	$(CKECLI) kubernetes issue --ttl=10h > .kubeconfig
-	time ./bin/sonobuoy run --wait --mode=certified-conformance
+	time ./bin/sonobuoy run --mode=certified-conformance --timeout=0 --wait
 	outfile=$$(./bin/sonobuoy retrieve) && mv $$outfile sonobuoy.tar.gz
 	-./bin/sonobuoy e2e sonobuoy.tar.gz
 	./bin/sonobuoy delete
