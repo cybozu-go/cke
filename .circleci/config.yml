@@ -189,9 +189,11 @@ jobs:
           command: ./bin/run-sonobuoy.sh
           no_output_timeout: 240m
       - persist_to_workspace:
-         root: /tmp
-         paths:
-          - sonobuoy.tar.gz
+          root: /tmp
+          paths:
+            - sonobuoy.tar.gz
+      - store_artifacts:
+          path: /tmp/sonobuoy.tar.gz
   github-release:
     docker:
       - image: quay.io/cybozu/golang:1.13-bionic
