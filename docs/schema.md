@@ -60,7 +60,7 @@ CA that issues certificates for client and server authentication between etcd pe
 CA that issues client authentication certificates for etcd clients.
 
 `records`
-----------
+---------
 
 The next ID of the record formatted as a decimal string.
 
@@ -107,3 +107,8 @@ configuration.
 ### `sabakan/url`
 
 Sabakan URL.
+
+`status`
+--------
+
+CKE server status represented as a string.

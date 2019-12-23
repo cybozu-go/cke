@@ -10,18 +10,19 @@ $ ckecli [--config FILE] <subcommand> args...
 | `--config`  | `/etc/cke/config.yml` | config file path    |
 | `--version` |                       | show ckecli version |
 
-`ckecli cluster set FILE`
--------------------------
+## `ckecli cluster`
+
+### `ckecli cluster set FILE`
 
 Set the cluster configuration.
 
-`ckecli cluster get`
---------------------
+### `ckecli cluster get`
 
 Get the cluster configuration.
 
-`ckecli constraints set NAME VALUE`
------------------------------------
+## `ckecli constraints`
+
+### `ckecli constraints set NAME VALUE`
 
 Set a constraint on the cluster configuration.
 
@@ -31,34 +32,33 @@ Set a constraint on the cluster configuration.
 - `minimum-workers`
 - `maximum-workers`
 
-`ckecli constraints show`
--------------------------
+### `ckecli constraints show`
 
 Show all constraints on the cluster.
 
-`ckecli vault init`
---------------------------
+## `ckecli vault`
+
+Vault related commands.
+
+### `ckecli vault init`
 
 Initialize vault configuration for CKE as described in [vault.md](vault.md).
 
-`ckecli vault config JSON`
---------------------------
+### `ckecli vault config JSON`
 
 Set vault configuration for CKE.
 `JSON` is a filename whose body is a JSON object described in [schema.md](schema.md#vault).
 
 If `JSON` is "-", `ckecli` reads from stdin.
 
-`ckecli vault ssh-privkey [--host=HOST] FILE`
----------------------------------------------
+### `ckecli vault ssh-privkey [--host=HOST] FILE`
 
 Store SSH private key for a host into Vault.  If no HOST is specified, the key will be
 used as the default key.
 
 FILE should be a SSH private key file.  If FILE is `-`, the contents are read from stdin.
 
-`ckecli vault enckey`
----------------------
+### `ckecli vault enckey`
 
 Generate a new cipher key to encrypt Kubernetes [Secrets](https://kubernetes.io/docs/concepts/configuration/secret/).
 
@@ -73,25 +73,23 @@ You need to restart API servers manually and replace all secrets as follows:
 $ kubectl get secrets --all-namespaces -o json | kubectl replace -f -
 ```
 
-`ckecli ca set NAME PEM`
-------------------------
+## `ckecli ca`
+
+### `ckecli ca set NAME PEM`
 
 `NAME` is one of `server`, `etcd-peer`, `etcd-client`, `kubernetes`.
 
 `PEM` is a filename of a x509 certificate.
 
-`ckecli ca get NAME`
---------------------
+### `ckecli ca get NAME`
 
 `NAME` is one of `server`, `etcd-peer`, `etcd-client`, `kubernetes`.
 
-`ckecli leader`
--------------------------
+## `ckecli leader`
 
 Show the host name of the current leader.
 
-`ckecli history [OPTION]...`
----------------------------
+## `ckecli history [OPTION]...`
 
 Show operation history.
 
@@ -100,13 +98,11 @@ Show operation history.
 | `-n`, `--count`  | `0`           | The number of the history to show. If `0` is specified, show all history. |
 | `-f`, `--follow` | `false`       | Show the history in a new order, and continuously print new entries.      |
 
-`ckecli images`
----------------
+## `ckecli images`
 
 List container image names used by `cke`.
 
-`ckecli etcd`
--------------
+## `ckecli etcd`
 
 Control CKE managed etcd.
 
@@ -151,8 +147,7 @@ Download etcd backup file to current directory.
 
 BACKUP_NAME is the name of backup file.
 
-`ckecli kubernetes`
--------------------
+## `ckecli kubernetes`
 
 Control CKE managed kubernetes.
 
@@ -168,8 +163,7 @@ This config file embeds client certificate and can be used with `kubectl` to con
 | `--group` | `system:masters` | organization name of the client certificate |
 | `--user`  | `admin`          | user name of the client certificate         |
 
-`ckecli resource`
------------------
+## `ckecli resource`
 
 Edit user-defined resources in Kubernetes.
 See [User-defined resources](user-resources.md) for details.
@@ -192,8 +186,7 @@ If `FILE` is "-", then resources are read from stdin.
 
 Note that Kubernetes resources will not be removed automatically.
 
-`ckecli ssh [user@]NODE [COMMAND...]`
--------------------------------------
+## `ckecli ssh [user@]NODE [COMMAND...]`
 
 Connect to the node via ssh.
 
@@ -201,8 +194,7 @@ Connect to the node via ssh.
 
 If `COMMAND` is specified, it will be executed on the node.
 
-`ckecli scp [-r] [[user@]NODE1:]FILE1 ... [[user@]NODE2:]FILE2`
----------------------------------------------------------------
+## `ckecli scp [-r] [[user@]NODE1:]FILE1 ... [[user@]NODE2:]FILE2`
 
 Copy files between hosts via scp.
 
@@ -212,8 +204,7 @@ Copy files between hosts via scp.
 | ------ | ------------- | ------------------------------------ |
 | `-r`   | `false`       | Recursively copy entire directories. |
 
-`ckecli sabakan`
-----------------
+## `ckecli sabakan`
 
 Control [sabakan integration feature](sabakan-integration.md).
 
@@ -255,3 +246,18 @@ Set the query variables to search machines in sabakan.
 ### `ckecli sabakan get-variables`
 
 Get the query variables to search machines in sabakan.
+
+## `ckecli status`
+
+Report the internal status of the CKE server.
+The status is represented as a JSON object having these keys:
+
+| Name             | Type   | Description                    |
+| ---------------- | ------ | ------------------------------ |
+| `status`         | string | The processing status.         |
+| `config-version` | string | Cluster configuration version. |
+
+Example:
+```json
+{"status":"completed","config-version":"2"}
+```
