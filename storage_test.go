@@ -622,9 +622,9 @@ func testStatus(t *testing.T) {
 		t.Error("unexpected error:", err)
 	}
 
-    resp, err := client.Grant(ctx, 10)
-    if err != nil {
-    	t.Fatal(err)
+	resp, err := client.Grant(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	err = s.SetStatus(ctx, resp.ID, "OK")
@@ -640,9 +640,9 @@ func testStatus(t *testing.T) {
 		t.Error("status is not OK. status=", status)
 	}
 
-    _, err = client.Revoke(ctx, resp.ID)
-    if err != nil {
-    	t.Fatal(err)
+	_, err = client.Revoke(ctx, resp.ID)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	_, err = s.GetStatus(ctx)

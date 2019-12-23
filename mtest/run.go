@@ -380,6 +380,18 @@ func getClusterStatus(cluster *cke.Cluster) (*cke.ClusterStatus, []cke.ResourceD
 	return cs, resources, err
 }
 
+func getProcessingStatus() (string, error) {
+	etcd, err := connectEtcd()
+	if err != nil {
+		return "", err
+	}
+	defer etcd.Close()
+
+	st := cke.Storage{Client: etcd}
+	ctx := context.Background()
+	return st.GetStatus(ctx)
+}
+
 func ckecliClusterSet(cluster *cke.Cluster) error {
 	y, err := yaml.Marshal(cluster)
 	if err != nil {
@@ -430,7 +442,7 @@ func (e checkError) Error() string {
 }
 
 func checkCluster(c *cke.Cluster) error {
-	status, res, err := getClusterStatus(c)
+	status, _, err := getClusterStatus(c)
 	if err != nil {
 		return err
 	}
@@ -439,20 +451,18 @@ func checkCluster(c *cke.Cluster) error {
 		return nil
 	}
 
-	nf := server.NewNodeFilter(c, status)
-	if !nf.EtcdIsGood() {
-		return errors.New("etcd cluster is not good")
+	processing, err := getProcessingStatus()
+	if err != nil {
+		if err == cke.ErrNotFound {
+			return errors.New("processing status is not found")
+		}
+		return err
 	}
 
-	ops := server.DecideOps(c, status, res)
-	if len(ops) == 0 {
-		return nil
+	if processing != server.StatusCompleted {
+		return fmt.Errorf("processing %q", processing)
 	}
-	opNames := make([]string, len(ops))
-	for i, op := range ops {
-		opNames[i] = op.Name()
-	}
-	return checkError{opNames, status}
+	return nil
 }
 
 func initializeControlPlane() {

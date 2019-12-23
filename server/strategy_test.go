@@ -1819,7 +1819,7 @@ func TestDecideOps(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			ops := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Resources)
+			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Resources)
 			if len(ops) == 0 && len(c.ExpectedOps) == 0 {
 				return
 			}
