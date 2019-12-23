@@ -45,6 +45,7 @@ var (
 		KeepAlive: defaultKeepAlive,
 	}
 
+	// TODO Remove looseCheck when the version which writes Processing Status is released.
 	looseCheck = false
 )
 
@@ -442,6 +443,10 @@ func (e checkError) Error() string {
 }
 
 func checkCluster(c *cke.Cluster) error {
+	/**
+	TODO Remove getCluster call and if clause with lookCheck and IsControlPlaneReady,
+	     when the version which writes Processing Status is released.
+	 */
 	status, _, err := getClusterStatus(c)
 	if err != nil {
 		return err
