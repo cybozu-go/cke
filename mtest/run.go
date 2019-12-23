@@ -381,10 +381,10 @@ func getClusterStatus(cluster *cke.Cluster) (*cke.ClusterStatus, []cke.ResourceD
 	return cs, resources, err
 }
 
-func getProcessingStatus() (string, error) {
+func getProcessingStatus() (*server.Status, error) {
 	etcd, err := connectEtcd()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer etcd.Close()
 

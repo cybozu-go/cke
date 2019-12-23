@@ -108,7 +108,12 @@ configuration.
 
 Sabakan URL.
 
-`status`
---------
+<a name="status"></a>
+### `status`
 
-CKE server status represented as a string.
+JSON object that has the following fields:
+
+Name           | Type    | Description
+----           | ----    | -----------
+`status`       | string  | CKE server processing status represented as a string. 
+`last-updated` | string  | The Last time when the processing status was updated.

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/cybozu-go/cke/server"
 	"sort"
 	"strconv"
 	"strings"
@@ -683,13 +684,31 @@ func (s Storage) GetSabakanURL(ctx context.Context) (string, error) {
 }
 
 // SetStatus stores the server status.
-func (s Storage) SetStatus(ctx context.Context, lease clientv3.LeaseID, st string) error {
-	_, err := s.Put(ctx, KeyStatus, st, clientv3.WithLease(lease))
+func (s Storage) SetStatus(ctx context.Context, lease clientv3.LeaseID, st *server.Status) error {
+	data, err := json.Marshal(st)
+	if err != nil {
+		return err
+	}
+	_, err = s.Put(ctx, KeyStatus, string(data), clientv3.WithLease(lease))
 	return err
 }
 
 // GetStatus retrieves the server status if exists.
 // If the status is not found, this returns ("", ErrNotFound).
-func (s Storage) GetStatus(ctx context.Context) (string, error) {
-	return s.getStringValue(ctx, KeyStatus)
+func (s Storage) GetStatus(ctx context.Context) (*server.Status, error) {
+	resp, err := s.Get(ctx, KeyStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Kvs) == 0 {
+		return nil, ErrNotFound
+	}
+
+	st := new(server.Status)
+	err = json.Unmarshal(resp.Kvs[0].Value, &st)
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }

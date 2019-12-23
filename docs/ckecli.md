@@ -250,14 +250,10 @@ Get the query variables to search machines in sabakan.
 ## `ckecli status`
 
 Report the internal status of the CKE server.
-The status is represented as a JSON object having these keys:
 
-| Name             | Type   | Description                    |
-| ---------------- | ------ | ------------------------------ |
-| `status`         | string | The processing status.         |
-| `config-version` | string | Cluster configuration version. |
+See [schema.md](schema.md#status)
 
 Example:
 ```json
-{"status":"completed","config-version":"2"}
+{"status":"completed","last-updated" : "2019-10-02-00:00:00"}
 ```
