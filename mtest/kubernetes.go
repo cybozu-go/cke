@@ -407,11 +407,11 @@ func TestKubernetes() {
 			return nil
 		}).Should(Succeed())
 
-		// kubelet rotates logfile every 10 second.
-		time.Sleep(10 * time.Second)
-
 		_, _, err = execAt(pod.Status.HostIP, "test", "-f", pattern)
 		Expect(err).To(HaveOccurred(), "log file is already rotated")
+
+		// kubelet rotates logfile every 10 second.
+		time.Sleep(10 * time.Second)
 
 		for i := 0; i < 5; i++ {
 			_, _, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP+":8000")
