@@ -255,5 +255,5 @@ See [schema.md](schema.md#status)
 
 Example:
 ```json
-{"status":"completed","last-updated" : "2019-10-02-00:00:00"}
+{"phase":"completed","timestamp":"2009-11-10T23:00:00Z"}
 ```

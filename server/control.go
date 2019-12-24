@@ -26,14 +26,6 @@ type Controller struct {
 	addon           Integrator
 }
 
-type Status struct {
-	// CKE server processing status represented as a string.
-	Status string `json:"status"`
-
-	// The Last time when the processing status was updated.
-	LastUpdated time.Time `json:"last-updated"`
-}
-
 // NewController construct controller instance
 func NewController(s *concurrency.Session, interval, gcInterval, timeout time.Duration, addon Integrator) Controller {
 	return Controller{s, interval, gcInterval, timeout, addon}
@@ -256,9 +248,13 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return err
 	}
 
-	ops, processing := DecideOps(cluster, status, rcs)
+	ops, phase := DecideOps(cluster, status, rcs)
 
-	err = storage.SetStatus(ctx, c.session.Lease(), &Status{string(processing), time.Now()})
+	st := &cke.ServerStatus{
+		Phase:     phase,
+		Timestamp: time.Now().UTC(),
+	}
+	err = storage.SetStatus(ctx, c.session.Lease(), st)
 	if err != nil {
 		return err
 	}

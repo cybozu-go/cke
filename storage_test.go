@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/google/go-cmp/cmp"
@@ -627,17 +628,17 @@ func testStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = s.SetStatus(ctx, resp.ID, "OK")
+	err = s.SetStatus(ctx, resp.ID, &ServerStatus{Phase: PhaseCompleted, Timestamp: time.Now().UTC()})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	status, err := s.GetStatus(ctx)
 	if err != nil {
-		t.Error("unexpected error:", err)
+		t.Fatal("unexpected error:", err)
 	}
-	if status != "OK" {
-		t.Error("status is not OK. status=", status)
+	if status.Phase != PhaseCompleted {
+		t.Error("wrong phase:", status.Phase)
 	}
 
 	_, err = client.Revoke(ctx, resp.ID)

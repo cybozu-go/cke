@@ -109,11 +109,12 @@ configuration.
 Sabakan URL.
 
 <a name="status"></a>
-### `status`
+`status`
+--------
 
 JSON object that has the following fields:
 
-Name           | Type    | Description
-----           | ----    | -----------
-`status`       | string  | CKE server processing status represented as a string. 
-`last-updated` | string  | The Last time when the processing status was updated.
+| Name        | Type   | Description                                                       |
+| ----------- | ------ | ----------------------------------------------------------------- |
+| `phase`     | string | CKE server processing phase represented as a string.              |
+| `timestamp` | string | RFC3339 formatted string of the time when the status is recorded. |

@@ -381,7 +381,7 @@ func getClusterStatus(cluster *cke.Cluster) (*cke.ClusterStatus, []cke.ResourceD
 	return cs, resources, err
 }
 
-func getProcessingStatus() (*server.Status, error) {
+func getServerStatus() (*cke.ServerStatus, error) {
 	etcd, err := connectEtcd()
 	if err != nil {
 		return nil, err
@@ -443,10 +443,8 @@ func (e checkError) Error() string {
 }
 
 func checkCluster(c *cke.Cluster) error {
-	/**
-	TODO Remove getCluster call and if clause with lookCheck and IsControlPlaneReady,
-	     when the version which writes Processing Status is released.
-	 */
+	// TODO: Remove getClusterStatus and if clause with looseCheck
+	// once a new version containing this is released.
 	status, _, err := getClusterStatus(c)
 	if err != nil {
 		return err
@@ -456,16 +454,16 @@ func checkCluster(c *cke.Cluster) error {
 		return nil
 	}
 
-	processing, err := getProcessingStatus()
+	st, err := getServerStatus()
 	if err != nil {
 		if err == cke.ErrNotFound {
-			return errors.New("processing status is not found")
+			return errors.New("server status is not found")
 		}
 		return err
 	}
 
-	if processing != server.StatusCompleted {
-		return fmt.Errorf("processing %q", processing)
+	if st.Phase != cke.PhaseCompleted {
+		return fmt.Errorf("status:%+v", st)
 	}
 	return nil
 }
