@@ -117,7 +117,7 @@ func TestKubernetes() {
 		_, stderr, err = kubectlWithInput(nginx, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		_, stderr, err = kubectl("expose", "-n="+namespace, "pod", "nginx", "--port=80")
+		_, stderr, err = kubectl("expose", "-n="+namespace, "pod", "nginx", "--port=8000")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		overrides := fmt.Sprintf(`{
@@ -385,7 +385,7 @@ func TestKubernetes() {
 
 		Eventually(func() error {
 			for i := 0; i < 5; i++ {
-				_, stderr, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP)
+				_, stderr, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP+":8000")
 				if err != nil {
 					return fmt.Errorf("%v: stderr=%s", err, stderr)
 				}
@@ -414,7 +414,7 @@ func TestKubernetes() {
 		Expect(err).To(HaveOccurred(), "log file is already rotated")
 
 		for i := 0; i < 5; i++ {
-			_, _, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP)
+			_, _, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP+":8000")
 			Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		}
 
