@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -331,100 +330,6 @@ func TestKubernetes() {
 		By("confirming etcdbackup CronJob is removed when etcdbackup is disabled")
 		cluster.EtcdBackup.Enabled = false
 		clusterSetAndWait(cluster)
-	})
-
-	It("can rotate pod log", func() {
-		if containerRuntime == "docker" {
-			Skip("docker doesn't support log rotation")
-		}
-
-		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
-		By("creating namespace " + namespace)
-		_, stderr, err := kubectl("create", "namespace", namespace)
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		psp, err := ioutil.ReadFile(policyYAMLPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n="+namespace)
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-
-		By("waiting the default service account gets created")
-		Eventually(func() error {
-			_, stderr, err := kubectl("get", "sa/default", "-o", "json")
-			if err != nil {
-				return fmt.Errorf("%v: stderr=%s", err, stderr)
-			}
-			return nil
-		}).Should(Succeed())
-
-		By("running nginx")
-		nginx, err := ioutil.ReadFile(nginxYAMLPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		_, stderr, err = kubectlWithInput(nginx, "apply", "-f", "-", "-n="+namespace)
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-
-		By("checking nginx pod status")
-		var pod corev1.Pod
-		Eventually(func() error {
-			stdout, stderr, err := kubectl("get", "pods/nginx", "-n="+namespace, "-o", "json")
-			if err != nil {
-				return fmt.Errorf("%v: stderr=%s", err, stderr)
-			}
-
-			err = json.Unmarshal(stdout, &pod)
-			if err != nil {
-				return err
-			}
-
-			for _, cond := range pod.Status.Conditions {
-				if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-					return nil
-				}
-			}
-			return errors.New("pod is not yet ready")
-		}).Should(Succeed())
-
-		Eventually(func() error {
-			for i := 0; i < 5; i++ {
-				_, stderr, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP+":8000")
-				if err != nil {
-					return fmt.Errorf("%v: stderr=%s", err, stderr)
-				}
-			}
-			return nil
-		}).Should(Succeed())
-
-		logFile := fmt.Sprintf("%d.log", pod.Status.ContainerStatuses[0].RestartCount)
-		subDirName := fmt.Sprintf("%s_%s_%s", namespace, "nginx", string(pod.ObjectMeta.UID))
-		logPath := filepath.Join("/var/log/pods", subDirName, "nginx", logFile)
-		pattern := fmt.Sprintf("%s.*", logPath)
-
-		By("checking log file")
-		Eventually(func() error {
-			_, _, err = execAt(pod.Status.HostIP, "test", "-f", logPath)
-			if err != nil {
-				return fmt.Errorf("log file doesn't exist")
-			}
-			return nil
-		}).Should(Succeed())
-
-		_, _, err = execAt(pod.Status.HostIP, "test", "-f", pattern)
-		Expect(err).To(HaveOccurred(), "log file is already rotated")
-
-		// kubelet rotates logfile every 10 second.
-		time.Sleep(10 * time.Second)
-
-		for i := 0; i < 5; i++ {
-			_, _, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP+":8000")
-			Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-		}
-
-		Eventually(func() error {
-			_, _, err = execAt(pod.Status.HostIP, "test", "-f", pattern)
-			if err != nil {
-				return fmt.Errorf("log file isn't rotated")
-			}
-			return nil
-		}).Should(Succeed())
 	})
 
 	It("can output audit log", func() {
