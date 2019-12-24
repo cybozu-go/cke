@@ -179,6 +179,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	storage := cke.Storage{
 		Client: c.session.Client(),
 	}
+	ts := time.Now().UTC()
 	cluster, err := storage.GetCluster(ctx)
 	switch err {
 	case cke.ErrNotFound:
@@ -252,7 +253,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 
 	st := &cke.ServerStatus{
 		Phase:     phase,
-		Timestamp: time.Now().UTC(),
+		Timestamp: ts,
 	}
 	err = storage.SetStatus(ctx, c.session.Lease(), st)
 	if err != nil {

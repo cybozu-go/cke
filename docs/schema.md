@@ -114,7 +114,7 @@ Sabakan URL.
 
 JSON object that has the following fields:
 
-| Name        | Type   | Description                                                       |
-| ----------- | ------ | ----------------------------------------------------------------- |
-| `phase`     | string | CKE server processing phase represented as a string.              |
-| `timestamp` | string | RFC3339 formatted string of the time when the status is recorded. |
+| Name        | Type   | Description                                                                    |
+| ----------- | ------ | ------------------------------------------------------------------------------ |
+| `phase`     | string | CKE server processing phase represented as a string.                           |
+| `timestamp` | string | RFC3339 formatted string of the time when CKE reads the cluster configuration. |
