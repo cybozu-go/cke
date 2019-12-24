@@ -519,9 +519,9 @@ roleRef:
   name: pod-reader
   apiGroup: rbac.authorization.k8s.io
 `
-		ts := time.Now()
 		ckecliWithInput([]byte(resources), "resource", "set", "-")
 		defer ckecliWithInput([]byte(resources), "resource", "delete", "-")
+		ts := time.Now()
 
 		cluster := getCluster()
 		for i := 0; i < 3; i++ {
@@ -539,9 +539,9 @@ metadata:
   labels:
     test: value
 `
-		ts = time.Now()
 		ckecliWithInput([]byte(newResources), "resource", "set", "-")
 		defer ckecliWithInput([]byte(newResources), "resource", "delete", "-")
+		ts = time.Now()
 		Eventually(func() error {
 			return checkCluster(cluster, ts)
 		}).Should(Succeed())

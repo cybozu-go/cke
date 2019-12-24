@@ -7,7 +7,5 @@ metadata:
 spec:
   containers:
     - name: nginx
-      image: nginx
-      securityContext:
-        readOnlyRootFilesystem: false
+      image: quay.io/cybozu/testhttpd:0
   hostNetwork: true
