@@ -92,9 +92,10 @@ func TestOperators(isDegraded bool) {
 			execSafeAt(node2, "docker", "rm", "etcd")
 			execSafeAt(node3, "docker", "stop", "etcd")
 			execSafeAt(node3, "docker", "rm", "etcd")
+			ts := time.Now()
 			runCKE(ckeImageURL)
 			Eventually(func() error {
-				return checkCluster(cluster)
+				return checkCluster(cluster, ts)
 			}).Should(Succeed())
 		}
 
@@ -109,10 +110,11 @@ func TestOperators(isDegraded bool) {
 		stopCKE()
 		ckecliSafe("constraints", "set", "control-plane-count", "2")
 		cluster.Nodes = append(cluster.Nodes[:1], cluster.Nodes[2:]...)
-		ckecliClusterSet(cluster)
+		ts, err := ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
 		runCKE(ckeImageURL)
 		Eventually(func() error {
-			return checkCluster(cluster)
+			return checkCluster(cluster, ts)
 		}).Should(Succeed())
 
 		By("Testing default/kubernetes Endpoints")
@@ -174,6 +176,7 @@ func TestOperators(isDegraded bool) {
 		for _, n := range rebootedNodes {
 			execAt(n, "sudo", "systemd-run", "reboot", "-f", "-f")
 		}
+		ts = time.Now()
 		Eventually(func() error {
 			for _, n := range rebootedNodes {
 				err := reconnectSSH(n)
@@ -193,7 +196,7 @@ func TestOperators(isDegraded bool) {
 		}).Should(Succeed())
 
 		Eventually(func() error {
-			return checkCluster(cluster)
+			return checkCluster(cluster, ts)
 		}).Should(Succeed())
 
 		// check node6 is added
@@ -294,10 +297,7 @@ func TestOperators(isDegraded bool) {
 		for i := 0; i < 2; i++ {
 			cluster.Nodes[i].ControlPlane = true
 		}
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 
 		// check control plane label
 		out, _, err = kubectl("get", "-o=json", "node", node3)
@@ -331,19 +331,13 @@ func TestOperators(isDegraded bool) {
 		cluster.Options.Proxy.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Kubelet.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Kubelet.Domain = "neconeco"
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 
 		By("Adding a scheduler extender")
 		// this will run these ops:
 		// - SchedulerRestartOp
 		cluster.Options.Scheduler.Extenders = []string{"urlPrefix: http://127.0.0.1:8000"}
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 
 		stdout, stderr, err := execAt(node1, "jq", "-r", "'.extenders[0].urlPrefix'", op.PolicyConfigPath)
 		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
@@ -370,10 +364,7 @@ func TestOperators(isDegraded bool) {
 				Effect: corev1.TaintEffectNoExecute,
 			},
 		}
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 
 		By("not removing existing labels, annotations, and taints")
 		cluster = getCluster()
@@ -381,9 +372,10 @@ func TestOperators(isDegraded bool) {
 			cluster.Nodes[i].ControlPlane = true
 		}
 		cluster.Nodes[0].Labels = map[string]string{"label2": "value2"}
-		ckecliClusterSet(cluster)
+		ts, err := ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() error {
-			err := checkCluster(cluster)
+			err := checkCluster(cluster, ts)
 			if err != nil {
 				return err
 			}
@@ -439,10 +431,7 @@ func TestOperators(isDegraded bool) {
 			},
 		}
 		cluster.TaintCP = true
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 
 		By("testing control plane taints")
 		var runningCPs []string
@@ -481,9 +470,10 @@ func TestOperators(isDegraded bool) {
 			cluster.Nodes[i].ControlPlane = true
 		}
 		cluster.Nodes[0].Hostname = "node1"
-		ckecliClusterSet(cluster)
+		ts, err = ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
 		Eventually(func() error {
-			err := checkCluster(cluster)
+			err := checkCluster(cluster, ts)
 			if err != nil {
 				return err
 			}
@@ -517,7 +507,7 @@ func TestOperators(isDegraded bool) {
 		}).Should(Succeed())
 
 		By("clearing CNI configuration file directory")
-		_, _, err := execAt(node1, "test", "-f", dummyCNIConf)
+		_, _, err = execAt(node1, "test", "-f", dummyCNIConf)
 		Expect(err).Should(HaveOccurred())
 	})
 
@@ -535,22 +525,14 @@ func TestOperators(isDegraded bool) {
 		}
 		// remove node4
 		cluster.Nodes = append(cluster.Nodes[:3], cluster.Nodes[4:]...)
-		Expect(ckecliClusterSet(cluster)).ShouldNot(HaveOccurred())
-
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 
 		By("recovering the cluster")
 		cluster = getCluster()
 		for i := 0; i < 3; i++ {
 			cluster.Nodes[i].ControlPlane = true
 		}
-		Expect(ckecliClusterSet(cluster)).ShouldNot(HaveOccurred())
-
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 
 		stdout, stderr, err := kubectl("get", "nodes", "-o=json")
 		Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", stdout, stderr)

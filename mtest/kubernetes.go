@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -117,7 +116,7 @@ func TestKubernetes() {
 		_, stderr, err = kubectlWithInput(nginx, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		_, stderr, err = kubectl("expose", "-n="+namespace, "pod", "nginx", "--port=80")
+		_, stderr, err = kubectl("expose", "-n="+namespace, "pod", "nginx", "--port=8000")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		overrides := fmt.Sprintf(`{
@@ -163,10 +162,7 @@ func TestKubernetes() {
 		By("updating domain name to neco.local")
 		before := cluster.Options.Kubelet.Domain
 		cluster.Options.Kubelet.Domain = "neco.local"
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 
 		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=cke.cybozu.com/appname=node-dns", "-o=json")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
@@ -191,11 +187,7 @@ func TestKubernetes() {
 		}).Should(Succeed())
 
 		cluster.Options.Kubelet.Domain = before
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
-
+		clusterSetAndWait(cluster)
 	})
 
 	It("has node DNS resources", func() {
@@ -267,10 +259,7 @@ func TestKubernetes() {
 			cluster.Nodes[i].ControlPlane = true
 		}
 		cluster.EtcdBackup.Enabled = true
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 
 		By("getting hostIP of etcdbackup Pod")
 		var hostIP string
@@ -340,104 +329,7 @@ func TestKubernetes() {
 
 		By("confirming etcdbackup CronJob is removed when etcdbackup is disabled")
 		cluster.EtcdBackup.Enabled = false
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
-	})
-
-	It("can rotate pod log", func() {
-		if containerRuntime == "docker" {
-			Skip("docker doesn't support log rotation")
-		}
-
-		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
-		By("creating namespace " + namespace)
-		_, stderr, err := kubectl("create", "namespace", namespace)
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		psp, err := ioutil.ReadFile(policyYAMLPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n="+namespace)
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-
-		By("waiting the default service account gets created")
-		Eventually(func() error {
-			_, stderr, err := kubectl("get", "sa/default", "-o", "json")
-			if err != nil {
-				return fmt.Errorf("%v: stderr=%s", err, stderr)
-			}
-			return nil
-		}).Should(Succeed())
-
-		By("running nginx")
-		nginx, err := ioutil.ReadFile(nginxYAMLPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		_, stderr, err = kubectlWithInput(nginx, "apply", "-f", "-", "-n="+namespace)
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-
-		By("checking nginx pod status")
-		var pod corev1.Pod
-		Eventually(func() error {
-			stdout, stderr, err := kubectl("get", "pods/nginx", "-n="+namespace, "-o", "json")
-			if err != nil {
-				return fmt.Errorf("%v: stderr=%s", err, stderr)
-			}
-
-			err = json.Unmarshal(stdout, &pod)
-			if err != nil {
-				return err
-			}
-
-			for _, cond := range pod.Status.Conditions {
-				if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-					return nil
-				}
-			}
-			return errors.New("pod is not yet ready")
-		}).Should(Succeed())
-
-		Eventually(func() error {
-			for i := 0; i < 5; i++ {
-				_, stderr, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP)
-				if err != nil {
-					return fmt.Errorf("%v: stderr=%s", err, stderr)
-				}
-			}
-			return nil
-		}).Should(Succeed())
-
-		logFile := fmt.Sprintf("%d.log", pod.Status.ContainerStatuses[0].RestartCount)
-		subDirName := fmt.Sprintf("%s_%s_%s", namespace, "nginx", string(pod.ObjectMeta.UID))
-		logPath := filepath.Join("/var/log/pods", subDirName, "nginx", logFile)
-		pattern := fmt.Sprintf("%s.*", logPath)
-
-		By("checking log file")
-		Eventually(func() error {
-			_, _, err = execAt(pod.Status.HostIP, "test", "-f", logPath)
-			if err != nil {
-				return fmt.Errorf("log file doesn't exist")
-			}
-			return nil
-		}).Should(Succeed())
-
-		// kubelet rotates logfile every 10 second.
-		time.Sleep(10 * time.Second)
-
-		_, _, err = execAt(pod.Status.HostIP, "test", "-f", pattern)
-		Expect(err).To(HaveOccurred(), "log file is already rotated")
-
-		for i := 0; i < 5; i++ {
-			_, _, err = execAt(pod.Status.HostIP, "curl", pod.Status.PodIP)
-			Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-		}
-
-		Eventually(func() error {
-			_, _, err = execAt(pod.Status.HostIP, "test", "-f", pattern)
-			if err != nil {
-				return fmt.Errorf("log file isn't rotated")
-			}
-			return nil
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 	})
 
 	It("can output audit log", func() {
@@ -456,10 +348,7 @@ func TestKubernetes() {
 kind: Policy
 rules:
 - level: Metadata`
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 		logs, _, err = execAt(node1, "sudo", "journalctl", "CONTAINER_NAME=kube-apiserver", "-p", "6..6", "-q")
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(logs).ShouldNot(BeEmpty())
@@ -479,10 +368,7 @@ rules:
 kind: Policy
 rules:
 - level: Request`
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 		status, _, err = getClusterStatus(cluster)
 		Expect(err).ShouldNot(HaveOccurred())
 		var currentPolicyFile string
@@ -498,10 +384,7 @@ rules:
 		By("disabling audit log")
 		cluster.Options.APIServer.AuditLogEnabled = false
 		cluster.Options.APIServer.AuditLogPolicy = ""
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 	})
 
 	It("updates user-defined resources", func() {
@@ -543,13 +426,14 @@ roleRef:
 `
 		ckecliWithInput([]byte(resources), "resource", "set", "-")
 		defer ckecliWithInput([]byte(resources), "resource", "delete", "-")
+		ts := time.Now()
 
 		cluster := getCluster()
 		for i := 0; i < 3; i++ {
 			cluster.Nodes[i].ControlPlane = true
 		}
 		Eventually(func() error {
-			return checkCluster(cluster)
+			return checkCluster(cluster, ts)
 		}).Should(Succeed())
 
 		By("updating user-defined resources")
@@ -562,8 +446,9 @@ metadata:
 `
 		ckecliWithInput([]byte(newResources), "resource", "set", "-")
 		defer ckecliWithInput([]byte(newResources), "resource", "delete", "-")
+		ts = time.Now()
 		Eventually(func() error {
-			return checkCluster(cluster)
+			return checkCluster(cluster, ts)
 		}).Should(Succeed())
 
 		stdout, _, err := kubectl("get", "namespaces/foo", "-o", "json")

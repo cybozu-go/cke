@@ -179,6 +179,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	storage := cke.Storage{
 		Client: c.session.Client(),
 	}
+	ts := time.Now().UTC()
 	cluster, err := storage.GetCluster(ctx)
 	switch err {
 	case cke.ErrNotFound:
@@ -248,7 +249,17 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return err
 	}
 
-	ops := DecideOps(cluster, status, rcs)
+	ops, phase := DecideOps(cluster, status, rcs)
+
+	st := &cke.ServerStatus{
+		Phase:     phase,
+		Timestamp: ts,
+	}
+	err = storage.SetStatus(ctx, c.session.Lease(), st)
+	if err != nil {
+		return err
+	}
+
 	if len(ops) == 0 {
 		wait = true
 		if c.addon != nil {

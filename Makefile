@@ -2,12 +2,14 @@
 
 GOFLAGS = -mod=vendor
 export GOFLAGS
+ETCD_VERSION = 3.3.18
 
 all: test
 
 setup:
 	cd /tmp; go get github.com/gostaticanalysis/nilerr/cmd/nilerr
 	cd /tmp; go get github.com/cybozu/neco-containers/golang/restrictpkg/cmd/restrictpkg
+	curl -fsL https://github.com/etcd-io/etcd/releases/download/v$(ETCD_VERSION)/etcd-v$(ETCD_VERSION)-linux-amd64.tar.gz | sudo tar -xzf - --strip-components=1 -C /usr/local/bin etcd-v$(ETCD_VERSION)-linux-amd64/etcd etcd-v$(ETCD_VERSION)-linux-amd64/etcdctl
 
 test:
 	test -z "$$(gofmt -s -l . | grep -v '^vendor' | tee /dev/stderr)"

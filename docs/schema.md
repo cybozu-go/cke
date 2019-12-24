@@ -60,7 +60,7 @@ CA that issues certificates for client and server authentication between etcd pe
 CA that issues client authentication certificates for etcd clients.
 
 `records`
-----------
+---------
 
 The next ID of the record formatted as a decimal string.
 
@@ -107,3 +107,14 @@ configuration.
 ### `sabakan/url`
 
 Sabakan URL.
+
+<a name="status"></a>
+`status`
+--------
+
+JSON object that has the following fields:
+
+| Name        | Type   | Description                                                                    |
+| ----------- | ------ | ------------------------------------------------------------------------------ |
+| `phase`     | string | CKE server processing phase represented as a string.                           |
+| `timestamp` | string | RFC3339 formatted string of the time when CKE reads the cluster configuration. |

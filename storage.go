@@ -39,6 +39,7 @@ const (
 	KeySabakanURL            = "sabakan/url"
 	KeyServiceAccountCert    = "service-account/certificate"
 	KeyServiceAccountKey     = "service-account/key"
+	KeyStatus                = "status"
 	KeyVault                 = "vault"
 )
 
@@ -53,18 +54,26 @@ var (
 	ErrNoLeader = errors.New("lost leadership")
 )
 
-// GetConfigVersion retrieves the configuration version of the Kubernetes cluster.
-func (s Storage) GetConfigVersion(ctx context.Context) (string, error) {
-	resp, err := s.Get(ctx, KeyConfigVersion)
+func (s Storage) getStringValue(ctx context.Context, key string) (string, error) {
+	resp, err := s.Get(ctx, key)
 	if err != nil {
 		return "", err
 	}
 
 	if len(resp.Kvs) == 0 {
-		return "1", nil
+		return "", ErrNotFound
 	}
 
 	return string(resp.Kvs[0].Value), nil
+}
+
+// GetConfigVersion retrieves the configuration version of the Kubernetes cluster.
+func (s Storage) GetConfigVersion(ctx context.Context) (string, error) {
+	val, err := s.getStringValue(ctx, KeyConfigVersion)
+	if err == ErrNotFound {
+		return "1", nil
+	}
+	return val, err
 }
 
 // PutConfigVersion sets the current configuration version of the Kubernetes cluster.
@@ -242,15 +251,7 @@ func (s Storage) GetVaultConfig(ctx context.Context) (*VaultConfig, error) {
 
 // GetCACertificate loads CA certificate from etcd.
 func (s Storage) GetCACertificate(ctx context.Context, name string) (string, error) {
-	resp, err := s.Get(ctx, KeyCA+name)
-	if err != nil {
-		return "", err
-	}
-	if len(resp.Kvs) == 0 {
-		return "", ErrNotFound
-	}
-
-	return string(resp.Kvs[0].Value), nil
+	return s.getStringValue(ctx, KeyCA+name)
 }
 
 // PutCACertificate stores CA certificate into etcd.
@@ -266,29 +267,13 @@ func recordKey(r *Record) string {
 // GetServiceAccountCert loads x509 certificate for service account.
 // The format is PEM.
 func (s Storage) GetServiceAccountCert(ctx context.Context) (string, error) {
-	resp, err := s.Get(ctx, KeyServiceAccountCert)
-	if err != nil {
-		return "", err
-	}
-	if len(resp.Kvs) == 0 {
-		return "", ErrNotFound
-	}
-
-	return string(resp.Kvs[0].Value), nil
+	return s.getStringValue(ctx, KeyServiceAccountCert)
 }
 
 // GetServiceAccountKey loads private key for service account.
 // The format is PEM.
 func (s Storage) GetServiceAccountKey(ctx context.Context) (string, error) {
-	resp, err := s.Get(ctx, KeyServiceAccountKey)
-	if err != nil {
-		return "", err
-	}
-	if len(resp.Kvs) == 0 {
-		return "", ErrNotFound
-	}
-
-	return string(resp.Kvs[0].Value), nil
+	return s.getStringValue(ctx, KeyServiceAccountKey)
 }
 
 // PutServiceAccountData stores x509 certificate and private key for service account.
@@ -694,13 +679,35 @@ func (s Storage) SetSabakanURL(ctx context.Context, url string) error {
 // GetSabakanURL gets URL of sabakan API.
 // The URL must be an absolute URL pointing GraphQL endpoint.
 func (s Storage) GetSabakanURL(ctx context.Context) (string, error) {
-	resp, err := s.Get(ctx, KeySabakanURL)
+	return s.getStringValue(ctx, KeySabakanURL)
+}
+
+// SetStatus stores the server status.
+func (s Storage) SetStatus(ctx context.Context, lease clientv3.LeaseID, st *ServerStatus) error {
+	data, err := json.Marshal(st)
 	if err != nil {
-		return "", err
+		return err
+	}
+	_, err = s.Put(ctx, KeyStatus, string(data), clientv3.WithLease(lease))
+	return err
+}
+
+// GetStatus retrieves the server status if exists.
+// If the status is not found, this returns ("", ErrNotFound).
+func (s Storage) GetStatus(ctx context.Context) (*ServerStatus, error) {
+	resp, err := s.Get(ctx, KeyStatus)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(resp.Kvs) == 0 {
-		return "", ErrNotFound
+		return nil, ErrNotFound
 	}
-	return string(resp.Kvs[0].Value), nil
+
+	st := &ServerStatus{}
+	err = json.Unmarshal(resp.Kvs[0].Value, &st)
+	if err != nil {
+		return nil, err
+	}
+	return st, nil
 }

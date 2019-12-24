@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/google/go-cmp/cmp"
@@ -609,6 +610,48 @@ func testStorageSabakan(t *testing.T) {
 	}
 }
 
+func testStatus(t *testing.T) {
+	t.Parallel()
+
+	client := newEtcdClient(t)
+	defer client.Close()
+	s := Storage{client}
+	ctx := context.Background()
+
+	_, err := s.GetStatus(ctx)
+	if err != ErrNotFound {
+		t.Error("unexpected error:", err)
+	}
+
+	resp, err := client.Grant(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = s.SetStatus(ctx, resp.ID, &ServerStatus{Phase: PhaseCompleted, Timestamp: time.Now().UTC()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	status, err := s.GetStatus(ctx)
+	if err != nil {
+		t.Fatal("unexpected error:", err)
+	}
+	if status.Phase != PhaseCompleted {
+		t.Error("wrong phase:", status.Phase)
+	}
+
+	_, err = client.Revoke(ctx, resp.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.GetStatus(ctx)
+	if err != ErrNotFound {
+		t.Error("err is not ErrNotFound. err=", err)
+	}
+}
+
 func TestStorage(t *testing.T) {
 	t.Run("ConfigVersion", testConfigVersion)
 	t.Run("Cluster", testStorageCluster)
@@ -617,4 +660,5 @@ func TestStorage(t *testing.T) {
 	t.Run("Maint", testStorageMaint)
 	t.Run("Resource", testStorageResource)
 	t.Run("Sabakan", testStorageSabakan)
+	t.Run("Status", testStatus)
 }

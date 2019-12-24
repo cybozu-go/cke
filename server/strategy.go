@@ -14,67 +14,66 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DecideOps returns the next operations to do.
-// This returns nil when no operation need to be done.
-func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition) []cke.Operator {
-
+// DecideOps returns the next operations to do and the operation phase.
+// This returns nil when no operations need to be done.
+func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition) ([]cke.Operator, cke.OperationPhase) {
 	nf := NewNodeFilter(c, cs)
 
 	// 0. Execute upgrade opeartion if necessary
 	if cs.ConfigVersion != cke.ConfigVersion {
-		return []cke.Operator{op.UpgradeOp(cs.ConfigVersion, nf.ControlPlane())}
+		return []cke.Operator{op.UpgradeOp(cs.ConfigVersion, nf.ControlPlane())}, cke.PhaseUpgrade
 	}
 
 	// 1. Run or restart rivers.  This guarantees:
 	// - CKE tools image is pulled on all nodes.
 	// - Rivers runs on all nodes and will proxy requests only to control plane nodes.
 	if ops := riversOps(c, nf); len(ops) > 0 {
-		return ops
+		return ops, cke.PhaseRivers
 	}
 
 	// 2. Bootstrap etcd cluster, if not yet.
 	if !nf.EtcdBootstrapped() {
 		// Etcd boot operations run only when all CPs are SSH reachable
 		if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, false)) > 0 {
-			log.Warn("cannot boot etcd since there are ssh-unconnectable control planes", nil)
-			return nil
+			log.Warn("cannot bootstrap etcd for unreachable nodes", nil)
+			return nil, cke.PhaseEtcdBootAborted
 		}
-		return []cke.Operator{etcd.BootOp(nf.ControlPlane(), c.Options.Etcd, c.Options.Kubelet.Domain)}
+		return []cke.Operator{etcd.BootOp(nf.ControlPlane(), c.Options.Etcd, c.Options.Kubelet.Domain)}, cke.PhaseEtcdBoot
 	}
 
 	// 3. Start etcd containers.
 	if nodes := nf.SSHConnectedNodes(nf.EtcdStoppedMembers(), true, false); len(nodes) > 0 {
-		return []cke.Operator{etcd.StartOp(nodes, c.Options.Etcd, c.Options.Kubelet.Domain)}
+		return []cke.Operator{etcd.StartOp(nodes, c.Options.Etcd, c.Options.Kubelet.Domain)}, cke.PhaseEtcdStart
 	}
 
 	// 4. Wait for etcd cluster to become ready
 	if !cs.Etcd.IsHealthy {
-		return []cke.Operator{etcd.WaitClusterOp(nf.ControlPlane())}
+		return []cke.Operator{etcd.WaitClusterOp(nf.ControlPlane())}, cke.PhaseEtcdWait
 	}
 
 	// 5. Run or restart kubernetes components.
 	if ops := k8sOps(c, nf); len(ops) > 0 {
-		return ops
+		return ops, cke.PhaseK8sStart
 	}
 
 	// 6. Maintain etcd cluster, only when all CPs are SSH reachable.
 	if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, false)) == 0 {
 		if o := etcdMaintOp(c, nf); o != nil {
-			return []cke.Operator{o}
+			return []cke.Operator{o}, cke.PhaseEtcdMaintain
 		}
 	}
 
 	// 7. Maintain k8s resources.
 	if ops := k8sMaintOps(c, cs, resources, nf); len(ops) > 0 {
-		return ops
+		return ops, cke.PhaseK8sMaintain
 	}
 
 	// 8. Stop and delete control plane services running on non control plane nodes.
 	if ops := cleanOps(c, nf); len(ops) > 0 {
-		return ops
+		return ops, cke.PhaseStopCP
 	}
 
-	return nil
+	return nil, cke.PhaseCompleted
 }
 
 func riversOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {

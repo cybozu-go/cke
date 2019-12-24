@@ -45,6 +45,7 @@ var (
 		KeepAlive: defaultKeepAlive,
 	}
 
+	// TODO Remove looseCheck when the version which writes Processing Status is released.
 	looseCheck = false
 )
 
@@ -380,15 +381,27 @@ func getClusterStatus(cluster *cke.Cluster) (*cke.ClusterStatus, []cke.ResourceD
 	return cs, resources, err
 }
 
-func ckecliClusterSet(cluster *cke.Cluster) error {
+func getServerStatus() (*cke.ServerStatus, error) {
+	etcd, err := connectEtcd()
+	if err != nil {
+		return nil, err
+	}
+	defer etcd.Close()
+
+	st := cke.Storage{Client: etcd}
+	ctx := context.Background()
+	return st.GetStatus(ctx)
+}
+
+func ckecliClusterSet(cluster *cke.Cluster) (time.Time, error) {
 	y, err := yaml.Marshal(cluster)
 	if err != nil {
-		return err
+		return time.Time{}, err
 	}
 
 	rf := remoteTempFile(string(y))
 	_, _, err = ckecli("cluster", "set", rf)
-	return err
+	return time.Now(), err
 }
 
 func stopManagementEtcd(client *ssh.Client) error {
@@ -429,8 +442,10 @@ func (e checkError) Error() string {
 	return strings.Join(e.Ops, ",")
 }
 
-func checkCluster(c *cke.Cluster) error {
-	status, res, err := getClusterStatus(c)
+func checkCluster(c *cke.Cluster, ts time.Time) error {
+	// TODO: Remove getClusterStatus and if clause with looseCheck
+	// once a new version containing this is released.
+	status, _, err := getClusterStatus(c)
 	if err != nil {
 		return err
 	}
@@ -439,20 +454,29 @@ func checkCluster(c *cke.Cluster) error {
 		return nil
 	}
 
-	nf := server.NewNodeFilter(c, status)
-	if !nf.EtcdIsGood() {
-		return errors.New("etcd cluster is not good")
+	st, err := getServerStatus()
+	if err != nil {
+		if err == cke.ErrNotFound {
+			return errors.New("server status is not found")
+		}
+		return err
 	}
 
-	ops := server.DecideOps(c, status, res)
-	if len(ops) == 0 {
-		return nil
+	if st.Phase != cke.PhaseCompleted {
+		return fmt.Errorf("status:%+v", st)
 	}
-	opNames := make([]string, len(ops))
-	for i, op := range ops {
-		opNames[i] = op.Name()
+	if st.Timestamp.Before(ts) {
+		return errors.New("server status is not yet updated")
 	}
-	return checkError{opNames, status}
+	return nil
+}
+
+func clusterSetAndWait(cluster *cke.Cluster) {
+	ts, err := ckecliClusterSet(cluster)
+	ExpectWithOffset(1, err).ShouldNot(HaveOccurred())
+	EventuallyWithOffset(1, func() error {
+		return checkCluster(cluster, ts)
+	}).Should(Succeed())
 }
 
 func initializeControlPlane() {
@@ -461,11 +485,7 @@ func initializeControlPlane() {
 	for i := 0; i < 3; i++ {
 		cluster.Nodes[i].ControlPlane = true
 	}
-	ckecliClusterSet(cluster)
-
-	Eventually(func() error {
-		return checkCluster(cluster)
-	}).Should(Succeed())
+	clusterSetAndWait(cluster)
 }
 
 func setFailurePoint(failurePoint, code string) {
