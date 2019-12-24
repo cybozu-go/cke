@@ -163,10 +163,7 @@ func TestKubernetes() {
 		By("updating domain name to neco.local")
 		before := cluster.Options.Kubelet.Domain
 		cluster.Options.Kubelet.Domain = "neco.local"
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 
 		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=cke.cybozu.com/appname=node-dns", "-o=json")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
@@ -191,11 +188,7 @@ func TestKubernetes() {
 		}).Should(Succeed())
 
 		cluster.Options.Kubelet.Domain = before
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
-
+		clusterSetAndWait(cluster)
 	})
 
 	It("has node DNS resources", func() {
@@ -267,10 +260,7 @@ func TestKubernetes() {
 			cluster.Nodes[i].ControlPlane = true
 		}
 		cluster.EtcdBackup.Enabled = true
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 
 		By("getting hostIP of etcdbackup Pod")
 		var hostIP string
@@ -340,10 +330,7 @@ func TestKubernetes() {
 
 		By("confirming etcdbackup CronJob is removed when etcdbackup is disabled")
 		cluster.EtcdBackup.Enabled = false
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 	})
 
 	It("can rotate pod log", func() {
@@ -456,10 +443,7 @@ func TestKubernetes() {
 kind: Policy
 rules:
 - level: Metadata`
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 		logs, _, err = execAt(node1, "sudo", "journalctl", "CONTAINER_NAME=kube-apiserver", "-p", "6..6", "-q")
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(logs).ShouldNot(BeEmpty())
@@ -479,10 +463,7 @@ rules:
 kind: Policy
 rules:
 - level: Request`
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 		status, _, err = getClusterStatus(cluster)
 		Expect(err).ShouldNot(HaveOccurred())
 		var currentPolicyFile string
@@ -498,10 +479,7 @@ rules:
 		By("disabling audit log")
 		cluster.Options.APIServer.AuditLogEnabled = false
 		cluster.Options.APIServer.AuditLogPolicy = ""
-		ckecliClusterSet(cluster)
-		Eventually(func() error {
-			return checkCluster(cluster)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 	})
 
 	It("updates user-defined resources", func() {
@@ -541,6 +519,7 @@ roleRef:
   name: pod-reader
   apiGroup: rbac.authorization.k8s.io
 `
+		ts := time.Now()
 		ckecliWithInput([]byte(resources), "resource", "set", "-")
 		defer ckecliWithInput([]byte(resources), "resource", "delete", "-")
 
@@ -549,7 +528,7 @@ roleRef:
 			cluster.Nodes[i].ControlPlane = true
 		}
 		Eventually(func() error {
-			return checkCluster(cluster)
+			return checkCluster(cluster, ts)
 		}).Should(Succeed())
 
 		By("updating user-defined resources")
@@ -560,10 +539,11 @@ metadata:
   labels:
     test: value
 `
+		ts = time.Now()
 		ckecliWithInput([]byte(newResources), "resource", "set", "-")
 		defer ckecliWithInput([]byte(newResources), "resource", "delete", "-")
 		Eventually(func() error {
-			return checkCluster(cluster)
+			return checkCluster(cluster, ts)
 		}).Should(Succeed())
 
 		stdout, _, err := kubectl("get", "namespaces/foo", "-o", "json")

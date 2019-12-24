@@ -38,6 +38,7 @@ func TestUpgrade() {
 	})
 
 	It("runs new CKE", func() {
+		ts := time.Now()
 		runCKE(ckeImageURL)
 		cluster := getCluster()
 		for i := 0; i < 3; i++ {
@@ -45,7 +46,7 @@ func TestUpgrade() {
 		}
 		looseCheck = false
 		Eventually(func() error {
-			return checkCluster(cluster)
+			return checkCluster(cluster, ts)
 		}).Should(Succeed())
 	})
 
