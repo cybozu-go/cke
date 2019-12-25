@@ -66,7 +66,7 @@ Bump version
     $ git commit -a -m "Bump version to $VERSION"
     $ git neco review
     ```
-7. Make sure that Sonobuoy test has been passed.
+7. Make sure that Sonobuoy test has been passed when updating to `x.y.0` and its RC.
 8. Merge the pull request.
 9. Make a tag and push it.
 
