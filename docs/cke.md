@@ -12,7 +12,7 @@ $ cke -h
       --debug-sabakan        debug sabakan integration
       --http string          <Listen IP>:<Port number> (default "0.0.0.0:10180")
       --interval string      check interval (default "1m")
-      --certs-gc-interval    tidy interval for expired certificates (default "1m")
+      --certs-gc-interval    tidy interval for expired certificates (default "1h")
       --logfile string       Log filename
       --logformat string     Log format [plain,logfmt,json]
       --loglevel string      Log level [critical,error,warning,info,debug]
