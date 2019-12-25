@@ -44,9 +44,6 @@ var (
 		Timeout:   defaultDialTimeout,
 		KeepAlive: defaultKeepAlive,
 	}
-
-	// TODO Remove looseCheck when the version which writes Processing Status is released.
-	looseCheck = false
 )
 
 type sshAgent struct {
@@ -443,17 +440,6 @@ func (e checkError) Error() string {
 }
 
 func checkCluster(c *cke.Cluster, ts time.Time) error {
-	// TODO: Remove getClusterStatus and if clause with looseCheck
-	// once a new version containing this is released.
-	status, _, err := getClusterStatus(c)
-	if err != nil {
-		return err
-	}
-
-	if looseCheck && status.Kubernetes.IsControlPlaneReady {
-		return nil
-	}
-
 	st, err := getServerStatus()
 	if err != nil {
 		if err == cke.ErrNotFound {

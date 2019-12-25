@@ -21,8 +21,6 @@ const (
 func RunBeforeSuite(img string) {
 	if img == "" {
 		img = ckeImageURL
-	} else {
-		looseCheck = true
 	}
 	fmt.Println("Preparing...")
 
