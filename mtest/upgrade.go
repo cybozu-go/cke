@@ -44,7 +44,6 @@ func TestUpgrade() {
 		for i := 0; i < 3; i++ {
 			cluster.Nodes[i].ControlPlane = true
 		}
-		looseCheck = false
 		Eventually(func() error {
 			return checkCluster(cluster, ts)
 		}).Should(Succeed())
