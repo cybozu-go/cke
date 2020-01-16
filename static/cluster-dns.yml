@@ -94,6 +94,12 @@ spec:
             cpu: 100m
             memory: 70Mi
         args: [ "-conf", "/etc/coredns/Corefile" ]
+        lifecycle:
+          preStop:
+            exec:
+              - sh
+              - -c
+              - "sleep 5"
         volumeMounts:
         - name: config-volume
           mountPath: /etc/coredns

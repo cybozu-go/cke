@@ -88,6 +88,12 @@ spec:
           args:
             - -c
             - /etc/unbound/unbound.conf
+          lifecycle:
+            preStop:
+              exec:
+                - sh
+                - -c
+                - "sleep 5"
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
