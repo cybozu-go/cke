@@ -11,7 +11,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Add preStop hook to wait for graceful termination. (#286)
 
 ### Changed
-- Update images for Kubernetes 1.16 (#262)
+- Update images for Kubernetes 1.16.5 (#287)
     - hyperkube 1.16.5
     - CNI plugins 0.8.4
 
