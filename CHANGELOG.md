@@ -5,6 +5,16 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.16.2-rc.1] - 2020-01-17
+
+### Added
+- Add preStop hook to wait for graceful termination. (#286)
+
+### Changed
+- Update images for Kubernetes 1.16.5 (#287)
+    - hyperkube 1.16.5
+    - CNI plugins 0.8.4
+
 ## [1.16.1] - 2019-12-25
 
 ### Changed
@@ -44,7 +54,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.16.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.16.2-rc.1...HEAD
+[1.16.2-rc.1]: https://github.com/cybozu-go/cke/compare/v1.16.1...v1.16.2-rc.1
 [1.16.1]: https://github.com/cybozu-go/cke/compare/v1.16.0...v1.16.1
 [1.16.0]: https://github.com/cybozu-go/cke/compare/v1.16.0-rc.3...v1.16.0
 [1.16.0-rc.3]: https://github.com/cybozu-go/cke/compare/v1.16.0-rc.2...v1.16.0-rc.3
