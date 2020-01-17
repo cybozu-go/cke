@@ -50,7 +50,7 @@ Modules under `k8s.io` are compatible with Go modules.
 Therefore, when `k8s.io/client-go` is updated as follows, dependent modules are also updated.
 
 ```console
-$ go get k8s.io/client-go@kubernetes-1.16.4
+$ go get k8s.io/client-go@kubernetes-1.16.5
 
 $ go mod tidy
 $ go mod vendor
