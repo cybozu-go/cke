@@ -99,16 +99,25 @@ func TestKubernetes() {
 		_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
+		var node string
 		By("getting CoreDNS Pods")
-		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=cke.cybozu.com/appname=cluster-dns", "-o=json")
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		Eventually(func() error {
+			stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=cke.cybozu.com/appname=cluster-dns", "-o=json")
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
 
-		var pods corev1.PodList
-		err = json.Unmarshal(stdout, &pods)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(pods.Items).To(HaveLen(2))
-
-		node := pods.Items[0].Spec.NodeName
+			var pods corev1.PodList
+			err = json.Unmarshal(stdout, &pods)
+			if err != nil {
+				return fmt.Errorf("%v: stdout=%s", err, stdout)
+			}
+			if len(pods.Items) != 2 {
+				return fmt.Errorf("len(pods.Items) should be 2: %d", len(pods.Items))
+			}
+			node = pods.Items[0].Spec.NodeName
+			return nil
+		}).Should(Succeed())
 
 		By("deploying Service resource")
 		nginx, err := ioutil.ReadFile(nginxYAMLPath)
