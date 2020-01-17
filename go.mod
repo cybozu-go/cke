@@ -32,16 +32,15 @@ require (
 	github.com/prometheus/client_golang v0.9.2 // indirect
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/spf13/cobra v0.0.5
-	github.com/spf13/pflag v1.0.3
+	github.com/spf13/pflag v1.0.5
 	github.com/vektah/gqlparser v1.1.2
-	golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8
+	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	google.golang.org/genproto v0.0.0-20190502173448-54afdca5d873 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
-	gopkg.in/inf.v0 v0.9.1 // indirect
 	gotest.tools v2.2.0+incompatible // indirect
-	k8s.io/api v0.16.4
-	k8s.io/apimachinery v0.16.4
-	k8s.io/client-go v0.16.4
+	k8s.io/api v0.16.5
+	k8s.io/apimachinery v0.16.5
+	k8s.io/client-go v0.16.5
 	sigs.k8s.io/yaml v1.1.0
 )
 
