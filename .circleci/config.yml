@@ -55,10 +55,10 @@ jobs:
             diff -u /tmp/resource_apply.go resource_apply.go
       - run: make test GOBIN=/tmp/workspace
       - persist_to_workspace:
-         root: /tmp/workspace
-         paths:
-           - cke
-           - ckecli
+          root: /tmp/workspace
+          paths:
+            - cke
+            - ckecli
   build-image:
     docker:
       - image: docker:stable
@@ -180,6 +180,10 @@ jobs:
           command: |
             echo $GCLOUD_SERVICE_ACCOUNT > account.json
             gcloud auth activate-service-account --key-file=account.json
+      - run:
+          name: Store Private Key
+          command: |
+            echo $GCLOUD_SSH_PRIVATE_KEY > gcp.private-key
       - run:
           name: Run Sonobuoy
           command: ./bin/run-sonobuoy.sh
