@@ -183,7 +183,8 @@ jobs:
       - run:
           name: Store Private Key
           command: |
-            echo $GCLOUD_SSH_PRIVATE_KEY > gcp.private-key
+            apt-get update && apt-get install -y --no-install-recommends jq
+            cat account.json | jq -r ".private_key" > gcp.private-key
       - run:
           name: Run Sonobuoy
           command: ./bin/run-sonobuoy.sh
