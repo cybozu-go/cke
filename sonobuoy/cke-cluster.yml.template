@@ -1,12 +1,12 @@
 name: tutorial
 nodes:
   - address: @WORKER1_ADDRESS@
-    user: core
+    user: cybozu
     control_plane: true
   - address: @WORKER2_ADDRESS@
-    user: core
+    user: cybozu
   - address: @WORKER3_ADDRESS@
-    user: core
+    user: cybozu
 service_subnet: 10.100.0.0/16
 pod_subnet: 10.10.0.0/16
 dns_servers: ["8.8.8.8", "1.1.1.1"]
