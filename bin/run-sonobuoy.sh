@@ -78,9 +78,9 @@ mv sonobuoy.tar.gz /tmp
 EOF
 chmod +x run.sh
 
-WORKER1_ADDRESS=$($GCLOUD compute instances describe ${INSTANCE_NAME}-1 --zone ${ZONE} --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
-WORKER2_ADDRESS=$($GCLOUD compute instances describe ${INSTANCE_NAME}-2 --zone ${ZONE} --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
-WORKER3_ADDRESS=$($GCLOUD compute instances describe ${INSTANCE_NAME}-3 --zone ${ZONE} --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+WORKER1_ADDRESS=$($GCLOUD compute instances describe ${INSTANCE_NAME}-1 --zone ${ZONE} --format='get(networkInterfaces[0].networkIP)')
+WORKER2_ADDRESS=$($GCLOUD compute instances describe ${INSTANCE_NAME}-2 --zone ${ZONE} --format='get(networkInterfaces[0].networkIP)')
+WORKER3_ADDRESS=$($GCLOUD compute instances describe ${INSTANCE_NAME}-3 --zone ${ZONE} --format='get(networkInterfaces[0].networkIP)')
 
 sed -e "s|@WORKER1_ADDRESS@|${WORKER1_ADDRESS}|" \
   -e "s|@WORKER2_ADDRESS@|${WORKER2_ADDRESS}|" \
