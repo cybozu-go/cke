@@ -15,7 +15,7 @@ delete_instance() {
 $GCLOUD compute instances delete ${INSTANCE_NAME}-0 --zone ${ZONE} || true
 $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --zone ${ZONE} \
-  --machine-type ${MACHINE_TYPE} \
+  --machine-type ${MACHINE_TYPE_SONOBUOY} \
   --image vmx-enabled \
   --boot-disk-type ${DISK_TYPE} \
   --boot-disk-size ${BOOT_DISK_SIZE}
@@ -24,11 +24,13 @@ for i in $(seq 3); do
   $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
   $GCLOUD compute instances create ${INSTANCE_NAME}-${i} \
     --zone ${ZONE} \
-    --machine-type ${MACHINE_TYPE} \
+    --machine-type ${MACHINE_TYPE_WORKER} \
     --image-project coreos-cloud \
     --image-family coreos-stable \
     --boot-disk-type ${DISK_TYPE} \
-    --boot-disk-size ${BOOT_DISK_SIZE}
+    --boot-disk-size ${BOOT_DISK_SIZE} \
+    --metadata-from-file user-data=$(dirname $0)/../sonobuoy/worker.ign \
+    --local-ssd interface=nvme
 done
 
 RET=0
