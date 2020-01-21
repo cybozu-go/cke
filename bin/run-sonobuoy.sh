@@ -43,11 +43,16 @@ for i in $(seq 0 3); do
   done
 done
 
-# Extend instance life to complete sonobuoy test
+# Register SSH key and extend instance life to complete sonobuoy test
+ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
+cat gcp_rsa.pub | sed -e "s/^/cybozu:/g" > ./gcp_public_key.txt
 for i in $(seq 0 3); do
   $GCLOUD compute instances add-metadata ${INSTANCE_NAME}-${i} --zone ${ZONE} \
     --metadata extended=$(date -Iseconds -d+4hours)
+  $GCLOUD compute instances add-metadata ${INSTANCE_NAME}-${i} --zone ${ZONE} \
+    --metadata-from-file ssh-keys=./gcp_public_key.txt
 done
+$GCLOUD compute scp --zone=${ZONE} ./gcp_rsa cybozu@${INSTANCE_NAME}-0:
 
 cat >run.sh <<EOF
 #!/bin/sh -ex
@@ -83,7 +88,6 @@ sed -e "s|@WORKER1_ADDRESS@|${WORKER1_ADDRESS}|" \
 
 $GCLOUD compute scp --zone=${ZONE} run.sh cybozu@${INSTANCE_NAME}-0:
 $GCLOUD compute scp --zone=${ZONE} cke-cluster.yml cybozu@${INSTANCE_NAME}-0:
-$GCLOUD compute scp --zone=${ZONE} gcp.private-key cybozu@${INSTANCE_NAME}-0:
 set +e
 $GCLOUD compute ssh --zone=${ZONE} cybozu@${INSTANCE_NAME}-0 --command='sudo -H /home/cybozu/run.sh'
 RET=$?

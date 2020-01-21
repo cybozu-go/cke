@@ -45,7 +45,7 @@ run: bin/cke bin/ckecli bin/kubectl
 	mkdir -p etcd-data
 	/usr/local/bin/docker-compose up -d
 	./wait-up.sh
-	$(CKECLI) vault ssh-privkey /home/cybozu/gcp.private-key
+	$(CKECLI) vault ssh-privkey /home/cybozu/gcp_rsa
 	$(CKECLI) constraints set minimum-workers 2
 	$(CKECLI) constraints set control-plane-count 1
 	$(CKECLI) cluster set /home/cybozu/cke-cluster.yml

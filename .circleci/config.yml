@@ -181,11 +181,6 @@ jobs:
             echo $GCLOUD_SERVICE_ACCOUNT > account.json
             gcloud auth activate-service-account --key-file=account.json
       - run:
-          name: Store Private Key
-          command: |
-            apt-get update && apt-get install -y --no-install-recommends jq
-            cat account.json | jq -r ".private_key" > gcp.private-key
-      - run:
           name: Run Sonobuoy
           command: ./bin/run-sonobuoy.sh
           no_output_timeout: 240m
