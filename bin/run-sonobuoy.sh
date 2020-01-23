@@ -7,33 +7,17 @@ delete_instance() {
     # do not delete GCP instance upon test failure to help debugging.
     return
   fi
-  $GCLOUD -q compute networks delete ${NETWORK_NAME} || true
-  $GCLOUD -q compute networks subnets delete ${SUBNET_NAME} || true
-  $GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_PREFIX}-internal || true
-  $GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_PREFIX}-external || true
+  $GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_NAME} || true
   for i in $(seq 0 3); do
     $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
   done
 }
 
-$GCLOUD -q compute networks delete ${NETWORK_NAME} || true
-$GCLOUD -q compute networks subnets delete ${SUBNET_NAME} --region ${REGION} || true
-$GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_PREFIX}-internal || true
-$GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_PREFIX}-external || true
-
-$GCLOUD compute networks create ${NETWORK_NAME} --subnet-mode custom
-$GCLOUD compute networks subnets create ${SUBNET_NAME} \
-  --network ${NETWORK_NAME} \
-  --range ${ADDRESS_RANGE} \
-  --region ${REGION}
-$GCLOUD compute firewall-rules create ${FIREWALL_RULE_PREFIX}-internal \
-  --allow tcp,udp,icmp,ipip \
-  --network ${NETWORK_NAME} \
-  --source-ranges ${ADDRESS_RANGE}
-$GCLOUD compute firewall-rules create ${FIREWALL_RULE_PREFIX}-external \
-  --allow tcp:22,tcp:6443,icmp \
-  --network ${INSTANCE_NAME} \
-  --source-ranges 0.0.0.0/0
+$GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_NAME} || true
+$GCLOUD compute firewall-rules create ${FIREWALL_RULE_NAME} \
+  --allow ipip \
+  --network default \
+  --source-ranges 10.128.0.0/9
 
 $GCLOUD compute instances delete ${INSTANCE_NAME}-0 --zone ${ZONE} || true
 $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
@@ -42,19 +26,16 @@ $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --image vmx-enabled \
   --boot-disk-type ${DISK_TYPE} \
   --boot-disk-size ${BOOT_DISK_SIZE} \
-  --subnet ${SUBNET_NAME}
 
 for i in $(seq 3); do
   $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
   $GCLOUD compute instances create ${INSTANCE_NAME}-${i} \
     --zone ${ZONE} \
-    --can-ip-forward \
     --machine-type ${MACHINE_TYPE_WORKER} \
     --image-project coreos-cloud \
     --image-family coreos-stable \
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
-    --subnet ${SUBNET_NAME} \
     --metadata-from-file user-data=$(dirname $0)/../sonobuoy/worker.ign \
     --local-ssd interface=nvme
 done
