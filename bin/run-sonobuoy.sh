@@ -25,7 +25,7 @@ $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --machine-type ${MACHINE_TYPE_SONOBUOY} \
   --image vmx-enabled \
   --boot-disk-type ${DISK_TYPE} \
-  --boot-disk-size ${BOOT_DISK_SIZE} \
+  --boot-disk-size ${BOOT_DISK_SIZE}
 
 for i in $(seq 3); do
   $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
@@ -37,6 +37,9 @@ for i in $(seq 3); do
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
     --metadata-from-file user-data=$(dirname $0)/../sonobuoy/worker.ign \
+    --local-ssd interface=nvme \
+    --local-ssd interface=nvme \
+    --local-ssd interface=nvme \
     --local-ssd interface=nvme
 done
 
