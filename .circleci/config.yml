@@ -55,10 +55,10 @@ jobs:
             diff -u /tmp/resource_apply.go resource_apply.go
       - run: make test GOBIN=/tmp/workspace
       - persist_to_workspace:
-         root: /tmp/workspace
-         paths:
-           - cke
-           - ckecli
+          root: /tmp/workspace
+          paths:
+            - cke
+            - ckecli
   build-image:
     docker:
       - image: docker:stable
