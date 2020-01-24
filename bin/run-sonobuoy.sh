@@ -25,7 +25,11 @@ $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --machine-type ${MACHINE_TYPE_SONOBUOY} \
   --image vmx-enabled \
   --boot-disk-type ${DISK_TYPE} \
-  --boot-disk-size ${BOOT_DISK_SIZE}
+  --boot-disk-size ${BOOT_DISK_SIZE} \
+  --local-ssd interface=nvme \
+  --local-ssd interface=nvme \
+  --local-ssd interface=nvme \
+  --local-ssd interface=nvme
 
 for i in $(seq 3); do
   $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
