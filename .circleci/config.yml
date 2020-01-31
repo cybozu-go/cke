@@ -27,6 +27,13 @@ commands:
             ./bin/run-mtest.sh <<parameters.runtime>> <<parameters.suite>> <<parameters.target>>
           no_output_timeout: 20m
       - run:
+          name: Set the instance lifetime to 10 minutes
+          command: |
+            . ./bin/env
+            $GCLOUD compute instances add-metadata ${INSTANCE_NAME} --zone ${ZONE} \
+              --metadata shutdown-at=$(date -Iseconds -d+10minutes)
+          when: on_fail
+      - run:
           name: delete instance
           command: |
             . ./bin/env
