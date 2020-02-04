@@ -7,16 +7,18 @@ Usage
 `cke [OPTIONS]`
 
 ```console
-$ cke -h
-      --config string        configuration file path (default "/etc/cke/config.yml")
-      --debug-sabakan        debug sabakan integration
-      --http string          <Listen IP>:<Port number> (default "0.0.0.0:10180")
-      --interval string      check interval (default "1m")
-      --certs-gc-interval    tidy interval for expired certificates (default "1h")
-      --logfile string       Log filename
-      --logformat string     Log format [plain,logfmt,json]
-      --loglevel string      Log level [critical,error,warning,info,debug]
-      --session-ttl string   leader session's TTL (default "60s")
+Usage of ./cke:
+      --certs-gc-interval string   tidy interval for expired certificates (default "1h")
+      --config string              configuration file path (default "/etc/cke/config.yml")
+      --debug-sabakan              debug sabakan integration
+      --http string                <Listen IP>:<Port number> (default "0.0.0.0:10180")
+      --interval string            check interval (default "1m")
+      --logfile string             Log filename
+      --logformat string           Log format [plain,logfmt,json]
+      --loglevel string            Log level [critical,error,warning,info,debug]
+      --metrics string             <Listen IP>:<Port number> (default "0.0.0.0:10081")
+      --metrics-interval string    interval duration to collect metrics data (default "30s")
+      --session-ttl string         leader session's TTL (default "60s")
 ```
 
 Configuration file
