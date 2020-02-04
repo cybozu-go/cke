@@ -46,7 +46,7 @@ func (u *Updater) UpdateLoop(ctx context.Context) error {
 func (u *Updater) UpdateAllMetrics(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 	tasks := map[string]func(ctx context.Context) error{
-		"updateMachineStatus": u.updateMachineStatus,
+		"updateOperationRunning": u.updateOperationRunning,
 	}
 	for key, task := range tasks {
 		key, task := key, task
@@ -64,23 +64,15 @@ func (u *Updater) UpdateAllMetrics(ctx context.Context) error {
 	return g.Wait()
 }
 
-func (u *Updater) updateMachineStatus(ctx context.Context) error {
-	// machines, err := u.storage.Machine.Query(ctx, nil)
-	// if err != nil {
-	// 	return err
-	// }
-	// for _, m := range machines {
-	// 	if len(m.Spec.IPv4) == 0 {
-	// 		return fmt.Errorf("unable to expose metrics, because machine have no IPv4 address; serial: %s", m.Spec.Serial)
-	// 	}
-	// 	for _, st := range sabakan.StateList {
-	// 		labelValues := []string{st.String(), m.Spec.IPv4[0], m.Spec.Serial, fmt.Sprint(m.Spec.Rack), m.Spec.Role, m.Spec.Labels["machine-type"]}
-	// 		if st == m.Status.State {
-	// 			MachineStatus.WithLabelValues(labelValues...).Set(1)
-	// 		} else {
-	// 			MachineStatus.WithLabelValues(labelValues...).Set(0)
-	// 		}
-	// 	}
-	// }
+func (u *Updater) updateOperationRunning(ctx context.Context) error {
+	st, err := u.storage.GetStatus(ctx)
+	if err != nil {
+		return err
+	}
+	if st.Phase == cke.PhaseCompleted {
+		OperationRunning.Set(0)
+	} else {
+		OperationRunning.Set(1)
+	}
 	return nil
 }
