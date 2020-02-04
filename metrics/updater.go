@@ -2,45 +2,13 @@ package metrics
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 	"time"
 
 	v3 "github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/sync/errgroup"
 )
-
-const (
-	namespace = "cke"
-)
-
-type logger struct{}
-
-func (l logger) Println(v ...interface{}) {
-	log.Error(fmt.Sprint(v...), nil)
-}
-
-// GetHandler return http.Handler for prometheus metrics
-func GetHandler() http.Handler {
-	registry := prometheus.NewRegistry()
-	registerMetrics(registry)
-
-	handler := promhttp.HandlerFor(registry,
-		promhttp.HandlerOpts{
-			ErrorLog:      logger{},
-			ErrorHandling: promhttp.ContinueOnError,
-		})
-
-	return handler
-}
-
-func registerMetrics(registry *prometheus.Registry) {
-	registry.MustRegister(AssetsBytesTotal)
-}
 
 // Updater updates Prometheus metrics periodically
 type Updater struct {

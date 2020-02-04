@@ -16,7 +16,7 @@ Usage of ./cke:
       --logfile string             Log filename
       --logformat string           Log format [plain,logfmt,json]
       --loglevel string            Log level [critical,error,warning,info,debug]
-      --metrics string             <Listen IP>:<Port number> (default "0.0.0.0:10081")
+      --metrics string             <Listen IP>:<Port number> (default "0.0.0.0:10181")
       --metrics-interval string    interval duration to collect metrics data (default "30s")
       --session-ttl string         leader session's TTL (default "60s")
 ```
@@ -27,6 +27,6 @@ Configuration file
 CKE read etcd configurations from a YAML file.
 Parameters are defined by [cybozu-go/etcdutil](https://github.com/cybozu-go/etcdutil), and not shown below will use default values of the etcdutil.
 
-Name       | Type    | Required | Description
----------- | ------- | -------- | -----------
-`prefix`   | string  | No       | Key prefix of etcd objects.  Default is `/cke/`.
+| Name     | Type   | Required | Description                                      |
+| -------- | ------ | -------- | ------------------------------------------------ |
+| `prefix` | string | No       | Key prefix of etcd objects.  Default is `/cke/`. |
