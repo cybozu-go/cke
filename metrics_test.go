@@ -13,11 +13,6 @@ import (
 	"github.com/prometheus/common/expfmt"
 )
 
-type expectedMachineStatus struct {
-	status string
-	labels map[string]string
-}
-
 type updateOperationRunningTestCase struct {
 	name     string
 	input    ServerStatus
@@ -30,9 +25,21 @@ type updateBootLeaderTestCase struct {
 	expected float64
 }
 
+type nodeInfo struct {
+	labels map[string]string
+	value  float64
+}
+
+type updateNodeInfoTestCase struct {
+	name     string
+	input    *Cluster
+	expected []nodeInfo
+}
+
 func TestMetrics(t *testing.T) {
 	t.Run("UpdateOperationRunning", testUpdateOperationRunning)
 	t.Run("UpdateBootLeader", testUpdateBootLeader)
+	t.Run("UpdateNodeInfo", testUpdateNodeInfo)
 }
 
 func testUpdateOperationRunning(t *testing.T) {
@@ -178,6 +185,151 @@ func testUpdateBootLeader(t *testing.T) {
 			}
 		})
 	}
+}
+
+func testUpdateNodeInfo(t *testing.T) {
+	testCases := []updateNodeInfoTestCase{
+		{
+			name: "1 control plane and 1 worker",
+			input: &Cluster{
+				Nodes: []*Node{
+					{
+						Address: "1.2.3.4",
+						Labels: map[string]string{
+							"cke.cybozu.com/rack": "0",
+							"cke.cybozu.com/role": "cs",
+						},
+						ControlPlane: true,
+					},
+					{
+						Address: "5.6.7.8",
+						Labels: map[string]string{
+							"cke.cybozu.com/rack": "1",
+							"cke.cybozu.com/role": "ss",
+						},
+						ControlPlane: false,
+					},
+				},
+			},
+			expected: []nodeInfo{
+				{
+					labels: map[string]string{
+						"address":       "1.2.3.4",
+						"rack":          "0",
+						"role":          "cs",
+						"control_plane": "true",
+					},
+					value: 1,
+				},
+				{
+					labels: map[string]string{
+						"address":       "1.2.3.4",
+						"rack":          "0",
+						"role":          "cs",
+						"control_plane": "false",
+					},
+					value: 0,
+				},
+				{
+					labels: map[string]string{
+						"address":       "5.6.7.8",
+						"rack":          "1",
+						"role":          "ss",
+						"control_plane": "true",
+					},
+					value: 0,
+				},
+				{
+					labels: map[string]string{
+						"address":       "5.6.7.8",
+						"rack":          "1",
+						"role":          "ss",
+						"control_plane": "false",
+					},
+					value: 1,
+				},
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			defer ctx.Done()
+
+			client := newEtcdClient(t)
+			defer client.Close()
+
+			storage := Storage{client}
+			err := storage.PutCluster(ctx, tt.input)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			updater := NewUpdater(10*time.Millisecond, client)
+			updater.updateNodeInfo(ctx)
+
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/metrics", nil)
+			GetHandler().ServeHTTP(w, req)
+
+			metricsFamily, err := parseMetrics(w.Result())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			metricsFamilyFound := false
+			for _, mf := range metricsFamily {
+				if *mf.Name != "cke_node_info" {
+					continue
+				}
+				metricsFamilyFound = true
+				for _, exp := range tt.expected {
+					metricsFound := false
+					for _, m := range mf.Metric {
+						labels := labelToMap(m.Label)
+						if !hasLabels(labels, exp.labels) {
+							continue
+						}
+						metricsFound = true
+						if *m.Gauge.Value != exp.value {
+							t.Errorf("value for cke_node_info with labels of %v is wrong.  expected: %f, actual: %f", exp.labels, exp.value, *m.Gauge.Value)
+						}
+					}
+					if !metricsFound {
+						t.Errorf("metrics cke_node_info with labels of %v was not found", exp.labels)
+					}
+				}
+			}
+			if !metricsFamilyFound {
+				t.Errorf("metrics cke_node_info was not found")
+			}
+		})
+	}
+}
+
+func labelToMap(labelPair []*dto.LabelPair) map[string]string {
+	res := make(map[string]string)
+	for _, l := range labelPair {
+		res[*l.Name] = *l.Value
+	}
+	return res
+}
+
+func hasLabels(lm map[string]string, expectedLabels map[string]string) bool {
+	for ek, ev := range expectedLabels {
+		found := false
+		for k, v := range lm {
+			if k == ek && v == ev {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 func parseMetrics(resp *http.Response) ([]*dto.MetricFamily, error) {

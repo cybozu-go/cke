@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	v3 "github.com/coreos/etcd/clientv3"
@@ -49,7 +50,7 @@ var NodeInfo = prometheus.NewGaugeVec(
 		Name:      "node_info",
 		Help:      "The Control Plane and Worker info.",
 	},
-	[]string{"rack", "role", "control_plane"},
+	[]string{"address", "rack", "role", "control_plane"},
 )
 
 // GetHandler return http.Handler for prometheus metrics
@@ -110,6 +111,7 @@ func (u *Updater) UpdateAllMetrics(ctx context.Context) error {
 	tasks := map[string]func(ctx context.Context) error{
 		"updateOperationRunning": u.updateOperationRunning,
 		"updateBootLeader":       u.updateBootLeader,
+		"updateNodeInfo":         u.updateNodeInfo,
 	}
 	for key, task := range tasks {
 		key, task := key, task
@@ -158,6 +160,21 @@ func (u *Updater) updateBootLeader(ctx context.Context) error {
 		BootLeader.Set(1)
 	} else {
 		BootLeader.Set(0)
+	}
+	return nil
+}
+
+func (u *Updater) updateNodeInfo(ctx context.Context) error {
+	cluster, err := u.storage.GetCluster(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, node := range cluster.Nodes {
+		rack := node.Labels["cke.cybozu.com/rack"]
+		role := node.Labels["cke.cybozu.com/role"]
+		NodeInfo.WithLabelValues(node.Address, rack, role, strconv.FormatBool(node.ControlPlane)).Set(1)
+		NodeInfo.WithLabelValues(node.Address, rack, role, strconv.FormatBool(!node.ControlPlane)).Set(0)
 	}
 	return nil
 }
