@@ -8,7 +8,6 @@ import (
 
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/metrics"
 	"github.com/cybozu-go/cke/sabakan"
 	"github.com/cybozu-go/cke/server"
 	"github.com/cybozu-go/etcdutil"
@@ -112,10 +111,10 @@ func main() {
 	well.Go(controller.Run)
 
 	// Metrics
-	metricsUpdater := metrics.NewUpdater(metricsInterval, etcd)
+	metricsUpdater := cke.NewUpdater(metricsInterval, etcd)
 	well.Go(metricsUpdater.UpdateLoop)
 
-	metricsHandler := metrics.GetHandler()
+	metricsHandler := cke.GetHandler()
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", metricsHandler)
 	ms := &well.HTTPServer{

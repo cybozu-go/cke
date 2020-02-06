@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	v3 "github.com/coreos/etcd/clientv3"
@@ -108,6 +109,7 @@ func (u *Updater) UpdateAllMetrics(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 	tasks := map[string]func(ctx context.Context) error{
 		"updateOperationRunning": u.updateOperationRunning,
+		"updateBootLeader":       u.updateBootLeader,
 	}
 	for key, task := range tasks {
 		key, task := key, task
@@ -134,6 +136,28 @@ func (u *Updater) updateOperationRunning(ctx context.Context) error {
 		OperationRunning.Set(0)
 	} else {
 		OperationRunning.Set(1)
+	}
+	return nil
+}
+
+func (u *Updater) updateBootLeader(ctx context.Context) error {
+	leader, err := u.storage.GetLeaderHostname(ctx)
+	if err != nil {
+		if err == ErrLeaderNotExist {
+			BootLeader.Set(0)
+		}
+		return err
+	}
+
+	myName, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
+	if leader == myName {
+		BootLeader.Set(1)
+	} else {
+		BootLeader.Set(0)
 	}
 	return nil
 }
