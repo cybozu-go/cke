@@ -6,7 +6,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 ## [Unreleased]
 
 
-## [1.16.3] - 2020-02-7
+## [1.16.3] - 2020-02-07
 
 ### Changed
 - Run Sonobuoy on multiple GCE instances. (#289)
