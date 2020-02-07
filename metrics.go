@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 
 	v3 "github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/log"
+	"github.com/cybozu-go/well"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/sync/errgroup"
@@ -24,6 +24,96 @@ func (l logger) Println(v ...interface{}) {
 const (
 	namespace = "cke"
 )
+
+// Metric represents collector and updater of metric.
+type Metric struct {
+	collector prometheus.Collector
+	updater   func(context.Context, *Storage) error
+}
+
+// Collector is a metrics collector for CKE.
+type Collector struct {
+	metrics map[string]Metric
+	storage *Storage
+}
+
+// NewCollector returns a new Collector.
+func NewCollector(client *v3.Client) *Collector {
+	return &Collector{
+		metrics: map[string]Metric{
+			"operation_running": {
+				collector: OperationRunning,
+				updater:   updateOperationRunning,
+			},
+			"boot_leader": {
+				collector: BootLeader,
+				updater:   updateBootLeader,
+			},
+			"node_info": {
+				collector: NodeInfo,
+				updater:   updateNodeInfo,
+			},
+		},
+		storage: &Storage{client},
+	}
+}
+
+// GetHandler returns http.Handler for prometheus metrics.
+func GetHandler(collector *Collector) http.Handler {
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collector)
+
+	handler := promhttp.HandlerFor(registry,
+		promhttp.HandlerOpts{
+			ErrorLog:      logger{},
+			ErrorHandling: promhttp.ContinueOnError,
+		})
+
+	return handler
+}
+
+// Describe implements Collector.Describe().
+func (c Collector) Describe(ch chan<- *prometheus.Desc) {
+	for _, metric := range c.metrics {
+		metric.collector.Describe(ch)
+	}
+}
+
+// Collect implements Collector.Collect().
+func (c Collector) Collect(ch chan<- prometheus.Metric) {
+	env := well.NewEnvironment(context.Background())
+	env.Go(c.updateAllMetrics)
+	env.Stop()
+	err := env.Wait()
+	if err != nil {
+		log.Warn("some metrics failed to be updated", map[string]interface{}{
+			log.FnError: err.Error(),
+		})
+	}
+
+	for _, metric := range c.metrics {
+		metric.collector.Collect(ch)
+	}
+}
+
+// UpdateAllMetrics is the func to update all metrics once
+func (c Collector) updateAllMetrics(ctx context.Context) error {
+	g, ctx := errgroup.WithContext(ctx)
+	for key, metric := range c.metrics {
+		key, metric := key, metric
+		g.Go(func() error {
+			err := metric.updater(ctx, c.storage)
+			if err != nil {
+				log.Warn("unable to update metrics", map[string]interface{}{
+					"funcname":  key,
+					log.FnError: err,
+				})
+			}
+			return err
+		})
+	}
+	return g.Wait()
+}
 
 // OperationRunning returns True (== 1) if any operations are running.
 var OperationRunning = prometheus.NewGauge(
@@ -53,84 +143,8 @@ var NodeInfo = prometheus.NewGaugeVec(
 	[]string{"address", "rack", "role", "control_plane"},
 )
 
-// GetHandler return http.Handler for prometheus metrics
-func GetHandler() http.Handler {
-	registry := prometheus.NewRegistry()
-	registerMetrics(registry)
-
-	handler := promhttp.HandlerFor(registry,
-		promhttp.HandlerOpts{
-			ErrorLog:      logger{},
-			ErrorHandling: promhttp.ContinueOnError,
-		})
-
-	return handler
-}
-
-func registerMetrics(registry *prometheus.Registry) {
-	registry.MustRegister(OperationRunning)
-	registry.MustRegister(BootLeader)
-	registry.MustRegister(NodeInfo)
-}
-
-// Updater updates Prometheus metrics periodically
-type Updater struct {
-	interval time.Duration
-	storage  *Storage
-}
-
-// NewUpdater is the constructor for Updater
-func NewUpdater(interval time.Duration, client *v3.Client) *Updater {
-	storage := Storage{
-		Client: client,
-	}
-	return &Updater{interval, &storage}
-}
-
-// UpdateLoop is the func to update all metrics continuously
-func (u *Updater) UpdateLoop(ctx context.Context) error {
-	ticker := time.NewTicker(u.interval)
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-ticker.C:
-			err := u.UpdateAllMetrics(ctx)
-			if err != nil {
-				log.Warn("failed to update metrics", map[string]interface{}{
-					log.FnError: err.Error(),
-				})
-			}
-		}
-	}
-}
-
-// UpdateAllMetrics is the func to update all metrics once
-func (u *Updater) UpdateAllMetrics(ctx context.Context) error {
-	g, ctx := errgroup.WithContext(ctx)
-	tasks := map[string]func(ctx context.Context) error{
-		"updateOperationRunning": u.updateOperationRunning,
-		"updateBootLeader":       u.updateBootLeader,
-		"updateNodeInfo":         u.updateNodeInfo,
-	}
-	for key, task := range tasks {
-		key, task := key, task
-		g.Go(func() error {
-			err := task(ctx)
-			if err != nil {
-				log.Warn("unable to update metrics", map[string]interface{}{
-					"funcname":  key,
-					log.FnError: err,
-				})
-			}
-			return err
-		})
-	}
-	return g.Wait()
-}
-
-func (u *Updater) updateOperationRunning(ctx context.Context) error {
-	st, err := u.storage.GetStatus(ctx)
+func updateOperationRunning(ctx context.Context, storage *Storage) error {
+	st, err := storage.GetStatus(ctx)
 	if err != nil {
 		return err
 	}
@@ -142,8 +156,8 @@ func (u *Updater) updateOperationRunning(ctx context.Context) error {
 	return nil
 }
 
-func (u *Updater) updateBootLeader(ctx context.Context) error {
-	leader, err := u.storage.GetLeaderHostname(ctx)
+func updateBootLeader(ctx context.Context, storage *Storage) error {
+	leader, err := storage.GetLeaderHostname(ctx)
 	if err != nil {
 		if err == ErrLeaderNotExist {
 			BootLeader.Set(0)
@@ -164,8 +178,8 @@ func (u *Updater) updateBootLeader(ctx context.Context) error {
 	return nil
 }
 
-func (u *Updater) updateNodeInfo(ctx context.Context) error {
-	cluster, err := u.storage.GetCluster(ctx)
+func updateNodeInfo(ctx context.Context, storage *Storage) error {
+	cluster, err := storage.GetCluster(ctx)
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -71,12 +72,12 @@ func testUpdateOperationRunning(t *testing.T) {
 			storage := Storage{client}
 			storage.SetStatus(ctx, resp.ID, &tt.input)
 
-			updater := NewUpdater(10*time.Millisecond, client)
-			updater.updateOperationRunning(ctx)
+			collector := newLimitedCollector(client, "operation_running")
+			handler := GetHandler(collector)
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/metrics", nil)
-			GetHandler().ServeHTTP(w, req)
+			handler.ServeHTTP(w, req)
 
 			metricsFamily, err := parseMetrics(w.Result())
 			if err != nil {
@@ -156,12 +157,12 @@ func testUpdateBootLeader(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			updater := NewUpdater(10*time.Millisecond, client)
-			updater.updateBootLeader(ctx)
+			collector := newLimitedCollector(client, "boot_leader")
+			handler := GetHandler(collector)
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/metrics", nil)
-			GetHandler().ServeHTTP(w, req)
+			handler.ServeHTTP(w, req)
 
 			metricsFamily, err := parseMetrics(w.Result())
 			if err != nil {
@@ -266,12 +267,12 @@ func testUpdateNodeInfo(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			updater := NewUpdater(10*time.Millisecond, client)
-			updater.updateNodeInfo(ctx)
+			collector := newLimitedCollector(client, "node_info")
+			handler := GetHandler(collector)
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/metrics", nil)
-			GetHandler().ServeHTTP(w, req)
+			handler.ServeHTTP(w, req)
 
 			metricsFamily, err := parseMetrics(w.Result())
 			if err != nil {
@@ -305,6 +306,16 @@ func testUpdateNodeInfo(t *testing.T) {
 				t.Errorf("metrics cke_node_info was not found")
 			}
 		})
+	}
+}
+
+func newLimitedCollector(client *clientv3.Client, name string) *Collector {
+	collector := NewCollector(client)
+	return &Collector{
+		metrics: map[string]Metric{
+			name: collector.metrics[name],
+		},
+		storage: collector.storage,
 	}
 }
 

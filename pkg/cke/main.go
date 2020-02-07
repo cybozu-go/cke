@@ -24,7 +24,6 @@ var (
 	flgCertsGCInterval = pflag.String("certs-gc-interval", "1h", "tidy interval for expired certificates")
 	flgSessionTTL      = pflag.String("session-ttl", "60s", "leader session's TTL")
 	flgMetrics         = pflag.String("metrics", "0.0.0.0:10181", "<Listen IP>:<Port number>")
-	flgMetricsInterval = pflag.String("metrics-interval", "30s", "interval duration to collect metrics data")
 	flgDebugSabakan    = pflag.Bool("debug-sabakan", false, "debug sabakan integration")
 )
 
@@ -68,11 +67,6 @@ func main() {
 		log.ErrorExit(err)
 	}
 
-	metricsInterval, err := time.ParseDuration(*flgMetricsInterval)
-	if err != nil {
-		log.ErrorExit(err)
-	}
-
 	ttl, err := time.ParseDuration(*flgSessionTTL)
 	if err != nil {
 		log.ErrorExit(err)
@@ -111,10 +105,8 @@ func main() {
 	well.Go(controller.Run)
 
 	// Metrics
-	metricsUpdater := cke.NewUpdater(metricsInterval, etcd)
-	well.Go(metricsUpdater.UpdateLoop)
-
-	metricsHandler := cke.GetHandler()
+	collector := cke.NewCollector(etcd)
+	metricsHandler := cke.GetHandler(collector)
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", metricsHandler)
 	ms := &well.HTTPServer{

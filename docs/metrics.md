@@ -1,7 +1,7 @@
 Metrics
 =======
 
-CKE exposes the following metrics with the Prometheus format. The listen address and update interval can be configured by the CLI flags (see [here](cke.md#Usage)). All these metrics are prefixed with `cke_`
+CKE exposes the following metrics with the Prometheus format. The listen address can be configured by the CLI flag (see [here](cke.md#Usage)). All these metrics are prefixed with `cke_`
 
 | Name              | Description                                      | Type  | Labels                             |
 | ----------------- | ------------------------------------------------ | ----- | ---------------------------------- |
