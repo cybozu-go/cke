@@ -5,6 +5,13 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+
+## [1.16.3] - 2020-02-07
+
+### Changed
+- Run Sonobuoy on multiple GCE instances. (#289)
+- node-dns: use TCP to connect upstream. (#293)
+
 ## [1.16.2] - 2020-01-20
 
 No change from v1.16.2-rc.1.
@@ -58,7 +65,8 @@ No change from v1.16.2-rc.1.
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.16.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.16.3...HEAD
+[1.16.3]: https://github.com/cybozu-go/cke/compare/v1.16.2...v1.16.3
 [1.16.2]: https://github.com/cybozu-go/cke/compare/v1.16.2-rc.1...v1.16.2
 [1.16.2-rc.1]: https://github.com/cybozu-go/cke/compare/v1.16.1...v1.16.2-rc.1
 [1.16.1]: https://github.com/cybozu-go/cke/compare/v1.16.0...v1.16.1
