@@ -43,9 +43,6 @@ github.com/cybozu-go/etcdutil
 github.com/cybozu-go/log
 # github.com/cybozu-go/netutil v1.2.0
 github.com/cybozu-go/netutil
-# github.com/cybozu-go/sabakan/v2 v2.5.0
-github.com/cybozu-go/sabakan/v2
-github.com/cybozu-go/sabakan/v2/models/mock
 # github.com/cybozu-go/well v1.8.1
 github.com/cybozu-go/well
 # github.com/davecgh/go-spew v1.1.1
@@ -118,8 +115,6 @@ github.com/hashicorp/go-retryablehttp
 github.com/hashicorp/go-rootcerts
 # github.com/hashicorp/go-sockaddr v1.0.2
 github.com/hashicorp/go-sockaddr
-# github.com/hashicorp/go-version v1.1.0
-github.com/hashicorp/go-version
 # github.com/hashicorp/golang-lru v0.5.1
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
