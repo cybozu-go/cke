@@ -6,7 +6,7 @@ CKE exposes the following metrics with the Prometheus format. The listen address
 | Name              | Description                                      | Type  | Labels                             |
 | ----------------- | ------------------------------------------------ | ----- | ---------------------------------- |
 | operation_running | True(=1) if any operations are running.          | Gauge |                                    |
-| boot_leader       | True(=1) if the boot server is the leader of CKE | Gauge |                                    |
+| leader            | True(=1) if the boot server is the leader of CKE | Gauge |                                    |
 | node_info         | The Control Plane and Worker info                | Gauge | address, rack, role, control_plane |
 
 Note that cke also exposes the metrics provided by the Prometheus client library which located under `go` and `process` namespaces.

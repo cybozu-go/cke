@@ -45,9 +45,9 @@ func NewCollector(client *v3.Client) *Collector {
 				collector: OperationRunning,
 				updater:   updateOperationRunning,
 			},
-			"boot_leader": {
-				collector: BootLeader,
-				updater:   updateBootLeader,
+			"leader": {
+				collector: Leader,
+				updater:   updateLeader,
 			},
 			"node_info": {
 				collector: NodeInfo,
@@ -124,11 +124,11 @@ var OperationRunning = prometheus.NewGauge(
 	},
 )
 
-// BootLeader returns True (== 1) if the boot server is the leader of CKE.
-var BootLeader = prometheus.NewGauge(
+// Leader returns True (== 1) if the boot server is the leader of CKE.
+var Leader = prometheus.NewGauge(
 	prometheus.GaugeOpts{
 		Namespace: namespace,
-		Name:      "boot_leader",
+		Name:      "leader",
 		Help:      "1 if the boot server is the leader of CKE.",
 	},
 )
@@ -156,11 +156,11 @@ func updateOperationRunning(ctx context.Context, storage *Storage) error {
 	return nil
 }
 
-func updateBootLeader(ctx context.Context, storage *Storage) error {
+func updateLeader(ctx context.Context, storage *Storage) error {
 	leader, err := storage.GetLeaderHostname(ctx)
 	if err != nil {
 		if err == ErrLeaderNotExist {
-			BootLeader.Set(0)
+			Leader.Set(0)
 		}
 		return err
 	}
@@ -171,9 +171,9 @@ func updateBootLeader(ctx context.Context, storage *Storage) error {
 	}
 
 	if leader == myName {
-		BootLeader.Set(1)
+		Leader.Set(1)
 	} else {
-		BootLeader.Set(0)
+		Leader.Set(0)
 	}
 	return nil
 }

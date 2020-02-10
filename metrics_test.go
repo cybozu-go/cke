@@ -20,7 +20,7 @@ type updateOperationRunningTestCase struct {
 	expected float64
 }
 
-type updateBootLeaderTestCase struct {
+type updateLeaderTestCase struct {
 	name     string
 	input    func(*concurrency.Election) error
 	expected float64
@@ -39,7 +39,7 @@ type updateNodeInfoTestCase struct {
 
 func TestMetrics(t *testing.T) {
 	t.Run("UpdateOperationRunning", testUpdateOperationRunning)
-	t.Run("UpdateBootLeader", testUpdateBootLeader)
+	t.Run("UpdateLeader", testUpdateLeader)
 	t.Run("UpdateNodeInfo", testUpdateNodeInfo)
 }
 
@@ -103,8 +103,8 @@ func testUpdateOperationRunning(t *testing.T) {
 	}
 }
 
-func testUpdateBootLeader(t *testing.T) {
-	testCases := []updateBootLeaderTestCase{
+func testUpdateLeader(t *testing.T) {
+	testCases := []updateLeaderTestCase{
 		{
 			name:     "leader does not exist",
 			input:    func(_ *concurrency.Election) error { return nil },
@@ -157,7 +157,7 @@ func testUpdateBootLeader(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			collector := newLimitedCollector(client, "boot_leader")
+			collector := newLimitedCollector(client, "leader")
 			handler := GetHandler(collector)
 
 			w := httptest.NewRecorder()
@@ -171,18 +171,18 @@ func testUpdateBootLeader(t *testing.T) {
 
 			found := false
 			for _, mf := range metricsFamily {
-				if *mf.Name != "cke_boot_leader" {
+				if *mf.Name != "cke_leader" {
 					continue
 				}
 				found = true
 				for _, m := range mf.Metric {
 					if *m.Gauge.Value != tt.expected {
-						t.Errorf("value for cke_boot_leader is wrong.  expected: %f, actual: %f", tt.expected, *m.Gauge.Value)
+						t.Errorf("value for cke_leader is wrong.  expected: %f, actual: %f", tt.expected, *m.Gauge.Value)
 					}
 				}
 			}
 			if !found {
-				t.Errorf("metrics cke_boot_leader was not found")
+				t.Errorf("metrics cke_leader was not found")
 			}
 		})
 	}
