@@ -135,7 +135,7 @@ func TestKubernetes() {
 		overrideFile := remoteTempFile(overrides)
 		_, stderr, err = kubectl("run",
 			"-n="+namespace, "--image=quay.io/cybozu/ubuntu:18.04", "--overrides=\"$(cat "+overrideFile+")\"", "--restart=Never",
-			"client", "--", "sleep", "infinity")
+			"client", "--", "pause")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		By("waiting pods are ready")
@@ -240,7 +240,7 @@ func TestKubernetes() {
 
 		By("querying www.google.com using node DNS from ubuntu pod")
 		_, stderr, err = kubectl("run", "-n="+namespace, "--image=quay.io/cybozu/ubuntu:18.04", "--restart=Never",
-			"client", "--", "sleep", "infinity")
+			"client", "--", "pause")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		Eventually(func() error {
 			_, _, err := kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "www.cybozu.com")
