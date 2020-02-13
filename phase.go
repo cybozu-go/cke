@@ -20,6 +20,21 @@ const (
 	PhaseCompleted       = OperationPhase("completed")
 )
 
+// AllOperationPhases contains all kinds of OperationPhases.
+var AllOperationPhases = []OperationPhase{
+	PhaseUpgrade,
+	PhaseRivers,
+	PhaseEtcdBootAborted,
+	PhaseEtcdBoot,
+	PhaseEtcdStart,
+	PhaseEtcdWait,
+	PhaseK8sStart,
+	PhaseEtcdMaintain,
+	PhaseK8sMaintain,
+	PhaseStopCP,
+	PhaseCompleted,
+}
+
 // ServerStatus represents the current server status.
 type ServerStatus struct {
 	Phase     OperationPhase `json:"phase"`

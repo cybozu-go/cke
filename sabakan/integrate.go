@@ -116,12 +116,14 @@ func (ig integrator) Do(ctx context.Context, leaderKey string) error {
 		}
 	}
 	if err != nil {
+		cke.UpdateSabakanIntegrationMetrics(false, nil, 0, time.Now().UTC())
 		log.Warn("sabakan: failed to generate cluster", map[string]interface{}{
 			log.FnError: err,
 		})
 		// return nil
 		return nil
 	}
+	cke.UpdateSabakanIntegrationMetrics(true, g.workersByRole, len(g.unusedMachines), time.Now().UTC())
 
 	if newc == nil {
 		log.Debug("sabakan: nothing to do", nil)

@@ -4,15 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
-	"strconv"
+	"sync"
+	"time"
 
 	v3 "github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/log"
-	"github.com/cybozu-go/well"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"golang.org/x/sync/errgroup"
 )
 
 type logger struct{}
@@ -22,13 +20,14 @@ func (l logger) Println(v ...interface{}) {
 }
 
 const (
-	namespace = "cke"
+	namespace     = "cke"
+	scrapeTimeout = time.Second * 10
 )
 
 // Metric represents collector and updater of metric.
 type Metric struct {
-	collector prometheus.Collector
-	updater   func(context.Context, *Storage) error
+	collectors  []prometheus.Collector
+	isAvailable func(context.Context, *Storage) (bool, error)
 }
 
 // Collector is a metrics collector for CKE.
@@ -41,17 +40,17 @@ type Collector struct {
 func NewCollector(client *v3.Client) *Collector {
 	return &Collector{
 		metrics: map[string]Metric{
-			"operation_running": {
-				collector: OperationRunning,
-				updater:   updateOperationRunning,
+			"operation_phase": {
+				collectors:  []prometheus.Collector{operationPhase, operationPhaseTimestampSeconds},
+				isAvailable: alwaysAvailable,
 			},
 			"leader": {
-				collector: Leader,
-				updater:   updateLeader,
+				collectors:  []prometheus.Collector{leader},
+				isAvailable: alwaysAvailable,
 			},
-			"node_info": {
-				collector: NodeInfo,
-				updater:   updateNodeInfo,
+			"sabakan_integration": {
+				collectors:  []prometheus.Collector{sabakanIntegrationSuccessful, sabakanIntegrationTimestampSeconds, sabakanWorkers, sabakanUnusedMachines},
+				isAvailable: isSabakanIntegrationMetricsAvailable,
 			},
 		},
 		storage: &Storage{client},
@@ -75,120 +74,153 @@ func GetHandler(collector *Collector) http.Handler {
 // Describe implements Collector.Describe().
 func (c Collector) Describe(ch chan<- *prometheus.Desc) {
 	for _, metric := range c.metrics {
-		metric.collector.Describe(ch)
+		for _, col := range metric.collectors {
+			col.Describe(ch)
+		}
 	}
 }
 
 // Collect implements Collector.Collect().
 func (c Collector) Collect(ch chan<- prometheus.Metric) {
-	env := well.NewEnvironment(context.Background())
-	env.Go(c.updateAllMetrics)
-	env.Stop()
-	err := env.Wait()
-	if err != nil {
-		log.Warn("some metrics failed to be updated", map[string]interface{}{
-			log.FnError: err.Error(),
-		})
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), scrapeTimeout)
+	defer cancel()
 
-	for _, metric := range c.metrics {
-		metric.collector.Collect(ch)
-	}
-}
-
-// UpdateAllMetrics is the func to update all metrics once
-func (c Collector) updateAllMetrics(ctx context.Context) error {
-	g, ctx := errgroup.WithContext(ctx)
+	var wg sync.WaitGroup
 	for key, metric := range c.metrics {
-		key, metric := key, metric
-		g.Go(func() error {
-			err := metric.updater(ctx, c.storage)
+		wg.Add(1)
+		go func(key string, metric Metric) {
+			defer wg.Done()
+			isAvailable, err := metric.isAvailable(ctx, c.storage)
 			if err != nil {
-				log.Warn("unable to update metrics", map[string]interface{}{
-					"funcname":  key,
+				log.Warn("unable to decide metrics are available", map[string]interface{}{
+					"name":      key,
 					log.FnError: err,
 				})
+				return
 			}
-			return err
-		})
+			if !isAvailable {
+				return
+			}
+
+			for _, col := range metric.collectors {
+				col.Collect(ch)
+			}
+		}(key, metric)
 	}
-	return g.Wait()
+	wg.Wait()
 }
 
-// OperationRunning returns True (== 1) if any operations are running.
-var OperationRunning = prometheus.NewGauge(
+func alwaysAvailable(_ context.Context, _ *Storage) (bool, error) {
+	return true, nil
+}
+
+var operationPhase = prometheus.NewGaugeVec(
 	prometheus.GaugeOpts{
 		Namespace: namespace,
-		Name:      "operation_running",
-		Help:      "1 if any operations are running.",
+		Name:      "operation_phase",
+		Help:      "The phase where CKE is currently operating.",
+	},
+	[]string{"phase"},
+)
+
+var operationPhaseTimestampSeconds = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "operation_phase_timestamp_seconds",
+		Help:      "The Unix timestamp when operation_phase was last updated.",
 	},
 )
 
-// Leader returns True (== 1) if the boot server is the leader of CKE.
-var Leader = prometheus.NewGauge(
+// UpdateOperationPhaseMetrics updates "operation_phase" and its timestamp.
+func UpdateOperationPhaseMetrics(phase OperationPhase, ts time.Time) {
+	for _, labelPhase := range AllOperationPhases {
+		if labelPhase == phase {
+			operationPhase.WithLabelValues(string(labelPhase)).Set(1)
+		} else {
+			operationPhase.WithLabelValues(string(labelPhase)).Set(0)
+		}
+	}
+	operationPhaseTimestampSeconds.Set(float64(ts.Unix()))
+}
+
+var leader = prometheus.NewGauge(
 	prometheus.GaugeOpts{
 		Namespace: namespace,
 		Name:      "leader",
-		Help:      "1 if the boot server is the leader of CKE.",
+		Help:      "1 if this server is the leader of CKE.",
 	},
 )
 
-// NodeInfo returns the Control Plane and Worker info.
-var NodeInfo = prometheus.NewGaugeVec(
+var leaderTimestampSeconds = prometheus.NewGauge(
 	prometheus.GaugeOpts{
 		Namespace: namespace,
-		Name:      "node_info",
-		Help:      "The Control Plane and Worker info.",
+		Name:      "leader_timestamp_seconds",
+		Help:      "The Unix timestamp when leader was last updated.",
 	},
-	[]string{"address", "rack", "role", "control_plane"},
 )
 
-func updateOperationRunning(ctx context.Context, storage *Storage) error {
-	st, err := storage.GetStatus(ctx)
-	if err != nil {
-		return err
-	}
-	if st.Phase == PhaseCompleted {
-		OperationRunning.Set(0)
+// UpdateLeaderMetrics updates "leader" and its timestamp.
+func UpdateLeaderMetrics(isLeader bool, ts time.Time) {
+	if isLeader {
+		leader.Set(1)
 	} else {
-		OperationRunning.Set(1)
+		leader.Set(0)
 	}
-	return nil
+	leaderTimestampSeconds.Set(float64(ts.Unix()))
 }
 
-func updateLeader(ctx context.Context, storage *Storage) error {
-	leader, err := storage.GetLeaderHostname(ctx)
-	if err != nil {
-		if err == ErrLeaderNotExist {
-			Leader.Set(0)
-		}
-		return err
+var sabakanIntegrationSuccessful = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "sabakan_integration_successful",
+		Help:      "1 if sabakan-integration satisfies constraints.",
+	},
+)
+
+var sabakanIntegrationTimestampSeconds = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "sabakan_integration_timestamp_seconds",
+		Help:      "The Unix timestamp when sabakan_integration_successful was last updated.",
+	},
+)
+
+var sabakanWorkers = prometheus.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "sabakan_workers",
+		Help:      "The number of worker nodes for each role.",
+	},
+	[]string{"role"},
+)
+
+var sabakanUnusedMachines = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "sabakan_unused_machines",
+		Help:      "The number of unused machines.",
+	},
+)
+
+// UpdateSabakanIntegrationMetrics updates Sabakan integration metrics.
+func UpdateSabakanIntegrationMetrics(isSuccessful bool, workersByRole map[string]int, unusedMachines int, ts time.Time) {
+	sabakanIntegrationTimestampSeconds.Set(float64(ts.Unix()))
+	if !isSuccessful {
+		sabakanIntegrationSuccessful.Set(0)
+		return
 	}
 
-	myName, err := os.Hostname()
-	if err != nil {
-		return err
+	sabakanIntegrationSuccessful.Set(1)
+	for role, num := range workersByRole {
+		sabakanWorkers.WithLabelValues(role).Set(float64(num))
 	}
-
-	if leader == myName {
-		Leader.Set(1)
-	} else {
-		Leader.Set(0)
-	}
-	return nil
+	sabakanUnusedMachines.Set(float64(unusedMachines))
 }
 
-func updateNodeInfo(ctx context.Context, storage *Storage) error {
-	cluster, err := storage.GetCluster(ctx)
+func isSabakanIntegrationMetricsAvailable(ctx context.Context, st *Storage) (bool, error) {
+	disabled, err := st.IsSabakanDisabled(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
-
-	for _, node := range cluster.Nodes {
-		rack := node.Labels["cke.cybozu.com/rack"]
-		role := node.Labels["cke.cybozu.com/role"]
-		NodeInfo.WithLabelValues(node.Address, rack, role, strconv.FormatBool(node.ControlPlane)).Set(1)
-		NodeInfo.WithLabelValues(node.Address, rack, role, strconv.FormatBool(!node.ControlPlane)).Set(0)
-	}
-	return nil
+	return !disabled, nil
 }

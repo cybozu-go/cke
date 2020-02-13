@@ -40,7 +40,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/vektah/gqlparser v1.1.2
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
-	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	google.golang.org/genproto v0.0.0-20190502173448-54afdca5d873 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gotest.tools v2.2.0+incompatible // indirect

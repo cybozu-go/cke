@@ -47,10 +47,12 @@ RETRY:
 	default:
 	}
 
+	cke.UpdateLeaderMetrics(false, time.Now().UTC())
 	err = e.Campaign(ctx, hostname)
 	if err != nil {
 		return err
 	}
+	cke.UpdateLeaderMetrics(true, time.Now().UTC())
 
 	leaderKey := e.Key()
 	log.Info("I am the leader", map[string]interface{}{
@@ -259,6 +261,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	if err != nil {
 		return err
 	}
+	cke.UpdateOperationPhaseMetrics(phase, ts)
 
 	if len(ops) == 0 {
 		wait = true
