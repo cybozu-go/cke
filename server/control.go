@@ -47,12 +47,12 @@ RETRY:
 	default:
 	}
 
-	cke.UpdateLeaderMetrics(false, time.Now().UTC())
+	cke.UpdateLeaderMetrics(false)
 	err = e.Campaign(ctx, hostname)
 	if err != nil {
 		return err
 	}
-	cke.UpdateLeaderMetrics(true, time.Now().UTC())
+	cke.UpdateLeaderMetrics(true)
 
 	leaderKey := e.Key()
 	log.Info("I am the leader", map[string]interface{}{
@@ -181,6 +181,18 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	storage := cke.Storage{
 		Client: c.session.Client(),
 	}
+
+	// Check my leadership.
+	// This check is not mandatory because every update operation checks leadership by itself.
+	// This check helps early detection of losing leadership even if no update occurs for a while.
+	isLeader, err := storage.IsLeader(ctx, leaderKey)
+	if err != nil {
+		return err
+	}
+	if !isLeader {
+		return cke.ErrNoLeader
+	}
+
 	ts := time.Now().UTC()
 	cluster, err := storage.GetCluster(ctx)
 	switch err {

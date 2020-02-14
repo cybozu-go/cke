@@ -481,6 +481,15 @@ func (s Storage) maintRecords(ctx context.Context, leaderKey string, max int64) 
 	return err
 }
 
+// IsLeader returns true if the specified leader key is valid.
+func (s Storage) IsLeader(ctx context.Context, leaderKey string) (bool, error) {
+	resp, err := s.Get(ctx, leaderKey, clientv3.WithKeysOnly())
+	if err != nil {
+		return false, err
+	}
+	return len(resp.Kvs) > 0, nil
+}
+
 // GetLeaderHostname returns the current leader's host name.
 // It returns non-nil error when there is no leader.
 func (s Storage) GetLeaderHostname(ctx context.Context) (string, error) {

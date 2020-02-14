@@ -8,7 +8,6 @@ CKE exposes the following metrics with the Prometheus format. The listen address
 | operation_phase                       | 1 if CKE is operating in the phase specified by the `phase` label.         | Gauge | phase  |
 | operation_phase_timestamp_seconds     | The Unix timestamp when `operation_phase` was last updated.                | Gauge |        |
 | leader                                | True (=1) if this server is the leader of CKE.                             | Gauge |        |
-| leader_timestamp_seconds              | The unix timestamp when `leader` was last updated.                         | Gauge |        |
 | sabakan_integration_successful        | True (=1) if sabakan-integration satisfies constraints.                    | Gauge |        |
 | sabakan_integration_timestamp_seconds | The Unix timestamp when `sabakan_integration_successful` was last updated. | Gauge |        |
 | sabakan_workers                       | The number of worker nodes for each role.                                  | Gauge | role   |

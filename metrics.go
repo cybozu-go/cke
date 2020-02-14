@@ -24,7 +24,7 @@ const (
 	scrapeTimeout = time.Second * 10
 )
 
-// Metric represents collector and updater of metric.
+// Metric represents collector and availability of metric.
 type Metric struct {
 	collectors  []prometheus.Collector
 	isAvailable func(context.Context, *Storage) (bool, error)
@@ -92,7 +92,7 @@ func (c Collector) Collect(ch chan<- prometheus.Metric) {
 			defer wg.Done()
 			isAvailable, err := metric.isAvailable(ctx, c.storage)
 			if err != nil {
-				log.Warn("unable to decide metrics are available", map[string]interface{}{
+				log.Warn("unable to decide whether metrics are available", map[string]interface{}{
 					"name":      key,
 					log.FnError: err,
 				})
@@ -151,22 +151,13 @@ var leader = prometheus.NewGauge(
 	},
 )
 
-var leaderTimestampSeconds = prometheus.NewGauge(
-	prometheus.GaugeOpts{
-		Namespace: namespace,
-		Name:      "leader_timestamp_seconds",
-		Help:      "The Unix timestamp when leader was last updated.",
-	},
-)
-
-// UpdateLeaderMetrics updates "leader" and its timestamp.
-func UpdateLeaderMetrics(isLeader bool, ts time.Time) {
+// UpdateLeaderMetrics updates "leader".
+func UpdateLeaderMetrics(isLeader bool) {
 	if isLeader {
 		leader.Set(1)
 	} else {
 		leader.Set(0)
 	}
-	leaderTimestampSeconds.Set(float64(ts.Unix()))
 }
 
 var sabakanIntegrationSuccessful = prometheus.NewGauge(
