@@ -4,56 +4,93 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/clientv3/concurrency"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 )
 
-type updateOperationRunningTestCase struct {
-	name     string
-	input    ServerStatus
-	expected float64
-}
-
-type updateLeaderTestCase struct {
-	name     string
-	input    func(*concurrency.Election) error
-	expected float64
-}
-
-type nodeInfo struct {
+type labeledValue struct {
 	labels map[string]string
 	value  float64
 }
 
-type updateNodeInfoTestCase struct {
+type updateOperationPhaseTestCase struct {
 	name     string
-	input    *Cluster
-	expected []nodeInfo
+	input    OperationPhase
+	expected []labeledValue
+}
+
+type updateLeaderTestCase struct {
+	name     string
+	input    bool
+	expected float64
+}
+
+type sabakanInput struct {
+	enabled        bool
+	successful     bool
+	workersByRole  map[string]int
+	unusedMachines int
+}
+
+type sabakanExpected struct {
+	returned       bool
+	successful     float64
+	workersByRole  []labeledValue
+	unusedMachines float64
+}
+
+type updateSabakanIntegrationTestCase struct {
+	name     string
+	input    sabakanInput
+	expected sabakanExpected
 }
 
 func TestMetrics(t *testing.T) {
-	t.Run("UpdateOperationRunning", testUpdateOperationRunning)
+	t.Run("UpdateOperationPhase", testUpdateOperationPhase)
 	t.Run("UpdateLeader", testUpdateLeader)
-	t.Run("UpdateNodeInfo", testUpdateNodeInfo)
+	t.Run("UpdateSabakanIntegration", testUpdateSabakanIntegration)
 }
 
-func testUpdateOperationRunning(t *testing.T) {
-	testCases := []updateOperationRunningTestCase{
+func testUpdateOperationPhase(t *testing.T) {
+	testCases := []updateOperationPhaseTestCase{
 		{
-			name:     "completed",
-			input:    ServerStatus{Phase: PhaseCompleted},
-			expected: 0,
+			name:  "completed",
+			input: PhaseCompleted,
+			expected: []labeledValue{
+				{
+					labels: map[string]string{"phase": string(PhaseCompleted)},
+					value:  1,
+				},
+				{
+					labels: map[string]string{"phase": string(PhaseUpgrade)},
+					value:  0,
+				},
+				{
+					labels: map[string]string{"phase": string(PhaseRivers)},
+					value:  0,
+				},
+			},
 		},
 		{
-			name:     "running",
-			input:    ServerStatus{Phase: PhaseK8sStart},
-			expected: 1,
+			name:  "upgrading",
+			input: PhaseUpgrade,
+			expected: []labeledValue{
+				{
+					labels: map[string]string{"phase": string(PhaseCompleted)},
+					value:  0,
+				},
+				{
+					labels: map[string]string{"phase": string(PhaseUpgrade)},
+					value:  1,
+				},
+				{
+					labels: map[string]string{"phase": string(PhaseRivers)},
+					value:  0,
+				},
+			},
 		},
 	}
 	for _, tt := range testCases {
@@ -64,16 +101,10 @@ func testUpdateOperationRunning(t *testing.T) {
 			client := newEtcdClient(t)
 			defer client.Close()
 
-			resp, err := client.Grant(ctx, 10)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			storage := Storage{client}
-			storage.SetStatus(ctx, resp.ID, &tt.input)
-
-			collector := newLimitedCollector(client, "operation_running")
+			collector := NewCollector(client)
 			handler := GetHandler(collector)
+
+			UpdateOperationPhaseMetrics(tt.input, time.Now().UTC())
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/metrics", nil)
@@ -84,20 +115,31 @@ func testUpdateOperationRunning(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			found := false
+			metricsFamilyFound := false
 			for _, mf := range metricsFamily {
-				if *mf.Name != "cke_operation_running" {
+				if *mf.Name != "cke_operation_phase" {
 					continue
 				}
-				found = true
-				for _, m := range mf.Metric {
-					if *m.Gauge.Value != tt.expected {
-						t.Errorf("value for cke_operation_running is wrong.  expected: %f, actual: %f", tt.expected, *m.Gauge.Value)
+				metricsFamilyFound = true
+				for _, exp := range tt.expected {
+					metricsFound := false
+					for _, m := range mf.Metric {
+						labels := labelToMap(m.Label)
+						if !hasLabels(labels, exp.labels) {
+							continue
+						}
+						metricsFound = true
+						if *m.Gauge.Value != exp.value {
+							t.Errorf("value for cke_operation_phase with labels of %v is wrong.  expected: %f, actual: %f", exp.labels, exp.value, *m.Gauge.Value)
+						}
+					}
+					if !metricsFound {
+						t.Errorf("metrics cke_operation_phase with labels of %v was not found", exp.labels)
 					}
 				}
 			}
-			if !found {
-				t.Errorf("metrics cke_operation_running was not found")
+			if !metricsFamilyFound {
+				t.Errorf("metrics cke_operation_phase was not found")
 			}
 		})
 	}
@@ -106,34 +148,13 @@ func testUpdateOperationRunning(t *testing.T) {
 func testUpdateLeader(t *testing.T) {
 	testCases := []updateLeaderTestCase{
 		{
-			name:     "leader does not exist",
-			input:    func(_ *concurrency.Election) error { return nil },
-			expected: 0,
-		},
-		{
-			name: "I am the leader",
-			input: func(e *concurrency.Election) error {
-				hostname, err := os.Hostname()
-				if err != nil {
-					return err
-				}
-				return e.Campaign(context.Background(), hostname)
-			},
+			name:     "I am the leader",
+			input:    true,
 			expected: 1,
 		},
 		{
-			name: "I am no longer the leader",
-			input: func(e *concurrency.Election) error {
-				hostname, err := os.Hostname()
-				if err != nil {
-					return err
-				}
-				err = e.Campaign(context.Background(), hostname)
-				if err != nil {
-					return err
-				}
-				return e.Resign(context.Background())
-			},
+			name:     "I am not the leader",
+			input:    false,
 			expected: 0,
 		},
 	}
@@ -146,18 +167,9 @@ func testUpdateLeader(t *testing.T) {
 			client := newEtcdClient(t)
 			defer client.Close()
 
-			session, err := concurrency.NewSession(client, concurrency.WithTTL(int(time.Second)))
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer session.Close()
+			UpdateLeaderMetrics(tt.input)
 
-			err = tt.input(concurrency.NewElection(session, KeyLeader))
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			collector := newLimitedCollector(client, "leader")
+			collector := NewCollector(client)
 			handler := GetHandler(collector)
 
 			w := httptest.NewRecorder()
@@ -188,67 +200,53 @@ func testUpdateLeader(t *testing.T) {
 	}
 }
 
-func testUpdateNodeInfo(t *testing.T) {
-	testCases := []updateNodeInfoTestCase{
+func testUpdateSabakanIntegration(t *testing.T) {
+	testCases := []updateSabakanIntegrationTestCase{
 		{
-			name: "1 control plane and 1 worker",
-			input: &Cluster{
-				Nodes: []*Node{
-					{
-						Address: "1.2.3.4",
-						Labels: map[string]string{
-							"cke.cybozu.com/rack": "0",
-							"cke.cybozu.com/role": "cs",
-						},
-						ControlPlane: true,
-					},
-					{
-						Address: "5.6.7.8",
-						Labels: map[string]string{
-							"cke.cybozu.com/rack": "1",
-							"cke.cybozu.com/role": "ss",
-						},
-						ControlPlane: false,
-					},
-				},
+			name: "disabled",
+			input: sabakanInput{
+				enabled: false,
 			},
-			expected: []nodeInfo{
-				{
-					labels: map[string]string{
-						"address":       "1.2.3.4",
-						"rack":          "0",
-						"role":          "cs",
-						"control_plane": "true",
-					},
-					value: 1,
+			expected: sabakanExpected{
+				returned: false,
+			},
+		},
+		{
+			name: "failed",
+			input: sabakanInput{
+				enabled:    true,
+				successful: false,
+			},
+			expected: sabakanExpected{
+				returned:   true,
+				successful: 0,
+			},
+		},
+		{
+			name: "succeeded",
+			input: sabakanInput{
+				enabled:    true,
+				successful: true,
+				workersByRole: map[string]int{
+					"cs": 17,
+					"ss": 29,
 				},
-				{
-					labels: map[string]string{
-						"address":       "1.2.3.4",
-						"rack":          "0",
-						"role":          "cs",
-						"control_plane": "false",
+				unusedMachines: 42,
+			},
+			expected: sabakanExpected{
+				returned:   true,
+				successful: 1,
+				workersByRole: []labeledValue{
+					{
+						labels: map[string]string{"role": "cs"},
+						value:  17,
 					},
-					value: 0,
-				},
-				{
-					labels: map[string]string{
-						"address":       "5.6.7.8",
-						"rack":          "1",
-						"role":          "ss",
-						"control_plane": "true",
+					{
+						labels: map[string]string{"role": "ss"},
+						value:  29,
 					},
-					value: 0,
 				},
-				{
-					labels: map[string]string{
-						"address":       "5.6.7.8",
-						"rack":          "1",
-						"role":          "ss",
-						"control_plane": "false",
-					},
-					value: 1,
-				},
+				unusedMachines: 42,
 			},
 		},
 	}
@@ -261,14 +259,15 @@ func testUpdateNodeInfo(t *testing.T) {
 			client := newEtcdClient(t)
 			defer client.Close()
 
+			collector := NewCollector(client)
+			handler := GetHandler(collector)
+
 			storage := Storage{client}
-			err := storage.PutCluster(ctx, tt.input)
+			err := storage.EnableSabakan(ctx, tt.input.enabled)
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			collector := newLimitedCollector(client, "node_info")
-			handler := GetHandler(collector)
+			UpdateSabakanIntegrationMetrics(tt.input.successful, tt.input.workersByRole, tt.input.unusedMachines, time.Now().UTC())
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/metrics", nil)
@@ -279,43 +278,69 @@ func testUpdateNodeInfo(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			metricsFamilyFound := false
+			successfulFound := false
+			workersFound := false
+			unusedMachinesFound := false
 			for _, mf := range metricsFamily {
-				if *mf.Name != "cke_node_info" {
+				if !tt.expected.returned {
+					switch *mf.Name {
+					case "cke_sabakan_integration_successful",
+						"cke_sabakan_integration_timestamp_seconds",
+						"cke_sabakan_workers",
+						"cke_sabakan_unused_machines":
+						t.Errorf("metrics %q should not be returned", *mf.Name)
+					}
 					continue
 				}
-				metricsFamilyFound = true
-				for _, exp := range tt.expected {
-					metricsFound := false
+				switch *mf.Name {
+				case "cke_sabakan_integration_successful":
+					successfulFound = true
 					for _, m := range mf.Metric {
-						labels := labelToMap(m.Label)
-						if !hasLabels(labels, exp.labels) {
-							continue
-						}
-						metricsFound = true
-						if *m.Gauge.Value != exp.value {
-							t.Errorf("value for cke_node_info with labels of %v is wrong.  expected: %f, actual: %f", exp.labels, exp.value, *m.Gauge.Value)
+						if *m.Gauge.Value != tt.expected.successful {
+							t.Errorf("value for cke_sabakan_integration_successful is wrong.  expected: %f, actual: %f", tt.expected.successful, *m.Gauge.Value)
 						}
 					}
-					if !metricsFound {
-						t.Errorf("metrics cke_node_info with labels of %v was not found", exp.labels)
+				case "cke_sabakan_workers":
+					workersFound = true
+					for _, exp := range tt.expected.workersByRole {
+						metricsFound := false
+						for _, m := range mf.Metric {
+							labels := labelToMap(m.Label)
+							if !hasLabels(labels, exp.labels) {
+								continue
+							}
+							metricsFound = true
+							if *m.Gauge.Value != exp.value {
+								t.Errorf("value for cke_sabakan_workers with labels of %v is wrong.  expected: %f, actual: %f", exp.labels, exp.value, *m.Gauge.Value)
+							}
+						}
+						if !metricsFound {
+							t.Errorf("metrics cke_sabakan_workers with labels of %v was not found", exp.labels)
+						}
+					}
+				case "cke_sabakan_unused_machines":
+					unusedMachinesFound = true
+					for _, m := range mf.Metric {
+						if *m.Gauge.Value != tt.expected.unusedMachines {
+							t.Errorf("value for cke_sabakan_unused_machines is wrong.  expected: %f, actual: %f", tt.expected.unusedMachines, *m.Gauge.Value)
+						}
 					}
 				}
 			}
-			if !metricsFamilyFound {
-				t.Errorf("metrics cke_node_info was not found")
+			if tt.expected.returned {
+				if !successfulFound {
+					t.Errorf("metrics cke_sabakan_integration_successful was not found")
+				}
+				if tt.expected.successful == 1 {
+					if !workersFound {
+						t.Errorf("metrics cke_sabakan_workers was not found")
+					}
+					if !unusedMachinesFound {
+						t.Errorf("metrics cke_sabakan_unused_machines was not found")
+					}
+				}
 			}
 		})
-	}
-}
-
-func newLimitedCollector(client *clientv3.Client, name string) *Collector {
-	collector := NewCollector(client)
-	return &Collector{
-		metrics: map[string]Metric{
-			name: collector.metrics[name],
-		},
-		storage: collector.storage,
 	}
 }
 

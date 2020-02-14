@@ -90,7 +90,7 @@ func (c Collector) Collect(ch chan<- prometheus.Metric) {
 		wg.Add(1)
 		go func(key string, metric Metric) {
 			defer wg.Done()
-			isAvailable, err := metric.isAvailable(ctx, c.storage)
+			available, err := metric.isAvailable(ctx, c.storage)
 			if err != nil {
 				log.Warn("unable to decide whether metrics are available", map[string]interface{}{
 					"name":      key,
@@ -98,7 +98,7 @@ func (c Collector) Collect(ch chan<- prometheus.Metric) {
 				})
 				return
 			}
-			if !isAvailable {
+			if !available {
 				return
 			}
 
