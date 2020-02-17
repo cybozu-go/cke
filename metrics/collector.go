@@ -24,26 +24,28 @@ const (
 	scrapeTimeout = time.Second * 10
 )
 
-// Metric represents collector and availability of metric.
-type Metric struct {
+// metricGroup represents collectors and availability of metric.
+type metricGroup struct {
 	collectors  []prometheus.Collector
 	isAvailable func(context.Context, storage) (bool, error)
 }
 
-// Collector is a metrics collector for CKE.
-type Collector struct {
-	metrics map[string]Metric
+// collector is a metrics collector for CKE.
+type collector struct {
+	metrics map[string]metricGroup
 	storage storage
 }
 
+// storage is abstraction of cke.Storage.
+// This abstraction is for mock test.
 type storage interface {
 	IsSabakanDisabled(context.Context) (bool, error)
 }
 
-// NewCollector returns a new Collector.
-func NewCollector(client *v3.Client) *Collector {
-	return &Collector{
-		metrics: map[string]Metric{
+// NewCollector returns a new prometheus.Collector.
+func NewCollector(client *v3.Client) prometheus.Collector {
+	return &collector{
+		metrics: map[string]metricGroup{
 			"leader": {
 				collectors:  []prometheus.Collector{leader},
 				isAvailable: alwaysAvailable,
@@ -54,7 +56,7 @@ func NewCollector(client *v3.Client) *Collector {
 			},
 			"sabakan_integration": {
 				collectors:  []prometheus.Collector{sabakanIntegrationSuccessful, sabakanIntegrationTimestampSeconds, sabakanWorkers, sabakanUnusedMachines},
-				isAvailable: isSabakanIntegrationMetricsAvailable,
+				isAvailable: isSabakanIntegrationAvailable,
 			},
 		},
 		storage: &cke.Storage{Client: client},
@@ -62,7 +64,7 @@ func NewCollector(client *v3.Client) *Collector {
 }
 
 // GetHandler returns http.Handler for prometheus metrics.
-func GetHandler(collector *Collector) http.Handler {
+func GetHandler(collector prometheus.Collector) http.Handler {
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collector)
 
@@ -76,7 +78,7 @@ func GetHandler(collector *Collector) http.Handler {
 }
 
 // Describe implements Collector.Describe().
-func (c Collector) Describe(ch chan<- *prometheus.Desc) {
+func (c collector) Describe(ch chan<- *prometheus.Desc) {
 	for _, metric := range c.metrics {
 		for _, col := range metric.collectors {
 			col.Describe(ch)
@@ -85,14 +87,14 @@ func (c Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 // Collect implements Collector.Collect().
-func (c Collector) Collect(ch chan<- prometheus.Metric) {
+func (c collector) Collect(ch chan<- prometheus.Metric) {
 	ctx, cancel := context.WithTimeout(context.Background(), scrapeTimeout)
 	defer cancel()
 
 	var wg sync.WaitGroup
 	for key, metric := range c.metrics {
 		wg.Add(1)
-		go func(key string, metric Metric) {
+		go func(key string, metric metricGroup) {
 			defer wg.Done()
 			available, err := metric.isAvailable(ctx, c.storage)
 			if err != nil {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 )
@@ -381,10 +382,10 @@ func testUpdateSabakanIntegration(t *testing.T) {
 	}
 }
 
-func newTestCollector() (*Collector, *testStorage) {
+func newTestCollector() (prometheus.Collector, *testStorage) {
 	c := NewCollector(nil)
 	s := &testStorage{}
-	c.storage = s
+	c.(*collector).storage = s
 	return c, s
 }
 

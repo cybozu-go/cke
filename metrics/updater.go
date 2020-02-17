@@ -54,7 +54,7 @@ func UpdateSabakanIntegration(isSuccessful bool, workersByRole map[string]int, u
 	sabakanUnusedMachines.Set(float64(unusedMachines))
 }
 
-func isSabakanIntegrationMetricsAvailable(ctx context.Context, st storage) (bool, error) {
+func isSabakanIntegrationAvailable(ctx context.Context, st storage) (bool, error) {
 	if !isLeader {
 		return false, nil
 	}
