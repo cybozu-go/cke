@@ -40,13 +40,13 @@ type Collector struct {
 func NewCollector(client *v3.Client) *Collector {
 	return &Collector{
 		metrics: map[string]Metric{
-			"operation_phase": {
-				collectors:  []prometheus.Collector{operationPhase, operationPhaseTimestampSeconds},
-				isAvailable: isOperationPhaseAvailable,
-			},
 			"leader": {
 				collectors:  []prometheus.Collector{leader},
 				isAvailable: alwaysAvailable,
+			},
+			"operation_phase": {
+				collectors:  []prometheus.Collector{operationPhase, operationPhaseTimestampSeconds},
+				isAvailable: isOperationPhaseAvailable,
 			},
 			"sabakan_integration": {
 				collectors:  []prometheus.Collector{sabakanIntegrationSuccessful, sabakanIntegrationTimestampSeconds, sabakanWorkers, sabakanUnusedMachines},
@@ -114,6 +114,26 @@ func alwaysAvailable(_ context.Context, _ *Storage) (bool, error) {
 	return true, nil
 }
 
+var isLeader bool
+
+var leader = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "leader",
+		Help:      "1 if this server is the leader of CKE.",
+	},
+)
+
+// UpdateLeaderMetrics updates "leader".
+func UpdateLeaderMetrics(flag bool) {
+	if flag {
+		leader.Set(1)
+	} else {
+		leader.Set(0)
+	}
+	isLeader = flag
+}
+
 var operationPhase = prometheus.NewGaugeVec(
 	prometheus.GaugeOpts{
 		Namespace: namespace,
@@ -145,26 +165,6 @@ func UpdateOperationPhaseMetrics(phase OperationPhase, ts time.Time) {
 
 func isOperationPhaseAvailable(ctx context.Context, storage *Storage) (bool, error) {
 	return isLeader, nil
-}
-
-var isLeader bool
-
-var leader = prometheus.NewGauge(
-	prometheus.GaugeOpts{
-		Namespace: namespace,
-		Name:      "leader",
-		Help:      "1 if this server is the leader of CKE.",
-	},
-)
-
-// UpdateLeaderMetrics updates "leader".
-func UpdateLeaderMetrics(flag bool) {
-	if flag {
-		leader.Set(1)
-	} else {
-		leader.Set(0)
-	}
-	isLeader = flag
 }
 
 var sabakanIntegrationSuccessful = prometheus.NewGauge(

@@ -16,6 +16,12 @@ type labeledValue struct {
 	value  float64
 }
 
+type updateLeaderTestCase struct {
+	name     string
+	input    bool
+	expected float64
+}
+
 type operationPhaseInput struct {
 	isLeader bool
 	phase    OperationPhase
@@ -30,12 +36,6 @@ type updateOperationPhaseTestCase struct {
 	name     string
 	input    operationPhaseInput
 	expected operationPhaseExpected
-}
-
-type updateLeaderTestCase struct {
-	name     string
-	input    bool
-	expected float64
 }
 
 type sabakanInput struct {
@@ -60,9 +60,64 @@ type updateSabakanIntegrationTestCase struct {
 }
 
 func TestMetrics(t *testing.T) {
-	t.Run("UpdateOperationPhase", testUpdateOperationPhase)
 	t.Run("UpdateLeader", testUpdateLeader)
+	t.Run("UpdateOperationPhase", testUpdateOperationPhase)
 	t.Run("UpdateSabakanIntegration", testUpdateSabakanIntegration)
+}
+
+func testUpdateLeader(t *testing.T) {
+	testCases := []updateLeaderTestCase{
+		{
+			name:     "I am the leader",
+			input:    true,
+			expected: 1,
+		},
+		{
+			name:     "I am not the leader",
+			input:    false,
+			expected: 0,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			defer ctx.Done()
+
+			client := newEtcdClient(t)
+			defer client.Close()
+
+			UpdateLeaderMetrics(tt.input)
+
+			collector := NewCollector(client)
+			handler := GetHandler(collector)
+
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/metrics", nil)
+			handler.ServeHTTP(w, req)
+
+			metricsFamily, err := parseMetrics(w.Result())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			found := false
+			for _, mf := range metricsFamily {
+				if *mf.Name != "cke_leader" {
+					continue
+				}
+				found = true
+				for _, m := range mf.Metric {
+					if *m.Gauge.Value != tt.expected {
+						t.Errorf("value for cke_leader is wrong.  expected: %f, actual: %f", tt.expected, *m.Gauge.Value)
+					}
+				}
+			}
+			if !found {
+				t.Errorf("metrics cke_leader was not found")
+			}
+		})
+	}
 }
 
 func testUpdateOperationPhase(t *testing.T) {
@@ -176,61 +231,6 @@ func testUpdateOperationPhase(t *testing.T) {
 			}
 			if !tt.expected.returned && metricsFamilyFound {
 				t.Errorf("metrics cke_operation_phase should not be returned")
-			}
-		})
-	}
-}
-
-func testUpdateLeader(t *testing.T) {
-	testCases := []updateLeaderTestCase{
-		{
-			name:     "I am the leader",
-			input:    true,
-			expected: 1,
-		},
-		{
-			name:     "I am not the leader",
-			input:    false,
-			expected: 0,
-		},
-	}
-
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			defer ctx.Done()
-
-			client := newEtcdClient(t)
-			defer client.Close()
-
-			UpdateLeaderMetrics(tt.input)
-
-			collector := NewCollector(client)
-			handler := GetHandler(collector)
-
-			w := httptest.NewRecorder()
-			req := httptest.NewRequest("GET", "/metrics", nil)
-			handler.ServeHTTP(w, req)
-
-			metricsFamily, err := parseMetrics(w.Result())
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			found := false
-			for _, mf := range metricsFamily {
-				if *mf.Name != "cke_leader" {
-					continue
-				}
-				found = true
-				for _, m := range mf.Metric {
-					if *m.Gauge.Value != tt.expected {
-						t.Errorf("value for cke_leader is wrong.  expected: %f, actual: %f", tt.expected, *m.Gauge.Value)
-					}
-				}
-			}
-			if !found {
-				t.Errorf("metrics cke_leader was not found")
 			}
 		})
 	}
