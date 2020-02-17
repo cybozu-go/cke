@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -14,7 +15,6 @@ import (
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	vault "github.com/hashicorp/vault/api"
-	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
