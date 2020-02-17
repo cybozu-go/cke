@@ -1,4 +1,4 @@
-package cke
+package metrics
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cybozu-go/cke"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 )
@@ -24,7 +25,7 @@ type updateLeaderTestCase struct {
 
 type operationPhaseInput struct {
 	isLeader bool
-	phase    OperationPhase
+	phase    cke.OperationPhase
 }
 
 type operationPhaseExpected struct {
@@ -59,7 +60,7 @@ type updateSabakanIntegrationTestCase struct {
 	expected sabakanExpected
 }
 
-func TestMetrics(t *testing.T) {
+func TestMetricsUpdater(t *testing.T) {
 	t.Run("UpdateLeader", testUpdateLeader)
 	t.Run("UpdateOperationPhase", testUpdateOperationPhase)
 	t.Run("UpdateSabakanIntegration", testUpdateSabakanIntegration)
@@ -84,12 +85,9 @@ func testUpdateLeader(t *testing.T) {
 			ctx := context.Background()
 			defer ctx.Done()
 
-			client := newEtcdClient(t)
-			defer client.Close()
+			UpdateLeader(tt.input)
 
-			UpdateLeaderMetrics(tt.input)
-
-			collector := NewCollector(client)
+			collector, _ := newTestCollector()
 			handler := GetHandler(collector)
 
 			w := httptest.NewRecorder()
@@ -135,21 +133,21 @@ func testUpdateOperationPhase(t *testing.T) {
 			name: "completed",
 			input: operationPhaseInput{
 				isLeader: true,
-				phase:    PhaseCompleted,
+				phase:    cke.PhaseCompleted,
 			},
 			expected: operationPhaseExpected{
 				returned: true,
 				values: []labeledValue{
 					{
-						labels: map[string]string{"phase": string(PhaseCompleted)},
+						labels: map[string]string{"phase": string(cke.PhaseCompleted)},
 						value:  1,
 					},
 					{
-						labels: map[string]string{"phase": string(PhaseUpgrade)},
+						labels: map[string]string{"phase": string(cke.PhaseUpgrade)},
 						value:  0,
 					},
 					{
-						labels: map[string]string{"phase": string(PhaseRivers)},
+						labels: map[string]string{"phase": string(cke.PhaseRivers)},
 						value:  0,
 					},
 				},
@@ -159,21 +157,21 @@ func testUpdateOperationPhase(t *testing.T) {
 			name: "upgrading",
 			input: operationPhaseInput{
 				isLeader: true,
-				phase:    PhaseUpgrade,
+				phase:    cke.PhaseUpgrade,
 			},
 			expected: operationPhaseExpected{
 				returned: true,
 				values: []labeledValue{
 					{
-						labels: map[string]string{"phase": string(PhaseCompleted)},
+						labels: map[string]string{"phase": string(cke.PhaseCompleted)},
 						value:  0,
 					},
 					{
-						labels: map[string]string{"phase": string(PhaseUpgrade)},
+						labels: map[string]string{"phase": string(cke.PhaseUpgrade)},
 						value:  1,
 					},
 					{
-						labels: map[string]string{"phase": string(PhaseRivers)},
+						labels: map[string]string{"phase": string(cke.PhaseRivers)},
 						value:  0,
 					},
 				},
@@ -185,14 +183,11 @@ func testUpdateOperationPhase(t *testing.T) {
 			ctx := context.Background()
 			defer ctx.Done()
 
-			client := newEtcdClient(t)
-			defer client.Close()
-
-			collector := NewCollector(client)
+			collector, _ := newTestCollector()
 			handler := GetHandler(collector)
 
-			UpdateLeaderMetrics(tt.input.isLeader)
-			UpdateOperationPhaseMetrics(tt.input.phase, time.Now().UTC())
+			UpdateLeader(tt.input.isLeader)
+			UpdateOperationPhase(tt.input.phase, time.Now().UTC())
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/metrics", nil)
@@ -304,20 +299,12 @@ func testUpdateSabakanIntegration(t *testing.T) {
 			ctx := context.Background()
 			defer ctx.Done()
 
-			client := newEtcdClient(t)
-			defer client.Close()
-
-			collector := NewCollector(client)
+			collector, storage := newTestCollector()
 			handler := GetHandler(collector)
 
-			UpdateLeaderMetrics(tt.input.isLeader)
-
-			storage := Storage{client}
-			err := storage.EnableSabakan(ctx, tt.input.enabled)
-			if err != nil {
-				t.Fatal(err)
-			}
-			UpdateSabakanIntegrationMetrics(tt.input.successful, tt.input.workersByRole, tt.input.unusedMachines, time.Now().UTC())
+			UpdateLeader(tt.input.isLeader)
+			storage.enableSabakan(tt.input.enabled)
+			UpdateSabakanIntegration(tt.input.successful, tt.input.workersByRole, tt.input.unusedMachines, time.Now().UTC())
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/metrics", nil)
@@ -392,6 +379,25 @@ func testUpdateSabakanIntegration(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newTestCollector() (*Collector, *testStorage) {
+	c := NewCollector(nil)
+	s := &testStorage{}
+	c.storage = s
+	return c, s
+}
+
+type testStorage struct {
+	sabakanEnabled bool
+}
+
+func (s *testStorage) enableSabakan(flag bool) {
+	s.sabakanEnabled = flag
+}
+
+func (s *testStorage) IsSabakanDisabled(_ context.Context) (bool, error) {
+	return !s.sabakanEnabled, nil
 }
 
 func labelToMap(labelPair []*dto.LabelPair) map[string]string {

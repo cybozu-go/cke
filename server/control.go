@@ -9,6 +9,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/metrics"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 )
@@ -47,12 +48,12 @@ RETRY:
 	default:
 	}
 
-	cke.UpdateLeaderMetrics(false)
+	metrics.UpdateLeader(false)
 	err = e.Campaign(ctx, hostname)
 	if err != nil {
 		return err
 	}
-	cke.UpdateLeaderMetrics(true)
+	metrics.UpdateLeader(true)
 
 	leaderKey := e.Key()
 	log.Info("I am the leader", map[string]interface{}{
@@ -273,7 +274,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	if err != nil {
 		return err
 	}
-	cke.UpdateOperationPhaseMetrics(phase, ts)
+	metrics.UpdateOperationPhase(phase, ts)
 
 	if len(ops) == 0 {
 		wait = true
