@@ -42,7 +42,7 @@ func NewCollector(client *v3.Client) *Collector {
 		metrics: map[string]Metric{
 			"operation_phase": {
 				collectors:  []prometheus.Collector{operationPhase, operationPhaseTimestampSeconds},
-				isAvailable: alwaysAvailable,
+				isAvailable: isOperationPhaseAvailable,
 			},
 			"leader": {
 				collectors:  []prometheus.Collector{leader},
@@ -143,6 +143,12 @@ func UpdateOperationPhaseMetrics(phase OperationPhase, ts time.Time) {
 	operationPhaseTimestampSeconds.Set(float64(ts.Unix()))
 }
 
+func isOperationPhaseAvailable(ctx context.Context, storage *Storage) (bool, error) {
+	return isLeader, nil
+}
+
+var isLeader bool
+
 var leader = prometheus.NewGauge(
 	prometheus.GaugeOpts{
 		Namespace: namespace,
@@ -152,12 +158,13 @@ var leader = prometheus.NewGauge(
 )
 
 // UpdateLeaderMetrics updates "leader".
-func UpdateLeaderMetrics(isLeader bool) {
-	if isLeader {
+func UpdateLeaderMetrics(flag bool) {
+	if flag {
 		leader.Set(1)
 	} else {
 		leader.Set(0)
 	}
+	isLeader = flag
 }
 
 var sabakanIntegrationSuccessful = prometheus.NewGauge(
@@ -209,6 +216,10 @@ func UpdateSabakanIntegrationMetrics(isSuccessful bool, workersByRole map[string
 }
 
 func isSabakanIntegrationMetricsAvailable(ctx context.Context, st *Storage) (bool, error) {
+	if !isLeader {
+		return false, nil
+	}
+
 	disabled, err := st.IsSabakanDisabled(ctx)
 	if err != nil {
 		return false, err

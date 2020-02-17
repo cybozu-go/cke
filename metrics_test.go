@@ -16,10 +16,20 @@ type labeledValue struct {
 	value  float64
 }
 
+type operationPhaseInput struct {
+	isLeader bool
+	phase    OperationPhase
+}
+
+type operationPhaseExpected struct {
+	returned bool
+	values   []labeledValue
+}
+
 type updateOperationPhaseTestCase struct {
 	name     string
-	input    OperationPhase
-	expected []labeledValue
+	input    operationPhaseInput
+	expected operationPhaseExpected
 }
 
 type updateLeaderTestCase struct {
@@ -29,6 +39,7 @@ type updateLeaderTestCase struct {
 }
 
 type sabakanInput struct {
+	isLeader       bool
 	enabled        bool
 	successful     bool
 	workersByRole  map[string]int
@@ -57,38 +68,59 @@ func TestMetrics(t *testing.T) {
 func testUpdateOperationPhase(t *testing.T) {
 	testCases := []updateOperationPhaseTestCase{
 		{
-			name:  "completed",
-			input: PhaseCompleted,
-			expected: []labeledValue{
-				{
-					labels: map[string]string{"phase": string(PhaseCompleted)},
-					value:  1,
-				},
-				{
-					labels: map[string]string{"phase": string(PhaseUpgrade)},
-					value:  0,
-				},
-				{
-					labels: map[string]string{"phase": string(PhaseRivers)},
-					value:  0,
+			name: "not leader",
+			input: operationPhaseInput{
+				isLeader: false,
+			},
+			expected: operationPhaseExpected{
+				returned: false,
+			},
+		},
+		{
+			name: "completed",
+			input: operationPhaseInput{
+				isLeader: true,
+				phase:    PhaseCompleted,
+			},
+			expected: operationPhaseExpected{
+				returned: true,
+				values: []labeledValue{
+					{
+						labels: map[string]string{"phase": string(PhaseCompleted)},
+						value:  1,
+					},
+					{
+						labels: map[string]string{"phase": string(PhaseUpgrade)},
+						value:  0,
+					},
+					{
+						labels: map[string]string{"phase": string(PhaseRivers)},
+						value:  0,
+					},
 				},
 			},
 		},
 		{
-			name:  "upgrading",
-			input: PhaseUpgrade,
-			expected: []labeledValue{
-				{
-					labels: map[string]string{"phase": string(PhaseCompleted)},
-					value:  0,
-				},
-				{
-					labels: map[string]string{"phase": string(PhaseUpgrade)},
-					value:  1,
-				},
-				{
-					labels: map[string]string{"phase": string(PhaseRivers)},
-					value:  0,
+			name: "upgrading",
+			input: operationPhaseInput{
+				isLeader: true,
+				phase:    PhaseUpgrade,
+			},
+			expected: operationPhaseExpected{
+				returned: true,
+				values: []labeledValue{
+					{
+						labels: map[string]string{"phase": string(PhaseCompleted)},
+						value:  0,
+					},
+					{
+						labels: map[string]string{"phase": string(PhaseUpgrade)},
+						value:  1,
+					},
+					{
+						labels: map[string]string{"phase": string(PhaseRivers)},
+						value:  0,
+					},
 				},
 			},
 		},
@@ -104,7 +136,8 @@ func testUpdateOperationPhase(t *testing.T) {
 			collector := NewCollector(client)
 			handler := GetHandler(collector)
 
-			UpdateOperationPhaseMetrics(tt.input, time.Now().UTC())
+			UpdateLeaderMetrics(tt.input.isLeader)
+			UpdateOperationPhaseMetrics(tt.input.phase, time.Now().UTC())
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/metrics", nil)
@@ -121,7 +154,7 @@ func testUpdateOperationPhase(t *testing.T) {
 					continue
 				}
 				metricsFamilyFound = true
-				for _, exp := range tt.expected {
+				for _, exp := range tt.expected.values {
 					metricsFound := false
 					for _, m := range mf.Metric {
 						labels := labelToMap(m.Label)
@@ -133,13 +166,16 @@ func testUpdateOperationPhase(t *testing.T) {
 							t.Errorf("value for cke_operation_phase with labels of %v is wrong.  expected: %f, actual: %f", exp.labels, exp.value, *m.Gauge.Value)
 						}
 					}
-					if !metricsFound {
+					if tt.expected.returned && !metricsFound {
 						t.Errorf("metrics cke_operation_phase with labels of %v was not found", exp.labels)
 					}
 				}
 			}
-			if !metricsFamilyFound {
+			if tt.expected.returned && !metricsFamilyFound {
 				t.Errorf("metrics cke_operation_phase was not found")
+			}
+			if !tt.expected.returned && metricsFamilyFound {
+				t.Errorf("metrics cke_operation_phase should not be returned")
 			}
 		})
 	}
@@ -203,9 +239,19 @@ func testUpdateLeader(t *testing.T) {
 func testUpdateSabakanIntegration(t *testing.T) {
 	testCases := []updateSabakanIntegrationTestCase{
 		{
+			name: "not leader",
+			input: sabakanInput{
+				isLeader: false,
+			},
+			expected: sabakanExpected{
+				returned: false,
+			},
+		},
+		{
 			name: "disabled",
 			input: sabakanInput{
-				enabled: false,
+				isLeader: true,
+				enabled:  false,
 			},
 			expected: sabakanExpected{
 				returned: false,
@@ -214,6 +260,7 @@ func testUpdateSabakanIntegration(t *testing.T) {
 		{
 			name: "failed",
 			input: sabakanInput{
+				isLeader:   true,
 				enabled:    true,
 				successful: false,
 			},
@@ -225,6 +272,7 @@ func testUpdateSabakanIntegration(t *testing.T) {
 		{
 			name: "succeeded",
 			input: sabakanInput{
+				isLeader:   true,
 				enabled:    true,
 				successful: true,
 				workersByRole: map[string]int{
@@ -261,6 +309,8 @@ func testUpdateSabakanIntegration(t *testing.T) {
 
 			collector := NewCollector(client)
 			handler := GetHandler(collector)
+
+			UpdateLeaderMetrics(tt.input.isLeader)
 
 			storage := Storage{client}
 			err := storage.EnableSabakan(ctx, tt.input.enabled)
