@@ -21,19 +21,19 @@ func (l logger) Println(v ...interface{}) {
 }
 
 const (
-	scrapeTimeout = time.Second * 10
+	scrapeTimeout = time.Second * 8
 )
-
-// metricGroup represents collectors and availability of metric.
-type metricGroup struct {
-	collectors  []prometheus.Collector
-	isAvailable func(context.Context, storage) (bool, error)
-}
 
 // collector is a metrics collector for CKE.
 type collector struct {
 	metrics map[string]metricGroup
 	storage storage
+}
+
+// metricGroup represents collectors and availability of metric.
+type metricGroup struct {
+	collectors  []prometheus.Collector
+	isAvailable func(context.Context, storage) (bool, error)
 }
 
 // storage is abstraction of cke.Storage.
