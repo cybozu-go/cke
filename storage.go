@@ -52,8 +52,6 @@ var (
 	ErrNotFound = errors.New("not found")
 	// ErrNoLeader is returned when the session lost leadership.
 	ErrNoLeader = errors.New("lost leadership")
-	// ErrLeaderNotExist is returned when there is no leader.
-	ErrLeaderNotExist = errors.New("no leader")
 )
 
 func (s Storage) getStringValue(ctx context.Context, key string) (string, error) {
@@ -501,7 +499,7 @@ func (s Storage) GetLeaderHostname(ctx context.Context) (string, error) {
 	}
 
 	if len(resp.Kvs) == 0 {
-		return "", ErrLeaderNotExist
+		return "", errors.New("no leader")
 	}
 	return string(resp.Kvs[0].Value), nil
 }
