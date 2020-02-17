@@ -16,7 +16,6 @@ Usage of ./cke:
       --logfile string             Log filename
       --logformat string           Log format [plain,logfmt,json]
       --loglevel string            Log level [critical,error,warning,info,debug]
-      --metrics string             <Listen IP>:<Port number> (default "0.0.0.0:10181")
       --session-ttl string         leader session's TTL (default "60s")
 ```
 

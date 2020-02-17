@@ -24,7 +24,6 @@ var (
 	flgInterval        = pflag.String("interval", "1m", "check interval")
 	flgCertsGCInterval = pflag.String("certs-gc-interval", "1h", "tidy interval for expired certificates")
 	flgSessionTTL      = pflag.String("session-ttl", "60s", "leader session's TTL")
-	flgMetrics         = pflag.String("metrics", "0.0.0.0:10181", "<Listen IP>:<Port number>")
 	flgDebugSabakan    = pflag.Bool("debug-sabakan", false, "debug sabakan integration")
 )
 
@@ -105,28 +104,22 @@ func main() {
 	controller := server.NewController(session, interval, gcInterval, timeout, addon)
 	well.Go(controller.Run)
 
+	// API server
+	mux := http.NewServeMux()
 	// Metrics
 	collector := metrics.NewCollector(etcd)
 	metricsHandler := metrics.GetHandler(collector)
-	mux := http.NewServeMux()
 	mux.Handle("/metrics", metricsHandler)
-	ms := &well.HTTPServer{
-		Server: &http.Server{
-			Addr:    *flgMetrics,
-			Handler: mux,
-		},
-	}
-	ms.ListenAndServe()
-
-	// API server
+	// REST API
 	server := server.Server{
 		EtcdClient: etcd,
 		Timeout:    timeout,
 	}
+	mux.Handle("/", server)
 	s := &well.HTTPServer{
 		Server: &http.Server{
 			Addr:    *flgHTTP,
-			Handler: server,
+			Handler: mux,
 		},
 		ShutdownTimeout: 3 * time.Minute,
 	}
