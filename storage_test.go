@@ -151,6 +151,15 @@ func testStorageRecord(t *testing.T) {
 	}
 
 	leaderKey := e.Key()
+
+	isLeader, err := storage.IsLeader(ctx, leaderKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isLeader {
+		t.Error("failed to confirm leadership")
+	}
+
 	r := NewRecord(1, "my-operation-1", []string{})
 	err = storage.RegisterRecord(ctx, leaderKey, r)
 	if err != nil {
@@ -310,6 +319,14 @@ func testStorageRecord(t *testing.T) {
 	err = e.Resign(ctx)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	isLeader, err = storage.IsLeader(ctx, leaderKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isLeader {
+		t.Error("failed to confirm loss of leadership")
 	}
 
 	err = storage.RegisterRecord(ctx, leaderKey, r)
