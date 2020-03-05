@@ -303,7 +303,7 @@ func (nf *NodeFilter) APIServerOutdatedNodes() (nodes []*cke.Node) {
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
-		case cke.HyperkubeImage.Name() != st.Image:
+		case cke.KubernetesImage.Name() != st.Image:
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
@@ -334,7 +334,7 @@ func (nf *NodeFilter) ControllerManagerOutdatedNodes() (nodes []*cke.Node) {
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
-		case cke.HyperkubeImage.Name() != st.Image:
+		case cke.KubernetesImage.Name() != st.Image:
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
@@ -379,7 +379,7 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.N
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
-		case cke.HyperkubeImage.Name() != st.Image:
+		case cke.KubernetesImage.Name() != st.Image:
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
@@ -456,7 +456,7 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 			// stopped nodes are excluded
 		case kubeletRuntimeChanged(st.BuiltInParams, currentBuiltIn):
 			log.Warn("kubelet's container runtime can not be changed", nil)
-		case cke.HyperkubeImage.Name() != st.Image:
+		case cke.KubernetesImage.Name() != st.Image:
 			fallthrough
 		case currentOpts.Domain != st.Domain:
 			fallthrough
@@ -580,7 +580,7 @@ func (nf *NodeFilter) ProxyOutdatedNodes() (nodes []*cke.Node) {
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
-		case cke.HyperkubeImage.Name() != st.Image:
+		case cke.KubernetesImage.Name() != st.Image:
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough

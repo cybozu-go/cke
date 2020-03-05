@@ -67,7 +67,7 @@ func (o *apiServerBootOp) NextCommand() cke.Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
+		return common.ImagePullCommand(o.nodes, cke.KubernetesImage)
 	case 1:
 		o.step++
 		return common.MakeDirsCommandWithMode(o.nodes, []string{encryptionConfigDir}, "700")
@@ -86,7 +86,7 @@ func (o *apiServerBootOp) NextCommand() cke.Commander {
 		for _, n := range o.nodes {
 			paramsMap[n.Address] = APIServerParams(o.cps, n.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy)
 		}
-		return common.RunContainerCommand(o.nodes, op.KubeAPIServerContainerName, cke.HyperkubeImage,
+		return common.RunContainerCommand(o.nodes, op.KubeAPIServerContainerName, cke.KubernetesImage,
 			common.WithOpts(opts),
 			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params.ServiceParams))

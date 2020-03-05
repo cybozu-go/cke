@@ -232,7 +232,7 @@ func (d testData) withAPIServer(serviceSubnet string) testData {
 		st := &d.NodeStatus(n).APIServer
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.APIServerParams(d.ControlPlane(), n.Address, serviceSubnet, false, "")
 	}
 	return d
@@ -243,7 +243,7 @@ func (d testData) withControllerManager(name, serviceSubnet string) testData {
 		st := &d.NodeStatus(n).ControllerManager
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.ControllerManagerParams(name, serviceSubnet)
 	}
 	return d
@@ -254,7 +254,7 @@ func (d testData) withScheduler() testData {
 		st := &d.NodeStatus(n).Scheduler
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.SchedulerParams()
 	}
 	return d
@@ -265,7 +265,7 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st := &d.NodeStatus(n).Kubelet
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.ContainerLogMaxSize = "10Mi"
 		st.ContainerLogMaxFiles = 10
 		st.BuiltInParams = k8s.KubeletServiceParams(n, cke.KubeletParams{
@@ -283,7 +283,7 @@ func (d testData) withProxy() testData {
 		st := &d.NodeStatus(n).Proxy
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.ProxyParams(n)
 	}
 	return d
