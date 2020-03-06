@@ -37,6 +37,7 @@ func applyNamespace(o *corev1.Namespace, rev int64, client rest.Interface, isNam
 		Resource("namespaces").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -66,6 +67,7 @@ func applyServiceAccount(o *corev1.ServiceAccount, rev int64, client rest.Interf
 		Resource("serviceaccounts").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -95,6 +97,7 @@ func applyConfigMap(o *corev1.ConfigMap, rev int64, client rest.Interface, isNam
 		Resource("configmaps").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -124,6 +127,7 @@ func applyService(o *corev1.Service, rev int64, client rest.Interface, isNamespa
 		Resource("services").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -153,6 +157,7 @@ func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, rev int64, clien
 		Resource("podsecuritypolicies").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -182,6 +187,7 @@ func applyNetworkPolicy(o *networkingv1.NetworkPolicy, rev int64, client rest.In
 		Resource("networkpolicies").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -211,6 +217,7 @@ func applyRole(o *rbacv1.Role, rev int64, client rest.Interface, isNamespaced bo
 		Resource("roles").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -240,6 +247,7 @@ func applyRoleBinding(o *rbacv1.RoleBinding, rev int64, client rest.Interface, i
 		Resource("rolebindings").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -269,6 +277,7 @@ func applyClusterRole(o *rbacv1.ClusterRole, rev int64, client rest.Interface, i
 		Resource("clusterroles").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -298,6 +307,7 @@ func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, rev int64, client res
 		Resource("clusterrolebindings").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -327,6 +337,7 @@ func applyDeployment(o *appsv1.Deployment, rev int64, client rest.Interface, isN
 		Resource("deployments").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -356,6 +367,7 @@ func applyDaemonSet(o *appsv1.DaemonSet, rev int64, client rest.Interface, isNam
 		Resource("daemonsets").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -385,6 +397,7 @@ func applyCronJob(o *batchv1beta1.CronJob, rev int64, client rest.Interface, isN
 		Resource("cronjobs").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -414,6 +427,7 @@ func applyPodDisruptionBudget(o *policyv1beta1.PodDisruptionBudget, rev int64, c
 		Resource("poddisruptionbudgets").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().

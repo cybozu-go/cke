@@ -46,6 +46,7 @@ func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, rev int64, client rest.Interfac
 		Resource("{{ .Resource }}").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
+		Param("force", "true").
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
