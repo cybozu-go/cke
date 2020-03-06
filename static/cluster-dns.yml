@@ -111,6 +111,7 @@ spec:
           protocol: TCP
         - containerPort: 9153
           name: metrics
+          protocol: TCP
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

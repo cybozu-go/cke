@@ -94,7 +94,7 @@ func subMain() error {
 		{"networkingv1", "NetworkPolicy", "networkpolicies", 0},
 		{"rbacv1", "Role", "roles", 0},
 		{"rbacv1", "RoleBinding", "rolebindings", 0},
-		{"rbacv1", "ClusterRole", "clusterrole", 0},
+		{"rbacv1", "ClusterRole", "clusterroles", 0},
 		{"rbacv1", "ClusterRoleBinding", "clusterrolebindings", 0},
 		{"appsv1", "Deployment", "deployments", 60},
 		{"appsv1", "DaemonSet", "daemonsets", 60},

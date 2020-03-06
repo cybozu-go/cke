@@ -266,7 +266,7 @@ func applyClusterRole(o *rbacv1.ClusterRole, rev int64, client rest.Interface, i
 
 	_, err = client.
 		Patch(types.ApplyPatchType).
-		Resource("clusterrole").
+		Resource("clusterroles").
 		Name(o.Name).
 		NamespaceIfScoped(o.Namespace, isNamespaced).
 		Param("fieldManager", "cke").

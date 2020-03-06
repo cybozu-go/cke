@@ -289,7 +289,6 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 		"--endpoint-reconciler-type=none",
 
 		"--service-cluster-ip-range=" + serviceSubnet,
-		"--machine-id-file=/etc/machine-id",
 		"--encryption-provider-config=" + encryptionConfigFile,
 	}
 	if auditLogEnabeled {
