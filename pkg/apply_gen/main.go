@@ -26,6 +26,11 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+type applyParams struct {
+	isNamespaced   bool
+	forceConflicts bool
+}
+
 func annotate(meta *metav1.ObjectMeta, rev int64) {
 	if meta.Annotations == nil {
 		meta.Annotations = make(map[string]string)
@@ -34,19 +39,18 @@ func annotate(meta *metav1.ObjectMeta, rev int64) {
 }
 {{- range . }}
 
-func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, rev int64, client rest.Interface, isNamespaced bool) error {
+func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("{{ .Resource }}").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -56,6 +60,7 @@ func apply{{ .Kind }}(o *{{ .API }}.{{ .Kind }}, rev int64, client rest.Interfac
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err

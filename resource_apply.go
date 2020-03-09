@@ -18,6 +18,11 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+type applyParams struct {
+	isNamespaced   bool
+	forceConflicts bool
+}
+
 func annotate(meta *metav1.ObjectMeta, rev int64) {
 	if meta.Annotations == nil {
 		meta.Annotations = make(map[string]string)
@@ -25,19 +30,18 @@ func annotate(meta *metav1.ObjectMeta, rev int64) {
 	meta.Annotations[AnnotationResourceRevision] = strconv.FormatInt(rev, 10)
 }
 
-func applyNamespace(o *corev1.Namespace, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyNamespace(o *corev1.Namespace, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("namespaces").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -47,6 +51,7 @@ func applyNamespace(o *corev1.Namespace, rev int64, client rest.Interface, isNam
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -55,19 +60,18 @@ func applyNamespace(o *corev1.Namespace, rev int64, client rest.Interface, isNam
 	return nil
 }
 
-func applyServiceAccount(o *corev1.ServiceAccount, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyServiceAccount(o *corev1.ServiceAccount, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("serviceaccounts").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -77,6 +81,7 @@ func applyServiceAccount(o *corev1.ServiceAccount, rev int64, client rest.Interf
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -85,19 +90,18 @@ func applyServiceAccount(o *corev1.ServiceAccount, rev int64, client rest.Interf
 	return nil
 }
 
-func applyConfigMap(o *corev1.ConfigMap, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyConfigMap(o *corev1.ConfigMap, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("configmaps").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -107,6 +111,7 @@ func applyConfigMap(o *corev1.ConfigMap, rev int64, client rest.Interface, isNam
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -115,19 +120,18 @@ func applyConfigMap(o *corev1.ConfigMap, rev int64, client rest.Interface, isNam
 	return nil
 }
 
-func applyService(o *corev1.Service, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyService(o *corev1.Service, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("services").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -137,6 +141,7 @@ func applyService(o *corev1.Service, rev int64, client rest.Interface, isNamespa
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -145,19 +150,18 @@ func applyService(o *corev1.Service, rev int64, client rest.Interface, isNamespa
 	return nil
 }
 
-func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("podsecuritypolicies").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -167,6 +171,7 @@ func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, rev int64, clien
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -175,19 +180,18 @@ func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, rev int64, clien
 	return nil
 }
 
-func applyNetworkPolicy(o *networkingv1.NetworkPolicy, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyNetworkPolicy(o *networkingv1.NetworkPolicy, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("networkpolicies").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -197,6 +201,7 @@ func applyNetworkPolicy(o *networkingv1.NetworkPolicy, rev int64, client rest.In
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -205,19 +210,18 @@ func applyNetworkPolicy(o *networkingv1.NetworkPolicy, rev int64, client rest.In
 	return nil
 }
 
-func applyRole(o *rbacv1.Role, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyRole(o *rbacv1.Role, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("roles").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -227,6 +231,7 @@ func applyRole(o *rbacv1.Role, rev int64, client rest.Interface, isNamespaced bo
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -235,19 +240,18 @@ func applyRole(o *rbacv1.Role, rev int64, client rest.Interface, isNamespaced bo
 	return nil
 }
 
-func applyRoleBinding(o *rbacv1.RoleBinding, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyRoleBinding(o *rbacv1.RoleBinding, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("rolebindings").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -257,6 +261,7 @@ func applyRoleBinding(o *rbacv1.RoleBinding, rev int64, client rest.Interface, i
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -265,19 +270,18 @@ func applyRoleBinding(o *rbacv1.RoleBinding, rev int64, client rest.Interface, i
 	return nil
 }
 
-func applyClusterRole(o *rbacv1.ClusterRole, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyClusterRole(o *rbacv1.ClusterRole, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("clusterroles").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -287,6 +291,7 @@ func applyClusterRole(o *rbacv1.ClusterRole, rev int64, client rest.Interface, i
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -295,19 +300,18 @@ func applyClusterRole(o *rbacv1.ClusterRole, rev int64, client rest.Interface, i
 	return nil
 }
 
-func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("clusterrolebindings").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -317,6 +321,7 @@ func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, rev int64, client res
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -325,19 +330,18 @@ func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, rev int64, client res
 	return nil
 }
 
-func applyDeployment(o *appsv1.Deployment, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyDeployment(o *appsv1.Deployment, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("deployments").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -347,6 +351,7 @@ func applyDeployment(o *appsv1.Deployment, rev int64, client rest.Interface, isN
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -355,19 +360,18 @@ func applyDeployment(o *appsv1.Deployment, rev int64, client rest.Interface, isN
 	return nil
 }
 
-func applyDaemonSet(o *appsv1.DaemonSet, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyDaemonSet(o *appsv1.DaemonSet, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("daemonsets").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -377,6 +381,7 @@ func applyDaemonSet(o *appsv1.DaemonSet, rev int64, client rest.Interface, isNam
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -385,19 +390,18 @@ func applyDaemonSet(o *appsv1.DaemonSet, rev int64, client rest.Interface, isNam
 	return nil
 }
 
-func applyCronJob(o *batchv1beta1.CronJob, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyCronJob(o *batchv1beta1.CronJob, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("cronjobs").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -407,6 +411,7 @@ func applyCronJob(o *batchv1beta1.CronJob, rev int64, client rest.Interface, isN
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -415,19 +420,18 @@ func applyCronJob(o *batchv1beta1.CronJob, rev int64, client rest.Interface, isN
 	return nil
 }
 
-func applyPodDisruptionBudget(o *policyv1beta1.PodDisruptionBudget, rev int64, client rest.Interface, isNamespaced bool) error {
+func applyPodDisruptionBudget(o *policyv1beta1.PodDisruptionBudget, rev int64, client rest.Interface, params applyParams) error {
 	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
 	_, err = client.
 		Patch(types.ApplyPatchType).
 		Resource("poddisruptionbudgets").
 		Name(o.Name).
-		NamespaceIfScoped(o.Namespace, isNamespaced).
-		Param("force", "true").
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
 		Param("fieldManager", "cke").
 		Body(modified).
 		Do().
@@ -437,6 +441,7 @@ func applyPodDisruptionBudget(o *policyv1beta1.PodDisruptionBudget, rev int64, c
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err

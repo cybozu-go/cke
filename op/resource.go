@@ -7,16 +7,19 @@ import (
 )
 
 type resourceApplyOp struct {
-	apiserver *cke.Node
-	resource  cke.ResourceDefinition
-	finished  bool
+	apiserver      *cke.Node
+	resource       cke.ResourceDefinition
+	forceConflicts bool
+
+	finished bool
 }
 
 // ResourceApplyOp creates or updates a Kubernetes object.
-func ResourceApplyOp(apiServer *cke.Node, resource cke.ResourceDefinition) cke.Operator {
+func ResourceApplyOp(apiServer *cke.Node, resource cke.ResourceDefinition, forceConflicts bool) cke.Operator {
 	return &resourceApplyOp{
-		apiserver: apiServer,
-		resource:  resource,
+		apiserver:      apiServer,
+		resource:       resource,
+		forceConflicts: forceConflicts,
 	}
 }
 
@@ -43,7 +46,7 @@ func (o *resourceApplyOp) Run(ctx context.Context, inf cke.Infrastructure, _ str
 	if err != nil {
 		return err
 	}
-	return cke.ApplyResource(cs, o.resource.Definition, o.resource.Revision)
+	return cke.ApplyResource(cs, o.resource.Definition, o.resource.Revision, o.forceConflicts)
 }
 
 func (o *resourceApplyOp) Command() cke.Command {

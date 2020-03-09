@@ -19,7 +19,7 @@ import (
 func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition) ([]cke.Operator, cke.OperationPhase) {
 	nf := NewNodeFilter(c, cs)
 
-	// 0. Execute upgrade opeartion if necessary
+	// 0. Execute upgrade operation if necessary
 	if cs.ConfigVersion != cke.ConfigVersion {
 		return []cke.Operator{op.UpgradeOp(cs.ConfigVersion, nf.ControlPlane())}, cke.PhaseUpgrade
 	}
@@ -460,18 +460,18 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 		if res.Kind == cke.KindDeployment && !isReady {
 			continue
 		}
-		annotations, ok := ks.ResourceStatuses[res.Key]
-		if !ok || res.NeedUpdate(annotations) {
-			ops = append(ops, op.ResourceApplyOp(apiServer, res))
+		status, ok := ks.ResourceStatuses[res.Key]
+		if !ok || res.NeedUpdate(&status) {
+			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
 		}
 	}
 	for _, res := range resources {
 		if res.Kind == cke.KindDeployment && !isReady {
 			continue
 		}
-		annotations, ok := ks.ResourceStatuses[res.Key]
-		if !ok || res.NeedUpdate(annotations) {
-			ops = append(ops, op.ResourceApplyOp(apiServer, res))
+		status, ok := ks.ResourceStatuses[res.Key]
+		if !ok || res.NeedUpdate(&status) {
+			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
 		}
 	}
 	return ops

@@ -120,7 +120,7 @@ func encodeToJSON(obj runtime.Object) ([]byte, error) {
 }
 
 // ApplyResource creates or patches Kubernetes object.
-func ApplyResource(clientset *kubernetes.Clientset, data []byte, rev int64) error {
+func ApplyResource(clientset *kubernetes.Clientset, data []byte, rev int64, forceConflicts bool) error {
 	obj, gvk, err := resourceDecoder.Decode(data, nil, nil)
 	if err != nil {
 		return err
@@ -129,46 +129,46 @@ func ApplyResource(clientset *kubernetes.Clientset, data []byte, rev int64) erro
 	switch o := obj.(type) {
 	case *corev1.Namespace:
 		c := clientset.CoreV1().RESTClient()
-		return applyNamespace(o, rev, c, false)
+		return applyNamespace(o, rev, c, applyParams{isNamespaced: false, forceConflicts: forceConflicts})
 	case *corev1.ServiceAccount:
 		c := clientset.CoreV1().RESTClient()
-		return applyServiceAccount(o, rev, c, true)
+		return applyServiceAccount(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
 	case *corev1.ConfigMap:
 		c := clientset.CoreV1().RESTClient()
-		return applyConfigMap(o, rev, c, true)
+		return applyConfigMap(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
 	case *corev1.Service:
 		c := clientset.CoreV1().RESTClient()
-		return applyService(o, rev, c, true)
+		return applyService(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
 	case *policyv1beta1.PodSecurityPolicy:
 		c := clientset.PolicyV1beta1().RESTClient()
-		return applyPodSecurityPolicy(o, rev, c, false)
+		return applyPodSecurityPolicy(o, rev, c, applyParams{isNamespaced: false, forceConflicts: forceConflicts})
 	case *networkingv1.NetworkPolicy:
 		c := clientset.NetworkingV1().RESTClient()
-		return applyNetworkPolicy(o, rev, c, true)
+		return applyNetworkPolicy(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
 	case *rbacv1.Role:
 		c := clientset.RbacV1().RESTClient()
-		return applyRole(o, rev, c, true)
+		return applyRole(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
 	case *rbacv1.RoleBinding:
 		c := clientset.RbacV1().RESTClient()
-		return applyRoleBinding(o, rev, c, true)
+		return applyRoleBinding(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
 	case *rbacv1.ClusterRole:
 		c := clientset.RbacV1().RESTClient()
-		return applyClusterRole(o, rev, c, false)
+		return applyClusterRole(o, rev, c, applyParams{isNamespaced: false, forceConflicts: forceConflicts})
 	case *rbacv1.ClusterRoleBinding:
 		c := clientset.RbacV1().RESTClient()
-		return applyClusterRoleBinding(o, rev, c, false)
+		return applyClusterRoleBinding(o, rev, c, applyParams{isNamespaced: false, forceConflicts: forceConflicts})
 	case *appsv1.Deployment:
 		c := clientset.AppsV1().RESTClient()
-		return applyDeployment(o, rev, c, true)
+		return applyDeployment(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
 	case *appsv1.DaemonSet:
 		c := clientset.AppsV1().RESTClient()
-		return applyDaemonSet(o, rev, c, true)
+		return applyDaemonSet(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
 	case *batchv1beta1.CronJob:
 		c := clientset.BatchV1beta1().RESTClient()
-		return applyCronJob(o, rev, c, true)
+		return applyCronJob(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
 	case *policyv1beta1.PodDisruptionBudget:
 		c := clientset.PolicyV1beta1().RESTClient()
-		return applyPodDisruptionBudget(o, rev, c, true)
+		return applyPodDisruptionBudget(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
 	}
 	return fmt.Errorf("unsupported type: %s", gvk.String())
 }
@@ -246,8 +246,11 @@ func (d ResourceDefinition) String() string {
 
 // NeedUpdate returns true if annotations of the current resource
 // indicates need for update.
-func (d ResourceDefinition) NeedUpdate(annotations map[string]string) bool {
-	curRev, ok := annotations[AnnotationResourceRevision]
+func (d ResourceDefinition) NeedUpdate(rs *ResourceStatus) bool {
+	if rs == nil {
+		return true
+	}
+	curRev, ok := rs.Annotations[AnnotationResourceRevision]
 	if !ok {
 		return true
 	}
@@ -259,7 +262,7 @@ func (d ResourceDefinition) NeedUpdate(annotations map[string]string) bool {
 		return false
 	}
 
-	curImage, ok := annotations[AnnotationResourceImage]
+	curImage, ok := rs.Annotations[AnnotationResourceImage]
 	if !ok {
 		return true
 	}
