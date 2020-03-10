@@ -29,7 +29,7 @@ func TestKubernetes() {
 
 		By("waiting the default service account gets created")
 		Eventually(func() error {
-			_, stderr, err := kubectl("get", "sa/default", "-o", "json")
+			_, stderr, err := kubectl("get", "sa/default", "-o", "json", "-n="+namespace)
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
