@@ -9,9 +9,9 @@ import (
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
-	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
+	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -360,9 +360,9 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.N
 	currentBuiltIn := k8s.SchedulerParams()
 	currentExtra := nf.cluster.Options.Scheduler
 
-	var extConfigs []*scheduler.ExtenderConfig
+	var extConfigs []*schedulerv1.Extender
 	for _, ext := range extenders {
-		conf := new(scheduler.ExtenderConfig)
+		conf := new(schedulerv1.Extender)
 		err := yaml.Unmarshal([]byte(ext), conf)
 		if err != nil {
 			log.Warn("failed to unmarshal extender config", map[string]interface{}{
@@ -406,7 +406,7 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.N
 	return nodes
 }
 
-func equalExtenderConfigs(configs1, configs2 []*scheduler.ExtenderConfig) bool {
+func equalExtenders(configs1, configs2 []*schedulerv1.Extender) bool {
 	if len(configs1) != len(configs2) {
 		return false
 	}

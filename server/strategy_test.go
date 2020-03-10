@@ -11,12 +11,12 @@ import (
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/op/nodedns"
-	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/cke/static"
 	"github.com/google/go-cmp/cmp"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 )
 
 const (
@@ -736,8 +736,8 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartScheduler4",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Extenders = []*scheduler.ExtenderConfig{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
-				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Extenders = []*scheduler.ExtenderConfig{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
+				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Extenders = []*schedulerv1.Extender{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Extenders = []*schedulerv1.Extender{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-scheduler-restart",

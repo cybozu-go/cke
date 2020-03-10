@@ -3,24 +3,24 @@ package server
 import (
 	"testing"
 
-	"github.com/cybozu-go/cke/scheduler"
+	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 )
 
 func TestEqualExtenderConfigs(t *testing.T) {
 	testCases := []struct {
 		message  string
 		expected bool
-		configs1 []*scheduler.ExtenderConfig
-		configs2 []*scheduler.ExtenderConfig
+		configs1 []*schedulerv1.Extender
+		configs2 []*schedulerv1.Extender
 	}{
 		{
 			"valid",
 			true,
-			[]*scheduler.ExtenderConfig{{
+			[]*schedulerv1.Extender{{
 				URLPrefix:  "http://localhost",
 				FilterVerb: "get",
 			}},
-			[]*scheduler.ExtenderConfig{{
+			[]*schedulerv1.Extender{{
 				URLPrefix:  "http://localhost",
 				FilterVerb: "get",
 			}},
@@ -28,7 +28,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 		{
 			"if order is difference, it should return false",
 			false,
-			[]*scheduler.ExtenderConfig{
+			[]*schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost:8000",
 					FilterVerb: "get",
@@ -38,7 +38,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 					FilterVerb: "post",
 				},
 			},
-			[]*scheduler.ExtenderConfig{
+			[]*schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -52,19 +52,19 @@ func TestEqualExtenderConfigs(t *testing.T) {
 		{
 			"empty",
 			true,
-			[]*scheduler.ExtenderConfig{},
-			[]*scheduler.ExtenderConfig{},
+			[]*schedulerv1.Extender{},
+			[]*schedulerv1.Extender{},
 		},
 		{
 			"subset",
 			false,
-			[]*scheduler.ExtenderConfig{
+			[]*schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
 				},
 			},
-			[]*scheduler.ExtenderConfig{
+			[]*schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -78,8 +78,8 @@ func TestEqualExtenderConfigs(t *testing.T) {
 		{
 			"configs1 is empty",
 			false,
-			[]*scheduler.ExtenderConfig{},
-			[]*scheduler.ExtenderConfig{
+			[]*schedulerv1.Extender{},
+			[]*schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -93,7 +93,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 		{
 			"difference",
 			false,
-			[]*scheduler.ExtenderConfig{
+			[]*schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -103,7 +103,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 					FilterVerb: "get",
 				},
 			},
-			[]*scheduler.ExtenderConfig{
+			[]*schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
