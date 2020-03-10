@@ -360,7 +360,7 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.N
 	currentBuiltIn := k8s.SchedulerParams()
 	currentExtra := nf.cluster.Options.Scheduler
 
-	var extConfigs []*schedulerv1.Extender
+	var extConfigs []schedulerv1.Extender
 	for _, ext := range extenders {
 		conf := new(schedulerv1.Extender)
 		err := yaml.Unmarshal([]byte(ext), conf)
@@ -371,7 +371,7 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.N
 			})
 			panic(err)
 		}
-		extConfigs = append(extConfigs, conf)
+		extConfigs = append(extConfigs, *conf)
 	}
 
 	for _, n := range nf.cp {
@@ -385,7 +385,7 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.N
 			fallthrough
 		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
 			fallthrough
-		case !equalExtenderConfigs(extConfigs, st.Extenders):
+		case !equalExtenders(extConfigs, st.Extenders):
 			log.Debug("node has been appended", map[string]interface{}{
 				"node":                    n.Nodename(),
 				"st_builtin_args":         st.BuiltInParams.ExtraArguments,
@@ -406,7 +406,7 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(extenders []string) (nodes []*cke.N
 	return nodes
 }
 
-func equalExtenders(configs1, configs2 []*schedulerv1.Extender) bool {
+func equalExtenders(configs1, configs2 []schedulerv1.Extender) bool {
 	if len(configs1) != len(configs2) {
 		return false
 	}

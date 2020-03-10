@@ -736,8 +736,8 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartScheduler4",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Extenders = []*schedulerv1.Extender{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
-				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Extenders = []*schedulerv1.Extender{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
+				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Extenders = []schedulerv1.Extender{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Extenders = []schedulerv1.Extender{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-scheduler-restart",

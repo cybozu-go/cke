@@ -95,14 +95,14 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	}
 
 	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		var configs []*schedulerv1.Extender
+		var configs []schedulerv1.Extender
 		for _, extStr := range c.params.Extenders {
 			conf := new(schedulerv1.Extender)
 			err = yaml.Unmarshal([]byte(extStr), conf)
 			if err != nil {
 				return nil, err
 			}
-			configs = append(configs, conf)
+			configs = append(configs, *conf)
 		}
 		policy := schedulerv1.Policy{TypeMeta: metav1.TypeMeta{Kind: "Policy", APIVersion: "v1"}, Extenders: configs}
 		return json.Marshal(policy)

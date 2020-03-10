@@ -43,7 +43,7 @@ require (
 	k8s.io/client-go v0.17.3
 	k8s.io/kube-scheduler v0.17.3
 	k8s.io/kubelet v0.17.3
-	sigs.k8s.io/yaml v1.1.0
+	sigs.k8s.io/yaml v1.2.0
 )
 
 go 1.13

@@ -10,17 +10,17 @@ func TestEqualExtenderConfigs(t *testing.T) {
 	testCases := []struct {
 		message  string
 		expected bool
-		configs1 []*schedulerv1.Extender
-		configs2 []*schedulerv1.Extender
+		configs1 []schedulerv1.Extender
+		configs2 []schedulerv1.Extender
 	}{
 		{
 			"valid",
 			true,
-			[]*schedulerv1.Extender{{
+			[]schedulerv1.Extender{{
 				URLPrefix:  "http://localhost",
 				FilterVerb: "get",
 			}},
-			[]*schedulerv1.Extender{{
+			[]schedulerv1.Extender{{
 				URLPrefix:  "http://localhost",
 				FilterVerb: "get",
 			}},
@@ -28,7 +28,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 		{
 			"if order is difference, it should return false",
 			false,
-			[]*schedulerv1.Extender{
+			[]schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost:8000",
 					FilterVerb: "get",
@@ -38,7 +38,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 					FilterVerb: "post",
 				},
 			},
-			[]*schedulerv1.Extender{
+			[]schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -52,19 +52,19 @@ func TestEqualExtenderConfigs(t *testing.T) {
 		{
 			"empty",
 			true,
-			[]*schedulerv1.Extender{},
-			[]*schedulerv1.Extender{},
+			[]schedulerv1.Extender{},
+			[]schedulerv1.Extender{},
 		},
 		{
 			"subset",
 			false,
-			[]*schedulerv1.Extender{
+			[]schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
 				},
 			},
-			[]*schedulerv1.Extender{
+			[]schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -78,8 +78,8 @@ func TestEqualExtenderConfigs(t *testing.T) {
 		{
 			"configs1 is empty",
 			false,
-			[]*schedulerv1.Extender{},
-			[]*schedulerv1.Extender{
+			[]schedulerv1.Extender{},
+			[]schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -93,7 +93,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 		{
 			"difference",
 			false,
-			[]*schedulerv1.Extender{
+			[]schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -103,7 +103,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 					FilterVerb: "get",
 				},
 			},
-			[]*schedulerv1.Extender{
+			[]schedulerv1.Extender{
 				{
 					URLPrefix:  "http://localhost",
 					FilterVerb: "post",
@@ -117,7 +117,7 @@ func TestEqualExtenderConfigs(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if equalExtenderConfigs(tc.configs1, tc.configs2) != tc.expected {
+		if equalExtenders(tc.configs1, tc.configs2) != tc.expected {
 			t.Error(tc.message)
 		}
 	}

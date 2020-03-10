@@ -1,10 +1,13 @@
 package k8s
 
 import (
+	"time"
+
 	"github.com/cybozu-go/cke"
-	apiserver "k8s.io/apiserver/pkg/apis/config"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apiserverv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/client-go/tools/clientcmd/api"
-	kubeletev1beta1 "k8s.io/kubelet/config/v1beta1"
+	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
 func controllerManagerKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Config {
@@ -41,29 +44,43 @@ func kubeletKubeconfig(cluster string, n *cke.Node, caPath, certPath, keyPath st
 	return cfg
 }
 
-func newKubeletConfiguration(cert, key, ca, domain, logSize string, logFiles int32, allowSwap bool) kubeletev1beta1.KubeletConfiguration {
-	return kubeletev1beta1.KubeletConfiguration{
-		APIVersion:            "kubelet.config.k8s.io/v1beta1",
-		Kind:                  "KubeletConfiguration",
-		ReadOnlyPort:          0,
-		TLSCertFile:           cert,
-		TLSPrivateKeyFile:     key,
-		Authentication:        KubeletAuthentication{ClientCAFile: ca},
-		Authorization:         kubeletAuthorization{Mode: "Webhook"},
+func newKubeletConfiguration(cert, key, ca, domain, logSize string, logFiles int32, allowSwap bool) kubeletv1beta1.KubeletConfiguration {
+	return kubeletv1beta1.KubeletConfiguration{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "kubelet.config.k8s.io/v1beta1",
+			Kind:       "KubeletConfiguration",
+		},
+		ReadOnlyPort:      0,
+		TLSCertFile:       cert,
+		TLSPrivateKeyFile: key,
+		Authentication: kubeletv1beta1.KubeletAuthentication{
+			X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: ca},
+			Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: boolPointer(true)},
+		},
+		Authorization:         kubeletv1beta1.KubeletAuthorization{Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook},
 		HealthzBindAddress:    "0.0.0.0",
-		OOMScoreAdj:           -1000,
+		OOMScoreAdj:           int32Pointer(-1000),
 		ClusterDomain:         domain,
-		RuntimeRequestTimeout: "15m",
-		FailSwapOn:            !allowSwap,
+		RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
+		FailSwapOn:            boolPointer(!allowSwap),
 		ContainerLogMaxSize:   logSize,
-		ContainerLogMaxFiles:  logFiles,
+		ContainerLogMaxFiles:  int32Pointer(logFiles),
 	}
 }
 
-func newEncryptionConfiguration() apiserver.EncryptionConfiguration {
+func int32Pointer(input int32) *int32 {
+	return &input
+}
 
-	return apiserver.EncryptionConfiguration{
-		APIVersion: "apiserver.config.k8s.io/v1",
-		Kind:       "EncryptionConfiguration",
+func boolPointer(input bool) *bool {
+	return &input
+}
+
+func newEncryptionConfiguration() apiserverv1.EncryptionConfiguration {
+	return apiserverv1.EncryptionConfiguration{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apiserver.config.k8s.io/v1",
+			Kind:       "EncryptionConfiguration",
+		},
 	}
 }

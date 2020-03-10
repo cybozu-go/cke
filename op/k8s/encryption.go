@@ -6,7 +6,7 @@ import (
 	"errors"
 
 	"github.com/cybozu-go/cke"
-	apiserver "k8s.io/apiserver/pkg/apis/config"
+	apiserverv1 "k8s.io/apiserver/pkg/apis/config/v1"
 )
 
 const (
@@ -35,25 +35,25 @@ func getEncryptionSecret(ctx context.Context, inf cke.Infrastructure, key string
 	return data.(string), nil
 }
 
-func getEncryptionConfiguration(ctx context.Context, inf cke.Infrastructure) (*apiserver.EncryptionConfiguration, error) {
+func getEncryptionConfiguration(ctx context.Context, inf cke.Infrastructure) (*apiserverv1.EncryptionConfiguration, error) {
 	data, err := getEncryptionSecret(ctx, inf, "aescbc")
 	if err != nil {
 		return nil, err
 	}
 
-	aescfg := new(apiserver.AESConfiguration)
+	aescfg := new(apiserverv1.AESConfiguration)
 	err = json.Unmarshal([]byte(data), aescfg)
 	if err != nil {
 		return nil, err
 	}
 
 	cfg := newEncryptionConfiguration()
-	resources := []ResourceConfiguration{
+	resources := []apiserverv1.ResourceConfiguration{
 		{
 			Resources: []string{"secrets"},
-			Providers: []ProviderConfiguration{
+			Providers: []apiserverv1.ProviderConfiguration{
 				{AESCBC: aescfg},
-				{Identity: &struct{}{}},
+				{Identity: &apiserverv1.IdentityConfiguration{}},
 			},
 		},
 	}

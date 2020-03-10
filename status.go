@@ -138,7 +138,7 @@ type KubeComponentStatus struct {
 type SchedulerStatus struct {
 	ServiceStatus
 	IsHealthy bool
-	Extenders []*schedulerv1.Extender
+	Extenders []schedulerv1.Extender
 }
 
 // KubeletStatus represents kubelet status and health
