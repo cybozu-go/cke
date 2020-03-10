@@ -172,20 +172,6 @@ rules:
 			false,
 		},
 		{
-			"RoleV1Beta1",
-			`kind: Role
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  namespace: default
-  name: pod-reader
-rules:
-- apiGroups: [""] # "" indicates the core API group
-  resources: ["pods"]
-  verbs: ["get", "watch", "list"]`,
-			"Role/default/pod-reader",
-			false,
-		},
-		{
 			"RoleBinding",
 			`kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
