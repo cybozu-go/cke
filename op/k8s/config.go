@@ -1,14 +1,42 @@
 package k8s
 
 import (
+	"bytes"
 	"time"
 
 	"github.com/cybozu-go/cke"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	apiserverv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/client-go/tools/clientcmd/api"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"sigs.k8s.io/yaml"
 )
+
+var (
+	resourceEncoder runtime.Encoder
+)
+
+func init() {
+	scm := runtime.NewScheme()
+	if err := apiserverv1.AddToScheme(scm); err != nil {
+		panic(err)
+	}
+	if err := kubeletv1beta1.AddToScheme(scm); err != nil {
+		panic(err)
+	}
+	resourceEncoder = json.NewSerializerWithOptions(json.DefaultMetaFactory, scm, scm, json.SerializerOptions{})
+}
+
+func encodeToYAML(obj runtime.Object) ([]byte, error) {
+	buf := &bytes.Buffer{}
+	err := resourceEncoder.Encode(obj, buf)
+	if err != nil {
+		return nil, err
+	}
+	return yaml.JSONToYAML(buf.Bytes())
+}
 
 func controllerManagerKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Config {
 	return cke.Kubeconfig(cluster, "system:kube-controller-manager", ca, clientCrt, clientKey)
@@ -46,10 +74,6 @@ func kubeletKubeconfig(cluster string, n *cke.Node, caPath, certPath, keyPath st
 
 func newKubeletConfiguration(cert, key, ca, domain, logSize string, logFiles int32, allowSwap bool) kubeletv1beta1.KubeletConfiguration {
 	return kubeletv1beta1.KubeletConfiguration{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "kubelet.config.k8s.io/v1beta1",
-			Kind:       "KubeletConfiguration",
-		},
 		ReadOnlyPort:      0,
 		TLSCertFile:       cert,
 		TLSPrivateKeyFile: key,
@@ -74,13 +98,4 @@ func int32Pointer(input int32) *int32 {
 
 func boolPointer(input bool) *bool {
 	return &input
-}
-
-func newEncryptionConfiguration() apiserverv1.EncryptionConfiguration {
-	return apiserverv1.EncryptionConfiguration{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apiserver.config.k8s.io/v1",
-			Kind:       "EncryptionConfiguration",
-		},
-	}
 }

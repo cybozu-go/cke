@@ -47,17 +47,15 @@ func getEncryptionConfiguration(ctx context.Context, inf cke.Infrastructure) (*a
 		return nil, err
 	}
 
-	cfg := newEncryptionConfiguration()
-	resources := []apiserverv1.ResourceConfiguration{
-		{
-			Resources: []string{"secrets"},
-			Providers: []apiserverv1.ProviderConfiguration{
-				{AESCBC: aescfg},
-				{Identity: &apiserverv1.IdentityConfiguration{}},
+	return &apiserverv1.EncryptionConfiguration{
+		Resources: []apiserverv1.ResourceConfiguration{
+			{
+				Resources: []string{"secrets"},
+				Providers: []apiserverv1.ProviderConfiguration{
+					{AESCBC: aescfg},
+					{Identity: &apiserverv1.IdentityConfiguration{}},
+				},
 			},
 		},
-	}
-	cfg.Resources = resources
-
-	return &cfg, nil
+	}, nil
 }

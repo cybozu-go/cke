@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -194,7 +193,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 	g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		cfg := cfg
 		cfg.ClusterDNS = []string{n.Address}
-		return yaml.Marshal(cfg)
+		return encodeToYAML(&cfg)
 	}
 	err := c.files.AddFile(ctx, kubeletConfigPath, g)
 	if err != nil {
