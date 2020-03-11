@@ -145,8 +145,8 @@ func newData() testData {
 		ConfigVersion: cke.ConfigVersion,
 		NodeStatuses:  nodeStatuses,
 		Kubernetes: cke.KubernetesClusterStatus{
-			ResourceStatuses: map[string]map[string]string{
-				"Namespace/foo": {cke.AnnotationResourceRevision: "1"},
+			ResourceStatuses: map[string]cke.ResourceStatus{
+				"Namespace/foo": {Annotations: map[string]string{cke.AnnotationResourceRevision: "1"}},
 			},
 			Nodes: nodeList,
 		},
@@ -232,7 +232,7 @@ func (d testData) withAPIServer(serviceSubnet string) testData {
 		st := &d.NodeStatus(n).APIServer
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.APIServerParams(d.ControlPlane(), n.Address, serviceSubnet, false, "")
 	}
 	return d
@@ -243,7 +243,7 @@ func (d testData) withControllerManager(name, serviceSubnet string) testData {
 		st := &d.NodeStatus(n).ControllerManager
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.ControllerManagerParams(name, serviceSubnet)
 	}
 	return d
@@ -254,7 +254,7 @@ func (d testData) withScheduler() testData {
 		st := &d.NodeStatus(n).Scheduler
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.SchedulerParams()
 	}
 	return d
@@ -265,7 +265,7 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st := &d.NodeStatus(n).Kubelet
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.ContainerLogMaxSize = "10Mi"
 		st.ContainerLogMaxFiles = 10
 		st.BuiltInParams = k8s.KubeletServiceParams(n, cke.KubeletParams{
@@ -283,7 +283,7 @@ func (d testData) withProxy() testData {
 		st := &d.NodeStatus(n).Proxy
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.ProxyParams(n)
 	}
 	return d
@@ -319,12 +319,12 @@ func (d testData) withK8sResourceReady() testData {
 	d.withK8sReady()
 	ks := &d.Status.Kubernetes
 	for _, res := range static.Resources {
-		ks.ResourceStatuses[res.Key] = map[string]string{
-			cke.AnnotationResourceRevision: "1",
+		ks.ResourceStatuses[res.Key] = cke.ResourceStatus{
+			Annotations: map[string]string{cke.AnnotationResourceRevision: "1"},
 		}
 	}
-	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"][cke.AnnotationResourceImage] = cke.CoreDNSImage.Name()
-	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"][cke.AnnotationResourceImage] = cke.UnboundImage.Name()
+	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"].Annotations[cke.AnnotationResourceImage] = cke.CoreDNSImage.Name()
+	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"].Annotations[cke.AnnotationResourceImage] = cke.UnboundImage.Name()
 	ks.ClusterDNS.ConfigMap = clusterdns.ConfigMap(testDefaultDNSDomain, testDefaultDNSServers)
 	ks.ClusterDNS.ClusterIP = testDefaultDNSAddr
 	ks.NodeDNS.ConfigMap = nodedns.ConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)

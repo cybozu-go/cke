@@ -58,7 +58,7 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return common.ImagePullCommand(o.nodes, cke.HyperkubeImage)
+		return common.ImagePullCommand(o.nodes, cke.KubernetesImage)
 	case 1:
 		o.step++
 		if len(o.params.CNIConfFile.Name) != 0 {
@@ -112,7 +112,7 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 			}
 			paramsMap[n.Address] = params
 		}
-		return common.RunContainerCommand(o.nodes, op.KubeletContainerName, cke.HyperkubeImage,
+		return common.RunContainerCommand(o.nodes, op.KubeletContainerName, cke.KubernetesImage,
 			common.WithOpts(opts),
 			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params.ServiceParams))

@@ -3,7 +3,7 @@ How to develop CKE
 
 ## Go environment
 
-Use Go 1.12.9 or higher.
+Use Go 1.13.8 or higher.
 
 CKE uses [Go modules](https://github.com/golang/go/wiki/Modules) to manage dependencies.
 So you must either set `GO111MODULE=on` environment variable or checkout CKE out of `GOPATH`.
@@ -50,7 +50,7 @@ Modules under `k8s.io` are compatible with Go modules.
 Therefore, when `k8s.io/client-go` is updated as follows, dependent modules are also updated.
 
 ```console
-$ go get k8s.io/client-go@kubernetes-1.16.5
+$ go get k8s.io/client-go@0.17.3
 
 $ go mod tidy
 $ go mod vendor

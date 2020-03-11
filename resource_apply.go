@@ -13,64 +13,45 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"k8s.io/client-go/rest"
 )
 
-func annotate(meta *metav1.ObjectMeta, rev int64, data []byte) {
+type applyParams struct {
+	isNamespaced   bool
+	forceConflicts bool
+}
+
+func annotate(meta *metav1.ObjectMeta, rev int64) {
 	if meta.Annotations == nil {
 		meta.Annotations = make(map[string]string)
 	}
 	meta.Annotations[AnnotationResourceRevision] = strconv.FormatInt(rev, 10)
-	meta.Annotations[AnnotationResourceOriginal] = string(data)
 }
 
-func applyNamespace(o *corev1.Namespace, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*corev1.Namespace, error), createFunc func(*corev1.Namespace) (*corev1.Namespace, error), patchFunc func(string, types.PatchType, []byte, ...string) (*corev1.Namespace, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyNamespace(o *corev1.Namespace, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("namespaces").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -79,50 +60,28 @@ func applyNamespace(o *corev1.Namespace, data []byte, rev int64, getFunc func(st
 	return nil
 }
 
-func applyServiceAccount(o *corev1.ServiceAccount, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*corev1.ServiceAccount, error), createFunc func(*corev1.ServiceAccount) (*corev1.ServiceAccount, error), patchFunc func(string, types.PatchType, []byte, ...string) (*corev1.ServiceAccount, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyServiceAccount(o *corev1.ServiceAccount, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("serviceaccounts").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -131,50 +90,28 @@ func applyServiceAccount(o *corev1.ServiceAccount, data []byte, rev int64, getFu
 	return nil
 }
 
-func applyConfigMap(o *corev1.ConfigMap, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*corev1.ConfigMap, error), createFunc func(*corev1.ConfigMap) (*corev1.ConfigMap, error), patchFunc func(string, types.PatchType, []byte, ...string) (*corev1.ConfigMap, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyConfigMap(o *corev1.ConfigMap, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("configmaps").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -183,50 +120,28 @@ func applyConfigMap(o *corev1.ConfigMap, data []byte, rev int64, getFunc func(st
 	return nil
 }
 
-func applyService(o *corev1.Service, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*corev1.Service, error), createFunc func(*corev1.Service) (*corev1.Service, error), patchFunc func(string, types.PatchType, []byte, ...string) (*corev1.Service, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyService(o *corev1.Service, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("services").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -235,50 +150,28 @@ func applyService(o *corev1.Service, data []byte, rev int64, getFunc func(string
 	return nil
 }
 
-func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*policyv1beta1.PodSecurityPolicy, error), createFunc func(*policyv1beta1.PodSecurityPolicy) (*policyv1beta1.PodSecurityPolicy, error), patchFunc func(string, types.PatchType, []byte, ...string) (*policyv1beta1.PodSecurityPolicy, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("podsecuritypolicies").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -287,50 +180,28 @@ func applyPodSecurityPolicy(o *policyv1beta1.PodSecurityPolicy, data []byte, rev
 	return nil
 }
 
-func applyNetworkPolicy(o *networkingv1.NetworkPolicy, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*networkingv1.NetworkPolicy, error), createFunc func(*networkingv1.NetworkPolicy) (*networkingv1.NetworkPolicy, error), patchFunc func(string, types.PatchType, []byte, ...string) (*networkingv1.NetworkPolicy, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyNetworkPolicy(o *networkingv1.NetworkPolicy, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("networkpolicies").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -339,50 +210,28 @@ func applyNetworkPolicy(o *networkingv1.NetworkPolicy, data []byte, rev int64, g
 	return nil
 }
 
-func applyRole(o *rbacv1.Role, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*rbacv1.Role, error), createFunc func(*rbacv1.Role) (*rbacv1.Role, error), patchFunc func(string, types.PatchType, []byte, ...string) (*rbacv1.Role, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyRole(o *rbacv1.Role, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("roles").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -391,50 +240,28 @@ func applyRole(o *rbacv1.Role, data []byte, rev int64, getFunc func(string, meta
 	return nil
 }
 
-func applyRoleBinding(o *rbacv1.RoleBinding, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*rbacv1.RoleBinding, error), createFunc func(*rbacv1.RoleBinding) (*rbacv1.RoleBinding, error), patchFunc func(string, types.PatchType, []byte, ...string) (*rbacv1.RoleBinding, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyRoleBinding(o *rbacv1.RoleBinding, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("rolebindings").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -443,50 +270,28 @@ func applyRoleBinding(o *rbacv1.RoleBinding, data []byte, rev int64, getFunc fun
 	return nil
 }
 
-func applyClusterRole(o *rbacv1.ClusterRole, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*rbacv1.ClusterRole, error), createFunc func(*rbacv1.ClusterRole) (*rbacv1.ClusterRole, error), patchFunc func(string, types.PatchType, []byte, ...string) (*rbacv1.ClusterRole, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyClusterRole(o *rbacv1.ClusterRole, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("clusterroles").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -495,50 +300,28 @@ func applyClusterRole(o *rbacv1.ClusterRole, data []byte, rev int64, getFunc fun
 	return nil
 }
 
-func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*rbacv1.ClusterRoleBinding, error), createFunc func(*rbacv1.ClusterRoleBinding) (*rbacv1.ClusterRoleBinding, error), patchFunc func(string, types.PatchType, []byte, ...string) (*rbacv1.ClusterRoleBinding, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("clusterrolebindings").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -547,50 +330,28 @@ func applyClusterRoleBinding(o *rbacv1.ClusterRoleBinding, data []byte, rev int6
 	return nil
 }
 
-func applyDeployment(o *appsv1.Deployment, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*appsv1.Deployment, error), createFunc func(*appsv1.Deployment) (*appsv1.Deployment, error), patchFunc func(string, types.PatchType, []byte, ...string) (*appsv1.Deployment, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyDeployment(o *appsv1.Deployment, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("deployments").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -599,50 +360,28 @@ func applyDeployment(o *appsv1.Deployment, data []byte, rev int64, getFunc func(
 	return nil
 }
 
-func applyDaemonSet(o *appsv1.DaemonSet, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*appsv1.DaemonSet, error), createFunc func(*appsv1.DaemonSet) (*appsv1.DaemonSet, error), patchFunc func(string, types.PatchType, []byte, ...string) (*appsv1.DaemonSet, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyDaemonSet(o *appsv1.DaemonSet, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("daemonsets").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -651,50 +390,28 @@ func applyDaemonSet(o *appsv1.DaemonSet, data []byte, rev int64, getFunc func(st
 	return nil
 }
 
-func applyCronJob(o *batchv1beta1.CronJob, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*batchv1beta1.CronJob, error), createFunc func(*batchv1beta1.CronJob) (*batchv1beta1.CronJob, error), patchFunc func(string, types.PatchType, []byte, ...string) (*batchv1beta1.CronJob, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyCronJob(o *batchv1beta1.CronJob, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("cronjobs").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err
@@ -703,50 +420,28 @@ func applyCronJob(o *batchv1beta1.CronJob, data []byte, rev int64, getFunc func(
 	return nil
 }
 
-func applyPodDisruptionBudget(o *policyv1beta1.PodDisruptionBudget, data []byte, rev int64, getFunc func(string, metav1.GetOptions) (*policyv1beta1.PodDisruptionBudget, error), createFunc func(*policyv1beta1.PodDisruptionBudget) (*policyv1beta1.PodDisruptionBudget, error), patchFunc func(string, types.PatchType, []byte, ...string) (*policyv1beta1.PodDisruptionBudget, error)) error {
-	annotate(&o.ObjectMeta, rev, data)
-	current, err := getFunc(o.Name, metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = createFunc(o)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
+func applyPodDisruptionBudget(o *policyv1beta1.PodDisruptionBudget, rev int64, client rest.Interface, params applyParams) error {
+	annotate(&o.ObjectMeta, rev)
 	modified, err := encodeToJSON(o)
 	if err != nil {
 		return err
 	}
-
-	original, ok := current.Annotations[AnnotationResourceOriginal]
-	if !ok {
-		original = string(modified)
-		log.Warn("use modified resource as original for 3-way patch", map[string]interface{}{
-			"kind":      o.Kind,
-			"namespace": o.Namespace,
-			"name":      o.Name,
-		})
-	}
-
-	currentData, err := encodeToJSON(current)
-	if err != nil {
-		return err
-	}
-	pm, err := strategicpatch.NewPatchMetaFromStruct(o)
-	if err != nil {
-		return err
-	}
-	patch, err := strategicpatch.CreateThreeWayMergePatch([]byte(original), modified, currentData, pm, true)
-	if err != nil {
-		return err
-	}
-	_, err = patchFunc(o.Name, types.StrategicMergePatchType, patch)
+	_, err = client.
+		Patch(types.ApplyPatchType).
+		Resource("poddisruptionbudgets").
+		Name(o.Name).
+		NamespaceIfScoped(o.Namespace, params.isNamespaced).
+		Param("force", strconv.FormatBool(params.forceConflicts)).
+		Param("fieldManager", "cke").
+		Body(modified).
+		Do().
+		Get()
 	if err != nil {
 		log.Error("failed to apply patch", map[string]interface{}{
 			"kind":      o.Kind,
 			"namespace": o.Namespace,
 			"name":      o.Name,
+			"force":     params.forceConflicts,
 			log.FnError: err,
 		})
 		return err

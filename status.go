@@ -46,7 +46,15 @@ type KubernetesClusterStatus struct {
 	EtcdService         *corev1.Service
 	EtcdEndpoints       *corev1.Endpoints
 	EtcdBackup          EtcdBackupStatus
-	ResourceStatuses    map[string]map[string]string
+	ResourceStatuses    map[string]ResourceStatus
+}
+
+// ResourceStatus represents the status of registered K8s resources
+type ResourceStatus struct {
+	// Annotations is the copy of metadata.annotations
+	Annotations map[string]string
+	// HasBeenSSA indicates that this resource has been already updated by server-side apply
+	HasBeenSSA bool
 }
 
 // IsReady returns the cluster condition whether or not Pod can be scheduled
@@ -74,8 +82,8 @@ func (s KubernetesClusterStatus) IsReady(cluster *Cluster) bool {
 }
 
 // SetResourceStatus sets status of the resource.
-func (s KubernetesClusterStatus) SetResourceStatus(rkey string, annotations map[string]string) {
-	s.ResourceStatuses[rkey] = annotations
+func (s KubernetesClusterStatus) SetResourceStatus(rkey string, ann map[string]string, isManaged bool) {
+	s.ResourceStatuses[rkey] = ResourceStatus{Annotations: ann, HasBeenSSA: isManaged}
 }
 
 // ClusterStatus represents the working cluster status.
