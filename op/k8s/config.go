@@ -11,7 +11,6 @@ import (
 	apiserverv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/client-go/tools/clientcmd/api"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -26,7 +25,7 @@ func init() {
 	if err := kubeletv1beta1.AddToScheme(scm); err != nil {
 		panic(err)
 	}
-	resourceEncoder = json.NewSerializerWithOptions(json.DefaultMetaFactory, scm, scm, json.SerializerOptions{})
+	resourceEncoder = json.NewSerializerWithOptions(json.DefaultMetaFactory, scm, scm, json.SerializerOptions{Yaml: true})
 }
 
 func encodeToYAML(obj runtime.Object) ([]byte, error) {
@@ -35,7 +34,7 @@ func encodeToYAML(obj runtime.Object) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return yaml.JSONToYAML(buf.Bytes())
+	return buf.Bytes(), nil
 }
 
 func controllerManagerKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Config {
