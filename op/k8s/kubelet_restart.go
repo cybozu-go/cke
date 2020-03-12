@@ -7,7 +7,6 @@ import (
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/yaml"
 )
 
 type kubeletRestartOp struct {
@@ -95,7 +94,7 @@ func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastruc
 	g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		cfg := cfg
 		cfg.ClusterDNS = []string{n.Address}
-		return yaml.Marshal(cfg)
+		return encodeToYAML(&cfg)
 	}
 	err := c.files.AddFile(ctx, kubeletConfigPath, g)
 	if err != nil {

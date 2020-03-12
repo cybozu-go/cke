@@ -9,7 +9,6 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
-	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -213,7 +212,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	if err != nil {
 		return err
 	}
-	enccfgData, err := yaml.Marshal(enccfg)
+	enccfgData, err := encodeToYAML(enccfg)
 	if err != nil {
 		return err
 	}

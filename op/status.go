@@ -14,11 +14,11 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -105,7 +105,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			})
 		}
 
-		var policy scheduler.Policy
+		var policy schedulerv1.Policy
 		// Testing policy file existence is needed for backward compatibility
 		policyStr, _, err := agent.Run(fmt.Sprintf("if [ -f %s ]; then cat %s; fi",
 			PolicyConfigPath, PolicyConfigPath))
@@ -125,7 +125,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			})
 			return nil, err
 		}
-		status.Scheduler.Extenders = policy.ExtenderConfigs
+		status.Scheduler.Extenders = policy.Extenders
 	}
 
 	// TODO: due to the following bug, health status cannot be checked for proxy.
