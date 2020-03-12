@@ -6,6 +6,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	apiserverv1 "k8s.io/apiserver/pkg/apis/config/v1"
@@ -15,10 +16,10 @@ import (
 
 var (
 	resourceEncoder runtime.Encoder
+	scm             = runtime.NewScheme()
 )
 
 func init() {
-	scm := runtime.NewScheme()
 	if err := apiserverv1.AddToScheme(scm); err != nil {
 		panic(err)
 	}
@@ -29,9 +30,13 @@ func init() {
 }
 
 func encodeToYAML(obj runtime.Object) ([]byte, error) {
+	unst := &unstructured.Unstructured{}
+	if err := scm.Convert(obj, unst, nil); err != nil {
+		return nil, err
+	}
+
 	buf := &bytes.Buffer{}
-	err := resourceEncoder.Encode(obj, buf)
-	if err != nil {
+	if err := resourceEncoder.Encode(unst, buf); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
