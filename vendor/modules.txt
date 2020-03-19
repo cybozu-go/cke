@@ -14,7 +14,7 @@ github.com/containernetworking/cni/pkg/types
 github.com/containernetworking/cni/pkg/types/020
 github.com/containernetworking/cni/pkg/types/current
 github.com/containernetworking/cni/pkg/version
-# github.com/coreos/etcd v3.3.18+incompatible
+# github.com/coreos/etcd v3.3.19+incompatible
 github.com/coreos/etcd/auth/authpb
 github.com/coreos/etcd/clientv3
 github.com/coreos/etcd/clientv3/balancer
@@ -33,6 +33,9 @@ github.com/coreos/etcd/pkg/systemd
 github.com/coreos/etcd/pkg/types
 github.com/coreos/etcd/raft
 github.com/coreos/etcd/raft/raftpb
+github.com/coreos/etcd/version
+# github.com/coreos/go-semver v0.3.0
+github.com/coreos/go-semver/semver
 # github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e
 github.com/coreos/go-systemd/journal
 # github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f
