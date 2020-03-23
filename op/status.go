@@ -24,7 +24,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-const csiBlockDeviceDirectory = "/var/lib/kubelet/plugins/kubernetes.io/csi/volumeDevices/publish/"
+// CSIBlockDeviceDirectory is the location of CSI raw block volume devices and their directories.
+const CSIBlockDeviceDirectory = "/var/lib/kubelet/plugins/kubernetes.io/csi/volumeDevices/publish/"
 
 // GetNodeStatus returns NodeStatus.
 func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, cluster *cke.Cluster) (*cke.NodeStatus, error) {
@@ -228,7 +229,7 @@ func hasBlockDevicePathsUpTo1_16(ctx context.Context, inf cke.Infrastructure, no
 		}
 
 		pvName := pv.GetName()
-		oldDevicePath := filepath.Join(csiBlockDeviceDirectory, pvName)
+		oldDevicePath := filepath.Join(CSIBlockDeviceDirectory, pvName)
 		stdout, stderr, err := agent.Run("ls -l " + oldDevicePath)
 		if err != nil || len(stdout) == 0 {
 			return false, fmt.Errorf("unable to ls %s; stderr: %s, err: %v", oldDevicePath, stderr, err)

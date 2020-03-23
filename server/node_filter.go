@@ -839,3 +839,14 @@ func (nf *NodeFilter) SSHConnectedNodes(targets []*cke.Node, includeControlPlane
 	}
 	return nodes
 }
+
+// HasOutdatedBlockDevicePaths returns nodes which use old block device path
+func (nf *NodeFilter) HasOutdatedBlockDevicePaths() (nodes []*cke.Node) {
+	for _, n := range nf.cluster.Nodes {
+		st := nf.nodeStatus(n).Kubelet
+		if st.HasOutdatedBlockDevicePaths {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
