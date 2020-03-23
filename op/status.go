@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -16,11 +17,14 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
+	corev1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	"sigs.k8s.io/yaml"
 )
+
+const csiBlockDeviceDirectory = "/var/lib/kubelet/plugins/kubernetes.io/csi/volumeDevices/publish/"
 
 // GetNodeStatus returns NodeStatus.
 func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, cluster *cke.Cluster) (*cke.NodeStatus, error) {
@@ -167,9 +171,74 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 				status.Kubelet.ContainerLogMaxFiles = v.ContainerLogMaxFiles
 			}
 		}
+
+		status.Kubelet.HasOutdatedBlockDevicePaths, err = hasBlockDevicePathsUpTo1_16(ctx, inf, node)
+		if err != nil {
+			log.Warn("failed to check outdated block device paths", map[string]interface{}{
+				log.FnError: err,
+				"node":      node.Address,
+			})
+		}
 	}
 
 	return status, nil
+}
+
+func hasBlockDevicePathsUpTo1_16(ctx context.Context, inf cke.Infrastructure, node *cke.Node) (bool, error) {
+	// Block device paths have been changed between k8s v1.16 and v1.17.
+	// https://github.com/kubernetes/kubernetes/pull/74026
+	clientset, err := inf.K8sClient(ctx, node)
+	if err != nil {
+		return false, err
+	}
+
+	n, err := clientset.CoreV1().Nodes().Get(node.Address, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	agent := inf.Agent(node.Address)
+	if agent == nil {
+		return false, errors.New("unable to get agent for " + node.Address)
+	}
+
+	for _, v := range n.Status.VolumesInUse {
+		// e.g. kubernetes.io/csi/topolvm.cybozu.com^720fab08-e197-4855-ad77-dad24970e3de
+		res := strings.Split(string(v), "^")
+		if len(res) != 2 {
+			continue
+		}
+
+		volumeHandle := res[1]
+		pvList, err := clientset.CoreV1().PersistentVolumes().List(metav1.ListOptions{FieldSelector: "spec.csi.volumeHandle=" + volumeHandle})
+		if err != nil {
+			return false, err
+		}
+
+		if len(pvList.Items) != 1 {
+			continue
+		}
+
+		pv := pvList.Items[0]
+		if pv.Spec.VolumeMode == nil {
+			continue
+		}
+		if *pv.Spec.VolumeMode != corev1.PersistentVolumeBlock {
+			continue
+		}
+
+		pvName := pv.GetName()
+		oldDevicePath := filepath.Join(csiBlockDeviceDirectory, pvName)
+		stdout, stderr, err := agent.Run("ls -l " + oldDevicePath)
+		if err != nil || len(stdout) == 0 {
+			return false, fmt.Errorf("unable to ls %s; stderr: %s, err: %v", oldDevicePath, stderr, err)
+		}
+		// Block devices should begin with b
+		if string(stdout)[0] == 'b' {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // GetEtcdClusterStatus returns EtcdClusterStatus
