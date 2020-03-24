@@ -364,6 +364,12 @@ func (d testData) withK8sResourceReady() testData {
 	return d
 }
 
+func (d testData) withOutdatedBlockDevicePaths() testData {
+	st := &d.Status.NodeStatuses[nodeNames[0]].Kubelet
+	st.HasOutdatedBlockDevicePaths = true
+	return d
+}
+
 func (d testData) withEtcdBackup() testData {
 	d.withK8sResourceReady()
 	d.Cluster.EtcdBackup = cke.EtcdBackup{
@@ -1003,6 +1009,11 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
 			ExpectedOps: []string{"update-endpoints"},
+		},
+		{
+			Name:        "OutdatedBlockDevicePaths",
+			Input:       newData().withAllServices().withOutdatedBlockDevicePaths(),
+			ExpectedOps: []string{"block-device-move"},
 		},
 		{
 			Name: "EtcdServiceUpdate",
