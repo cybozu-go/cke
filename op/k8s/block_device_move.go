@@ -9,6 +9,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -76,6 +77,16 @@ func (c moveBlockDeviceFor17Command) Run(ctx context.Context, inf cke.Infrastruc
 		deviceFiles := strings.Fields(string(stdout))
 		pvNames := getFilesJustUnderTargetDir(deviceFiles, op.CSIBlockDevicePublishDirectory)
 		for _, pvName := range pvNames {
+			needsFileMove := true
+			if strings.HasSuffix(pvName, "_tmp") {
+				log.Info("tmp file already renamed", map[string]interface{}{
+					"node": n.Nodename(),
+					"pv":   pvName,
+				})
+				needsFileMove = false
+				pvName = strings.ReplaceAll(pvName, "_tmp", "")
+			}
+
 			pvcRef, err := getPVCFromPV(clientset, pvName)
 			if err != nil {
 				return err
@@ -88,16 +99,29 @@ func (c moveBlockDeviceFor17Command) Run(ctx context.Context, inf cke.Infrastruc
 
 			// 1. Move device file to tmp
 			oldDevicePath := filepath.Join(op.CSIBlockDevicePublishDirectory, pvName)
-			tmpDevicePath := oldDevicePath + ".tmp"
-			_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", oldDevicePath, tmpDevicePath))
-			if err != nil {
-				return fmt.Errorf("unable to mv tmp on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+			tmpDevicePath := oldDevicePath + "_tmp"
+			if needsFileMove {
+				_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", oldDevicePath, tmpDevicePath))
+				if err != nil {
+					return fmt.Errorf("unable to mv tmp on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+				}
+			} else {
+				log.Info("rename procedure was skipped", map[string]interface{}{
+					"node":   n.Nodename(),
+					"device": oldDevicePath,
+				})
 			}
 
 			// 2. Create directory
 			newDirectoryPath := oldDevicePath
 			_, stderr, err = agent.Run(fmt.Sprintf("mkdir %s", newDirectoryPath))
 			if err != nil {
+				_, stderr2, err2 := agent.Run(fmt.Sprintf("mv %s %s", tmpDevicePath, oldDevicePath))
+				log.Warn("unable to revert tmp file to the original path", map[string]interface{}{
+					log.FnError: err2,
+					"node":      n.Nodename(),
+					"stderr":    stderr2,
+				})
 				return fmt.Errorf("unable to mkdir on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
 			}
 

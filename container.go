@@ -131,7 +131,7 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 	}
 	if len(id) != 0 {
 		cmdline := "docker rm " + name
-		stderr, stdout, err := c.agent.Run(cmdline)
+		stdout, stderr, err := c.agent.Run(cmdline)
 		if err != nil {
 			return fmt.Errorf("%w, cmdline: %s, stdout: %s, stderr: %s", err, cmdline, stdout, stderr)
 		}
