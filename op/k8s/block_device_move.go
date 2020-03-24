@@ -68,32 +68,53 @@ func (c moveBlockDeviceFor17Command) Run(ctx context.Context, inf cke.Infrastruc
 			return errors.New("unable to prepare agent for " + n.Nodename())
 		}
 
-		stdout, stderr, err := agent.Run(fmt.Sprintf("find %s -type b", op.CSIBlockDeviceDirectory))
+		stdout, stderr, err := agent.Run(fmt.Sprintf("find %s -type b", op.CSIBlockDevicePublishDirectory))
 		if err != nil {
 			return fmt.Errorf("unable to ls on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
 		}
 
 		deviceFiles := strings.Fields(string(stdout))
-		pvNames := getFilesJustUnderTargetDir(deviceFiles, op.CSIBlockDeviceDirectory)
+		pvNames := getFilesJustUnderTargetDir(deviceFiles, op.CSIBlockDevicePublishDirectory)
 		for _, pvName := range pvNames {
 			pvcRef, err := getPVCFromPV(clientset, pvName)
 			if err != nil {
 				return err
 			}
 
-			_, err = getPodFromPVC(clientset, pvcRef)
+			po, err := getPodFromPVC(clientset, pvcRef)
 			if err != nil {
 				return err
 			}
 
-			// TODO:
 			// 1. Move device file to tmp
-			// 2. Create directory
-			// 3. Move device file to the new path
-			// 4. Fix symlink
-			// 5. Fix symlink under dev directory
-		}
+			oldDevicePath := filepath.Join(op.CSIBlockDevicePublishDirectory, pvName)
+			tmpDevicePath := oldDevicePath + ".tmp"
+			_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", oldDevicePath, tmpDevicePath))
+			if err != nil {
+				return fmt.Errorf("unable to mv tmp on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+			}
 
+			// 2. Create directory
+			newDirectoryPath := oldDevicePath
+			_, stderr, err = agent.Run(fmt.Sprintf("mkdir %s", newDirectoryPath))
+			if err != nil {
+				return fmt.Errorf("unable to mkdir on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+			}
+
+			// 3. Move device file to the new path
+			newDevicePath := filepath.Join(newDirectoryPath, string(po.GetUID()))
+			_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", tmpDevicePath, newDevicePath))
+			if err != nil {
+				return fmt.Errorf("unable to mv on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+			}
+
+			// 4. Fix symlink
+			symlinkSourcePath := filepath.Join(op.CSIBlockDeviceDirectory, pvName, "dev", string(po.GetUID()))
+			_, stderr, err = agent.Run(fmt.Sprintf("ln -nfs %s %s", newDevicePath, symlinkSourcePath))
+			if err != nil {
+				return fmt.Errorf("unable to ln on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+			}
+		}
 	}
 	return nil
 }
