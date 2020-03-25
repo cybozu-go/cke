@@ -251,6 +251,27 @@ func hasBlockDevicePathsUpTo1_16(ctx context.Context, inf cke.Infrastructure, no
 		if string(stdout)[0] == 'b' {
 			return true, nil
 		}
+
+		symlinkSourcePath := filepath.Join(CSIBlockDeviceDirectory, pvName, "dev")
+		stdout, stderr, err = agent.Run("ls " + symlinkSourcePath)
+		if err != nil {
+			return false, fmt.Errorf("unable to ls %s; stderr: %s, err: %v", symlinkSourcePath, stderr, err)
+		}
+
+		links := strings.Fields(string(stdout))
+		for _, l := range links {
+			stdout, stderr, err = agent.Run("readlink -f " + l)
+			if err != nil {
+				return false, fmt.Errorf("unable to readlink %s; stderr: %s, err: %v", l, stderr, err)
+			}
+			matched, err := filepath.Match(filepath.Join(CSIBlockDevicePublishDirectory, "*"), string(stdout))
+			if err != nil {
+				return false, fmt.Errorf("failed to parse %s; stderr: %s, err: %v", string(stdout), stderr, err)
+			}
+			if !matched {
+				return true, nil
+			}
+		}
 	}
 	return false, nil
 }

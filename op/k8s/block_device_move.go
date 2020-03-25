@@ -83,16 +83,6 @@ func (c moveBlockDeviceFor17Command) Run(ctx context.Context, inf cke.Infrastruc
 			deviceFiles := strings.Fields(string(stdout))
 			pvNames := getFilesJustUnderTargetDir(deviceFiles, op.CSIBlockDevicePublishDirectory)
 			for _, pvName := range pvNames {
-				needsFileMove := true
-				if strings.HasSuffix(pvName, "_tmp") {
-					log.Info("tmp file already renamed", map[string]interface{}{
-						"node": n.Nodename(),
-						"pv":   pvName,
-					})
-					needsFileMove = false
-					pvName = strings.ReplaceAll(pvName, "_tmp", "")
-				}
-
 				pvcRef, err := getPVCFromPV(clientset, pvName)
 				if err != nil {
 					return err
@@ -105,37 +95,36 @@ func (c moveBlockDeviceFor17Command) Run(ctx context.Context, inf cke.Infrastruc
 
 				// 1. Move device file to tmp
 				oldDevicePath := filepath.Join(op.CSIBlockDevicePublishDirectory, pvName)
-				tmpDevicePath := oldDevicePath + "_tmp"
-				if needsFileMove {
+				tmpDevicePath := filepath.Join("/tmp", oldDevicePath)
+				stdout, stderr, err = agent.Run(fmt.Sprintf("if [ -d %s ]; then echo -n yes; fi", oldDevicePath))
+				if err != nil {
+					return fmt.Errorf("unable to test -d %s` on %s; stderr: %s, err: %v", oldDevicePath, n.Nodename(), stderr, err)
+				}
+				if string(stdout) == "yes" {
 					_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", oldDevicePath, tmpDevicePath))
 					if err != nil {
-						return fmt.Errorf("unable to mv tmp on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+						return fmt.Errorf("unable to ls %s on %s; stderr: %s, err: %v", oldDevicePath, n.Nodename(), stderr, err)
 					}
-				} else {
-					log.Info("rename procedure was skipped", map[string]interface{}{
-						"node":   n.Nodename(),
-						"device": oldDevicePath,
-					})
 				}
 
 				// 2. Create directory
 				newDirectoryPath := oldDevicePath
-				_, stderr, err = agent.Run(fmt.Sprintf("mkdir %s", newDirectoryPath))
+				_, stderr, err = agent.Run(fmt.Sprintf("mkdir -p %s", newDirectoryPath))
 				if err != nil {
-					_, stderr2, err2 := agent.Run(fmt.Sprintf("mv %s %s", tmpDevicePath, oldDevicePath))
-					log.Warn("unable to revert tmp file to the original path", map[string]interface{}{
-						log.FnError: err2,
-						"node":      n.Nodename(),
-						"stderr":    stderr2,
-					})
 					return fmt.Errorf("unable to mkdir on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
 				}
 
 				// 3. Move device file to the new path
 				newDevicePath := filepath.Join(newDirectoryPath, string(po.GetUID()))
-				_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", tmpDevicePath, newDevicePath))
+				stdout, stderr, err = agent.Run(fmt.Sprintf("if [ -f %s ]; then echo -n yes; fi", tmpDevicePath))
 				if err != nil {
-					return fmt.Errorf("unable to mv on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+					return fmt.Errorf("unable to test -f %s` on %s; stderr: %s, err: %v", tmpDevicePath, n.Nodename(), stderr, err)
+				}
+				if string(stdout) == "yes" {
+					_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", tmpDevicePath, newDevicePath))
+					if err != nil {
+						return fmt.Errorf("unable to mv on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+					}
 				}
 
 				// 4. Fix symlink
