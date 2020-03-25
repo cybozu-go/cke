@@ -208,6 +208,20 @@ func hasBlockDevicePathsUpTo1_16(ctx context.Context, inf cke.Infrastructure, no
 		return false, errors.New("unable to get agent for " + node.Address)
 	}
 
+	pvList, err := clientset.CoreV1().PersistentVolumes().List(metav1.ListOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	pvMap := make(map[string]corev1.PersistentVolume)
+	for _, pv := range pvList.Items {
+		if pv.Spec.CSI != nil || pv.Spec.CSI.VolumeHandle != "" {
+			// VolumeHandle is unique name
+			// https://github.com/kubernetes/api/blob/1fc28ea2498c5c1bc60693fab7a6741b0b4973bc/core/v1/types.go#L1657-L1659
+			pvMap[pv.Spec.CSI.VolumeHandle] = pv
+		}
+	}
+
 	for _, v := range n.Status.VolumesInUse {
 		// e.g. kubernetes.io/csi/topolvm.cybozu.com^720fab08-e197-4855-ad77-dad24970e3de
 		res := strings.Split(string(v), "^")
@@ -216,16 +230,10 @@ func hasBlockDevicePathsUpTo1_16(ctx context.Context, inf cke.Infrastructure, no
 		}
 
 		volumeHandle := res[1]
-		pvList, err := clientset.CoreV1().PersistentVolumes().List(metav1.ListOptions{FieldSelector: "spec.csi.volumeHandle=" + volumeHandle})
-		if err != nil {
-			return false, err
-		}
-
-		if len(pvList.Items) != 1 {
+		pv, ok := pvMap[volumeHandle]
+		if !ok {
 			continue
 		}
-
-		pv := pvList.Items[0]
 		if pv.Spec.VolumeMode == nil {
 			continue
 		}
