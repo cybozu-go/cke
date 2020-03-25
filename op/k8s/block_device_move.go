@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/log"
+	"github.com/cybozu-go/well"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -58,89 +60,100 @@ func moveBlockDeviceFor17(nodes []*cke.Node) cke.Commander {
 }
 
 func (c moveBlockDeviceFor17Command) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+	begin := time.Now()
+	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
-		clientset, err := inf.K8sClient(ctx, n)
-		if err != nil {
-			return err
-		}
-
-		agent := inf.Agent(n.Address)
-		if agent == nil {
-			return errors.New("unable to prepare agent for " + n.Nodename())
-		}
-
-		stdout, stderr, err := agent.Run(fmt.Sprintf("find %s -type b", op.CSIBlockDevicePublishDirectory))
-		if err != nil {
-			return fmt.Errorf("unable to ls on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
-		}
-
-		deviceFiles := strings.Fields(string(stdout))
-		pvNames := getFilesJustUnderTargetDir(deviceFiles, op.CSIBlockDevicePublishDirectory)
-		for _, pvName := range pvNames {
-			needsFileMove := true
-			if strings.HasSuffix(pvName, "_tmp") {
-				log.Info("tmp file already renamed", map[string]interface{}{
-					"node": n.Nodename(),
-					"pv":   pvName,
-				})
-				needsFileMove = false
-				pvName = strings.ReplaceAll(pvName, "_tmp", "")
-			}
-
-			pvcRef, err := getPVCFromPV(clientset, pvName)
+		n := n
+		env.Go(func(ctx context.Context) error {
+			clientset, err := inf.K8sClient(ctx, n)
 			if err != nil {
 				return err
 			}
 
-			po, err := getPodFromPVC(clientset, pvcRef)
-			if err != nil {
-				return err
+			agent := inf.Agent(n.Address)
+			if agent == nil {
+				return errors.New("unable to prepare agent for " + n.Nodename())
 			}
 
-			// 1. Move device file to tmp
-			oldDevicePath := filepath.Join(op.CSIBlockDevicePublishDirectory, pvName)
-			tmpDevicePath := oldDevicePath + "_tmp"
-			if needsFileMove {
-				_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", oldDevicePath, tmpDevicePath))
-				if err != nil {
-					return fmt.Errorf("unable to mv tmp on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+			stdout, stderr, err := agent.Run(fmt.Sprintf("find %s -type b", op.CSIBlockDevicePublishDirectory))
+			if err != nil {
+				return fmt.Errorf("unable to ls on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+			}
+
+			deviceFiles := strings.Fields(string(stdout))
+			pvNames := getFilesJustUnderTargetDir(deviceFiles, op.CSIBlockDevicePublishDirectory)
+			for _, pvName := range pvNames {
+				needsFileMove := true
+				if strings.HasSuffix(pvName, "_tmp") {
+					log.Info("tmp file already renamed", map[string]interface{}{
+						"node": n.Nodename(),
+						"pv":   pvName,
+					})
+					needsFileMove = false
+					pvName = strings.ReplaceAll(pvName, "_tmp", "")
 				}
-			} else {
-				log.Info("rename procedure was skipped", map[string]interface{}{
-					"node":   n.Nodename(),
-					"device": oldDevicePath,
-				})
-			}
 
-			// 2. Create directory
-			newDirectoryPath := oldDevicePath
-			_, stderr, err = agent.Run(fmt.Sprintf("mkdir %s", newDirectoryPath))
-			if err != nil {
-				_, stderr2, err2 := agent.Run(fmt.Sprintf("mv %s %s", tmpDevicePath, oldDevicePath))
-				log.Warn("unable to revert tmp file to the original path", map[string]interface{}{
-					log.FnError: err2,
-					"node":      n.Nodename(),
-					"stderr":    stderr2,
-				})
-				return fmt.Errorf("unable to mkdir on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
-			}
+				pvcRef, err := getPVCFromPV(clientset, pvName)
+				if err != nil {
+					return err
+				}
 
-			// 3. Move device file to the new path
-			newDevicePath := filepath.Join(newDirectoryPath, string(po.GetUID()))
-			_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", tmpDevicePath, newDevicePath))
-			if err != nil {
-				return fmt.Errorf("unable to mv on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
-			}
+				po, err := getPodFromPVC(clientset, pvcRef)
+				if err != nil {
+					return err
+				}
 
-			// 4. Fix symlink
-			symlinkSourcePath := filepath.Join(op.CSIBlockDeviceDirectory, pvName, "dev", string(po.GetUID()))
-			_, stderr, err = agent.Run(fmt.Sprintf("ln -nfs %s %s", newDevicePath, symlinkSourcePath))
-			if err != nil {
-				return fmt.Errorf("unable to ln on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+				// 1. Move device file to tmp
+				oldDevicePath := filepath.Join(op.CSIBlockDevicePublishDirectory, pvName)
+				tmpDevicePath := oldDevicePath + "_tmp"
+				if needsFileMove {
+					_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", oldDevicePath, tmpDevicePath))
+					if err != nil {
+						return fmt.Errorf("unable to mv tmp on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+					}
+				} else {
+					log.Info("rename procedure was skipped", map[string]interface{}{
+						"node":   n.Nodename(),
+						"device": oldDevicePath,
+					})
+				}
+
+				// 2. Create directory
+				newDirectoryPath := oldDevicePath
+				_, stderr, err = agent.Run(fmt.Sprintf("mkdir %s", newDirectoryPath))
+				if err != nil {
+					_, stderr2, err2 := agent.Run(fmt.Sprintf("mv %s %s", tmpDevicePath, oldDevicePath))
+					log.Warn("unable to revert tmp file to the original path", map[string]interface{}{
+						log.FnError: err2,
+						"node":      n.Nodename(),
+						"stderr":    stderr2,
+					})
+					return fmt.Errorf("unable to mkdir on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+				}
+
+				// 3. Move device file to the new path
+				newDevicePath := filepath.Join(newDirectoryPath, string(po.GetUID()))
+				_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", tmpDevicePath, newDevicePath))
+				if err != nil {
+					return fmt.Errorf("unable to mv on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+				}
+
+				// 4. Fix symlink
+				symlinkSourcePath := filepath.Join(op.CSIBlockDeviceDirectory, pvName, "dev", string(po.GetUID()))
+				_, stderr, err = agent.Run(fmt.Sprintf("ln -nfs %s %s", newDevicePath, symlinkSourcePath))
+				if err != nil {
+					return fmt.Errorf("unable to ln on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+				}
 			}
-		}
+			return nil
+		})
 	}
-	return nil
+	env.Stop()
+	err := env.Wait()
+	log.Info("moveBlockDeviceFor17Command finished", map[string]interface{}{
+		"elapsed": time.Now().Sub(begin).Seconds(),
+	})
+	return err
 }
 
 func (c moveBlockDeviceFor17Command) Command() cke.Command {
