@@ -1030,7 +1030,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name:        "TmpBlockDevicePaths",
 			Input:       newData().withAllServices().withTmpBlockDevicePaths(),
-			ExpectedOps: []string{"block-device-move-to-tmp"},
+			ExpectedOps: []string{"block-device-move-from-tmp"},
 		},
 		{
 			Name:        "OutdatedBlockDeviceLinks",

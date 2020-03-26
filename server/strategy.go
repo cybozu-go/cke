@@ -128,7 +128,7 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 		ops = append(ops, k8s.BlockDeviceMoveOp(nodes))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.HasTmpBlockDevicePaths(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.BlockDeviceMoveToTmpOp(apiServer, nodes))
+		ops = append(ops, k8s.BlockDeviceMoveFromTmpOp(apiServer, nodes))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.HasOutdatedBlockDeviceLinks(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.BlockDeviceLinkUpdateOp(apiServer, nodes))

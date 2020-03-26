@@ -70,9 +70,9 @@ func (c moveBlockDeviceForV1_17Command) Run(ctx context.Context, inf cke.Infrast
 				return errors.New("unable to prepare agent for " + n.Nodename())
 			}
 
-			stdout, stderr, err := agent.Run(fmt.Sprintf("find %s -type b", op.CSIBlockDevicePublishDirectory))
+			stdout, stderr, err := agent.Run(fmt.Sprintf("sudo find %s -type b", op.CSIBlockDevicePublishDirectory))
 			if err != nil {
-				return fmt.Errorf("unable to ls on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+				return fmt.Errorf("unable to find block device on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
 			}
 
 			deviceFiles := strings.Fields(string(stdout))
@@ -80,9 +80,9 @@ func (c moveBlockDeviceForV1_17Command) Run(ctx context.Context, inf cke.Infrast
 			for _, pvName := range pvNames {
 				oldDevicePath := makeOldDevicePath(pvName)
 				tmpDevicePath := makeTmpDevicePath(pvName)
-				_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", oldDevicePath, tmpDevicePath))
+				_, stderr, err = agent.Run(fmt.Sprintf("sudo mv %s %s", oldDevicePath, tmpDevicePath))
 				if err != nil {
-					return fmt.Errorf("unable to ls %s on %s; stderr: %s, err: %v", oldDevicePath, n.Nodename(), stderr, err)
+					return fmt.Errorf("unable to mv %s %s on %s; stderr: %s, err: %v", oldDevicePath, tmpDevicePath, n.Nodename(), stderr, err)
 				}
 			}
 			return nil

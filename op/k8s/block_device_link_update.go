@@ -73,9 +73,9 @@ func (c updateBlockDeviceLinkForV1_17Command) Run(ctx context.Context, inf cke.I
 				return errors.New("unable to prepare agent for " + n.Nodename())
 			}
 
-			stdout, stderr, err := agent.Run(fmt.Sprintf("find %s -type b", op.CSIBlockDevicePublishDirectory))
+			stdout, stderr, err := agent.Run(fmt.Sprintf("sudo find %s -maxdepth 1 -name pvc-* -type d", op.CSIBlockDevicePublishDirectory))
 			if err != nil {
-				return fmt.Errorf("unable to ls on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+				return fmt.Errorf("unable to find -type d on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
 			}
 
 			deviceFiles := strings.Fields(string(stdout))
@@ -94,7 +94,7 @@ func (c updateBlockDeviceLinkForV1_17Command) Run(ctx context.Context, inf cke.I
 				podUID := string(po.GetUID())
 				newDevicePath := makeNewDevicePath(pvName, podUID)
 				symlinkSourcePath := makeSymlinkSourcePath(pvName, podUID)
-				_, stderr, err = agent.Run(fmt.Sprintf("ln -nfs %s %s", newDevicePath, symlinkSourcePath))
+				_, stderr, err = agent.Run(fmt.Sprintf("sudo ln -nfs %s %s", newDevicePath, symlinkSourcePath))
 				if err != nil {
 					return fmt.Errorf("unable to ln on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
 				}

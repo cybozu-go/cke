@@ -240,7 +240,7 @@ func hasBlockDevicePathsUpToV1_16(ctx context.Context, inf cke.Infrastructure, a
 
 	pvMap := make(map[string]corev1.PersistentVolume)
 	for _, pv := range pvList.Items {
-		if pv.Spec.CSI != nil || pv.Spec.CSI.VolumeHandle != "" {
+		if pv.Spec.CSI != nil && pv.Spec.CSI.VolumeHandle != "" {
 			// VolumeHandle represents a unique name of CSI volume
 			// https://github.com/kubernetes/api/blob/1fc28ea2498c5c1bc60693fab7a6741b0b4973bc/core/v1/types.go#L1657-L1659
 			pvMap[pv.Spec.CSI.VolumeHandle] = pv
@@ -267,11 +267,11 @@ func hasBlockDevicePathsUpToV1_16(ctx context.Context, inf cke.Infrastructure, a
 		}
 
 		oldDevicePath := filepath.Join(CSIBlockDevicePublishDirectory, pv.GetName())
-		stdout, stderr, err := agent.Run(fmt.Sprintf("if [ -d %s ]; then echo -n yes; fi", oldDevicePath))
+		stdout, stderr, err := agent.Run(fmt.Sprintf("if sudo bash -c '[[ -b %s ]]'; then echo -n yes; fi", oldDevicePath))
 		if err != nil {
-			return false, fmt.Errorf("unable to test -d %s on %s; stderr: %s, err: %v", oldDevicePath, n.GetName(), stderr, err)
+			return false, fmt.Errorf("unable to test -b %s on %s; stderr: %s, err: %v", oldDevicePath, n.GetName(), stderr, err)
 		}
-		if string(stdout) == "yes" {
+		if len(string(stdout)) > 0 {
 			return true, nil
 		}
 	}
@@ -301,7 +301,7 @@ func hasTmpDevicePathsUpToV1_16(ctx context.Context, inf cke.Infrastructure, api
 
 	pvMap := make(map[string]corev1.PersistentVolume)
 	for _, pv := range pvList.Items {
-		if pv.Spec.CSI != nil || pv.Spec.CSI.VolumeHandle != "" {
+		if pv.Spec.CSI != nil && pv.Spec.CSI.VolumeHandle != "" {
 			// VolumeHandle represents a unique name of CSI volume
 			// https://github.com/kubernetes/api/blob/1fc28ea2498c5c1bc60693fab7a6741b0b4973bc/core/v1/types.go#L1657-L1659
 			pvMap[pv.Spec.CSI.VolumeHandle] = pv
@@ -328,11 +328,12 @@ func hasTmpDevicePathsUpToV1_16(ctx context.Context, inf cke.Infrastructure, api
 		}
 
 		tmpDevicePath := filepath.Join("/tmp", pv.GetName())
-		stdout, stderr, err := agent.Run(fmt.Sprintf("if [ -f %s ]; then echo -n yes; fi", tmpDevicePath))
+		stdout, stderr, err := agent.Run(fmt.Sprintf("if sudo bash -c '[[ -b %s ]]'; then echo -n yes; fi", tmpDevicePath))
 		if err != nil {
-			return false, fmt.Errorf("unable to test -f %s on %s; stderr: %s, err: %v", tmpDevicePath, n.GetName(), stderr, err)
+			return false, fmt.Errorf("unable to test -b %s on %s; stderr: %s, err: %v", tmpDevicePath, n.GetName(), stderr, err)
 		}
-		if string(stdout) == "yes" {
+
+		if len(string(stdout)) > 0 {
 			return true, nil
 		}
 	}
@@ -362,7 +363,7 @@ func hasBlockDeviceLinksUpToV1_16(ctx context.Context, inf cke.Infrastructure, a
 
 	pvMap := make(map[string]corev1.PersistentVolume)
 	for _, pv := range pvList.Items {
-		if pv.Spec.CSI != nil || pv.Spec.CSI.VolumeHandle != "" {
+		if pv.Spec.CSI != nil && pv.Spec.CSI.VolumeHandle != "" {
 			// VolumeHandle represents a unique name of CSI volume
 			// https://github.com/kubernetes/api/blob/1fc28ea2498c5c1bc60693fab7a6741b0b4973bc/core/v1/types.go#L1657-L1659
 			pvMap[pv.Spec.CSI.VolumeHandle] = pv
@@ -390,22 +391,20 @@ func hasBlockDeviceLinksUpToV1_16(ctx context.Context, inf cke.Infrastructure, a
 
 		// The symlink always exists at the symlinkSourcePath, but might be old
 		symlinkSourcePath := filepath.Join(CSIBlockDeviceDirectory, pv.GetName(), "dev")
-		stdout, stderr, err := agent.Run("ls " + symlinkSourcePath)
+		stdout1, stderr1, err := agent.Run("sudo ls " + symlinkSourcePath)
 		if err != nil {
-			return false, fmt.Errorf("unable to ls %s; stderr: %s, err: %v", symlinkSourcePath, stderr, err)
+			return false, fmt.Errorf("unable to ls %s; stderr: %s, err: %v", symlinkSourcePath, stderr1, err)
 		}
 
-		links := strings.Fields(string(stdout))
+		links := strings.Fields(string(stdout1))
 		for _, l := range links {
-			stdout, stderr, err = agent.Run("readlink -f " + l)
+			stdout2, stderr2, err := agent.Run("sudo readlink -f " + filepath.Join(symlinkSourcePath, l))
 			if err != nil {
-				return false, fmt.Errorf("unable to readlink %s; stderr: %s, err: %v", l, stderr, err)
+				return false, fmt.Errorf("unable to readlink %s; stderr: %s, err: %v", l, stderr2, err)
 			}
-			matched, err := filepath.Match(filepath.Join(CSIBlockDevicePublishDirectory, "*"), string(stdout))
-			if err != nil {
-				return false, fmt.Errorf("failed to parse %s; stderr: %s, err: %v", string(stdout), stderr, err)
-			}
-			if !matched {
+			realPath := filepath.Join(CSIBlockDevicePublishDirectory, pv.GetName(), filepath.Base(l))
+			symlinkPointer := strings.TrimSpace(string(stdout2))
+			if realPath != symlinkPointer {
 				return true, nil
 			}
 		}

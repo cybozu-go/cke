@@ -84,6 +84,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 			return nil, err
 		}
 
+		env := well.NewEnvironment(ctx)
 		for _, n := range cluster.Nodes {
 			n := n
 			env.Go(func(ctx context.Context) error {
@@ -98,6 +99,12 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 				return nil
 			})
 		}
+		env.Stop()
+		err := env.Wait()
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	return cs, nil
 }
