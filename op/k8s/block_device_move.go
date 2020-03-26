@@ -43,23 +43,23 @@ func (o *blockDeviceMoveOp) NextCommand() cke.Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return moveBlockDeviceFor17(o.nodes)
+		return moveBlockDeviceForV1_17(o.nodes)
 	default:
 		return nil
 	}
 }
 
-type moveBlockDeviceFor17Command struct {
+type moveBlockDeviceForV1_17Command struct {
 	nodes []*cke.Node
 }
 
-// moveBlockDeviceFor17 move raw block device files.
+// moveBlockDeviceForV1_17 move raw block device files.
 // This command is used for upgrading to k8s 1.17
-func moveBlockDeviceFor17(nodes []*cke.Node) cke.Commander {
-	return moveBlockDeviceFor17Command{nodes}
+func moveBlockDeviceForV1_17(nodes []*cke.Node) cke.Commander {
+	return moveBlockDeviceForV1_17Command{nodes}
 }
 
-func (c moveBlockDeviceFor17Command) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+func (c moveBlockDeviceForV1_17Command) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	begin := time.Now()
 	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
@@ -90,13 +90,13 @@ func (c moveBlockDeviceFor17Command) Run(ctx context.Context, inf cke.Infrastruc
 	}
 	env.Stop()
 	err := env.Wait()
-	log.Info("moveBlockDeviceFor17Command finished", map[string]interface{}{
+	log.Info("moveBlockDeviceForV1_17Command finished", map[string]interface{}{
 		"elapsed": time.Now().Sub(begin).Seconds(),
 	})
 	return err
 }
 
-func (c moveBlockDeviceFor17Command) Command() cke.Command {
+func (c moveBlockDeviceForV1_17Command) Command() cke.Command {
 	return cke.Command{Name: "move-block-device-for-1.17"}
 }
 

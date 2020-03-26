@@ -14,13 +14,14 @@ import (
 )
 
 type blockDeviceMoveToTmpOp struct {
-	nodes []*cke.Node
-	step  int
+	apiServer *cke.Node
+	nodes     []*cke.Node
+	step      int
 }
 
 // BlockDeviceMoveToTmpOp returns an Operator to restart kubelet
-func BlockDeviceMoveToTmpOp(nodes []*cke.Node) cke.Operator {
-	return &blockDeviceMoveToTmpOp{nodes: nodes}
+func BlockDeviceMoveToTmpOp(apiServer *cke.Node, nodes []*cke.Node) cke.Operator {
+	return &blockDeviceMoveToTmpOp{apiServer: apiServer, nodes: nodes}
 }
 
 func (o *blockDeviceMoveToTmpOp) Name() string {
@@ -39,29 +40,30 @@ func (o *blockDeviceMoveToTmpOp) NextCommand() cke.Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return moveBlockDeviceToTmpFor17(o.nodes)
+		return moveBlockDeviceToTmpForV1_17(o.apiServer, o.nodes)
 	default:
 		return nil
 	}
 }
 
-type moveBlockDeviceToTmpFor17Command struct {
-	nodes []*cke.Node
+type moveBlockDeviceToTmpForV1_17Command struct {
+	apiServer *cke.Node
+	nodes     []*cke.Node
 }
 
-// moveBlockDeviceToTmpFor17 move raw block device files.
+// moveBlockDeviceToTmpForV1_17 move raw block device files.
 // This command is used for upgrading to k8s 1.17
-func moveBlockDeviceToTmpFor17(nodes []*cke.Node) cke.Commander {
-	return moveBlockDeviceToTmpFor17Command{nodes}
+func moveBlockDeviceToTmpForV1_17(apiServer *cke.Node, nodes []*cke.Node) cke.Commander {
+	return moveBlockDeviceToTmpForV1_17Command{apiServer: apiServer, nodes: nodes}
 }
 
-func (c moveBlockDeviceToTmpFor17Command) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+func (c moveBlockDeviceToTmpForV1_17Command) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	begin := time.Now()
 	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		n := n
 		env.Go(func(ctx context.Context) error {
-			clientset, err := inf.K8sClient(ctx, n)
+			clientset, err := inf.K8sClient(ctx, c.apiServer)
 			if err != nil {
 				return err
 			}
@@ -108,12 +110,12 @@ func (c moveBlockDeviceToTmpFor17Command) Run(ctx context.Context, inf cke.Infra
 	}
 	env.Stop()
 	err := env.Wait()
-	log.Info("moveBlockDeviceToTmpFor17Command finished", map[string]interface{}{
+	log.Info("moveBlockDeviceToTmpForV1_17Command finished", map[string]interface{}{
 		"elapsed": time.Now().Sub(begin).Seconds(),
 	})
 	return err
 }
 
-func (c moveBlockDeviceToTmpFor17Command) Command() cke.Command {
+func (c moveBlockDeviceToTmpForV1_17Command) Command() cke.Command {
 	return cke.Command{Name: "move-block-device-to-tmp-for-1.17"}
 }

@@ -83,6 +83,21 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 			})
 			return nil, err
 		}
+
+		for _, n := range cluster.Nodes {
+			n := n
+			env.Go(func(ctx context.Context) error {
+				ns, err := op.GetNodeStatusUpToV1_16(ctx, inf, n, cluster, statuses[n.Address], livingMaster)
+				if err != nil {
+					return fmt.Errorf("%s: %v", n.Address, err)
+				}
+
+				mu.Lock()
+				statuses[n.Address] = ns
+				mu.Unlock()
+				return nil
+			})
+		}
 	}
 	return cs, nil
 }

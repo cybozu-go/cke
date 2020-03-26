@@ -14,13 +14,14 @@ import (
 )
 
 type blockDeviceLinkUpdateOp struct {
-	nodes []*cke.Node
-	step  int
+	apiServer *cke.Node
+	nodes     []*cke.Node
+	step      int
 }
 
 // BlockDeviceLinkUpdateOp returns an Operator to restart kubelet
-func BlockDeviceLinkUpdateOp(nodes []*cke.Node) cke.Operator {
-	return &blockDeviceLinkUpdateOp{nodes: nodes}
+func BlockDeviceLinkUpdateOp(apiServer *cke.Node, nodes []*cke.Node) cke.Operator {
+	return &blockDeviceLinkUpdateOp{apiServer: apiServer, nodes: nodes}
 }
 
 func (o *blockDeviceLinkUpdateOp) Name() string {
@@ -39,29 +40,30 @@ func (o *blockDeviceLinkUpdateOp) NextCommand() cke.Commander {
 	switch o.step {
 	case 0:
 		o.step++
-		return updateBlockDeviceLinkFor17(o.nodes)
+		return updateBlockDeviceLinkForV1_17(o.apiServer, o.nodes)
 	default:
 		return nil
 	}
 }
 
-type updateBlockDeviceLinkFor17Command struct {
-	nodes []*cke.Node
+type updateBlockDeviceLinkForV1_17Command struct {
+	apiServer *cke.Node
+	nodes     []*cke.Node
 }
 
-// updateBlockDeviceLinkFor17 move raw block device files.
+// updateBlockDeviceLinkForV1_17 move raw block device files.
 // This command is used for upgrading to k8s 1.17
-func updateBlockDeviceLinkFor17(nodes []*cke.Node) cke.Commander {
-	return updateBlockDeviceLinkFor17Command{nodes}
+func updateBlockDeviceLinkForV1_17(apiServer *cke.Node, nodes []*cke.Node) cke.Commander {
+	return updateBlockDeviceLinkForV1_17Command{apiServer: apiServer, nodes: nodes}
 }
 
-func (c updateBlockDeviceLinkFor17Command) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+func (c updateBlockDeviceLinkForV1_17Command) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	begin := time.Now()
 	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		n := n
 		env.Go(func(ctx context.Context) error {
-			clientset, err := inf.K8sClient(ctx, n)
+			clientset, err := inf.K8sClient(ctx, c.apiServer)
 			if err != nil {
 				return err
 			}
@@ -102,12 +104,12 @@ func (c updateBlockDeviceLinkFor17Command) Run(ctx context.Context, inf cke.Infr
 	}
 	env.Stop()
 	err := env.Wait()
-	log.Info("updateBlockDeviceLinkFor17Command finished", map[string]interface{}{
+	log.Info("updateBlockDeviceLinkForV1_17Command finished", map[string]interface{}{
 		"elapsed": time.Now().Sub(begin).Seconds(),
 	})
 	return err
 }
 
-func (c updateBlockDeviceLinkFor17Command) Command() cke.Command {
+func (c updateBlockDeviceLinkForV1_17Command) Command() cke.Command {
 	return cke.Command{Name: "update-block-device-link-for-1.17"}
 }

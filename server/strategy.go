@@ -114,11 +114,12 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	}
 
 	// For all nodes
+	apiServer := nf.HealthyAPIServer()
 	if nodes := nf.SSHConnectedNodes(nf.KubeletUnrecognizedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.Kubelet))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.KubeletStoppedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletBootOp(nodes, nf.KubeletStoppedRegisteredNodes(), nf.HealthyAPIServer(), c.Name, c.PodSubnet, c.Options.Kubelet))
+		ops = append(ops, k8s.KubeletBootOp(nodes, nf.KubeletStoppedRegisteredNodes(), apiServer, c.Name, c.PodSubnet, c.Options.Kubelet))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.KubeletOutdatedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.Kubelet))
@@ -127,10 +128,10 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 		ops = append(ops, k8s.BlockDeviceMoveOp(nodes))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.HasTmpBlockDevicePaths(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.BlockDeviceMoveToTmpOp(nodes))
+		ops = append(ops, k8s.BlockDeviceMoveToTmpOp(apiServer, nodes))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.HasOutdatedBlockDeviceLinks(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.BlockDeviceLinkUpdateOp(nodes))
+		ops = append(ops, k8s.BlockDeviceLinkUpdateOp(apiServer, nodes))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.ProxyStoppedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeProxyBootOp(nodes, c.Name, c.Options.Proxy))

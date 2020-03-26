@@ -177,11 +177,19 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 				status.Kubelet.ContainerLogMaxFiles = v.ContainerLogMaxFiles
 			}
 		}
+	}
 
+	return status, nil
+}
+
+// GetNodeStatusUpToV1_16 sets node status about k8s v1.16 or below
+func GetNodeStatusUpToV1_16(ctx context.Context, inf cke.Infrastructure, node *cke.Node, cluster *cke.Cluster, status *cke.NodeStatus, apiServer *cke.Node) (*cke.NodeStatus, error) {
+	var err error
+	if status.Kubelet.Running {
 		// Block device paths have been changed between k8s v1.16 and v1.17.
 		// https://github.com/kubernetes/kubernetes/pull/74026
 		// So, old device paths and symlinks must be updated before upgrading.
-		status.Kubelet.HasOutdatedBlockDevicePaths, err = hasBlockDevicePathsUpTo16(ctx, inf, node)
+		status.Kubelet.HasOutdatedBlockDevicePaths, err = hasBlockDevicePathsUpToV1_16(ctx, inf, apiServer, node)
 		if err != nil {
 			log.Warn("failed to check outdated block device paths", map[string]interface{}{
 				log.FnError: err,
@@ -189,7 +197,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			})
 		}
 
-		status.Kubelet.HasTmpBlockDevicePaths, err = hasTmpDevicePathsUpTo16(ctx, inf, node)
+		status.Kubelet.HasTmpBlockDevicePaths, err = hasTmpDevicePathsUpToV1_16(ctx, inf, apiServer, node)
 		if err != nil {
 			log.Warn("failed to check tmp block device paths", map[string]interface{}{
 				log.FnError: err,
@@ -197,7 +205,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			})
 		}
 
-		status.Kubelet.HasOutdatedBlockDeviceLinks, err = hasBlockDeviceLinksUpTo16(ctx, inf, node)
+		status.Kubelet.HasOutdatedBlockDeviceLinks, err = hasBlockDeviceLinksUpToV1_16(ctx, inf, apiServer, node)
 		if err != nil {
 			log.Warn("failed to check outdated block device links", map[string]interface{}{
 				log.FnError: err,
@@ -209,8 +217,8 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	return status, nil
 }
 
-func hasBlockDevicePathsUpTo16(ctx context.Context, inf cke.Infrastructure, node *cke.Node) (bool, error) {
-	clientset, err := inf.K8sClient(ctx, node)
+func hasBlockDevicePathsUpToV1_16(ctx context.Context, inf cke.Infrastructure, apiServer *cke.Node, node *cke.Node) (bool, error) {
+	clientset, err := inf.K8sClient(ctx, apiServer)
 	if err != nil {
 		return false, err
 	}
@@ -233,7 +241,7 @@ func hasBlockDevicePathsUpTo16(ctx context.Context, inf cke.Infrastructure, node
 	pvMap := make(map[string]corev1.PersistentVolume)
 	for _, pv := range pvList.Items {
 		if pv.Spec.CSI != nil || pv.Spec.CSI.VolumeHandle != "" {
-			// VolumeHandle is unique name
+			// VolumeHandle represents a unique name of CSI volume
 			// https://github.com/kubernetes/api/blob/1fc28ea2498c5c1bc60693fab7a6741b0b4973bc/core/v1/types.go#L1657-L1659
 			pvMap[pv.Spec.CSI.VolumeHandle] = pv
 		}
@@ -261,9 +269,8 @@ func hasBlockDevicePathsUpTo16(ctx context.Context, inf cke.Infrastructure, node
 		oldDevicePath := filepath.Join(CSIBlockDevicePublishDirectory, pv.GetName())
 		stdout, stderr, err := agent.Run(fmt.Sprintf("if [ -d %s ]; then echo -n yes; fi", oldDevicePath))
 		if err != nil {
-			return false, fmt.Errorf("unable to test -d %s` on %s; stderr: %s, err: %v", oldDevicePath, n.GetName(), stderr, err)
+			return false, fmt.Errorf("unable to test -d %s on %s; stderr: %s, err: %v", oldDevicePath, n.GetName(), stderr, err)
 		}
-		// Block devices should begin with b
 		if string(stdout) == "yes" {
 			return true, nil
 		}
@@ -271,8 +278,8 @@ func hasBlockDevicePathsUpTo16(ctx context.Context, inf cke.Infrastructure, node
 	return false, nil
 }
 
-func hasTmpDevicePathsUpTo16(ctx context.Context, inf cke.Infrastructure, node *cke.Node) (bool, error) {
-	clientset, err := inf.K8sClient(ctx, node)
+func hasTmpDevicePathsUpToV1_16(ctx context.Context, inf cke.Infrastructure, apiServer *cke.Node, node *cke.Node) (bool, error) {
+	clientset, err := inf.K8sClient(ctx, apiServer)
 	if err != nil {
 		return false, err
 	}
@@ -295,7 +302,7 @@ func hasTmpDevicePathsUpTo16(ctx context.Context, inf cke.Infrastructure, node *
 	pvMap := make(map[string]corev1.PersistentVolume)
 	for _, pv := range pvList.Items {
 		if pv.Spec.CSI != nil || pv.Spec.CSI.VolumeHandle != "" {
-			// VolumeHandle is unique name
+			// VolumeHandle represents a unique name of CSI volume
 			// https://github.com/kubernetes/api/blob/1fc28ea2498c5c1bc60693fab7a6741b0b4973bc/core/v1/types.go#L1657-L1659
 			pvMap[pv.Spec.CSI.VolumeHandle] = pv
 		}
@@ -323,7 +330,7 @@ func hasTmpDevicePathsUpTo16(ctx context.Context, inf cke.Infrastructure, node *
 		tmpDevicePath := filepath.Join("/tmp", pv.GetName())
 		stdout, stderr, err := agent.Run(fmt.Sprintf("if [ -f %s ]; then echo -n yes; fi", tmpDevicePath))
 		if err != nil {
-			return false, fmt.Errorf("unable to test -f %s` on %s; stderr: %s, err: %v", tmpDevicePath, n.GetName(), stderr, err)
+			return false, fmt.Errorf("unable to test -f %s on %s; stderr: %s, err: %v", tmpDevicePath, n.GetName(), stderr, err)
 		}
 		if string(stdout) == "yes" {
 			return true, nil
@@ -332,8 +339,8 @@ func hasTmpDevicePathsUpTo16(ctx context.Context, inf cke.Infrastructure, node *
 	return false, nil
 }
 
-func hasBlockDeviceLinksUpTo16(ctx context.Context, inf cke.Infrastructure, node *cke.Node) (bool, error) {
-	clientset, err := inf.K8sClient(ctx, node)
+func hasBlockDeviceLinksUpToV1_16(ctx context.Context, inf cke.Infrastructure, apiServer *cke.Node, node *cke.Node) (bool, error) {
+	clientset, err := inf.K8sClient(ctx, apiServer)
 	if err != nil {
 		return false, err
 	}
@@ -356,7 +363,7 @@ func hasBlockDeviceLinksUpTo16(ctx context.Context, inf cke.Infrastructure, node
 	pvMap := make(map[string]corev1.PersistentVolume)
 	for _, pv := range pvList.Items {
 		if pv.Spec.CSI != nil || pv.Spec.CSI.VolumeHandle != "" {
-			// VolumeHandle is unique name
+			// VolumeHandle represents a unique name of CSI volume
 			// https://github.com/kubernetes/api/blob/1fc28ea2498c5c1bc60693fab7a6741b0b4973bc/core/v1/types.go#L1657-L1659
 			pvMap[pv.Spec.CSI.VolumeHandle] = pv
 		}
