@@ -370,6 +370,18 @@ func (d testData) withOutdatedBlockDevicePaths() testData {
 	return d
 }
 
+func (d testData) withTmpBlockDevicePaths() testData {
+	st := &d.Status.NodeStatuses[nodeNames[0]].Kubelet
+	st.HasTmpBlockDevicePaths = true
+	return d
+}
+
+func (d testData) withOutdatedBlockDeviceLinks() testData {
+	st := &d.Status.NodeStatuses[nodeNames[0]].Kubelet
+	st.HasOutdatedBlockDeviceLinks = true
+	return d
+}
+
 func (d testData) withEtcdBackup() testData {
 	d.withK8sResourceReady()
 	d.Cluster.EtcdBackup = cke.EtcdBackup{
@@ -1014,6 +1026,16 @@ func TestDecideOps(t *testing.T) {
 			Name:        "OutdatedBlockDevicePaths",
 			Input:       newData().withAllServices().withOutdatedBlockDevicePaths(),
 			ExpectedOps: []string{"block-device-move"},
+		},
+		{
+			Name:        "TmpBlockDevicePaths",
+			Input:       newData().withAllServices().withTmpBlockDevicePaths(),
+			ExpectedOps: []string{"block-device-move-to-tmp"},
+		},
+		{
+			Name:        "OutdatedBlockDeviceLinks",
+			Input:       newData().withAllServices().withOutdatedBlockDeviceLinks(),
+			ExpectedOps: []string{"block-device-link-update"},
 		},
 		{
 			Name: "EtcdServiceUpdate",
