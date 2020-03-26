@@ -65,11 +65,6 @@ func (c moveBlockDeviceFor17Command) Run(ctx context.Context, inf cke.Infrastruc
 	for _, n := range c.nodes {
 		n := n
 		env.Go(func(ctx context.Context) error {
-			clientset, err := inf.K8sClient(ctx, n)
-			if err != nil {
-				return err
-			}
-
 			agent := inf.Agent(n.Address)
 			if agent == nil {
 				return errors.New("unable to prepare agent for " + n.Nodename())
@@ -83,55 +78,11 @@ func (c moveBlockDeviceFor17Command) Run(ctx context.Context, inf cke.Infrastruc
 			deviceFiles := strings.Fields(string(stdout))
 			pvNames := getFilesJustUnderTargetDir(deviceFiles, op.CSIBlockDevicePublishDirectory)
 			for _, pvName := range pvNames {
-				pvcRef, err := getPVCFromPV(clientset, pvName)
-				if err != nil {
-					return err
-				}
-
-				po, err := getPodFromPVC(clientset, pvcRef)
-				if err != nil {
-					return err
-				}
-
-				// 1. Move device file to tmp
 				oldDevicePath := filepath.Join(op.CSIBlockDevicePublishDirectory, pvName)
-				tmpDevicePath := filepath.Join("/tmp", oldDevicePath)
-				stdout, stderr, err = agent.Run(fmt.Sprintf("if [ -d %s ]; then echo -n yes; fi", oldDevicePath))
+				tmpDevicePath := filepath.Join("/tmp", pvName)
+				_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", oldDevicePath, tmpDevicePath))
 				if err != nil {
-					return fmt.Errorf("unable to test -d %s` on %s; stderr: %s, err: %v", oldDevicePath, n.Nodename(), stderr, err)
-				}
-				if string(stdout) == "yes" {
-					_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", oldDevicePath, tmpDevicePath))
-					if err != nil {
-						return fmt.Errorf("unable to ls %s on %s; stderr: %s, err: %v", oldDevicePath, n.Nodename(), stderr, err)
-					}
-				}
-
-				// 2. Create directory
-				newDirectoryPath := oldDevicePath
-				_, stderr, err = agent.Run(fmt.Sprintf("mkdir -p %s", newDirectoryPath))
-				if err != nil {
-					return fmt.Errorf("unable to mkdir on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
-				}
-
-				// 3. Move device file to the new path
-				newDevicePath := filepath.Join(newDirectoryPath, string(po.GetUID()))
-				stdout, stderr, err = agent.Run(fmt.Sprintf("if [ -f %s ]; then echo -n yes; fi", tmpDevicePath))
-				if err != nil {
-					return fmt.Errorf("unable to test -f %s` on %s; stderr: %s, err: %v", tmpDevicePath, n.Nodename(), stderr, err)
-				}
-				if string(stdout) == "yes" {
-					_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", tmpDevicePath, newDevicePath))
-					if err != nil {
-						return fmt.Errorf("unable to mv on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
-					}
-				}
-
-				// 4. Fix symlink
-				symlinkSourcePath := filepath.Join(op.CSIBlockDeviceDirectory, pvName, "dev", string(po.GetUID()))
-				_, stderr, err = agent.Run(fmt.Sprintf("ln -nfs %s %s", newDevicePath, symlinkSourcePath))
-				if err != nil {
-					return fmt.Errorf("unable to ln on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
+					return fmt.Errorf("unable to ls %s on %s; stderr: %s, err: %v", oldDevicePath, n.Nodename(), stderr, err)
 				}
 			}
 			return nil
