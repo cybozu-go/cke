@@ -850,3 +850,25 @@ func (nf *NodeFilter) HasOutdatedBlockDevicePaths() (nodes []*cke.Node) {
 	}
 	return nodes
 }
+
+// HasTmpBlockDevicePaths returns nodes which use old block device path
+func (nf *NodeFilter) HasTmpBlockDevicePaths() (nodes []*cke.Node) {
+	for _, n := range nf.cluster.Nodes {
+		st := nf.nodeStatus(n).Kubelet
+		if st.HasTmpBlockDevicePaths {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
+// HasOutdatedBlockDeviceLinks returns nodes which use old block device path
+func (nf *NodeFilter) HasOutdatedBlockDeviceLinks() (nodes []*cke.Node) {
+	for _, n := range nf.cluster.Nodes {
+		st := nf.nodeStatus(n).Kubelet
+		if st.HasOutdatedBlockDeviceLinks {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}

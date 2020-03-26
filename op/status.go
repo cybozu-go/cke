@@ -185,6 +185,22 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 				"node":      node.Address,
 			})
 		}
+
+		status.Kubelet.HasTmpBlockDevicePaths, err = hasTmpDevicePathsUpTo1_16(ctx, inf, node)
+		if err != nil {
+			log.Warn("failed to check outdated block device paths", map[string]interface{}{
+				log.FnError: err,
+				"node":      node.Address,
+			})
+		}
+
+		status.Kubelet.HasOutdatedBlockDeviceLinks, err = hasBlockDeviceLinksUpTo1_16(ctx, inf, node)
+		if err != nil {
+			log.Warn("failed to check outdated block device paths", map[string]interface{}{
+				log.FnError: err,
+				"node":      node.Address,
+			})
+		}
 	}
 
 	return status, nil
@@ -241,19 +257,136 @@ func hasBlockDevicePathsUpTo1_16(ctx context.Context, inf cke.Infrastructure, no
 			continue
 		}
 
-		pvName := pv.GetName()
-		oldDevicePath := filepath.Join(CSIBlockDevicePublishDirectory, pvName)
-		stdout, stderr, err := agent.Run("ls -l " + oldDevicePath)
-		if err != nil || len(stdout) == 0 {
-			return false, fmt.Errorf("unable to ls %s; stderr: %s, err: %v", oldDevicePath, stderr, err)
+		oldDevicePath := filepath.Join(CSIBlockDevicePublishDirectory, pv.GetName())
+		stdout, stderr, err := agent.Run(fmt.Sprintf("if [ -d %s ]; then echo -n yes; fi", oldDevicePath))
+		if err != nil {
+			return false, fmt.Errorf("unable to test -d %s` on %s; stderr: %s, err: %v", oldDevicePath, n.GetName(), stderr, err)
 		}
 		// Block devices should begin with b
-		if string(stdout)[0] == 'b' {
+		if string(stdout) == "yes" {
 			return true, nil
 		}
+	}
+	return false, nil
+}
 
-		symlinkSourcePath := filepath.Join(CSIBlockDeviceDirectory, pvName, "dev")
-		stdout, stderr, err = agent.Run("ls " + symlinkSourcePath)
+func hasTmpDevicePathsUpTo1_16(ctx context.Context, inf cke.Infrastructure, node *cke.Node) (bool, error) {
+	// Block device paths have been changed between k8s v1.16 and v1.17.
+	// https://github.com/kubernetes/kubernetes/pull/74026
+	clientset, err := inf.K8sClient(ctx, node)
+	if err != nil {
+		return false, err
+	}
+
+	n, err := clientset.CoreV1().Nodes().Get(node.Address, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	agent := inf.Agent(node.Address)
+	if agent == nil {
+		return false, errors.New("unable to get agent for " + node.Address)
+	}
+
+	pvList, err := clientset.CoreV1().PersistentVolumes().List(metav1.ListOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	pvMap := make(map[string]corev1.PersistentVolume)
+	for _, pv := range pvList.Items {
+		if pv.Spec.CSI != nil || pv.Spec.CSI.VolumeHandle != "" {
+			// VolumeHandle is unique name
+			// https://github.com/kubernetes/api/blob/1fc28ea2498c5c1bc60693fab7a6741b0b4973bc/core/v1/types.go#L1657-L1659
+			pvMap[pv.Spec.CSI.VolumeHandle] = pv
+		}
+	}
+
+	for _, v := range n.Status.VolumesInUse {
+		// e.g. kubernetes.io/csi/topolvm.cybozu.com^720fab08-e197-4855-ad77-dad24970e3de
+		res := strings.Split(string(v), "^")
+		if len(res) != 2 {
+			continue
+		}
+
+		volumeHandle := res[1]
+		pv, ok := pvMap[volumeHandle]
+		if !ok {
+			continue
+		}
+		if pv.Spec.VolumeMode == nil {
+			continue
+		}
+		if *pv.Spec.VolumeMode != corev1.PersistentVolumeBlock {
+			continue
+		}
+
+		tmpDevicePath := filepath.Join("/tmp", pv.GetName())
+		stdout, stderr, err := agent.Run(fmt.Sprintf("if [ -f %s ]; then echo -n yes; fi", tmpDevicePath))
+		if err != nil {
+			return false, fmt.Errorf("unable to test -f %s` on %s; stderr: %s, err: %v", tmpDevicePath, n.GetName(), stderr, err)
+		}
+		if string(stdout) == "yes" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func hasBlockDeviceLinksUpTo1_16(ctx context.Context, inf cke.Infrastructure, node *cke.Node) (bool, error) {
+	// Block device paths have been changed between k8s v1.16 and v1.17.
+	// https://github.com/kubernetes/kubernetes/pull/74026
+	clientset, err := inf.K8sClient(ctx, node)
+	if err != nil {
+		return false, err
+	}
+
+	n, err := clientset.CoreV1().Nodes().Get(node.Address, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	agent := inf.Agent(node.Address)
+	if agent == nil {
+		return false, errors.New("unable to get agent for " + node.Address)
+	}
+
+	pvList, err := clientset.CoreV1().PersistentVolumes().List(metav1.ListOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	pvMap := make(map[string]corev1.PersistentVolume)
+	for _, pv := range pvList.Items {
+		if pv.Spec.CSI != nil || pv.Spec.CSI.VolumeHandle != "" {
+			// VolumeHandle is unique name
+			// https://github.com/kubernetes/api/blob/1fc28ea2498c5c1bc60693fab7a6741b0b4973bc/core/v1/types.go#L1657-L1659
+			pvMap[pv.Spec.CSI.VolumeHandle] = pv
+		}
+	}
+
+	for _, v := range n.Status.VolumesInUse {
+		// e.g. kubernetes.io/csi/topolvm.cybozu.com^720fab08-e197-4855-ad77-dad24970e3de
+		res := strings.Split(string(v), "^")
+		if len(res) != 2 {
+			continue
+		}
+
+		volumeHandle := res[1]
+		pv, ok := pvMap[volumeHandle]
+		if !ok {
+			continue
+		}
+		if pv.Spec.VolumeMode == nil {
+			continue
+		}
+		if *pv.Spec.VolumeMode != corev1.PersistentVolumeBlock {
+			continue
+		}
+
+		// The symlink always exists at the symlinkSourcePath, but might be old
+		symlinkSourcePath := filepath.Join(CSIBlockDeviceDirectory, pv.GetName(), "dev")
+		stdout, stderr, err := agent.Run("ls " + symlinkSourcePath)
 		if err != nil {
 			return false, fmt.Errorf("unable to ls %s; stderr: %s, err: %v", symlinkSourcePath, stderr, err)
 		}
