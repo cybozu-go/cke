@@ -78,8 +78,8 @@ func (c moveBlockDeviceFor17Command) Run(ctx context.Context, inf cke.Infrastruc
 			deviceFiles := strings.Fields(string(stdout))
 			pvNames := getFilesJustUnderTargetDir(deviceFiles, op.CSIBlockDevicePublishDirectory)
 			for _, pvName := range pvNames {
-				oldDevicePath := filepath.Join(op.CSIBlockDevicePublishDirectory, pvName)
-				tmpDevicePath := filepath.Join("/tmp", pvName)
+				oldDevicePath := makeOldDevicePath(pvName)
+				tmpDevicePath := makeTmpDevicePath(pvName)
 				_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", oldDevicePath, tmpDevicePath))
 				if err != nil {
 					return fmt.Errorf("unable to ls %s on %s; stderr: %s, err: %v", oldDevicePath, n.Nodename(), stderr, err)
@@ -98,6 +98,22 @@ func (c moveBlockDeviceFor17Command) Run(ctx context.Context, inf cke.Infrastruc
 
 func (c moveBlockDeviceFor17Command) Command() cke.Command {
 	return cke.Command{Name: "move-block-device-for-1.17"}
+}
+
+func makeOldDevicePath(pvName string) string {
+	return filepath.Join(op.CSIBlockDevicePublishDirectory, pvName)
+}
+
+func makeNewDevicePath(pvName, podUID string) string {
+	return filepath.Join(op.CSIBlockDevicePublishDirectory, pvName, podUID)
+}
+
+func makeTmpDevicePath(pvName string) string {
+	return filepath.Join("/tmp", pvName)
+}
+
+func makeSymlinkSourcePath(pvName, podUID string) string {
+	return filepath.Join(op.CSIBlockDeviceDirectory, pvName, "dev", podUID)
 }
 
 func getPodFromPVC(clientset *kubernetes.Clientset, pvcRef *corev1.ObjectReference) (*corev1.Pod, error) {

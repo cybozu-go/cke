@@ -178,7 +178,10 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			}
 		}
 
-		status.Kubelet.HasOutdatedBlockDevicePaths, err = hasBlockDevicePathsUpTo1_16(ctx, inf, node)
+		// Block device paths have been changed between k8s v1.16 and v1.17.
+		// https://github.com/kubernetes/kubernetes/pull/74026
+		// So, old device paths and symlinks must be updated before upgrading.
+		status.Kubelet.HasOutdatedBlockDevicePaths, err = hasBlockDevicePathsUpTo16(ctx, inf, node)
 		if err != nil {
 			log.Warn("failed to check outdated block device paths", map[string]interface{}{
 				log.FnError: err,
@@ -186,17 +189,17 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			})
 		}
 
-		status.Kubelet.HasTmpBlockDevicePaths, err = hasTmpDevicePathsUpTo1_16(ctx, inf, node)
+		status.Kubelet.HasTmpBlockDevicePaths, err = hasTmpDevicePathsUpTo16(ctx, inf, node)
 		if err != nil {
-			log.Warn("failed to check outdated block device paths", map[string]interface{}{
+			log.Warn("failed to check tmp block device paths", map[string]interface{}{
 				log.FnError: err,
 				"node":      node.Address,
 			})
 		}
 
-		status.Kubelet.HasOutdatedBlockDeviceLinks, err = hasBlockDeviceLinksUpTo1_16(ctx, inf, node)
+		status.Kubelet.HasOutdatedBlockDeviceLinks, err = hasBlockDeviceLinksUpTo16(ctx, inf, node)
 		if err != nil {
-			log.Warn("failed to check outdated block device paths", map[string]interface{}{
+			log.Warn("failed to check outdated block device links", map[string]interface{}{
 				log.FnError: err,
 				"node":      node.Address,
 			})
@@ -206,9 +209,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	return status, nil
 }
 
-func hasBlockDevicePathsUpTo1_16(ctx context.Context, inf cke.Infrastructure, node *cke.Node) (bool, error) {
-	// Block device paths have been changed between k8s v1.16 and v1.17.
-	// https://github.com/kubernetes/kubernetes/pull/74026
+func hasBlockDevicePathsUpTo16(ctx context.Context, inf cke.Infrastructure, node *cke.Node) (bool, error) {
 	clientset, err := inf.K8sClient(ctx, node)
 	if err != nil {
 		return false, err
@@ -270,9 +271,7 @@ func hasBlockDevicePathsUpTo1_16(ctx context.Context, inf cke.Infrastructure, no
 	return false, nil
 }
 
-func hasTmpDevicePathsUpTo1_16(ctx context.Context, inf cke.Infrastructure, node *cke.Node) (bool, error) {
-	// Block device paths have been changed between k8s v1.16 and v1.17.
-	// https://github.com/kubernetes/kubernetes/pull/74026
+func hasTmpDevicePathsUpTo16(ctx context.Context, inf cke.Infrastructure, node *cke.Node) (bool, error) {
 	clientset, err := inf.K8sClient(ctx, node)
 	if err != nil {
 		return false, err
@@ -333,9 +332,7 @@ func hasTmpDevicePathsUpTo1_16(ctx context.Context, inf cke.Infrastructure, node
 	return false, nil
 }
 
-func hasBlockDeviceLinksUpTo1_16(ctx context.Context, inf cke.Infrastructure, node *cke.Node) (bool, error) {
-	// Block device paths have been changed between k8s v1.16 and v1.17.
-	// https://github.com/kubernetes/kubernetes/pull/74026
+func hasBlockDeviceLinksUpTo16(ctx context.Context, inf cke.Infrastructure, node *cke.Node) (bool, error) {
 	clientset, err := inf.K8sClient(ctx, node)
 	if err != nil {
 		return false, err

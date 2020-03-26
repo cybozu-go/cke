@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -90,9 +89,9 @@ func (c updateBlockDeviceLinkFor17Command) Run(ctx context.Context, inf cke.Infr
 					return err
 				}
 
-				newDirectoryPath := filepath.Join(op.CSIBlockDevicePublishDirectory, pvName)
-				newDevicePath := filepath.Join(newDirectoryPath, string(po.GetUID()))
-				symlinkSourcePath := filepath.Join(op.CSIBlockDeviceDirectory, pvName, "dev", string(po.GetUID()))
+				podUID := string(po.GetUID())
+				newDevicePath := makeNewDevicePath(pvName, podUID)
+				symlinkSourcePath := makeSymlinkSourcePath(pvName, podUID)
 				_, stderr, err = agent.Run(fmt.Sprintf("ln -nfs %s %s", newDevicePath, symlinkSourcePath))
 				if err != nil {
 					return fmt.Errorf("unable to ln on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)

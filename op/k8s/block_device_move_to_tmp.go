@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -90,14 +89,15 @@ func (c moveBlockDeviceToTmpFor17Command) Run(ctx context.Context, inf cke.Infra
 					return err
 				}
 
-				newDirectoryPath := filepath.Join(op.CSIBlockDevicePublishDirectory, pvName)
+				// Make directory at the path where the device path existed before being moved
+				newDirectoryPath := makeOldDevicePath(pvName)
 				_, stderr, err = agent.Run(fmt.Sprintf("mkdir -p %s", newDirectoryPath))
 				if err != nil {
 					return fmt.Errorf("unable to mkdir on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
 				}
 
-				tmpDevicePath := filepath.Join("/tmp", pvName)
-				newDevicePath := filepath.Join(newDirectoryPath, string(po.GetUID()))
+				tmpDevicePath := makeTmpDevicePath(pvName)
+				newDevicePath := makeNewDevicePath(pvName, string(po.GetUID()))
 				_, stderr, err = agent.Run(fmt.Sprintf("mv %s %s", tmpDevicePath, newDevicePath))
 				if err != nil {
 					return fmt.Errorf("unable to mv on %s; stderr: %s, err: %v", n.Nodename(), stderr, err)
