@@ -124,14 +124,9 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	if nodes := nf.SSHConnectedNodes(nf.KubeletOutdatedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.Kubelet))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.HasOutdatedBlockDevicePaths(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.BlockDeviceMoveOp(nodes))
-	}
-	if nodes := nf.SSHConnectedNodes(nf.HasTmpBlockDevicePaths(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.BlockDeviceMoveFromTmpOp(apiServer, nodes))
-	}
-	if nodes := nf.SSHConnectedNodes(nf.HasOutdatedBlockDeviceLinks(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.BlockDeviceLinkUpdateOp(apiServer, nodes))
+	nupvNodes, nupvs := nf.NeedUpdateUpBlockPVsToV1_16()
+	if nodes := nf.SSHConnectedNodes(nupvNodes, true, true); len(nodes) > 0 {
+		ops = append(ops, k8s.UpdateBlockPVsUpToV1_16Op(apiServer, nodes, nupvs))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.ProxyStoppedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeProxyBootOp(nodes, c.Name, c.Options.Proxy))

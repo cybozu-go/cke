@@ -840,35 +840,16 @@ func (nf *NodeFilter) SSHConnectedNodes(targets []*cke.Node, includeControlPlane
 	return nodes
 }
 
-// HasOutdatedBlockDevicePaths returns nodes which use old block device path
-func (nf *NodeFilter) HasOutdatedBlockDevicePaths() (nodes []*cke.Node) {
+// NeedUpdateUpBlockPVsToV1_16 returns nodes which need to update block device path
+func (nf *NodeFilter) NeedUpdateUpBlockPVsToV1_16() ([]*cke.Node, map[string][]string) {
+	var nodes []*cke.Node
+	var pvs map[string][]string
 	for _, n := range nf.cluster.Nodes {
 		st := nf.nodeStatus(n).Kubelet
-		if st.HasOutdatedBlockDevicePaths {
+		if len(st.NeedUpdateBlockPVsUpToV1_16) != 0 {
 			nodes = append(nodes, n)
+			pvs[n.Address] = st.NeedUpdateBlockPVsUpToV1_16
 		}
 	}
-	return nodes
-}
-
-// HasTmpBlockDevicePaths returns nodes which use old block device path
-func (nf *NodeFilter) HasTmpBlockDevicePaths() (nodes []*cke.Node) {
-	for _, n := range nf.cluster.Nodes {
-		st := nf.nodeStatus(n).Kubelet
-		if st.HasTmpBlockDevicePaths {
-			nodes = append(nodes, n)
-		}
-	}
-	return nodes
-}
-
-// HasOutdatedBlockDeviceLinks returns nodes which use old block device path
-func (nf *NodeFilter) HasOutdatedBlockDeviceLinks() (nodes []*cke.Node) {
-	for _, n := range nf.cluster.Nodes {
-		st := nf.nodeStatus(n).Kubelet
-		if st.HasOutdatedBlockDeviceLinks {
-			nodes = append(nodes, n)
-		}
-	}
-	return nodes
+	return nodes, pvs
 }

@@ -149,7 +149,5 @@ type KubeletStatus struct {
 	AllowSwap                   bool
 	ContainerLogMaxSize         string
 	ContainerLogMaxFiles        int32
-	HasOutdatedBlockDevicePaths bool
-	HasTmpBlockDevicePaths      bool
-	HasOutdatedBlockDeviceLinks bool
+	NeedUpdateBlockPVsUpToV1_16 []string
 }
