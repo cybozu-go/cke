@@ -67,43 +67,44 @@ func (c updateBlockPVsUpTo1_16Command) Run(ctx context.Context, inf cke.Infrastr
 	env := well.NewEnvironment(ctx)
 	for _, node := range c.nodes {
 		node := node
-		ce := inf.Engine(node.Address)
 		pvs := c.pvs[node.Address]
 
-		for _, pv := range pvs {
-			env.Go(func(ctx context.Context) error {
+		env.Go(func(ctx context.Context) error {
+			ce := inf.Engine(node.Address)
+
+			for _, pv := range pvs {
 				arg := strings.Join([]string{
 					"/usr/local/cke-tools/bin/updateblock117",
-					"need-update",
+					"operate",
 					pv,
 				}, " ")
 				binds := []cke.Mount{
-					{ // TODO: set source and destination path.
-						Source:      "/var/lib/kubelet/plugins/kubernetes.io/csi/volumeDevices",
-						Destination: "",
+					{
+						Source:      "/var/lib/kubelet",
+						Destination: "/var/lib/kubelet",
 						Label:       cke.LabelPrivate,
 					},
 				}
 				stdout, stderr, err := ce.RunWithOutput(cke.ToolsImage, binds, arg)
 				if err != nil || len(stderr) != 0 {
-					return fmt.Errorf("%w, stdout: %s, stderr: %s", err, string(stdout), string(stderr))
+					return fmt.Errorf("updateblock117 operate failed, %w, stdout: %s, stderr: %s", err, string(stdout), string(stderr))
 				}
 				// parse stdout
 				var result ckeToolResult
 				err = json.Unmarshal(stdout, &result)
 				if err != nil {
-					return fmt.Errorf("%w, stdout: %s", err, string(stdout))
+					return fmt.Errorf("unmarshal error, %w, stdout: %s", err, string(stdout))
 				}
-				if string(stdout) != "yes" {
-					return fmt.Errorf("stdout: %s", string(stdout))
+				if result.Result != "completed" {
+					return fmt.Errorf("updateblock117 operate result failed, stdout: %s", string(stdout))
 				}
-				return nil
-			})
-		}
+			}
+			return nil
+		})
 	}
 	env.Stop()
 	err := env.Wait()
-	log.Info("updateBlockUpTo1_16Command finished", map[string]interface{}{
+	log.Info("updateBlockPVsUpTo1_16 finished", map[string]interface{}{
 		"elapsed": time.Now().Sub(begin).Seconds(),
 	})
 	return err
