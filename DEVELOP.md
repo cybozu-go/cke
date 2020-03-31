@@ -31,8 +31,10 @@ $ git commit
 Each CKE release corresponds to a Kubernetes version.
 For example, CKE 1.13.8 corresponds to Kubernetes 1.13.4.
 
-When the `master` branch of CKE is updated for a new Kubernetes minor version (e.g. 1.14),
-we should keep a maintenance branch for old (e.g. 1.13) Kubernetes.
+We should keep a maintenance branch for old (e.g. 1.13) Kubernetes:
+
+- When the `master` branch of CKE is updated for a new Kubernetes minor version (e.g. 1.14) except for RC version.
+- When we backport some changes to old versions.
 
 Run following commands to create such a branch:
 
