@@ -5,6 +5,19 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.17.0-rc.1] - 2020-03-31
+
+### Changed
+- Add new op for upgrading Kubelet without draining nodes (#304)
+- Update etcd: v3.3.19.1 (#303)
+- Update images for Kubernetes 1.17 (#302)
+- Add label for each role (#300)
+- Server Side Apply (#299)
+    - Kubernetes 1.17.4
+    - CNI plugins 0.8.5
+    - CoreDNS 1.6.7
+    - Unbound 1.10.0
+
 ## [1.16.4] - 2020-02-20
 
 ### Added
@@ -69,7 +82,8 @@ No change from v1.16.2-rc.1.
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.16.4...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.0-rc.1...HEAD
+[1.17.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.16.4...v1.17.0-rc.1
 [1.16.4]: https://github.com/cybozu-go/cke/compare/v1.16.3...v1.16.4
 [1.16.3]: https://github.com/cybozu-go/cke/compare/v1.16.2...v1.16.3
 [1.16.2]: https://github.com/cybozu-go/cke/compare/v1.16.2-rc.1...v1.16.2
