@@ -25,6 +25,8 @@ type ContainerEngine interface {
 	Run(img Image, binds []Mount, command string) error
 	// RunWithInput runs a container as a foreground process with stdin as a string.
 	RunWithInput(img Image, binds []Mount, command, input string) error
+	/// RunWithOutput runs a container as a foreground process and get stdout and stderr.
+	RunWithOutput(img Image, binds []Mount, command string) ([]byte, []byte, error)
 	// RunSystem runs the named container as a system service.
 	RunSystem(name string, img Image, opts []string, params, extra ServiceParams) error
 	// Exists returns if named system container exists.
@@ -124,6 +126,30 @@ func (c docker) RunWithInput(img Image, binds []Mount, command, input string) er
 	return c.agent.RunWithInput(strings.Join(args, " "), input)
 }
 
+func (c docker) RunWithOutput(img Image, binds []Mount, command string) ([]byte, []byte, error) {
+	args := []string{
+		"docker",
+		"run",
+		"--log-driver=journald",
+		"--rm",
+		"--network=host",
+		"--uts=host",
+		"--read-only",
+	}
+	for _, m := range binds {
+		o := "rw"
+		if m.ReadOnly {
+			o = "ro"
+		}
+		args = append(args, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
+	}
+	args = append(args, img.Name(), command)
+
+	stdout, stderr, err := c.agent.Run(strings.Join(args, " "))
+
+	return stdout, stderr, err
+}
+
 func (c docker) RunSystem(name string, img Image, opts []string, params, extra ServiceParams) error {
 	id, err := c.getID(name)
 	if err != nil {
@@ -131,7 +157,7 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 	}
 	if len(id) != 0 {
 		cmdline := "docker rm " + name
-		stderr, stdout, err := c.agent.Run(cmdline)
+		stdout, stderr, err := c.agent.Run(cmdline)
 		if err != nil {
 			return fmt.Errorf("%w, cmdline: %s, stdout: %s, stderr: %s", err, cmdline, stdout, stderr)
 		}

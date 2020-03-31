@@ -144,9 +144,10 @@ type SchedulerStatus struct {
 // KubeletStatus represents kubelet status and health
 type KubeletStatus struct {
 	ServiceStatus
-	IsHealthy            bool
-	Domain               string
-	AllowSwap            bool
-	ContainerLogMaxSize  string
-	ContainerLogMaxFiles int32
+	IsHealthy                   bool
+	Domain                      string
+	AllowSwap                   bool
+	ContainerLogMaxSize         string
+	ContainerLogMaxFiles        int32
+	NeedUpdateBlockPVsUpToV1_16 []string
 }
