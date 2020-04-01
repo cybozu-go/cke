@@ -29,20 +29,33 @@ $ git commit
 ### Maintenance branch
 
 Each CKE release corresponds to a Kubernetes version.
-For example, CKE 1.13.8 corresponds to Kubernetes 1.13.4.
+For example, CKE 1.16.x corresponds to Kubernetes 1.16.x.
 
-We should keep a maintenance branch for old (e.g. 1.13) Kubernetes:
+We should keep a maintenance branch for old (e.g. 1.16) Kubernetes:
 
-- When the `master` branch of CKE is updated for a new Kubernetes minor version (e.g. 1.14) except for RC version.
-- When we backport some changes to old versions.
+When the `master` branch of CKE is updated for a new Kubernetes minor version (e.g. 1.17),
+we should keep a maintenance branch for old (e.g. 1.16) Kubernetes.
 
-Run following commands to create such a branch:
+Run the following commands to create such a branch:
 
 ```console
 $ git fetch origin
-$ git checkout -b release-1.13 origin/master
-$ git push -u origin release-1.13
+$ git checkout -b release-1.16 origin/master
+$ git push -u origin release-1.16
 ```
+
+When vulnerabilities or critical issues are found in the master branch, 
+we should backport the fixes to an older branch.
+
+Run following commands to backport:
+
+```
+$ git checkout release-1.16
+$ git cherry-pick <commit from master>
+```
+
+Then, release it. 
+https://github.com/cybozu-go/cke/blob/master/RELEASE.md
 
 ### Update `k8s.io` modules
 
