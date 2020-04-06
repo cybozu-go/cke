@@ -1,15 +1,15 @@
 name: mtest
 nodes:
   - address: __NODE1__
-    user: cybozu
+    user: cke
   - address: __NODE2__
-    user: cybozu
+    user: cke
   - address: __NODE3__
-    user: cybozu
+    user: cke
   - address: __NODE4__
-    user: cybozu
+    user: cke
   - address: __NODE5__
-    user: cybozu
+    user: cke
 service_subnet: 10.34.56.0/24
 pod_subnet: 10.1.0.0/16
 dns_servers: ["8.8.8.8", "1.1.1.1"]
