@@ -23,10 +23,12 @@ export KUBECONFIG
 
 all:
 	@echo "Available targets:"
-	@echo "    run        Run CKE and install Kubernetes into GCP Instances."
-	@echo "    sonobuoy   Run sonobuoy."
-	@echo "    clean      Stop VMs and clean files."
-	@echo "    setup      Onetime setup.  Need root privilege."
+	@echo "    run              Run CKE and install Kubernetes into GCP Instances."
+	@echo "    sonobuoy         Run sonobuoy."
+	@echo "    clean            Stop VMs and clean files."
+	@echo "    setup            Onetime setup.  Need root privilege."
+	@echo "    run-on-vagrant   Run CKE and install Kubernetes into Vagrant."
+	@echo "    setup-vagrant    Onetime setup to install vagrant.  Need root privilege."
 
 bin/cke bin/ckecli:
 	mkdir -p bin
@@ -70,4 +72,23 @@ setup:
 	$(SUDO) $(CURL) -o /usr/local/bin/docker-compose $(DOCKER_COMPOSE_URL)
 	$(SUDO) chmod +x /usr/local/bin/docker-compose
 
-.PHONY: all run sonobuoy clean setup
+run-on-vagrant: bin/cke bin/ckecli bin/kubectl
+	mkdir -p etcd-data
+	/usr/local/bin/docker-compose up -d
+	vagrant up
+	for i in $$(seq 180); do sleep 1; vagrant ssh worker-1 -c date && break; done
+	$(CKECLI) vault ssh-privkey $$HOME/.vagrant.d/insecure_private_key
+	$(CKECLI) constraints set minimum-workers 2
+	$(CKECLI) constraints set control-plane-count 1
+	$(CKECLI) cluster set ./cke-cluster.yml
+	$(CKECLI) kubernetes issue > .kubeconfig
+	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system ds/node-dns -o json | jq .status.numberReady)" = 3 ]; then break; fi; done
+	./bin/kubectl apply -f ../example/calico.yaml
+	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get nodes --no-headers | grep Ready | wc -l)" = 3 ]; then break; fi; done
+	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system deployments/cluster-dns -o json | jq .status.readyReplicas)" = 2 ]; then break; fi; done
+
+setup-vagrant: setup
+	$(SUDO) apt-get update
+	$(SUDO) apt-get install -y virtualbox vagrant
+
+.PHONY: all run sonobuoy clean setup run-on-vagrant setup-vagrant
