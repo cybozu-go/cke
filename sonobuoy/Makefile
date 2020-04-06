@@ -23,10 +23,12 @@ export KUBECONFIG
 
 all:
 	@echo "Available targets:"
-	@echo "    run        Run CKE and install Kubernetes into GCP Instances."
-	@echo "    sonobuoy   Run sonobuoy."
-	@echo "    clean      Stop VMs and clean files."
-	@echo "    setup      Onetime setup.  Need root privilege."
+	@echo "    run              Run CKE and install Kubernetes into GCP Instances."
+	@echo "    sonobuoy         Run sonobuoy."
+	@echo "    clean            Stop VMs and clean files."
+	@echo "    setup            Onetime setup.  Need root privilege."
+	@echo "    run-on-vagrant   Run CKE and install Kubernetes into Vagrant."
+	@echo "    setup-vagrant    Onetime setup to install vagrant.  Need root privilege."
 
 bin/cke bin/ckecli:
 	mkdir -p bin
@@ -84,6 +86,7 @@ run-on-vagrant: bin/cke bin/ckecli bin/kubectl
 	./bin/kubectl apply -f ../example/calico.yaml
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get nodes --no-headers | grep Ready | wc -l)" = 3 ]; then break; fi; done
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system deployments/cluster-dns -o json | jq .status.readyReplicas)" = 2 ]; then break; fi; done
+
 setup-vagrant: setup
 	$(SUDO) apt-get update
 	$(SUDO) apt-get install -y virtualbox vagrant
