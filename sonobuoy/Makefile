@@ -54,7 +54,20 @@ run: bin/cke bin/ckecli bin/kubectl
 	./bin/kubectl apply -f ../example/calico.yaml
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get nodes --no-headers | grep Ready | wc -l)" = 3 ]; then break; fi; done
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system deployments/cluster-dns -o json | jq .status.readyReplicas)" = 2 ]; then break; fi; done
-
+run-on-vagrant: bin/cke bin/ckecli bin/kubectl
+	mkdir -p etcd-data
+	/usr/local/bin/docker-compose up -d
+	vagrant up
+	for i in $$(seq 180); do sleep 1; vagrant ssh worker-1 -c date && break; done
+	$(CKECLI) vault ssh-privkey $$HOME/.vagrant.d/insecure_private_key
+	$(CKECLI) constraints set minimum-workers 2
+	$(CKECLI) constraints set control-plane-count 1
+	$(CKECLI) cluster set ./cke-cluster.yml
+	$(CKECLI) kubernetes issue > .kubeconfig
+	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system ds/node-dns -o json | jq .status.numberReady)" = 3 ]; then break; fi; done
+	./bin/kubectl apply -f ../example/calico.yaml
+	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get nodes --no-headers | grep Ready | wc -l)" = 3 ]; then break; fi; done
+	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system deployments/cluster-dns -o json | jq .status.readyReplicas)" = 2 ]; then break; fi; done
 sonobuoy: bin/sonobuoy
 	$(CKECLI) kubernetes issue --ttl=10h > .kubeconfig
 	time ./bin/sonobuoy run --mode=certified-conformance --timeout=14400 --wait
@@ -63,6 +76,7 @@ sonobuoy: bin/sonobuoy
 	./bin/sonobuoy delete
 
 clean:
+	-vagrant destroy -f
 	-/usr/local/bin/docker-compose down
 	$(SUDO) rm -rf bin etcd-data
 
@@ -70,4 +84,4 @@ setup:
 	$(SUDO) $(CURL) -o /usr/local/bin/docker-compose $(DOCKER_COMPOSE_URL)
 	$(SUDO) chmod +x /usr/local/bin/docker-compose
 
-.PHONY: all run sonobuoy clean setup
+.PHONY: all run run-on-vagrant sonobuoy clean setup
