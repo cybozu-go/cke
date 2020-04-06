@@ -1,7 +1,7 @@
 Conformance test for CKE
 ========================
 
-Follow the instructions to run [Sonobuoy][] for conformance test of certified Kubernetes.
+This document describes steps to run the conformance test for certified Kubernetes.
 
 ## Prepare environment
 
@@ -21,7 +21,7 @@ $ git checkout vX.Y.Z
 
 ## Run Sonobuoy
 
-Setup `docker-compose` and Vagrant, use them to setup CKE and its Kubernetes, then run Sonobuoy
+Setup `docker-compose` and Vagrant, use them to setup CKE and its Kubernetes, then run [Sonobuoy][]
 with the following commands.
 
 ```console
