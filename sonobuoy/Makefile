@@ -56,6 +56,7 @@ run: bin/cke bin/ckecli bin/kubectl
 	./bin/kubectl apply -f ../example/calico.yaml
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get nodes --no-headers | grep Ready | wc -l)" = 3 ]; then break; fi; done
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system deployments/cluster-dns -o json | jq .status.readyReplicas)" = 2 ]; then break; fi; done
+
 sonobuoy: bin/sonobuoy
 	$(CKECLI) kubernetes issue --ttl=10h > .kubeconfig
 	time ./bin/sonobuoy run --mode=certified-conformance --timeout=14400 --wait
@@ -64,7 +65,6 @@ sonobuoy: bin/sonobuoy
 	./bin/sonobuoy delete
 
 clean:
-	-vagrant destroy -f
 	-/usr/local/bin/docker-compose down
 	$(SUDO) rm -rf bin etcd-data
 

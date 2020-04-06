@@ -1,7 +1,7 @@
 Conformance test for CKE
 ========================
 
-Follow the instructions to run [Sonobuoy][] for conformance test of certified Kubernetes with Vagrant.
+Follow the instructions to run [Sonobuoy][] for conformance test of certified Kubernetes.
 
 ## Prepare environment
 
@@ -38,6 +38,7 @@ Stop and clean Vagrant VMs and Docker containers as follows:
 
 ```console
 $ make clean
+$ vagrant destroy
 ```
 
 [Sonobuoy]: https://github.com/vmware-tanzu/sonobuoy
