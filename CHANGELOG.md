@@ -5,6 +5,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.17.1] - 2020-04-07
+
+### Changed
+- Add run-on-vagrant target to sonobuoy/Makefile (#309)
+
 ## [1.17.0] - 2020-04-01
 
 No change from v1.17.0-rc.1.
@@ -86,7 +91,8 @@ No change from v1.16.2-rc.1.
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.0...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.1...HEAD
+[1.17.1]: https://github.com/cybozu-go/cke/compare/v1.17.0...v1.17.1
 [1.17.0]: https://github.com/cybozu-go/cke/compare/v1.17.0-rc.1...v1.17.0
 [1.17.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.16.4...v1.17.0-rc.1
 [1.16.4]: https://github.com/cybozu-go/cke/compare/v1.16.3...v1.16.4
