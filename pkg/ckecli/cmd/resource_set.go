@@ -14,12 +14,12 @@ import (
 )
 
 func updateResource(ctx context.Context, data []byte) error {
-	key, parsed, err := cke.ParseResource(data)
+	key, err := cke.ParseResource(data)
 	if err != nil {
 		return err
 	}
 
-	return storage.SetResource(ctx, key, string(parsed))
+	return storage.SetResource(ctx, key, string(data))
 }
 
 var resourceSetCmd = &cobra.Command{

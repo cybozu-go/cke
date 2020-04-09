@@ -7,16 +7,21 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cybozu-go/log"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -95,7 +100,6 @@ func (k Kind) Order() int {
 }
 
 var resourceDecoder runtime.Decoder
-var resourceEncoder runtime.Encoder
 
 func init() {
 	gvs := schema.GroupVersions{
@@ -107,125 +111,94 @@ func init() {
 		schema.GroupVersion{Group: batchv1beta1.SchemeGroupVersion.Group, Version: batchv1beta1.SchemeGroupVersion.Version},
 	}
 	resourceDecoder = scheme.Codecs.DecoderToVersion(scheme.Codecs.UniversalDeserializer(), gvs)
-	resourceEncoder = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, json.SerializerOptions{})
 }
 
-func encodeToJSON(obj runtime.Object) ([]byte, error) {
-	buf := &bytes.Buffer{}
-	err := resourceEncoder.Encode(obj, buf)
+// ApplyResource creates or updates given resource using server-side-apply.
+func ApplyResource(dynclient dynamic.Interface, mapper meta.RESTMapper, data []byte, rev int64, forceConflicts bool) error {
+	obj := &unstructured.Unstructured{}
+	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+	_, gvk, err := dec.Decode(data, nil, obj)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return buf.Bytes(), nil
-}
+	ann := obj.GetAnnotations()
+	if ann == nil {
+		ann = make(map[string]string)
+	}
+	ann[AnnotationResourceRevision] = strconv.FormatInt(rev, 10)
+	obj.SetAnnotations(ann)
 
-// ApplyResource creates or patches Kubernetes object.
-func ApplyResource(clientset *kubernetes.Clientset, data []byte, rev int64, forceConflicts bool) error {
-	obj, gvk, err := resourceDecoder.Decode(data, nil, nil)
+	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
 		return err
 	}
 
-	switch o := obj.(type) {
-	case *corev1.Namespace:
-		c := clientset.CoreV1().RESTClient()
-		return applyNamespace(o, rev, c, applyParams{isNamespaced: false, forceConflicts: forceConflicts})
-	case *corev1.ServiceAccount:
-		c := clientset.CoreV1().RESTClient()
-		return applyServiceAccount(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
-	case *corev1.ConfigMap:
-		c := clientset.CoreV1().RESTClient()
-		return applyConfigMap(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
-	case *corev1.Service:
-		c := clientset.CoreV1().RESTClient()
-		return applyService(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
-	case *policyv1beta1.PodSecurityPolicy:
-		c := clientset.PolicyV1beta1().RESTClient()
-		return applyPodSecurityPolicy(o, rev, c, applyParams{isNamespaced: false, forceConflicts: forceConflicts})
-	case *networkingv1.NetworkPolicy:
-		c := clientset.NetworkingV1().RESTClient()
-		return applyNetworkPolicy(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
-	case *rbacv1.Role:
-		c := clientset.RbacV1().RESTClient()
-		return applyRole(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
-	case *rbacv1.RoleBinding:
-		c := clientset.RbacV1().RESTClient()
-		return applyRoleBinding(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
-	case *rbacv1.ClusterRole:
-		c := clientset.RbacV1().RESTClient()
-		return applyClusterRole(o, rev, c, applyParams{isNamespaced: false, forceConflicts: forceConflicts})
-	case *rbacv1.ClusterRoleBinding:
-		c := clientset.RbacV1().RESTClient()
-		return applyClusterRoleBinding(o, rev, c, applyParams{isNamespaced: false, forceConflicts: forceConflicts})
-	case *appsv1.Deployment:
-		c := clientset.AppsV1().RESTClient()
-		return applyDeployment(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
-	case *appsv1.DaemonSet:
-		c := clientset.AppsV1().RESTClient()
-		return applyDaemonSet(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
-	case *batchv1beta1.CronJob:
-		c := clientset.BatchV1beta1().RESTClient()
-		return applyCronJob(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
-	case *policyv1beta1.PodDisruptionBudget:
-		c := clientset.PolicyV1beta1().RESTClient()
-		return applyPodDisruptionBudget(o, rev, c, applyParams{isNamespaced: true, forceConflicts: forceConflicts})
+	var dr dynamic.ResourceInterface
+	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+		dr = dynclient.Resource(mapping.Resource).Namespace(obj.GetNamespace())
+	} else {
+		dr = dynclient.Resource(mapping.Resource)
 	}
-	return fmt.Errorf("unsupported type: %s", gvk.String())
+	buf := &bytes.Buffer{}
+	if err := unstructured.UnstructuredJSONScheme.Encode(obj, buf); err != nil {
+		return err
+	}
+	if log.Enabled(log.LvDebug) {
+		log.Debug("resource-apply", map[string]interface{}{
+			"gvk":       gvk.String(),
+			"gvr":       mapping.Resource.String(),
+			"namespace": obj.GetNamespace(),
+			"name":      obj.GetName(),
+			"data":      string(buf.Bytes()),
+		})
+	}
+
+	_, err = dr.Patch(obj.GetName(), types.ApplyPatchType, buf.Bytes(), metav1.PatchOptions{
+		FieldManager: "cke",
+		Force:        &forceConflicts,
+	})
+	return err
 }
 
 // ParseResource parses YAML string.
-func ParseResource(data []byte) (key string, jsonData []byte, err error) {
+func ParseResource(data []byte) (key string, err error) {
 	obj, gvk, err := resourceDecoder.Decode(data, nil, nil)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	switch o := obj.(type) {
 	case *corev1.Namespace:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Name, nil
 	case *corev1.ServiceAccount:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, nil
 	case *corev1.ConfigMap:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, nil
 	case *corev1.Service:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, nil
 	case *policyv1beta1.PodSecurityPolicy:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Name, nil
 	case *networkingv1.NetworkPolicy:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, nil
 	case *rbacv1.Role:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, nil
 	case *rbacv1.RoleBinding:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, nil
 	case *rbacv1.ClusterRole:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Name, nil
 	case *rbacv1.ClusterRoleBinding:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Name, nil
 	case *appsv1.Deployment:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, nil
 	case *appsv1.DaemonSet:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, nil
 	case *batchv1beta1.CronJob:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, nil
 	case *policyv1beta1.PodDisruptionBudget:
-		data, err := encodeToJSON(o)
-		return o.Kind + "/" + o.Namespace + "/" + o.Name, data, err
+		return o.Kind + "/" + o.Namespace + "/" + o.Name, nil
 	}
 
-	return "", nil, fmt.Errorf("unsupported type: %s", gvk.String())
+	return "", fmt.Errorf("unsupported type: %s", gvk.String())
 }
 
 // ResourceDefinition represents a CKE-managed kubernetes resource.

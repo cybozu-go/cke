@@ -4,6 +4,10 @@ import (
 	"context"
 
 	"github.com/cybozu-go/cke"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/restmapper"
 )
 
 type resourceApplyOp struct {
@@ -42,11 +46,21 @@ func (o *resourceApplyOp) Targets() []string {
 }
 
 func (o *resourceApplyOp) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	cs, err := inf.K8sClient(ctx, o.apiserver)
+	cfg, err := inf.K8sConfig(ctx, o.apiserver)
 	if err != nil {
 		return err
 	}
-	return cke.ApplyResource(cs, o.resource.Definition, o.resource.Revision, o.forceConflicts)
+	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		return err
+	}
+	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
+
+	dyn, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return err
+	}
+	return cke.ApplyResource(dyn, mapper, o.resource.Definition, o.resource.Revision, true)
 }
 
 func (o *resourceApplyOp) Command() cke.Command {
