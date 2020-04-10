@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -15,7 +14,8 @@ import (
 	"text/template"
 
 	"github.com/cybozu-go/cke"
-	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
+	"sigs.k8s.io/yaml"
 )
 
 func main() {
@@ -63,7 +63,7 @@ func loadResources(fname string, images map[string]string) ([]cke.ResourceDefini
 		return nil, err
 	}
 
-	y := k8sYaml.NewYAMLReader(bufio.NewReader(buf))
+	y := utilyaml.NewYAMLReader(bufio.NewReader(buf))
 	var res []cke.ResourceDefinition
 	for {
 		data, err := y.Read()
@@ -74,7 +74,7 @@ func loadResources(fname string, images map[string]string) ([]cke.ResourceDefini
 			return nil, err
 		}
 
-		key, jd, err := cke.ParseResource(data)
+		key, err := cke.ParseResource(data)
 		if err != nil {
 			return nil, err
 		}
@@ -97,8 +97,7 @@ func loadResources(fname string, images map[string]string) ([]cke.ResourceDefini
 				} `json:"annotations"`
 			} `json:"metadata"`
 		}{}
-		err = json.Unmarshal(jd, &obj)
-		if err != nil {
+		if err := yaml.Unmarshal(data, &obj); err != nil {
 			return nil, err
 		}
 		rev := obj.Metadata.Annotations.Revision
@@ -113,7 +112,7 @@ func loadResources(fname string, images map[string]string) ([]cke.ResourceDefini
 			Name:       name,
 			Revision:   rev,
 			Image:      obj.Metadata.Annotations.Image,
-			Definition: jd,
+			Definition: data,
 		})
 	}
 }
