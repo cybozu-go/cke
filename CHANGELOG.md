@@ -5,6 +5,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.17.3] - 2020-04-21
+
+### Changed
+- Update to k8s 1.17.5 (#314)
+
 ## [1.17.2] - 2020-04-10
 
 ### Changed
@@ -40,7 +45,8 @@ No change from v1.17.0-rc.1.
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.3...HEAD
+[1.17.3]: https://github.com/cybozu-go/cke/compare/v1.17.2...v1.17.3
 [1.17.2]: https://github.com/cybozu-go/cke/compare/v1.17.1...v1.17.2
 [1.17.1]: https://github.com/cybozu-go/cke/compare/v1.17.0...v1.17.1
 [1.17.0]: https://github.com/cybozu-go/cke/compare/v1.17.0-rc.1...v1.17.0
