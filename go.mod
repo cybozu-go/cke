@@ -37,12 +37,12 @@ require (
 	github.com/vektah/gqlparser v1.1.2
 	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
-	k8s.io/api v0.17.4
-	k8s.io/apimachinery v0.17.4
-	k8s.io/apiserver v0.17.4
-	k8s.io/client-go v0.17.4
-	k8s.io/kube-scheduler v0.17.4
-	k8s.io/kubelet v0.17.4
+	k8s.io/api v0.17.5
+	k8s.io/apimachinery v0.17.5
+	k8s.io/apiserver v0.17.5
+	k8s.io/client-go v0.17.5
+	k8s.io/kube-scheduler v0.17.5
+	k8s.io/kubelet v0.17.5
 	sigs.k8s.io/yaml v1.2.0
 )
 
