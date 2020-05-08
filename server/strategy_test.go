@@ -1173,6 +1173,33 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"update-node"},
 		},
 		{
+			Name: "NodeLabel5",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "10.0.0.14",
+					Labels: map[string]string{
+						"label1":                         "value",
+						"node-role.kubernetes.io/worker": "true",
+					},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
 			Name: "NodeLabelCP1",
 			Input: newData().withNodes(corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
