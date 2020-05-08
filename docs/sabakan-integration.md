@@ -311,6 +311,7 @@ The label key will be prefixed by `sabakan.cke.cybozu.com/`.
 
 Other Machine fields are also translated to labels as follows.
 `topology.kubernetes.io/zone` and `failure-domain.beta.kubernetes.io/zone`(deprecated) are well-known labels.
+`node-role.kubernetes.io/<role>` are used by `kubectl` to display the node's role.
 
 | Field              | Label key                                | Value                                               |
 | ------------------ | ---------------------------------------- | --------------------------------------------------- |
@@ -319,6 +320,9 @@ Other Machine fields are also translated to labels as follows.
 | `spec.rack`        | `failure-domain.beta.kubernetes.io/zone` | `spec.rack` converted to string with prefix `rack`. |
 | `spec.indexInRack` | `cke.cybozu.com/index-in-rack`           | `spec.indexInRack` converted to string.             |
 | `spec.role`        | `cke.cybozu.com/role`                    | The same as `spec.role`.                            |
+| `spec.role`        | `node-role.kubernetes.io/<role>`         | `"true"`                                            |
+
+In addition `node-role.kubernetes.io/master` is set to `"true"` in the control plane node.
 
 Node annotations
 ----------------

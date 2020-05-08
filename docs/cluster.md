@@ -42,7 +42,7 @@ A `Node` has these fields:
 `annotations`, `labels`, and `taints` are added or updated, but not removed.
 This is because other applications may edit their own annotations, labels, or taints.
 
-Note that annotations, labels, and taints whose name begin with `cke.cybozu.com` are
+Note that annotations, labels, and taints whose names contain `cke.cybozu.com/` or start with `node-role.kubernetes.io/` are
 reserved for CKE internal usage, therefore should not be used.
 
 Taint

@@ -631,6 +631,9 @@ func isInternal(name string) bool {
 	if strings.Contains(name, ".cke.cybozu.com/") {
 		return true
 	}
+	if strings.HasPrefix(name, "node-role.kubernetes.io/") {
+		return true
+	}
 	return false
 }
 
