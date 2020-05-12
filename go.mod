@@ -22,7 +22,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect
 	github.com/google/go-cmp v0.3.0
 	github.com/googleapis/gnostic v0.3.1 // indirect
-	github.com/hashicorp/vault/api v1.0.4
+	github.com/hashicorp/vault/api v1.0.5-0.20200117231345-460d63e36490
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/onsi/ginkgo v1.10.1
