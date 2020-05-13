@@ -1676,7 +1676,16 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 3}
 			}),
-			ExpectedOps: []string{"etcd-destroy-member"},
+			ExpectedOps:        []string{"etcd-destroy-member"},
+			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 1},
+		},
+		{
+			Name: "EtcdDestroyNonCPMemberSSHNotConnected",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 3}
+			}).withSSHNotConnectedNonCPWorker(3),
+			ExpectedOps:        []string{"etcd-destroy-member"},
+			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 0},
 		},
 		{
 			Name: "EtcdReAdd",
@@ -1719,7 +1728,17 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 14}
 				d.Status.Etcd.InSyncMembers["10.0.0.14"] = true
 			}),
-			ExpectedOps: []string{"etcd-destroy-member"},
+			ExpectedOps:        []string{"etcd-destroy-member"},
+			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 1},
+		},
+		{
+			Name: "EtcdDestroyHealthyNonCPMemberSSHNotConnected",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 14}
+				d.Status.Etcd.InSyncMembers["10.0.0.14"] = true
+			}).withSSHNotConnectedNonCPWorker(3),
+			ExpectedOps:        []string{"etcd-destroy-member"},
+			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 0},
 		},
 		{
 			Name: "EtcdRestart",
@@ -1855,6 +1874,32 @@ func TestDecideOps(t *testing.T) {
 				data.Status.ConfigVersion = "1"
 			}),
 			ExpectedOps: []string{"upgrade"},
+		},
+		{
+			Name: "UpgradeAbort",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "10.0.0.14",
+					Labels:      map[string]string{"label1": "value"},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}).with(func(data testData) {
+				data.Status.ConfigVersion = "1"
+			}).withSSHNotConnectedCP(),
+			ExpectedOps: nil,
 		},
 	}
 
