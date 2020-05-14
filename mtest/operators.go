@@ -553,22 +553,41 @@ func TestOperators(isDegraded bool) {
 	})
 
 	It("should exclude updateOp of the shutdowned node", func() {
-		By("Adding a new node to the cluster as a control plane")
 		if !isDegraded {
 			return
 		}
 
-		// Remove Node2 from CP but remains in the cluster
+		By("Preparing the cluster with available nodes")
+		stopCKE()
+		ckecliSafe("constraints", "set", "control-plane-count", "3")
+		cluster := getCluster()
+		cluster.Nodes[0].ControlPlane = true
+		cluster.Nodes[3].ControlPlane = true
+		cluster.Nodes[4].ControlPlane = true
+		ts, err := ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
+		runCKE(ckeImageURL)
+		Eventually(func() error {
+			return checkCluster(cluster, ts)
+		}).Should(Succeed())
+
+		By("Terminating a control plane")
+		execAt(node4, "sudo", "systemd-run", "halt", "-f", "-f")
+		Eventually(func() error {
+			_, err := execAtLocal("ping", "-c", "1", "-W", "1", node4)
+			return err
+		}).ShouldNot(Succeed())
+		Eventually(func() error {
+			return checkClusterAtPhase(cluster, ts, cke.PhaseEtcdBootAborted)
+		}).Should(Succeed())
+
+		By("recovering the cluster")
 		stopCKE()
 		ckecliSafe("constraints", "set", "control-plane-count", "2")
-		cluster := getCluster()
-		for _, n := range cluster.Nodes {
-			if n.Nodename() != "node2" {
-				continue
-			}
-			n.ControlPlane = false
-		}
-		ts, err := ckecliClusterSet(cluster)
+		cluster = getCluster()
+		cluster.Nodes[0].ControlPlane = true
+		cluster.Nodes[4].ControlPlane = true
+		ts, err = ckecliClusterSet(cluster)
 		Expect(err).ShouldNot(HaveOccurred())
 		runCKE(ckeImageURL)
 		Eventually(func() error {
