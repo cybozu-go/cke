@@ -551,4 +551,28 @@ func TestOperators(isDegraded bool) {
 		}
 		Expect(isFound).To(BeTrue())
 	})
+
+	It("should exclude updateOp of the shutdowned node", func() {
+		By("Adding a new node to the cluster as a control plane")
+		if !isDegraded {
+			return
+		}
+
+		// Remove Node2 from CP but remains in the cluster
+		stopCKE()
+		ckecliSafe("constraints", "set", "control-plane-count", "2")
+		cluster := getCluster()
+		for _, n := range cluster.Nodes {
+			if n.Nodename() != "node2" {
+				continue
+			}
+			n.ControlPlane = false
+		}
+		ts, err := ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
+		runCKE(ckeImageURL)
+		Eventually(func() error {
+			return checkCluster(cluster, ts)
+		}).Should(Succeed())
+	})
 }
