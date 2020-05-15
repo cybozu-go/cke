@@ -439,7 +439,7 @@ func (e checkError) Error() string {
 	return strings.Join(e.Ops, ",")
 }
 
-func checkClusterAtPhase(c *cke.Cluster, ts time.Time, expectedPhase cke.OperationPhase) error {
+func checkCluster(c *cke.Cluster, ts time.Time) error {
 	st, err := getServerStatus()
 	if err != nil {
 		if err == cke.ErrNotFound {
@@ -448,17 +448,13 @@ func checkClusterAtPhase(c *cke.Cluster, ts time.Time, expectedPhase cke.Operati
 		return err
 	}
 
-	if st.Phase != expectedPhase {
+	if st.Phase != cke.PhaseCompleted {
 		return fmt.Errorf("status:%+v", st)
 	}
 	if st.Timestamp.Before(ts) {
 		return errors.New("server status is not yet updated")
 	}
 	return nil
-}
-
-func checkCluster(c *cke.Cluster, ts time.Time) error {
-	return checkClusterAtPhase(c, ts, cke.PhaseCompleted)
 }
 
 func clusterSetAndWait(cluster *cke.Cluster) {

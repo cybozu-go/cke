@@ -577,9 +577,7 @@ func TestOperators(isDegraded bool) {
 			_, err := execAtLocal("ping", "-c", "1", "-W", "1", node4)
 			return err
 		}).ShouldNot(Succeed())
-		Eventually(func() error {
-			return checkClusterAtPhase(cluster, ts, cke.PhaseEtcdBootAborted)
-		}).Should(Succeed())
+		clusterSetAndWait(cluster)
 
 		By("recovering the cluster")
 		stopCKE()
