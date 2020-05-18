@@ -204,19 +204,10 @@ func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machine
 }
 
 func (g *Generator) chooseWorkerTmpl() nodeTemplate {
-	if len(g.workerTmpls) == 1 {
-		return g.workerTmpls[0]
-	}
-
-	var least float64
-	var leastIndex int
-
+	least := float64(g.workersByRole[g.workerTmpls[0].Role]) / g.workerTmpls[0].Weight
+	leastIndex := 0
 	for i, tmpl := range g.workerTmpls {
 		w := float64(g.workersByRole[tmpl.Role]) / tmpl.Weight
-		if i == 0 {
-			least = w
-			continue
-		}
 		if w < least {
 			least = w
 			leastIndex = i
