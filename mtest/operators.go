@@ -551,4 +551,33 @@ func TestOperators(isDegraded bool) {
 		}
 		Expect(isFound).To(BeTrue())
 	})
+
+	It("should exclude updateOp of the shutdowned node", func() {
+		if isDegraded {
+			return
+		}
+
+		By("Preparing the cluster with available nodes")
+		ckecliSafe("constraints", "set", "control-plane-count", "3")
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		clusterSetAndWait(cluster)
+
+		By("Terminating a control plane")
+		execAt(node2, "sudo", "systemd-run", "halt", "-f", "-f")
+		Eventually(func() error {
+			_, err := execAtLocal("ping", "-c", "1", "-W", "1", node2)
+			return err
+		}).ShouldNot(Succeed())
+		clusterSetAndWait(cluster)
+
+		By("Recovering the cluster by promoting a worker")
+		cluster = getCluster()
+		for i := range []int{0, 2, 3} {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		clusterSetAndWait(cluster)
+	})
 }
