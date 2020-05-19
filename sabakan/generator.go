@@ -287,15 +287,14 @@ func (g *Generator) SetWaitSeconds(secs float64) {
 
 // deselectControlPlane selects the lowest scored control plane and remove it.
 func (g *Generator) deselectControlPlane(numMachinesByRack map[int]int) *Machine {
-	machines := g.nextControlPlanes
-	sort.Slice(machines, func(i, j int) bool {
-		si := scoreMachine(machines[i], numMachinesByRack, g.timestamp)
-		sj := scoreMachine(machines[j], numMachinesByRack, g.timestamp)
+	sort.Slice(g.nextControlPlanes, func(i, j int) bool {
+		si := scoreMachine(g.nextControlPlanes[i], numMachinesByRack, g.timestamp)
+		sj := scoreMachine(g.nextControlPlanes[j], numMachinesByRack, g.timestamp)
 		// lower first
 		return si < sj
 	})
-	m := machines[0]
-	g.nextControlPlanes = machines[1:]
+	m := g.nextControlPlanes[0]
+	g.nextControlPlanes = g.nextControlPlanes[1:]
 
 	return m
 }
@@ -314,17 +313,16 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 
 		// If no unused machines available, steal a redundant worker and promote it as a control plane.
 		if len(g.nextWorkers) > g.constraints.MinimumWorkers {
-			machines := g.nextWorkers
-			sort.Slice(machines, func(i, j int) bool {
-				si := scoreMachine(machines[i], numCPs, g.timestamp)
-				sj := scoreMachine(machines[j], numCPs, g.timestamp)
+			sort.Slice(g.nextWorkers, func(i, j int) bool {
+				si := scoreMachine(g.nextWorkers[i], numCPs, g.timestamp)
+				sj := scoreMachine(g.nextWorkers[j], numCPs, g.timestamp)
 				// higher first
 				return si > sj
 			})
-			promote := machines[0]
+			promote := g.nextWorkers[0]
 			op.promoteWorker(promote)
 			g.nextControlPlanes = append(g.nextControlPlanes, promote)
-			g.nextWorkers = machines[1:]
+			g.nextWorkers = g.nextWorkers[1:]
 			continue
 		}
 		return nil, errNotAvailable
@@ -377,7 +375,7 @@ func (g *Generator) Regenerate() (*cke.Cluster, error) {
 		name: "regenerate",
 	}
 
-	cps := make([]*Machine, len(g.controlPlanes))
+	var cps []*Machine
 	for _, n := range g.controlPlanes {
 		m := g.machineMap[n.Address]
 		if m == nil {
@@ -388,7 +386,7 @@ func (g *Generator) Regenerate() (*cke.Cluster, error) {
 	}
 	g.nextControlPlanes = cps
 
-	workers := make([]*Machine, len(g.workers))
+	var workers []*Machine
 	for _, n := range g.workers {
 		m := g.machineMap[n.Address]
 		if m == nil {
@@ -470,7 +468,7 @@ func (g *Generator) removeNonExistentNode() (*updateOp, error) {
 		name: "remove non-existent node",
 	}
 
-	cps := make([]*Machine, len(g.controlPlanes))
+	var cps []*Machine
 	for _, n := range g.controlPlanes {
 		m := g.machineMap[n.Address]
 		if m == nil {
@@ -486,7 +484,7 @@ func (g *Generator) removeNonExistentNode() (*updateOp, error) {
 	}
 	g.nextControlPlanes = cps
 
-	workers := make([]*Machine, len(g.workers))
+	var workers []*Machine
 	for _, n := range g.workers {
 		m := g.machineMap[n.Address]
 		if m == nil {
@@ -510,21 +508,12 @@ func (g *Generator) increaseControlPlane() (*updateOp, error) {
 		return nil, nil
 	}
 
-	cps := make([]*Machine, len(g.controlPlanes))
-	for i, n := range g.controlPlanes {
-		cps[i] = g.machineMap[n.Address]
-	}
-
-	workers := make([]*Machine, len(g.workers))
-	for i, n := range g.workers {
-		workers[i] = g.machineMap[n.Address]
-	}
-
 	op := &updateOp{
 		name: "increase control plane",
 	}
-	g.nextControlPlanes = cps
-	g.nextWorkers = workers
+	g.nextControlPlanes = g.nodesToMachines(true)
+	g.nextWorkers = g.nodesToMachines(false)
+
 	return op, nil
 }
 
@@ -533,22 +522,11 @@ func (g *Generator) decreaseControlPlane() (*updateOp, error) {
 		return nil, nil
 	}
 
-	workers := make([]*Machine, len(g.workers))
-	for i, n := range g.workers {
-		workers[i] = g.machineMap[n.Address]
-	}
-
-	cps := make([]*Machine, len(g.controlPlanes))
-	for i, n := range g.controlPlanes {
-		cps[i] = g.machineMap[n.Address]
-	}
-
-	g.nextControlPlanes = cps
-	g.nextWorkers = workers
-
 	op := &updateOp{
 		name: "decrease control plane",
 	}
+	g.nextControlPlanes = g.nodesToMachines(true)
+	g.nextWorkers = g.nodesToMachines(false)
 
 	for len(g.nextControlPlanes) != g.constraints.ControlPlaneCount {
 		var m *Machine
@@ -594,17 +572,11 @@ func (g *Generator) replaceControlPlane() (*updateOp, error) {
 		return nil, nil
 	}
 
-	workers := make([]*Machine, len(g.workers))
-	for i, n := range g.workers {
-		workers[i] = g.machineMap[n.Address]
-	}
-
-	g.nextControlPlanes = cps
-	g.nextWorkers = workers
-
 	op := &updateOp{
 		name: "replace control plane",
 	}
+	g.nextControlPlanes = cps
+	g.nextWorkers = g.nodesToMachines(false)
 
 	if g.constraints.MaximumWorkers == 0 || len(g.nextWorkers) < g.constraints.MaximumWorkers {
 		op.demoteControlPlane(demote)
@@ -613,14 +585,13 @@ func (g *Generator) replaceControlPlane() (*updateOp, error) {
 	}
 
 	numCPs := g.countControlPlanesByRack()
-	machines := g.nextWorkers
-	sort.Slice(machines, func(i, j int) bool {
-		si := scoreMachine(machines[i], numCPs, g.timestamp)
-		sj := scoreMachine(machines[j], numCPs, g.timestamp)
+	sort.Slice(g.nextWorkers, func(i, j int) bool {
+		si := scoreMachine(g.nextWorkers[i], numCPs, g.timestamp)
+		sj := scoreMachine(g.nextWorkers[j], numCPs, g.timestamp)
 		// higher first
 		return si > sj
 	})
-	promote := machines[0]
+	promote := g.nextWorkers[0]
 
 	if promote.Status.State != StateHealthy {
 		op.record("remove bad control plane: " + demote.Spec.IPv4[0])
@@ -631,7 +602,10 @@ func (g *Generator) replaceControlPlane() (*updateOp, error) {
 		panic("the given worker's IP address is missing")
 	}
 	op.promoteWorker(promote)
-	g.nextWorkers = machines[1:]
+	g.nextWorkers = g.nextWorkers[1:]
+	if len(g.nextWorkers) < g.constraints.MaximumWorkers {
+		g.nextWorkers = append(g.nextWorkers, demote)
+	}
 	g.nextControlPlanes = append(g.nextControlPlanes, promote)
 
 	return op, nil
@@ -642,22 +616,11 @@ func (g *Generator) increaseWorker() (*updateOp, error) {
 		return nil, nil
 	}
 
-	cps := make([]*Machine, len(g.controlPlanes))
-	for i, n := range g.controlPlanes {
-		cps[i] = g.machineMap[n.Address]
-	}
-
-	workers := make([]*Machine, len(g.workers))
-	for i, n := range g.workers {
-		workers[i] = g.machineMap[n.Address]
-	}
-
 	op := &updateOp{
 		name: "increase worker",
 	}
-
-	g.nextControlPlanes = cps
-	g.nextWorkers = workers
+	g.nextControlPlanes = g.nodesToMachines(true)
+	g.nextWorkers = g.nodesToMachines(false)
 
 	for i := g.healthyWorkers; i < g.constraints.MinimumWorkers; i++ {
 		if g.constraints.MaximumWorkers != 0 && len(g.nextWorkers) >= g.constraints.MaximumWorkers {
@@ -705,15 +668,10 @@ func (g *Generator) decreaseWorker() (*updateOp, error) {
 		return nil, nil
 	}
 
-	cps := make([]*Machine, len(g.controlPlanes))
-	for i, n := range g.controlPlanes {
-		cps[i] = g.machineMap[n.Address]
-	}
-
 	op := &updateOp{
 		name: "decrease worker",
 	}
-	g.nextControlPlanes = cps
+	g.nextControlPlanes = g.nodesToMachines(true)
 	g.nextWorkers = workers
 
 	if len(workers) >= g.constraints.MinimumWorkers {
@@ -731,6 +689,19 @@ func (g *Generator) decreaseWorker() (*updateOp, error) {
 	}
 
 	return nil, nil
+}
+
+func (g *Generator) nodesToMachines(cp bool) []*Machine {
+	var machines []*Machine
+	nodes := g.controlPlanes
+	if !cp {
+		nodes = g.workers
+	}
+	for _, n := range nodes {
+		machines = append(machines, g.machineMap[n.Address])
+	}
+
+	return machines
 }
 
 func hasValidTaint(n *cke.Node, m *Machine) bool {

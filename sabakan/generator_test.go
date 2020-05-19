@@ -1047,6 +1047,68 @@ func testWeighted(t *testing.T) {
 	}
 }
 
+func TestCountControlePlanesByRack(t *testing.T) {
+	{
+		// control plane
+		g := &Generator{nextControlPlanes: []*Machine{}}
+		racks := []int{0, 0, 1}
+		for _, r := range racks {
+			m := &Machine{}
+			m.Spec.Rack = r
+			g.nextControlPlanes = append(g.nextControlPlanes, m)
+		}
+
+		bin := g.countControlPlanesByRack()
+		if bin[0] != 2 || bin[1] != 1 {
+			t.Errorf(
+				"rack0: expect 2 actual %d, rack1: expect 1 actual %d",
+				bin[0],
+				bin[1],
+			)
+		}
+	}
+
+	{
+		// empty controlplane
+		g := &Generator{nextControlPlanes: []*Machine{}}
+		bin := g.countControlPlanesByRack()
+		if len(bin) != 0 {
+			t.Errorf("len(bin): expect 0 actual %d", len(bin))
+		}
+	}
+}
+
+func TestCountWorkersByRack(t *testing.T) {
+	{
+		// worker
+		g := &Generator{nextWorkers: []*Machine{}}
+		racks := []int{0, 0, 1}
+		for _, r := range racks {
+			m := &Machine{}
+			m.Spec.Rack = r
+			g.nextWorkers = append(g.nextWorkers, m)
+		}
+
+		bin := g.countWorkersByRack()
+		if bin[0] != 2 || bin[1] != 1 {
+			t.Errorf(
+				"rack0: expect 2 actual %d rack1: expect 1 actual %d",
+				bin[0],
+				bin[1],
+			)
+		}
+	}
+
+	{
+		// empty worker
+		g := &Generator{nextWorkers: []*Machine{}}
+		bin := g.countWorkersByRack()
+		if len(bin) != 0 {
+			t.Errorf("len(bin): expect 0 actual %d", len(bin))
+		}
+	}
+}
+
 func TestGenerator(t *testing.T) {
 	t.Run("MachineToNode", testMachineToNode)
 	t.Run("New", testNewGenerator)
