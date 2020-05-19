@@ -101,6 +101,10 @@ func (i *cliInfrastructure) NewEtcdClient(ctx context.Context, endpoints []strin
 	return etcd, nil
 }
 
+func (i *cliInfrastructure) K8sConfig(ctx context.Context, n *cke.Node) (*rest.Config, error) {
+	panic("not implemented")
+}
+
 func (i *cliInfrastructure) K8sClient(ctx context.Context, n *cke.Node) (*kubernetes.Clientset, error) {
 	c, k, err := cke.KubernetesCA{}.IssueUserCert(ctx, i, cke.RoleAdmin, cke.AdminGroup, "1h")
 	if err != nil {

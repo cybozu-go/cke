@@ -5,10 +5,50 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/google/go-cmp/cmp"
 )
+
+func testConfigVersion(t *testing.T) {
+	client := newEtcdClient(t)
+	defer client.Close()
+	storage := Storage{client}
+
+	ctx := context.Background()
+	version, err := storage.GetConfigVersion(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != "1" {
+		t.Errorf("version is not 1: version %s", version)
+	}
+
+	s, err := concurrency.NewSession(client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	e := concurrency.NewElection(s, KeyLeader)
+	err = e.Campaign(ctx, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	leaderKey := e.Key()
+	err = storage.PutConfigVersion(ctx, leaderKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	version, err = storage.GetConfigVersion(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != ConfigVersion {
+		t.Errorf("version is not %s: version %s", ConfigVersion, version)
+	}
+}
 
 func testStorageCluster(t *testing.T) {
 	t.Parallel()
@@ -111,6 +151,15 @@ func testStorageRecord(t *testing.T) {
 	}
 
 	leaderKey := e.Key()
+
+	isLeader, err := storage.IsLeader(ctx, leaderKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isLeader {
+		t.Error("failed to confirm leadership")
+	}
+
 	r := NewRecord(1, "my-operation-1", []string{})
 	err = storage.RegisterRecord(ctx, leaderKey, r)
 	if err != nil {
@@ -270,6 +319,14 @@ func testStorageRecord(t *testing.T) {
 	err = e.Resign(ctx)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	isLeader, err = storage.IsLeader(ctx, leaderKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isLeader {
+		t.Error("failed to confirm loss of leadership")
 	}
 
 	err = storage.RegisterRecord(ctx, leaderKey, r)
@@ -570,11 +627,55 @@ func testStorageSabakan(t *testing.T) {
 	}
 }
 
+func testStatus(t *testing.T) {
+	t.Parallel()
+
+	client := newEtcdClient(t)
+	defer client.Close()
+	s := Storage{client}
+	ctx := context.Background()
+
+	_, err := s.GetStatus(ctx)
+	if err != ErrNotFound {
+		t.Error("unexpected error:", err)
+	}
+
+	resp, err := client.Grant(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = s.SetStatus(ctx, resp.ID, &ServerStatus{Phase: PhaseCompleted, Timestamp: time.Now().UTC()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	status, err := s.GetStatus(ctx)
+	if err != nil {
+		t.Fatal("unexpected error:", err)
+	}
+	if status.Phase != PhaseCompleted {
+		t.Error("wrong phase:", status.Phase)
+	}
+
+	_, err = client.Revoke(ctx, resp.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = s.GetStatus(ctx)
+	if err != ErrNotFound {
+		t.Error("err is not ErrNotFound. err=", err)
+	}
+}
+
 func TestStorage(t *testing.T) {
+	t.Run("ConfigVersion", testConfigVersion)
 	t.Run("Cluster", testStorageCluster)
 	t.Run("Constraints", testStorageConstraints)
 	t.Run("Record", testStorageRecord)
 	t.Run("Maint", testStorageMaint)
 	t.Run("Resource", testStorageResource)
 	t.Run("Sabakan", testStorageSabakan)
+	t.Run("Status", testStatus)
 }

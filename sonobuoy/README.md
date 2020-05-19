@@ -1,7 +1,7 @@
 Conformance test for CKE
 ========================
 
-Follow the instructions to run [Sonobuoy][] for conformance test of certified Kubernetes.
+This document describes steps to run the conformance test for certified Kubernetes.
 
 ## Prepare environment
 
@@ -21,12 +21,12 @@ $ git checkout vX.Y.Z
 
 ## Run Sonobuoy
 
-Setup `docker-compose` and Vagrant, use them to setup CKE and its Kubernetes, then run Sonobuoy
+Setup `docker-compose` and Vagrant, use them to setup CKE and its Kubernetes, then run [Sonobuoy][]
 with the following commands.
 
 ```console
-$ sudo make setup
-$ make run
+$ sudo make setup-vagrant
+$ make run-on-vagrant
 $ make sonobuoy
 ```
 
@@ -38,8 +38,9 @@ Stop and clean Vagrant VMs and Docker containers as follows:
 
 ```console
 $ make clean
+$ vagrant destroy
 ```
 
-[Sonobuoy]: https://github.com/heptio/sonobuoy
-[Docker]: https://docs.docker.com/install/linux/docker-ce/ubuntu/
+[Sonobuoy]: https://github.com/vmware-tanzu/sonobuoy
+[Docker CE]: https://docs.docker.com/install/linux/docker-ce/ubuntu/
 [Go]: https://golang.org/doc/install#install

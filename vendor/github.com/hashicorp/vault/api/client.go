@@ -41,6 +41,10 @@ const EnvVaultToken = "VAULT_TOKEN"
 const EnvVaultMFA = "VAULT_MFA"
 const EnvRateLimit = "VAULT_RATE_LIMIT"
 
+// Deprecated values
+const EnvVaultAgentAddress = "VAULT_AGENT_ADDR"
+const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
+
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
 // "15s", or simply "15"). The path will not begin with "/v1/" or "v1/" or "/",
@@ -83,6 +87,9 @@ type Config struct {
 
 	// The Backoff function to use; a default is used if not provided
 	Backoff retryablehttp.Backoff
+
+	// The CheckRetry function to use; a default is used if not provided
+	CheckRetry retryablehttp.CheckRetry
 
 	// Limiter is the rate limiter used by the client.
 	// If this pointer is nil, then there will be no limit set.
@@ -136,8 +143,8 @@ func DefaultConfig() *Config {
 	config := &Config{
 		Address:    "https://127.0.0.1:8200",
 		HttpClient: cleanhttp.DefaultPooledClient(),
+		Timeout:    time.Second * 60,
 	}
-	config.HttpClient.Timeout = time.Second * 60
 
 	transport := config.HttpClient.Transport.(*http.Transport)
 	transport.TLSHandshakeTimeout = 10 * time.Second
@@ -246,6 +253,8 @@ func (c *Config) ReadEnvironment() error {
 	}
 	if v := os.Getenv(EnvVaultAgentAddr); v != "" {
 		envAgentAddress = v
+	} else if v := os.Getenv(EnvVaultAgentAddress); v != "" {
+		envAgentAddress = v
 	}
 	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
 		maxRetries, err := strconv.ParseUint(v, 10, 32)
@@ -286,7 +295,14 @@ func (c *Config) ReadEnvironment() error {
 		if err != nil {
 			return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
 		}
+	} else if v := os.Getenv(EnvVaultInsecure); v != "" {
+		var err error
+		envInsecure, err = strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("could not parse VAULT_INSECURE")
+		}
 	}
+
 	if v := os.Getenv(EnvVaultTLSServerName); v != "" {
 		envTLSServerName = v
 	}
@@ -414,9 +430,13 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	client := &Client{
-		addr:   u,
-		config: c,
+		addr:    u,
+		config:  c,
+		headers: make(http.Header),
 	}
+
+	// Add the VaultRequest SSRF protection header
+	client.headers[consts.RequestHeaderName] = []string{"true"}
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.token = token
@@ -473,6 +493,16 @@ func (c *Client) SetMaxRetries(retries int) {
 	c.modifyLock.RUnlock()
 
 	c.config.MaxRetries = retries
+}
+
+// SetCheckRetry sets the CheckRetry function to be used for future requests.
+func (c *Client) SetCheckRetry(checkRetry retryablehttp.CheckRetry) {
+	c.modifyLock.RLock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+	c.modifyLock.RUnlock()
+
+	c.config.CheckRetry = checkRetry
 }
 
 // SetClientTimeout sets the client request timeout
@@ -630,6 +660,7 @@ func (c *Client) Clone() (*Client, error) {
 		MaxRetries: config.MaxRetries,
 		Timeout:    config.Timeout,
 		Backoff:    config.Backoff,
+		CheckRetry: config.CheckRetry,
 		Limiter:    config.Limiter,
 	}
 	config.modifyLock.RUnlock()
@@ -656,7 +687,6 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	token := c.token
 	mfaCreds := c.mfaCreds
 	wrappingLookupFunc := c.wrappingLookupFunc
-	headers := c.headers
 	policyOverride := c.policyOverride
 	c.modifyLock.RUnlock()
 
@@ -701,10 +731,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 		req.WrapTTL = DefaultWrappingLookupFunc(method, lookupPath)
 	}
 
-	if headers != nil {
-		req.Headers = headers
-	}
-
+	req.Headers = c.Headers()
 	req.PolicyOverride = policyOverride
 
 	return req
@@ -727,6 +754,7 @@ func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	c.config.modifyLock.RLock()
 	limiter := c.config.Limiter
 	maxRetries := c.config.MaxRetries
+	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
 	timeout := c.config.Timeout
@@ -763,6 +791,13 @@ START:
 	}
 
 	if timeout != 0 {
+		// NOTE: this leaks a timer. But when we defer a cancel call here for
+		// the returned function we see errors in tests with contxt canceled.
+		// Although the request is done by the time we exit this function it is
+		// still causing something else to go wrong. Maybe it ends up being
+		// tied to the response somehow and reading the response body ends up
+		// checking it, or something. I don't know, but until we can chase this
+		// down, keep it not-canceled even though vet complains.
 		ctx, _ = context.WithTimeout(ctx, timeout)
 	}
 	req.Request = req.Request.WithContext(ctx)
@@ -771,13 +806,17 @@ START:
 		backoff = retryablehttp.LinearJitterBackoff
 	}
 
+	if checkRetry == nil {
+		checkRetry = retryablehttp.DefaultRetryPolicy
+	}
+
 	client := &retryablehttp.Client{
 		HTTPClient:   httpClient,
 		RetryWaitMin: 1000 * time.Millisecond,
 		RetryWaitMax: 1500 * time.Millisecond,
 		RetryMax:     maxRetries,
-		CheckRetry:   retryablehttp.DefaultRetryPolicy,
 		Backoff:      backoff,
+		CheckRetry:   checkRetry,
 		ErrorHandler: retryablehttp.PassthroughErrorHandler,
 	}
 

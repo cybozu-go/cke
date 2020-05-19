@@ -8,6 +8,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/metrics"
 	"github.com/cybozu-go/cke/sabakan"
 	"github.com/cybozu-go/cke/server"
 	"github.com/cybozu-go/etcdutil"
@@ -21,7 +22,7 @@ var (
 	flgHTTP            = pflag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
 	flgConfigPath      = pflag.String("config", "/etc/cke/config.yml", "configuration file path")
 	flgInterval        = pflag.String("interval", "1m", "check interval")
-	flgCertsGCInterval = pflag.String("certs-gc-interval", "1m", "tidy interval for expired certificates")
+	flgCertsGCInterval = pflag.String("certs-gc-interval", "1h", "tidy interval for expired certificates")
 	flgSessionTTL      = pflag.String("session-ttl", "60s", "leader session's TTL")
 	flgDebugSabakan    = pflag.Bool("debug-sabakan", false, "debug sabakan integration")
 )
@@ -98,17 +99,27 @@ func main() {
 	if err != nil {
 		log.ErrorExit(err)
 	}
-	controller := server.NewController(session, interval, gcInterval, timeout, addon)
 
+	// Controller
+	controller := server.NewController(session, interval, gcInterval, timeout, addon)
 	well.Go(controller.Run)
+
+	// API server
+	mux := http.NewServeMux()
+	// Metrics
+	collector := metrics.NewCollector(etcd)
+	metricsHandler := metrics.GetHandler(collector)
+	mux.Handle("/metrics", metricsHandler)
+	// REST API
 	server := server.Server{
 		EtcdClient: etcd,
 		Timeout:    timeout,
 	}
+	mux.Handle("/", server)
 	s := &well.HTTPServer{
 		Server: &http.Server{
 			Addr:    *flgHTTP,
-			Handler: server,
+			Handler: mux,
 		},
 		ShutdownTimeout: 3 * time.Minute,
 	}

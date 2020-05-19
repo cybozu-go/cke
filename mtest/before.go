@@ -18,7 +18,10 @@ const (
 )
 
 // RunBeforeSuite is for Ginkgo BeforeSuite
-func RunBeforeSuite() {
+func RunBeforeSuite(img string) {
+	if img == "" {
+		img = ckeImageURL
+	}
 	fmt.Println("Preparing...")
 
 	SetDefaultEventuallyPollingInterval(3 * time.Second)
@@ -74,7 +77,7 @@ func RunBeforeSuite() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("running install-tools")
-	err = installTools(ckeImageURL)
+	err = installTools(img)
 	Expect(err).NotTo(HaveOccurred())
 
 	f, err := os.Open(ckeConfigPath)
@@ -107,7 +110,7 @@ func RunBeforeSuite() {
 	err = cke.ConnectVault(context.Background(), resp.Kvs[0].Value)
 	Expect(err).NotTo(HaveOccurred())
 
-	setupCKE()
+	setupCKE(img)
 
 	By("initializing control plane")
 	initializeControlPlane()

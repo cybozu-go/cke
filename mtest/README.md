@@ -7,7 +7,7 @@ How to manually run CKE using placemat
 
     ```console
     $ chmod 600 mtest_key
-    $ ./mssh host-1 
+    $ ./mssh host1 
     ```
 
 4. Run `/data/setup-cke.sh` on `host1`.
@@ -25,6 +25,6 @@ How to manually run CKE using placemat
 If you want to use kubectl, run the following commands on host-vm.
 
     ```console
-    $ ./mssh host-1 /opt/bin/ckecli kubernetes issue > ~/.kube/config
+    $ ./mssh host1 /opt/bin/ckecli kubernetes issue > ~/.kube/config
     $ ./output/kubectl get nodes
     ```

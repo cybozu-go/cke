@@ -18,7 +18,7 @@ func TestMtest(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	mtest.RunBeforeSuite()
+	mtest.RunBeforeSuite("")
 })
 
 // This must be the only top-level test container.

@@ -11,12 +11,12 @@ import (
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/op/nodedns"
-	"github.com/cybozu-go/cke/scheduler"
 	"github.com/cybozu-go/cke/static"
 	"github.com/google/go-cmp/cmp"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 )
 
 const (
@@ -142,10 +142,11 @@ func newData() testData {
 	nodeList[3].Labels = cluster.Nodes[3].Labels
 	nodeList[3].Spec.Taints = cluster.Nodes[3].Taints
 	status := &cke.ClusterStatus{
-		NodeStatuses: nodeStatuses,
+		ConfigVersion: cke.ConfigVersion,
+		NodeStatuses:  nodeStatuses,
 		Kubernetes: cke.KubernetesClusterStatus{
-			ResourceStatuses: map[string]map[string]string{
-				"Namespace/foo": {cke.AnnotationResourceRevision: "1"},
+			ResourceStatuses: map[string]cke.ResourceStatus{
+				"Namespace/foo": {Annotations: map[string]string{cke.AnnotationResourceRevision: "1"}},
 			},
 			Nodes: nodeList,
 		},
@@ -194,6 +195,11 @@ func (d testData) withStoppedEtcd() testData {
 	return d
 }
 
+func (d testData) withNotHasDataStoppedEtcd() testData {
+	d.NodeStatus(d.ControlPlane()[0]).Etcd.HasData = false
+	return d
+}
+
 func (d testData) withUnhealthyEtcd() testData {
 	d.withStoppedEtcd()
 	for _, n := range d.ControlPlane() {
@@ -226,7 +232,7 @@ func (d testData) withAPIServer(serviceSubnet string) testData {
 		st := &d.NodeStatus(n).APIServer
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.APIServerParams(d.ControlPlane(), n.Address, serviceSubnet, false, "")
 	}
 	return d
@@ -237,7 +243,7 @@ func (d testData) withControllerManager(name, serviceSubnet string) testData {
 		st := &d.NodeStatus(n).ControllerManager
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.ControllerManagerParams(name, serviceSubnet)
 	}
 	return d
@@ -248,7 +254,7 @@ func (d testData) withScheduler() testData {
 		st := &d.NodeStatus(n).Scheduler
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.SchedulerParams()
 	}
 	return d
@@ -259,7 +265,7 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st := &d.NodeStatus(n).Kubelet
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.ContainerLogMaxSize = "10Mi"
 		st.ContainerLogMaxFiles = 10
 		st.BuiltInParams = k8s.KubeletServiceParams(n, cke.KubeletParams{
@@ -277,7 +283,7 @@ func (d testData) withProxy() testData {
 		st := &d.NodeStatus(n).Proxy
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.HyperkubeImage.Name()
+		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.ProxyParams(n)
 	}
 	return d
@@ -313,12 +319,12 @@ func (d testData) withK8sResourceReady() testData {
 	d.withK8sReady()
 	ks := &d.Status.Kubernetes
 	for _, res := range static.Resources {
-		ks.ResourceStatuses[res.Key] = map[string]string{
-			cke.AnnotationResourceRevision: "1",
+		ks.ResourceStatuses[res.Key] = cke.ResourceStatus{
+			Annotations: map[string]string{cke.AnnotationResourceRevision: "1"},
 		}
 	}
-	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"][cke.AnnotationResourceImage] = cke.CoreDNSImage.Name()
-	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"][cke.AnnotationResourceImage] = cke.UnboundImage.Name()
+	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"].Annotations[cke.AnnotationResourceImage] = cke.CoreDNSImage.Name()
+	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"].Annotations[cke.AnnotationResourceImage] = cke.UnboundImage.Name()
 	ks.ClusterDNS.ConfigMap = clusterdns.ConfigMap(testDefaultDNSDomain, testDefaultDNSServers)
 	ks.ClusterDNS.ClusterIP = testDefaultDNSAddr
 	ks.NodeDNS.ConfigMap = nodedns.ConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
@@ -355,6 +361,15 @@ func (d testData) withK8sResourceReady() testData {
 		},
 	}
 
+	return d
+}
+
+func (d testData) withUpdateBlockPVSUpTo1_16() testData {
+	st := &d.Status.NodeStatuses[nodeNames[0]].Kubelet
+	st.NeedUpdateBlockPVsUpToV1_16 = []string{
+		"pv-name-1",
+		"pv-name-2",
+	}
 	return d
 }
 
@@ -576,6 +591,14 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
+			Name:        "EtcdStart3",
+			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd().withNotHasDataStoppedEtcd(),
+			ExpectedOps: []string{"etcd-start"},
+			ExpectedTargetNums: map[string]int{
+				"etcd-start": 2,
+			},
+		},
+		{
 			Name:        "WaitEtcd",
 			Input:       newData().withRivers().withEtcdRivers().withUnhealthyEtcd(),
 			ExpectedOps: []string{"etcd-wait-cluster"},
@@ -722,8 +745,8 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartScheduler4",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Extenders = []*scheduler.ExtenderConfig{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
-				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Extenders = []*scheduler.ExtenderConfig{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
+				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Extenders = []schedulerv1.Extender{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Extenders = []schedulerv1.Extender{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-scheduler-restart",
@@ -991,6 +1014,11 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"update-endpoints"},
 		},
 		{
+			Name:        "UpdateBlockPVsUpTo1.16",
+			Input:       newData().withAllServices().withUpdateBlockPVSUpTo1_16(),
+			ExpectedOps: []string{"update-block-up-to-1.16"},
+		},
+		{
 			Name: "EtcdServiceUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdService.Spec.Ports = []corev1.ServicePort{}
@@ -1125,6 +1153,33 @@ func TestDecideOps(t *testing.T) {
 					Labels: map[string]string{
 						"label1":                     "value",
 						"sabakan.cke.cybozu.com/foo": "bar",
+					},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: []string{"update-node"},
+		},
+		{
+			Name: "NodeLabel5",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "10.0.0.14",
+					Labels: map[string]string{
+						"label1":                         "value",
+						"node-role.kubernetes.io/worker": "true",
 					},
 					Annotations: map[string]string{"annotation1": "value"},
 				},
@@ -1621,7 +1676,16 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 3}
 			}),
-			ExpectedOps: []string{"etcd-destroy-member"},
+			ExpectedOps:        []string{"etcd-destroy-member"},
+			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 1},
+		},
+		{
+			Name: "EtcdDestroyNonCPMemberSSHNotConnected",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 3}
+			}).withSSHNotConnectedNonCPWorker(3),
+			ExpectedOps:        []string{"etcd-destroy-member"},
+			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 0},
 		},
 		{
 			Name: "EtcdReAdd",
@@ -1664,7 +1728,17 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 14}
 				d.Status.Etcd.InSyncMembers["10.0.0.14"] = true
 			}),
-			ExpectedOps: []string{"etcd-destroy-member"},
+			ExpectedOps:        []string{"etcd-destroy-member"},
+			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 1},
+		},
+		{
+			Name: "EtcdDestroyHealthyNonCPMemberSSHNotConnected",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 14}
+				d.Status.Etcd.InSyncMembers["10.0.0.14"] = true
+			}).withSSHNotConnectedNonCPWorker(3),
+			ExpectedOps:        []string{"etcd-destroy-member"},
+			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 0},
 		},
 		{
 			Name: "EtcdRestart",
@@ -1775,11 +1849,63 @@ func TestDecideOps(t *testing.T) {
 				"stop-kube-scheduler":          1,
 			},
 		},
+		{
+			Name: "Upgrade",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "10.0.0.14",
+					Labels:      map[string]string{"label1": "value"},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}).with(func(data testData) {
+				data.Status.ConfigVersion = "1"
+			}),
+			ExpectedOps: []string{"upgrade"},
+		},
+		{
+			Name: "UpgradeAbort",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "10.0.0.14",
+					Labels:      map[string]string{"label1": "value"},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}).with(func(data testData) {
+				data.Status.ConfigVersion = "1"
+			}).withSSHNotConnectedCP(),
+			ExpectedOps: nil,
+		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			ops := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Resources)
+			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Resources)
 			if len(ops) == 0 && len(c.ExpectedOps) == 0 {
 				return
 			}

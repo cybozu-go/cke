@@ -17,14 +17,14 @@ ifeq ($(CONTAINER_RUNTIME),remote)
 RUNTIME_ENDPOINT = unix:///var/run/k8s-containerd.sock
 endif
 PLACEMAT = /usr/bin/placemat
-GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo
+GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo --failFast -v
 CURL = curl -fsL
-MANAGEMENT_ETCD_VERSION = 3.3.15
+MANAGEMENT_ETCD_VERSION = 3.3.21
 VAULT_VERSION = 1.2.2
-K8S_VERSION = 1.15.3
+K8S_VERSION = 1.17.5
 PLACEMAT_DATADIR = /var/scratch/placemat
-CONTAINERD_VERSION = 1.2.7
-CRITOOLS_VERSION = 1.15.0
+CONTAINERD_VERSION = 1.3.3
+CRITOOLS_VERSION = 1.17.0
 CT_VERSION = 0.9.0
 CT = /usr/local/bin/ct
 SUDO = sudo
@@ -60,6 +60,8 @@ export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL ETCDCTL 
 CONTAINERD_FILES = \
 	$(OUTPUT)/containerd \
 	$(OUTPUT)/containerd-shim \
+	$(OUTPUT)/containerd-shim-runc-v1 \
+	$(OUTPUT)/containerd-shim-runc-v2 \
 	$(OUTPUT)/ctr
 
 TEST_DEPS = \
@@ -282,7 +284,7 @@ $(OUTPUT)/cke.yml: cke.yml
 unpack-containerd:
 	mkdir -p $(OUTPUT)
 	$(CURL) https://github.com/containerd/containerd/releases/download/v$(CONTAINERD_VERSION)/containerd-$(CONTAINERD_VERSION).linux-amd64.tar.gz | \
-	tar xzf - --strip-components=1 -C $(OUTPUT) bin/containerd bin/containerd-shim bin/ctr --warning=no-unknown-keyword
+	tar xzf - --strip-components=1 -C $(OUTPUT) bin/containerd bin/containerd-shim bin/containerd-shim-runc-v1 bin/containerd-shim-runc-v2 bin/ctr --warning=no-unknown-keyword
 
 $(CONTAINERD_FILES): unpack-containerd
 

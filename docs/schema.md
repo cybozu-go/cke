@@ -10,6 +10,15 @@ Prefix
 Keys are prefixed by a constant string.
 The default prefix is `/cke/`.
 
+`config-version`
+----------------
+
+This represents the configuration version of the constructed
+Kubernetes cluster.  If this key does not exist, the version
+is considered as "1".
+
+See [cluster_overview.md](cluster_overview.md#config-version) for details.
+
 `cluster`
 ---------
 
@@ -51,7 +60,7 @@ CA that issues certificates for client and server authentication between etcd pe
 CA that issues client authentication certificates for etcd clients.
 
 `records`
-----------
+---------
 
 The next ID of the record formatted as a decimal string.
 
@@ -98,3 +107,14 @@ configuration.
 ### `sabakan/url`
 
 Sabakan URL.
+
+<a name="status"></a>
+`status`
+--------
+
+JSON object that has the following fields:
+
+| Name        | Type   | Description                                                                    |
+| ----------- | ------ | ------------------------------------------------------------------------------ |
+| `phase`     | string | CKE server processing phase represented as a string.                           |
+| `timestamp` | string | RFC3339 formatted string of the time when CKE reads the cluster configuration. |

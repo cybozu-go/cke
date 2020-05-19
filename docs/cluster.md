@@ -42,7 +42,7 @@ A `Node` has these fields:
 `annotations`, `labels`, and `taints` are added or updated, but not removed.
 This is because other applications may edit their own annotations, labels, or taints.
 
-Note that annotations, labels, and taints whose name begin with `cke.cybozu.com` are
+Note that annotations, labels, and taints whose names contain `cke.cybozu.com/` or start with `node-role.kubernetes.io/` are
 reserved for CKE internal usage, therefore should not be used.
 
 Taint
@@ -159,7 +159,7 @@ updated later on.
 | `extra_binds` | false    | array      | Extra bind mounts.  List of `Mount`.            |
 | `extra_env`   | false    | object     | Extra environment variables.                    |
 
-Elements of `extenders` are contents of [`ExtenderConfig`](https://github.com/kubernetes/kubernetes/blob/release-1.14//pkg/scheduler/api/v1/types.go#L183) in JSON format.
+Elements of `extenders` are contents of [`Extender`](https://github.com/kubernetes/kubernetes/blob/release-1.14//pkg/scheduler/api/v1/types.go#L183) in JSON format.
 
 ### CNIConfFile
 

@@ -3,7 +3,7 @@ User-defined resources
 
 CKE can automatically create or update user-defined resources on Kubernetes.
 
-This can be considered as `kubectl apply` automatically executed by CKE.
+This can be considered as `kubectl apply --server-side=true --field-manager=cke` automatically executed by CKE.
 
 ## Supported resource types
 

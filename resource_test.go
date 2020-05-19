@@ -172,20 +172,6 @@ rules:
 			false,
 		},
 		{
-			"RoleV1Beta1",
-			`kind: Role
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  namespace: default
-  name: pod-reader
-rules:
-- apiGroups: [""] # "" indicates the core API group
-  resources: ["pods"]
-  verbs: ["get", "watch", "list"]`,
-			"Role/default/pod-reader",
-			false,
-		},
-		{
 			"RoleBinding",
 			`kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -458,7 +444,7 @@ spec:
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
-			key, data, err := ParseResource([]byte(c.yaml))
+			key, err := ParseResource([]byte(c.yaml))
 			if c.expectError {
 				if err == nil {
 					t.Error("error should have occurred")
@@ -472,8 +458,6 @@ spec:
 			if key != c.key {
 				t.Error("unexpected key: ", c.key, key)
 			}
-
-			t.Log(string(data))
 		})
 	}
 }
