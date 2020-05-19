@@ -204,8 +204,8 @@ func testNewGenerator(t *testing.T) {
 					"10.0.0.3": &machines[2],
 					"10.0.0.4": &machines[3],
 				},
-				unusedMachines: []*Machine{&machines[0], &machines[3]},
-				cpTmpl:         nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				nextUnused: []*Machine{&machines[0], &machines[3]},
+				cpTmpl:     nodeTemplate{tmpl.Nodes[0], "", 1.0},
 				workerTmpls: []nodeTemplate{
 					{tmpl.Nodes[1], "cs", 3.0},
 				},
@@ -234,8 +234,8 @@ func testNewGenerator(t *testing.T) {
 					"10.0.0.3": &machines[2],
 					"10.0.0.4": &machines[3],
 				},
-				unusedMachines: []*Machine{&machines[3]},
-				cpTmpl:         nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				nextUnused: []*Machine{&machines[3]},
+				cpTmpl:     nodeTemplate{tmpl.Nodes[0], "", 1.0},
 				workerTmpls: []nodeTemplate{
 					{tmpl.Nodes[1], "cs", 3.0},
 				},
@@ -272,12 +272,12 @@ func testNewGenerator(t *testing.T) {
 			if !cmp.Equal(got.machineMap, tt.want.machineMap, cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.machineMap, tt.want.machineMap), actual: %v, want %v", got.machineMap, tt.want.machineMap)
 			}
-			// the order in the unusedMachines is not stable.
+			// the order in the nextUnused is not stable.
 			var unusedGot, unusedExpected []string
-			for _, m := range got.unusedMachines {
+			for _, m := range got.nextUnused {
 				unusedGot = append(unusedGot, m.Spec.IPv4[0])
 			}
-			for _, m := range tt.want.unusedMachines {
+			for _, m := range tt.want.nextUnused {
 				unusedExpected = append(unusedExpected, m.Spec.IPv4[0])
 			}
 			sort.Strings(unusedGot)
