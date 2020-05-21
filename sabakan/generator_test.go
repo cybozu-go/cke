@@ -1065,7 +1065,7 @@ func testWeighted(t *testing.T) {
 	}
 }
 
-func TestCountControlePlanesByRack(t *testing.T) {
+func TestCountMachinesByRack(t *testing.T) {
 	{
 		// control plane
 		g := &Generator{nextControlPlanes: []*Machine{}}
@@ -1076,7 +1076,7 @@ func TestCountControlePlanesByRack(t *testing.T) {
 			g.nextControlPlanes = append(g.nextControlPlanes, m)
 		}
 
-		bin := g.countControlPlanesByRack()
+		bin := g.countMachinesByRack(true, "")
 		if bin[0] != 2 || bin[1] != 1 {
 			t.Errorf(
 				"rack0: expect 2 actual %d, rack1: expect 1 actual %d",
@@ -1089,14 +1089,12 @@ func TestCountControlePlanesByRack(t *testing.T) {
 	{
 		// empty controlplane
 		g := &Generator{nextControlPlanes: []*Machine{}}
-		bin := g.countControlPlanesByRack()
+		bin := g.countMachinesByRack(true, "")
 		if len(bin) != 0 {
 			t.Errorf("len(bin): expect 0 actual %d", len(bin))
 		}
 	}
-}
 
-func TestCountWorkersByRack(t *testing.T) {
 	{
 		// worker
 		g := &Generator{nextWorkers: []*Machine{}}
@@ -1109,7 +1107,7 @@ func TestCountWorkersByRack(t *testing.T) {
 			g.nextWorkers = append(g.nextWorkers, m)
 		}
 
-		bin := g.countWorkersByRack("cs")
+		bin := g.countMachinesByRack(false, "cs")
 		if bin[0] != 1 || bin[1] != 1 {
 			t.Errorf(
 				"rack0: expect 2 actual %d rack1: expect 1 actual %d",
@@ -1117,7 +1115,7 @@ func TestCountWorkersByRack(t *testing.T) {
 				bin[1],
 			)
 		}
-		bin = g.countWorkersByRack("ss")
+		bin = g.countMachinesByRack(false, "ss")
 		if bin[0] != 1 || bin[1] != 0 {
 			t.Errorf(
 				"rack0: expect 2 actual %d rack1: expect 1 actual %d",
@@ -1125,7 +1123,7 @@ func TestCountWorkersByRack(t *testing.T) {
 				bin[1],
 			)
 		}
-		bin = g.countWorkersByRack("")
+		bin = g.countMachinesByRack(false, "")
 		if bin[0] != 2 || bin[1] != 1 {
 			t.Errorf(
 				"rack0: expect 2 actual %d rack1: expect 1 actual %d",
@@ -1138,7 +1136,7 @@ func TestCountWorkersByRack(t *testing.T) {
 	{
 		// empty worker
 		g := &Generator{nextWorkers: []*Machine{}}
-		bin := g.countWorkersByRack("")
+		bin := g.countMachinesByRack(false, "")
 		if len(bin) != 0 {
 			t.Errorf("len(bin): expect 0 actual %d", len(bin))
 		}
