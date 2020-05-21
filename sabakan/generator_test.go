@@ -1,7 +1,9 @@
 package sabakan
 
 import (
+	"fmt"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -690,7 +692,7 @@ func testUpdate(t *testing.T) {
 
 			nil,
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[6], cps[7], workers[1]},
+				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[1]},
 			},
 		},
 		{
@@ -1099,13 +1101,31 @@ func TestCountWorkersByRack(t *testing.T) {
 		// worker
 		g := &Generator{nextWorkers: []*Machine{}}
 		racks := []int{0, 0, 1}
-		for _, r := range racks {
+		roles := []string{"cs", "ss", "cs"}
+		for i, r := range racks {
 			m := &Machine{}
 			m.Spec.Rack = r
+			m.Spec.Role = roles[i]
 			g.nextWorkers = append(g.nextWorkers, m)
 		}
 
-		bin := g.countWorkersByRack()
+		bin := g.countWorkersByRack("cs")
+		if bin[0] != 1 || bin[1] != 1 {
+			t.Errorf(
+				"rack0: expect 2 actual %d rack1: expect 1 actual %d",
+				bin[0],
+				bin[1],
+			)
+		}
+		bin = g.countWorkersByRack("ss")
+		if bin[0] != 1 || bin[1] != 0 {
+			t.Errorf(
+				"rack0: expect 2 actual %d rack1: expect 1 actual %d",
+				bin[0],
+				bin[1],
+			)
+		}
+		bin = g.countWorkersByRack("")
 		if bin[0] != 2 || bin[1] != 1 {
 			t.Errorf(
 				"rack0: expect 2 actual %d rack1: expect 1 actual %d",
@@ -1118,11 +1138,95 @@ func TestCountWorkersByRack(t *testing.T) {
 	{
 		// empty worker
 		g := &Generator{nextWorkers: []*Machine{}}
-		bin := g.countWorkersByRack()
+		bin := g.countWorkersByRack("")
 		if len(bin) != 0 {
 			t.Errorf("len(bin): expect 0 actual %d", len(bin))
 		}
 	}
+}
+
+func testRackDistribution(t *testing.T) {
+	rackIDs := []int{0, 1, 2}
+	var machines []Machine
+	for i := range rackIDs {
+		machines = append(machines, createRack(i)...)
+	}
+
+	template := &cke.Cluster{
+		Name: "test",
+		Nodes: []*cke.Node{
+			{
+				User:         "cybozu",
+				ControlPlane: true,
+				Labels: map[string]string{
+					"cke.cybozu.com/role": "cs",
+				},
+			},
+			{
+				User:         "cybozu",
+				ControlPlane: false,
+				Labels: map[string]string{
+					"cke.cybozu.com/role":   "cs",
+					"cke.cybozu.com/weight": "18",
+				},
+			},
+			{
+				User:         "cybozu",
+				ControlPlane: false,
+				Labels: map[string]string{
+					"cke.cybozu.com/role":   "ss",
+					"cke.cybozu.com/weight": "9",
+				},
+			},
+		},
+	}
+	constraints := &cke.Constraints{
+		ControlPlaneCount: 3,
+		MinimumWorkers:    27,
+		MaximumWorkers:    56,
+	}
+
+	g := NewGenerator(nil, template, constraints, machines, testBaseTS)
+	cluster, err := g.Generate()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rackDist := make(map[string]map[string]int)
+	for i := range rackIDs {
+		rackDist[strconv.Itoa(i)] = make(map[string]int)
+	}
+	for _, n := range cluster.Nodes {
+		if n.ControlPlane {
+			continue
+		}
+		rackDist[n.Labels["cke.cybozu.com/rack"]][n.Labels["cke.cybozu.com/role"]]++
+	}
+
+	for k, v := range rackDist {
+		for kk, vv := range v {
+			if kk == "cs" && vv != 6 {
+				t.Errorf("rack=%s, role=%s: expect 6 actual %d", k, kk, vv)
+			}
+			if kk == "ss" && vv != 3 {
+				t.Errorf("rack=%s, role=%s: expect 3 actual %d", k, kk, vv)
+			}
+		}
+	}
+}
+
+func createRack(rack int) []Machine {
+	var machines []Machine
+	for i := 0; i < 18; i++ {
+		addr := fmt.Sprintf("10.0.%d.%d", rack, i+1)
+		machines = append(machines, newTestMachineWithIP(rack, testBaseTS, StateHealthy, addr, "cs"))
+	}
+	for i := 18; i < 28; i++ {
+		addr := fmt.Sprintf("10.0.%d.%d", rack, i+1)
+		machines = append(machines, newTestMachineWithIP(rack, testBaseTS, StateHealthy, addr, "ss"))
+	}
+
+	return machines
 }
 
 func TestGenerator(t *testing.T) {
@@ -1132,4 +1236,5 @@ func TestGenerator(t *testing.T) {
 	t.Run("Regenerate", testRegenerate)
 	t.Run("Update", testUpdate)
 	t.Run("Weighted", testWeighted)
+	t.Run("RackDistribution", testRackDistribution)
 }
