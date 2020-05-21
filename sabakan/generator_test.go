@@ -204,8 +204,8 @@ func testNewGenerator(t *testing.T) {
 					"10.0.0.3": &machines[2],
 					"10.0.0.4": &machines[3],
 				},
-				unusedMachines: []*Machine{&machines[0], &machines[3]},
-				cpTmpl:         nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				nextUnused: []*Machine{&machines[0], &machines[3]},
+				cpTmpl:     nodeTemplate{tmpl.Nodes[0], "", 1.0},
 				workerTmpls: []nodeTemplate{
 					{tmpl.Nodes[1], "cs", 3.0},
 				},
@@ -234,8 +234,8 @@ func testNewGenerator(t *testing.T) {
 					"10.0.0.3": &machines[2],
 					"10.0.0.4": &machines[3],
 				},
-				unusedMachines: []*Machine{&machines[3]},
-				cpTmpl:         nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				nextUnused: []*Machine{&machines[3]},
+				cpTmpl:     nodeTemplate{tmpl.Nodes[0], "", 1.0},
 				workerTmpls: []nodeTemplate{
 					{tmpl.Nodes[1], "cs", 3.0},
 				},
@@ -272,12 +272,12 @@ func testNewGenerator(t *testing.T) {
 			if !cmp.Equal(got.machineMap, tt.want.machineMap, cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.machineMap, tt.want.machineMap), actual: %v, want %v", got.machineMap, tt.want.machineMap)
 			}
-			// the order in the unusedMachines is not stable.
+			// the order in the nextUnused is not stable.
 			var unusedGot, unusedExpected []string
-			for _, m := range got.unusedMachines {
+			for _, m := range got.nextUnused {
 				unusedGot = append(unusedGot, m.Spec.IPv4[0])
 			}
-			for _, m := range tt.want.unusedMachines {
+			for _, m := range tt.want.nextUnused {
 				unusedExpected = append(unusedExpected, m.Spec.IPv4[0])
 			}
 			sort.Strings(unusedGot)
@@ -592,6 +592,22 @@ func testUpdate(t *testing.T) {
 			nil,
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[6]},
+			},
+		},
+		{
+			"PromoteWorker",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], workers[6], workers[7]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+				MinimumWorkers:    1,
+			},
+			machines,
+
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], cps[6], workers[7]},
 			},
 		},
 		{
@@ -1044,6 +1060,68 @@ func testWeighted(t *testing.T) {
 				t.Error("unexpected workers", cmp.Diff(tt.expectWorkerRoles, workerRoles))
 			}
 		})
+	}
+}
+
+func TestCountControlePlanesByRack(t *testing.T) {
+	{
+		// control plane
+		g := &Generator{nextControlPlanes: []*Machine{}}
+		racks := []int{0, 0, 1}
+		for _, r := range racks {
+			m := &Machine{}
+			m.Spec.Rack = r
+			g.nextControlPlanes = append(g.nextControlPlanes, m)
+		}
+
+		bin := g.countControlPlanesByRack()
+		if bin[0] != 2 || bin[1] != 1 {
+			t.Errorf(
+				"rack0: expect 2 actual %d, rack1: expect 1 actual %d",
+				bin[0],
+				bin[1],
+			)
+		}
+	}
+
+	{
+		// empty controlplane
+		g := &Generator{nextControlPlanes: []*Machine{}}
+		bin := g.countControlPlanesByRack()
+		if len(bin) != 0 {
+			t.Errorf("len(bin): expect 0 actual %d", len(bin))
+		}
+	}
+}
+
+func TestCountWorkersByRack(t *testing.T) {
+	{
+		// worker
+		g := &Generator{nextWorkers: []*Machine{}}
+		racks := []int{0, 0, 1}
+		for _, r := range racks {
+			m := &Machine{}
+			m.Spec.Rack = r
+			g.nextWorkers = append(g.nextWorkers, m)
+		}
+
+		bin := g.countWorkersByRack()
+		if bin[0] != 2 || bin[1] != 1 {
+			t.Errorf(
+				"rack0: expect 2 actual %d rack1: expect 1 actual %d",
+				bin[0],
+				bin[1],
+			)
+		}
+	}
+
+	{
+		// empty worker
+		g := &Generator{nextWorkers: []*Machine{}}
+		bin := g.countWorkersByRack()
+		if len(bin) != 0 {
+			t.Errorf("len(bin): expect 0 actual %d", len(bin))
+		}
 	}
 }
 
