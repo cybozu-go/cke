@@ -236,26 +236,17 @@ func (g *Generator) getWorkerTmpl(role string) nodeTemplate {
 
 // selectWorkerFromUnused selects a healthy unused machine.
 // If there is no such machine, this returns nil.
-func (g *Generator) selectWorkerFromUnused(numMachinesByRack map[int]int) *Machine {
-	tmpl := g.chooseWorkerTmpl()
-
-	var unused []*Machine
-	if tmpl.Role == "" {
-		unused = g.nextUnused
-	} else {
-		for _, m := range g.nextUnused {
-			if m.Spec.Role == tmpl.Role {
-				unused = append(unused, m)
-			}
-		}
-	}
+func (g *Generator) selectWorkerFromUnused() *Machine {
+	workerTmpl := g.chooseWorkerTmpl()
+	unused := filterMachines(g.nextUnused, workerTmpl.Role, true)
 	if len(unused) == 0 {
 		return nil
 	}
 
+	countByRack := g.countWorkersByRack(workerTmpl.Role)
 	sort.Slice(unused, func(i, j int) bool {
-		si := scoreMachine(unused[i], numMachinesByRack, g.timestamp)
-		sj := scoreMachine(unused[j], numMachinesByRack, g.timestamp)
+		si := scoreMachine(unused[i], countByRack, g.timestamp)
+		sj := scoreMachine(unused[j], countByRack, g.timestamp)
 		// higher first
 		return si > sj
 	})
@@ -271,7 +262,7 @@ func (g *Generator) selectWorkerFromUnused(numMachinesByRack map[int]int) *Machi
 	}
 	g.nextUnused = newUnused
 
-	g.workersByRole[tmpl.Role]++
+	g.workersByRole[workerTmpl.Role]++
 	return m
 }
 
@@ -283,22 +274,12 @@ func (g *Generator) SetWaitSeconds(secs float64) {
 // selectControlPlaneFromUnused selects a healthy controle plane from unused machines.
 // If there is no such machine, this returns nil.
 func (g *Generator) selectControlPlaneFromUnused() *Machine {
-	numCPsByRack := g.countControlPlanesByRack()
-
-	var unused []*Machine
-	if g.cpTmpl.Role == "" {
-		unused = g.nextUnused
-	} else {
-		for _, m := range g.nextUnused {
-			if m.Spec.Role == g.cpTmpl.Role {
-				unused = append(unused, m)
-			}
-		}
-	}
+	unused := filterMachines(g.nextUnused, g.cpTmpl.Role, true)
 	if len(unused) == 0 {
 		return nil
 	}
 
+	numCPsByRack := g.countControlPlanesByRack()
 	sort.Slice(unused, func(i, j int) bool {
 		si := scoreMachine(unused[i], numCPsByRack, g.timestamp)
 		sj := scoreMachine(unused[j], numCPsByRack, g.timestamp)
@@ -325,16 +306,7 @@ func (g *Generator) selectControlPlaneFromUnused() *Machine {
 func (g *Generator) selectControlPlaneFromWorker() *Machine {
 	numCPsByRack := g.countControlPlanesByRack()
 
-	var workers []*Machine
-	if g.cpTmpl.Role == "" {
-		workers = g.nextWorkers
-	} else {
-		for _, m := range g.nextWorkers {
-			if m.Spec.Role == g.cpTmpl.Role {
-				workers = append(workers, m)
-			}
-		}
-	}
+	workers := filterMachines(g.nextWorkers, g.cpTmpl.Role, true)
 	if len(workers) == 0 {
 		return nil
 	}
@@ -355,7 +327,7 @@ func (g *Generator) selectControlPlaneFromWorker() *Machine {
 		}
 		newWorkers = append(newWorkers, mm)
 	}
-	g.nextUnused = newWorkers
+	g.nextWorkers = newWorkers
 
 	return m
 }
@@ -399,8 +371,7 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 	}
 
 	for i := len(g.nextWorkers); i < g.constraints.MinimumWorkers; i++ {
-		numWorkers := g.countWorkersByRack()
-		m := g.selectWorkerFromUnused(numWorkers)
+		m := g.selectWorkerFromUnused()
 		if m == nil {
 			return nil, errNotAvailable
 		}
@@ -660,7 +631,7 @@ func (g *Generator) replaceControlPlane() (*updateOp, error) {
 	}
 
 	op.promoteWorker(promote)
-	g.nextWorkers = g.nextWorkers[1:]
+
 	if len(g.nextWorkers) < g.constraints.MaximumWorkers {
 		g.nextWorkers = append(g.nextWorkers, demote)
 	}
@@ -684,8 +655,7 @@ func (g *Generator) increaseWorker() (*updateOp, error) {
 		if g.constraints.MaximumWorkers != 0 && len(g.nextWorkers) >= g.constraints.MaximumWorkers {
 			break
 		}
-		numWorkers := g.countWorkersByRack()
-		m := g.selectWorkerFromUnused(numWorkers)
+		m := g.selectWorkerFromUnused()
 		if m == nil {
 			break
 		}
@@ -737,8 +707,7 @@ func (g *Generator) decreaseWorker() (*updateOp, error) {
 		return op, nil
 	}
 
-	numWorkers := g.countWorkersByRack()
-	m := g.selectWorkerFromUnused(numWorkers)
+	m := g.selectWorkerFromUnused()
 	if m != nil {
 		op.record("remove retiring worker: " + retiring.Spec.IPv4[0])
 		op.addWorker(m)
@@ -838,10 +807,13 @@ func (g *Generator) countControlPlanesByRack() map[int]int {
 	return count
 }
 
-func (g *Generator) countWorkersByRack() map[int]int {
+func (g *Generator) countWorkersByRack(role string) map[int]int {
 	machines := g.nextWorkers
 	count := make(map[int]int)
 	for _, m := range machines {
+		if role != "" && role != m.Spec.Role {
+			continue
+		}
 		count[m.Spec.Rack]++
 	}
 	return count
