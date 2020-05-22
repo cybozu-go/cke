@@ -36,8 +36,8 @@ for i in $(seq 3); do
   $GCLOUD compute instances create ${INSTANCE_NAME}-${i} \
     --zone ${ZONE} \
     --machine-type ${MACHINE_TYPE_WORKER} \
-    --image-project coreos-cloud \
-    --image-family coreos-stable \
+    --image-project fedora-coreos-cloud \
+    --image-family fedora-coreos-stable \
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
     --metadata-from-file user-data=$(dirname $0)/../sonobuoy/worker.ign \
