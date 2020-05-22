@@ -103,16 +103,12 @@ type Generator struct {
 	timestamp   time.Time
 	waitSeconds float64
 
-	controlPlanes []*cke.Node
-	healthyCPs    int
-
+	controlPlanes  []*cke.Node
 	workers        []*cke.Node
 	healthyWorkers int
-	workerRacks    map[int]int
-
-	machineMap  map[string]*Machine
-	cpTmpl      nodeTemplate
-	workerTmpls []nodeTemplate
+	machineMap     map[string]*Machine
+	cpTmpl         nodeTemplate
+	workerTmpls    []nodeTemplate
 
 	// intermediate data
 	nextUnused        []*Machine
@@ -147,24 +143,17 @@ func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machine
 	nodeMap := make(map[string]*cke.Node)
 	if current != nil {
 		for _, n := range current.Nodes {
-			m := machineMap[n.Address]
 			nodeMap[n.Address] = n
 			if n.ControlPlane {
-				if m != nil {
-					if m.Status.State == StateHealthy {
-						g.healthyCPs++
-					}
-				}
 				g.controlPlanes = append(g.controlPlanes, n)
 				continue
 			}
 
-			if m != nil {
-				if m.Status.State == StateHealthy {
-					g.healthyWorkers++
-				}
-			}
 			g.workers = append(g.workers, n)
+			m := machineMap[n.Address]
+			if m != nil && m.Status.State == StateHealthy {
+				g.healthyWorkers++
+			}
 		}
 	}
 

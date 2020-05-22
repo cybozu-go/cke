@@ -220,13 +220,11 @@ func testNewGenerator(t *testing.T) {
 					cluster.Nodes[0],
 					cluster.Nodes[2],
 				},
-				healthyCPs: 1,
 				workers: []*cke.Node{
 					cluster.Nodes[1],
 					cluster.Nodes[3],
 				},
 				healthyWorkers: 0,
-				workerRacks:    map[int]int{0: 1},
 				machineMap: map[string]*Machine{
 					"10.0.0.1": &machines[0],
 					"10.0.0.2": &machines[1],
@@ -249,9 +247,6 @@ func testNewGenerator(t *testing.T) {
 			got := NewGenerator(tt.args.current, tt.args.template, tt.args.cstr, tt.args.machines, testBaseTS)
 			if !cmp.Equal(got.controlPlanes, tt.want.controlPlanes, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.controlPlanes, tt.want.controlPlanes), actual: %v, want %v", got.controlPlanes, tt.want.controlPlanes)
-			}
-			if got.healthyCPs != tt.want.healthyCPs {
-				t.Errorf("!cmp.Equal(got.healthyCPs, tt.want.healthyCPs), actual: %v, want %v", got.healthyCPs, tt.want.healthyCPs)
 			}
 			if !cmp.Equal(got.workers, tt.want.workers, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.workers, tt.want.workers), actual: %v, want %v", got.workers, tt.want.workers)
