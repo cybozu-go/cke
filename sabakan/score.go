@@ -63,7 +63,7 @@ func filterMachine(m *Machine, role string, isHealthy bool) bool {
 func filterMachines(ms []*Machine, role string, isHealthy bool) []*Machine {
 	var filtered []*Machine
 	for _, m := range ms {
-		if !filterMachine(m, role, true) {
+		if !filterMachine(m, role, isHealthy) {
 			continue
 		}
 		filtered = append(filtered, m)
