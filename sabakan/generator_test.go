@@ -3,7 +3,6 @@ package sabakan
 import (
 	"fmt"
 	"sort"
-	"strconv"
 	"testing"
 	"time"
 
@@ -1144,13 +1143,7 @@ func TestCountMachinesByRack(t *testing.T) {
 }
 
 func testRackDistribution(t *testing.T) {
-	rackIDs := []int{0, 1, 2}
-	var machines []Machine
-	for i := range rackIDs {
-		machines = append(machines, createRack(i)...)
-	}
-
-	template := &cke.Cluster{
+	baseTemplate := &cke.Cluster{
 		Name: "test",
 		Nodes: []*cke.Node{
 			{
@@ -1185,86 +1178,259 @@ func testRackDistribution(t *testing.T) {
 	}
 
 	t.Run("GenerateInitialCluster", func(t *testing.T) {
-		g := NewGenerator(nil, template, baseConstraints, machines, testBaseTS)
+		rackIDs := []int{0, 1, 2}
+		var machines []Machine
+		for i := range rackIDs {
+			machines = append(machines, createRack(i, "standard")...)
+		}
+
+		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		rackDist := make(map[string]map[string]int)
-		for i := range rackIDs {
-			rackDist[strconv.Itoa(i)] = make(map[string]int)
+		expect := map[string]map[string]int{
+			"0": {"cs": 6, "ss": 3},
+			"1": {"cs": 6, "ss": 3},
+			"2": {"cs": 6, "ss": 3},
 		}
-		for _, n := range cluster.Nodes {
-			if n.ControlPlane {
-				continue
-			}
-			rackDist[n.Labels["cke.cybozu.com/rack"]][n.Labels["cke.cybozu.com/role"]]++
-		}
-
-		for k, v := range rackDist {
-			for kk, vv := range v {
-				if kk == "cs" && vv != 6 {
-					t.Errorf("rack=%s, role=%s: expect 6 actual %d", k, kk, vv)
-				}
-				if kk == "ss" && vv != 3 {
-					t.Errorf("rack=%s, role=%s: expect 3 actual %d", k, kk, vv)
-				}
-			}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
 		}
 	})
 
 	t.Run("IncreaseMinimumWorkers", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2}
+		var machines []Machine
+		for i := range rackIDs {
+			machines = append(machines, createRack(i, "standard")...)
+		}
 		constraints := &cke.Constraints{
 			ControlPlaneCount: 3,
 			MinimumWorkers:    36,
 			MaximumWorkers:    56,
 		}
 
-		g := NewGenerator(nil, template, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
 		cluster, err := g.Generate()
-		g = NewGenerator(cluster, template, constraints, machines, testBaseTS)
+		g = NewGenerator(cluster, baseTemplate, constraints, machines, testBaseTS)
 		cluster, err = g.Update()
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		rackDist := make(map[string]map[string]int)
-		for i := range rackIDs {
-			rackDist[strconv.Itoa(i)] = make(map[string]int)
+		expect := map[string]map[string]int{
+			"0": {"cs": 8, "ss": 4},
+			"1": {"cs": 8, "ss": 4},
+			"2": {"cs": 8, "ss": 4},
 		}
-		for _, n := range cluster.Nodes {
-			if n.ControlPlane {
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
+		}
+	})
+
+	t.Run("MultipleRackTypes", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2}
+		var machines []Machine
+		for i := range rackIDs {
+			if i == 2 {
+				machines = append(machines, createRack(i, "storage")...)
 				continue
 			}
-			rackDist[n.Labels["cke.cybozu.com/rack"]][n.Labels["cke.cybozu.com/role"]]++
+			machines = append(machines, createRack(i, "standard")...)
 		}
 
-		for k, v := range rackDist {
-			for kk, vv := range v {
-				if kk == "cs" && vv != 8 {
-					t.Errorf("rack=%s, role=%s: expect 8 actual %d", k, kk, vv)
-				}
-				if kk == "ss" && vv != 4 {
-					t.Errorf("rack=%s, role=%s: expect 4 actual %d", k, kk, vv)
-				}
+		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expect := map[string]map[string]int{
+			"0": {"cs": 9, "ss": 3},
+			"1": {"cs": 9, "ss": 3},
+			"2": {"ss": 3},
+		}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
+		}
+	})
+
+	t.Run("ReachMaxMachinesInRack", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2}
+		var machines []Machine
+		for i := range rackIDs {
+			if i == 2 {
+				machines = append(machines, createRack(i, "storage")...)
+				continue
 			}
+			machines = append(machines, createRack(i, "standard")...)
+		}
+
+		constraints := &cke.Constraints{
+			ControlPlaneCount: 3,
+			MinimumWorkers:    33,
+			MaximumWorkers:    56,
+		}
+
+		withoutCSTemplate := &cke.Cluster{Name: "test", Nodes: []*cke.Node{}}
+		for i, n := range baseTemplate.Nodes {
+			if i == 1 {
+				continue
+			}
+			withoutCSTemplate.Nodes = append(withoutCSTemplate.Nodes, n)
+		}
+
+		g := NewGenerator(nil, withoutCSTemplate, constraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expect := map[string]map[string]int{
+			"0": {"ss": 10},
+			"1": {"ss": 10},
+			"2": {"ss": 13},
+		}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
+		}
+	})
+
+	t.Run("IncreaseRack", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2}
+		var machines []Machine
+		for i := range rackIDs {
+			machines = append(machines, createRack(i, "standard")...)
+		}
+
+		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+
+		machines = append(machines, createRack(3, "storage")...)
+		constraints := &cke.Constraints{
+			ControlPlaneCount: 3,
+			MinimumWorkers:    36,
+			MaximumWorkers:    56,
+		}
+		g = NewGenerator(cluster, baseTemplate, constraints, machines, testBaseTS)
+		cluster, err = g.Update()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expect := map[string]map[string]int{
+			"0": {"cs": 8, "ss": 3},
+			"1": {"cs": 8, "ss": 3},
+			"2": {"cs": 8, "ss": 3},
+			"3": {"ss": 3},
+		}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
+		}
+	})
+
+	t.Run("DisappearRack", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2, 3}
+		var machines []Machine
+		for i := range rackIDs {
+			machines = append(machines, createRack(i, "standard")...)
+		}
+
+		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+
+		machines = machines[28:] // Disappear rack0
+		g = NewGenerator(cluster, baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err = g.Update()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expect := map[string]map[string]int{
+			"1": {"cs": 6, "ss": 3},
+			"2": {"cs": 6, "ss": 3},
+			"3": {"cs": 6, "ss": 3},
+		}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
+		}
+	})
+
+	t.Run("OneAllUnhealthyRack", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2, 3}
+		var machines []Machine
+		for i := range rackIDs {
+			machines = append(machines, createRack(i, "standard")...)
+		}
+
+		for i := 0; i < 28; i++ {
+			machines[i].Status.State = StateUnhealthy
+		}
+		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expect := map[string]map[string]int{
+			"1": {"cs": 6, "ss": 3},
+			"2": {"cs": 6, "ss": 3},
+			"3": {"cs": 6, "ss": 3},
+		}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
 		}
 	})
 }
 
-func createRack(rack int) []Machine {
+func createRack(rack int, rackType string) []Machine {
+	var numCS, numSS int
+	switch rackType {
+	case "standard":
+		numCS = 18
+		numSS = 10
+	case "storage":
+		numCS = 0
+		numSS = 19
+	default:
+		return nil
+	}
+
 	var machines []Machine
-	for i := 0; i < 18; i++ {
+	for i := 0; i < numCS; i++ {
 		addr := fmt.Sprintf("10.0.%d.%d", rack, i+1)
 		machines = append(machines, newTestMachineWithIP(rack, testBaseTS, StateHealthy, addr, "cs"))
 	}
-	for i := 18; i < 28; i++ {
+	for i := numCS; i < numCS+numSS; i++ {
 		addr := fmt.Sprintf("10.0.%d.%d", rack, i+1)
 		machines = append(machines, newTestMachineWithIP(rack, testBaseTS, StateHealthy, addr, "ss"))
 	}
 
 	return machines
+}
+
+func countRolesByRack(nodes []*cke.Node) map[string]map[string]int {
+	count := make(map[string]map[string]int)
+	for _, n := range nodes {
+		if n.ControlPlane {
+			continue
+		}
+		if _, ok := count[n.Labels["cke.cybozu.com/rack"]]; !ok {
+			count[n.Labels["cke.cybozu.com/rack"]] = make(map[string]int)
+		}
+		count[n.Labels["cke.cybozu.com/rack"]][n.Labels["cke.cybozu.com/role"]]++
+	}
+
+	return count
 }
 
 func TestGenerator(t *testing.T) {
