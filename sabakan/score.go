@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	// maxCountPerRack should be max count of machines per rack + 1
+	// maxCountPerRack should be more than max machine num per rack + 1
 	maxCountPerRack = 100
 )
 

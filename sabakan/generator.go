@@ -257,7 +257,7 @@ func (g *Generator) SetWaitSeconds(secs float64) {
 	g.waitSeconds = secs
 }
 
-// selectControlPlaneFromUnused selects a healthy controle plane from unused or worker machines.
+// selectControlPlane selects a healthy controle plane from unused or worker machines.
 // If there is no such machine, this returns nil.
 func (g *Generator) selectControlPlane(unused bool) *Machine {
 	machines := &g.nextWorkers
@@ -277,7 +277,6 @@ func (g *Generator) selectControlPlane(unused bool) *Machine {
 		// higher first
 		return si > sj
 	})
-
 	m := candidates[0]
 
 	newNext := make([]*Machine, 0, len(*machines)-1)

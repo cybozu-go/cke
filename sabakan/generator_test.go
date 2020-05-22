@@ -1191,11 +1191,6 @@ func testRackDistribution(t *testing.T) {
 		for i := range rackIDs {
 			machines = append(machines, createRack(i, "standard")...)
 		}
-		constraints := &cke.Constraints{
-			ControlPlaneCount: 3,
-			MinimumWorkers:    36,
-			MaximumWorkers:    56,
-		}
 
 		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
 		cluster, err := g.Generate()
@@ -1203,6 +1198,11 @@ func testRackDistribution(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		constraints := &cke.Constraints{
+			ControlPlaneCount: 3,
+			MinimumWorkers:    36,
+			MaximumWorkers:    56,
+		}
 		g = NewGenerator(cluster, baseTemplate, constraints, machines, testBaseTS)
 		cluster, err = g.Update()
 		if err != nil {
