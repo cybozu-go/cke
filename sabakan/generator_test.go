@@ -1178,39 +1178,79 @@ func testRackDistribution(t *testing.T) {
 			},
 		},
 	}
-	constraints := &cke.Constraints{
+	baseConstraints := &cke.Constraints{
 		ControlPlaneCount: 3,
 		MinimumWorkers:    27,
 		MaximumWorkers:    56,
 	}
 
-	g := NewGenerator(nil, template, constraints, machines, testBaseTS)
-	cluster, err := g.Generate()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rackDist := make(map[string]map[string]int)
-	for i := range rackIDs {
-		rackDist[strconv.Itoa(i)] = make(map[string]int)
-	}
-	for _, n := range cluster.Nodes {
-		if n.ControlPlane {
-			continue
+	t.Run("GenerateInitialCluster", func(t *testing.T) {
+		g := NewGenerator(nil, template, baseConstraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
 		}
-		rackDist[n.Labels["cke.cybozu.com/rack"]][n.Labels["cke.cybozu.com/role"]]++
-	}
 
-	for k, v := range rackDist {
-		for kk, vv := range v {
-			if kk == "cs" && vv != 6 {
-				t.Errorf("rack=%s, role=%s: expect 6 actual %d", k, kk, vv)
+		rackDist := make(map[string]map[string]int)
+		for i := range rackIDs {
+			rackDist[strconv.Itoa(i)] = make(map[string]int)
+		}
+		for _, n := range cluster.Nodes {
+			if n.ControlPlane {
+				continue
 			}
-			if kk == "ss" && vv != 3 {
-				t.Errorf("rack=%s, role=%s: expect 3 actual %d", k, kk, vv)
+			rackDist[n.Labels["cke.cybozu.com/rack"]][n.Labels["cke.cybozu.com/role"]]++
+		}
+
+		for k, v := range rackDist {
+			for kk, vv := range v {
+				if kk == "cs" && vv != 6 {
+					t.Errorf("rack=%s, role=%s: expect 6 actual %d", k, kk, vv)
+				}
+				if kk == "ss" && vv != 3 {
+					t.Errorf("rack=%s, role=%s: expect 3 actual %d", k, kk, vv)
+				}
 			}
 		}
-	}
+	})
+
+	t.Run("IncreaseMinimumWorkers", func(t *testing.T) {
+		constraints := &cke.Constraints{
+			ControlPlaneCount: 3,
+			MinimumWorkers:    36,
+			MaximumWorkers:    56,
+		}
+
+		g := NewGenerator(nil, template, baseConstraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+		g = NewGenerator(cluster, template, constraints, machines, testBaseTS)
+		cluster, err = g.Update()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rackDist := make(map[string]map[string]int)
+		for i := range rackIDs {
+			rackDist[strconv.Itoa(i)] = make(map[string]int)
+		}
+		for _, n := range cluster.Nodes {
+			if n.ControlPlane {
+				continue
+			}
+			rackDist[n.Labels["cke.cybozu.com/rack"]][n.Labels["cke.cybozu.com/role"]]++
+		}
+
+		for k, v := range rackDist {
+			for kk, vv := range v {
+				if kk == "cs" && vv != 8 {
+					t.Errorf("rack=%s, role=%s: expect 8 actual %d", k, kk, vv)
+				}
+				if kk == "ss" && vv != 4 {
+					t.Errorf("rack=%s, role=%s: expect 4 actual %d", k, kk, vv)
+				}
+			}
+		}
+	})
 }
 
 func createRack(rack int) []Machine {
