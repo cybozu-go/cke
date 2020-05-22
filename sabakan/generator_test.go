@@ -221,12 +221,10 @@ func testNewGenerator(t *testing.T) {
 					cluster.Nodes[2],
 				},
 				healthyCPs: 1,
-				cpRacks:    map[int]int{0: 1, 1: 1},
 				workers: []*cke.Node{
 					cluster.Nodes[1],
 					cluster.Nodes[3],
 				},
-				workersByRole:  map[string]int{"ss": 1, "": 1},
 				healthyWorkers: 0,
 				workerRacks:    map[int]int{0: 1},
 				machineMap: map[string]*Machine{
@@ -255,20 +253,11 @@ func testNewGenerator(t *testing.T) {
 			if got.healthyCPs != tt.want.healthyCPs {
 				t.Errorf("!cmp.Equal(got.healthyCPs, tt.want.healthyCPs), actual: %v, want %v", got.healthyCPs, tt.want.healthyCPs)
 			}
-			if !cmp.Equal(got.cpRacks, tt.want.cpRacks, cmpopts.EquateEmpty()) {
-				t.Errorf("!cmp.Equal(got.cpRacks, tt.want.cpRacks), actual: %v, want %v", got.cpRacks, tt.want.cpRacks)
-			}
 			if !cmp.Equal(got.workers, tt.want.workers, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.workers, tt.want.workers), actual: %v, want %v", got.workers, tt.want.workers)
 			}
-			if !cmp.Equal(got.workersByRole, tt.want.workersByRole, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
-				t.Error("!cmp.Equal(got.workersByRole, tt.want.workersByRole)", cmp.Diff(got.workersByRole, tt.want.workersByRole, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()))
-			}
 			if got.healthyWorkers != tt.want.healthyWorkers {
 				t.Errorf("!cmp.Equal(got.healthyWorkers, tt.want.healthyWorkers), actual: %v, want %v", got.healthyWorkers, tt.want.healthyWorkers)
-			}
-			if !cmp.Equal(got.workerRacks, tt.want.workerRacks, cmpopts.EquateEmpty()) {
-				t.Errorf("!cmp.Equal(got.workerRacks, tt.want.workerRacks), actual: %v, want %v", got.workerRacks, tt.want.workerRacks)
 			}
 			if !cmp.Equal(got.machineMap, tt.want.machineMap, cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.machineMap, tt.want.machineMap), actual: %v, want %v", got.machineMap, tt.want.machineMap)
@@ -1215,6 +1204,10 @@ func testRackDistribution(t *testing.T) {
 
 		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
 		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		g = NewGenerator(cluster, baseTemplate, constraints, machines, testBaseTS)
 		cluster, err = g.Update()
 		if err != nil {
@@ -1311,6 +1304,9 @@ func testRackDistribution(t *testing.T) {
 
 		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
 		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		machines = append(machines, createRack(3, "storage")...)
 		constraints := &cke.Constraints{
@@ -1345,6 +1341,9 @@ func testRackDistribution(t *testing.T) {
 
 		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
 		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		machines = machines[28:] // Disappear rack0
 		g = NewGenerator(cluster, baseTemplate, baseConstraints, machines, testBaseTS)

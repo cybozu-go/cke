@@ -105,7 +105,6 @@ type Generator struct {
 
 	controlPlanes []*cke.Node
 	healthyCPs    int
-	cpRacks       map[int]int
 
 	workers        []*cke.Node
 	healthyWorkers int
@@ -119,7 +118,6 @@ type Generator struct {
 	nextUnused        []*Machine
 	nextControlPlanes []*Machine
 	nextWorkers       []*Machine
-	workersByRole     map[string]int
 }
 
 // NewGenerator creates a new Generator.
@@ -147,16 +145,12 @@ func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machine
 	g.machineMap = machineMap
 
 	nodeMap := make(map[string]*cke.Node)
-	cpRacks := make(map[int]int)
-	workerRacks := make(map[int]int)
-	workersByRole := make(map[string]int)
 	if current != nil {
 		for _, n := range current.Nodes {
 			m := machineMap[n.Address]
 			nodeMap[n.Address] = n
 			if n.ControlPlane {
 				if m != nil {
-					cpRacks[m.Spec.Rack]++
 					if m.Status.State == StateHealthy {
 						g.healthyCPs++
 					}
@@ -166,19 +160,13 @@ func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machine
 			}
 
 			if m != nil {
-				workerRacks[m.Spec.Rack]++
 				if m.Status.State == StateHealthy {
 					g.healthyWorkers++
 				}
 			}
 			g.workers = append(g.workers, n)
-			role := n.Labels[CKELabelRole]
-			workersByRole[role]++
 		}
 	}
-	g.cpRacks = cpRacks
-	g.workerRacks = workerRacks
-	g.workersByRole = workersByRole
 
 	for a, m := range machineMap {
 		if _, ok := nodeMap[a]; !ok && m.Status.State == StateHealthy {
@@ -207,11 +195,21 @@ func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machine
 	return g
 }
 
+func (g *Generator) workersByRole() map[string]int {
+	countByRole := make(map[string]int)
+	for _, m := range g.nextWorkers {
+		countByRole[m.Spec.Role]++
+	}
+	return countByRole
+}
+
 func (g *Generator) chooseWorkerTmpl() nodeTemplate {
-	least := float64(g.workersByRole[g.workerTmpls[0].Role]) / g.workerTmpls[0].Weight
+	count := g.workersByRole()
+
+	least := float64(count[g.workerTmpls[0].Role]) / g.workerTmpls[0].Weight
 	leastIndex := 0
 	for i, tmpl := range g.workerTmpls {
-		w := float64(g.workersByRole[tmpl.Role]) / tmpl.Weight
+		w := float64(count[tmpl.Role]) / tmpl.Weight
 		if w < least {
 			least = w
 			leastIndex = i
@@ -262,7 +260,6 @@ func (g *Generator) selectWorkerFromUnused() *Machine {
 	}
 	g.nextUnused = newUnused
 
-	g.workersByRole[workerTmpl.Role]++
 	return m
 }
 
