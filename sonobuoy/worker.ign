@@ -1,39 +1,38 @@
-{
-  "ignition": {
-    "config": {},
-    "timeouts": {},
-    "version": "2.1.0"
-  },
-  "networkd": {},
-  "passwd": {},
-  "storage": {
-    "filesystems": [
-      {
-        "mount": {
-          "device": "/dev/nvme0n1",
-          "format": "ext4",
-          "wipeFilesystem": true
-        },
-        "name": "ephemeral1"
-      }
-    ]
-  },
-  "systemd": {
-    "units": [
-      {
-        "contents": "[Unit]\nDescription=Mount ephemeral to /var/lib/docker\nBefore=local-fs.target\n[Mount]\nWhat=/dev/nvme0n1\nWhere=/var/lib/docker\nType=ext4\n[Install]\nWantedBy=local-fs.target\n",
-        "enable": true,
-        "name": "var-lib-docker.mount"
-      },
-      {
-        "dropins": [
-          {
-            "contents": "[Unit]\nAfter=var-lib-docker.mount\nRequires=var-lib-docker.mount",
-            "name": "10-wait-docker.conf"
-          }
-        ],
-        "name": "docker.service"
-      }
-    ]
-  }
-}
+variant: fcos
+version: 1.0.0
+ignition:
+  config:
+    replace:
+      source: https://example.com/sample.ign
+  security:
+    tls:
+      certificate_authorities:
+        - source: https://example.com/source1
+          verification:
+            hash: sha512-e2bb19fdbc3604f511b13d66f4c675f011a63dd967b97e2fe4f5d50bf6cb224e902182221ba0f9dd87c0bb4abcbd2ab428eb7965aa7f177eb5630e7a1793e2e6
+storage:
+  filesystems:
+  - device: /dev/nvme0n1
+    format: ext4
+    wipe_filesystem: true
+systemd:
+  name: docker.service
+  units:
+  - name: var-lib-docker.mount
+    enable: true
+    contents: |
+      [Unit]
+      Description=Mount ephemeral to /var/lib/docker
+      Before=local-fs.target
+      [Mount]
+      What=/dev/nvme0n1
+      Where=/var/lib/docker
+      Type=ext4
+      [Install]
+      WantedBy=local-fs.target
+    dropins:
+    - name: 10-wait-docker.conf
+      contents: |
+       [Unit]
+       After=var-lib-docker.mount
+       Requires=var-lib-docker.mount
