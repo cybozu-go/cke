@@ -98,7 +98,7 @@ func (ig integrator) Do(ctx context.Context, leaderKey string) error {
 		return err
 	}
 
-	g := NewGenerator(cluster, tmpl, cstr, machines, time.Now())
+	g := NewGenerator(tmpl, cstr, machines, time.Now())
 
 	val := ctx.Value(WaitSecs)
 	if val != nil {
@@ -111,9 +111,9 @@ func (ig integrator) Do(ctx context.Context, leaderKey string) error {
 	if cluster == nil {
 		newc, err = g.Generate()
 	} else {
-		newc, err = g.Update()
+		newc, err = g.Update(cluster)
 		if newc == nil && err == nil && tmplUpdated {
-			newc, err = g.Regenerate()
+			newc, err = g.Regenerate(cluster)
 		}
 	}
 	if err != nil {

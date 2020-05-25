@@ -98,8 +98,6 @@ type nodeTemplate struct {
 
 // Generator generates cluster configuration.
 type Generator struct {
-	current *cke.Cluster
-
 	template    *cke.Cluster
 	constraints *cke.Constraints
 	timestamp   time.Time
@@ -118,9 +116,8 @@ type Generator struct {
 // NewGenerator creates a new Generator.
 // current can be nil if no cluster configuration has been set.
 // template must have been validated with ValidateTemplate().
-func NewGenerator(current, template *cke.Cluster, cstr *cke.Constraints, machines []Machine, currentTime time.Time) *Generator {
+func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machine, currentTime time.Time) *Generator {
 	g := &Generator{
-		current:     current,
 		template:    template,
 		constraints: cstr,
 		timestamp:   currentTime,
@@ -352,15 +349,15 @@ func (g *Generator) Generate() (*cke.Cluster, error) {
 
 // Regenerate regenerates *Cluster using the same set of nodes in the current configuration.
 // This method should be used only when the template is updated and no other changes happen.
-func (g *Generator) Regenerate() (*cke.Cluster, error) {
+func (g *Generator) Regenerate(current *cke.Cluster) (*cke.Cluster, error) {
 	op := &updateOp{
 		name: "regenerate",
 	}
 
-	g.nextUnused = g.getUnusedMachines(g.current.Nodes)
+	g.nextUnused = g.getUnusedMachines(current.Nodes)
 
 	var cps []*Machine
-	for _, n := range cke.ControlPlanes(g.current.Nodes) {
+	for _, n := range cke.ControlPlanes(current.Nodes) {
 		m := g.machineMap[n.Address]
 		if m == nil {
 			return nil, errMissingMachine
@@ -371,7 +368,7 @@ func (g *Generator) Regenerate() (*cke.Cluster, error) {
 	g.nextControlPlanes = cps
 
 	var workers []*Machine
-	for _, n := range cke.Workers(g.current.Nodes) {
+	for _, n := range cke.Workers(current.Nodes) {
 		m := g.machineMap[n.Address]
 		if m == nil {
 			return nil, errMissingMachine
@@ -387,10 +384,10 @@ func (g *Generator) Regenerate() (*cke.Cluster, error) {
 
 // Update updates the current configuration when necessary.
 // If the generator decides no updates are necessary, it returns (nil, nil).
-func (g *Generator) Update() (*cke.Cluster, error) {
-	g.nextUnused = g.getUnusedMachines(g.current.Nodes)
-	currentCPs := cke.ControlPlanes(g.current.Nodes)
-	currentWorkers := cke.Workers(g.current.Nodes)
+func (g *Generator) Update(current *cke.Cluster) (*cke.Cluster, error) {
+	g.nextUnused = g.getUnusedMachines(current.Nodes)
+	currentCPs := cke.ControlPlanes(current.Nodes)
+	currentWorkers := cke.Workers(current.Nodes)
 
 	op, err := g.removeNonExistentNode(currentCPs, currentWorkers)
 	if err != nil {
