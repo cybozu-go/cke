@@ -215,7 +215,6 @@ func testNewGenerator(t *testing.T) {
 			"Cluster",
 			args{cluster, tmpl, cke.DefaultConstraints(), machines},
 			&Generator{
-				current: cluster,
 				machineMap: map[string]*Machine{
 					"10.0.0.1": &machines[0],
 					"10.0.0.2": &machines[1],
@@ -234,7 +233,7 @@ func testNewGenerator(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := NewGenerator(tt.args.current, tt.args.template, tt.args.cstr, tt.args.machines, testBaseTS)
+			got := NewGenerator(tt.args.template, tt.args.cstr, tt.args.machines, testBaseTS)
 			if !cmp.Equal(got.machineMap, tt.want.machineMap, cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.machineMap, tt.want.machineMap), actual: %v, want %v", got.machineMap, tt.want.machineMap)
 			}
@@ -320,7 +319,7 @@ func testGenerate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			g := NewGenerator(nil, tt.template, tt.cstr, tt.machines, testBaseTS)
+			g := NewGenerator(tt.template, tt.cstr, tt.machines, testBaseTS)
 			cluster, err := g.Generate()
 			if err != nil {
 				if !tt.expectErr {
@@ -397,8 +396,8 @@ func testRegenerate(t *testing.T) {
 	generated := *tmpl
 	generated.Nodes = nil
 
-	g := NewGenerator(cluster, tmpl, cke.DefaultConstraints(), machines, testBaseTS)
-	regenerated, err := g.Regenerate()
+	g := NewGenerator(tmpl, cke.DefaultConstraints(), machines, testBaseTS)
+	regenerated, err := g.Regenerate(cluster)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -821,8 +820,8 @@ func testUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			g := NewGenerator(tt.current, tmpl, tt.cstr, tt.machines, testBaseTS)
-			got, err := g.Update()
+			g := NewGenerator(tmpl, tt.cstr, tt.machines, testBaseTS)
+			got, err := g.Update(tt.current)
 
 			if err != tt.expectErr {
 				if err != nil {
@@ -1028,7 +1027,7 @@ func testWeighted(t *testing.T) {
 				Nodes: append(tt.tmplWorkers, tt.tmplCP),
 			}
 
-			g := NewGenerator(nil, tmpl, tt.cstr, machines, testBaseTS)
+			g := NewGenerator(tmpl, tt.cstr, machines, testBaseTS)
 			cluster, err := g.Generate()
 			if err != nil {
 				t.Fatal(err)
@@ -1176,7 +1175,7 @@ func testRackDistribution(t *testing.T) {
 			machines = append(machines, createRack(i, "standard")...)
 		}
 
-		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
@@ -1200,7 +1199,7 @@ func testRackDistribution(t *testing.T) {
 			machines = append(machines, createRack(i, "standard")...)
 		}
 
-		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
@@ -1211,8 +1210,8 @@ func testRackDistribution(t *testing.T) {
 			MinimumWorkers:    36,
 			MaximumWorkers:    56,
 		}
-		g = NewGenerator(cluster, baseTemplate, constraints, machines, testBaseTS)
-		cluster, err = g.Update()
+		g = NewGenerator(baseTemplate, constraints, machines, testBaseTS)
+		cluster, err = g.Update(cluster)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1239,7 +1238,7 @@ func testRackDistribution(t *testing.T) {
 			machines = append(machines, createRack(i, "standard")...)
 		}
 
-		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
@@ -1281,7 +1280,7 @@ func testRackDistribution(t *testing.T) {
 			withoutCSTemplate.Nodes = append(withoutCSTemplate.Nodes, n)
 		}
 
-		g := NewGenerator(nil, withoutCSTemplate, constraints, machines, testBaseTS)
+		g := NewGenerator(withoutCSTemplate, constraints, machines, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
@@ -1305,7 +1304,7 @@ func testRackDistribution(t *testing.T) {
 			machines = append(machines, createRack(i, "standard")...)
 		}
 
-		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
@@ -1317,8 +1316,8 @@ func testRackDistribution(t *testing.T) {
 			MinimumWorkers:    36,
 			MaximumWorkers:    56,
 		}
-		g = NewGenerator(cluster, baseTemplate, constraints, machines, testBaseTS)
-		cluster, err = g.Update()
+		g = NewGenerator(baseTemplate, constraints, machines, testBaseTS)
+		cluster, err = g.Update(cluster)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1342,15 +1341,15 @@ func testRackDistribution(t *testing.T) {
 			machines = append(machines, createRack(i, "standard")...)
 		}
 
-		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		machines = machines[28:] // Disappear rack0
-		g = NewGenerator(cluster, baseTemplate, baseConstraints, machines, testBaseTS)
-		cluster, err = g.Update()
+		g = NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err = g.Update(cluster)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1376,7 +1375,7 @@ func testRackDistribution(t *testing.T) {
 		for i := 0; i < 28; i++ {
 			machines[i].Status.State = StateUnhealthy
 		}
-		g := NewGenerator(nil, baseTemplate, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
