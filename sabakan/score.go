@@ -7,6 +7,8 @@ import (
 const (
 	// maxCountPerRack should be more than max machine num per rack + 1
 	maxCountPerRack = 100
+	// heathyScore is addted when the machine status is healthy.
+	heathyScore = 1000
 )
 
 func scoreByDays(days int) int {
@@ -35,35 +37,24 @@ func scoreByDays(days int) int {
 func scoreMachine(m *Machine, rackCount map[int]int, ts time.Time) int {
 	rackScore := maxCountPerRack - rackCount[m.Spec.Rack]
 
-	var isHealthy int
-	if m.Status.State == StateHealthy {
-		isHealthy = 1
-	}
-
 	days := int(m.Spec.RetireDate.Sub(ts).Hours() / 24)
 	daysScore := scoreByDays(days)
 
-	score := rackScore*100 + isHealthy*10 + daysScore
-
-	return score
+	return rackScore*10 + daysScore
 }
 
-func filterMachine(m *Machine, role string, isHealthy bool) bool {
-	if role != "" && m.Spec.Role != role {
-		return false
+func scoreMachineWithHealthStatus(m *Machine, rackCount map[int]int, ts time.Time) int {
+	score := scoreMachine(m, rackCount, ts)
+	if m.Status.State != StateHealthy {
+		return score
 	}
-
-	if isHealthy && m.Status.State != StateHealthy {
-		return false
-	}
-
-	return true
+	return heathyScore + score
 }
 
-func filterMachines(ms []*Machine, role string, isHealthy bool) []*Machine {
+func filterHealthyMachinesByRole(ms []*Machine, role string) []*Machine {
 	var filtered []*Machine
 	for _, m := range ms {
-		if !filterMachine(m, role, isHealthy) {
+		if m.Status.State != StateHealthy || (role != "" && m.Spec.Role != role) {
 			continue
 		}
 		filtered = append(filtered, m)

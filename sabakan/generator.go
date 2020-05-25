@@ -225,7 +225,7 @@ func (g *Generator) getWorkerTmpl(role string) nodeTemplate {
 // If there is no such machine, this returns nil.
 func (g *Generator) selectWorkerFromUnused() *Machine {
 	workerTmpl := g.chooseWorkerTmpl()
-	unused := filterMachines(g.nextUnused, workerTmpl.Role, true)
+	unused := filterHealthyMachinesByRole(g.nextUnused, workerTmpl.Role)
 	if len(unused) == 0 {
 		return nil
 	}
@@ -265,7 +265,7 @@ func (g *Generator) selectControlPlane(unused bool) *Machine {
 		machines = &g.nextUnused
 	}
 
-	candidates := filterMachines(*machines, g.cpTmpl.Role, true)
+	candidates := filterHealthyMachinesByRole(*machines, g.cpTmpl.Role)
 	if len(candidates) == 0 {
 		return nil
 	}
@@ -295,8 +295,8 @@ func (g *Generator) selectControlPlane(unused bool) *Machine {
 func (g *Generator) deselectControlPlane() *Machine {
 	numCPsByRack := g.countMachinesByRack(true, "")
 	sort.Slice(g.nextControlPlanes, func(i, j int) bool {
-		si := scoreMachine(g.nextControlPlanes[i], numCPsByRack, g.timestamp)
-		sj := scoreMachine(g.nextControlPlanes[j], numCPsByRack, g.timestamp)
+		si := scoreMachineWithHealthStatus(g.nextControlPlanes[i], numCPsByRack, g.timestamp)
+		sj := scoreMachineWithHealthStatus(g.nextControlPlanes[j], numCPsByRack, g.timestamp)
 		// lower first
 		return si < sj
 	})

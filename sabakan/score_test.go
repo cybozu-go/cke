@@ -38,67 +38,67 @@ func TestScoreMachine(t *testing.T) {
 			"Base",
 			newTestMachine(0, "", testBaseTS, StateHealthy),
 			nil,
-			maxCountPerRack*100 + 10,
-		},
-		{
-			"SameRack",
-			newTestMachine(1, "", testBaseTS, StateHealthy),
-			map[int]int{0: 2, 1: 3},
-			(maxCountPerRack-3)*100 + 10,
-		},
-		{
-			"SameRack2",
-			newTestMachine(1, "", testBaseTS, StateHealthy),
-			map[int]int{0: 2, 1: 13},
-			(maxCountPerRack-13)*100 + 10,
-		},
-		{
-			"Future250",
-			newTestMachine(1, "", testFuture250, StateHealthy),
-			nil,
-			maxCountPerRack*100 + 10 + 1,
-		},
-		{
-			"Future500",
-			newTestMachine(1, "", testFuture500, StateHealthy),
-			nil,
-			maxCountPerRack*100 + 10 + 2,
-		},
-		{
-			"Future1000",
-			newTestMachine(1, "", testFuture1000, StateHealthy),
-			nil,
-			maxCountPerRack*100 + 10 + 3,
-		},
-		{
-			"Past250",
-			newTestMachine(1, "", testPast250, StateHealthy),
-			nil,
-			maxCountPerRack*100 + 10 - 1,
-		},
-		{
-			"Past500",
-			newTestMachine(1, "", testPast500, StateHealthy),
-			nil,
-			maxCountPerRack*100 + 10 - 2,
-		},
-		{
-			"Past1000",
-			newTestMachine(1, "", testPast1000, StateHealthy),
-			nil,
-			maxCountPerRack*100 + 10 - 3,
+			maxCountPerRack * 10,
 		},
 		{
 			"NotHealthy",
 			newTestMachine(1, "", testBaseTS, StateRetiring),
 			nil,
-			maxCountPerRack * 100,
+			maxCountPerRack * 10,
+		},
+		{
+			"SameRack",
+			newTestMachine(1, "", testBaseTS, StateHealthy),
+			map[int]int{0: 2, 1: 3},
+			(maxCountPerRack - 3) * 10,
+		},
+		{
+			"SameRack2",
+			newTestMachine(1, "", testBaseTS, StateHealthy),
+			map[int]int{0: 2, 1: 13},
+			(maxCountPerRack - 13) * 10,
+		},
+		{
+			"Future250",
+			newTestMachine(1, "", testFuture250, StateHealthy),
+			nil,
+			maxCountPerRack*10 + 1,
+		},
+		{
+			"Future500",
+			newTestMachine(1, "", testFuture500, StateHealthy),
+			nil,
+			maxCountPerRack*10 + 2,
+		},
+		{
+			"Future1000",
+			newTestMachine(1, "", testFuture1000, StateHealthy),
+			nil,
+			maxCountPerRack*10 + 3,
+		},
+		{
+			"Past250",
+			newTestMachine(1, "", testPast250, StateHealthy),
+			nil,
+			maxCountPerRack*10 - 1,
+		},
+		{
+			"Past500",
+			newTestMachine(1, "", testPast500, StateHealthy),
+			nil,
+			maxCountPerRack*10 - 2,
+		},
+		{
+			"Past1000",
+			newTestMachine(1, "", testPast1000, StateHealthy),
+			nil,
+			maxCountPerRack*10 - 3,
 		},
 		{
 			"Compound",
 			newTestMachine(2, "", testFuture500, StateRetiring),
 			map[int]int{2: 9},
-			(maxCountPerRack-9)*100 + 2,
+			(maxCountPerRack-9)*10 + 2,
 		},
 	}
 
@@ -114,48 +114,31 @@ func TestScoreMachine(t *testing.T) {
 	}
 }
 
-func TestFilterMachine(t *testing.T) {
+func TestScoreMachineWithHealthStatus(t *testing.T) {
+
 	testCases := []struct {
 		name      string
 		machine   *Machine
-		role      string
-		isHealthy bool
-		expect    bool
+		rackCount map[int]int
+		expect    int
 	}{
 		{
-			"Base",
-			newTestMachine(0, "cs", testBaseTS, StateHealthy),
-			"cs",
-			true,
-			true,
+			"Heatlhy",
+			newTestMachine(2, "", testFuture500, StateHealthy),
+			map[int]int{2: 9},
+			1000 + (maxCountPerRack-9)*10 + 2,
 		},
 		{
-			"FilteredByRole",
-			newTestMachine(0, "cs", testBaseTS, StateHealthy),
-			"ss",
-			true,
-			false,
+			"Unhealthy",
+			newTestMachine(1, "", testBaseTS, StateUnhealthy),
+			map[int]int{0: 2, 1: 3},
+			(maxCountPerRack - 3) * 10,
 		},
 		{
-			"DisableRoleFilter",
-			newTestMachine(0, "cs", testBaseTS, StateHealthy),
-			"",
-			true,
-			true,
-		},
-		{
-			"FilteredByHealth",
-			newTestMachine(0, "", testBaseTS, StateUnhealthy),
-			"",
-			true,
-			false,
-		},
-		{
-			"DisableHealthFilter",
-			newTestMachine(0, "", testBaseTS, StateUnhealthy),
-			"",
-			false,
-			true,
+			"Retiring",
+			newTestMachine(2, "", testFuture500, StateRetiring),
+			map[int]int{2: 9},
+			(maxCountPerRack-9)*10 + 2,
 		},
 	}
 
@@ -163,15 +146,15 @@ func TestFilterMachine(t *testing.T) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			actual := filterMachine(c.machine, c.role, c.isHealthy)
-			if actual != c.expect {
-				t.Errorf("unexpected result: expected=%t, actual=%t", c.expect, actual)
+			score := scoreMachineWithHealthStatus(c.machine, c.rackCount, testBaseTS)
+			if score != c.expect {
+				t.Errorf("unexpected score: expected=%d, actual=%d", c.expect, score)
 			}
 		})
 	}
 }
 
-func TestFilterMachines(t *testing.T) {
+func TestfilterHealthyMachinesByRole(t *testing.T) {
 	machines := []*Machine{
 		newTestMachine(0, "cs", testBaseTS, StateHealthy),     // [0]
 		newTestMachine(0, "ss", testBaseTS, StateUnhealthy),   // [1]
@@ -182,33 +165,20 @@ func TestFilterMachines(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name      string
-		role      string
-		isHealthy bool
-		expect    []*Machine
+		name   string
+		role   string
+		expect []*Machine
 	}{
-		{
-			"Base",
-			"cs",
-			true,
-			[]*Machine{machines[0]},
-		},
 		{
 			"FilteredByRole",
 			"cs",
-			false,
+
 			[]*Machine{machines[0], machines[2], machines[4]},
-		},
-		{
-			"FilteredByHealth",
-			"",
-			true,
-			[]*Machine{machines[0], machines[3]},
 		},
 		{
 			"DisableFilter",
 			"",
-			false,
+
 			[]*Machine{machines[0], machines[1], machines[2], machines[3], machines[4], machines[5]},
 		},
 	}
@@ -217,7 +187,7 @@ func TestFilterMachines(t *testing.T) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			actual := filterMachines(machines, c.role, c.isHealthy)
+			actual := filterHealthyMachinesByRole(machines, c.role)
 			if !cmp.Equal(c.expect, actual) {
 				t.Error("unexpected result", cmp.Diff(c.expect, actual))
 			}

@@ -622,7 +622,7 @@ func testUpdate(t *testing.T) {
 			},
 		},
 		{
-			"DecreaseCPRemove",
+			"DecreaseCPRemoveAllCPsHealthy",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[6], cps[7], workers[5]},
 			},
@@ -636,6 +636,23 @@ func testUpdate(t *testing.T) {
 			nil,
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[6], workers[5]},
+			},
+		},
+		{
+			"DecreaseCPRemoveUnhealthyCP",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[2], cps[6], cps[7], workers[5]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 2,
+				MinimumWorkers:    1,
+				MaximumWorkers:    1,
+			},
+			machines,
+
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[6], cps[7], workers[5]},
 			},
 		},
 		{

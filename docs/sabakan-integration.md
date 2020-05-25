@@ -190,31 +190,31 @@ selects a machine as follows:
     - Otherwise, choose a node template with the smallest number of servers than the specified weight,
         and use the role specified for the template.
 4. Add the following score to each machine:
-    - (100 - (machine counts which have the same role and in the same rack)) * 100
-5. Add the following score to each machine:
-    - If the machine's state is healthy, +10.
-6. Add the following scores to each machine:
+    - (100 - (machine counts which have the same role and in the same rack)) * 10
+5. Add the following scores to each machine:
     - If the machine's lifetime is > 250 days, +1.
     - If the machine's lifetime is > 500 days, +1 (+2 in total).
     - If the machine's lifetime is > 1000 days, +1 (+3 in total).
     - If the machine's lifetime is < -250 days, -1.
     - If the machine's lifetime is < -500 days, -1 (-2 in total).
     - If the machine's lifetime is < -1000 days, -1 (-3 in total).
-7. Select the highest scored machine.
+6. Select the highest scored machine.
 
 When an existing node need to be removed from the cluster configuration,
 the algorithm select one as follows:
 
-1. Add scores to each machine as follows:
-    - If the machine's lifetime is > 250 days, +10.
-    - If the machine's lifetime is > 500 days, +10 (+20 in total).
-    - If the machine's lifetime is > 1000 days, +10 (+30 in total).
-    - If the machine's lifetime is < -250 days, -10.
-    - If the machine's lifetime is < -500 days, -10 (-20 in total).
-    - If the machine's lifetime is < -1000 days, -10 (-30 in total).
-    - If the machine is not healthy, -30.
-    - If the cluster contains `n` machines in the same rack, - `min(n, 10)`.
-2. Select the lowest scored machine.
+1. Add the following score to each machine:
+    - If the machine's state is healthy, +1000.
+2. Add the following score to each machine:
+    - (100 - (machine counts which have the same role and in the same rack)) * 10
+3. Add scores to each machine as follows:
+    - If the machine's lifetime is > 250 days, +1.
+    - If the machine's lifetime is > 500 days, +1 (+2 in total).
+    - If the machine's lifetime is > 1000 days, +1 (+3 in total).
+    - If the machine's lifetime is < -250 days, -1.
+    - If the machine's lifetime is < -500 days, -1 (-2 in total).
+    - If the machine's lifetime is < -1000 days, -1 (-3 in total).
+4. Select the lowest scored machine.
 
 Note that node selection should be done separately for control plane nodes
 and non-control plane nodes.
