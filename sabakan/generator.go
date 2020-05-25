@@ -471,7 +471,7 @@ func (g *Generator) decreaseControlPlane() (*updateOp, error) {
 		name: "decrease control plane",
 	}
 
-	for len(g.nextControlPlanes) != g.constraints.ControlPlaneCount {
+	for len(g.nextControlPlanes) > g.constraints.ControlPlaneCount {
 		m := g.deselectControlPlane()
 		g.nextControlPlanes = removeMachine(g.nextControlPlanes, m)
 
@@ -588,7 +588,7 @@ func (g *Generator) decreaseWorker() (*updateOp, error) {
 		return nil, nil
 	}
 
-	op.record("remove retiring worker: " + retired.Spec.IPv4[0])
+	op.record("remove retired worker: " + retired.Spec.IPv4[0])
 	g.nextWorkers = removeMachine(g.nextWorkers, retired)
 	return op, nil
 }
