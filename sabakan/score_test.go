@@ -154,7 +154,7 @@ func TestScoreMachineWithHealthStatus(t *testing.T) {
 	}
 }
 
-func TestfilterHealthyMachinesByRole(t *testing.T) {
+func TestFilterHealthyMachinesByRole(t *testing.T) {
 	machines := []*Machine{
 		newTestMachine(0, "cs", testBaseTS, StateHealthy),     // [0]
 		newTestMachine(0, "ss", testBaseTS, StateUnhealthy),   // [1]
@@ -173,13 +173,13 @@ func TestfilterHealthyMachinesByRole(t *testing.T) {
 			"FilteredByRole",
 			"cs",
 
-			[]*Machine{machines[0], machines[2], machines[4]},
+			[]*Machine{machines[0]},
 		},
 		{
 			"DisableFilter",
 			"",
 
-			[]*Machine{machines[0], machines[1], machines[2], machines[3], machines[4], machines[5]},
+			[]*Machine{machines[0], machines[3]},
 		},
 	}
 

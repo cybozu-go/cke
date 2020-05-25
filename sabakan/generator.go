@@ -240,14 +240,12 @@ func (g *Generator) selectWorkerFromUnused() *Machine {
 
 	m := unused[0]
 
-	newUnused := make([]*Machine, 0, len(g.nextUnused)-1)
-	for _, mm := range g.nextUnused {
+	for i, mm := range g.nextUnused {
 		if m == mm {
-			continue
+			g.nextUnused = append(g.nextUnused[:i], g.nextUnused[i+1:]...)
+			break
 		}
-		newUnused = append(newUnused, mm)
 	}
-	g.nextUnused = newUnused
 
 	return m
 }
@@ -260,12 +258,12 @@ func (g *Generator) SetWaitSeconds(secs float64) {
 // selectControlPlane selects a healthy controle plane from unused or worker machines.
 // If there is no such machine, this returns nil.
 func (g *Generator) selectControlPlane(unused bool) *Machine {
-	machines := &g.nextWorkers
+	machines := g.nextWorkers
 	if unused {
-		machines = &g.nextUnused
+		machines = g.nextUnused
 	}
 
-	candidates := filterHealthyMachinesByRole(*machines, g.cpTmpl.Role)
+	candidates := filterHealthyMachinesByRole(machines, g.cpTmpl.Role)
 	if len(candidates) == 0 {
 		return nil
 	}
@@ -279,14 +277,18 @@ func (g *Generator) selectControlPlane(unused bool) *Machine {
 	})
 	m := candidates[0]
 
-	newNext := make([]*Machine, 0, len(*machines)-1)
-	for _, mm := range *machines {
+	for i, mm := range machines {
 		if m == mm {
-			continue
+			machines = append(machines[:i], machines[i+1:]...)
+			break
 		}
-		newNext = append(newNext, mm)
 	}
-	*machines = newNext
+
+	if unused {
+		g.nextUnused = machines
+	} else {
+		g.nextWorkers = machines
+	}
 
 	return m
 }
