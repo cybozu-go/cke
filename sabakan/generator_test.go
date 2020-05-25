@@ -205,8 +205,7 @@ func testNewGenerator(t *testing.T) {
 					"10.0.0.3": &machines[2],
 					"10.0.0.4": &machines[3],
 				},
-				nextUnused: []*Machine{&machines[0], &machines[3]},
-				cpTmpl:     nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				cpTmpl: nodeTemplate{tmpl.Nodes[0], "", 1.0},
 				workerTmpls: []nodeTemplate{
 					{tmpl.Nodes[1], "cs", 3.0},
 				},
@@ -216,23 +215,14 @@ func testNewGenerator(t *testing.T) {
 			"Cluster",
 			args{cluster, tmpl, cke.DefaultConstraints(), machines},
 			&Generator{
-				controlPlanes: []*cke.Node{
-					cluster.Nodes[0],
-					cluster.Nodes[2],
-				},
-				workers: []*cke.Node{
-					cluster.Nodes[1],
-					cluster.Nodes[3],
-				},
-				healthyWorkers: 0,
+				current: cluster,
 				machineMap: map[string]*Machine{
 					"10.0.0.1": &machines[0],
 					"10.0.0.2": &machines[1],
 					"10.0.0.3": &machines[2],
 					"10.0.0.4": &machines[3],
 				},
-				nextUnused: []*Machine{&machines[3]},
-				cpTmpl:     nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				cpTmpl: nodeTemplate{tmpl.Nodes[0], "", 1.0},
 				workerTmpls: []nodeTemplate{
 					{tmpl.Nodes[1], "cs", 3.0},
 				},
@@ -245,15 +235,6 @@ func testNewGenerator(t *testing.T) {
 			t.Parallel()
 
 			got := NewGenerator(tt.args.current, tt.args.template, tt.args.cstr, tt.args.machines, testBaseTS)
-			if !cmp.Equal(got.controlPlanes, tt.want.controlPlanes, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
-				t.Errorf("!cmp.Equal(got.controlPlanes, tt.want.controlPlanes), actual: %v, want %v", got.controlPlanes, tt.want.controlPlanes)
-			}
-			if !cmp.Equal(got.workers, tt.want.workers, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
-				t.Errorf("!cmp.Equal(got.workers, tt.want.workers), actual: %v, want %v", got.workers, tt.want.workers)
-			}
-			if got.healthyWorkers != tt.want.healthyWorkers {
-				t.Errorf("!cmp.Equal(got.healthyWorkers, tt.want.healthyWorkers), actual: %v, want %v", got.healthyWorkers, tt.want.healthyWorkers)
-			}
 			if !cmp.Equal(got.machineMap, tt.want.machineMap, cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.machineMap, tt.want.machineMap), actual: %v, want %v", got.machineMap, tt.want.machineMap)
 			}
