@@ -335,29 +335,19 @@ func (g *Generator) Regenerate(current *cke.Cluster) (*cke.Cluster, error) {
 		name: "regenerate",
 	}
 
-	g.nextUnused = g.getUnusedMachines(current.Nodes)
-
-	var nextCPs []*Machine
-	for _, n := range cke.ControlPlanes(current.Nodes) {
-		m := g.machineMap[n.Address]
-		if m == nil {
-			return nil, errMissingMachine
-		}
-		// avoid recording changes by not using op.addControlPlane
-		nextCPs = append(nextCPs, m)
+	nextCPs, nonExistentCPs := g.nodesToMachines(cke.ControlPlanes(current.Nodes))
+	if nonExistentCPs != nil {
+		return nil, errMissingMachine
 	}
 	g.nextControlPlanes = nextCPs
 
-	var nextWorkers []*Machine
-	for _, n := range cke.Workers(current.Nodes) {
-		m := g.machineMap[n.Address]
-		if m == nil {
-			return nil, errMissingMachine
-		}
-		// avoid recording changes by not using op.addWorker
-		nextWorkers = append(nextWorkers, m)
+	nextWorkers, nonExistentWorkers := g.nodesToMachines(cke.Workers(current.Nodes))
+	if nonExistentWorkers != nil {
+		return nil, errMissingMachine
 	}
 	g.nextWorkers = nextWorkers
+
+	g.nextUnused = g.getUnusedMachines(current.Nodes)
 
 	op.record("regenerate with new template")
 	return g.fill(op)
@@ -433,30 +423,20 @@ func (g *Generator) removeNonExistentNode(currentCPs, currentWorkers []*cke.Node
 		name: "remove non-existent node",
 	}
 
-	var nextCPs []*Machine
-	for _, n := range currentCPs {
-		m := g.machineMap[n.Address]
-		if m == nil {
-			op.record("remove non-existent control plane: " + n.Address)
-			continue
-		}
-		nextCPs = append(nextCPs, m)
-	}
+	nextCPs, nonExistentCPs := g.nodesToMachines(currentCPs)
 	if len(nextCPs)*2 <= len(currentCPs) {
 		// Replacing more than half of control plane nodes would destroy
 		// etcd cluster.  We cannot do anything in this case.
 		return nil, errTooManyNonExistent
 	}
+	for _, n := range nonExistentCPs {
+		op.record("remove non-existent control plane: " + n.Address)
+	}
 	g.nextControlPlanes = nextCPs
 
-	var nextWorkers []*Machine
-	for _, n := range currentWorkers {
-		m := g.machineMap[n.Address]
-		if m == nil {
-			op.record("remove non-existent worker: " + n.Address)
-			continue
-		}
-		nextWorkers = append(nextWorkers, m)
+	nextWorkers, nonExistentWorkers := g.nodesToMachines(currentWorkers)
+	for _, n := range nonExistentWorkers {
+		op.record("remove non-existent worker: " + n.Address)
 	}
 	g.nextWorkers = nextWorkers
 
@@ -613,13 +593,17 @@ func (g *Generator) decreaseWorker() (*updateOp, error) {
 	return op, nil
 }
 
-func (g *Generator) nodesToMachines(nodes []*cke.Node) []*Machine {
+func (g *Generator) nodesToMachines(nodes []*cke.Node) ([]*Machine, []*cke.Node) {
 	var machines []*Machine
+	var nonExistent []*cke.Node
 	for _, n := range nodes {
+		if m := g.machineMap[n.Address]; m == nil {
+			nonExistent = append(nonExistent, n)
+			continue
+		}
 		machines = append(machines, g.machineMap[n.Address])
 	}
-
-	return machines
+	return machines, nonExistent
 }
 
 func (g *Generator) getUnusedMachines(usedNodes []*cke.Node) []*Machine {
