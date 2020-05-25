@@ -1,0 +1,52 @@
+{
+  "ignition": {
+    "config": {
+      "replace": {
+        "source": "https://example.com/sample.ign",
+        "verification": {}
+      }
+    },
+    "security": {
+      "tls": {
+        "certificateAuthorities": [
+          {
+            "source": "https://example.com/source1",
+            "verification": {
+              "hash": "sha512-e2bb19fdbc3604f511b13d66f4c675f011a63dd967b97e2fe4f5d50bf6cb224e902182221ba0f9dd87c0bb4abcbd2ab428eb7965aa7f177eb5630e7a1793e2e6"
+            }
+          }
+        ]
+      }
+    },
+    "timeouts": {},
+    "version": "3.0.0"
+  },
+  "passwd": {},
+  "storage": {
+    "filesystems": [
+      {
+        "device": "/dev/nvme0n1",
+        "format": "ext4",
+        "wipeFilesystem": true
+      }
+    ]
+  },
+  "systemd": {
+    "units": [
+      {
+        "contents": "[Unit]\nDescription=Mount ephemeral to /var/lib/docker\nBefore=local-fs.target\n[Mount]\nWhat=/dev/nvme0n1\nWhere=/var/lib/docker\nType=ext4\n[Install]\nWantedBy=local-fs.target\n",
+        "enabled": true,
+        "name": "var-lib-docker.mount"
+      },
+      {
+        "dropins": [
+          {
+            "contents": "[Unit]\nAfter=var-lib-docker.mount\nRequires=var-lib-docker.mount\n",
+            "name": "10-wait-docker.conf"
+          }
+        ],
+        "name": "docker.service"
+      }
+    ]
+  }
+}

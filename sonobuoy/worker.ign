@@ -16,10 +16,9 @@ storage:
     format: ext4
     wipe_filesystem: true
 systemd:
-  name: docker.service
   units:
   - name: var-lib-docker.mount
-    enable: true
+    enabled: true
     contents: |
       [Unit]
       Description=Mount ephemeral to /var/lib/docker
@@ -30,6 +29,7 @@ systemd:
       Type=ext4
       [Install]
       WantedBy=local-fs.target
+  - name: docker.service
     dropins:
     - name: 10-wait-docker.conf
       contents: |

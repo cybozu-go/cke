@@ -40,7 +40,7 @@ for i in $(seq 3); do
     --image-family fedora-coreos-stable \
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
-    --metadata-from-file user-data=$(dirname $0)/../sonobuoy/worker.ign \
+    --metadata-from-file user-data=$(dirname $0)/../sonobuoy/transpiled_config.ign \
     --local-ssd interface=nvme \
     --local-ssd interface=nvme \
     --local-ssd interface=nvme \
