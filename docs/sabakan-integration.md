@@ -287,7 +287,7 @@ nodes are added.
 
 #### Decrease worker nodes
 
-If a worker node is either retiring or retired for a while,
+If a worker node is retired for a while,
 
 1. it is removed from the cluster if the number of workers is greater than `minimum-workers`, or
 2. it is replaced with a new machine if available, otherwise,

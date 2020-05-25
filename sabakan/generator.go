@@ -638,7 +638,7 @@ func (g *Generator) decreaseWorker() (*updateOp, error) {
 			workers = append(workers, m)
 			continue
 		}
-		if m.Status.State != StateRetiring && m.Status.State != StateRetired {
+		if m.Status.State != StateRetired {
 			workers = append(workers, m)
 			continue
 		}

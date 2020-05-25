@@ -463,6 +463,7 @@ func testUpdate(t *testing.T) {
 		newTestMachineWithIP(3, testFuture1000, StateHealthy, "10.0.0.7", "cs"),    // [6]
 		newTestMachineWithIP(3, testFuture500, StateHealthy, "10.0.0.8", "cs"),     // [7]
 		newTestMachineWithIP(4, testFuture500, StateUpdating, "10.0.0.9", "cs"),    // [8]
+		newTestMachineWithIP(4, testFuture500, StateRetired, "10.0.0.10", "cs"),    // [9]
 	}
 	cps := []*cke.Node{
 		{Address: "10.0.0.1", ControlPlane: true},    // [0]
@@ -474,8 +475,9 @@ func testUpdate(t *testing.T) {
 		{Address: "10.0.0.7", ControlPlane: true},    // [6]
 		{Address: "10.0.0.8", ControlPlane: true},    // [7]
 		{Address: "10.0.0.9", ControlPlane: true},    // [8]
-		{Address: "10.100.0.10", ControlPlane: true}, // [9]  non-existent
-		{Address: "10.100.0.11", ControlPlane: true}, // [10] non-existent
+		{Address: "10.100.0.10", ControlPlane: true}, // [9]
+		{Address: "10.100.0.11", ControlPlane: true}, // [10]  non-existent
+		{Address: "10.100.0.12", ControlPlane: true}, // [11] non-existent
 	}
 	workers := []*cke.Node{
 		{Address: "10.0.0.1"}, // [0]
@@ -487,15 +489,23 @@ func testUpdate(t *testing.T) {
 					Effect: corev1.TaintEffectNoExecute,
 				},
 			}},
-		{Address: "10.0.0.3"},    // [2]
-		{Address: "10.0.0.4"},    // [3]
-		{Address: "10.0.0.5"},    // [4]
-		{Address: "10.0.0.6"},    // [5]
-		{Address: "10.0.0.7"},    // [6]
-		{Address: "10.0.0.8"},    // [7]
-		{Address: "10.0.0.9"},    // [8]
-		{Address: "10.100.0.10"}, // [9]  non-existent
-		{Address: "10.100.0.11"}, // [10] non-existent
+		{Address: "10.0.0.3"}, // [2]
+		{Address: "10.0.0.4"}, // [3]
+		{Address: "10.0.0.5"}, // [4]
+		{Address: "10.0.0.6"}, // [5]
+		{Address: "10.0.0.7"}, // [6]
+		{Address: "10.0.0.8"}, // [7]
+		{Address: "10.0.0.9"}, // [8]
+		{Address: "10.0.0.10", // [9]
+			Taints: []corev1.Taint{
+				{
+					Key:    "cke.cybozu.com/state",
+					Value:  "retired",
+					Effect: corev1.TaintEffectNoExecute,
+				},
+			}},
+		{Address: "10.100.0.11"}, // [10]  non-existent
+		{Address: "10.100.0.12"}, // [11] non-existent
 	}
 
 	tmpl := &cke.Cluster{
@@ -522,7 +532,7 @@ func testUpdate(t *testing.T) {
 		{
 			"RemoveNonExistent",
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[1], cps[9], workers[2], workers[3], workers[10]},
+				Nodes: []*cke.Node{cps[0], cps[1], cps[10], workers[2], workers[3], workers[11]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 3,
@@ -729,7 +739,7 @@ func testUpdate(t *testing.T) {
 		{
 			"DecreaseWorkerRemove",
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7]},
+				Nodes: []*cke.Node{cps[0], cps[5], workers[9], workers[7]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 2,
@@ -745,31 +755,31 @@ func testUpdate(t *testing.T) {
 		{
 			"DecreaseWorkerReplace",
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7]},
+				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7], workers[9]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 2,
-				MinimumWorkers:    2,
-				MaximumWorkers:    2,
+				MinimumWorkers:    3,
+				MaximumWorkers:    3,
 			},
 			machines,
 
 			nil,
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[6], workers[7]},
+				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[6], workers[7]},
 			},
 		},
 		{
 			"NotDecreaseWorker",
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7]},
+				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7], workers[9]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 2,
-				MinimumWorkers:    2,
-				MaximumWorkers:    2,
+				MinimumWorkers:    3,
+				MaximumWorkers:    3,
 			},
-			[]Machine{machines[0], machines[1], machines[5], machines[7]},
+			[]Machine{machines[0], machines[1], machines[5], machines[7], machines[9]},
 
 			nil,
 			nil,
