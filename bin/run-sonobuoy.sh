@@ -31,9 +31,12 @@ $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --local-ssd interface=nvme \
   --local-ssd interface=nvme
 
-sudo docker run --rm -v $(dirname $0)/../sonobuoy/worker.ign:/config.fcc:z quay.io/coreos/fcct:release --pretty --strict /config.fcc > transpiled_config.ign
+curl -L -o fcct https://github.com/coreos/fcct/releases/latest/download/fcct-x86_64-unknown-linux-gnu
+chmod +x ./fcct
+./fcct $(dirname $0)/../sonobuoy/worker.ign --pretty --strict > transpiled_config.ign
+
 ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
-cat transpiled_config.ign | sed -e "s#<PUBLIC_KEY>#$(cat gcp_rsa.pub)#g" > transpiled_config_with_key.ign
+cat transpiled_config.ign | sed -e "s#PUBLIC_KEY#$(cat gcp_rsa.pub)#g" > transpiled_config_with_key.ign
 
 for i in $(seq 3); do
   $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true

@@ -4,7 +4,7 @@ passwd:
   users:
   - name: cybozu
     ssh_authorized_keys:
-    - "<PUBLIC_KEY>"
+    - "PUBLIC_KEY"
 storage:
   filesystems:
   - device: /dev/nvme0n1
