@@ -376,7 +376,7 @@ func TestOperators(isDegraded bool) {
 		By("Adding a scheduler priorities")
 		// this will run these ops:
 		// - SchedulerRestartOp
-		cluster.Options.Scheduler.Predicates = []string{"name: some_priority"}
+		cluster.Options.Scheduler.Priorities = []string{"name: some_priority"}
 		clusterSetAndWait(cluster)
 
 		stdout, stderr, err = execAt(node1, "jq", "-r", "'.priorities[0].name'", op.PolicyConfigPath)
@@ -386,7 +386,7 @@ func TestOperators(isDegraded bool) {
 		By("Removing a scheduler priorities")
 		// this will run these ops:
 		// - SchedulerRestartOp
-		cluster.Options.Scheduler.Predicates = []string{}
+		cluster.Options.Scheduler.Priorities = []string{}
 		clusterSetAndWait(cluster)
 
 		stdout, stderr, err = execAt(node1, "jq", "'.priorities'", op.PolicyConfigPath)
