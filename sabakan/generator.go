@@ -662,19 +662,21 @@ func (g *Generator) taintNodes(currentCPs, currentWorkers []*cke.Node) (*updateO
 		name: "taint nodes",
 	}
 
-	cps := make([]*Machine, len(g.nextControlPlanes))
-	for i, n := range currentCPs {
+	for _, n := range currentCPs {
 		m := g.machineMap[n.Address]
-		cps[i] = m
+		if m == nil {
+			panic("BUG: " + n.Address + " does not exist")
+		}
 		if !hasValidTaint(n, m) {
 			op.record("change taint of " + n.Address)
 		}
 	}
 
-	workers := make([]*Machine, len(currentWorkers))
-	for i, n := range currentWorkers {
+	for _, n := range currentWorkers {
 		m := g.machineMap[n.Address]
-		workers[i] = m
+		if m == nil {
+			panic("BUG: " + n.Address + " does not exist")
+		}
 		if !hasValidTaint(n, m) {
 			op.record("change taint of " + n.Address)
 		}
@@ -684,8 +686,6 @@ func (g *Generator) taintNodes(currentCPs, currentWorkers []*cke.Node) (*updateO
 		return nil, nil
 	}
 
-	g.nextControlPlanes = cps
-	g.nextWorkers = workers
 	return op, nil
 }
 
