@@ -31,6 +31,10 @@ $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --local-ssd interface=nvme \
   --local-ssd interface=nvme
 
+sudo docker run --rm -v $(dirname $0)/../sonobuoy/worker.ign:/config.fcc:z quay.io/coreos/fcct:release --pretty --strict /config.fcc > transpiled_config.ign
+ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
+cat transpiled_config.ign | sed -e "s#<PUBLIC_KEY>#$(cat gcp_rsa.pub)#g" > transpiled_config_with_key.ign
+
 for i in $(seq 3); do
   $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
   $GCLOUD compute instances create ${INSTANCE_NAME}-${i} \
@@ -40,7 +44,7 @@ for i in $(seq 3); do
     --image-family fedora-coreos-stable \
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
-    --metadata-from-file user-data=$(dirname $0)/../sonobuoy/transpiled_config.ign \
+    --metadata-from-file user-data=transpiled_config_with_key.ign \
     --local-ssd interface=nvme \
     --local-ssd interface=nvme \
     --local-ssd interface=nvme \
@@ -60,13 +64,9 @@ for i in $(seq 0 3); do
 done
 
 # Register SSH key and extend instance life to complete sonobuoy test
-ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
-cat gcp_rsa.pub | sed -e "s/^/cybozu:/g" > ./gcp_public_key.txt
 for i in $(seq 0 3); do
   $GCLOUD compute instances add-metadata ${INSTANCE_NAME}-${i} --zone ${ZONE} \
     --metadata extended=$(date -Iseconds -d+4hours)
-  $GCLOUD compute instances add-metadata ${INSTANCE_NAME}-${i} --zone ${ZONE} \
-    --metadata-from-file ssh-keys=./gcp_public_key.txt
 done
 $GCLOUD compute scp --zone=${ZONE} ./gcp_rsa cybozu@${INSTANCE_NAME}-0:
 

@@ -1,5 +1,10 @@
 variant: fcos
 version: 1.0.0
+passwd:
+  users:
+  - name: cybozu
+    ssh_authorized_keys:
+    - "<PUBLIC_KEY>"
 storage:
   filesystems:
   - device: /dev/nvme0n1
