@@ -8,9 +8,9 @@ delete_instance() {
     return
   fi
   $GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_NAME} || true
-  for i in $(seq 0 3); do
-    $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
-  done
+#  for i in $(seq 0 3); do
+#    $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
+#  done
 }
 
 $GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_NAME} || true
@@ -58,7 +58,7 @@ RET=0
 trap delete_instance INT QUIT TERM 0
 
 for i in $(seq 0 3); do
-  for j in $(seq 100); do
+  for j in $(seq 10); do
     if $GCLOUD compute ssh --zone=${ZONE} core@${INSTANCE_NAME}-${i} --command=date 2>/dev/null; then
       break
     fi
