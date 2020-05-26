@@ -59,7 +59,7 @@ trap delete_instance INT QUIT TERM 0
 
 for i in $(seq 0 3); do
   for j in $(seq 10); do
-    if $GCLOUD compute ssh --zone=${ZONE} core@${INSTANCE_NAME}-${i} --command=date 2>/dev/null; then
+    if $GCLOUD compute ssh --zone=${ZONE} cybozu@${INSTANCE_NAME}-${i} --ssh-key-file=gcp_rsa --command=date 2>/dev/null; then
       break
     fi
     sleep 1
@@ -67,7 +67,7 @@ for i in $(seq 0 3); do
 done
 
 for i in $(seq 1 3); do
-  $GCLOUD compute ssh --zone=${ZONE} core@${INSTANCE_NAME}-${i} --command="sudo setenforce 0"
+  $GCLOUD compute ssh --zone=${ZONE} cybozu@${INSTANCE_NAME}-${i} --ssh-key-file=gcp_rsa --command="sudo setenforce 0"
 done
 
 # Register SSH key and extend instance life to complete sonobuoy test
