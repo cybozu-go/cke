@@ -155,11 +155,17 @@ updated later on.
 | Name          | Required | Type       | Description                                     |
 | ------------- | -------- | ---------- | ----------------------------------------------- |
 | `extenders`   | false    | `[]string` | Extender parameters                             |
+| `predicates`  | false    | `[]string` | Predicate parameters                            |
+| `priorities`  | false    | `[]string` | Priority parameters                             |
 | `extra_args`  | false    | array      | Extra command-line arguments.  List of strings. |
 | `extra_binds` | false    | array      | Extra bind mounts.  List of `Mount`.            |
 | `extra_env`   | false    | object     | Extra environment variables.                    |
 
-Elements of `extenders` are contents of [`Extender`](https://github.com/kubernetes/kubernetes/blob/release-1.14//pkg/scheduler/api/v1/types.go#L183) in JSON format.
+Elements of `extenders`, `predicates` and `priorities` are contents of
+[`Extender`](https://github.com/kubernetes/kube-scheduler/blob/release-1.17/config/v1/types.go#L190),
+[`PredicatePolicy`](https://github.com/kubernetes/kube-scheduler/blob/release-1.17/config/v1/types.go#L50) and
+[`PriorityPolicy`](https://github.com/kubernetes/kube-scheduler/blob/release-1.17/config/v1/types.go#L60)
+in JSON format, respectively.
 
 ### CNIConfFile
 
