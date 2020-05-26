@@ -53,11 +53,11 @@ options:
       env1: val1
   kube-scheduler:
     extenders:
-	  - "urlPrefix: http://127.0.0.1:8000"
-	predicates:
-	  - "name: some_predicate"
-	priorities:
-	  - "name: some_priority"
+      - "urlPrefix: http://127.0.0.1:8000"
+    predicates:
+      - "name: some_predicate"
+    priorities:
+      - "name: some_priority"
     extra_args:
       - arg1
   kube-proxy:
