@@ -5,6 +5,7 @@ passwd:
   - name: cybozu
     ssh_authorized_keys:
     - "PUBLIC_KEY"
+    groups: [ sudo, docker ]
 storage:
   filesystems:
   - device: /dev/nvme0n1
