@@ -114,7 +114,6 @@ type Generator struct {
 }
 
 // NewGenerator creates a new Generator.
-// current can be nil if no cluster configuration has been set.
 // template must have been validated with ValidateTemplate().
 func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machine, currentTime time.Time) *Generator {
 	g := &Generator{
@@ -122,9 +121,9 @@ func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machi
 		constraints: cstr,
 		timestamp:   currentTime,
 		waitSeconds: DefaultWaitRetiredSeconds,
+		machineMap:  make(map[string]*Machine),
 	}
 
-	machineMap := make(map[string]*Machine)
 	for _, m := range machines {
 		if len(m.Spec.IPv4) == 0 {
 			log.Warn("ignore machine w/o IPv4 address", map[string]interface{}{
@@ -133,9 +132,8 @@ func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machi
 			continue
 		}
 		m := m
-		machineMap[m.Spec.IPv4[0]] = &m
+		g.machineMap[m.Spec.IPv4[0]] = &m
 	}
-	g.machineMap = machineMap
 
 	for _, n := range template.Nodes {
 		weight := 1.0
