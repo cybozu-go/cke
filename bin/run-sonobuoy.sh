@@ -8,9 +8,9 @@ delete_instance() {
     return
   fi
   $GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_NAME} || true
-#  for i in $(seq 0 3); do
-#    $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
-#  done
+  for i in $(seq 0 3); do
+    $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
+  done
 }
 
 $GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_NAME} || true
@@ -33,10 +33,10 @@ $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
 
 curl -L -o fcct https://github.com/coreos/fcct/releases/latest/download/fcct-x86_64-unknown-linux-gnu
 chmod +x ./fcct
-./fcct $(dirname $0)/../sonobuoy/worker.ign --pretty --strict > transpiled_config.ign
+./fcct $(dirname $0)/../sonobuoy/worker.fcc --pretty --strict > /tmp/worker.ign
 
 ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
-cat transpiled_config.ign | sed -e "s#PUBLIC_KEY#$(cat gcp_rsa.pub)#g" > transpiled_config_with_key.ign
+sed -i -e "s#PUBLIC_KEY#$(cat gcp_rsa.pub)#g" /tmp/worker.ign
 
 for i in $(seq 3); do
   $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
@@ -47,7 +47,7 @@ for i in $(seq 3); do
     --image-family fedora-coreos-stable \
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
-    --metadata-from-file user-data=transpiled_config_with_key.ign \
+    --metadata-from-file user-data=/tmp/worker.ign \
     --local-ssd interface=nvme \
     --local-ssd interface=nvme \
     --local-ssd interface=nvme \
@@ -58,7 +58,7 @@ RET=0
 trap delete_instance INT QUIT TERM 0
 
 for i in $(seq 0 3); do
-  for j in $(seq 10); do
+  for j in $(seq 300); do
     if $GCLOUD compute ssh --zone=${ZONE} cybozu@${INSTANCE_NAME}-${i} --ssh-key-file=gcp_rsa --command=date 2>/dev/null; then
       break
     fi

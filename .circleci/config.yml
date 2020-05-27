@@ -247,7 +247,15 @@ workflows:
       - build-image:
           requires:
             - build
-      - sonobuoy
+      - mtest-docker-functions
+      - mtest-containerd-functions
+      - mtest-containerd-operators
+      - mtest-containerd-robustness
+      - mtest-upgrade:
+          filters:
+            branches:
+              ignore: ["master", "/release-.*/", "/bump-.*/"]
+      - compose
   conformance:
     jobs:
       - hold:
