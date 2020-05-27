@@ -201,14 +201,14 @@ func (g *Generator) SetWaitSeconds(secs float64) {
 }
 
 // removeMachine removes the specified machine from machines slice.
-// If m is nil, this returns the same slice as input.
+//  If m is nil or if m is not found in machines, this causes panic.
 func removeMachine(machines []*Machine, m *Machine) []*Machine {
 	for i, mm := range machines {
 		if m == mm {
 			return append(machines[:i], machines[i+1:]...)
 		}
 	}
-	return machines
+	panic("BUG: illegal machines operation")
 }
 
 // selectWorker selects a healthy machine from given machines slice.
