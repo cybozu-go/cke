@@ -299,10 +299,17 @@ func validateTaint(taint corev1.Taint, fldPath *field.Path) error {
 	return nil
 }
 
-// ControlPlanes returns control plane []*Node
+// ControlPlanes returns control planes []*Node
 func ControlPlanes(nodes []*Node) []*Node {
 	return filterNodes(nodes, func(n *Node) bool {
 		return n.ControlPlane
+	})
+}
+
+// Workers returns workers []*Node
+func Workers(nodes []*Node) []*Node {
+	return filterNodes(nodes, func(n *Node) bool {
+		return !n.ControlPlane
 	})
 }
 
