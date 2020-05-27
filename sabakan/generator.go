@@ -16,8 +16,8 @@ var (
 	errMissingMachine     = errors.New("failed to apply new template due to missing machines")
 	errTooManyNonExistent = errors.New("too many non-existent control plane nodes")
 
-	// DefaultWaitRetiringSeconds before removing retiring nodes from the cluster.
-	DefaultWaitRetiringSeconds = 300.0
+	// DefaultWaitRetiredSeconds before removing retired nodes from the cluster.
+	DefaultWaitRetiredSeconds = 300.0
 )
 
 // MachineToNode converts sabakan.Machine to cke.Node.
@@ -121,7 +121,7 @@ func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machi
 		template:    template,
 		constraints: cstr,
 		timestamp:   currentTime,
-		waitSeconds: DefaultWaitRetiringSeconds,
+		waitSeconds: DefaultWaitRetiredSeconds,
 	}
 
 	machineMap := make(map[string]*Machine)
@@ -195,20 +195,20 @@ func (g *Generator) getWorkerTmpl(role string) nodeTemplate {
 	panic("BUG: instantiating for invalid role: " + role)
 }
 
-// SetWaitSeconds set seconds before removing retiring nodes from the cluster.
+// SetWaitSeconds set seconds before removing retired nodes from the cluster.
 func (g *Generator) SetWaitSeconds(secs float64) {
 	g.waitSeconds = secs
 }
 
+// removeMachine removes the specified machine from machines slice.
+// If m is nil, this returns the same slice as input.
 func removeMachine(machines []*Machine, m *Machine) []*Machine {
-	var ret []*Machine
 	for i, mm := range machines {
 		if m == mm {
-			ret = append(machines[:i], machines[i+1:]...)
-			break
+			return append(machines[:i], machines[i+1:]...)
 		}
 	}
-	return ret
+	return machines
 }
 
 // selectWorker selects a healthy machine from given machines slice.

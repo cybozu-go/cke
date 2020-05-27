@@ -7,8 +7,8 @@ import (
 const (
 	// maxCountPerRack should be more than max machine num per rack + 1
 	maxCountPerRack = 100
-	// heathyScore is addted when the machine status is healthy.
-	heathyScore = 1000
+	// healthyScore is addted when the machine status is healthy.
+	healthyScore = 1000
 )
 
 func scoreByDays(days int) int {
@@ -48,13 +48,16 @@ func scoreMachineWithHealthStatus(m *Machine, rackCount map[int]int, ts time.Tim
 	if m.Status.State != StateHealthy {
 		return score
 	}
-	return heathyScore + score
+	return healthyScore + score
 }
 
 func filterHealthyMachinesByRole(ms []*Machine, role string) []*Machine {
 	var filtered []*Machine
 	for _, m := range ms {
-		if m.Status.State != StateHealthy || (role != "" && m.Spec.Role != role) {
+		if m.Status.State != StateHealthy {
+			continue
+		}
+		if role != "" && m.Spec.Role != role {
 			continue
 		}
 		filtered = append(filtered, m)

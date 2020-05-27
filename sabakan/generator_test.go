@@ -110,7 +110,7 @@ func newTestMachineWithIP(rack int, retireDate time.Time, state State, ip, role 
 	m.Spec.Role = role
 	m.Spec.RetireDate = retireDate
 	m.Status.State = state
-	m.Status.Duration = DefaultWaitRetiringSeconds * 2
+	m.Status.Duration = DefaultWaitRetiredSeconds * 2
 	return m
 }
 

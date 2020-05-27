@@ -15,7 +15,7 @@ type sabakanContextKey string
 
 const (
 	// WaitSecs is a context key to pass to change the wait seconds
-	// before removing retiring nodes from the cluster.
+	// before removing retired nodes from the cluster.
 	WaitSecs = sabakanContextKey("wait secs")
 )
 

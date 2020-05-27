@@ -167,7 +167,8 @@ CKE generates cluster configuration with the following conditions.
 * Newer machines should be preferred than old ones.
 * Healthy machines should be preferred than non-healthy ones.
 * Unhealthy and unreachable machines in the cluster should be [tainted][taint] with `NoSchedule`.
-* Retiring machines should be [tainted][taint] with `NoExecute`.
+* Retiring and retired machines should be [tainted][taint] with `NoExecute`.
+* Retired machines should be removed if the machines are kept retired for a while.
 * Rebooting machines should not be removed from the cluster nor be tainted.
 * Each change of the cluster configuration should be made as small as possible.
 * Control plane nodes should be distributed across different racks.
@@ -287,7 +288,7 @@ nodes are added.
 
 #### Decrease worker nodes
 
-If a worker node is retired for a while,
+If a worker node is kept retired for a while,
 
 1. it is removed from the cluster if the number of workers is greater than `minimum-workers`, or
 2. it is replaced with a new machine if available, otherwise,
