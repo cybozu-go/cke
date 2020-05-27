@@ -124,7 +124,7 @@ func (ig integrator) Do(ctx context.Context, leaderKey string) error {
 		// return nil
 		return nil
 	}
-	metrics.UpdateSabakanIntegration(true, g.workersByRole(), len(g.nextUnused), time.Now().UTC())
+	metrics.UpdateSabakanIntegration(true, g.countWorkerByRole, len(g.nextUnused), time.Now().UTC())
 
 	if newc == nil {
 		log.Debug("sabakan: nothing to do", nil)

@@ -111,17 +111,19 @@ type Generator struct {
 	nextUnused        []*Machine
 	nextControlPlanes []*Machine
 	nextWorkers       []*Machine
+	countWorkerByRole map[string]int
 }
 
 // NewGenerator creates a new Generator.
 // template must have been validated with ValidateTemplate().
 func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machine, currentTime time.Time) *Generator {
 	g := &Generator{
-		template:    template,
-		constraints: cstr,
-		timestamp:   currentTime,
-		waitSeconds: DefaultWaitRetiredSeconds,
-		machineMap:  make(map[string]*Machine),
+		template:          template,
+		constraints:       cstr,
+		timestamp:         currentTime,
+		waitSeconds:       DefaultWaitRetiredSeconds,
+		machineMap:        make(map[string]*Machine),
+		countWorkerByRole: make(map[string]int),
 	}
 
 	for _, m := range machines {
@@ -156,16 +158,8 @@ func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machi
 	return g
 }
 
-func (g *Generator) workersByRole() map[string]int {
-	countByRole := make(map[string]int)
-	for _, m := range g.nextWorkers {
-		countByRole[m.Spec.Role]++
-	}
-	return countByRole
-}
-
 func (g *Generator) chooseWorkerTmpl() nodeTemplate {
-	count := g.workersByRole()
+	count := g.countWorkerByRole
 
 	least := float64(count[g.workerTmpls[0].Role]) / g.workerTmpls[0].Weight
 	leastIndex := 0
@@ -276,7 +270,7 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 			if promote != nil {
 				op.promoteWorker(promote)
 				g.nextControlPlanes = append(g.nextControlPlanes, promote)
-				g.nextWorkers = removeMachine(g.nextWorkers, promote)
+				g.removeNextWorker(promote)
 				continue
 			}
 		}
@@ -289,7 +283,7 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 			return nil, errNotAvailable
 		}
 		op.addWorker(m)
-		g.nextWorkers = append(g.nextWorkers, m)
+		g.appendNextWorker(m)
 		g.nextUnused = removeMachine(g.nextUnused, m)
 	}
 
@@ -343,8 +337,10 @@ func (g *Generator) Regenerate(current *cke.Cluster) (*cke.Cluster, error) {
 	if nonExistentWorkers != nil {
 		return nil, errMissingMachine
 	}
-	g.nextWorkers = nextWorkers
 
+	for _, m := range nextWorkers {
+		g.appendNextWorker(m)
+	}
 	g.nextUnused = g.getUnusedMachines(current.Nodes)
 
 	op.record("regenerate with new template")
@@ -436,7 +432,9 @@ func (g *Generator) removeNonExistentNode(currentCPs, currentWorkers []*cke.Node
 	for _, n := range nonExistentWorkers {
 		op.record("remove non-existent worker: " + n.Address)
 	}
-	g.nextWorkers = nextWorkers
+	for _, m := range nextWorkers {
+		g.appendNextWorker(m)
+	}
 
 	g.nextUnused = g.getUnusedMachines(append(currentCPs, currentWorkers...))
 
@@ -475,7 +473,7 @@ func (g *Generator) decreaseControlPlane() (*updateOp, error) {
 
 		if g.constraints.MaximumWorkers == 0 || len(g.nextWorkers) < g.constraints.MaximumWorkers {
 			op.demoteControlPlane(m)
-			g.nextWorkers = append(g.nextWorkers, m)
+			g.appendNextWorker(m)
 			continue
 		}
 		op.record("remove excessive control plane: " + m.Spec.IPv4[0])
@@ -510,7 +508,7 @@ func (g *Generator) replaceControlPlane() (*updateOp, error) {
 
 	if g.constraints.MaximumWorkers == 0 || len(g.nextWorkers) < g.constraints.MaximumWorkers {
 		op.demoteControlPlane(demote)
-		g.nextWorkers = append(g.nextWorkers, demote)
+		g.appendNextWorker(demote)
 		return op, nil
 	}
 
@@ -522,8 +520,8 @@ func (g *Generator) replaceControlPlane() (*updateOp, error) {
 
 	op.promoteWorker(promote)
 	g.nextControlPlanes = append(g.nextControlPlanes, promote)
-	g.nextWorkers = removeMachine(g.nextWorkers, promote)
-	g.nextWorkers = append(g.nextWorkers, demote)
+	g.removeNextWorker(promote)
+	g.appendNextWorker(demote)
 
 	return op, nil
 }
@@ -553,7 +551,7 @@ func (g *Generator) increaseWorker() (*updateOp, error) {
 			break
 		}
 		op.addWorker(m)
-		g.nextWorkers = append(g.nextWorkers, m)
+		g.appendNextWorker(m)
 		g.nextUnused = removeMachine(g.nextUnused, m)
 	}
 
@@ -587,7 +585,7 @@ func (g *Generator) decreaseWorker() (*updateOp, error) {
 	}
 
 	op.record("remove retired worker: " + retired.Spec.IPv4[0])
-	g.nextWorkers = removeMachine(g.nextWorkers, retired)
+	g.removeNextWorker(retired)
 	return op, nil
 }
 
@@ -701,4 +699,14 @@ func (g *Generator) countMachinesByRack(cp bool, role string) map[int]int {
 		count[m.Spec.Rack]++
 	}
 	return count
+}
+
+func (g *Generator) appendNextWorker(m *Machine) {
+	g.nextWorkers = append(g.nextWorkers, m)
+	g.countWorkerByRole[m.Spec.Role]++
+}
+
+func (g *Generator) removeNextWorker(m *Machine) {
+	g.nextWorkers = removeMachine(g.nextWorkers, m)
+	g.countWorkerByRole[m.Spec.Role]--
 }
