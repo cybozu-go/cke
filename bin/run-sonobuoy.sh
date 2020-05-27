@@ -66,10 +66,6 @@ for i in $(seq 0 3); do
   done
 done
 
-for i in $(seq 1 3); do
-  $GCLOUD compute ssh --zone=${ZONE} cybozu@${INSTANCE_NAME}-${i} --ssh-key-file=gcp_rsa --command="sudo setenforce 0"
-done
-
 # Register SSH key and extend instance life to complete sonobuoy test
 for i in $(seq 0 3); do
   $GCLOUD compute instances add-metadata ${INSTANCE_NAME}-${i} --zone ${ZONE} \

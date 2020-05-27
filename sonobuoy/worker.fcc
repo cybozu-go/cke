@@ -20,6 +20,13 @@ storage:
         net.bridge.bridge-nf-call-iptables  = 1
         net.ipv4.ip_forward                 = 1
         net.bridge.bridge-nf-call-ip6tables = 1
+  - path: /etc/selinux/config
+    overwrite: true
+    mode: 0644
+    contents:
+      inline: |
+        SELINUX=disabled
+        SELINUXTYPE=targeted
 systemd:
   units:
   - name: var-lib-docker.mount
