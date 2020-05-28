@@ -11,9 +11,9 @@ service_subnet: 10.100.0.0/16
 dns_servers: ["8.8.8.8", "1.1.1.1"]
 options:
   kubelet:
+    cgroup_driver: systemd
     extra_args:
       - "--volume-plugin-dir=/var/lib/kubelet/volumeplugins"
-      - "--cgroup-driver=systemd"
   kube-controller-manager:
     extra_args:
       - "--flex-volume-plugin-dir=/var/lib/kubelet/volumeplugins"
