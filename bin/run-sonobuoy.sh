@@ -7,10 +7,17 @@ delete_instance() {
     # do not delete GCP instance upon test failure to help debugging.
     return
   fi
+  $GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_NAME} || true
   for i in $(seq 0 3); do
     $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
   done
 }
+
+$GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_NAME} || true
+$GCLOUD compute firewall-rules create ${FIREWALL_RULE_NAME} \
+  --allow ipip \
+  --network default \
+  --source-ranges 10.128.0.0/9
 
 $GCLOUD compute instances delete ${INSTANCE_NAME}-0 --zone ${ZONE} || true
 $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
