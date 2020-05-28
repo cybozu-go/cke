@@ -22,7 +22,6 @@ nodes:
     labels:
       label1: value1
 service_subnet: 12.34.56.00/24
-pod_subnet: 10.1.0.0/16
 dns_servers: ["1.1.1.1", "8.8.8.8"]
 dns_service: kube-system/dns
 etcd_backup:
@@ -113,9 +112,6 @@ options:
 	if c.ServiceSubnet != "12.34.56.00/24" {
 		t.Error(`c.ServiceSubnet != "12.34.56.00/24"`)
 	}
-	if c.PodSubnet != "10.1.0.0/16" {
-		t.Error(`c.PodSubnet != "10.1.0.0/16"`)
-	}
 	if !reflect.DeepEqual(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"}) {
 		t.Error(`!reflect.DeepEqual(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"})`)
 	}
@@ -205,7 +201,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 			},
 			true,
 		},
@@ -214,16 +209,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "",
-				PodSubnet:     "10.1.0.0/16",
-			},
-			true,
-		},
-		{
-			"No pod subnet",
-			Cluster{
-				Name:          "testcluster",
-				ServiceSubnet: "10.1.0.0/16",
-				PodSubnet:     "",
 			},
 			true,
 		},
@@ -232,7 +217,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				DNSServers:    []string{"a.b.c.d"},
 			},
 			true,
@@ -242,7 +226,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				DNSService:    "hoge",
 			},
 			true,
@@ -252,7 +235,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				EtcdBackup: EtcdBackup{
 					Enabled:  true,
 					PVCName:  "",
@@ -266,7 +248,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				EtcdBackup: EtcdBackup{
 					Enabled:  true,
 					PVCName:  "etcdbackup-pvc",
@@ -280,7 +261,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					APIServer: APIServerParams{
 						AuditLogEnabled: true,
@@ -295,7 +275,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					APIServer: APIServerParams{
 						AuditLogEnabled: true,
@@ -310,7 +289,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					APIServer: APIServerParams{
 						AuditLogEnabled: true,
@@ -329,7 +307,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						Domain: "a_b.c",
@@ -343,7 +320,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						ContainerRuntime:         "test",
@@ -358,7 +334,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						ContainerRuntime:         "remote",
@@ -373,7 +348,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						BootTaints: []corev1.Taint{
@@ -393,7 +367,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						BootTaints: []corev1.Taint{
@@ -413,7 +386,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						BootTaints: []corev1.Taint{
@@ -433,7 +405,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						BootTaints: []corev1.Taint{
@@ -453,7 +424,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						CNIConfFile: CNIConfFile{
@@ -470,7 +440,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						CNIConfFile: CNIConfFile{
@@ -487,7 +456,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						CNIConfFile: CNIConfFile{
@@ -504,7 +472,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Scheduler: SchedulerParams{
 						Extenders: []string{`foo: bar`},
@@ -518,7 +485,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Scheduler: SchedulerParams{
 						Extenders: []string{`urlPrefix: http://127.0.0.1:8000`},
@@ -532,7 +498,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				DNSService:    "kube-system/dns",
 				Options: Options{
 					Kubelet: KubeletParams{

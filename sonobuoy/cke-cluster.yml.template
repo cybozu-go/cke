@@ -8,7 +8,6 @@ nodes:
   - address: @WORKER3_ADDRESS@
     user: cybozu
 service_subnet: 10.100.0.0/16
-pod_subnet: 10.10.0.0/16
 dns_servers: ["8.8.8.8", "1.1.1.1"]
 options:
   kubelet:

@@ -396,7 +396,10 @@ func ckecliClusterSet(cluster *cke.Cluster) (time.Time, error) {
 		return time.Time{}, err
 	}
 
-	rf := remoteTempFile(string(y))
+	// TODO: remove this workaround added in #334
+	data := string(y) + "\npod_subnet: 10.1.0.0/16"
+
+	rf := remoteTempFile(data)
 	_, _, err = ckecli("cluster", "set", rf)
 	return time.Now(), err
 }
