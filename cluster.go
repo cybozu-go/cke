@@ -161,7 +161,6 @@ type Cluster struct {
 	Nodes         []*Node    `json:"nodes"`
 	TaintCP       bool       `json:"taint_control_plane"`
 	ServiceSubnet string     `json:"service_subnet"`
-	PodSubnet     string     `json:"pod_subnet"`
 	DNSServers    []string   `json:"dns_servers"`
 	DNSService    string     `json:"dns_service"`
 	EtcdBackup    EtcdBackup `json:"etcd_backup"`
@@ -175,10 +174,6 @@ func (c *Cluster) Validate(isTmpl bool) error {
 	}
 
 	_, _, err := net.ParseCIDR(c.ServiceSubnet)
-	if err != nil {
-		return err
-	}
-	_, _, err = net.ParseCIDR(c.PodSubnet)
 	if err != nil {
 		return err
 	}

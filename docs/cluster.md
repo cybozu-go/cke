@@ -11,14 +11,11 @@ a YAML or JSON object with these fields:
 | `nodes`               | true     | array        | `Node` list.                                                     |
 | `taint_control_plane` | false    | bool         | If true, taint contorl plane nodes.                              |
 | `service_subnet`      | true     | string       | CIDR subnet for k8s `Service`.                                   |
-| `pod_subnet`          | true     | string       | CIDR subnet for k8s `Pod`.                                       |
 | `dns_servers`         | false    | array        | List of upstream DNS server IP addresses.                        |
 | `dns_service`         | false    | string       | Upstream DNS service name with namespace as `namespace/service`. |
 | `etcd_backup`         | false    | `EtcdBackup` | See EtcdBackup.                                                  |
 | `options`             | false    | `Options`    | See options.                                                     |
 
-* IP addresses in `pod_subnet` are only used for host-local communication
-  as a fallback CNI plugin.  They are never seen from outside of the cluster.
 * Upstream DNS servers can be specified one of the following ways:
     * List server IP addresses in `dns_servers`.
     * Specify Kubernetes `Service` name in `dns_service` (e.g. `"kube-system/dns"`).  

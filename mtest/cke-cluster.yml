@@ -11,7 +11,6 @@ nodes:
   - address: __NODE5__
     user: cke
 service_subnet: 10.34.56.0/24
-pod_subnet: 10.1.0.0/16
 dns_servers: ["8.8.8.8", "1.1.1.1"]
 options:
   kube-api:

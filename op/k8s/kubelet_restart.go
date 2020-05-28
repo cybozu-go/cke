@@ -12,22 +12,20 @@ import (
 type kubeletRestartOp struct {
 	nodes []*cke.Node
 
-	cluster   string
-	podSubnet string
-	params    cke.KubeletParams
+	cluster string
+	params  cke.KubeletParams
 
 	step  int
 	files *common.FilesBuilder
 }
 
 // KubeletRestartOp returns an Operator to restart kubelet
-func KubeletRestartOp(nodes []*cke.Node, cluster, podSubnet string, params cke.KubeletParams) cke.Operator {
+func KubeletRestartOp(nodes []*cke.Node, cluster string, params cke.KubeletParams) cke.Operator {
 	return &kubeletRestartOp{
-		nodes:     nodes,
-		cluster:   cluster,
-		podSubnet: podSubnet,
-		params:    params,
-		files:     common.NewFilesBuilder(nodes),
+		nodes:   nodes,
+		cluster: cluster,
+		params:  params,
+		files:   common.NewFilesBuilder(nodes),
 	}
 }
 

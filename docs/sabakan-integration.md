@@ -43,7 +43,6 @@ nodes:
 - user: cybozu
   control_plane: false
 service_subnet: 10.68.0.0/16
-pod_subnet: 10.64.0.0/14
 ```
 
 When the configuration template is updated, CKE will soon regenerate
@@ -97,7 +96,6 @@ nodes:
     value: gpu
     effect: PreferNoSchedule
 service_subnet: 10.68.0.0/16
-pod_subnet: 10.64.0.0/14
 ```
 
 ### Node template without role
