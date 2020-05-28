@@ -120,6 +120,8 @@ type CNIConfFile struct {
 type SchedulerParams struct {
 	ServiceParams `json:",inline"`
 	Extenders     []string `json:"extenders"`
+	Predicates    []string `json:"predicates"`
+	Priorities    []string `json:"priorities"`
 }
 
 // KubeletParams is a set of extra parameters for kubelet.
@@ -441,6 +443,28 @@ func validateOptions(opts Options) error {
 		}
 		if _, err = url.Parse(config.URLPrefix); err != nil {
 			return err
+		}
+	}
+
+	for _, e := range opts.Scheduler.Predicates {
+		config := schedulerv1.PredicatePolicy{}
+		err = yaml.Unmarshal([]byte(e), &config)
+		if err != nil {
+			return err
+		}
+		if len(config.Name) == 0 {
+			return errors.New("no name is provided")
+		}
+	}
+
+	for _, e := range opts.Scheduler.Priorities {
+		config := schedulerv1.PriorityPolicy{}
+		err = yaml.Unmarshal([]byte(e), &config)
+		if err != nil {
+			return err
+		}
+		if len(config.Name) == 0 {
+			return errors.New("no name is provided")
 		}
 	}
 

@@ -53,6 +53,10 @@ options:
   kube-scheduler:
     extenders:
       - "urlPrefix: http://127.0.0.1:8000"
+    predicates:
+      - "name: some_predicate"
+    priorities:
+      - "name: some_priority"
     extra_args:
       - arg1
   kube-proxy:
@@ -145,6 +149,12 @@ rules:
 	}
 	if !reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"urlPrefix: http://127.0.0.1:8000"}) {
 		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"urlPrefix: http://127.0.0.1:8000"}`)
+	}
+	if !reflect.DeepEqual(c.Options.Scheduler.Predicates, []string{"name: some_predicate"}) {
+		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Predicates, []string{"name: some_predicate"}`)
+	}
+	if !reflect.DeepEqual(c.Options.Scheduler.Priorities, []string{"name: some_priority"}) {
+		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Priorities, []string{"name: some_priority"}`)
 	}
 	if c.Options.Kubelet.Domain != "my.domain" {
 		t.Error(`c.Options.Kubelet.Domain != "my.domain"`)
@@ -488,6 +498,62 @@ rules:
 				Options: Options{
 					Scheduler: SchedulerParams{
 						Extenders: []string{`urlPrefix: http://127.0.0.1:8000`},
+					},
+				},
+			},
+			false,
+		},
+		{
+			"scheduler predicate config JSON is invalid",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					Scheduler: SchedulerParams{
+						Predicates: []string{`foo: bar`},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"scheduler predicate config JSON is valid",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					Scheduler: SchedulerParams{
+						Predicates: []string{`name: some_predicate`},
+					},
+				},
+			},
+			false,
+		},
+		{
+			"scheduler priority config JSON is invalid",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					Scheduler: SchedulerParams{
+						Priorities: []string{`foo: bar`},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"scheduler extender config JSON is valid",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				PodSubnet:     "10.1.0.0/16",
+				Options: Options{
+					Scheduler: SchedulerParams{
+						Priorities: []string{`name: some_priority`},
 					},
 				},
 			},

@@ -128,6 +128,8 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			return nil, err
 		}
 		status.Scheduler.Extenders = policy.Extenders
+		status.Scheduler.Predicates = policy.Predicates
+		status.Scheduler.Priorities = policy.Priorities
 	}
 
 	// TODO: due to the following bug, health status cannot be checked for proxy.
