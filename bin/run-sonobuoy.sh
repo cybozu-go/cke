@@ -31,16 +31,23 @@ $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --local-ssd interface=nvme \
   --local-ssd interface=nvme
 
+curl -L -o fcct https://github.com/coreos/fcct/releases/latest/download/fcct-x86_64-unknown-linux-gnu
+chmod +x ./fcct
+./fcct $(dirname $0)/../sonobuoy/worker.fcc --pretty --strict > /tmp/worker.ign
+
+ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
+sed -i -e "s#PUBLIC_KEY#$(cat gcp_rsa.pub)#g" /tmp/worker.ign
+
 for i in $(seq 3); do
   $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
   $GCLOUD compute instances create ${INSTANCE_NAME}-${i} \
     --zone ${ZONE} \
     --machine-type ${MACHINE_TYPE_WORKER} \
-    --image-project coreos-cloud \
-    --image-family coreos-stable \
+    --image-project fedora-coreos-cloud \
+    --image-family fedora-coreos-stable \
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
-    --metadata-from-file user-data=$(dirname $0)/../sonobuoy/worker.ign \
+    --metadata-from-file user-data=/tmp/worker.ign \
     --local-ssd interface=nvme \
     --local-ssd interface=nvme \
     --local-ssd interface=nvme \
@@ -51,8 +58,8 @@ RET=0
 trap delete_instance INT QUIT TERM 0
 
 for i in $(seq 0 3); do
-  for i in $(seq 300); do
-    if $GCLOUD compute ssh --zone=${ZONE} core@${INSTANCE_NAME}-${i} --command=date 2>/dev/null; then
+  for j in $(seq 300); do
+    if $GCLOUD compute ssh --zone=${ZONE} cybozu@${INSTANCE_NAME}-${i} --ssh-key-file=gcp_rsa --command=date 2>/dev/null; then
       break
     fi
     sleep 1
@@ -60,13 +67,9 @@ for i in $(seq 0 3); do
 done
 
 # Register SSH key and extend instance life to complete sonobuoy test
-ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
-cat gcp_rsa.pub | sed -e "s/^/cybozu:/g" > ./gcp_public_key.txt
 for i in $(seq 0 3); do
   $GCLOUD compute instances add-metadata ${INSTANCE_NAME}-${i} --zone ${ZONE} \
     --metadata extended=$(date -Iseconds -d+4hours)
-  $GCLOUD compute instances add-metadata ${INSTANCE_NAME}-${i} --zone ${ZONE} \
-    --metadata-from-file ssh-keys=./gcp_public_key.txt
 done
 $GCLOUD compute scp --zone=${ZONE} ./gcp_rsa cybozu@${INSTANCE_NAME}-0:
 

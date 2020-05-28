@@ -7,4 +7,4 @@ MACHINE_TYPE_WORKER=c2-standard-8
 DISK_TYPE=pd-ssd
 BOOT_DISK_SIZE=20GB
 GCLOUD="gcloud --quiet --account ${SERVICE_ACCOUNT} --project ${PROJECT}"
-FIREWALL_RULE_NAME=calico-ipip
+FIREWALL_RULE_NAME=ipip

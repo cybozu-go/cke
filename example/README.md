@@ -115,13 +115,13 @@ $ ./bin/ckecli --config=./cke.config kubernetes issue > $HOME/.kube/config
 CKE itself does not install any network plugins.
 To implement the [Kubernetes networking model](https://kubernetes.io/docs/concepts/cluster-administration/networking/), you have to install [a plugin](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/).
 
-You can deploy calico on Kubernetes cluster with the following command.
+You can deploy flannel on Kubernetes cluster with the following command.
 
 ```console
-$ kubectl apply -f calico.yaml
+$ kubectl apply -f kube-flannel.yaml
 ```
 
-See [Calico Documantation](https://docs.projectcalico.org/v3.8/getting-started/kubernetes/installation/calico) for details.
+See [Flannel Documentation](https://github.com/coreos/flannel/blob/master/Documentation/kubernetes.md) for details.
 
 After a few minutes, Kubernetes cluster will become ready.
 
