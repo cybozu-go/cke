@@ -66,16 +66,16 @@ Options
 
 `Option` is a set of optional parameters for k8s components.
 
-| Name              | Required | Type              | Description                             |
-| ----------------- | -------- | ----------------- | --------------------------------------- |
-| `etcd`            | false    | `EtcdParams`      | Extra arguments for etcd.               |
-| `etcd-rivers`     | false    | `ServiceParams`   | Extra arguments for EtcdRivers.         |
-| `rivers`          | false    | `ServiceParams`   | Extra arguments for Rivers.             |
-| `kube-api`        | false    | `APIServerParams` | Extra arguments for API server.         |
-| `kube-controller-mangaer` | false    | `ServiceParams`   | Extra arguments for controller manager. |
-| `kube-scheduler`  | false    | `SchedulerParams` | Extra arguments for scheduler.          |
-| `kube-proxy`      | false    | `ServiceParams`   | Extra arguments for kube-proxy.         |
-| `kubelet`         | false    | `KubeletParams`   | Extra arguments for kubelet.            |
+| Name                      | Required | Type              | Description                             |
+| ------------------------- | -------- | ----------------- | --------------------------------------- |
+| `etcd`                    | false    | `EtcdParams`      | Extra arguments for etcd.               |
+| `etcd-rivers`             | false    | `ServiceParams`   | Extra arguments for EtcdRivers.         |
+| `rivers`                  | false    | `ServiceParams`   | Extra arguments for Rivers.             |
+| `kube-api`                | false    | `APIServerParams` | Extra arguments for API server.         |
+| `kube-controller-manager` | false    | `ServiceParams`   | Extra arguments for controller manager. |
+| `kube-scheduler`          | false    | `SchedulerParams` | Extra arguments for scheduler.          |
+| `kube-proxy`              | false    | `ServiceParams`   | Extra arguments for kube-proxy.         |
+| `kubelet`                 | false    | `KubeletParams`   | Extra arguments for kubelet.            |
 
 ### ServiceParams
 
