@@ -72,7 +72,7 @@ Options
 | `etcd-rivers`     | false    | `ServiceParams`   | Extra arguments for EtcdRivers.         |
 | `rivers`          | false    | `ServiceParams`   | Extra arguments for Rivers.             |
 | `kube-api`        | false    | `APIServerParams` | Extra arguments for API server.         |
-| `kube-controller` | false    | `ServiceParams`   | Extra arguments for controller manager. |
+| `kube-controller-mangaer` | false    | `ServiceParams`   | Extra arguments for controller manager. |
 | `kube-scheduler`  | false    | `SchedulerParams` | Extra arguments for scheduler.          |
 | `kube-proxy`      | false    | `ServiceParams`   | Extra arguments for kube-proxy.         |
 | `kubelet`         | false    | `KubeletParams`   | Extra arguments for kubelet.            |
