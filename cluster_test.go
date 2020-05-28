@@ -508,7 +508,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Scheduler: SchedulerParams{
 						Predicates: []string{`foo: bar`},
@@ -522,7 +521,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Scheduler: SchedulerParams{
 						Predicates: []string{`name: some_predicate`},
@@ -536,7 +534,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Scheduler: SchedulerParams{
 						Priorities: []string{`foo: bar`},
@@ -550,7 +547,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Scheduler: SchedulerParams{
 						Priorities: []string{`name: some_priority`},
