@@ -1,6 +1,7 @@
 package sabakan
 
 import (
+	"fmt"
 	"sort"
 	"testing"
 	"time"
@@ -109,7 +110,7 @@ func newTestMachineWithIP(rack int, retireDate time.Time, state State, ip, role 
 	m.Spec.Role = role
 	m.Spec.RetireDate = retireDate
 	m.Status.State = state
-	m.Status.Duration = DefaultWaitRetiringSeconds * 2
+	m.Status.Duration = DefaultWaitRetiredSeconds * 2
 	return m
 }
 
@@ -204,8 +205,7 @@ func testNewGenerator(t *testing.T) {
 					"10.0.0.3": &machines[2],
 					"10.0.0.4": &machines[3],
 				},
-				unusedMachines: []*Machine{&machines[0], &machines[3]},
-				cpTmpl:         nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				cpTmpl: nodeTemplate{tmpl.Nodes[0], "", 1.0},
 				workerTmpls: []nodeTemplate{
 					{tmpl.Nodes[1], "cs", 3.0},
 				},
@@ -215,27 +215,13 @@ func testNewGenerator(t *testing.T) {
 			"Cluster",
 			args{cluster, tmpl, cke.DefaultConstraints(), machines},
 			&Generator{
-				controlPlanes: []*cke.Node{
-					cluster.Nodes[0],
-					cluster.Nodes[2],
-				},
-				healthyCPs: 1,
-				cpRacks:    map[int]int{0: 1, 1: 1},
-				workers: []*cke.Node{
-					cluster.Nodes[1],
-					cluster.Nodes[3],
-				},
-				workersByRole:  map[string]int{"ss": 1, "": 1},
-				healthyWorkers: 0,
-				workerRacks:    map[int]int{0: 1},
 				machineMap: map[string]*Machine{
 					"10.0.0.1": &machines[0],
 					"10.0.0.2": &machines[1],
 					"10.0.0.3": &machines[2],
 					"10.0.0.4": &machines[3],
 				},
-				unusedMachines: []*Machine{&machines[3]},
-				cpTmpl:         nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				cpTmpl: nodeTemplate{tmpl.Nodes[0], "", 1.0},
 				workerTmpls: []nodeTemplate{
 					{tmpl.Nodes[1], "cs", 3.0},
 				},
@@ -247,37 +233,16 @@ func testNewGenerator(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := NewGenerator(tt.args.current, tt.args.template, tt.args.cstr, tt.args.machines, testBaseTS)
-			if !cmp.Equal(got.controlPlanes, tt.want.controlPlanes, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
-				t.Errorf("!cmp.Equal(got.controlPlanes, tt.want.controlPlanes), actual: %v, want %v", got.controlPlanes, tt.want.controlPlanes)
-			}
-			if got.healthyCPs != tt.want.healthyCPs {
-				t.Errorf("!cmp.Equal(got.healthyCPs, tt.want.healthyCPs), actual: %v, want %v", got.healthyCPs, tt.want.healthyCPs)
-			}
-			if !cmp.Equal(got.cpRacks, tt.want.cpRacks, cmpopts.EquateEmpty()) {
-				t.Errorf("!cmp.Equal(got.cpRacks, tt.want.cpRacks), actual: %v, want %v", got.cpRacks, tt.want.cpRacks)
-			}
-			if !cmp.Equal(got.workers, tt.want.workers, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
-				t.Errorf("!cmp.Equal(got.workers, tt.want.workers), actual: %v, want %v", got.workers, tt.want.workers)
-			}
-			if !cmp.Equal(got.workersByRole, tt.want.workersByRole, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()) {
-				t.Error("!cmp.Equal(got.workersByRole, tt.want.workersByRole)", cmp.Diff(got.workersByRole, tt.want.workersByRole, cmpopts.IgnoreUnexported(cke.Node{}), cmpopts.EquateEmpty()))
-			}
-			if got.healthyWorkers != tt.want.healthyWorkers {
-				t.Errorf("!cmp.Equal(got.healthyWorkers, tt.want.healthyWorkers), actual: %v, want %v", got.healthyWorkers, tt.want.healthyWorkers)
-			}
-			if !cmp.Equal(got.workerRacks, tt.want.workerRacks, cmpopts.EquateEmpty()) {
-				t.Errorf("!cmp.Equal(got.workerRacks, tt.want.workerRacks), actual: %v, want %v", got.workerRacks, tt.want.workerRacks)
-			}
+			got := NewGenerator(tt.args.template, tt.args.cstr, tt.args.machines, testBaseTS)
 			if !cmp.Equal(got.machineMap, tt.want.machineMap, cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.machineMap, tt.want.machineMap), actual: %v, want %v", got.machineMap, tt.want.machineMap)
 			}
-			// the order in the unusedMachines is not stable.
+			// the order in the nextUnused is not stable.
 			var unusedGot, unusedExpected []string
-			for _, m := range got.unusedMachines {
+			for _, m := range got.nextUnused {
 				unusedGot = append(unusedGot, m.Spec.IPv4[0])
 			}
-			for _, m := range tt.want.unusedMachines {
+			for _, m := range tt.want.nextUnused {
 				unusedExpected = append(unusedExpected, m.Spec.IPv4[0])
 			}
 			sort.Strings(unusedGot)
@@ -354,7 +319,7 @@ func testGenerate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			g := NewGenerator(nil, tt.template, tt.cstr, tt.machines, testBaseTS)
+			g := NewGenerator(tt.template, tt.cstr, tt.machines, testBaseTS)
 			cluster, err := g.Generate()
 			if err != nil {
 				if !tt.expectErr {
@@ -431,8 +396,8 @@ func testRegenerate(t *testing.T) {
 	generated := *tmpl
 	generated.Nodes = nil
 
-	g := NewGenerator(cluster, tmpl, cke.DefaultConstraints(), machines, testBaseTS)
-	regenerated, err := g.Regenerate()
+	g := NewGenerator(tmpl, cke.DefaultConstraints(), machines, testBaseTS)
+	regenerated, err := g.Regenerate(cluster)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -478,6 +443,7 @@ func testUpdate(t *testing.T) {
 		newTestMachineWithIP(3, testFuture1000, StateHealthy, "10.0.0.7", "cs"),    // [6]
 		newTestMachineWithIP(3, testFuture500, StateHealthy, "10.0.0.8", "cs"),     // [7]
 		newTestMachineWithIP(4, testFuture500, StateUpdating, "10.0.0.9", "cs"),    // [8]
+		newTestMachineWithIP(4, testFuture500, StateRetired, "10.0.0.10", "cs"),    // [9]
 	}
 	cps := []*cke.Node{
 		{Address: "10.0.0.1", ControlPlane: true},    // [0]
@@ -489,8 +455,9 @@ func testUpdate(t *testing.T) {
 		{Address: "10.0.0.7", ControlPlane: true},    // [6]
 		{Address: "10.0.0.8", ControlPlane: true},    // [7]
 		{Address: "10.0.0.9", ControlPlane: true},    // [8]
-		{Address: "10.100.0.10", ControlPlane: true}, // [9]  non-existent
-		{Address: "10.100.0.11", ControlPlane: true}, // [10] non-existent
+		{Address: "10.100.0.10", ControlPlane: true}, // [9]
+		{Address: "10.100.0.11", ControlPlane: true}, // [10]  non-existent
+		{Address: "10.100.0.12", ControlPlane: true}, // [11] non-existent
 	}
 	workers := []*cke.Node{
 		{Address: "10.0.0.1"}, // [0]
@@ -502,15 +469,23 @@ func testUpdate(t *testing.T) {
 					Effect: corev1.TaintEffectNoExecute,
 				},
 			}},
-		{Address: "10.0.0.3"},    // [2]
-		{Address: "10.0.0.4"},    // [3]
-		{Address: "10.0.0.5"},    // [4]
-		{Address: "10.0.0.6"},    // [5]
-		{Address: "10.0.0.7"},    // [6]
-		{Address: "10.0.0.8"},    // [7]
-		{Address: "10.0.0.9"},    // [8]
-		{Address: "10.100.0.10"}, // [9]  non-existent
-		{Address: "10.100.0.11"}, // [10] non-existent
+		{Address: "10.0.0.3"}, // [2]
+		{Address: "10.0.0.4"}, // [3]
+		{Address: "10.0.0.5"}, // [4]
+		{Address: "10.0.0.6"}, // [5]
+		{Address: "10.0.0.7"}, // [6]
+		{Address: "10.0.0.8"}, // [7]
+		{Address: "10.0.0.9"}, // [8]
+		{Address: "10.0.0.10", // [9]
+			Taints: []corev1.Taint{
+				{
+					Key:    "cke.cybozu.com/state",
+					Value:  "retired",
+					Effect: corev1.TaintEffectNoExecute,
+				},
+			}},
+		{Address: "10.100.0.11"}, // [10]  non-existent
+		{Address: "10.100.0.12"}, // [11] non-existent
 	}
 
 	tmpl := &cke.Cluster{
@@ -537,7 +512,7 @@ func testUpdate(t *testing.T) {
 		{
 			"RemoveNonExistent",
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[1], cps[9], workers[2], workers[3], workers[10]},
+				Nodes: []*cke.Node{cps[0], cps[1], cps[10], workers[2], workers[3], workers[11]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 3,
@@ -595,6 +570,22 @@ func testUpdate(t *testing.T) {
 			},
 		},
 		{
+			"PromoteWorker",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], workers[6], workers[7]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+				MinimumWorkers:    1,
+			},
+			machines,
+
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], cps[6], workers[7]},
+			},
+		},
+		{
 			"DecreaseCPDemote",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[6], cps[7], workers[5]},
@@ -611,7 +602,7 @@ func testUpdate(t *testing.T) {
 			},
 		},
 		{
-			"DecreaseCPRemove",
+			"DecreaseCPRemoveAllCPsHealthy",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[6], cps[7], workers[5]},
 			},
@@ -625,6 +616,23 @@ func testUpdate(t *testing.T) {
 			nil,
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[6], workers[5]},
+			},
+		},
+		{
+			"DecreaseCPRemoveUnhealthyCP",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[2], cps[6], cps[7], workers[5]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 2,
+				MinimumWorkers:    1,
+				MaximumWorkers:    1,
+			},
+			machines,
+
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[6], cps[7], workers[5]},
 			},
 		},
 		{
@@ -674,7 +682,7 @@ func testUpdate(t *testing.T) {
 
 			nil,
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[6], cps[7], workers[1]},
+				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[1]},
 			},
 		},
 		{
@@ -728,7 +736,7 @@ func testUpdate(t *testing.T) {
 		{
 			"DecreaseWorkerRemove",
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7]},
+				Nodes: []*cke.Node{cps[0], cps[5], workers[9], workers[7]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 2,
@@ -744,31 +752,31 @@ func testUpdate(t *testing.T) {
 		{
 			"DecreaseWorkerReplace",
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7]},
+				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7], workers[9]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 2,
-				MinimumWorkers:    2,
-				MaximumWorkers:    2,
+				MinimumWorkers:    3,
+				MaximumWorkers:    3,
 			},
 			machines,
 
 			nil,
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[6], workers[7]},
+				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[6], workers[7]},
 			},
 		},
 		{
 			"NotDecreaseWorker",
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7]},
+				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7], workers[9]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 2,
-				MinimumWorkers:    2,
-				MaximumWorkers:    2,
+				MinimumWorkers:    3,
+				MaximumWorkers:    3,
 			},
-			[]Machine{machines[0], machines[1], machines[5], machines[7]},
+			[]Machine{machines[0], machines[1], machines[5], machines[7], machines[9]},
 
 			nil,
 			nil,
@@ -812,8 +820,8 @@ func testUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			g := NewGenerator(tt.current, tmpl, tt.cstr, tt.machines, testBaseTS)
-			got, err := g.Update()
+			g := NewGenerator(tmpl, tt.cstr, tt.machines, testBaseTS)
+			got, err := g.Update(tt.current)
 
 			if err != tt.expectErr {
 				if err != nil {
@@ -1019,7 +1027,7 @@ func testWeighted(t *testing.T) {
 				Nodes: append(tt.tmplWorkers, tt.tmplCP),
 			}
 
-			g := NewGenerator(nil, tmpl, tt.cstr, machines, testBaseTS)
+			g := NewGenerator(tmpl, tt.cstr, machines, testBaseTS)
 			cluster, err := g.Generate()
 			if err != nil {
 				t.Fatal(err)
@@ -1047,6 +1055,385 @@ func testWeighted(t *testing.T) {
 	}
 }
 
+func TestCountMachinesByRack(t *testing.T) {
+	{
+		// control plane
+		g := &Generator{nextControlPlanes: []*Machine{}}
+		racks := []int{0, 0, 1}
+		for _, r := range racks {
+			m := &Machine{}
+			m.Spec.Rack = r
+			g.nextControlPlanes = append(g.nextControlPlanes, m)
+		}
+
+		bin := g.countMachinesByRack(true, "")
+		if bin[0] != 2 || bin[1] != 1 {
+			t.Errorf(
+				"rack0: expect 2 actual %d, rack1: expect 1 actual %d",
+				bin[0],
+				bin[1],
+			)
+		}
+	}
+
+	{
+		// empty controlplane
+		g := &Generator{nextControlPlanes: []*Machine{}}
+		bin := g.countMachinesByRack(true, "")
+		if len(bin) != 0 {
+			t.Errorf("len(bin): expect 0 actual %d", len(bin))
+		}
+	}
+
+	{
+		// worker
+		g := &Generator{nextWorkers: []*Machine{}}
+		racks := []int{0, 0, 1}
+		roles := []string{"cs", "ss", "cs"}
+		for i, r := range racks {
+			m := &Machine{}
+			m.Spec.Rack = r
+			m.Spec.Role = roles[i]
+			g.nextWorkers = append(g.nextWorkers, m)
+		}
+
+		bin := g.countMachinesByRack(false, "cs")
+		if bin[0] != 1 || bin[1] != 1 {
+			t.Errorf(
+				"rack0: expect 2 actual %d rack1: expect 1 actual %d",
+				bin[0],
+				bin[1],
+			)
+		}
+		bin = g.countMachinesByRack(false, "ss")
+		if bin[0] != 1 || bin[1] != 0 {
+			t.Errorf(
+				"rack0: expect 2 actual %d rack1: expect 1 actual %d",
+				bin[0],
+				bin[1],
+			)
+		}
+		bin = g.countMachinesByRack(false, "")
+		if bin[0] != 2 || bin[1] != 1 {
+			t.Errorf(
+				"rack0: expect 2 actual %d rack1: expect 1 actual %d",
+				bin[0],
+				bin[1],
+			)
+		}
+	}
+
+	{
+		// empty worker
+		g := &Generator{nextWorkers: []*Machine{}}
+		bin := g.countMachinesByRack(false, "")
+		if len(bin) != 0 {
+			t.Errorf("len(bin): expect 0 actual %d", len(bin))
+		}
+	}
+}
+
+func testRackDistribution(t *testing.T) {
+	baseTemplate := &cke.Cluster{
+		Name: "test",
+		Nodes: []*cke.Node{
+			{
+				User:         "cybozu",
+				ControlPlane: true,
+				Labels: map[string]string{
+					"cke.cybozu.com/role": "cs",
+				},
+			},
+			{
+				User:         "cybozu",
+				ControlPlane: false,
+				Labels: map[string]string{
+					"cke.cybozu.com/role":   "cs",
+					"cke.cybozu.com/weight": "18",
+				},
+			},
+			{
+				User:         "cybozu",
+				ControlPlane: false,
+				Labels: map[string]string{
+					"cke.cybozu.com/role":   "ss",
+					"cke.cybozu.com/weight": "9",
+				},
+			},
+		},
+	}
+	baseConstraints := &cke.Constraints{
+		ControlPlaneCount: 3,
+		MinimumWorkers:    27,
+		MaximumWorkers:    56,
+	}
+
+	t.Run("GenerateInitialCluster", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2}
+		var machines []Machine
+		for i := range rackIDs {
+			machines = append(machines, createRack(i, "standard")...)
+		}
+
+		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expect := map[string]map[string]int{
+			"0": {"cs": 6, "ss": 3},
+			"1": {"cs": 6, "ss": 3},
+			"2": {"cs": 6, "ss": 3},
+		}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
+		}
+	})
+
+	t.Run("IncreaseMinimumWorkers", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2}
+		var machines []Machine
+		for i := range rackIDs {
+			machines = append(machines, createRack(i, "standard")...)
+		}
+
+		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		constraints := &cke.Constraints{
+			ControlPlaneCount: 3,
+			MinimumWorkers:    36,
+			MaximumWorkers:    56,
+		}
+		g = NewGenerator(baseTemplate, constraints, machines, testBaseTS)
+		cluster, err = g.Update(cluster)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expect := map[string]map[string]int{
+			"0": {"cs": 8, "ss": 4},
+			"1": {"cs": 8, "ss": 4},
+			"2": {"cs": 8, "ss": 4},
+		}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
+		}
+	})
+
+	t.Run("MultipleRackTypes", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2}
+		var machines []Machine
+		for i := range rackIDs {
+			if i == 2 {
+				machines = append(machines, createRack(i, "storage")...)
+				continue
+			}
+			machines = append(machines, createRack(i, "standard")...)
+		}
+
+		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expect := map[string]map[string]int{
+			"0": {"cs": 9, "ss": 3},
+			"1": {"cs": 9, "ss": 3},
+			"2": {"ss": 3},
+		}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
+		}
+	})
+
+	t.Run("ReachMaxMachinesInRack", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2}
+		var machines []Machine
+		for i := range rackIDs {
+			if i == 2 {
+				machines = append(machines, createRack(i, "storage")...)
+				continue
+			}
+			machines = append(machines, createRack(i, "standard")...)
+		}
+
+		constraints := &cke.Constraints{
+			ControlPlaneCount: 3,
+			MinimumWorkers:    33,
+			MaximumWorkers:    56,
+		}
+
+		withoutCSTemplate := &cke.Cluster{Name: "test", Nodes: []*cke.Node{}}
+		for i, n := range baseTemplate.Nodes {
+			if i == 1 {
+				continue
+			}
+			withoutCSTemplate.Nodes = append(withoutCSTemplate.Nodes, n)
+		}
+
+		g := NewGenerator(withoutCSTemplate, constraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expect := map[string]map[string]int{
+			"0": {"ss": 10},
+			"1": {"ss": 10},
+			"2": {"ss": 13},
+		}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
+		}
+	})
+
+	t.Run("IncreaseRack", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2}
+		var machines []Machine
+		for i := range rackIDs {
+			machines = append(machines, createRack(i, "standard")...)
+		}
+
+		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		machines = append(machines, createRack(3, "storage")...)
+		constraints := &cke.Constraints{
+			ControlPlaneCount: 3,
+			MinimumWorkers:    36,
+			MaximumWorkers:    56,
+		}
+		g = NewGenerator(baseTemplate, constraints, machines, testBaseTS)
+		cluster, err = g.Update(cluster)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expect := map[string]map[string]int{
+			"0": {"cs": 8, "ss": 3},
+			"1": {"cs": 8, "ss": 3},
+			"2": {"cs": 8, "ss": 3},
+			"3": {"ss": 3},
+		}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
+		}
+	})
+
+	t.Run("DisappearRack", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2, 3}
+		var machines []Machine
+		for i := range rackIDs {
+			machines = append(machines, createRack(i, "standard")...)
+		}
+
+		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		machines = machines[28:] // Disappear rack0
+		g = NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err = g.Update(cluster)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expect := map[string]map[string]int{
+			"1": {"cs": 6, "ss": 3},
+			"2": {"cs": 6, "ss": 3},
+			"3": {"cs": 6, "ss": 3},
+		}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
+		}
+	})
+
+	t.Run("OneAllUnhealthyRack", func(t *testing.T) {
+		rackIDs := []int{0, 1, 2, 3}
+		var machines []Machine
+		for i := range rackIDs {
+			machines = append(machines, createRack(i, "standard")...)
+		}
+
+		for i := 0; i < 28; i++ {
+			machines[i].Status.State = StateUnhealthy
+		}
+		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		cluster, err := g.Generate()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expect := map[string]map[string]int{
+			"1": {"cs": 6, "ss": 3},
+			"2": {"cs": 6, "ss": 3},
+			"3": {"cs": 6, "ss": 3},
+		}
+		actual := countRolesByRack(cluster.Nodes)
+		if !cmp.Equal(actual, expect) {
+			t.Errorf("expect=%v, actual=%v", expect, actual)
+		}
+	})
+}
+
+func createRack(rack int, rackType string) []Machine {
+	var numCS, numSS int
+	switch rackType {
+	case "standard":
+		numCS = 18
+		numSS = 10
+	case "storage":
+		numCS = 0
+		numSS = 19
+	default:
+		return nil
+	}
+
+	var machines []Machine
+	for i := 0; i < numCS; i++ {
+		addr := fmt.Sprintf("10.0.%d.%d", rack, i+1)
+		machines = append(machines, newTestMachineWithIP(rack, testBaseTS, StateHealthy, addr, "cs"))
+	}
+	for i := numCS; i < numCS+numSS; i++ {
+		addr := fmt.Sprintf("10.0.%d.%d", rack, i+1)
+		machines = append(machines, newTestMachineWithIP(rack, testBaseTS, StateHealthy, addr, "ss"))
+	}
+
+	return machines
+}
+
+func countRolesByRack(nodes []*cke.Node) map[string]map[string]int {
+	count := make(map[string]map[string]int)
+	for _, n := range nodes {
+		if n.ControlPlane {
+			continue
+		}
+		if _, ok := count[n.Labels["cke.cybozu.com/rack"]]; !ok {
+			count[n.Labels["cke.cybozu.com/rack"]] = make(map[string]int)
+		}
+		count[n.Labels["cke.cybozu.com/rack"]][n.Labels["cke.cybozu.com/role"]]++
+	}
+
+	return count
+}
+
 func TestGenerator(t *testing.T) {
 	t.Run("MachineToNode", testMachineToNode)
 	t.Run("New", testNewGenerator)
@@ -1054,4 +1441,5 @@ func TestGenerator(t *testing.T) {
 	t.Run("Regenerate", testRegenerate)
 	t.Run("Update", testUpdate)
 	t.Run("Weighted", testWeighted)
+	t.Run("RackDistribution", testRackDistribution)
 }

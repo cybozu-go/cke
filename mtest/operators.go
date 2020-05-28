@@ -566,11 +566,14 @@ func TestOperators(isDegraded bool) {
 		clusterSetAndWait(cluster)
 
 		By("Terminating a control plane")
+
+		stopCKE()
 		execAt(node2, "sudo", "systemd-run", "halt", "-f", "-f")
 		Eventually(func() error {
 			_, err := execAtLocal("ping", "-c", "1", "-W", "1", node2)
 			return err
 		}).ShouldNot(Succeed())
+		runCKE(ckeImageURL)
 		clusterSetAndWait(cluster)
 
 		By("Recovering the cluster by promoting a worker")

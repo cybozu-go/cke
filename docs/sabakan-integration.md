@@ -163,10 +163,12 @@ CKE generates cluster configuration with the following conditions.
 * If the template node for control plane has `cke.cybozu.com/role` label,
     servers of control plane nodes should be the specified role.
 * The number of servers for each role should be proportional to the given weights in the template.
+* The servers which have the same role should be distributed evenly over the racks.
 * Newer machines should be preferred than old ones.
 * Healthy machines should be preferred than non-healthy ones.
 * Unhealthy and unreachable machines in the cluster should be [tainted][taint] with `NoSchedule`.
-* Retiring machines should be [tainted][taint] with `NoExecute`.
+* Retiring and retired machines should be [tainted][taint] with `NoExecute`.
+* Retired machines should be removed if the machines are kept retired for a while.
 * Rebooting machines should not be removed from the cluster nor be tainted.
 * Each change of the cluster configuration should be made as small as possible.
 * Control plane nodes should be distributed across different racks.
@@ -179,8 +181,8 @@ Algorithms
 
 ### Node selection
 
-When a new node need to be added to the cluster configuration, the algorithm
-select a machine as follows:
+When a new node needs to be added to the cluster configuration, the algorithm
+selects a machine as follows:
 
 1. Deselect non-healthy machines.
 2. Deselect machines used in the current cluster configuration.
@@ -188,29 +190,32 @@ select a machine as follows:
     - If the new node will be a control plane and a role is specified, select servers of the same role.
     - Otherwise, choose a node template with the smallest number of servers than the specified weight,
         and use the role specified for the template.
-4. Add scores to each machine as follows:
-    - If the machine's lifetime is > 250 days, +10.
-    - If the machine's lifetime is > 500 days, +10 (+20 in total).
-    - If the machine's lifetime is > 1000 days, +10 (+30 in total).
-    - If the machine's lifetime is < -250 days, -10.
-    - If the machine's lifetime is < -500 days, -10 (-20 in total).
-    - If the machine's lifetime is < -1000 days, -10 (-30 in total).
-    - If the cluster contains `n` machines in the same rack, - `min(n, 10)`.
-5. Select the highest scored machine.
+4. Add the following score to each machine:
+    - (100 - (machine counts which have the same role and in the same rack)) * 10
+5. Add the following scores to each machine:
+    - If the machine's lifetime is > 250 days, +1.
+    - If the machine's lifetime is > 500 days, +1 (+2 in total).
+    - If the machine's lifetime is > 1000 days, +1 (+3 in total).
+    - If the machine's lifetime is < -250 days, -1.
+    - If the machine's lifetime is < -500 days, -1 (-2 in total).
+    - If the machine's lifetime is < -1000 days, -1 (-3 in total).
+6. Select the highest scored machine.
 
 When an existing node need to be removed from the cluster configuration,
 the algorithm select one as follows:
 
-1. Add scores to each machine as follows:
-    - If the machine's lifetime is > 250 days, +10.
-    - If the machine's lifetime is > 500 days, +10 (+20 in total).
-    - If the machine's lifetime is > 1000 days, +10 (+30 in total).
-    - If the machine's lifetime is < -250 days, -10.
-    - If the machine's lifetime is < -500 days, -10 (-20 in total).
-    - If the machine's lifetime is < -1000 days, -10 (-30 in total).
-    - If the machine is not healthy, -30.
-    - If the cluster contains `n` machines in the same rack, - `min(n, 10)`.
-2. Select the lowest scored machine.
+1. Add the following score to each machine:
+    - If the machine's state is healthy, +1000.
+2. Add the following score to each machine:
+    - (100 - (machine counts which have the same role and in the same rack)) * 10
+3. Add scores to each machine as follows:
+    - If the machine's lifetime is > 250 days, +1.
+    - If the machine's lifetime is > 500 days, +1 (+2 in total).
+    - If the machine's lifetime is > 1000 days, +1 (+3 in total).
+    - If the machine's lifetime is < -250 days, -1.
+    - If the machine's lifetime is < -500 days, -1 (-2 in total).
+    - If the machine's lifetime is < -1000 days, -1 (-3 in total).
+4. Select the lowest scored machine.
 
 Note that node selection should be done separately for control plane nodes
 and non-control plane nodes.
@@ -283,7 +288,7 @@ nodes are added.
 
 #### Decrease worker nodes
 
-If a worker node is either retiring or retired for a while,
+If a worker node is kept retired for a while,
 
 1. it is removed from the cluster if the number of workers is greater than `minimum-workers`, or
 2. it is replaced with a new machine if available, otherwise,
