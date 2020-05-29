@@ -72,14 +72,7 @@ spec:
         kubernetes.io/os: linux
       hostNetwork: true
       tolerations:
-        # Make sure unbound gets scheduled on all nodes.
-        - effect: NoSchedule
-          operator: Exists
-        # Mark the pod as a critical add-on for rescheduling.
-        - key: CriticalAddonsOnly
-          operator: Exists
-        - effect: NoExecute
-          operator: Exists
+        - operator: Exists
       terminationGracePeriodSeconds: 0
       serviceAccountName: cke-node-dns
       containers:
