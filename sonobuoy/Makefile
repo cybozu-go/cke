@@ -53,7 +53,7 @@ run: bin/cke bin/ckecli bin/kubectl
 	$(CKECLI) cluster set /home/cybozu/cke-cluster.yml
 	$(CKECLI) kubernetes issue > .kubeconfig
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system ds/node-dns -o json | jq .status.numberReady)" = 3 ]; then break; fi; done
-	./bin/kubectl apply -f ../example/kube-flannel.yaml
+	./bin/kubectl apply -k ../example
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get nodes --no-headers | grep Ready | wc -l)" = 3 ]; then break; fi; done
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system deployments/cluster-dns -o json | jq .status.readyReplicas)" = 2 ]; then break; fi; done
 
