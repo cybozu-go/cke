@@ -46,6 +46,9 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 		o.step++
 		return o.files
 	case 3:
+		o.step++
+		return common.StopContainersCommand(o.nodes, op.KubeAPIServerContainerName)
+	case 4:
 		if len(o.nodes) == 0 {
 			return nil
 		}
@@ -60,8 +63,7 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 			op.KubeAPIServerContainerName, cke.KubernetesImage,
 			common.WithOpts(opts),
 			common.WithParams(APIServerParams(o.cps, node.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy)),
-			common.WithExtra(o.params.ServiceParams),
-			common.WithRestart())
+			common.WithExtra(o.params.ServiceParams))
 	}
 
 	panic("unreachable")
