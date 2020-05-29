@@ -2,75 +2,55 @@
 
 . $(dirname $0)/env-sonobuoy
 
+RET=0
 delete_instance() {
   if [ $RET -ne 0 ]; then
     # do not delete GCP instance upon test failure to help debugging.
     return
   fi
-  $GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_NAME} || true
-  for i in $(seq 0 3); do
-    $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
-  done
+  $GCLOUD compute instances delete --zone ${ZONE} \
+    ${INSTANCE_NAME}-0 \
+    ${INSTANCE_NAME}-1 \
+    ${INSTANCE_NAME}-2 \
+    ${INSTANCE_NAME}-3 || true
 }
 
-$GCLOUD -q compute firewall-rules delete ${FIREWALL_RULE_NAME} || true
-$GCLOUD compute firewall-rules create ${FIREWALL_RULE_NAME} \
-  --allow ipip \
-  --network default \
-  --source-ranges 10.128.0.0/9
-
-$GCLOUD compute instances delete ${INSTANCE_NAME}-0 --zone ${ZONE} || true
+delete_instance
 $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --zone ${ZONE} \
   --machine-type ${MACHINE_TYPE_SONOBUOY} \
   --image vmx-enabled \
   --boot-disk-type ${DISK_TYPE} \
   --boot-disk-size ${BOOT_DISK_SIZE} \
-  --local-ssd interface=nvme \
-  --local-ssd interface=nvme \
-  --local-ssd interface=nvme \
-  --local-ssd interface=nvme
-
-curl -L -o fcct https://github.com/coreos/fcct/releases/latest/download/fcct-x86_64-unknown-linux-gnu
-chmod +x ./fcct
-./fcct $(dirname $0)/../sonobuoy/worker.fcc --pretty --strict > /tmp/worker.ign
+  --metadata extended=$(date -Iseconds -d+4hours)
 
 ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
-sed -i -e "s#PUBLIC_KEY#$(cat gcp_rsa.pub)#g" /tmp/worker.ign
+sed -e "s#PUBLIC_KEY#$(cat gcp_rsa.pub)#g" $(dirname $0)/../sonobuoy/worker.cfg > /tmp/worker.cfg
 
 for i in $(seq 3); do
-  $GCLOUD compute instances delete ${INSTANCE_NAME}-${i} --zone ${ZONE} || true
   $GCLOUD compute instances create ${INSTANCE_NAME}-${i} \
     --zone ${ZONE} \
     --machine-type ${MACHINE_TYPE_WORKER} \
-    --image-project fedora-coreos-cloud \
-    --image-family fedora-coreos-stable \
+    --image-project cos-cloud \
+    --image-family cos-stable \
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
-    --metadata-from-file user-data=/tmp/worker.ign \
-    --local-ssd interface=nvme \
-    --local-ssd interface=nvme \
-    --local-ssd interface=nvme \
-    --local-ssd interface=nvme
+    --metadata-from-file user-data=/tmp/worker.cfg \
+    --metadata extended=$(date -Iseconds -d+4hours),cos-update-strategy=update_disabled
 done
 
-RET=0
 trap delete_instance INT QUIT TERM 0
 
 for i in $(seq 0 3); do
   for j in $(seq 300); do
-    if $GCLOUD compute ssh --zone=${ZONE} cybozu@${INSTANCE_NAME}-${i} --ssh-key-file=gcp_rsa --command=date 2>/dev/null; then
+    if $GCLOUD compute ssh --zone=${ZONE} cke@${INSTANCE_NAME}-${i} --ssh-key-file=gcp_rsa --command=date 2>/dev/null; then
       break
     fi
     sleep 1
   done
 done
 
-# Register SSH key and extend instance life to complete sonobuoy test
-for i in $(seq 0 3); do
-  $GCLOUD compute instances add-metadata ${INSTANCE_NAME}-${i} --zone ${ZONE} \
-    --metadata extended=$(date -Iseconds -d+4hours)
-done
+# Register SSH key
 $GCLOUD compute scp --zone=${ZONE} ./gcp_rsa cybozu@${INSTANCE_NAME}-0:
 
 cat >run.sh <<EOF
