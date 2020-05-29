@@ -65,6 +65,7 @@ options:
   kubelet:
     domain: my.domain
     allow_swap: true
+    cgroup_driver: systemd
     container_runtime: remote
     container_runtime_endpoint: /var/run/k8s-containerd.sock
     container_log_max_size: 10Mi
@@ -167,6 +168,9 @@ rules:
 	}
 	if c.Options.Kubelet.ContainerRuntimeEndpoint != "/var/run/k8s-containerd.sock" {
 		t.Error(`c.Options.Kubelet.ContainerRuntimeEndpoint != "/var/run/k8s-containerd.sock"`)
+	}
+	if c.Options.Kubelet.CgroupDriver != "systemd" {
+		t.Error(`c.Options.Kubelet.CgroupDriver != "systemd"`)
 	}
 	if c.Options.Kubelet.ContainerLogMaxSize != "10Mi" {
 		t.Error(`c.Options.Kubelet.ContainerLogMaxSize != "10Mi"`)

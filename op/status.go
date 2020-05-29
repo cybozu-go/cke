@@ -160,6 +160,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			v := struct {
 				ClusterDomain        string `json:"clusterDomain"`
 				FailSwapOn           bool   `json:"failSwapOn"`
+				CgroupDriver         string `json:"cgroupDriver"`
 				ContainerLogMaxSize  string `json:"containerLogMaxSize"`
 				ContainerLogMaxFiles int32  `json:"containerLogMaxFiles"`
 			}{}
@@ -167,6 +168,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			if err == nil {
 				status.Kubelet.Domain = v.ClusterDomain
 				status.Kubelet.AllowSwap = !v.FailSwapOn
+				status.Kubelet.CgroupDriver = v.CgroupDriver
 				status.Kubelet.ContainerLogMaxSize = v.ContainerLogMaxSize
 				status.Kubelet.ContainerLogMaxFiles = v.ContainerLogMaxFiles
 			}

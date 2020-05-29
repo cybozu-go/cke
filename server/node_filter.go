@@ -517,12 +517,14 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 		case !st.Running:
 			// stopped nodes are excluded
 		case kubeletRuntimeChanged(st.BuiltInParams, currentBuiltIn):
-			log.Warn("kubelet's container runtime can not be changed", nil)
+			log.Warn("kubelet's container runtime cannot be changed", nil)
 		case cke.KubernetesImage.Name() != st.Image:
 			fallthrough
 		case currentOpts.Domain != st.Domain:
 			fallthrough
 		case currentOpts.AllowSwap != st.AllowSwap:
+			fallthrough
+		case currentOpts.CgroupDriver != st.CgroupDriver:
 			fallthrough
 		case currentOpts.ContainerLogMaxSize != st.ContainerLogMaxSize:
 			fallthrough

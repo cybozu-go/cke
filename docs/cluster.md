@@ -5,6 +5,18 @@ CKE deploys and maintains a Kubernetes cluster and an etcd cluster solely for
 the Kubernetes cluster.  The configurations of the clusters can be defined by
 a YAML or JSON object with these fields:
 
+- [Node](#node)
+- [Taint](#taint)
+- [EtcdBackup](#etcdbackup)
+- [Options](#options)
+  - [ServiceParams](#serviceparams)
+  - [Mount](#mount)
+  - [EtcdParams](#etcdparams)
+  - [APIServerParams](#apiserverparams)
+  - [KubeletParams](#kubeletparams)
+  - [SchedulerParams](#schedulerparams)
+  - [CNIConfFile](#cniconffile)
+
 | Name                  | Required | Type         | Description                                                      |
 | --------------------- | -------- | ------------ | ---------------------------------------------------------------- |
 | `name`                | true     | string       | The k8s cluster name.                                            |
@@ -35,6 +47,7 @@ A `Node` has these fields:
 | `annotations`   | false    | object    | Node annotations.                                              |
 | `labels`        | false    | object    | Node labels.                                                   |
 | `taints`        | false    | `[]Taint` | Node taints.                                                   |
+|                 |
 
 `annotations`, `labels`, and `taints` are added or updated, but not removed.
 This is because other applications may edit their own annotations, labels, or taints.
@@ -130,6 +143,7 @@ Options
 | `extra_args`                 | false    | array       | Extra command-line arguments.  List of strings.                                                                                                                     |
 | `extra_binds`                | false    | array       | Extra bind mounts.  List of `Mount`.                                                                                                                                |
 | `extra_env`                  | false    | object      | Extra environment variables.                                                                                                                                        |
+| `cgroup_driver`              | false    | string      | Driver that the kubelet uses to manipulate cgroups on the host. `cgroupfs` (default) or `systemd`.                                                                  |
 | `container_runtime`          | false    | string      | Container runtime for Pod. Default: `docker`. You have to choose `docker` or `remote` which supports [CRI][].                                                       |
 | `container_runtime_endpoint` | false    | string      | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/var/run/dockershim.sock`.                                               |
 | `container_log_max_size`     | false    | string      | Equivalent to the [log rotation for CRI runtime]. Size of log file size. If the file size becomes bigger than given size, the log file is rotated. Default: `10Mi`. |

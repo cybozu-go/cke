@@ -885,6 +885,18 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet10",
 			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Kubelet.CgroupDriver = "systemd"
+			}).withSSHNotConnectedNodes(),
+			ExpectedOps: []string{
+				"kubelet-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kubelet-restart": 4,
+			},
+		},
+		{
+			Name: "RestartKubelet11",
+			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[:3]
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{

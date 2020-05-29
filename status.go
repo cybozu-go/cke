@@ -149,6 +149,7 @@ type KubeletStatus struct {
 	IsHealthy                   bool
 	Domain                      string
 	AllowSwap                   bool
+	CgroupDriver                string
 	ContainerLogMaxSize         string
 	ContainerLogMaxFiles        int32
 	NeedUpdateBlockPVsUpToV1_16 []string

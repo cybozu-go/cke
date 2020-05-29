@@ -127,6 +127,7 @@ type SchedulerParams struct {
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
 	ServiceParams            `json:",inline"`
+	CgroupDriver             string         `json:"cgroup_driver,omitempty"`
 	ContainerRuntime         string         `json:"container_runtime"`
 	ContainerRuntimeEndpoint string         `json:"container_runtime_endpoint"`
 	ContainerLogMaxSize      string         `json:"container_log_max_size"`
