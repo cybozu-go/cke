@@ -53,18 +53,19 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 			break
 		}
 	}
-
-	if etcdRunning {
-		ecs, err := op.GetEtcdClusterStatus(ctx, inf, cluster.Nodes)
-		if err != nil {
-			log.Warn("failed to get etcd cluster status", map[string]interface{}{
-				log.FnError: err,
-			})
-			// return nil
-			return cs, nil
-		}
-		cs.Etcd = ecs
+	if !etcdRunning {
+		return cs, nil
 	}
+
+	ecs, err := op.GetEtcdClusterStatus(ctx, inf, cluster.Nodes)
+	if err != nil {
+		log.Warn("failed to get etcd cluster status", map[string]interface{}{
+			log.FnError: err,
+		})
+		// return nil
+		return cs, nil
+	}
+	cs.Etcd = ecs
 
 	var livingMaster *cke.Node
 	for _, n := range cke.ControlPlanes(cluster.Nodes) {
@@ -74,37 +75,38 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 			break
 		}
 	}
-
-	if livingMaster != nil {
-		cs.Kubernetes, err = op.GetKubernetesClusterStatus(ctx, inf, livingMaster, cluster)
-		if err != nil {
-			log.Error("failed to get kubernetes cluster status", map[string]interface{}{
-				log.FnError: err,
-			})
-			return nil, err
-		}
-
-		env := well.NewEnvironment(ctx)
-		for _, n := range cluster.Nodes {
-			n := n
-			env.Go(func(ctx context.Context) error {
-				ns, err := op.GetNodeStatusUpToV1_16(ctx, inf, n, cluster, statuses[n.Address], livingMaster)
-				if err != nil {
-					return fmt.Errorf("%s: %v", n.Address, err)
-				}
-
-				mu.Lock()
-				statuses[n.Address] = ns
-				mu.Unlock()
-				return nil
-			})
-		}
-		env.Stop()
-		err := env.Wait()
-		if err != nil {
-			return nil, err
-		}
+	if livingMaster == nil {
+		return cs, nil
 	}
 
+	kcs, err := op.GetKubernetesClusterStatus(ctx, inf, livingMaster, cluster)
+	if err != nil {
+		log.Error("failed to get kubernetes cluster status", map[string]interface{}{
+			log.FnError: err,
+		})
+		return nil, err
+	}
+	cs.Kubernetes = kcs
+
+	env = well.NewEnvironment(ctx)
+	for _, n := range cluster.Nodes {
+		n := n
+		env.Go(func(ctx context.Context) error {
+			mu.Lock()
+			defer mu.Unlock()
+
+			ns, err := op.GetNodeStatusUpToV1_16(ctx, inf, n, cluster, statuses[n.Address], livingMaster)
+			if err != nil {
+				return fmt.Errorf("%s: %v", n.Address, err)
+			}
+			statuses[n.Address] = ns
+			return nil
+		})
+	}
+	env.Stop()
+	err = env.Wait()
+	if err != nil {
+		return nil, err
+	}
 	return cs, nil
 }
