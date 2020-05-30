@@ -22,7 +22,7 @@ $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --image vmx-enabled \
   --boot-disk-type ${DISK_TYPE} \
   --boot-disk-size ${BOOT_DISK_SIZE} \
-  --metadata extended=$(date -Iseconds -d+4hours)
+  --metadata shutdown-at=$(date -Iseconds -d+4hours)
 
 ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
 sed -e "s#PUBLIC_KEY#$(cat gcp_rsa.pub)#g" $(dirname $0)/../sonobuoy/worker.cfg > /tmp/worker.cfg
@@ -36,7 +36,7 @@ for i in $(seq 3); do
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
     --metadata-from-file user-data=/tmp/worker.cfg \
-    --metadata extended=$(date -Iseconds -d+4hours),cos-update-strategy=update_disabled
+    --metadata shutdown-at=$(date -Iseconds -d+4hours),cos-update-strategy=update_disabled
 done
 
 trap delete_instance INT QUIT TERM 0
