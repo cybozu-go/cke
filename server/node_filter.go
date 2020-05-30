@@ -524,8 +524,6 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 			fallthrough
 		case currentOpts.AllowSwap != st.AllowSwap:
 			fallthrough
-		case currentOpts.CgroupDriver != st.CgroupDriver:
-			fallthrough
 		case currentOpts.ContainerLogMaxSize != st.ContainerLogMaxSize:
 			fallthrough
 		case currentOpts.ContainerLogMaxFiles != st.ContainerLogMaxFiles:
