@@ -91,15 +91,9 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 	env = well.NewEnvironment(ctx)
 	for _, n := range cluster.Nodes {
 		n := n
+		ns := statuses[n.Address]
 		env.Go(func(ctx context.Context) error {
-			mu.Lock()
-			defer mu.Unlock()
-
-			ns, err := op.GetNodeStatusUpToV1_16(ctx, inf, n, cluster, statuses[n.Address], livingMaster)
-			if err != nil {
-				return fmt.Errorf("%s: %v", n.Address, err)
-			}
-			statuses[n.Address] = ns
+			op.GetNodeStatusUpToV1_16(ctx, inf, n, cluster, ns, livingMaster)
 			return nil
 		})
 	}
