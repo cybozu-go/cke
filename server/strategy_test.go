@@ -888,10 +888,7 @@ func TestDecideOps(t *testing.T) {
 				d.Cluster.Options.Kubelet.CgroupDriver = "systemd"
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
-				"kubelet-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kubelet-restart": 4,
+				"wait-kubernetes",
 			},
 		},
 		{
