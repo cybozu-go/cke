@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -332,66 +331,6 @@ func TestOperators(isDegraded bool) {
 		cluster.Options.Kubelet.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Kubelet.Domain = "neconeco"
 		clusterSetAndWait(cluster)
-
-		By("Adding a scheduler extender")
-		// this will run these ops:
-		// - SchedulerRestartOp
-		cluster.Options.Scheduler.Extenders = []string{"urlPrefix: http://127.0.0.1:8000"}
-		clusterSetAndWait(cluster)
-
-		stdout, stderr, err := execAt(node1, "jq", "-r", "'.extenders[0].urlPrefix'", op.PolicyConfigPath)
-		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
-		Expect(strings.TrimSpace(string(stdout))).To(Equal("http://127.0.0.1:8000"))
-
-		By("Removing a scheduler extender")
-		// this will run these ops:
-		// - SchedulerRestartOp
-		cluster.Options.Scheduler.Extenders = []string{}
-		clusterSetAndWait(cluster)
-
-		stdout, stderr, err = execAt(node1, "jq", "'.extenders'", op.PolicyConfigPath)
-		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
-		Expect(strings.TrimSpace(string(stdout))).To(Equal("null"))
-
-		By("Adding a scheduler predicate")
-		// this will run these ops:
-		// - SchedulerRestartOp
-		cluster.Options.Scheduler.Predicates = []string{"name: some_predicate"}
-		clusterSetAndWait(cluster)
-
-		stdout, stderr, err = execAt(node1, "jq", "-r", "'.predicates[0].name'", op.PolicyConfigPath)
-		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
-		Expect(strings.TrimSpace(string(stdout))).To(Equal("some_predicate"))
-
-		By("Removing a scheduler predicate")
-		// this will run these ops:
-		// - SchedulerRestartOp
-		cluster.Options.Scheduler.Predicates = []string{}
-		clusterSetAndWait(cluster)
-
-		stdout, stderr, err = execAt(node1, "jq", "'.predicates'", op.PolicyConfigPath)
-		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
-		Expect(strings.TrimSpace(string(stdout))).To(Equal("null"))
-
-		By("Adding a scheduler priorities")
-		// this will run these ops:
-		// - SchedulerRestartOp
-		cluster.Options.Scheduler.Priorities = []string{"name: some_priority"}
-		clusterSetAndWait(cluster)
-
-		stdout, stderr, err = execAt(node1, "jq", "-r", "'.priorities[0].name'", op.PolicyConfigPath)
-		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
-		Expect(strings.TrimSpace(string(stdout))).To(Equal("some_priority"))
-
-		By("Removing a scheduler priorities")
-		// this will run these ops:
-		// - SchedulerRestartOp
-		cluster.Options.Scheduler.Priorities = []string{}
-		clusterSetAndWait(cluster)
-
-		stdout, stderr, err = execAt(node1, "jq", "'.priorities'", op.PolicyConfigPath)
-		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
-		Expect(strings.TrimSpace(string(stdout))).To(Equal("null"))
 	})
 
 	It("updates Node resources", func() {
