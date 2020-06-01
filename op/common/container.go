@@ -124,37 +124,40 @@ func StopContainerCommand(node *cke.Node, name string) cke.Commander {
 }
 
 func (c stopContainerCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
-		begin := time.Now()
+		n := n
 		ce := inf.Engine(n.Address)
-		exists, err := ce.Exists(c.name)
-		if err != nil {
-			return err
-		}
-		if !exists {
-			continue
-		}
-		// Inspect returns ServiceStatus for the named container.
-		statuses, err := ce.Inspect([]string{c.name})
-		if err != nil {
-			return err
-		}
-		if st, ok := statuses[c.name]; ok && st.Running {
-			err = ce.Stop(c.name)
+		env.Go(func(ctx context.Context) error {
+			begin := time.Now()
+			exists, err := ce.Exists(c.name)
 			if err != nil {
 				return err
 			}
-		}
-		err = ce.Remove(c.name)
-		log.Info("stop container", map[string]interface{}{
-			"container": c.name,
-			"elapsed":   time.Now().Sub(begin).Seconds(),
-		})
-		if err != nil {
+			if !exists {
+				return nil
+			}
+			// Inspect returns ServiceStatus for the named container.
+			statuses, err := ce.Inspect([]string{c.name})
+			if err != nil {
+				return err
+			}
+			if st, ok := statuses[c.name]; ok && st.Running {
+				err = ce.Stop(c.name)
+				if err != nil {
+					return err
+				}
+			}
+			err = ce.Remove(c.name)
+			log.Info("stop container", map[string]interface{}{
+				"container": c.name,
+				"elapsed":   time.Now().Sub(begin).Seconds(),
+			})
 			return err
-		}
+		})
 	}
-	return nil
+	env.Stop()
+	return env.Wait()
 }
 
 func (c stopContainerCommand) Command() cke.Command {

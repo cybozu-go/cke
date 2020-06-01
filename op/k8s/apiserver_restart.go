@@ -52,17 +52,17 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 		if len(o.nodes) == 0 {
 			return nil
 		}
-
-		// apiserver need to be restarted one by one
-		node := o.nodes[0]
-		o.nodes = o.nodes[1:]
 		opts := []string{
 			"--mount", "type=tmpfs,dst=/run/kubernetes",
 		}
-		return common.RunContainerCommand([]*cke.Node{node},
+		paramsMap := make(map[string]cke.ServiceParams)
+		for _, n := range o.nodes {
+			paramsMap[n.Address] = APIServerParams(o.cps, n.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy)
+		}
+		return common.RunContainerCommand(o.nodes,
 			op.KubeAPIServerContainerName, cke.KubernetesImage,
 			common.WithOpts(opts),
-			common.WithParams(APIServerParams(o.cps, node.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy)),
+			common.WithParamsMap(paramsMap),
 			common.WithExtra(o.params.ServiceParams))
 	}
 
