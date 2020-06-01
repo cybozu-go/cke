@@ -8,3 +8,17 @@ spec:
     spec:
       tolerations:
       - operator: Exists
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: kube-system
+  name: kube-flannel-cfg
+data:
+  net-conf.json: |
+    {
+      "Network": "192.168.0.0/16",
+      "Backend": {
+        "Type": "vxlan"
+      }
+    }

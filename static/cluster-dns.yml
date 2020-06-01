@@ -83,6 +83,9 @@ spec:
           effect: NoSchedule
         - key: "CriticalAddonsOnly"
           operator: "Exists"
+        - key: kubernetes.io/e2e-evict-taint-key
+          operator: Exists
+          # for sonobuoy https://github.com/vmware-tanzu/sonobuoy/pull/878
       containers:
       - name: coredns
         image: {{ .coredns }}
