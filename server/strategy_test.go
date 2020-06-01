@@ -607,14 +607,14 @@ func TestDecideOps(t *testing.T) {
 			Name:  "BootK8s",
 			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
-				"kube-apiserver-bootstrap",
+				"kube-apiserver-restart",
 				"kube-controller-manager-bootstrap",
 				"kube-proxy-bootstrap",
 				"kube-scheduler-bootstrap",
 				"kubelet-bootstrap",
 			},
 			ExpectedTargetNums: map[string]int{
-				"kube-apiserver-bootstrap":          2,
+				"kube-apiserver-restart":            2,
 				"kube-controller-manager-bootstrap": 2,
 				"kube-proxy-bootstrap":              4,
 				"kube-scheduler-bootstrap":          2,
