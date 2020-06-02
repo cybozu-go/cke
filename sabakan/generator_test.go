@@ -767,21 +767,6 @@ func testUpdate(t *testing.T) {
 			},
 		},
 		{
-			"NotDecreaseWorker",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7], workers[9]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 2,
-				MinimumWorkers:    3,
-				MaximumWorkers:    3,
-			},
-			[]Machine{machines[0], machines[1], machines[5], machines[7], machines[9]},
-
-			nil,
-			nil,
-		},
-		{
 			"Taint",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[5], workers[2], workers[7], {
@@ -812,6 +797,21 @@ func testUpdate(t *testing.T) {
 					}},
 				}},
 			},
+		},
+		{
+			"UpdateNotRequired",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7], workers[9]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 2,
+				MinimumWorkers:    3,
+				MaximumWorkers:    3,
+			},
+			[]Machine{machines[0], machines[1], machines[5], machines[7], machines[9]},
+
+			nil,
+			nil,
 		},
 	}
 
@@ -870,6 +870,75 @@ func testUpdate(t *testing.T) {
 				t.Log(cmp.Diff(gotWorkers, expectedWorkers))
 			}
 		})
+	}
+}
+
+func testRegenerateAfterUpdate(t *testing.T) {
+	machines := []Machine{
+		newTestMachineWithIP(0, testFuture250, StateHealthy, "10.0.0.1", "cs"),
+		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.2", "cs"),
+		newTestMachineWithIP(0, testFuture250, StateHealthy, "10.0.0.3", "cs"),
+		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4", "cs"),
+	}
+
+	cluster := &cke.Cluster{
+		Name: "old",
+		Nodes: []*cke.Node{
+			{
+				Address:      "10.0.0.4",
+				ControlPlane: true,
+			},
+			{
+				Address: "10.0.0.1",
+			},
+		},
+	}
+
+	tmpl := &cke.Cluster{
+		Name: "new",
+		Nodes: []*cke.Node{
+			{
+				ControlPlane: true,
+			},
+			{
+				ControlPlane: false,
+			},
+		},
+	}
+
+	g := NewGenerator(tmpl, cke.DefaultConstraints(), machines, testBaseTS)
+
+	got, err := g.Update(cluster)
+	if err != nil {
+		t.Error("unexpected error:", err)
+		return
+	}
+	if got != nil {
+		t.Error("unexpected update:", got)
+		return
+	}
+
+	got, err = g.Regenerate(cluster)
+	if err != nil {
+		t.Error("unexpected error:", err)
+		return
+	}
+
+	nodes := got.Nodes
+	if len(nodes) != 2 {
+		t.Fatal(`len(nodes) != 2`, nodes)
+	}
+	if nodes[0].Address != "10.0.0.4" {
+		t.Error(`nodes[0].Address != "10.0.0.4"`, nodes[0].Address)
+	}
+	if !nodes[0].ControlPlane {
+		t.Error(`!nodes[0].ControlPlane`)
+	}
+	if nodes[1].Address != "10.0.0.1" {
+		t.Error(`nodes[1].Address != "10.0.0.1"`, nodes[1].Address)
+	}
+	if nodes[1].ControlPlane {
+		t.Error(`nodes[1].ControlPlane`)
 	}
 }
 
@@ -1440,6 +1509,7 @@ func TestGenerator(t *testing.T) {
 	t.Run("Generate", testGenerate)
 	t.Run("Regenerate", testRegenerate)
 	t.Run("Update", testUpdate)
+	t.Run("RegenerateAfterUpdate", testRegenerateAfterUpdate)
 	t.Run("Weighted", testWeighted)
 	t.Run("RackDistribution", testRackDistribution)
 }
