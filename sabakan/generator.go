@@ -118,13 +118,14 @@ type Generator struct {
 // template must have been validated with ValidateTemplate().
 func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machine, currentTime time.Time) *Generator {
 	g := &Generator{
-		template:          template,
-		constraints:       cstr,
-		timestamp:         currentTime,
-		waitSeconds:       DefaultWaitRetiredSeconds,
-		machineMap:        make(map[string]*Machine),
-		countWorkerByRole: make(map[string]int),
+		template:    template,
+		constraints: cstr,
+		timestamp:   currentTime,
+		waitSeconds: DefaultWaitRetiredSeconds,
+		machineMap:  make(map[string]*Machine),
 	}
+
+	g.clearIntermediateData()
 
 	for _, m := range machines {
 		if len(m.Spec.IPv4) == 0 {
@@ -156,6 +157,13 @@ func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machi
 	}
 
 	return g
+}
+
+func (g *Generator) clearIntermediateData() {
+	g.nextControlPlanes = nil
+	g.nextUnused = nil
+	g.nextWorkers = nil
+	g.countWorkerByRole = make(map[string]int)
 }
 
 func (g *Generator) chooseWorkerTmpl() nodeTemplate {
@@ -310,6 +318,8 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 
 // Generate generates a new *Cluster that satisfies constraints.
 func (g *Generator) Generate() (*cke.Cluster, error) {
+	g.clearIntermediateData()
+
 	op := &updateOp{
 		name: "new",
 	}
@@ -323,6 +333,8 @@ func (g *Generator) Generate() (*cke.Cluster, error) {
 // Regenerate regenerates *Cluster using the same set of nodes in the current configuration.
 // This method should be used only when the template is updated and no other changes happen.
 func (g *Generator) Regenerate(current *cke.Cluster) (*cke.Cluster, error) {
+	g.clearIntermediateData()
+
 	op := &updateOp{
 		name: "regenerate",
 	}
@@ -350,6 +362,8 @@ func (g *Generator) Regenerate(current *cke.Cluster) (*cke.Cluster, error) {
 // Update updates the current configuration when necessary.
 // If the generator decides no updates are necessary, it returns (nil, nil).
 func (g *Generator) Update(current *cke.Cluster) (*cke.Cluster, error) {
+	g.clearIntermediateData()
+
 	currentCPs := cke.ControlPlanes(current.Nodes)
 	currentWorkers := cke.Workers(current.Nodes)
 
