@@ -189,6 +189,15 @@ func (c *Cluster) Validate(isTmpl bool) error {
 		}
 	}
 
+	nodeAddressSet := make(map[string]int)
+	for _, n := range c.Nodes {
+		_, ok := nodeAddressSet[n.Address]
+		if ok {
+			return errors.New("duplicate node address: " + n.Address)
+		}
+		nodeAddressSet[n.Address] = 1
+	}
+
 	for _, a := range c.DNSServers {
 		if net.ParseIP(a) == nil {
 			return errors.New("invalid IP address: " + a)

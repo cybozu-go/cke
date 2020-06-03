@@ -560,6 +560,24 @@ rules:
 			false,
 		},
 		{
+			"duplicate node address",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Nodes: []*Node{
+					{
+						Address: "10.0.0.1",
+						User:    "user",
+					},
+					{
+						Address: "10.0.0.1",
+						User:    "another",
+					},
+				},
+			},
+			true,
+		},
+		{
 			"valid case",
 			Cluster{
 				Name:          "testcluster",
