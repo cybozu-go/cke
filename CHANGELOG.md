@@ -5,6 +5,14 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.17.8] - 2020-06-03
+
+### Changed
+- Do not mix new/old API servers (#340)
+
+### Fixed
+- Fix a sabakan integration bug and enhance cluster validation (#346)
+
 ## [1.17.7] - 2020-06-01
 
 ### Fixed
@@ -81,7 +89,8 @@ No change from v1.17.0-rc.1.
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.7...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.8...HEAD
+[1.17.8]: https://github.com/cybozu-go/cke/compare/v1.17.7...v1.17.8
 [1.17.7]: https://github.com/cybozu-go/cke/compare/v1.17.6...v1.17.7
 [1.17.6]: https://github.com/cybozu-go/cke/compare/v1.17.5...v1.17.6
 [1.17.5]: https://github.com/cybozu-go/cke/compare/v1.17.4...v1.17.5
