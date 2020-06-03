@@ -189,13 +189,13 @@ func (c *Cluster) Validate(isTmpl bool) error {
 		}
 	}
 
-	nodeAddressSet := make(map[string]int)
+	nodeAddressSet := make(map[string]struct{})
 	for _, n := range c.Nodes {
 		_, ok := nodeAddressSet[n.Address]
 		if ok {
 			return errors.New("duplicate node address: " + n.Address)
 		}
-		nodeAddressSet[n.Address] = 1
+		nodeAddressSet[n.Address] = struct{}{}
 	}
 
 	for _, a := range c.DNSServers {
