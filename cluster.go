@@ -182,19 +182,18 @@ func (c *Cluster) Validate(isTmpl bool) error {
 	}
 
 	fldPath := field.NewPath("nodes")
+	nodeAddressSet := make(map[string]struct{})
 	for i, n := range c.Nodes {
 		err := c.validateNode(n, isTmpl, fldPath.Index(i))
 		if err != nil {
 			return err
 		}
-	}
-
-	nodeAddressSet := make(map[string]struct{})
-	for _, n := range c.Nodes {
 		if _, ok := nodeAddressSet[n.Address]; ok {
 			return errors.New("duplicate node address: " + n.Address)
 		}
-		nodeAddressSet[n.Address] = struct{}{}
+		if !isTmpl {
+			nodeAddressSet[n.Address] = struct{}{}
+		}
 	}
 
 	for _, a := range c.DNSServers {
