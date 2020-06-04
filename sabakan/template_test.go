@@ -58,6 +58,26 @@ func TestClusterValidate(t *testing.T) {
 			false,
 		},
 		{
+			"valid case: 1cp, 1worker (valid weight)",
+			&cke.Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Nodes: []*cke.Node{
+					{
+						User:         "user",
+						ControlPlane: true,
+					},
+					{
+						User: "another",
+						Labels: map[string]string{
+							"cke.cybozu.com/weight": "1.0",
+						},
+					},
+				},
+			},
+			false,
+		},
+		{
 			"invalid case: 1node",
 			&cke.Cluster{
 				Name:          "testcluster",
@@ -154,6 +174,66 @@ func TestClusterValidate(t *testing.T) {
 					{
 						Address: "10.0.0.2",
 						User:    "another",
+					},
+				},
+			},
+			true,
+		},
+		{
+			"invalid case: zero weight",
+			&cke.Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Nodes: []*cke.Node{
+					{
+						ControlPlane: true,
+						User:         "user",
+					},
+					{
+						User: "another",
+						Labels: map[string]string{
+							"cke.cybozu.com/weight": "0",
+						},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"invalid case: negative weight",
+			&cke.Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Nodes: []*cke.Node{
+					{
+						ControlPlane: true,
+						User:         "user",
+					},
+					{
+						User: "another",
+						Labels: map[string]string{
+							"cke.cybozu.com/weight": "-1.0",
+						},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"invalid case: not float weight",
+			&cke.Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Nodes: []*cke.Node{
+					{
+						ControlPlane: true,
+						User:         "user",
+					},
+					{
+						User: "another",
+						Labels: map[string]string{
+							"cke.cybozu.com/weight": "weight",
+						},
 					},
 				},
 			},
