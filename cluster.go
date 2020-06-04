@@ -182,19 +182,18 @@ func (c *Cluster) Validate(isTmpl bool) error {
 	}
 
 	fldPath := field.NewPath("nodes")
+	nodeAddressSet := make(map[string]struct{})
 	for i, n := range c.Nodes {
-		err := c.validateNode(n, isTmpl, fldPath.Index(i))
+		err := validateNode(n, isTmpl, fldPath.Index(i))
 		if err != nil {
 			return err
 		}
-	}
-
-	nodeAddressSet := make(map[string]struct{})
-	for _, n := range c.Nodes {
 		if _, ok := nodeAddressSet[n.Address]; ok {
 			return errors.New("duplicate node address: " + n.Address)
 		}
-		nodeAddressSet[n.Address] = struct{}{}
+		if !isTmpl {
+			nodeAddressSet[n.Address] = struct{}{}
+		}
 	}
 
 	for _, a := range c.DNSServers {
@@ -223,12 +222,17 @@ func (c *Cluster) Validate(isTmpl bool) error {
 	return nil
 }
 
-func (c *Cluster) validateNode(n *Node, isTmpl bool, fldPath *field.Path) error {
-	if !isTmpl {
+func validateNode(n *Node, isTmpl bool, fldPath *field.Path) error {
+	if isTmpl {
+		if len(n.Address) != 0 {
+			return errors.New("address is not empty: " + n.Address)
+		}
+	} else {
 		if net.ParseIP(n.Address) == nil {
 			return errors.New("invalid IP address: " + n.Address)
 		}
 	}
+
 	if len(n.User) == 0 {
 		return errors.New("user name is empty")
 	}

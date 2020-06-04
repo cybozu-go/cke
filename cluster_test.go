@@ -615,7 +615,7 @@ func testClusterValidateNode(t *testing.T) {
 	tests := []struct {
 		name    string
 		node    Node
-		cluster Cluster
+		isTmpl  bool
 		wantErr bool
 	}{
 		{
@@ -631,7 +631,7 @@ func testClusterValidateNode(t *testing.T) {
 					Effect: "NoExecute",
 				}},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: false,
 		},
 		{
@@ -640,7 +640,7 @@ func testClusterValidateNode(t *testing.T) {
 				Address: "10000",
 				User:    "testuser",
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -648,7 +648,7 @@ func testClusterValidateNode(t *testing.T) {
 			node: Node{
 				Address: "10.0.0.1",
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -658,7 +658,7 @@ func testClusterValidateNode(t *testing.T) {
 				User:    "testuser",
 				Labels:  map[string]string{"a_b/c": "hello"},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -668,7 +668,7 @@ func testClusterValidateNode(t *testing.T) {
 				User:    "testuser",
 				Labels:  map[string]string{"a_b/c": "こんにちは"},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -678,7 +678,7 @@ func testClusterValidateNode(t *testing.T) {
 				User:        "testuser",
 				Annotations: map[string]string{"a.b/c_": "hello"},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -692,7 +692,7 @@ func testClusterValidateNode(t *testing.T) {
 					Effect: "NoSchedule",
 				}},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -706,7 +706,7 @@ func testClusterValidateNode(t *testing.T) {
 					Effect: "NoSchedule",
 				}},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -720,16 +720,32 @@ func testClusterValidateNode(t *testing.T) {
 					Effect: "NoNoNo",
 				}},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
+			wantErr: true,
+		},
+		{
+			name: "valid template node",
+			node: Node{
+				User: "testuser",
+			},
+			isTmpl:  true,
+			wantErr: false,
+		},
+		{
+			name: "invalid template node: non-empty address",
+			node: Node{
+				Address: "10.0.0.1",
+				User:    "testuser",
+			},
+			isTmpl:  true,
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := tt.cluster
 			n := tt.node
-			if err := c.validateNode(&n, false, field.NewPath("node")); (err != nil) != tt.wantErr {
-				t.Errorf("Cluster.validateNode() error = %v, wantErr %v", err, tt.wantErr)
+			if err := validateNode(&n, tt.isTmpl, field.NewPath("node")); (err != nil) != tt.wantErr {
+				t.Errorf("validateNode(%t) error = %v, wantErr %v", tt.isTmpl, err, tt.wantErr)
 			}
 		})
 	}

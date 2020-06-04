@@ -262,15 +262,18 @@ func testNewGenerator(t *testing.T) {
 
 func testGenerate(t *testing.T) {
 	tmpl := &cke.Cluster{
-		Name: "test",
+		Name:          "test",
+		ServiceSubnet: "10.0.0.0/14",
 		Nodes: []*cke.Node{
 			{
+				User:         "cybozu",
 				ControlPlane: true,
 				Labels:       map[string]string{"foo": "bar"},
 				Annotations:  map[string]string{"hoge": "fuga"},
 				Taints:       []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoSchedule}},
 			},
 			{
+				User:         "cybozu",
 				ControlPlane: false,
 				Labels:       map[string]string{"foo": "aaa"},
 				Annotations:  map[string]string{"hoge": "bbb"},
@@ -381,12 +384,15 @@ func testRegenerate(t *testing.T) {
 	}
 
 	tmpl := &cke.Cluster{
-		Name: "new",
+		Name:          "new",
+		ServiceSubnet: "10.0.0.0/14",
 		Nodes: []*cke.Node{
 			{
+				User:         "cybozu",
 				ControlPlane: true,
 			},
 			{
+				User:         "cybozu",
 				ControlPlane: false,
 			},
 		},
@@ -405,7 +411,7 @@ func testRegenerate(t *testing.T) {
 	nodes := regenerated.Nodes
 	regenerated.Nodes = nil
 	if !cmp.Equal(regenerated, &generated) {
-		t.Log(cmp.Diff(cluster, &generated))
+		t.Log(cmp.Diff(regenerated, &generated))
 		t.Errorf("cluster mismatch: actual=%#v, expected=%#v", regenerated, &generated)
 	}
 
@@ -489,12 +495,15 @@ func testUpdate(t *testing.T) {
 	}
 
 	tmpl := &cke.Cluster{
-		Name: "tmpl",
+		Name:          "tmpl",
+		ServiceSubnet: "10.0.0.0/14",
 		Nodes: []*cke.Node{
 			{
+				User:         "cybozu",
 				ControlPlane: true,
 			},
 			{
+				User:         "cybozu",
 				ControlPlane: false,
 			},
 		},
@@ -895,12 +904,15 @@ func testRegenerateAfterUpdate(t *testing.T) {
 	}
 
 	tmpl := &cke.Cluster{
-		Name: "new",
+		Name:          "new",
+		ServiceSubnet: "10.0.0.0/14",
 		Nodes: []*cke.Node{
 			{
+				User:         "cybozu",
 				ControlPlane: true,
 			},
 			{
+				User:         "cybozu",
 				ControlPlane: false,
 			},
 		},
@@ -1092,8 +1104,9 @@ func testWeighted(t *testing.T) {
 				w.User = "cybozu"
 			}
 			tmpl := &cke.Cluster{
-				Name:  "test",
-				Nodes: append(tt.tmplWorkers, tt.tmplCP),
+				Name:          "test",
+				ServiceSubnet: "10.0.0.0/14",
+				Nodes:         append(tt.tmplWorkers, tt.tmplCP),
 			}
 
 			g := NewGenerator(tmpl, tt.cstr, machines, testBaseTS)
@@ -1204,7 +1217,8 @@ func TestCountMachinesByRack(t *testing.T) {
 
 func testRackDistribution(t *testing.T) {
 	baseTemplate := &cke.Cluster{
-		Name: "test",
+		Name:          "test",
+		ServiceSubnet: "10.0.0.0/14",
 		Nodes: []*cke.Node{
 			{
 				User:         "cybozu",
@@ -1341,7 +1355,11 @@ func testRackDistribution(t *testing.T) {
 			MaximumWorkers:    56,
 		}
 
-		withoutCSTemplate := &cke.Cluster{Name: "test", Nodes: []*cke.Node{}}
+		withoutCSTemplate := &cke.Cluster{
+			Name:          "test",
+			ServiceSubnet: "10.0.0.0/14",
+			Nodes:         []*cke.Node{},
+		}
 		for i, n := range baseTemplate.Nodes {
 			if i == 1 {
 				continue
