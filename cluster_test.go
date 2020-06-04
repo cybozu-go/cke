@@ -615,7 +615,6 @@ func testClusterValidateNode(t *testing.T) {
 	tests := []struct {
 		name    string
 		node    Node
-		cluster Cluster
 		wantErr bool
 	}{
 		{
@@ -631,7 +630,6 @@ func testClusterValidateNode(t *testing.T) {
 					Effect: "NoExecute",
 				}},
 			},
-			cluster: Cluster{},
 			wantErr: false,
 		},
 		{
@@ -640,7 +638,6 @@ func testClusterValidateNode(t *testing.T) {
 				Address: "10000",
 				User:    "testuser",
 			},
-			cluster: Cluster{},
 			wantErr: true,
 		},
 		{
@@ -648,7 +645,6 @@ func testClusterValidateNode(t *testing.T) {
 			node: Node{
 				Address: "10.0.0.1",
 			},
-			cluster: Cluster{},
 			wantErr: true,
 		},
 		{
@@ -658,7 +654,6 @@ func testClusterValidateNode(t *testing.T) {
 				User:    "testuser",
 				Labels:  map[string]string{"a_b/c": "hello"},
 			},
-			cluster: Cluster{},
 			wantErr: true,
 		},
 		{
@@ -668,7 +663,6 @@ func testClusterValidateNode(t *testing.T) {
 				User:    "testuser",
 				Labels:  map[string]string{"a_b/c": "こんにちは"},
 			},
-			cluster: Cluster{},
 			wantErr: true,
 		},
 		{
@@ -678,7 +672,6 @@ func testClusterValidateNode(t *testing.T) {
 				User:        "testuser",
 				Annotations: map[string]string{"a.b/c_": "hello"},
 			},
-			cluster: Cluster{},
 			wantErr: true,
 		},
 		{
@@ -692,7 +685,6 @@ func testClusterValidateNode(t *testing.T) {
 					Effect: "NoSchedule",
 				}},
 			},
-			cluster: Cluster{},
 			wantErr: true,
 		},
 		{
@@ -706,7 +698,6 @@ func testClusterValidateNode(t *testing.T) {
 					Effect: "NoSchedule",
 				}},
 			},
-			cluster: Cluster{},
 			wantErr: true,
 		},
 		{
@@ -720,15 +711,13 @@ func testClusterValidateNode(t *testing.T) {
 					Effect: "NoNoNo",
 				}},
 			},
-			cluster: Cluster{},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := tt.cluster
 			n := tt.node
-			if err := c.validateNode(&n, false, field.NewPath("node")); (err != nil) != tt.wantErr {
+			if err := validateNode(&n, false, field.NewPath("node")); (err != nil) != tt.wantErr {
 				t.Errorf("Cluster.validateNode() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

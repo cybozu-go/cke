@@ -184,7 +184,7 @@ func (c *Cluster) Validate(isTmpl bool) error {
 	fldPath := field.NewPath("nodes")
 	nodeAddressSet := make(map[string]struct{})
 	for i, n := range c.Nodes {
-		err := c.validateNode(n, isTmpl, fldPath.Index(i))
+		err := validateNode(n, isTmpl, fldPath.Index(i))
 		if err != nil {
 			return err
 		}
@@ -222,7 +222,7 @@ func (c *Cluster) Validate(isTmpl bool) error {
 	return nil
 }
 
-func (c *Cluster) validateNode(n *Node, isTmpl bool, fldPath *field.Path) error {
+func validateNode(n *Node, isTmpl bool, fldPath *field.Path) error {
 	if !isTmpl {
 		if net.ParseIP(n.Address) == nil {
 			return errors.New("invalid IP address: " + n.Address)
