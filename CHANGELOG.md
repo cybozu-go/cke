@@ -5,6 +5,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.17.9] - 2020-06-04
+
+### Fixed
+- Fix a sabakan template validation bug (#348)
+
 ## [1.17.8] - 2020-06-03
 
 ### Changed
@@ -89,7 +94,8 @@ No change from v1.17.0-rc.1.
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.8...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.9...HEAD
+[1.17.9]: https://github.com/cybozu-go/cke/compare/v1.17.8...v1.17.9
 [1.17.8]: https://github.com/cybozu-go/cke/compare/v1.17.7...v1.17.8
 [1.17.7]: https://github.com/cybozu-go/cke/compare/v1.17.6...v1.17.7
 [1.17.6]: https://github.com/cybozu-go/cke/compare/v1.17.5...v1.17.6
