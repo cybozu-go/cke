@@ -313,6 +313,9 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 
 	c := *g.template
 	c.Nodes = nodes
+	if err := c.Validate(false); err != nil {
+		return nil, err
+	}
 	return &c, nil
 }
 
