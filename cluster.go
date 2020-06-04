@@ -223,11 +223,16 @@ func (c *Cluster) Validate(isTmpl bool) error {
 }
 
 func validateNode(n *Node, isTmpl bool, fldPath *field.Path) error {
-	if !isTmpl {
+	if isTmpl {
+		if len(n.Address) != 0 {
+			return errors.New("address is not empty: " + n.Address)
+		}
+	} else {
 		if net.ParseIP(n.Address) == nil {
 			return errors.New("invalid IP address: " + n.Address)
 		}
 	}
+
 	if len(n.User) == 0 {
 		return errors.New("user name is empty")
 	}
