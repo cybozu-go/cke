@@ -262,15 +262,18 @@ func testNewGenerator(t *testing.T) {
 
 func testGenerate(t *testing.T) {
 	tmpl := &cke.Cluster{
-		Name: "test",
+		Name:          "test",
+		ServiceSubnet: "10.0.0.0/14",
 		Nodes: []*cke.Node{
 			{
+				User:         "cybozu",
 				ControlPlane: true,
 				Labels:       map[string]string{"foo": "bar"},
 				Annotations:  map[string]string{"hoge": "fuga"},
 				Taints:       []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoSchedule}},
 			},
 			{
+				User:         "cybozu",
 				ControlPlane: false,
 				Labels:       map[string]string{"foo": "aaa"},
 				Annotations:  map[string]string{"hoge": "bbb"},
@@ -381,12 +384,15 @@ func testRegenerate(t *testing.T) {
 	}
 
 	tmpl := &cke.Cluster{
-		Name: "new",
+		Name:          "new",
+		ServiceSubnet: "10.0.0.0/14",
 		Nodes: []*cke.Node{
 			{
+				User:         "cybozu",
 				ControlPlane: true,
 			},
 			{
+				User:         "cybozu",
 				ControlPlane: false,
 			},
 		},
@@ -405,7 +411,7 @@ func testRegenerate(t *testing.T) {
 	nodes := regenerated.Nodes
 	regenerated.Nodes = nil
 	if !cmp.Equal(regenerated, &generated) {
-		t.Log(cmp.Diff(cluster, &generated))
+		t.Log(cmp.Diff(regenerated, &generated))
 		t.Errorf("cluster mismatch: actual=%#v, expected=%#v", regenerated, &generated)
 	}
 
@@ -489,12 +495,15 @@ func testUpdate(t *testing.T) {
 	}
 
 	tmpl := &cke.Cluster{
-		Name: "tmpl",
+		Name:          "tmpl",
+		ServiceSubnet: "10.0.0.0/14",
 		Nodes: []*cke.Node{
 			{
+				User:         "cybozu",
 				ControlPlane: true,
 			},
 			{
+				User:         "cybozu",
 				ControlPlane: false,
 			},
 		},
@@ -767,21 +776,6 @@ func testUpdate(t *testing.T) {
 			},
 		},
 		{
-			"NotDecreaseWorker",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7], workers[9]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 2,
-				MinimumWorkers:    3,
-				MaximumWorkers:    3,
-			},
-			[]Machine{machines[0], machines[1], machines[5], machines[7], machines[9]},
-
-			nil,
-			nil,
-		},
-		{
 			"Taint",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[5], workers[2], workers[7], {
@@ -812,6 +806,21 @@ func testUpdate(t *testing.T) {
 					}},
 				}},
 			},
+		},
+		{
+			"UpdateNotRequired",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7], workers[9]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 2,
+				MinimumWorkers:    3,
+				MaximumWorkers:    3,
+			},
+			[]Machine{machines[0], machines[1], machines[5], machines[7], machines[9]},
+
+			nil,
+			nil,
 		},
 	}
 
@@ -870,6 +879,78 @@ func testUpdate(t *testing.T) {
 				t.Log(cmp.Diff(gotWorkers, expectedWorkers))
 			}
 		})
+	}
+}
+
+func testRegenerateAfterUpdate(t *testing.T) {
+	machines := []Machine{
+		newTestMachineWithIP(0, testFuture250, StateHealthy, "10.0.0.1", "cs"),
+		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.2", "cs"),
+		newTestMachineWithIP(0, testFuture250, StateHealthy, "10.0.0.3", "cs"),
+		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4", "cs"),
+	}
+
+	cluster := &cke.Cluster{
+		Name: "old",
+		Nodes: []*cke.Node{
+			{
+				Address:      "10.0.0.4",
+				ControlPlane: true,
+			},
+			{
+				Address: "10.0.0.1",
+			},
+		},
+	}
+
+	tmpl := &cke.Cluster{
+		Name:          "new",
+		ServiceSubnet: "10.0.0.0/14",
+		Nodes: []*cke.Node{
+			{
+				User:         "cybozu",
+				ControlPlane: true,
+			},
+			{
+				User:         "cybozu",
+				ControlPlane: false,
+			},
+		},
+	}
+
+	g := NewGenerator(tmpl, cke.DefaultConstraints(), machines, testBaseTS)
+
+	got, err := g.Update(cluster)
+	if err != nil {
+		t.Error("unexpected error:", err)
+		return
+	}
+	if got != nil {
+		t.Error("unexpected update:", got)
+		return
+	}
+
+	got, err = g.Regenerate(cluster)
+	if err != nil {
+		t.Error("unexpected error:", err)
+		return
+	}
+
+	nodes := got.Nodes
+	if len(nodes) != 2 {
+		t.Fatal(`len(nodes) != 2`, nodes)
+	}
+	if nodes[0].Address != "10.0.0.4" {
+		t.Error(`nodes[0].Address != "10.0.0.4"`, nodes[0].Address)
+	}
+	if !nodes[0].ControlPlane {
+		t.Error(`!nodes[0].ControlPlane`)
+	}
+	if nodes[1].Address != "10.0.0.1" {
+		t.Error(`nodes[1].Address != "10.0.0.1"`, nodes[1].Address)
+	}
+	if nodes[1].ControlPlane {
+		t.Error(`nodes[1].ControlPlane`)
 	}
 }
 
@@ -1023,8 +1104,9 @@ func testWeighted(t *testing.T) {
 				w.User = "cybozu"
 			}
 			tmpl := &cke.Cluster{
-				Name:  "test",
-				Nodes: append(tt.tmplWorkers, tt.tmplCP),
+				Name:          "test",
+				ServiceSubnet: "10.0.0.0/14",
+				Nodes:         append(tt.tmplWorkers, tt.tmplCP),
 			}
 
 			g := NewGenerator(tmpl, tt.cstr, machines, testBaseTS)
@@ -1135,7 +1217,8 @@ func TestCountMachinesByRack(t *testing.T) {
 
 func testRackDistribution(t *testing.T) {
 	baseTemplate := &cke.Cluster{
-		Name: "test",
+		Name:          "test",
+		ServiceSubnet: "10.0.0.0/14",
 		Nodes: []*cke.Node{
 			{
 				User:         "cybozu",
@@ -1272,7 +1355,11 @@ func testRackDistribution(t *testing.T) {
 			MaximumWorkers:    56,
 		}
 
-		withoutCSTemplate := &cke.Cluster{Name: "test", Nodes: []*cke.Node{}}
+		withoutCSTemplate := &cke.Cluster{
+			Name:          "test",
+			ServiceSubnet: "10.0.0.0/14",
+			Nodes:         []*cke.Node{},
+		}
 		for i, n := range baseTemplate.Nodes {
 			if i == 1 {
 				continue
@@ -1440,6 +1527,7 @@ func TestGenerator(t *testing.T) {
 	t.Run("Generate", testGenerate)
 	t.Run("Regenerate", testRegenerate)
 	t.Run("Update", testUpdate)
+	t.Run("RegenerateAfterUpdate", testRegenerateAfterUpdate)
 	t.Run("Weighted", testWeighted)
 	t.Run("RackDistribution", testRackDistribution)
 }

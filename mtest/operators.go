@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -328,20 +327,13 @@ func TestOperators(isDegraded bool) {
 		cluster.Options.Etcd.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.ControllerManager.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Scheduler.ExtraEnvvar = map[string]string{"AAA": "aaa"}
+		cluster.Options.Scheduler.Extenders = []string{"urlPrefix: http://127.0.0.1:8000"}
+		cluster.Options.Scheduler.Predicates = []string{"name: some_predicate"}
+		cluster.Options.Scheduler.Priorities = []string{"name: some_priority"}
 		cluster.Options.Proxy.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Kubelet.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Kubelet.Domain = "neconeco"
 		clusterSetAndWait(cluster)
-
-		By("Adding a scheduler extender")
-		// this will run these ops:
-		// - SchedulerRestartOp
-		cluster.Options.Scheduler.Extenders = []string{"urlPrefix: http://127.0.0.1:8000"}
-		clusterSetAndWait(cluster)
-
-		stdout, stderr, err := execAt(node1, "jq", "-r", "'.extenders[0].urlPrefix'", op.PolicyConfigPath)
-		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
-		Expect(strings.TrimSpace(string(stdout))).To(Equal("http://127.0.0.1:8000"))
 	})
 
 	It("updates Node resources", func() {

@@ -22,7 +22,6 @@ nodes:
     labels:
       label1: value1
 service_subnet: 12.34.56.00/24
-pod_subnet: 10.1.0.0/16
 dns_servers: ["1.1.1.1", "8.8.8.8"]
 dns_service: kube-system/dns
 etcd_backup:
@@ -54,6 +53,10 @@ options:
   kube-scheduler:
     extenders:
       - "urlPrefix: http://127.0.0.1:8000"
+    predicates:
+      - "name: some_predicate"
+    priorities:
+      - "name: some_priority"
     extra_args:
       - arg1
   kube-proxy:
@@ -62,6 +65,7 @@ options:
   kubelet:
     domain: my.domain
     allow_swap: true
+    cgroup_driver: systemd
     container_runtime: remote
     container_runtime_endpoint: /var/run/k8s-containerd.sock
     container_log_max_size: 10Mi
@@ -113,9 +117,6 @@ options:
 	if c.ServiceSubnet != "12.34.56.00/24" {
 		t.Error(`c.ServiceSubnet != "12.34.56.00/24"`)
 	}
-	if c.PodSubnet != "10.1.0.0/16" {
-		t.Error(`c.PodSubnet != "10.1.0.0/16"`)
-	}
 	if !reflect.DeepEqual(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"}) {
 		t.Error(`!reflect.DeepEqual(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"})`)
 	}
@@ -150,6 +151,12 @@ rules:
 	if !reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"urlPrefix: http://127.0.0.1:8000"}) {
 		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"urlPrefix: http://127.0.0.1:8000"}`)
 	}
+	if !reflect.DeepEqual(c.Options.Scheduler.Predicates, []string{"name: some_predicate"}) {
+		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Predicates, []string{"name: some_predicate"}`)
+	}
+	if !reflect.DeepEqual(c.Options.Scheduler.Priorities, []string{"name: some_priority"}) {
+		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Priorities, []string{"name: some_priority"}`)
+	}
 	if c.Options.Kubelet.Domain != "my.domain" {
 		t.Error(`c.Options.Kubelet.Domain != "my.domain"`)
 	}
@@ -161,6 +168,9 @@ rules:
 	}
 	if c.Options.Kubelet.ContainerRuntimeEndpoint != "/var/run/k8s-containerd.sock" {
 		t.Error(`c.Options.Kubelet.ContainerRuntimeEndpoint != "/var/run/k8s-containerd.sock"`)
+	}
+	if c.Options.Kubelet.CgroupDriver != "systemd" {
+		t.Error(`c.Options.Kubelet.CgroupDriver != "systemd"`)
 	}
 	if c.Options.Kubelet.ContainerLogMaxSize != "10Mi" {
 		t.Error(`c.Options.Kubelet.ContainerLogMaxSize != "10Mi"`)
@@ -205,7 +215,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 			},
 			true,
 		},
@@ -214,16 +223,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "",
-				PodSubnet:     "10.1.0.0/16",
-			},
-			true,
-		},
-		{
-			"No pod subnet",
-			Cluster{
-				Name:          "testcluster",
-				ServiceSubnet: "10.1.0.0/16",
-				PodSubnet:     "",
 			},
 			true,
 		},
@@ -232,7 +231,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				DNSServers:    []string{"a.b.c.d"},
 			},
 			true,
@@ -242,7 +240,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				DNSService:    "hoge",
 			},
 			true,
@@ -252,7 +249,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				EtcdBackup: EtcdBackup{
 					Enabled:  true,
 					PVCName:  "",
@@ -266,7 +262,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				EtcdBackup: EtcdBackup{
 					Enabled:  true,
 					PVCName:  "etcdbackup-pvc",
@@ -280,7 +275,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					APIServer: APIServerParams{
 						AuditLogEnabled: true,
@@ -295,7 +289,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					APIServer: APIServerParams{
 						AuditLogEnabled: true,
@@ -310,7 +303,6 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					APIServer: APIServerParams{
 						AuditLogEnabled: true,
@@ -329,7 +321,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						Domain: "a_b.c",
@@ -343,7 +334,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						ContainerRuntime:         "test",
@@ -358,7 +348,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						ContainerRuntime:         "remote",
@@ -373,7 +362,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						BootTaints: []corev1.Taint{
@@ -393,7 +381,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						BootTaints: []corev1.Taint{
@@ -413,7 +400,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						BootTaints: []corev1.Taint{
@@ -433,7 +419,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						BootTaints: []corev1.Taint{
@@ -453,7 +438,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						CNIConfFile: CNIConfFile{
@@ -470,7 +454,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						CNIConfFile: CNIConfFile{
@@ -487,7 +470,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Kubelet: KubeletParams{
 						CNIConfFile: CNIConfFile{
@@ -504,7 +486,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Scheduler: SchedulerParams{
 						Extenders: []string{`foo: bar`},
@@ -518,7 +499,6 @@ rules:
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				Options: Options{
 					Scheduler: SchedulerParams{
 						Extenders: []string{`urlPrefix: http://127.0.0.1:8000`},
@@ -528,11 +508,80 @@ rules:
 			false,
 		},
 		{
+			"scheduler predicate config JSON is invalid",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Options: Options{
+					Scheduler: SchedulerParams{
+						Predicates: []string{`foo: bar`},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"scheduler predicate config JSON is valid",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Options: Options{
+					Scheduler: SchedulerParams{
+						Predicates: []string{`name: some_predicate`},
+					},
+				},
+			},
+			false,
+		},
+		{
+			"scheduler priority config JSON is invalid",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Options: Options{
+					Scheduler: SchedulerParams{
+						Priorities: []string{`foo: bar`},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"scheduler extender config JSON is valid",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Options: Options{
+					Scheduler: SchedulerParams{
+						Priorities: []string{`name: some_priority`},
+					},
+				},
+			},
+			false,
+		},
+		{
+			"duplicate node address",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Nodes: []*Node{
+					{
+						Address: "10.0.0.1",
+						User:    "user",
+					},
+					{
+						Address: "10.0.0.1",
+						User:    "another",
+					},
+				},
+			},
+			true,
+		},
+		{
 			"valid case",
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
-				PodSubnet:     "10.1.0.0/16",
 				DNSService:    "kube-system/dns",
 				Options: Options{
 					Kubelet: KubeletParams{
@@ -566,7 +615,7 @@ func testClusterValidateNode(t *testing.T) {
 	tests := []struct {
 		name    string
 		node    Node
-		cluster Cluster
+		isTmpl  bool
 		wantErr bool
 	}{
 		{
@@ -582,7 +631,7 @@ func testClusterValidateNode(t *testing.T) {
 					Effect: "NoExecute",
 				}},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: false,
 		},
 		{
@@ -591,7 +640,7 @@ func testClusterValidateNode(t *testing.T) {
 				Address: "10000",
 				User:    "testuser",
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -599,7 +648,7 @@ func testClusterValidateNode(t *testing.T) {
 			node: Node{
 				Address: "10.0.0.1",
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -609,7 +658,7 @@ func testClusterValidateNode(t *testing.T) {
 				User:    "testuser",
 				Labels:  map[string]string{"a_b/c": "hello"},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -619,7 +668,7 @@ func testClusterValidateNode(t *testing.T) {
 				User:    "testuser",
 				Labels:  map[string]string{"a_b/c": "こんにちは"},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -629,7 +678,7 @@ func testClusterValidateNode(t *testing.T) {
 				User:        "testuser",
 				Annotations: map[string]string{"a.b/c_": "hello"},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -643,7 +692,7 @@ func testClusterValidateNode(t *testing.T) {
 					Effect: "NoSchedule",
 				}},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -657,7 +706,7 @@ func testClusterValidateNode(t *testing.T) {
 					Effect: "NoSchedule",
 				}},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
 			wantErr: true,
 		},
 		{
@@ -671,16 +720,32 @@ func testClusterValidateNode(t *testing.T) {
 					Effect: "NoNoNo",
 				}},
 			},
-			cluster: Cluster{},
+			isTmpl:  false,
+			wantErr: true,
+		},
+		{
+			name: "valid template node",
+			node: Node{
+				User: "testuser",
+			},
+			isTmpl:  true,
+			wantErr: false,
+		},
+		{
+			name: "invalid template node: non-empty address",
+			node: Node{
+				Address: "10.0.0.1",
+				User:    "testuser",
+			},
+			isTmpl:  true,
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := tt.cluster
 			n := tt.node
-			if err := c.validateNode(&n, false, field.NewPath("node")); (err != nil) != tt.wantErr {
-				t.Errorf("Cluster.validateNode() error = %v, wantErr %v", err, tt.wantErr)
+			if err := validateNode(&n, tt.isTmpl, field.NewPath("node")); (err != nil) != tt.wantErr {
+				t.Errorf("validateNode(%t) error = %v, wantErr %v", tt.isTmpl, err, tt.wantErr)
 			}
 		})
 	}

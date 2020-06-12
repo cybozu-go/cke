@@ -120,11 +120,14 @@ type CNIConfFile struct {
 type SchedulerParams struct {
 	ServiceParams `json:",inline"`
 	Extenders     []string `json:"extenders"`
+	Predicates    []string `json:"predicates"`
+	Priorities    []string `json:"priorities"`
 }
 
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
 	ServiceParams            `json:",inline"`
+	CgroupDriver             string         `json:"cgroup_driver,omitempty"`
 	ContainerRuntime         string         `json:"container_runtime"`
 	ContainerRuntimeEndpoint string         `json:"container_runtime_endpoint"`
 	ContainerLogMaxSize      string         `json:"container_log_max_size"`
@@ -161,7 +164,6 @@ type Cluster struct {
 	Nodes         []*Node    `json:"nodes"`
 	TaintCP       bool       `json:"taint_control_plane"`
 	ServiceSubnet string     `json:"service_subnet"`
-	PodSubnet     string     `json:"pod_subnet"`
 	DNSServers    []string   `json:"dns_servers"`
 	DNSService    string     `json:"dns_service"`
 	EtcdBackup    EtcdBackup `json:"etcd_backup"`
@@ -178,16 +180,19 @@ func (c *Cluster) Validate(isTmpl bool) error {
 	if err != nil {
 		return err
 	}
-	_, _, err = net.ParseCIDR(c.PodSubnet)
-	if err != nil {
-		return err
-	}
 
 	fldPath := field.NewPath("nodes")
+	nodeAddressSet := make(map[string]struct{})
 	for i, n := range c.Nodes {
-		err := c.validateNode(n, isTmpl, fldPath.Index(i))
+		err := validateNode(n, isTmpl, fldPath.Index(i))
 		if err != nil {
 			return err
+		}
+		if _, ok := nodeAddressSet[n.Address]; ok {
+			return errors.New("duplicate node address: " + n.Address)
+		}
+		if !isTmpl {
+			nodeAddressSet[n.Address] = struct{}{}
 		}
 	}
 
@@ -217,12 +222,17 @@ func (c *Cluster) Validate(isTmpl bool) error {
 	return nil
 }
 
-func (c *Cluster) validateNode(n *Node, isTmpl bool, fldPath *field.Path) error {
-	if !isTmpl {
+func validateNode(n *Node, isTmpl bool, fldPath *field.Path) error {
+	if isTmpl {
+		if len(n.Address) != 0 {
+			return errors.New("address is not empty: " + n.Address)
+		}
+	} else {
 		if net.ParseIP(n.Address) == nil {
 			return errors.New("invalid IP address: " + n.Address)
 		}
 	}
+
 	if len(n.User) == 0 {
 		return errors.New("user name is empty")
 	}
@@ -446,6 +456,28 @@ func validateOptions(opts Options) error {
 		}
 		if _, err = url.Parse(config.URLPrefix); err != nil {
 			return err
+		}
+	}
+
+	for _, e := range opts.Scheduler.Predicates {
+		config := schedulerv1.PredicatePolicy{}
+		err = yaml.Unmarshal([]byte(e), &config)
+		if err != nil {
+			return err
+		}
+		if len(config.Name) == 0 {
+			return errors.New("no name is provided")
+		}
+	}
+
+	for _, e := range opts.Scheduler.Priorities {
+		config := schedulerv1.PriorityPolicy{}
+		err = yaml.Unmarshal([]byte(e), &config)
+		if err != nil {
+			return err
+		}
+		if len(config.Name) == 0 {
+			return errors.New("no name is provided")
 		}
 	}
 

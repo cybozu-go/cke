@@ -128,6 +128,8 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			return nil, err
 		}
 		status.Scheduler.Extenders = policy.Extenders
+		status.Scheduler.Predicates = policy.Predicates
+		status.Scheduler.Priorities = policy.Priorities
 	}
 
 	// TODO: due to the following bug, health status cannot be checked for proxy.
@@ -175,22 +177,23 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 }
 
 // GetNodeStatusUpToV1_16 sets node status about k8s v1.16 or below
-func GetNodeStatusUpToV1_16(ctx context.Context, inf cke.Infrastructure, node *cke.Node, cluster *cke.Cluster, status *cke.NodeStatus, apiServer *cke.Node) (*cke.NodeStatus, error) {
-	var err error
-	if status.Kubelet.Running {
-		// Block device paths have been changed between k8s v1.16 and v1.17.
-		// https://github.com/kubernetes/kubernetes/pull/74026
-		// So, old device paths and symlinks must be updated before upgrading.
-		status.Kubelet.NeedUpdateBlockPVsUpToV1_16, err = needUpdateBlockPVsUpToV1_16(ctx, inf, apiServer, node)
-		if err != nil {
-			log.Warn("failed to check outdated block device paths", map[string]interface{}{
-				log.FnError: err,
-				"node":      node.Address,
-			})
-		}
+func GetNodeStatusUpToV1_16(ctx context.Context, inf cke.Infrastructure, node *cke.Node, cluster *cke.Cluster, status *cke.NodeStatus, apiServer *cke.Node) {
+	if !status.Kubelet.Running {
+		return
 	}
 
-	return status, nil
+	// Block device paths have been changed between k8s v1.16 and v1.17.
+	// https://github.com/kubernetes/kubernetes/pull/74026
+	// So, old device paths and symlinks must be updated before upgrading.
+	nu, err := needUpdateBlockPVsUpToV1_16(ctx, inf, apiServer, node)
+	if err != nil {
+		log.Warn("failed to check outdated block device paths", map[string]interface{}{
+			log.FnError: err,
+			"node":      node.Address,
+		})
+	}
+
+	status.Kubelet.NeedUpdateBlockPVsUpToV1_16 = nu
 }
 
 func needUpdateBlockPVsUpToV1_16(ctx context.Context, inf cke.Infrastructure, apiServer *cke.Node, node *cke.Node) ([]string, error) {

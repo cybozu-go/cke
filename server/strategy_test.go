@@ -607,14 +607,14 @@ func TestDecideOps(t *testing.T) {
 			Name:  "BootK8s",
 			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
-				"kube-apiserver-bootstrap",
+				"kube-apiserver-restart",
 				"kube-controller-manager-bootstrap",
 				"kube-proxy-bootstrap",
 				"kube-scheduler-bootstrap",
 				"kubelet-bootstrap",
 			},
 			ExpectedTargetNums: map[string]int{
-				"kube-apiserver-bootstrap":          2,
+				"kube-apiserver-restart":            2,
 				"kube-controller-manager-bootstrap": 2,
 				"kube-proxy-bootstrap":              4,
 				"kube-scheduler-bootstrap":          2,
@@ -756,6 +756,32 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
+			Name: "RestartScheduler5",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Predicates = []schedulerv1.PredicatePolicy{{Name: `some_predicate`}}
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Predicates = []schedulerv1.PredicatePolicy{{Name: `some_predicate`}}
+			}).withSSHNotConnectedNodes(),
+			ExpectedOps: []string{
+				"kube-scheduler-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-scheduler-restart": 1,
+			},
+		},
+		{
+			Name: "RestartScheduler6",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Priorities = []schedulerv1.PriorityPolicy{{Name: `some_priority`}}
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Priorities = []schedulerv1.PriorityPolicy{{Name: `some_priority`}}
+			}).withSSHNotConnectedNodes(),
+			ExpectedOps: []string{
+				"kube-scheduler-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-scheduler-restart": 1,
+			},
+		},
+		{
 			Name:  "RestartKubelet",
 			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
@@ -858,6 +884,15 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "RestartKubelet10",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Kubelet.CgroupDriver = "systemd"
+			}).withSSHNotConnectedNodes(),
+			ExpectedOps: []string{
+				"wait-kubernetes",
+			},
+		},
+		{
+			Name: "RestartKubelet11",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[:3]
 			}).withSSHNotConnectedNodes(),

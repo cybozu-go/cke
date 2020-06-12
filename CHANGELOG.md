@@ -5,6 +5,43 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.17.9] - 2020-06-04
+
+### Fixed
+- Fix a sabakan template validation bug (#348)
+
+## [1.17.8] - 2020-06-03
+
+### Changed
+- Do not mix new/old API servers (#340)
+
+### Fixed
+- Fix a sabakan integration bug and enhance cluster validation (#346)
+
+## [1.17.7] - 2020-06-01
+
+### Fixed
+- Do not restart kubelet when cgroup_driver is changed (#342)
+- Fix race bug (#343)
+- Remove redundant test (#343, #344)
+- Stabilize sonobuoy test (#341)
+
+## [1.17.6] - 2020-05-29
+
+### Added
+- Add predicates and priorities support for kube-scheduler policy (#329)
+- Add cgroup driver option to KubeletParams (#337)
+
+### Changed
+- Update Kubernetes to 1.17.6 (#335)
+- Make machine scheduling of sabakan-integration better (#327, #331)
+- Update etcd to 3.3.22 (#332)
+- Fix a crash bug (#321)
+- Use flannel instead of Calico in examples (#328, #338)
+
+### Removed
+- Remove `pod_subnet` field from cluster.yml (#334)
+
 ## [1.17.5] - 2020-05-12
 
 Nothing changed.
@@ -57,7 +94,11 @@ No change from v1.17.0-rc.1.
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.5...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.9...HEAD
+[1.17.9]: https://github.com/cybozu-go/cke/compare/v1.17.8...v1.17.9
+[1.17.8]: https://github.com/cybozu-go/cke/compare/v1.17.7...v1.17.8
+[1.17.7]: https://github.com/cybozu-go/cke/compare/v1.17.6...v1.17.7
+[1.17.6]: https://github.com/cybozu-go/cke/compare/v1.17.5...v1.17.6
 [1.17.5]: https://github.com/cybozu-go/cke/compare/v1.17.4...v1.17.5
 [1.17.4]: https://github.com/cybozu-go/cke/compare/v1.17.3...v1.17.4
 [1.17.3]: https://github.com/cybozu-go/cke/compare/v1.17.2...v1.17.3
