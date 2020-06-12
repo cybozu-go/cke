@@ -68,7 +68,8 @@ func GetHandler(collector prometheus.Collector) http.Handler {
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collector)
 
-	handler := promhttp.HandlerFor(registry,
+	gathers := prometheus.Gatherers{registry, prometheus.DefaultGatherer}
+	handler := promhttp.HandlerFor(gathers,
 		promhttp.HandlerOpts{
 			ErrorLog:      logger{},
 			ErrorHandling: promhttp.ContinueOnError,
