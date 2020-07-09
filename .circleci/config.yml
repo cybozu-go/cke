@@ -27,11 +27,11 @@ commands:
             ./bin/run-mtest.sh <<parameters.runtime>> <<parameters.suite>> <<parameters.target>>
           no_output_timeout: 20m
       - run:
-          name: Set the instance lifetime to 10 minutes
+          name: Set the instance lifetime
           command: |
             . ./bin/env
             $GCLOUD compute instances add-metadata ${INSTANCE_NAME} --zone ${ZONE} \
-              --metadata shutdown-at=$(date -Iseconds -d+10minutes)
+              --metadata shutdown-at=$(date -Iseconds -d+30minutes)
           when: on_fail
       - run:
           name: Notify to Slack
