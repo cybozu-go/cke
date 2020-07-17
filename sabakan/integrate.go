@@ -121,7 +121,7 @@ func (ig integrator) Do(ctx context.Context, leaderKey string) error {
 		log.Warn("sabakan: failed to generate cluster", map[string]interface{}{
 			log.FnError: err,
 		})
-		// return nil
+		// lint:ignore nilerr  Some restriction was not satisfied. Try again.
 		return nil
 	}
 	metrics.UpdateSabakanIntegration(true, g.countWorkerByRole, len(g.nextUnused), time.Now().UTC())

@@ -193,7 +193,8 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 				log.Warn("failed to create SSHAgent for "+node.Address, map[string]interface{}{
 					log.FnError: err,
 				})
-				return nil // return nil
+				// lint:ignore nilerr  Just skip adding my agent to agents.
+				return nil
 			}
 
 			mu.Lock()

@@ -214,7 +214,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 			log.FnError: err,
 		})
 		wait = true
-		// return nil
+		// lint:ignore nilerr  Try again.
 		return nil
 	}
 
@@ -227,7 +227,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		if c.addon != nil {
 			return c.addon.Do(ctx, leaderKey)
 		}
-		// return nil
+		// lint:ignore nilerr  Try again.
 		return nil
 	}
 	defer inf.Close()
@@ -255,7 +255,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		log.Warn("failed to get cluster status", map[string]interface{}{
 			log.FnError: err,
 		})
-		// return nil
+		// lint:ignore nilerr  Try again.
 		return nil
 	}
 
@@ -390,7 +390,7 @@ func (c Controller) runTidyExpiredCertificates(ctx context.Context) error {
 		log.Warn("failed to get vault config. skip tidy", map[string]interface{}{
 			log.FnError: err,
 		})
-		// return nil
+		// lint:ignore nilerr  Tidy is not mandatory.
 		return nil
 	}
 
