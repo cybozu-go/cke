@@ -1,6 +1,6 @@
 ### Configurable variables
 SONOBUOY_VERSION = 0.17.2
-KUBECTL_VERSION = 1.17.6
+KUBECTL_VERSION = 1.17.9
 DOCKER_COMPOSE_VERSION = 1.25.4
 
 ### Unconfigurable
