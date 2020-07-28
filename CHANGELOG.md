@@ -5,6 +5,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.17.11] - 2020-07-28
+
+### Changed
+- Update Kubernetes to version 1.17.9 (#360)
+
 ## [1.17.10] - 2020-06-16
 
 ### Added
@@ -102,7 +107,8 @@ No change from v1.17.0-rc.1.
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.10...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.11...HEAD
+[1.17.11]: https://github.com/cybozu-go/cke/compare/v1.17.10...v1.17.11
 [1.17.10]: https://github.com/cybozu-go/cke/compare/v1.17.9...v1.17.10
 [1.17.9]: https://github.com/cybozu-go/cke/compare/v1.17.8...v1.17.9
 [1.17.8]: https://github.com/cybozu-go/cke/compare/v1.17.7...v1.17.8
