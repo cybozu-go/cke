@@ -1,6 +1,6 @@
 [![GitHub release](https://img.shields.io/github/release/cybozu-go/cke.svg?maxAge=60)][releases]
 [![CircleCI](https://circleci.com/gh/cybozu-go/cke.svg?style=svg)](https://circleci.com/gh/cybozu-go/cke)
-[![GoDoc](https://godoc.org/github.com/cybozu-go/cke?status.svg)][godoc]
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/cybozu-go/cke)](https://pkg.go.dev/github.com/cybozu-go/cke)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cybozu-go/cke)](https://goreportcard.com/report/github.com/cybozu-go/cke)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3391/badge)](https://bestpractices.coreinfrastructure.org/projects/3391)
 
@@ -11,7 +11,7 @@ Cybozu Kubernetes Engine
 
 **CKE** (Cybozu Kubernetes Engine) is a distributed service that automates [Kubernetes][] cluster management.
 
-**Project Status**: Testing for production.
+**Project Status**: GA
 
 Requirements
 ------------
@@ -135,6 +135,11 @@ $ docker run --rm -u root:root \
     quay.io/cybozu/cke:1.17
 ```
 
+Docker images
+-------------
+
+Docker images are available on [Quay.io](https://quay.io/repository/cybozu/cke)
+
 Feedback
 --------
 
@@ -148,7 +153,6 @@ License
 CKE is licensed under MIT license.
 
 [releases]: https://github.com/cybozu-go/cke/releases
-[godoc]: https://godoc.org/github.com/cybozu-go/cke
 [Kubernetes]: https://kubernetes.io/
 [etcd]: https://github.com/etcd-io/etcd
 [kubeadm]: https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm/
@@ -161,8 +165,3 @@ CKE is licensed under MIT license.
 [CoreDNS]: https://coredns.io/
 [sabakan]: https://github.com/cybozu-go/sabakan
 [Taints]: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-
-Docker images
--------------
-
-Docker images are available on [Quay.io](https://quay.io/repository/cybozu/cke)
