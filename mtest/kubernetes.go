@@ -184,7 +184,7 @@ func TestKubernetes() {
 
 		Eventually(func() error {
 			stdout, stderr, err := kubectl("exec", "-n=kube-system", pod.Name, "-c=unbound",
-				"/usr/local/unbound/sbin/unbound-control", "--",
+				"--", "/usr/local/unbound/sbin/unbound-control",
 				"-c", "/etc/unbound/unbound.conf", "list_stubs")
 			if err != nil {
 				return fmt.Errorf("%v: %s", err, string(stderr))

@@ -173,9 +173,9 @@ updated later on.
 | `extra_env`   | false    | object     | Extra environment variables.                    |
 
 Elements of `extenders`, `predicates` and `priorities` are contents of
-[`Extender`](https://github.com/kubernetes/kube-scheduler/blob/release-1.17/config/v1/types.go#L190),
-[`PredicatePolicy`](https://github.com/kubernetes/kube-scheduler/blob/release-1.17/config/v1/types.go#L50) and
-[`PriorityPolicy`](https://github.com/kubernetes/kube-scheduler/blob/release-1.17/config/v1/types.go#L60)
+[`Extender`](https://github.com/kubernetes/kube-scheduler/blob/release-1.18/config/v1/types.go#L190),
+[`PredicatePolicy`](https://github.com/kubernetes/kube-scheduler/blob/release-1.18/config/v1/types.go#L50) and
+[`PriorityPolicy`](https://github.com/kubernetes/kube-scheduler/blob/release-1.18/config/v1/types.go#L60)
 in JSON format, respectively.
 
 ### CNIConfFile

@@ -21,10 +21,10 @@ GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo --failFast -v
 CURL = curl -fsL
 MANAGEMENT_ETCD_VERSION = 3.3.22
 VAULT_VERSION = 1.2.2
-K8S_VERSION = 1.17.9
+K8S_VERSION = 1.18.9
 PLACEMAT_DATADIR = /var/scratch/placemat
-CONTAINERD_VERSION = 1.3.3
-CRITOOLS_VERSION = 1.17.0
+CONTAINERD_VERSION = 1.4.1
+CRITOOLS_VERSION = 1.18.0
 CT_VERSION = 0.9.0
 CT = /usr/local/bin/ct
 SUDO = sudo
@@ -283,7 +283,7 @@ $(OUTPUT)/cke.yml: cke.yml
 
 unpack-containerd:
 	mkdir -p $(OUTPUT)
-	$(CURL) https://github.com/containerd/containerd/releases/download/v$(CONTAINERD_VERSION)/containerd-$(CONTAINERD_VERSION).linux-amd64.tar.gz | \
+	$(CURL) https://github.com/containerd/containerd/releases/download/v$(CONTAINERD_VERSION)/containerd-$(CONTAINERD_VERSION)-linux-amd64.tar.gz | \
 	tar xzf - --strip-components=1 -C $(OUTPUT) bin/containerd bin/containerd-shim bin/containerd-shim-runc-v1 bin/containerd-shim-runc-v2 bin/ctr --warning=no-unknown-keyword
 
 $(CONTAINERD_FILES): unpack-containerd
