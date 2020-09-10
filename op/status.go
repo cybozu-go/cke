@@ -2,7 +2,6 @@ package op
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -17,7 +16,6 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
-	corev1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
@@ -174,113 +172,6 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	}
 
 	return status, nil
-}
-
-// GetNodeStatusUpToV1_16 sets node status about k8s v1.16 or below
-func GetNodeStatusUpToV1_16(ctx context.Context, inf cke.Infrastructure, node *cke.Node, cluster *cke.Cluster, status *cke.NodeStatus, apiServer *cke.Node) {
-	if !status.Kubelet.Running {
-		return
-	}
-
-	// Block device paths have been changed between k8s v1.16 and v1.17.
-	// https://github.com/kubernetes/kubernetes/pull/74026
-	// So, old device paths and symlinks must be updated before upgrading.
-	nu, err := needUpdateBlockPVsUpToV1_16(ctx, inf, apiServer, node)
-	if err != nil {
-		log.Warn("failed to check outdated block device paths", map[string]interface{}{
-			log.FnError: err,
-			"node":      node.Address,
-		})
-	}
-
-	status.Kubelet.NeedUpdateBlockPVsUpToV1_16 = nu
-}
-
-func needUpdateBlockPVsUpToV1_16(ctx context.Context, inf cke.Infrastructure, apiServer *cke.Node, node *cke.Node) ([]string, error) {
-	type ckeToolResult struct {
-		Result string `json:"result"`
-	}
-
-	clientset, err := inf.K8sClient(ctx, apiServer)
-	if err != nil {
-		return nil, err
-	}
-
-	n, err := clientset.CoreV1().Nodes().Get(ctx, node.Address, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	agent := inf.Agent(node.Address)
-	if agent == nil {
-		return nil, errors.New("unable to get agent for " + node.Address)
-	}
-
-	pvList, err := clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	pvMap := make(map[string]corev1.PersistentVolume)
-	for _, pv := range pvList.Items {
-		if pv.Spec.CSI != nil && pv.Spec.CSI.VolumeHandle != "" {
-			// VolumeHandle represents a unique name of CSI volume
-			// https://github.com/kubernetes/api/blob/1fc28ea2498c5c1bc60693fab7a6741b0b4973bc/core/v1/types.go#L1657-L1659
-			pvMap[pv.Spec.CSI.VolumeHandle] = pv
-		}
-	}
-
-	var needUpdatePVs []string
-	ce := inf.Engine(node.Address)
-
-	for _, v := range n.Status.VolumesInUse {
-		// e.g. kubernetes.io/csi/topolvm.cybozu.com^720fab08-e197-4855-ad77-dad24970e3de
-		res := strings.Split(string(v), "^")
-		if len(res) != 2 {
-			continue
-		}
-
-		volumeHandle := res[1]
-		pv, ok := pvMap[volumeHandle]
-		if !ok {
-			continue
-		}
-		if pv.Spec.VolumeMode == nil {
-			continue
-		}
-		if *pv.Spec.VolumeMode != corev1.PersistentVolumeBlock {
-			continue
-		}
-
-		pvName := pv.GetName()
-		arg := strings.Join([]string{
-			"/usr/local/cke-tools/bin/updateblock117",
-			"need-update",
-			pvName,
-		}, " ")
-		binds := []cke.Mount{
-			{
-				Source:      "/var/lib/kubelet",
-				Destination: "/var/lib/kubelet",
-				Label:       cke.LabelPrivate,
-			},
-		}
-		stdout, stderr, err := ce.RunWithOutput(cke.ToolsImage, binds, arg)
-		if err != nil || len(stderr) != 0 {
-			return nil, fmt.Errorf("updateblock117 need-update failed, %w, stdout: %s, stderr: %s", err, string(stdout), string(stderr))
-		}
-		// parse stdout
-		var result ckeToolResult
-		err = json.Unmarshal(stdout, &result)
-		if err != nil {
-			return nil, fmt.Errorf("unmarshal error, %w, stdout: %s", err, string(stdout))
-		}
-		if result.Result == "yes" {
-			needUpdatePVs = append(needUpdatePVs, pvName)
-		}
-	}
-
-	return needUpdatePVs, nil
 }
 
 // GetEtcdClusterStatus returns EtcdClusterStatus

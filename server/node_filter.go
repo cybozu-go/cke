@@ -904,18 +904,3 @@ func (nf *NodeFilter) SSHConnectedNodes(targets []*cke.Node, includeControlPlane
 	}
 	return nodes
 }
-
-// NeedUpdateUpBlockPVsToV1_16 returns nodes which need to update block device path
-func (nf *NodeFilter) NeedUpdateUpBlockPVsToV1_16() ([]*cke.Node, map[string][]string) {
-	var nodes []*cke.Node
-	pvs := make(map[string][]string)
-
-	for _, n := range nf.cluster.Nodes {
-		st := nf.nodeStatus(n).Kubelet
-		if len(st.NeedUpdateBlockPVsUpToV1_16) != 0 {
-			nodes = append(nodes, n)
-			pvs[n.Address] = st.NeedUpdateBlockPVsUpToV1_16
-		}
-	}
-	return nodes, pvs
-}

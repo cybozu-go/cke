@@ -88,19 +88,5 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 	}
 	cs.Kubernetes = kcs
 
-	env = well.NewEnvironment(ctx)
-	for _, n := range cluster.Nodes {
-		n := n
-		ns := statuses[n.Address]
-		env.Go(func(ctx context.Context) error {
-			op.GetNodeStatusUpToV1_16(ctx, inf, n, cluster, ns, livingMaster)
-			return nil
-		})
-	}
-	env.Stop()
-	err = env.Wait()
-	if err != nil {
-		return nil, err
-	}
 	return cs, nil
 }

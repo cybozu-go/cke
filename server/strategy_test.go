@@ -364,15 +364,6 @@ func (d testData) withK8sResourceReady() testData {
 	return d
 }
 
-func (d testData) withUpdateBlockPVSUpTo1_16() testData {
-	st := &d.Status.NodeStatuses[nodeNames[0]].Kubelet
-	st.NeedUpdateBlockPVsUpToV1_16 = []string{
-		"pv-name-1",
-		"pv-name-2",
-	}
-	return d
-}
-
 func (d testData) withEtcdBackup() testData {
 	d.withK8sResourceReady()
 	d.Cluster.EtcdBackup = cke.EtcdBackup{
@@ -1047,11 +1038,6 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
 			ExpectedOps: []string{"update-endpoints"},
-		},
-		{
-			Name:        "UpdateBlockPVsUpTo1.16",
-			Input:       newData().withAllServices().withUpdateBlockPVSUpTo1_16(),
-			ExpectedOps: []string{"update-block-up-to-1.16"},
 		},
 		{
 			Name: "EtcdServiceUpdate",
