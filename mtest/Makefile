@@ -19,7 +19,7 @@ endif
 PLACEMAT = /usr/bin/placemat
 GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo --failFast -v
 CURL = curl -fsL
-MANAGEMENT_ETCD_VERSION = 3.3.22
+MANAGEMENT_ETCD_VERSION = 3.3.25
 VAULT_VERSION = 1.2.2
 K8S_VERSION = 1.18.9
 PLACEMAT_DATADIR = /var/scratch/placemat

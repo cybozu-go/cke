@@ -5,6 +5,13 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.5] - 2020-09-10
+### Changed
+- Update etcd client library as of [etcd-3.3.25](https://github.com/etcd-io/etcd/releases/tag/v3.3.25).
+
+### Fixed
+- Fix NewConfig() to return copy of default object (#28).
+
 ## [1.3.4] - 2019-10-24
 ### Changed
 - Update golang 1.13.3 (#22)
@@ -46,7 +53,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 This is the first release.
 
-[Unreleased]: https://github.com/cybozu-go/etcdutil/compare/v1.3.4...HEAD
+[Unreleased]: https://github.com/cybozu-go/etcdutil/compare/v1.3.5...HEAD
+[1.3.5]: https://github.com/cybozu-go/etcdutil/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/cybozu-go/etcdutil/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/cybozu-go/etcdutil/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/cybozu-go/etcdutil/compare/v1.3.1...v1.3.2
