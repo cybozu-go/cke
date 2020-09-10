@@ -6,6 +6,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type kubeEndpointsCreateOp struct {
@@ -85,7 +86,7 @@ func (c createEndpointsCommand) Run(ctx context.Context, inf cke.Infrastructure,
 		return err
 	}
 
-	_, err = cs.CoreV1().Endpoints(c.endpoints.Namespace).Create(c.endpoints)
+	_, err = cs.CoreV1().Endpoints(c.endpoints.Namespace).Create(ctx, c.endpoints, metav1.CreateOptions{})
 
 	return err
 }
@@ -112,7 +113,7 @@ func (c updateEndpointsCommand) Run(ctx context.Context, inf cke.Infrastructure,
 		return err
 	}
 
-	_, err = cs.CoreV1().Endpoints(c.endpoints.Namespace).Update(c.endpoints)
+	_, err = cs.CoreV1().Endpoints(c.endpoints.Namespace).Update(ctx, c.endpoints, metav1.UpdateOptions{})
 
 	return err
 }

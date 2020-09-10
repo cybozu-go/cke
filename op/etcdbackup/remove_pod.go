@@ -47,7 +47,7 @@ func (c removeEtcdBackupPodCommand) Run(ctx context.Context, inf cke.Infrastruct
 	if err != nil {
 		return err
 	}
-	return cs.CoreV1().Pods("kube-system").Delete(op.EtcdBackupAppName, metav1.NewDeleteOptions(60))
+	return cs.CoreV1().Pods("kube-system").Delete(ctx, op.EtcdBackupAppName, *metav1.NewDeleteOptions(60))
 }
 
 func (c removeEtcdBackupPodCommand) Command() cke.Command {

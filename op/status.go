@@ -206,7 +206,7 @@ func needUpdateBlockPVsUpToV1_16(ctx context.Context, inf cke.Infrastructure, ap
 		return nil, err
 	}
 
-	n, err := clientset.CoreV1().Nodes().Get(node.Address, metav1.GetOptions{})
+	n, err := clientset.CoreV1().Nodes().Get(ctx, node.Address, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +216,7 @@ func needUpdateBlockPVsUpToV1_16(ctx context.Context, inf cke.Infrastructure, ap
 		return nil, errors.New("unable to get agent for " + node.Address)
 	}
 
-	pvList, err := clientset.CoreV1().PersistentVolumes().List(metav1.ListOptions{})
+	pvList, err := clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +388,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 
 	s := cke.KubernetesClusterStatus{}
 
-	_, err = clientset.CoreV1().ServiceAccounts("kube-system").Get("default", metav1.GetOptions{})
+	_, err = clientset.CoreV1().ServiceAccounts("kube-system").Get(ctx, "default", metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.IsControlPlaneReady = true
@@ -397,7 +397,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	resp, err := clientset.CoreV1().Nodes().List(metav1.ListOptions{})
+	resp, err := clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return cke.KubernetesClusterStatus{}, err
 	}
@@ -408,7 +408,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		if len(fields) != 2 {
 			panic("invalid dns_service in cluster.yml")
 		}
-		svc, err := clientset.CoreV1().Services(fields[0]).Get(fields[1], metav1.GetOptions{})
+		svc, err := clientset.CoreV1().Services(fields[0]).Get(ctx, fields[1], metav1.GetOptions{})
 		switch {
 		case k8serr.IsNotFound(err):
 		case err == nil:
@@ -429,7 +429,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	}
 
 	epAPI := clientset.CoreV1().Endpoints
-	ep, err := epAPI(metav1.NamespaceDefault).Get("kubernetes", metav1.GetOptions{})
+	ep, err := epAPI(metav1.NamespaceDefault).Get(ctx, "kubernetes", metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.MasterEndpoints = ep
@@ -438,7 +438,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	svc, err := clientset.CoreV1().Services(metav1.NamespaceSystem).Get(EtcdServiceName, metav1.GetOptions{})
+	svc, err := clientset.CoreV1().Services(metav1.NamespaceSystem).Get(ctx, EtcdServiceName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.EtcdService = svc
@@ -447,7 +447,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	ep, err = epAPI(metav1.NamespaceSystem).Get(EtcdEndpointsName, metav1.GetOptions{})
+	ep, err = epAPI(metav1.NamespaceSystem).Get(ctx, EtcdEndpointsName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.EtcdEndpoints = ep
@@ -478,7 +478,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		parts := strings.Split(rkey, "/")
 		switch parts[0] {
 		case "Namespace":
-			obj, err := k8s.CoreV1().Namespaces().Get(parts[1], metav1.GetOptions{})
+			obj, err := k8s.CoreV1().Namespaces().Get(ctx, parts[1], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -487,7 +487,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "ServiceAccount":
-			obj, err := k8s.CoreV1().ServiceAccounts(parts[1]).Get(parts[2], metav1.GetOptions{})
+			obj, err := k8s.CoreV1().ServiceAccounts(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -496,7 +496,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "ConfigMap":
-			obj, err := k8s.CoreV1().ConfigMaps(parts[1]).Get(parts[2], metav1.GetOptions{})
+			obj, err := k8s.CoreV1().ConfigMaps(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -505,7 +505,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "Service":
-			obj, err := k8s.CoreV1().Services(parts[1]).Get(parts[2], metav1.GetOptions{})
+			obj, err := k8s.CoreV1().Services(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -514,7 +514,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "PodSecurityPolicy":
-			obj, err := k8s.PolicyV1beta1().PodSecurityPolicies().Get(parts[1], metav1.GetOptions{})
+			obj, err := k8s.PolicyV1beta1().PodSecurityPolicies().Get(ctx, parts[1], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -523,7 +523,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "NetworkPolicy":
-			obj, err := k8s.NetworkingV1().NetworkPolicies(parts[1]).Get(parts[2], metav1.GetOptions{})
+			obj, err := k8s.NetworkingV1().NetworkPolicies(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -532,7 +532,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "Role":
-			obj, err := k8s.RbacV1().Roles(parts[1]).Get(parts[2], metav1.GetOptions{})
+			obj, err := k8s.RbacV1().Roles(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -541,7 +541,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "RoleBinding":
-			obj, err := k8s.RbacV1().RoleBindings(parts[1]).Get(parts[2], metav1.GetOptions{})
+			obj, err := k8s.RbacV1().RoleBindings(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -550,7 +550,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "ClusterRole":
-			obj, err := k8s.RbacV1().ClusterRoles().Get(parts[1], metav1.GetOptions{})
+			obj, err := k8s.RbacV1().ClusterRoles().Get(ctx, parts[1], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -559,7 +559,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "ClusterRoleBinding":
-			obj, err := k8s.RbacV1().ClusterRoleBindings().Get(parts[1], metav1.GetOptions{})
+			obj, err := k8s.RbacV1().ClusterRoleBindings().Get(ctx, parts[1], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -568,7 +568,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "Deployment":
-			obj, err := k8s.AppsV1().Deployments(parts[1]).Get(parts[2], metav1.GetOptions{})
+			obj, err := k8s.AppsV1().Deployments(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -577,7 +577,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "DaemonSet":
-			obj, err := k8s.AppsV1().DaemonSets(parts[1]).Get(parts[2], metav1.GetOptions{})
+			obj, err := k8s.AppsV1().DaemonSets(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -586,7 +586,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "CronJob":
-			obj, err := k8s.BatchV2alpha1().CronJobs(parts[1]).Get(parts[2], metav1.GetOptions{})
+			obj, err := k8s.BatchV2alpha1().CronJobs(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -595,7 +595,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
 		case "PodDisruptionBudget":
-			obj, err := k8s.PolicyV1beta1().PodDisruptionBudgets(parts[1]).Get(parts[2], metav1.GetOptions{})
+			obj, err := k8s.PolicyV1beta1().PodDisruptionBudgets(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
 			if k8serr.IsNotFound(err) {
 				continue
 			}
@@ -621,7 +621,7 @@ func getClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 
 	s := cke.ClusterDNSStatus{}
 
-	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(ClusterDNSAppName, metav1.GetOptions{})
+	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(ctx, ClusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.ConfigMap = config
@@ -630,7 +630,7 @@ func getClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.ClusterDNSStatus{}, err
 	}
 
-	service, err := clientset.CoreV1().Services("kube-system").Get(ClusterDNSAppName, metav1.GetOptions{})
+	service, err := clientset.CoreV1().Services("kube-system").Get(ctx, ClusterDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.ClusterIP = service.Spec.ClusterIP
@@ -650,7 +650,7 @@ func getNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) 
 
 	s := cke.NodeDNSStatus{}
 
-	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(NodeDNSAppName, metav1.GetOptions{})
+	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(ctx, NodeDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.ConfigMap = config
@@ -670,7 +670,7 @@ func getEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 
 	s := cke.EtcdBackupStatus{}
 
-	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(EtcdBackupAppName, metav1.GetOptions{})
+	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(ctx, EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.ConfigMap = config
@@ -679,7 +679,7 @@ func getEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.EtcdBackupStatus{}, err
 	}
 
-	pod, err := clientset.CoreV1().Pods("kube-system").Get(EtcdBackupAppName, metav1.GetOptions{})
+	pod, err := clientset.CoreV1().Pods("kube-system").Get(ctx, EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.Pod = pod
@@ -688,7 +688,7 @@ func getEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.EtcdBackupStatus{}, err
 	}
 
-	service, err := clientset.CoreV1().Services("kube-system").Get(EtcdBackupAppName, metav1.GetOptions{})
+	service, err := clientset.CoreV1().Services("kube-system").Get(ctx, EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.Service = service
@@ -697,7 +697,7 @@ func getEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.EtcdBackupStatus{}, err
 	}
 
-	secret, err := clientset.CoreV1().Secrets("kube-system").Get(EtcdBackupAppName, metav1.GetOptions{})
+	secret, err := clientset.CoreV1().Secrets("kube-system").Get(ctx, EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.Secret = secret
@@ -706,7 +706,7 @@ func getEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Nod
 		return cke.EtcdBackupStatus{}, err
 	}
 
-	job, err := clientset.BatchV1beta1().CronJobs("kube-system").Get(EtcdBackupAppName, metav1.GetOptions{})
+	job, err := clientset.BatchV1beta1().CronJobs("kube-system").Get(ctx, EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.CronJob = job
@@ -770,7 +770,7 @@ func checkAPIServerHealth(ctx context.Context, inf cke.Infrastructure, n *cke.No
 	if err != nil {
 		return false, err
 	}
-	_, err = clientset.CoreV1().Namespaces().List(metav1.ListOptions{})
+	_, err = clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return false, err
 	}

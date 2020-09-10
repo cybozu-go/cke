@@ -47,7 +47,7 @@ func (c removeEtcdBackupSecretCommand) Run(ctx context.Context, inf cke.Infrastr
 	if err != nil {
 		return err
 	}
-	return cs.CoreV1().Secrets("kube-system").Delete(op.EtcdBackupAppName, metav1.NewDeleteOptions(0))
+	return cs.CoreV1().Secrets("kube-system").Delete(ctx, op.EtcdBackupAppName, *metav1.NewDeleteOptions(0))
 }
 
 func (c removeEtcdBackupSecretCommand) Command() cke.Command {

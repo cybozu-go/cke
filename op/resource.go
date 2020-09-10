@@ -60,7 +60,7 @@ func (o *resourceApplyOp) Run(ctx context.Context, inf cke.Infrastructure, _ str
 	if err != nil {
 		return err
 	}
-	return cke.ApplyResource(dyn, mapper, o.resource.Definition, o.resource.Revision, true)
+	return cke.ApplyResource(ctx, dyn, mapper, o.resource.Definition, o.resource.Revision, true)
 }
 
 func (o *resourceApplyOp) Command() cke.Command {

@@ -51,7 +51,7 @@ func (c waitKubeCommand) Run(ctx context.Context, inf cke.Infrastructure, _ stri
 
 	begin := time.Now()
 	for i := 0; i < 100; i++ {
-		_, err = cs.CoreV1().ServiceAccounts("kube-system").Get("default", metav1.GetOptions{})
+		_, err = cs.CoreV1().ServiceAccounts("kube-system").Get(ctx, "default", metav1.GetOptions{})
 		switch {
 		case err == nil:
 			elapsed := time.Now().Sub(begin)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -69,7 +70,7 @@ func (c updateEtcdBackupConfigMapCommand) Run(ctx context.Context, inf cke.Infra
 	}
 
 	maps := cs.CoreV1().ConfigMaps("kube-system")
-	_, err = maps.Update(ConfigMap)
+	_, err = maps.Update(ctx, ConfigMap, metav1.UpdateOptions{})
 	return err
 }
 

@@ -56,7 +56,7 @@ func (c createEtcdBackupCronJobCommand) Run(ctx context.Context, inf cke.Infrast
 	}
 
 	jobs := cs.BatchV1beta1().CronJobs("kube-system")
-	_, err = jobs.Get(op.EtcdBackupAppName, metav1.GetOptions{})
+	_, err = jobs.Get(ctx, op.EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
@@ -75,7 +75,7 @@ func (c createEtcdBackupCronJobCommand) Run(ctx context.Context, inf cke.Infrast
 		if err != nil {
 			return err
 		}
-		_, err = jobs.Create(cronJob)
+		_, err = jobs.Create(ctx, cronJob, metav1.CreateOptions{})
 		if err != nil {
 			return err
 		}

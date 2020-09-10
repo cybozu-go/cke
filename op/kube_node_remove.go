@@ -7,6 +7,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
@@ -71,12 +72,12 @@ func (c nodeRemoveCommand) Run(ctx context.Context, inf cke.Infrastructure, _ st
 			if err != nil {
 				return fmt.Errorf("failed to create patch for node %s: %v", n.Name, err)
 			}
-			_, err = nodesAPI.Patch(n.Name, types.StrategicMergePatchType, patchBytes)
+			_, err = nodesAPI.Patch(ctx, n.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to patch node %s: %v", n.Name, err)
 			}
 		}
-		err = nodesAPI.Delete(n.Name, nil)
+		err = nodesAPI.Delete(ctx, n.Name, metav1.DeleteOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to delete node %s: %v", n.Name, err)
 		}

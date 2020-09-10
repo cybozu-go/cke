@@ -54,7 +54,7 @@ func (c updateEtcdBackupPodCommand) Run(ctx context.Context, inf cke.Infrastruct
 	}
 
 	claims := cs.CoreV1().PersistentVolumeClaims("kube-system")
-	_, err = claims.Get(c.pvcname, metav1.GetOptions{})
+	_, err = claims.Get(ctx, c.pvcname, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (c updateEtcdBackupPodCommand) Run(ctx context.Context, inf cke.Infrastruct
 	}
 
 	pods := cs.CoreV1().Pods("kube-system")
-	_, err = pods.Update(pod)
+	_, err = pods.Update(ctx, pod, metav1.UpdateOptions{})
 	return err
 }
 

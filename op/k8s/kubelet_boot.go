@@ -277,7 +277,7 @@ func (c retaintBeforeKubeletBootCommand) Run(ctx context.Context, inf cke.Infras
 	nodesAPI := cs.CoreV1().Nodes()
 	for _, n := range c.nodes {
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			node, err := nodesAPI.Get(n.Nodename(), metav1.GetOptions{})
+			node, err := nodesAPI.Get(ctx, n.Nodename(), metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
@@ -303,7 +303,7 @@ func (c retaintBeforeKubeletBootCommand) Run(ctx context.Context, inf cke.Infras
 				return nil
 			}
 
-			_, err = nodesAPI.Update(node)
+			_, err = nodesAPI.Update(ctx, node, metav1.UpdateOptions{})
 			return err
 		})
 		if err != nil {

@@ -47,7 +47,7 @@ func (c removeEtcdBackupServiceCommand) Run(ctx context.Context, inf cke.Infrast
 	if err != nil {
 		return err
 	}
-	return cs.CoreV1().Services("kube-system").Delete(op.EtcdBackupAppName, metav1.NewDeleteOptions(0))
+	return cs.CoreV1().Services("kube-system").Delete(ctx, op.EtcdBackupAppName, *metav1.NewDeleteOptions(0))
 }
 
 func (c removeEtcdBackupServiceCommand) Command() cke.Command {
