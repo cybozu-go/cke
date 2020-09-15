@@ -41,6 +41,7 @@ require (
 	k8s.io/apimachinery v0.18.8
 	k8s.io/apiserver v0.18.8
 	k8s.io/client-go v0.18.8
+	k8s.io/component-base v0.18.8
 	k8s.io/kube-openapi v0.0.0-20200410145947-bcb3869e6f29 // indirect
 	k8s.io/kube-scheduler v0.18.8
 	k8s.io/kubelet v0.18.8

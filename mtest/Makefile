@@ -35,6 +35,7 @@ ifeq ($(findstring /,$(SUITE)),)
 else
   SUITE_PACKAGE = $(SUITE)
 endif
+CLUSTER := cke-cluster.yml
 
 export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO CONTAINER_RUNTIME SUITE_PACKAGE
 
@@ -263,7 +264,7 @@ $(OUTPUT)/node6.ign: $(OUTPUT)/node.ign
 		-e 's/__NODE6__/$(NODE6)/' \
 		-e 's/__NODE_ADDRESS__/$(NODE6)/' $< > $@
 
-$(OUTPUT)/cke-cluster.yml: cke-cluster.yml
+$(OUTPUT)/cke-cluster.yml: $(CLUSTER)
 	mkdir -p $(OUTPUT)
 	sed -e 's/__NODE1__/$(NODE1)/' \
 		-e 's/__NODE2__/$(NODE2)/' \

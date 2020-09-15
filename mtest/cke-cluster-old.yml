@@ -16,21 +16,8 @@ options:
   kube-api:
     extra_args:
     - --enable-admission-plugins=PodSecurityPolicy
-  kube-scheduler:
-    config:
-      apiVersion: kubescheduler.config.k8s.io/v1alpha2
-      kind: KubeSchedulerConfiguration
-      profiles:
-        - schedulerName: default-scheduler
-        - schedulerName: no-scoring-scheduler
-          plugins:
-            preScore:
-              disabled:
-              - name: '*'
-            score:
-              disabled:
-              - name: '*'
   kubelet:
+    domain: cluster.local
     extra_binds:
     - source: /mnt/disks
       destination: /mnt/disks
@@ -40,6 +27,8 @@ options:
       read_only: false
     container_runtime: __RUNTIME__
     container_runtime_endpoint: __RUNTIME_ENDPOINT__
+    container_log_max_size: "1000"
+    container_log_max_files: 3
     cni_conf_file:
       name: 98-bridge.conf
       content: |
@@ -58,12 +47,6 @@ options:
             "routes": [{"dst": "0.0.0.0/0"}]
           }
         }
-    config:
-      apiVersion: kubelet.config.k8s.io/v1beta1
-      kind: KubeletConfiguration
-      clusterDomain: cluster.local
-      containerLogMaxSize: "1000"
-      containerLogMaxFiles: 3
 
 etcd_backup:
   enabled: false

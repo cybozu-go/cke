@@ -1,91 +1,28 @@
 package cke
 
 import (
+	"io/ioutil"
 	"reflect"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
+	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"sigs.k8s.io/yaml"
 )
 
 func testClusterYAML(t *testing.T) {
 	t.Parallel()
 
-	y := `
-name: test
-nodes:
-  - address: 1.2.3.4
-    hostname: host1
-    user: cybozu
-    control_plane: true
-    labels:
-      label1: value1
-service_subnet: 12.34.56.00/24
-dns_servers: ["1.1.1.1", "8.8.8.8"]
-dns_service: kube-system/dns
-etcd_backup:
-  enabled: true
-  pvc_name: etcdbackup-pvc
-  schedule: "*/1 * * * *"
-options:
-  etcd:
-    volume_name: myetcd
-    extra_args:
-      - arg1
-      - arg2
-  kube-api:
-    extra_binds:
-      - source: src1
-        destination: target1
-        read_only: true
-        propagation: shared
-        selinux_label: z
-    audit_log_enabled: true
-    audit_log_policy: |
-      apiVersion: audit.k8s.io/v1
-      kind: Policy
-      rules:
-      - level: Metadata
-  kube-controller-manager:
-    extra_env:
-      env1: val1
-  kube-scheduler:
-    extenders:
-      - "urlPrefix: http://127.0.0.1:8000"
-    predicates:
-      - "name: some_predicate"
-    priorities:
-      - "name: some_priority"
-    extra_args:
-      - arg1
-  kube-proxy:
-    extra_args:
-      - arg1
-  kubelet:
-    domain: my.domain
-    allow_swap: true
-    cgroup_driver: systemd
-    container_runtime: remote
-    container_runtime_endpoint: /var/run/k8s-containerd.sock
-    container_log_max_size: 10Mi
-    container_log_max_files: 10
-    boot_taints:
-      - key: taint1
-        value: tainted
-        effect: NoExecute
-    extra_args:
-      - arg1
-    cni_conf_file:
-      name: 99-loopback.conf
-      content: |
-        {
-            "cniVersion": "0.3.1",
-            "type": "loopback"
-        }
-`
+	b, err := ioutil.ReadFile("cluster_test.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	c := new(Cluster)
-	err := yaml.Unmarshal([]byte(y), c)
+	err = yaml.Unmarshal(b, c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,14 +85,24 @@ rules:
 	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
 	}
-	if !reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"urlPrefix: http://127.0.0.1:8000"}) {
-		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"urlPrefix: http://127.0.0.1:8000"}`)
+	kubeSchedulerHealthz := "0.0.0.0"
+	kubeSchedulerConfig, err := c.Options.Scheduler.GetConfigV1Alpha2(&schedulerv1alpha2.KubeSchedulerConfiguration{
+		HealthzBindAddress: &kubeSchedulerHealthz,
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(c.Options.Scheduler.Predicates, []string{"name: some_predicate"}) {
-		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Predicates, []string{"name: some_predicate"}`)
+	if kubeSchedulerConfig.PodMaxBackoffSeconds == nil {
+		t.Fatal(`kubeSchedulerConfig.PodMaxBackoffSeconds == nil`)
 	}
-	if !reflect.DeepEqual(c.Options.Scheduler.Priorities, []string{"name: some_priority"}) {
-		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Priorities, []string{"name: some_priority"}`)
+	if *kubeSchedulerConfig.PodMaxBackoffSeconds != 100 {
+		t.Error(`*kubeSchedulerConfig.PodMaxBackoffSeconds != 100`)
+	}
+	if kubeSchedulerConfig.HealthzBindAddress == nil {
+		t.Fatal(`kubeSchedulerConfig.HealthzBindAddress == nil`)
+	}
+	if *kubeSchedulerConfig.HealthzBindAddress != "0.0.0.0" {
+		t.Error(`*kubeSchedulerConfig.HealthzBindAddress != "0.0.0.0"`)
 	}
 	if c.Options.Kubelet.Domain != "my.domain" {
 		t.Error(`c.Options.Kubelet.Domain != "my.domain"`)
@@ -175,8 +122,8 @@ rules:
 	if c.Options.Kubelet.ContainerLogMaxSize != "10Mi" {
 		t.Error(`c.Options.Kubelet.ContainerLogMaxSize != "10Mi"`)
 	}
-	if c.Options.Kubelet.ContainerLogMaxFiles != 10 {
-		t.Error(`c.Options.Kubelet.ContainerLogMaxFiles != 10`)
+	if c.Options.Kubelet.ContainerLogMaxFiles != 5 {
+		t.Error(`c.Options.Kubelet.ContainerLogMaxFiles != 5`)
 	}
 	if len(c.Options.Kubelet.BootTaints) != 1 {
 		t.Fatal(`len(c.Options.Kubelet.BootTaints) != 1`)
@@ -199,6 +146,64 @@ rules:
 	}
 	if len(c.Options.Kubelet.CNIConfFile.Content) == 0 {
 		t.Error(`len(c.Options.Kubelet.CNIConfFile.Content) == 0`)
+	}
+	kubeletConfig, err := c.Options.Kubelet.GetConfigV1Beta1(&kubeletv1beta1.KubeletConfiguration{
+		ClusterDomain: "hoge.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kubeletConfig.ContainerLogMaxFiles == nil {
+		t.Fatal(`kubeletConfig.ContainerLogMaxFiles == nil`)
+	}
+	if *kubeletConfig.ContainerLogMaxFiles != 10 {
+		t.Error(`*kubeletConfig.ContainerLogMaxFiles != 10`)
+	}
+	if kubeletConfig.ClusterDomain != "hoge.com" {
+		t.Error(`kubeletConfig.ClusterDomain != "hoge.com"`)
+	}
+}
+
+func testClusterYAML117(t *testing.T) {
+	t.Parallel()
+
+	b, err := ioutil.ReadFile("cluster_test_1.17.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := new(Cluster)
+	err = yaml.Unmarshal(b, c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"urlPrefix: http://127.0.0.1:8000"}) {
+		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Extenders, []string{"urlPrefix: http://127.0.0.1:8000"}`)
+	}
+	if !reflect.DeepEqual(c.Options.Scheduler.Predicates, []string{"name: some_predicate"}) {
+		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Predicates, []string{"name: some_predicate"}`)
+	}
+	if !reflect.DeepEqual(c.Options.Scheduler.Priorities, []string{"name: some_priority"}) {
+		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Priorities, []string{"name: some_priority"}`)
+	}
+	_, err = c.Options.Scheduler.GetConfigV1Alpha2(&schedulerv1alpha2.KubeSchedulerConfiguration{})
+	if err == nil {
+		t.Error(`c.Options.Scheduler.GetConfigV1Alpha2() should fail`)
+	}
+
+	kubeletConfig, err := c.Options.Kubelet.GetConfigV1Beta1(&kubeletv1beta1.KubeletConfiguration{
+		ClusterDomain:       "hoge.com",
+		ContainerLogMaxSize: "5Mi",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kubeletConfig.ClusterDomain != "hoge.com" {
+		t.Error(`kubeletConfig.ClusterDomain != "hoge.com"`)
+	}
+	if kubeletConfig.ContainerLogMaxSize != "10Mi" {
+		t.Fatal(`kubeletConfig.ContainerLogMaxSize != "10Mi"`)
 	}
 }
 
@@ -324,6 +329,19 @@ rules:
 				Options: Options{
 					Kubelet: KubeletParams{
 						Domain: "a_b.c",
+					},
+				},
+			},
+			true,
+		},
+		{
+			"invalid kubelet config",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Options: Options{
+					Kubelet: KubeletParams{
+						Config: &unstructured.Unstructured{},
 					},
 				},
 			},
@@ -560,6 +578,20 @@ rules:
 			false,
 		},
 		{
+			"invalid scheduler config",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Options: Options{
+					Scheduler: SchedulerParams{
+						Config: &unstructured.Unstructured{},
+					},
+				},
+			},
+			true,
+		},
+
+		{
 			"duplicate node address",
 			Cluster{
 				Name:          "testcluster",
@@ -771,6 +803,7 @@ func testNodename(t *testing.T) {
 
 func TestCluster(t *testing.T) {
 	t.Run("YAML", testClusterYAML)
+	t.Run("YAML117", testClusterYAML117)
 	t.Run("Validate", testClusterValidate)
 	t.Run("ValidateNode", testClusterValidateNode)
 	t.Run("Nodename", testNodename)

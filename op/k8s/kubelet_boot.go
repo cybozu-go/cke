@@ -169,9 +169,6 @@ type prepareKubeletFilesCommand struct {
 }
 
 func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	caPath := op.K8sPKIPath("ca.crt")
-	tlsCertPath := op.K8sPKIPath("kubelet.crt")
-	tlsKeyPath := op.K8sPKIPath("kubelet.key")
 	storage := inf.Storage()
 
 	if len(c.params.CNIConfFile.Name) != 0 {
@@ -185,10 +182,8 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		}
 	}
 
-	cfg := newKubeletConfiguration(tlsCertPath, tlsKeyPath, caPath, c.params)
 	g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		cfg := cfg
-		cfg.ClusterDNS = []string{n.Address}
+		cfg := GenerateKubeletConfiguration(c.params, n.Address)
 		return encodeToYAML(&cfg)
 	}
 	err := c.files.AddFile(ctx, kubeletConfigPath, g)
@@ -196,6 +191,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		return err
 	}
 
+	caPath := op.K8sPKIPath("ca.crt")
 	ca, err := storage.GetCACertificate(ctx, "kubernetes")
 	if err != nil {
 		return err
@@ -221,6 +217,8 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 		return err
 	}
 
+	tlsCertPath := op.K8sPKIPath("kubelet.crt")
+	tlsKeyPath := op.K8sPKIPath("kubelet.key")
 	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		cfg := kubeletKubeconfig(c.cluster, n, caPath, tlsCertPath, tlsKeyPath)
 		return clientcmd.Write(*cfg)

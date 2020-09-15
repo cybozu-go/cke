@@ -1,6 +1,7 @@
 package cke
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -11,10 +12,13 @@ import (
 
 	"github.com/containernetworking/cni/libcni"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
+	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
+	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -119,23 +123,97 @@ type CNIConfFile struct {
 // SchedulerParams is a set of extra parameters for kube-scheduler.
 type SchedulerParams struct {
 	ServiceParams `json:",inline"`
-	Extenders     []string `json:"extenders"`
-	Predicates    []string `json:"predicates"`
-	Priorities    []string `json:"priorities"`
+	Extenders     []string                   `json:"extenders"`
+	Predicates    []string                   `json:"predicates"`
+	Priorities    []string                   `json:"priorities"`
+	Config        *unstructured.Unstructured `json:"config,omitempty"`
+}
+
+// IsConfigV1Alpha1 returns whether params is v1alpha1.
+func (p SchedulerParams) IsConfigV1Alpha1() bool {
+	return p.Config == nil
+}
+
+// GetConfigV1Alpha2 returns *schedulerv1alpha2.KubeSchedulerConfiguration.
+func (p SchedulerParams) GetConfigV1Alpha2(base *schedulerv1alpha2.KubeSchedulerConfiguration) (*schedulerv1alpha2.KubeSchedulerConfiguration, error) {
+	cfg := *base
+	if p.Config == nil {
+		return nil, errors.New("api version mismatch")
+	}
+
+	if p.Config.GetAPIVersion() != schedulerv1alpha2.SchemeGroupVersion.String() {
+		return nil, fmt.Errorf("unexpected kube-scheduler API version: %s", p.Config.GetAPIVersion())
+	}
+	if p.Config.GetKind() != "KubeSchedulerConfiguration" {
+		return nil, fmt.Errorf("wrong kind for kube-scheduler config: %s", p.Config.GetKind())
+	}
+
+	data, err := json.Marshal(p.Config)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, &cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
 
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
 	ServiceParams            `json:",inline"`
-	CgroupDriver             string         `json:"cgroup_driver,omitempty"`
-	ContainerRuntime         string         `json:"container_runtime"`
-	ContainerRuntimeEndpoint string         `json:"container_runtime_endpoint"`
-	ContainerLogMaxSize      string         `json:"container_log_max_size"`
-	ContainerLogMaxFiles     int32          `json:"container_log_max_files"`
-	Domain                   string         `json:"domain"`
-	AllowSwap                bool           `json:"allow_swap"`
-	BootTaints               []corev1.Taint `json:"boot_taints"`
-	CNIConfFile              CNIConfFile    `json:"cni_conf_file"`
+	CgroupDriver             string                     `json:"cgroup_driver,omitempty"`
+	ContainerRuntime         string                     `json:"container_runtime"`
+	ContainerRuntimeEndpoint string                     `json:"container_runtime_endpoint"`
+	ContainerLogMaxSize      string                     `json:"container_log_max_size"`
+	ContainerLogMaxFiles     int32                      `json:"container_log_max_files"`
+	Domain                   string                     `json:"domain"`
+	AllowSwap                bool                       `json:"allow_swap"`
+	BootTaints               []corev1.Taint             `json:"boot_taints"`
+	CNIConfFile              CNIConfFile                `json:"cni_conf_file"`
+	Config                   *unstructured.Unstructured `json:"config,omitempty"`
+}
+
+// GetConfigV1Beta1 returns *kubeletv1beta1.KubeletConfiguration.
+func (p KubeletParams) GetConfigV1Beta1(base *kubeletv1beta1.KubeletConfiguration) (*kubeletv1beta1.KubeletConfiguration, error) {
+	cfg := *base
+	if p.Config == nil {
+		if p.CgroupDriver != "" {
+			cfg.CgroupDriver = p.CgroupDriver
+		}
+		if p.Domain != "" {
+			cfg.ClusterDomain = p.Domain
+		}
+		failSwapOn := !p.AllowSwap
+		cfg.FailSwapOn = &failSwapOn
+		if p.ContainerLogMaxSize != "" {
+			cfg.ContainerLogMaxSize = p.ContainerLogMaxSize
+		}
+		if p.ContainerLogMaxFiles != 0 {
+			maxFiles := p.ContainerLogMaxFiles
+			cfg.ContainerLogMaxFiles = &maxFiles
+		}
+		return &cfg, nil
+	}
+
+	if p.Config.GetAPIVersion() != kubeletv1beta1.SchemeGroupVersion.String() {
+		return nil, fmt.Errorf("unexpected kubelet API version: %s", p.Config.GetAPIVersion())
+	}
+	if p.Config.GetKind() != "KubeletConfiguration" {
+		return nil, fmt.Errorf("wrong kind for kubelet config: %s", p.Config.GetKind())
+	}
+
+	data, err := json.Marshal(p.Config)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, &cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
 
 // EtcdBackup is a set of configurations for etcdbackup.
@@ -384,12 +462,18 @@ func validateOptions(opts Options) error {
 		return err
 	}
 
+	base := &kubeletv1beta1.KubeletConfiguration{}
+	kubeletConfig, err := opts.Kubelet.GetConfigV1Beta1(base)
+	if err != nil {
+		return err
+	}
+
 	fldPath := field.NewPath("options", "kubelet")
-	if len(opts.Kubelet.Domain) > 0 {
-		msgs := validation.IsDNS1123Subdomain(opts.Kubelet.Domain)
+	if len(kubeletConfig.ClusterDomain) > 0 {
+		msgs := validation.IsDNS1123Subdomain(kubeletConfig.ClusterDomain)
 		if len(msgs) > 0 {
 			return field.Invalid(fldPath.Child("domain"),
-				opts.Kubelet.Domain, strings.Join(msgs, ";"))
+				kubeletConfig.ClusterDomain, strings.Join(msgs, ";"))
 		}
 	}
 	if len(opts.Kubelet.ContainerRuntime) > 0 {
@@ -445,40 +529,49 @@ func validateOptions(opts Options) error {
 		}
 	}
 
-	for _, e := range opts.Scheduler.Extenders {
-		config := schedulerv1.Extender{}
-		err = yaml.Unmarshal([]byte(e), &config)
-		if err != nil {
-			return err
+	if opts.Scheduler.IsConfigV1Alpha1() {
+		for _, e := range opts.Scheduler.Extenders {
+			config := schedulerv1.Extender{}
+			err = yaml.Unmarshal([]byte(e), &config)
+			if err != nil {
+				return err
+			}
+			if len(config.URLPrefix) == 0 {
+				return errors.New("no urlPrefix is provided")
+			}
+			if _, err = url.Parse(config.URLPrefix); err != nil {
+				return err
+			}
 		}
-		if len(config.URLPrefix) == 0 {
-			return errors.New("no urlPrefix is provided")
-		}
-		if _, err = url.Parse(config.URLPrefix); err != nil {
-			return err
-		}
-	}
 
-	for _, e := range opts.Scheduler.Predicates {
-		config := schedulerv1.PredicatePolicy{}
-		err = yaml.Unmarshal([]byte(e), &config)
-		if err != nil {
-			return err
+		for _, e := range opts.Scheduler.Predicates {
+			config := schedulerv1.PredicatePolicy{}
+			err = yaml.Unmarshal([]byte(e), &config)
+			if err != nil {
+				return err
+			}
+			if len(config.Name) == 0 {
+				return errors.New("no name is provided")
+			}
 		}
-		if len(config.Name) == 0 {
-			return errors.New("no name is provided")
-		}
-	}
 
-	for _, e := range opts.Scheduler.Priorities {
-		config := schedulerv1.PriorityPolicy{}
-		err = yaml.Unmarshal([]byte(e), &config)
+		for _, e := range opts.Scheduler.Priorities {
+			config := schedulerv1.PriorityPolicy{}
+			err = yaml.Unmarshal([]byte(e), &config)
+			if err != nil {
+				return err
+			}
+			if len(config.Name) == 0 {
+				return errors.New("no name is provided")
+			}
+		}
+	} else {
+		base := schedulerv1alpha2.KubeSchedulerConfiguration{}
+		_, err := opts.Scheduler.GetConfigV1Alpha2(&base)
 		if err != nil {
 			return err
 		}
-		if len(config.Name) == 0 {
-			return errors.New("no name is provided")
-		}
+		// nothing to check
 	}
 
 	return nil

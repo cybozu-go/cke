@@ -69,6 +69,8 @@ const (
 	PolicyConfigPath = "/etc/kubernetes/scheduler/policy.cfg"
 	// SchedulerConfigPath is a path for scheduler extender config
 	SchedulerConfigPath = "/etc/kubernetes/scheduler/config.yml"
+	// SchedulerKubeConfigPath is a path for scheduler kubeconfig
+	SchedulerKubeConfigPath = "/etc/kubernetes/scheduler/kubeconfig"
 )
 
 // EtcdPKIPath returns a certificate file path for k8s.

@@ -12,6 +12,7 @@ import (
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kubelet/config/v1beta1"
 )
 
 // DecideOps returns the next operations to do and the operation phase.
@@ -280,11 +281,12 @@ func decideClusterDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesC
 			desiredDNSServers = []string{ip}
 		}
 	}
-	desiredClusterDomain := c.Options.Kubelet.Domain
-
-	if len(desiredClusterDomain) == 0 {
-		panic("Options.Kubelet.Domain is empty")
+	base := &v1beta1.KubeletConfiguration{}
+	kubeletConfig, err := c.Options.Kubelet.GetConfigV1Beta1(base)
+	if err != nil {
+		panic(err)
 	}
+	desiredClusterDomain := kubeletConfig.ClusterDomain
 
 	if ks.ClusterDNS.ConfigMap == nil {
 		ops = append(ops, clusterdns.CreateConfigMapOp(apiServer, desiredClusterDomain, desiredDNSServers))
@@ -313,11 +315,18 @@ func decideNodeDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClus
 		}
 	}
 
+	base := &v1beta1.KubeletConfiguration{}
+	kubeletConfig, err := c.Options.Kubelet.GetConfigV1Beta1(base)
+	if err != nil {
+		panic(err)
+	}
+	desiredClusterDomain := kubeletConfig.ClusterDomain
+
 	if ks.NodeDNS.ConfigMap == nil {
-		ops = append(ops, nodedns.CreateConfigMapOp(apiServer, ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, desiredDNSServers))
+		ops = append(ops, nodedns.CreateConfigMapOp(apiServer, ks.ClusterDNS.ClusterIP, desiredClusterDomain, desiredDNSServers))
 	} else {
 		actualConfigData := ks.NodeDNS.ConfigMap.Data
-		expectedConfig := nodedns.ConfigMap(ks.ClusterDNS.ClusterIP, c.Options.Kubelet.Domain, desiredDNSServers)
+		expectedConfig := nodedns.ConfigMap(ks.ClusterDNS.ClusterIP, desiredClusterDomain, desiredDNSServers)
 		if actualConfigData["unbound.conf"] != expectedConfig.Data["unbound.conf"] {
 			ops = append(ops, nodedns.UpdateConfigMapOp(apiServer, expectedConfig))
 		}
@@ -392,7 +401,7 @@ func decideEtcdServiceOps(apiServer *cke.Node, svc *corev1.Service) cke.Operator
 }
 
 func decideEtcdBackupOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClusterStatus) (ops []cke.Operator) {
-	if c.EtcdBackup.Enabled == false {
+	if !c.EtcdBackup.Enabled {
 		if ks.EtcdBackup.ConfigMap != nil {
 			ops = append(ops, etcdbackup.ConfigMapRemoveOp(apiServer))
 		}

@@ -10,8 +10,11 @@ import (
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/log"
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
+	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
+	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -404,6 +407,14 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) (nodes 
 
 	for _, n := range nf.cp {
 		st := nf.nodeStatus(n).Scheduler
+		var currentConfig schedulerv1alpha2.KubeSchedulerConfiguration
+		var runningConfig schedulerv1alpha2.KubeSchedulerConfiguration
+		if !params.IsConfigV1Alpha1() {
+			currentConfig = k8s.GenerateSchedulerConfiguration(params)
+		}
+		if st.Config != nil {
+			runningConfig = *st.Config
+		}
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
@@ -413,11 +424,13 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) (nodes 
 			fallthrough
 		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
 			fallthrough
-		case !equalExtenders(extenders, st.Extenders):
+		case params.IsConfigV1Alpha1() && !equalExtenders(extenders, st.Extenders):
 			fallthrough
-		case !equalPredicates(predicates, st.Predicates):
+		case params.IsConfigV1Alpha1() && !equalPredicates(predicates, st.Predicates):
 			fallthrough
-		case !equalPriorities(priorities, st.Priorities):
+		case params.IsConfigV1Alpha1() && !equalPriorities(priorities, st.Priorities):
+			fallthrough
+		case !params.IsConfigV1Alpha1() && !reflect.DeepEqual(currentConfig, *st.Config):
 			log.Debug("node has been appended", map[string]interface{}{
 				"node":                       n.Nodename(),
 				"st_builtin_args":            st.BuiltInParams.ExtraArguments,
@@ -437,6 +450,8 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) (nodes 
 				"current_extenders_configs":  extenders,
 				"current_predicates_configs": predicates,
 				"current_priorities_configs": priorities,
+				"config":                     currentConfig,
+				"diff":                       cmp.Diff(currentConfig, runningConfig),
 			})
 			nodes = append(nodes, n)
 		}
@@ -512,7 +527,20 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 
 	for _, n := range nf.cluster.Nodes {
 		st := nf.nodeStatus(n).Kubelet
+		currentConfig := k8s.GenerateKubeletConfiguration(currentOpts, n.Address)
 		currentBuiltIn := k8s.KubeletServiceParams(n, currentOpts)
+		if st.Config != nil {
+			// CgroupDriver should be kept while node is running.
+			currentConfig.CgroupDriver = st.Config.CgroupDriver
+
+			// APIVersion and Kind should be ignored
+			currentConfig.APIVersion = st.Config.APIVersion
+			currentConfig.Kind = st.Config.Kind
+		}
+		var runningConfig kubeletv1beta1.KubeletConfiguration
+		if st.Config != nil {
+			runningConfig = *st.Config
+		}
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
@@ -520,13 +548,13 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 			log.Warn("kubelet's container runtime cannot be changed", nil)
 		case cke.KubernetesImage.Name() != st.Image:
 			fallthrough
-		case currentOpts.Domain != st.Domain:
+		case st.Config == nil:
 			fallthrough
-		case currentOpts.AllowSwap != st.AllowSwap:
-			fallthrough
-		case currentOpts.ContainerLogMaxSize != st.ContainerLogMaxSize:
-			fallthrough
-		case currentOpts.ContainerLogMaxFiles != st.ContainerLogMaxFiles:
+		case !reflect.DeepEqual(&currentConfig, st.Config):
+			log.Debug("kubelet restarting because", map[string]interface{}{
+				"config": currentConfig,
+				"diff":   cmp.Diff(currentConfig, runningConfig),
+			})
 			fallthrough
 		case !kubeletEqualParams(st.BuiltInParams, currentBuiltIn):
 			fallthrough

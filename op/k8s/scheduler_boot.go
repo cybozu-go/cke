@@ -74,7 +74,6 @@ type prepareSchedulerFilesCommand struct {
 }
 
 func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	const kubeconfigPath = "/etc/kubernetes/scheduler/kubeconfig"
 	storage := inf.Storage()
 
 	ca, err := storage.GetCACertificate(ctx, "kubernetes")
@@ -89,56 +88,57 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		cfg := schedulerKubeconfig(c.cluster, ca, crt, key)
 		return clientcmd.Write(*cfg)
 	}
-	err = c.files.AddFile(ctx, kubeconfigPath, g)
+	err = c.files.AddFile(ctx, op.SchedulerKubeConfigPath, g)
 	if err != nil {
 		return err
 	}
 
-	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		var extenders []schedulerv1.Extender
-		for _, extStr := range c.params.Extenders {
-			conf := new(schedulerv1.Extender)
-			err = yaml.Unmarshal([]byte(extStr), conf)
-			if err != nil {
-				return nil, err
+	if c.params.IsConfigV1Alpha1() {
+		g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
+			var extenders []schedulerv1.Extender
+			for _, extStr := range c.params.Extenders {
+				conf := new(schedulerv1.Extender)
+				err = yaml.Unmarshal([]byte(extStr), conf)
+				if err != nil {
+					return nil, err
+				}
+				extenders = append(extenders, *conf)
 			}
-			extenders = append(extenders, *conf)
-		}
 
-		var predicates []schedulerv1.PredicatePolicy
-		for _, extStr := range c.params.Predicates {
-			conf := new(schedulerv1.PredicatePolicy)
-			err = yaml.Unmarshal([]byte(extStr), conf)
-			if err != nil {
-				return nil, err
+			var predicates []schedulerv1.PredicatePolicy
+			for _, extStr := range c.params.Predicates {
+				conf := new(schedulerv1.PredicatePolicy)
+				err = yaml.Unmarshal([]byte(extStr), conf)
+				if err != nil {
+					return nil, err
+				}
+				predicates = append(predicates, *conf)
 			}
-			predicates = append(predicates, *conf)
-		}
 
-		var priorities []schedulerv1.PriorityPolicy
-		for _, extStr := range c.params.Priorities {
-			conf := new(schedulerv1.PriorityPolicy)
-			err = yaml.Unmarshal([]byte(extStr), conf)
-			if err != nil {
-				return nil, err
+			var priorities []schedulerv1.PriorityPolicy
+			for _, extStr := range c.params.Priorities {
+				conf := new(schedulerv1.PriorityPolicy)
+				err = yaml.Unmarshal([]byte(extStr), conf)
+				if err != nil {
+					return nil, err
+				}
+				priorities = append(priorities, *conf)
 			}
-			priorities = append(priorities, *conf)
+
+			policy := schedulerv1.Policy{
+				TypeMeta:   metav1.TypeMeta{Kind: "Policy", APIVersion: "v1"},
+				Extenders:  extenders,
+				Predicates: predicates,
+				Priorities: priorities,
+			}
+			return json.Marshal(policy)
+		}
+		err = c.files.AddFile(ctx, op.PolicyConfigPath, g)
+		if err != nil {
+			return err
 		}
 
-		policy := schedulerv1.Policy{
-			TypeMeta:   metav1.TypeMeta{Kind: "Policy", APIVersion: "v1"},
-			Extenders:  extenders,
-			Predicates: predicates,
-			Priorities: priorities,
-		}
-		return json.Marshal(policy)
-	}
-	err = c.files.AddFile(ctx, op.PolicyConfigPath, g)
-	if err != nil {
-		return err
-	}
-
-	schedulerConfig := fmt.Sprintf(`apiVersion: kubescheduler.config.k8s.io/v1alpha1
+		schedulerConfig := fmt.Sprintf(`apiVersion: kubescheduler.config.k8s.io/v1alpha1
 kind: KubeSchedulerConfiguration
 schedulerName: default-scheduler
 clientConnection:
@@ -149,11 +149,18 @@ algorithmSource:
       path: %s
 leaderElection:
   leaderElect: true
-`, kubeconfigPath, op.PolicyConfigPath)
+`, op.SchedulerKubeConfigPath, op.PolicyConfigPath)
 
-	return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		return []byte(schedulerConfig), nil
-	})
+		return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+			return []byte(schedulerConfig), nil
+		})
+	}
+
+	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		cfg := GenerateSchedulerConfiguration(c.params)
+		return yaml.Marshal(cfg)
+	}
+	return c.files.AddFile(ctx, op.SchedulerConfigPath, g)
 }
 
 func (c prepareSchedulerFilesCommand) Command() cke.Command {

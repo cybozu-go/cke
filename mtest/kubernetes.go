@@ -170,7 +170,11 @@ func TestKubernetes() {
 
 		By("updating domain name to neco.local")
 		before := cluster.Options.Kubelet.Domain
-		cluster.Options.Kubelet.Domain = "neco.local"
+		if cluster.Options.Kubelet.Config == nil {
+			cluster.Options.Kubelet.Domain = "neco.local"
+		} else {
+			cluster.Options.Kubelet.Config.Object["clusterDomain"] = "neco.local"
+		}
 		clusterSetAndWait(cluster)
 
 		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=cke.cybozu.com/appname=node-dns", "-o=json")

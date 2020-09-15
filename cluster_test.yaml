@@ -1,0 +1,72 @@
+name: test
+nodes:
+  - address: 1.2.3.4
+    hostname: host1
+    user: cybozu
+    control_plane: true
+    labels:
+      label1: value1
+service_subnet: 12.34.56.00/24
+dns_servers: ["1.1.1.1", "8.8.8.8"]
+dns_service: kube-system/dns
+etcd_backup:
+  enabled: true
+  pvc_name: etcdbackup-pvc
+  schedule: "*/1 * * * *"
+options:
+  etcd:
+    volume_name: myetcd
+    extra_args:
+      - arg1
+      - arg2
+  kube-api:
+    extra_binds:
+      - source: src1
+        destination: target1
+        read_only: true
+        propagation: shared
+        selinux_label: z
+    audit_log_enabled: true
+    audit_log_policy: |
+      apiVersion: audit.k8s.io/v1
+      kind: Policy
+      rules:
+      - level: Metadata
+  kube-controller-manager:
+    extra_env:
+      env1: val1
+  kube-scheduler:
+    config:
+      apiVersion: kubescheduler.config.k8s.io/v1alpha2
+      kind: KubeSchedulerConfiguration
+      PodMaxBackoffSeconds: 100
+    extra_args:
+      - arg1
+  kube-proxy:
+    extra_args:
+      - arg1
+  kubelet:
+    domain: my.domain
+    allow_swap: true
+    cgroup_driver: systemd
+    container_runtime: remote
+    container_runtime_endpoint: /var/run/k8s-containerd.sock
+    container_log_max_size: 10Mi
+    container_log_max_files: 5
+    boot_taints:
+      - key: taint1
+        value: tainted
+        effect: NoExecute
+    extra_args:
+      - arg1
+    cni_conf_file:
+      name: 99-loopback.conf
+      content: |
+        {
+            "cniVersion": "0.3.1",
+            "type": "loopback"
+        }
+    config:
+      apiVersion: kubelet.config.k8s.io/v1beta1
+      kind: KubeletConfiguration
+      containerLogMaxFiles: 10
