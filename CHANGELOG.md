@@ -5,6 +5,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.18.0-rc.1] - 2020-09-23
+
 ### Added
 - New styles of configurations for k8s components are available.
   - Kubelet is now configurable by embedding [KubeletConfiguration v1beta1](https://pkg.go.dev/k8s.io/kubelet@v0.18.9/config/v1beta1#KubeletConfiguration) directly.
@@ -29,4 +31,5 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.17.11...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.18.0-rc.1...HEAD
+[1.18.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.17.11...v1.18.0-rc.1
