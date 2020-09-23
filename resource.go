@@ -2,6 +2,7 @@ package cke
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"sort"
 	"strconv"
@@ -114,7 +115,7 @@ func init() {
 }
 
 // ApplyResource creates or updates given resource using server-side-apply.
-func ApplyResource(dynclient dynamic.Interface, mapper meta.RESTMapper, data []byte, rev int64, forceConflicts bool) error {
+func ApplyResource(ctx context.Context, dynclient dynamic.Interface, mapper meta.RESTMapper, data []byte, rev int64, forceConflicts bool) error {
 	obj := &unstructured.Unstructured{}
 	dec := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 	_, gvk, err := dec.Decode(data, nil, obj)
@@ -153,7 +154,7 @@ func ApplyResource(dynclient dynamic.Interface, mapper meta.RESTMapper, data []b
 		})
 	}
 
-	_, err = dr.Patch(obj.GetName(), types.ApplyPatchType, buf.Bytes(), metav1.PatchOptions{
+	_, err = dr.Patch(ctx, obj.GetName(), types.ApplyPatchType, buf.Bytes(), metav1.PatchOptions{
 		FieldManager: "cke",
 		Force:        &forceConflicts,
 	})

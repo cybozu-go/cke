@@ -3,6 +3,7 @@ package server
 import (
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
@@ -16,7 +17,11 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	componentv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
+	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
+	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
 const (
@@ -104,12 +109,20 @@ func newData() testData {
 		ServiceSubnet: testServiceSubnet,
 		DNSServers:    testDefaultDNSServers,
 	}
+	schedulerConfig := &unstructured.Unstructured{}
+	schedulerConfig.SetGroupVersionKind(schedulerv1alpha2.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
+	schedulerConfig.Object["healthzBindAddress"] = "0.0.0.0"
+	cluster.Options.Scheduler = cke.SchedulerParams{
+		Config: schedulerConfig,
+	}
+	kubeletConfig := &unstructured.Unstructured{}
+	kubeletConfig.SetGroupVersionKind(kubeletv1beta1.SchemeGroupVersion.WithKind("KubeletConfiguration"))
+	kubeletConfig.Object["containerLogMaxSize"] = "20Mi"
+	kubeletConfig.Object["clusterDomain"] = testDefaultDNSDomain
 	cluster.Options.Kubelet = cke.KubeletParams{
-		Domain:                   testDefaultDNSDomain,
 		ContainerRuntime:         "remote",
 		ContainerRuntimeEndpoint: "/var/run/k8s-containerd.sock",
-		ContainerLogMaxFiles:     10,
-		ContainerLogMaxSize:      "10Mi",
+		Config:                   kubeletConfig,
 	}
 
 	nodeReadyStatus := corev1.NodeStatus{
@@ -256,6 +269,33 @@ func (d testData) withScheduler() testData {
 		st.IsHealthy = true
 		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.SchedulerParams()
+
+		address := "0.0.0.0"
+		leaderElect := true
+		st.Config = &schedulerv1alpha2.KubeSchedulerConfiguration{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "kubescheduler.config.k8s.io/v1alpha2",
+				Kind:       "KubeSchedulerConfiguration",
+			},
+			ClientConnection: componentv1alpha1.ClientConnectionConfiguration{
+				Kubeconfig: op.SchedulerKubeConfigPath,
+			},
+			LeaderElection: schedulerv1alpha2.KubeSchedulerLeaderElectionConfiguration{
+				LeaderElectionConfiguration: componentv1alpha1.LeaderElectionConfiguration{
+					LeaderElect: &leaderElect,
+				},
+			},
+			HealthzBindAddress: &address,
+		}
+	}
+	return d
+}
+
+func (d testData) withSchedulerV1Alpha1() testData {
+	d.Cluster.Options.Scheduler.Config = nil
+	for _, n := range d.ControlPlane() {
+		st := &d.NodeStatus(n).Scheduler
+		st.Config = nil
 	}
 	return d
 }
@@ -266,14 +306,36 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.KubernetesImage.Name()
-		st.ContainerLogMaxSize = "10Mi"
-		st.ContainerLogMaxFiles = 10
 		st.BuiltInParams = k8s.KubeletServiceParams(n, cke.KubeletParams{
 			ContainerRuntime:         "remote",
 			ContainerRuntimeEndpoint: "/var/run/k8s-containerd.sock",
 		})
-		st.Domain = domain
-		st.AllowSwap = allowSwap
+
+		var oomScoreAdj int32 = -1000
+		webhookEnabled := true
+		st.Config = &kubeletv1beta1.KubeletConfiguration{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "kubelet.config.k8s.io/v1beta1",
+				Kind:       "KubeletConfiguration",
+			},
+			ClusterDomain:         domain,
+			RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
+			HealthzBindAddress:    "0.0.0.0",
+			OOMScoreAdj:           &oomScoreAdj,
+			ContainerLogMaxSize:   "20Mi",
+			TLSCertFile:           "/etc/kubernetes/pki/kubelet.crt",
+			TLSPrivateKeyFile:     "/etc/kubernetes/pki/kubelet.key",
+			Authentication: kubeletv1beta1.KubeletAuthentication{
+				X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: "/etc/kubernetes/pki/ca.crt"},
+				Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: &webhookEnabled},
+			},
+			Authorization: kubeletv1beta1.KubeletAuthorization{Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook},
+			ClusterDNS:    []string{n.Address},
+		}
+		if allowSwap {
+			failSwapOn := !allowSwap
+			st.Config.FailSwapOn = &failSwapOn
+		}
 	}
 	return d
 }
@@ -361,15 +423,6 @@ func (d testData) withK8sResourceReady() testData {
 		},
 	}
 
-	return d
-}
-
-func (d testData) withUpdateBlockPVSUpTo1_16() testData {
-	st := &d.Status.NodeStatuses[nodeNames[0]].Kubelet
-	st.NeedUpdateBlockPVsUpToV1_16 = []string{
-		"pv-name-1",
-		"pv-name-2",
-	}
 	return d
 }
 
@@ -744,7 +797,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "RestartScheduler4",
-			Input: newData().withAllServices().with(func(d testData) {
+			Input: newData().withAllServices().withSchedulerV1Alpha1().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Extenders = []schedulerv1.Extender{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
 				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Extenders = []schedulerv1.Extender{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
 			}).withSSHNotConnectedNodes(),
@@ -757,7 +810,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "RestartScheduler5",
-			Input: newData().withAllServices().with(func(d testData) {
+			Input: newData().withAllServices().withSchedulerV1Alpha1().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Predicates = []schedulerv1.PredicatePolicy{{Name: `some_predicate`}}
 				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Predicates = []schedulerv1.PredicatePolicy{{Name: `some_predicate`}}
 			}).withSSHNotConnectedNodes(),
@@ -770,9 +823,22 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "RestartScheduler6",
-			Input: newData().withAllServices().with(func(d testData) {
+			Input: newData().withAllServices().withSchedulerV1Alpha1().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Priorities = []schedulerv1.PriorityPolicy{{Name: `some_priority`}}
 				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Priorities = []schedulerv1.PriorityPolicy{{Name: `some_priority`}}
+			}).withSSHNotConnectedNodes(),
+			ExpectedOps: []string{
+				"kube-scheduler-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-scheduler-restart": 1,
+			},
+		},
+		{
+			Name: "RestartScheduler7",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Config.HealthzBindAddress = nil
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Config.HealthzBindAddress = nil
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-scheduler-restart",
@@ -830,8 +896,8 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet5",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[3]).Kubelet.Domain = "neco.local"
-				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.Domain = "neco.local"
+				d.NodeStatus(d.Cluster.Nodes[3]).Kubelet.Config.ClusterDomain = "neco.local"
+				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.Config.ClusterDomain = "neco.local"
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kubelet-restart",
@@ -843,7 +909,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet6",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.Cluster.Options.Kubelet.ContainerLogMaxFiles = 20
+				d.Cluster.Options.Kubelet.Config.Object["containerLogMaxFiles"] = 20
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kubelet-restart",
@@ -855,7 +921,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet7",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.Cluster.Options.Kubelet.ContainerLogMaxSize = "1Gi"
+				d.Cluster.Options.Kubelet.Config.Object["containerLogMaxSize"] = "1Gi"
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kubelet-restart",
@@ -989,7 +1055,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "DNSUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
-				d.Cluster.Options.Kubelet.Domain = "neco.local"
+				d.Cluster.Options.Kubelet.Config.Object["clusterDomain"] = "neco.local"
 			}),
 			ExpectedOps: []string{
 				"kubelet-restart",
@@ -998,9 +1064,9 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "DNSUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
-				d.Cluster.Options.Kubelet.Domain = "neco.local"
+				d.Cluster.Options.Kubelet.Config.Object["clusterDomain"] = "neco.local"
 				for _, st := range d.Status.NodeStatuses {
-					st.Kubelet.Domain = "neco.local"
+					st.Kubelet.Config.ClusterDomain = "neco.local"
 				}
 			}),
 			ExpectedOps: []string{
@@ -1047,11 +1113,6 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
 			ExpectedOps: []string{"update-endpoints"},
-		},
-		{
-			Name:        "UpdateBlockPVsUpTo1.16",
-			Input:       newData().withAllServices().withUpdateBlockPVSUpTo1_16(),
-			ExpectedOps: []string{"update-block-up-to-1.16"},
 		},
 		{
 			Name: "EtcdServiceUpdate",

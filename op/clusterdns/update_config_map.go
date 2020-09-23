@@ -5,6 +5,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type updateConfigMapOp struct {
@@ -52,7 +53,7 @@ func (c updateConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure,
 
 	// ConfigMap
 	configs := cs.CoreV1().ConfigMaps("kube-system")
-	_, err = configs.Update(c.configmap)
+	_, err = configs.Update(ctx, c.configmap, metav1.UpdateOptions{})
 	return err
 }
 

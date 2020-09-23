@@ -10,6 +10,9 @@ commands:
       target:
         type: string
         default: ""
+      cluster:
+        type: string
+        default: "cke-cluster.yml"
     steps:
       - run:
           name: Store Service Account
@@ -24,7 +27,7 @@ commands:
           background: true
       - run:
           command: |
-            ./bin/run-mtest.sh <<parameters.runtime>> <<parameters.suite>> <<parameters.target>>
+            ./bin/run-mtest.sh "<<parameters.runtime>>" "<<parameters.suite>>" "<<parameters.target>>" "<<parameters.cluster>>"
           no_output_timeout: 20m
       - run:
           name: Set the instance lifetime
@@ -141,6 +144,15 @@ jobs:
       - run-mtest:
           runtime: remote
           suite: ./functions
+  mtest-containerd-functions-oldstylecluster:
+    docker:
+      - image: google/cloud-sdk
+    steps:
+      - checkout
+      - run-mtest:
+          runtime: remote
+          suite: ./functions
+          cluster: cke-cluster-old.yml
   mtest-containerd-operators:
     docker:
       - image: google/cloud-sdk
@@ -165,6 +177,7 @@ jobs:
       - run-mtest:
           runtime: remote
           suite: ./upgrade
+          cluster: cke-cluster-old.yml
   mtest-docker-functions:
     docker:
       - image: google/cloud-sdk
@@ -249,6 +262,7 @@ workflows:
             - build
       - mtest-docker-functions
       - mtest-containerd-functions
+      - mtest-containerd-functions-oldstylecluster
       - mtest-containerd-operators
       - mtest-containerd-robustness
       - mtest-upgrade:

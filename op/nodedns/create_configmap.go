@@ -60,12 +60,12 @@ func (c createConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure,
 
 	// ConfigMap
 	configs := cs.CoreV1().ConfigMaps("kube-system")
-	_, err = configs.Get(op.NodeDNSAppName, metav1.GetOptions{})
+	_, err = configs.Get(ctx, op.NodeDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
 		configMap := ConfigMap(c.clusterIP, c.domain, c.dnsServers)
-		_, err = configs.Create(configMap)
+		_, err = configs.Create(ctx, configMap, metav1.CreateOptions{})
 		if err != nil {
 			return err
 		}

@@ -31,7 +31,7 @@ spec:
   allowPrivilegeEscalation: false
   defaultAllowPrivilegeEscalation: false
   # Capabilities
-  allowedCapabilities: ['NET_ADMIN']
+  allowedCapabilities: ['NET_ADMIN', 'NET_RAW']
   defaultAddCapabilities: []
   requiredDropCapabilities: []
   # Host namespaces
@@ -125,7 +125,7 @@ data:
     }
   net-conf.json: |
     {
-      "Network": "192.168.0.0/16",
+      "Network": "10.244.0.0/16",
       "Backend": {
         "Type": "vxlan"
       }
@@ -163,6 +163,7 @@ spec:
                     values:
                       - amd64
       hostNetwork: true
+      priorityClassName: system-node-critical
       tolerations:
       - operator: Exists
         effect: NoSchedule
@@ -199,7 +200,7 @@ spec:
         securityContext:
           privileged: false
           capabilities:
-            add: ["NET_ADMIN"]
+            add: ["NET_ADMIN", "NET_RAW"]
         env:
         - name: POD_NAME
           valueFrom:
@@ -257,6 +258,7 @@ spec:
                     values:
                       - arm64
       hostNetwork: true
+      priorityClassName: system-node-critical
       tolerations:
       - operator: Exists
         effect: NoSchedule
@@ -293,7 +295,7 @@ spec:
         securityContext:
           privileged: false
           capabilities:
-             add: ["NET_ADMIN"]
+             add: ["NET_ADMIN", "NET_RAW"]
         env:
         - name: POD_NAME
           valueFrom:
@@ -351,6 +353,7 @@ spec:
                     values:
                       - arm
       hostNetwork: true
+      priorityClassName: system-node-critical
       tolerations:
       - operator: Exists
         effect: NoSchedule
@@ -387,7 +390,7 @@ spec:
         securityContext:
           privileged: false
           capabilities:
-             add: ["NET_ADMIN"]
+             add: ["NET_ADMIN", "NET_RAW"]
         env:
         - name: POD_NAME
           valueFrom:
@@ -445,6 +448,7 @@ spec:
                     values:
                       - ppc64le
       hostNetwork: true
+      priorityClassName: system-node-critical
       tolerations:
       - operator: Exists
         effect: NoSchedule
@@ -481,7 +485,7 @@ spec:
         securityContext:
           privileged: false
           capabilities:
-             add: ["NET_ADMIN"]
+             add: ["NET_ADMIN", "NET_RAW"]
         env:
         - name: POD_NAME
           valueFrom:
@@ -539,6 +543,7 @@ spec:
                     values:
                       - s390x
       hostNetwork: true
+      priorityClassName: system-node-critical
       tolerations:
       - operator: Exists
         effect: NoSchedule
@@ -575,7 +580,7 @@ spec:
         securityContext:
           privileged: false
           capabilities:
-             add: ["NET_ADMIN"]
+             add: ["NET_ADMIN", "NET_RAW"]
         env:
         - name: POD_NAME
           valueFrom:

@@ -56,11 +56,11 @@ func (c createEtcdBackupConfigMapCommand) Run(ctx context.Context, inf cke.Infra
 	}
 
 	configs := cs.CoreV1().ConfigMaps("kube-system")
-	_, err = configs.Get(op.EtcdBackupAppName, metav1.GetOptions{})
+	_, err = configs.Get(ctx, op.EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		_, err = configs.Create(RenderConfigMap(c.rotate))
+		_, err = configs.Create(ctx, RenderConfigMap(c.rotate), metav1.CreateOptions{})
 		if err != nil {
 			return err
 		}

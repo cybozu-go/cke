@@ -19,12 +19,12 @@ endif
 PLACEMAT = /usr/bin/placemat
 GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo --failFast -v
 CURL = curl -fsL
-MANAGEMENT_ETCD_VERSION = 3.3.22
+MANAGEMENT_ETCD_VERSION = 3.3.25
 VAULT_VERSION = 1.2.2
-K8S_VERSION = 1.17.9
+K8S_VERSION = 1.18.9
 PLACEMAT_DATADIR = /var/scratch/placemat
-CONTAINERD_VERSION = 1.3.3
-CRITOOLS_VERSION = 1.17.0
+CONTAINERD_VERSION = 1.4.1
+CRITOOLS_VERSION = 1.18.0
 CT_VERSION = 0.9.0
 CT = /usr/local/bin/ct
 SUDO = sudo
@@ -35,6 +35,7 @@ ifeq ($(findstring /,$(SUITE)),)
 else
   SUITE_PACKAGE = $(SUITE)
 endif
+CLUSTER := cke-cluster.yml
 
 export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO CONTAINER_RUNTIME SUITE_PACKAGE
 
@@ -263,7 +264,7 @@ $(OUTPUT)/node6.ign: $(OUTPUT)/node.ign
 		-e 's/__NODE6__/$(NODE6)/' \
 		-e 's/__NODE_ADDRESS__/$(NODE6)/' $< > $@
 
-$(OUTPUT)/cke-cluster.yml: cke-cluster.yml
+$(OUTPUT)/cke-cluster.yml: $(CLUSTER)
 	mkdir -p $(OUTPUT)
 	sed -e 's/__NODE1__/$(NODE1)/' \
 		-e 's/__NODE2__/$(NODE2)/' \
@@ -283,7 +284,7 @@ $(OUTPUT)/cke.yml: cke.yml
 
 unpack-containerd:
 	mkdir -p $(OUTPUT)
-	$(CURL) https://github.com/containerd/containerd/releases/download/v$(CONTAINERD_VERSION)/containerd-$(CONTAINERD_VERSION).linux-amd64.tar.gz | \
+	$(CURL) https://github.com/containerd/containerd/releases/download/v$(CONTAINERD_VERSION)/containerd-$(CONTAINERD_VERSION)-linux-amd64.tar.gz | \
 	tar xzf - --strip-components=1 -C $(OUTPUT) bin/containerd bin/containerd-shim bin/containerd-shim-runc-v1 bin/containerd-shim-runc-v2 bin/ctr --warning=no-unknown-keyword
 
 $(CONTAINERD_FILES): unpack-containerd

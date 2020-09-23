@@ -6,6 +6,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -69,7 +70,7 @@ func (c updateEtcdBackupCronJobCommand) Run(ctx context.Context, inf cke.Infrast
 	}
 
 	jobs := cs.BatchV1beta1().CronJobs("kube-system")
-	_, err = jobs.Update(cronJob)
+	_, err = jobs.Update(ctx, cronJob, metav1.UpdateOptions{})
 	return err
 }
 

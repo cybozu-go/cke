@@ -40,7 +40,7 @@ func backupGet(ctx context.Context, cmd *cobra.Command, filename string) error {
 		return err
 	}
 
-	svc, err := cs.CoreV1().Services("kube-system").Get(op.EtcdBackupAppName, metav1.GetOptions{})
+	svc, err := cs.CoreV1().Services("kube-system").Get(ctx, op.EtcdBackupAppName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}

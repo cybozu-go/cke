@@ -83,4 +83,9 @@ CircleCI also creates a GitHub release automatically after running [sonobuoy](./
 So, **DO NOT MANUALLY CREATE GITHUB RELEASES**.  The test results will be attached to the GitHub
 release that can be submitted to [cncf/k8s-conformance](https://github.com/cncf/k8s-conformance).
 
+Maintain docker-compose
+-----------------------
+
+After new CKE released, update cke image on docker-compose.yml.
+
 [example]: https://github.com/cybozu-go/etcdpasswd/commit/77d95384ac6c97e7f48281eaf23cb94f68867f79

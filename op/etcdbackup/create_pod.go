@@ -56,13 +56,13 @@ func (c createEtcdBackupPodCommand) Run(ctx context.Context, inf cke.Infrastruct
 	}
 
 	claims := cs.CoreV1().PersistentVolumeClaims("kube-system")
-	_, err = claims.Get(c.pvcname, metav1.GetOptions{})
+	_, err = claims.Get(ctx, c.pvcname, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
 	pods := cs.CoreV1().Pods("kube-system")
-	_, err = pods.Get(op.EtcdBackupAppName, metav1.GetOptions{})
+	_, err = pods.Get(ctx, op.EtcdBackupAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
@@ -81,7 +81,7 @@ func (c createEtcdBackupPodCommand) Run(ctx context.Context, inf cke.Infrastruct
 		if err != nil {
 			return err
 		}
-		_, err = pods.Create(pod)
+		_, err = pods.Create(ctx, pod, metav1.CreateOptions{})
 		if err != nil {
 			return err
 		}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type kubeNodeUpdate struct {
@@ -52,7 +53,7 @@ func (c nodeUpdateCommand) Run(ctx context.Context, inf cke.Infrastructure, _ st
 
 	nodesAPI := cs.CoreV1().Nodes()
 	for _, n := range c.nodes {
-		_, err := nodesAPI.Update(n)
+		_, err := nodesAPI.Update(ctx, n, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}

@@ -38,8 +38,12 @@ type Config struct {
 
 // NewConfig creates Config with default values.
 func NewConfig(prefix string) *Config {
+	defaultEndpoints := make([]string, len(DefaultEndpoints))
+	for i := range DefaultEndpoints {
+		defaultEndpoints[i] = DefaultEndpoints[i]
+	}
 	return &Config{
-		Endpoints: DefaultEndpoints,
+		Endpoints: defaultEndpoints,
 		Prefix:    prefix,
 		Timeout:   DefaultTimeout,
 	}

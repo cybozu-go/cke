@@ -5,12 +5,15 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	k8sjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	apiserverv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/client-go/tools/clientcmd/api"
+	componentv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
@@ -26,7 +29,7 @@ func init() {
 	if err := kubeletv1beta1.AddToScheme(scm); err != nil {
 		panic(err)
 	}
-	resourceEncoder = json.NewSerializerWithOptions(json.DefaultMetaFactory, scm, scm, json.SerializerOptions{Yaml: true})
+	resourceEncoder = k8sjson.NewSerializerWithOptions(k8sjson.DefaultMetaFactory, scm, scm, k8sjson.SerializerOptions{Yaml: true})
 }
 
 func encodeToYAML(obj runtime.Object) ([]byte, error) {
@@ -48,6 +51,29 @@ func controllerManagerKubeconfig(cluster string, ca, clientCrt, clientKey string
 
 func schedulerKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Config {
 	return cke.Kubeconfig(cluster, "system:kube-scheduler", ca, clientCrt, clientKey)
+}
+
+// GenerateSchedulerConfiguration generates scheduler configuration.
+func GenerateSchedulerConfiguration(params cke.SchedulerParams) schedulerv1alpha2.KubeSchedulerConfiguration {
+	// default values
+	base := schedulerv1alpha2.KubeSchedulerConfiguration{}
+
+	c, err := params.GetConfigV1Alpha2(&base)
+	if err != nil {
+		panic(err)
+	}
+
+	// forced values
+	c.ClientConnection = componentv1alpha1.ClientConnectionConfiguration{
+		Kubeconfig: op.SchedulerKubeConfigPath,
+	}
+	c.LeaderElection = schedulerv1alpha2.KubeSchedulerLeaderElectionConfiguration{
+		LeaderElectionConfiguration: componentv1alpha1.LeaderElectionConfiguration{
+			LeaderElect: boolPointer(true),
+		},
+	}
+
+	return *c
 }
 
 func proxyKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Config {
@@ -77,24 +103,39 @@ func kubeletKubeconfig(cluster string, n *cke.Node, caPath, certPath, keyPath st
 }
 
 func newKubeletConfiguration(cert, key, ca string, params cke.KubeletParams) kubeletv1beta1.KubeletConfiguration {
-	return kubeletv1beta1.KubeletConfiguration{
-		ReadOnlyPort:      0,
-		TLSCertFile:       cert,
-		TLSPrivateKeyFile: key,
-		Authentication: kubeletv1beta1.KubeletAuthentication{
-			X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: ca},
-			Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: boolPointer(true)},
-		},
-		Authorization:         kubeletv1beta1.KubeletAuthorization{Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook},
+	// default values
+	base := &kubeletv1beta1.KubeletConfiguration{
+		RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
 		HealthzBindAddress:    "0.0.0.0",
 		OOMScoreAdj:           int32Pointer(-1000),
-		ClusterDomain:         params.Domain,
-		RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
-		FailSwapOn:            boolPointer(!params.AllowSwap),
-		CgroupDriver:          params.CgroupDriver,
-		ContainerLogMaxSize:   params.ContainerLogMaxSize,
-		ContainerLogMaxFiles:  int32Pointer(params.ContainerLogMaxFiles),
 	}
+
+	// This won't raise an error because of prior validation
+	c, err := params.GetConfigV1Beta1(base)
+	if err != nil {
+		panic(err)
+	}
+
+	// forced values
+	c.TLSCertFile = cert
+	c.TLSPrivateKeyFile = key
+	c.Authentication = kubeletv1beta1.KubeletAuthentication{
+		X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: ca},
+		Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: boolPointer(true)},
+	}
+	c.Authorization = kubeletv1beta1.KubeletAuthorization{Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook}
+
+	return *c
+}
+
+// GenerateKubeletConfiguration generates kubelet configuration.
+func GenerateKubeletConfiguration(params cke.KubeletParams, nodeAddress string) kubeletv1beta1.KubeletConfiguration {
+	caPath := op.K8sPKIPath("ca.crt")
+	tlsCertPath := op.K8sPKIPath("kubelet.crt")
+	tlsKeyPath := op.K8sPKIPath("kubelet.key")
+	cfg := newKubeletConfiguration(tlsCertPath, tlsKeyPath, caPath, params)
+	cfg.ClusterDNS = []string{nodeAddress}
+	return cfg
 }
 
 func int32Pointer(input int32) *int32 {

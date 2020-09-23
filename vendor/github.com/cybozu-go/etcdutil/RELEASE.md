@@ -56,7 +56,7 @@ Bump version
 Publish GitHub release page
 ---------------------------
 
-Go to https://github.com/cybozu-go/sabakan/releases and edit the tag.
+Go to https://github.com/cybozu-go/etcdutil/releases and edit the tag.
 Finally, press `Publish release` button.
 
 [semver]: https://semver.org/spec/v2.0.0.html

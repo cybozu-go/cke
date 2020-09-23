@@ -9,6 +9,7 @@ spec:
       tolerations:
       - operator: Exists
 ---
+# Tweak network range to avoid using GCP auto mode VPC range.
 apiVersion: v1
 kind: ConfigMap
 metadata:

@@ -2,7 +2,7 @@
 
 GOFLAGS = -mod=vendor
 export GOFLAGS
-ETCD_VERSION = 3.3.22
+ETCD_VERSION = 3.3.25
 
 all: test
 

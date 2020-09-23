@@ -47,7 +47,7 @@ func (c removeEtcdBackupConfigMapCommand) Run(ctx context.Context, inf cke.Infra
 	if err != nil {
 		return err
 	}
-	return cs.CoreV1().ConfigMaps("kube-system").Delete(op.EtcdBackupAppName, metav1.NewDeleteOptions(0))
+	return cs.CoreV1().ConfigMaps("kube-system").Delete(ctx, op.EtcdBackupAppName, *metav1.NewDeleteOptions(0))
 }
 
 func (c removeEtcdBackupConfigMapCommand) Command() cke.Command {

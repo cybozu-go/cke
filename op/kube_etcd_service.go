@@ -80,7 +80,7 @@ func (c createEtcdServiceCommand) Run(ctx context.Context, inf cke.Infrastructur
 		return err
 	}
 
-	_, err = cs.CoreV1().Services(metav1.NamespaceSystem).Create(&corev1.Service{
+	_, err = cs.CoreV1().Services(metav1.NamespaceSystem).Create(ctx, &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: EtcdServiceName,
 		},
@@ -89,7 +89,7 @@ func (c createEtcdServiceCommand) Run(ctx context.Context, inf cke.Infrastructur
 			Type:      corev1.ServiceTypeClusterIP,
 			ClusterIP: corev1.ClusterIPNone,
 		},
-	})
+	}, metav1.CreateOptions{})
 	return err
 }
 
@@ -110,7 +110,7 @@ func (c updateEtcdServiceCommand) Run(ctx context.Context, inf cke.Infrastructur
 		return err
 	}
 
-	_, err = cs.CoreV1().Services(metav1.NamespaceSystem).Update(&corev1.Service{
+	_, err = cs.CoreV1().Services(metav1.NamespaceSystem).Update(ctx, &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: EtcdServiceName,
 		},
@@ -119,7 +119,7 @@ func (c updateEtcdServiceCommand) Run(ctx context.Context, inf cke.Infrastructur
 			Type:      corev1.ServiceTypeClusterIP,
 			ClusterIP: corev1.ClusterIPNone,
 		},
-	})
+	}, metav1.UpdateOptions{})
 
 	return err
 }
