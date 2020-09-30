@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Use Flatcar Container Linux in mtest(#365)
+
 ## [1.18.0-rc.1] - 2020-09-23
 
 ### Added
