@@ -31,6 +31,10 @@ func (c imagePullCommand) Run(ctx context.Context, inf cke.Infrastructure, _ str
 		for _, n := range c.nodes {
 			ce := inf.Engine(n.Address)
 			for i := 0; i < pullMaxRetry; i++ {
+				log.Info("pulling image", map[string]interface{}{
+					"image": c.img.Name(),
+					"node":  n.Address,
+				})
 				err = ce.PullImage(c.img)
 				if err == nil {
 					return nil

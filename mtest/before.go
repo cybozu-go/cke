@@ -25,7 +25,7 @@ func RunBeforeSuite(img string) {
 	fmt.Println("Preparing...")
 
 	SetDefaultEventuallyPollingInterval(3 * time.Second)
-	SetDefaultEventuallyTimeout(9 * time.Minute)
+	SetDefaultEventuallyTimeout(20 * time.Minute)
 
 	log.DefaultLogger().SetThreshold(log.LvError)
 
