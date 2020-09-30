@@ -37,7 +37,7 @@ func (c imagePullCommand) Run(ctx context.Context, inf cke.Infrastructure, _ str
 				})
 				err = ce.PullImage(c.img)
 				if err == nil {
-					return nil
+					break
 				}
 
 				log.Warn("failed to pull image", map[string]interface{}{
