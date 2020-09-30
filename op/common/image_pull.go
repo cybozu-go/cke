@@ -26,10 +26,10 @@ func ImagePullCommand(nodes []*cke.Node, img cke.Image) cke.Commander {
 
 func (c imagePullCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	env := well.NewEnvironment(ctx)
-	for _, n := range c.nodes {
-		ce := inf.Engine(n.Address)
-		env.Go(func(ctx context.Context) error {
-			var err error
+	env.Go(func(ctx context.Context) error {
+		var err error
+		for _, n := range c.nodes {
+			ce := inf.Engine(n.Address)
 			for i := 0; i < pullMaxRetry; i++ {
 				err = ce.PullImage(c.img)
 				if err == nil {
@@ -46,9 +46,9 @@ func (c imagePullCommand) Run(ctx context.Context, inf cke.Infrastructure, _ str
 				case <-time.After(pullWaitDuration):
 				}
 			}
-			return err
-		})
-	}
+		}
+		return err
+	})
 	env.Stop()
 	return env.Wait()
 }
