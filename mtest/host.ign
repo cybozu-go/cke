@@ -32,7 +32,7 @@
   "networkd": {
     "units": [{
       "name": "00-eth0.network",
-      "contents": "[Match]\nName=eth0\n\n[Network]\nAddress=__NODE_ADDRESS__/24\nGateway=__BRIDGE_ADDRESS__\nDNS=8.8.8.8\nDNS=1.1.1.1"
+      "contents": "[Match]\nName=eth0\n\n[Network]\nAddress=__NODE_ADDRESS__/24\nGateway=__BRIDGE_ADDRESS__\nDNS=8.8.8.8\nDNS=1.1.1.1\n\n[Link]\nMTUBytes=1460\n"
     }]
   },
   "passwd": {
@@ -65,4 +65,3 @@
     ]
   }
 }
-

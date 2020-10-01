@@ -217,6 +217,9 @@ networkd:
         DNS=8.8.8.8
         DNS=1.1.1.1
 
+        [Link]
+        MTUBytes=1460
+
 passwd:
   users:
     - name: cybozu
