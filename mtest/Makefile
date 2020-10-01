@@ -109,7 +109,7 @@ $(VAULT_ARCHIVE):
 	$(CURL) -o $@ https://releases.hashicorp.com/vault/$(VAULT_VERSION)/$(VAULT_ARCHIVE)
 
 $(COREOS_IMAGE):
-	$(CURL) -o $@.bz2 https://stable.release.core-os.net/amd64-usr/current/$@.bz2
+	$(CURL) -o $@.bz2 https://stable.release.flatcar-linux.net/amd64-usr/current/$@.bz2
 	bunzip2 -q $@.bz2
 
 $(OUTPUT)/etcd $(OUTPUT)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
