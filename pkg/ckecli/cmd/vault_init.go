@@ -54,6 +54,11 @@ var (
 			commonName: "kubernetes aggregation CA",
 			key:        "kubernetes-aggregation",
 		},
+		{
+			vaultPath:  cke.CAWebhook,
+			commonName: "kubernetes webhook CA",
+			key:        "kubernetes-webhook",
+		},
 	}
 
 	ckePolicy = `

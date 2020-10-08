@@ -25,6 +25,7 @@ Root certificates need to be registered with `ckecli`.
 * `cke/ca-etcd-client`: issues client authentication certificates for etcd.
 * `cke/ca-kubernetes`: issues Kubernetes certificates.
 * `cke/ca-kubernetes-aggregation`: issues certificates used for aggregated API servers.
+* `cke/ca-kubernetes-webhook`: issues certificates used for admission webhooks.
 
 Additionally, `kv` secret engine version 1 is mounted at `cke/secrets`.
 

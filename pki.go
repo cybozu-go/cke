@@ -22,6 +22,7 @@ const (
 	CAEtcdClient            = "cke/ca-etcd-client"
 	CAKubernetes            = "cke/ca-kubernetes"
 	CAKubernetesAggregation = "cke/ca-kubernetes-aggregation"
+	CAWebhook               = "cke/ca-kubernetes-webhook"
 )
 
 // CAKeys is list of CA keys
@@ -31,6 +32,7 @@ var CAKeys = []string{
 	CAEtcdClient,
 	CAKubernetes,
 	CAKubernetesAggregation,
+	CAWebhook,
 }
 
 // Role name in Vault
@@ -361,6 +363,29 @@ func (a AggregationCA) IssueClientCertificate(ctx context.Context, inf Infrastru
 		},
 		map[string]interface{}{
 			"common_name":          CNAPIServer,
+			"exclude_cn_from_sans": "true",
+		})
+}
+
+// WebhookCA is a certificate authority for kubernetes admission webhooks
+type WebhookCA struct{}
+
+// IssueCertificate issues TLS server certificate
+// `namespace` and `name` specifies the namespace/name of a webhook Service.
+func (WebhookCA) IssueCertificate(ctx context.Context, inf Infrastructure, namespace, name string) (cert, key string, err error) {
+	altNames := []string{name, name + "." + namespace, name + "." + namespace + ".svc"}
+	return issueCertificate(inf, CAWebhook, RoleSystem, false,
+		map[string]interface{}{
+			"ttl":               "175200h",
+			"max_ttl":           "175200h",
+			"enforce_hostnames": "false",
+			"allow_any_name":    "true",
+			"server_flag":       "true",
+			"client_flag":       "false",
+		},
+		map[string]interface{}{
+			"common_name":          namespace + "/" + name,
+			"alt_names":            strings.Join(altNames, ","),
 			"exclude_cn_from_sans": "true",
 		})
 }
