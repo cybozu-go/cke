@@ -58,6 +58,13 @@ Features
     In addition to Docker, CRI runtimes such as [containerd][] or [cri-o][]
     can be used to run Kubernetes Pods.
 
+* Certificate for admission webhooks
+
+    [Admission webhooks](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) are Kubernetes extension to validate or mutate API resources.
+    Installing them requires some sort of self-signed X509 certificates.
+
+    CKE can become a certificate authority (CA) and issue certificates for these webhooks.
+
 * Kubernetes features:
 
     * HA control plane.
