@@ -28,24 +28,7 @@ var resourceSetCmd = &cobra.Command{
 	Long: `Register user-defined resources.
 
 FILE should contain multiple Kubernetes resources in YAML or JSON format.
-If FILE is "-", then data is read from stdin.
-
-Only the following resource types can be used:
-
-  * Namespace
-  * ServiceAccount
-  * PodSecurityPolicy
-  * NetworkPolicy
-  * Role
-  * RoleBinding
-  * ClusterRole
-  * ClusterRoleBinding
-  * ConfigMap
-  * Deployment
-  * DaemonSet
-  * CronJob
-  * Service
-  * PodDisruptionBudget`,
+If FILE is "-", then data is read from stdin.`,
 
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

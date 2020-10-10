@@ -37,7 +37,7 @@ else
 endif
 CLUSTER := cke-cluster.yml
 
-export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO CONTAINER_RUNTIME SUITE_PACKAGE
+export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO SUITE_PACKAGE
 
 # non-configuration variables
 MANAGEMENT_ETCD_ARCHIVE := etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
@@ -50,13 +50,14 @@ CKE_IMAGE := $(abspath $(OUTPUT))/cke.img
 CKE_IMAGE_URL := quay.io/cybozu/cke:dev
 CKECLUSTER := $(abspath $(OUTPUT))/cke-cluster.yml
 CKECONFIG := $(abspath $(OUTPUT))/cke.yml
-ETCDCTL := $(abspath $(OUTPUT))/etcdctl
 KUBECTL := $(abspath $(OUTPUT))/kubectl
 LOCALPVYAML := $(realpath ./local-pv.yml)
 NGINXYAML := $(realpath ./nginx.yml)
 POLICYYAML := $(realpath ./mtest-policy.yml)
+WEBHOOKYAML := $(realpath ./webhook-resources.yaml)
 
-export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL ETCDCTL POLICYYAML NGINXYAML LOCALPVYAML
+export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL \
+	POLICYYAML NGINXYAML LOCALPVYAML WEBHOOKYAML
 
 CONTAINERD_FILES = \
 	$(OUTPUT)/containerd \
