@@ -387,7 +387,6 @@ func (s Storage) WatchRecords(ctx context.Context, initialCount int64) (RecordCh
 				recordCh <- r
 			}
 		}
-		return
 	}()
 
 	return recordCh, nil

@@ -54,7 +54,7 @@ func (c waitKubeCommand) Run(ctx context.Context, inf cke.Infrastructure, _ stri
 		_, err = cs.CoreV1().ServiceAccounts("kube-system").Get(ctx, "default", metav1.GetOptions{})
 		switch {
 		case err == nil:
-			elapsed := time.Now().Sub(begin)
+			elapsed := time.Since(begin)
 			log.Info("k8s gets initialized", map[string]interface{}{
 				"elapsed": elapsed.Seconds(),
 			})

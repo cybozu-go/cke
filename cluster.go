@@ -412,7 +412,7 @@ func filterNodes(nodes []*Node, f func(n *Node) bool) []*Node {
 }
 
 func validateEtcdBackup(etcdBackup EtcdBackup) error {
-	if etcdBackup.Enabled == false {
+	if !etcdBackup.Enabled {
 		return nil
 	}
 	if len(etcdBackup.PVCName) == 0 {

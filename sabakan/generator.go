@@ -57,9 +57,7 @@ func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 	n.Labels["topology.kubernetes.io/zone"] = "rack" + strconv.Itoa(m.Spec.Rack)
 	n.Labels["failure-domain.beta.kubernetes.io/zone"] = "rack" + strconv.Itoa(m.Spec.Rack)
 
-	for _, taint := range tmpl.Taints {
-		n.Taints = append(n.Taints, taint)
-	}
+	n.Taints = append(n.Taints, tmpl.Taints...)
 	switch m.Status.State {
 	case StateUnhealthy:
 		n.Taints = append(n.Taints, corev1.Taint{
