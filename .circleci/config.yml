@@ -7,9 +7,6 @@ commands:
         type: string
       suite:
         type: string
-      target:
-        type: string
-        default: ""
       cluster:
         type: string
         default: "cke-cluster.yml"
@@ -27,7 +24,7 @@ commands:
           background: true
       - run:
           command: |
-            ./bin/run-mtest.sh "<<parameters.runtime>>" "<<parameters.suite>>" "<<parameters.target>>" "<<parameters.cluster>>"
+            ./bin/run-mtest.sh "<<parameters.runtime>>" "<<parameters.suite>>" "<<parameters.cluster>>"
           no_output_timeout: 20m
       - run:
           name: Set the instance lifetime
@@ -143,7 +140,7 @@ jobs:
       - checkout
       - run-mtest:
           runtime: remote
-          suite: ./functions
+          suite: functions
   mtest-containerd-functions-oldstylecluster:
     docker:
       - image: google/cloud-sdk
@@ -151,7 +148,7 @@ jobs:
       - checkout
       - run-mtest:
           runtime: remote
-          suite: ./functions
+          suite: functions
           cluster: cke-cluster-old.yml
   mtest-containerd-operators:
     docker:
@@ -160,7 +157,7 @@ jobs:
       - checkout
       - run-mtest:
           runtime: remote
-          suite: ./operators
+          suite: operators
   mtest-containerd-robustness:
     docker:
       - image: google/cloud-sdk
@@ -168,7 +165,7 @@ jobs:
       - checkout
       - run-mtest:
           runtime: remote
-          suite: ./robustness
+          suite: robustness
   mtest-upgrade:
     docker:
       - image: google/cloud-sdk
@@ -176,7 +173,7 @@ jobs:
       - checkout
       - run-mtest:
           runtime: remote
-          suite: ./upgrade
+          suite: upgrade
           cluster: cke-cluster-old.yml
   mtest-docker-functions:
     docker:
@@ -185,7 +182,7 @@ jobs:
       - checkout
       - run-mtest:
           runtime: docker
-          suite: ./functions
+          suite: functions
   compose:
     machine:
       image: circleci/classic:edge

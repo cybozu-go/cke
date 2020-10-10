@@ -9,8 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// TestCKECLI tests ckecli command
-func TestCKECLI() {
+func testCKECLI() {
 	It("should be able to re-run vault init", func() {
 		execSafeAt(host1, "env", "VAULT_TOKEN=cybozu", "VAULT_ADDR=http://10.0.0.11:8200",
 			"/opt/bin/ckecli", "vault", "init")

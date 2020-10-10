@@ -18,8 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// TestKubernetes tests kubernetes workloads on CKE
-func TestKubernetes() {
+func testKubernetes() {
 	It("can run Pods", func() {
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
 		By("creating namespace " + namespace)

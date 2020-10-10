@@ -23,6 +23,7 @@ var (
 	nginxYAMLPath   = os.Getenv("NGINXYAML")
 	policyYAMLPath  = os.Getenv("POLICYYAML")
 	webhookYAMLPath = os.Getenv("WEBHOOKYAML")
+	testSuite       = os.Getenv("SUITE")
 
 	sshKeyFile = os.Getenv("SSH_PRIVKEY")
 )

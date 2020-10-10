@@ -5,8 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// TestStopCP stops 1 control plane for succeeding tests
-func TestStopCP() {
+func testStopCP() {
 	It("should stop CP", func() {
 		// stop CKE temporarily to avoid hang-up in SSH session due to node2 shutdown
 		stopCKE()

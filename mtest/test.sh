@@ -2,7 +2,7 @@
 
 TARGET="$1"
 
-$GINKGO -v -focus="${TARGET}" $SUITE_PACKAGE
+$GINKGO -v -focus="${TARGET}" .
 RET=$?
 
 exit $RET
