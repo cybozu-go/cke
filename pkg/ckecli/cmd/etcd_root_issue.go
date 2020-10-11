@@ -39,7 +39,7 @@ var etcdRootIssueCmd = &cobra.Command{
 				return err
 			}
 
-			cacert, err := storage.GetCACertificate(ctx, "server")
+			cacert, err := storage.GetCACertificate(ctx, cke.CAServer)
 			if err != nil {
 				return err
 			}

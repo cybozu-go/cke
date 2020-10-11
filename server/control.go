@@ -400,7 +400,7 @@ func (c Controller) runTidyExpiredCertificates(ctx context.Context) error {
 	}
 
 	for _, ca := range cke.CAKeys {
-		if err := c.TidyExpiredCertificates(ctx, client, ca); err != nil {
+		if err := c.TidyExpiredCertificates(ctx, client, cke.VaultPKIKey(ca)); err != nil {
 			log.Warn("failed to tidy expired certificates", map[string]interface{}{
 				log.FnError: err,
 				"ca":        ca,

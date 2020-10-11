@@ -62,7 +62,7 @@ func (c createEtcdBackupSecretCommand) Run(ctx context.Context, inf cke.Infrastr
 		if err != nil {
 			return err
 		}
-		ca, err := inf.Storage().GetCACertificate(ctx, "server")
+		ca, err := inf.Storage().GetCACertificate(ctx, cke.CAServer)
 		if err != nil {
 			return err
 		}

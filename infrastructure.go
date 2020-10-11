@@ -111,7 +111,7 @@ func (i *ckeInfrastructure) init(ctx context.Context) error {
 		}
 		kubeHTTP.cache = cache
 
-		ca, err := i.Storage().GetCACertificate(ctx, "kubernetes")
+		ca, err := i.Storage().GetCACertificate(ctx, CAKubernetes)
 		if err != nil {
 			kubeHTTP.err = err
 			return
@@ -241,7 +241,7 @@ func (i *ckeInfrastructure) Close() {
 
 func (i *ckeInfrastructure) NewEtcdClient(ctx context.Context, endpoints []string) (*clientv3.Client, error) {
 	i.etcdOnce.Do(func() {
-		serverCA, err := i.Storage().GetCACertificate(ctx, "server")
+		serverCA, err := i.Storage().GetCACertificate(ctx, CAServer)
 		if err != nil {
 			i.etcdErr = err
 			return

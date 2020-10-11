@@ -103,7 +103,7 @@ func ApplyResource(ctx context.Context, dynclient dynamic.Interface, mapper meta
 }
 
 func injectCA(ctx context.Context, st Storage, obj *unstructured.Unstructured, gvk *schema.GroupVersionKind) error {
-	cacert, err := st.GetCACertificate(ctx, "kubernetes-webhook")
+	cacert, err := st.GetCACertificate(ctx, CAWebhook)
 	if err != nil {
 		return fmt.Errorf("failed to get CA cert for webhook: %w", err)
 	}

@@ -36,7 +36,7 @@ var kubernetesIssueCmd = &cobra.Command{
 
 			server := "https://" + cpNodes[0].Address + ":6443"
 
-			cacert, err := storage.GetCACertificate(ctx, "kubernetes")
+			cacert, err := storage.GetCACertificate(ctx, cke.CAKubernetes)
 			if err != nil {
 				return err
 			}

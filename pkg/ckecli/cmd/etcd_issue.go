@@ -48,7 +48,7 @@ NAME is the username of etcd user to be authenticated.`,
 				return err
 			}
 
-			cacert, err := storage.GetCACertificate(ctx, "server")
+			cacert, err := storage.GetCACertificate(ctx, cke.CAServer)
 			if err != nil {
 				return err
 			}
