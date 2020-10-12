@@ -5,6 +5,16 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.18.1] - 2020-10-12
+
+### Added
+
+- Issue and embed TLS certificates for admission webhooks (#371).
+
+### Changed
+
+- The user-defined resource feature is extended to accept all the standard Kubernetes resources (#371).
+
 ## [1.18.0] - 2020-10-05
 
 ### Changed
@@ -37,6 +47,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.18.0...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.18.1...HEAD
+[1.18.1]: https://github.com/cybozu-go/cke/compare/v1.18.0...v1.18.1
 [1.18.0]: https://github.com/cybozu-go/cke/compare/v1.18.0-rc.1...v1.18.0
 [1.18.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.17.11...v1.18.0-rc.1
