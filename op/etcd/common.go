@@ -119,7 +119,7 @@ func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf cke.Infrast
 		return err
 	}
 
-	peerCA, err := inf.Storage().GetCACertificate(ctx, "etcd-peer")
+	peerCA, err := inf.Storage().GetCACertificate(ctx, cke.CAEtcdPeer)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf cke.Infrast
 		return err
 	}
 
-	clientCA, err := inf.Storage().GetCACertificate(ctx, "etcd-client")
+	clientCA, err := inf.Storage().GetCACertificate(ctx, cke.CAEtcdClient)
 	if err != nil {
 		return err
 	}

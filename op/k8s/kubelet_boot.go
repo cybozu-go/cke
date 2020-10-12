@@ -192,7 +192,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 	}
 
 	caPath := op.K8sPKIPath("ca.crt")
-	ca, err := storage.GetCACertificate(ctx, "kubernetes")
+	ca, err := storage.GetCACertificate(ctx, cke.CAKubernetes)
 	if err != nil {
 		return err
 	}

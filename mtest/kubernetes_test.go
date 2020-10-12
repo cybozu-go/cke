@@ -1,7 +1,9 @@
 package mtest
 
 import (
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -10,13 +12,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
-// TestKubernetes tests kubernetes workloads on CKE
-func TestKubernetes() {
+func testKubernetes() {
 	It("can run Pods", func() {
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
 		By("creating namespace " + namespace)
@@ -470,5 +472,69 @@ metadata:
 		err = json.Unmarshal(stdout, &ns)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(ns.Labels).Should(HaveKeyWithValue("test", "value"))
+	})
+
+	It("embed certificates for webhooks", func() {
+		By("set user-defined resource")
+		resources, err := ioutil.ReadFile(webhookYAMLPath)
+		Expect(err).ShouldNot(HaveOccurred())
+		_, _, err = ckecliWithInput(resources, "resource", "set", "-")
+		if err != nil {
+			// skip remaining test because old ckecli does not support these resources
+			return
+		}
+		defer ckecliWithInput(resources, "resource", "delete", "-")
+		ts := time.Now()
+
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		Eventually(func() error {
+			return checkCluster(cluster, ts)
+		}).Should(Succeed())
+
+		By("checking ValidatingWebhookConfiguration")
+		stdout, _, err := kubectl("get", "validatingwebhookconfigurations/test", "-o", "json")
+		Expect(err).ShouldNot(HaveOccurred())
+		vwh := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
+		err = json.Unmarshal(stdout, vwh)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(vwh.Webhooks).Should(HaveLen(2))
+
+		block, _ := pem.Decode(vwh.Webhooks[1].ClientConfig.CABundle)
+		Expect(block).NotTo(BeNil())
+		_, err = x509.ParseCertificate(block.Bytes)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		By("checking MutatingWebhookConfiguration")
+		stdout, _, err = kubectl("get", "mutatingwebhookconfigurations/test", "-o", "json")
+		Expect(err).ShouldNot(HaveOccurred())
+		mwh := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
+		err = json.Unmarshal(stdout, mwh)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(mwh.Webhooks).Should(HaveLen(1))
+
+		block, _ = pem.Decode(vwh.Webhooks[0].ClientConfig.CABundle)
+		Expect(block).NotTo(BeNil())
+		_, err = x509.ParseCertificate(block.Bytes)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		By("checking Secret")
+		stdout, _, err = kubectl("get", "secrets/webhook-cert", "-o", "json")
+		Expect(err).ShouldNot(HaveOccurred())
+		secret := &corev1.Secret{}
+		err = json.Unmarshal(stdout, secret)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(secret.Data).To(HaveKey("tls.crt"))
+		block, _ = pem.Decode(secret.Data["tls.crt"])
+		Expect(block).NotTo(BeNil())
+		cert, err := x509.ParseCertificate(block.Bytes)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(cert.DNSNames).Should(ContainElements(
+			"webhook-service",
+			"webhook-service.default",
+			"webhook-service.default.svc",
+		))
 	})
 }

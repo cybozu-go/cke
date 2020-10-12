@@ -2,8 +2,7 @@
 
 CONTAINER_RUNTIME=$1
 SUITE=$2
-TARGET=$3
-CLUSTER=$4
+CLUSTER=$3
 
 . $(dirname $0)/env
 
@@ -57,7 +56,7 @@ cp /assets/flatcar_production_qemu_image.img .
 make setup
 make placemat SUITE=${SUITE} CLUSTER="${CLUSTER}"
 sleep 3
-exec make test CONTAINER_RUNTIME=${CONTAINER_RUNTIME} SUITE=${SUITE} TARGET="${TARGET}" CLUSTER="${CLUSTER}"
+exec make test CONTAINER_RUNTIME=${CONTAINER_RUNTIME} SUITE=${SUITE} CLUSTER="${CLUSTER}"
 EOF
 chmod +x run.sh
 

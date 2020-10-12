@@ -17,14 +17,21 @@ import (
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/restmapper"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	schedulerv1alpha1 "k8s.io/kube-scheduler/config/v1alpha1"
 	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"sigs.k8s.io/yaml"
 )
+
+var decUnstructured = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 
 // GetNodeStatus returns NodeStatus.
 func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, cluster *cke.Cluster) (*cke.NodeStatus, error) {
@@ -118,7 +125,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			})
 			return nil, err
 		}
-		err = yaml.Unmarshal(configStr, &schedulerConfig)
+		_, _, err = decUnstructured.Decode(configStr, nil, &schedulerConfig)
 		if err != nil {
 			log.Error("failed to unmarshal component config yaml to unstructured", map[string]interface{}{
 				log.FnError: err,
@@ -140,7 +147,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 				})
 				return nil, err
 			}
-			err = yaml.Unmarshal(policyStr, &policy)
+			_, _, err = decUnstructured.Decode(policyStr, nil, &policy)
 			if err != nil {
 				log.Error("failed to unmarshal policy config json", map[string]interface{}{
 					log.FnError: err,
@@ -154,7 +161,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			status.Scheduler.Priorities = policy.Priorities
 		} else {
 			schedulerConfigV1Alpha2 := schedulerv1alpha2.KubeSchedulerConfiguration{}
-			err = yaml.Unmarshal(configStr, &schedulerConfigV1Alpha2)
+			_, _, err = decUnstructured.Decode(configStr, nil, &schedulerConfigV1Alpha2)
 			if err != nil {
 				log.Error("failed to unmarshal component config yaml", map[string]interface{}{
 					log.FnError: err,
@@ -191,7 +198,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		cfgData, _, err := agent.Run("cat /etc/kubernetes/kubelet/config.yml")
 		if err == nil {
 			var v kubeletv1beta1.KubeletConfiguration
-			err = yaml.Unmarshal(cfgData, &v)
+			_, _, err = decUnstructured.Decode(cfgData, nil, &v)
 			if err == nil {
 				status.Kubelet.Config = &v
 			}
@@ -379,153 +386,59 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	rkeys, err := inf.Storage().ListResources(ctx)
+	resources, err := inf.Storage().GetAllResources(ctx)
 	if err != nil {
 		return cke.KubernetesClusterStatus{}, err
 	}
-	for _, res := range static.Resources {
-		rkeys = append(rkeys, res.Key)
+	resources = append(resources, static.Resources...)
+
+	cfg, err := inf.K8sConfig(ctx, n)
+	if err != nil {
+		return cke.KubernetesClusterStatus{}, err
+	}
+	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		return cke.KubernetesClusterStatus{}, err
+	}
+	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
+	decUnstructured := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+	dyn, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return cke.KubernetesClusterStatus{}, err
 	}
 
-	k8s, err := inf.K8sClient(ctx, n)
-	if err != nil {
-		return cke.KubernetesClusterStatus{}, err
-	}
 	s.ResourceStatuses = make(map[string]cke.ResourceStatus)
-	for _, rkey := range rkeys {
-		parts := strings.Split(rkey, "/")
-		switch parts[0] {
-		case "Namespace":
-			obj, err := k8s.CoreV1().Namespaces().Get(ctx, parts[1], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "ServiceAccount":
-			obj, err := k8s.CoreV1().ServiceAccounts(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "ConfigMap":
-			obj, err := k8s.CoreV1().ConfigMaps(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "Service":
-			obj, err := k8s.CoreV1().Services(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "PodSecurityPolicy":
-			obj, err := k8s.PolicyV1beta1().PodSecurityPolicies().Get(ctx, parts[1], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "NetworkPolicy":
-			obj, err := k8s.NetworkingV1().NetworkPolicies(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "Role":
-			obj, err := k8s.RbacV1().Roles(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "RoleBinding":
-			obj, err := k8s.RbacV1().RoleBindings(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "ClusterRole":
-			obj, err := k8s.RbacV1().ClusterRoles().Get(ctx, parts[1], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "ClusterRoleBinding":
-			obj, err := k8s.RbacV1().ClusterRoleBindings().Get(ctx, parts[1], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "Deployment":
-			obj, err := k8s.AppsV1().Deployments(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "DaemonSet":
-			obj, err := k8s.AppsV1().DaemonSets(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "CronJob":
-			obj, err := k8s.BatchV2alpha1().CronJobs(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		case "PodDisruptionBudget":
-			obj, err := k8s.PolicyV1beta1().PodDisruptionBudgets(parts[1]).Get(ctx, parts[2], metav1.GetOptions{})
-			if k8serr.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return cke.KubernetesClusterStatus{}, err
-			}
-			s.SetResourceStatus(rkey, obj.Annotations, len(obj.GetManagedFields()) != 0)
-		default:
-			log.Warn("unknown resource kind", map[string]interface{}{
-				"kind": parts[0],
-			})
+	for _, res := range resources {
+		obj := &unstructured.Unstructured{}
+		_, gvk, err := decUnstructured.Decode(res.Definition, nil, obj)
+		if err != nil {
+			return cke.KubernetesClusterStatus{}, err
 		}
+
+		mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+		if err != nil {
+			return cke.KubernetesClusterStatus{}, fmt.Errorf("failed to find rest mapping for %s: %w", gvk.String(), err)
+		}
+
+		var dr dynamic.ResourceInterface
+		if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+			ns := obj.GetNamespace()
+			if ns == "" {
+				return cke.KubernetesClusterStatus{}, fmt.Errorf("no namespace for %s: name=%s", gvk.String(), obj.GetName())
+			}
+			dr = dyn.Resource(mapping.Resource).Namespace(ns)
+		} else {
+			dr = dyn.Resource(mapping.Resource)
+		}
+
+		obj, err = dr.Get(ctx, obj.GetName(), metav1.GetOptions{})
+		if k8serr.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return cke.KubernetesClusterStatus{}, err
+		}
+		s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0)
 	}
 
 	return s, nil

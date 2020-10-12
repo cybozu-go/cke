@@ -74,7 +74,7 @@ func (c prepareControllerManagerFilesCommand) Run(ctx context.Context, inf cke.I
 	const kubeconfigPath = "/etc/kubernetes/controller-manager/kubeconfig"
 	storage := inf.Storage()
 
-	ca, err := storage.GetCACertificate(ctx, "kubernetes")
+	ca, err := storage.GetCACertificate(ctx, cke.CAKubernetes)
 	if err != nil {
 		return err
 	}

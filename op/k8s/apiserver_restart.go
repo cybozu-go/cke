@@ -143,7 +143,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	}
 
 	// CA of k8s cluster.
-	ca, err := storage.GetCACertificate(ctx, "kubernetes")
+	ca, err := storage.GetCACertificate(ctx, cke.CAKubernetes)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	}
 
 	// CA of etcd server.
-	etcdCA, err := storage.GetCACertificate(ctx, "server")
+	etcdCA, err := storage.GetCACertificate(ctx, cke.CAServer)
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	}
 
 	// Aggregation cert.
-	agCert, err := storage.GetCACertificate(ctx, "kubernetes-aggregation")
+	agCert, err := storage.GetCACertificate(ctx, cke.CAKubernetesAggregation)
 	if err != nil {
 		return err
 	}

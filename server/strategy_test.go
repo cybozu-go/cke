@@ -1147,7 +1147,7 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().withResources(
 				append(testResources, cke.ResourceDefinition{
 					Key:        "ConfigMap/foo/bar",
-					Kind:       cke.KindConfigMap,
+					Kind:       "ConfigMap",
 					Namespace:  "foo",
 					Name:       "bar",
 					Revision:   1,
@@ -1160,7 +1160,7 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().withResources(
 				[]cke.ResourceDefinition{{
 					Key:        "Namespace/foo",
-					Kind:       cke.KindNamespace,
+					Kind:       "Namespace",
 					Name:       "foo",
 					Revision:   2,
 					Definition: []byte(`{"apiversion":"v1","kind":"Namespace","metadata":{"name":"foo"}}`),

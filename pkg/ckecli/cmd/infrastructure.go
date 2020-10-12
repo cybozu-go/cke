@@ -76,7 +76,7 @@ func (i *cliInfrastructure) NewEtcdClient(ctx context.Context, endpoints []strin
 		return nil, errors.New("no control plane")
 	}
 
-	serverCA, err := storage.GetCACertificate(ctx, "server")
+	serverCA, err := storage.GetCACertificate(ctx, cke.CAServer)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (i *cliInfrastructure) K8sClient(ctx context.Context, n *cke.Node) (*kubern
 	if err != nil {
 		return nil, err
 	}
-	ca, err := i.Storage().GetCACertificate(ctx, "kubernetes")
+	ca, err := i.Storage().GetCACertificate(ctx, cke.CAKubernetes)
 	if err != nil {
 		return nil, err
 	}

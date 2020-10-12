@@ -464,7 +464,7 @@ func testStorageResource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expected := []string{"Namespace/foo", "ServiceAccount/foo/sa1", "ConfigMap/foo/conf1"}
+	expected := []string{"Namespace/foo", "ServiceAccount/foo/sa1", "ConfigMap/foo/conf1", "Pod/foo/pod1"}
 	actual := make([]string, len(resources))
 	for i, r := range resources {
 		actual[i] = r.Key

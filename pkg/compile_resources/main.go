@@ -80,7 +80,7 @@ func loadResources(fname string, images map[string]string) ([]cke.ResourceDefini
 		}
 
 		parts := strings.Split(key, "/")
-		kind := cke.Kind(parts[0])
+		kind := parts[0]
 		var namespace, name string
 		if len(parts) == 2 {
 			name = parts[1]

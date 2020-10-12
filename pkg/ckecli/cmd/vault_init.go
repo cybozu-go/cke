@@ -21,7 +21,6 @@ const (
 )
 
 type caParams struct {
-	vaultPath  string
 	commonName string
 	key        string
 }
@@ -29,30 +28,28 @@ type caParams struct {
 var (
 	cas = []caParams{
 		{
-			vaultPath:  cke.CAServer,
 			commonName: "server CA",
-			key:        "server",
+			key:        cke.CAServer,
 		},
 		{
-
-			vaultPath:  cke.CAEtcdPeer,
 			commonName: "etcd peer CA",
-			key:        "etcd-peer",
+			key:        cke.CAEtcdPeer,
 		},
 		{
-			vaultPath:  cke.CAEtcdClient,
 			commonName: "etcd client CA",
-			key:        "etcd-client",
+			key:        cke.CAEtcdClient,
 		},
 		{
-			vaultPath:  cke.CAKubernetes,
 			commonName: "kubernetes CA",
-			key:        "kubernetes",
+			key:        cke.CAKubernetes,
 		},
 		{
-			vaultPath:  cke.CAKubernetesAggregation,
 			commonName: "kubernetes aggregation CA",
-			key:        "kubernetes-aggregation",
+			key:        cke.CAKubernetesAggregation,
+		},
+		{
+			commonName: "kubernetes webhook CA",
+			key:        cke.CAWebhook,
 		},
 	}
 
@@ -205,14 +202,15 @@ func createPKI(ctx context.Context, vc *vault.Client, ca caParams) error {
 	if err != nil {
 		return err
 	}
-	if _, ok := mounts[ca.vaultPath]; ok {
+	pkiKey := cke.VaultPKIKey(ca.key)
+	if _, ok := mounts[pkiKey]; ok {
 		return nil
 	}
-	if _, ok := mounts[ca.vaultPath+"/"]; ok {
+	if _, ok := mounts[pkiKey+"/"]; ok {
 		return nil
 	}
 
-	return vc.Sys().Mount(ca.vaultPath, &vault.MountInput{
+	return vc.Sys().Mount(pkiKey, &vault.MountInput{
 		Type: "pki",
 		Config: vault.MountConfigInput{
 			MaxLeaseTTL:     ttl100Year,
@@ -231,7 +229,8 @@ func createRootCA(ctx context.Context, vc *vault.Client, ca caParams) error {
 		return err
 	}
 
-	secret, err := vc.Logical().Write(path.Join(ca.vaultPath, "/root/generate/internal"), map[string]interface{}{
+	pkiKey := cke.VaultPKIKey(ca.key)
+	secret, err := vc.Logical().Write(path.Join(pkiKey, "/root/generate/internal"), map[string]interface{}{
 		"common_name": ca.commonName,
 		"ttl":         ttl100Year,
 		"format":      "pem",

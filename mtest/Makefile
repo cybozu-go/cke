@@ -29,15 +29,10 @@ CT_VERSION = 0.6.1
 CT = /usr/local/bin/ct
 SUDO = sudo
 PACKAGES = libseccomp-dev automake autoconf libtool
-SUITE = ./functions
-ifeq ($(findstring /,$(SUITE)),)
-  SUITE_PACKAGE = ./$(SUITE)
-else
-  SUITE_PACKAGE = $(SUITE)
-endif
+SUITE = functions
 CLUSTER := cke-cluster.yml
 
-export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO CONTAINER_RUNTIME SUITE_PACKAGE
+export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO SUITE
 
 # non-configuration variables
 MANAGEMENT_ETCD_ARCHIVE := etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
@@ -50,13 +45,14 @@ CKE_IMAGE := $(abspath $(OUTPUT))/cke.img
 CKE_IMAGE_URL := quay.io/cybozu/cke:dev
 CKECLUSTER := $(abspath $(OUTPUT))/cke-cluster.yml
 CKECONFIG := $(abspath $(OUTPUT))/cke.yml
-ETCDCTL := $(abspath $(OUTPUT))/etcdctl
 KUBECTL := $(abspath $(OUTPUT))/kubectl
 LOCALPVYAML := $(realpath ./local-pv.yml)
 NGINXYAML := $(realpath ./nginx.yml)
 POLICYYAML := $(realpath ./mtest-policy.yml)
+WEBHOOKYAML := $(realpath ./webhook-resources.yaml)
 
-export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL ETCDCTL POLICYYAML NGINXYAML LOCALPVYAML
+export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL \
+	POLICYYAML NGINXYAML LOCALPVYAML WEBHOOKYAML
 
 CONTAINERD_FILES = \
 	$(OUTPUT)/containerd \
@@ -274,7 +270,7 @@ $(OUTPUT)/cke-cluster.yml: $(CLUSTER)
 		-e 's/__NODE6__/$(NODE6)/' \
 		-e 's/__RUNTIME__/$(CONTAINER_RUNTIME)/' \
 		-e 's|__RUNTIME_ENDPOINT__|$(RUNTIME_ENDPOINT)|' $< > $@
-ifeq ($(notdir $(SUITE_PACKAGE)),robustness)
+ifeq ($(SUITE),robustness)
 	sed -i -e '/address: $(NODE5)/a\    user: cybozu\n  - address: 10.0.0.107' $@
 endif
 
@@ -296,10 +292,10 @@ $(OUTPUT)/crictl:
 
 # Targets
 test: $(TEST_DEPS)
-	./test.sh "$(TARGET)"
+	./test.sh
 
 bootstrap: $(TEST_DEPS)
-	SUITE_PACKAGE=./functions ./test.sh "can run Pods"
+	./test.sh "can run Pods"
 
 placemat: $(PLACEMAT_DEPS)
 	sudo rm -rf $(PLACEMAT_DATADIR)

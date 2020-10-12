@@ -3,8 +3,10 @@ package mtest
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"testing"
 	"time"
 
 	"github.com/cybozu-go/cke"
@@ -17,11 +19,20 @@ const (
 	dummyCNIConf = "/etc/cni/net.d/00-dummy.conf"
 )
 
-// RunBeforeSuite is for Ginkgo BeforeSuite
-func RunBeforeSuite(img string) {
-	if img == "" {
-		img = ckeImageURL
+func TestMtest(t *testing.T) {
+	if os.Getenv("SSH_PRIVKEY") == "" {
+		t.Skip("no SSH_PRIVKEY envvar")
 	}
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Multi-host test for cke")
+}
+
+var _ = BeforeSuite(func() {
+	img := ckeImageURL
+	if testSuite == "upgrade" {
+		img = "quay.io/cybozu/cke:" + cke.Version
+	}
+
 	fmt.Println("Preparing...")
 
 	SetDefaultEventuallyPollingInterval(3 * time.Second)
@@ -60,7 +71,7 @@ func RunBeforeSuite(img string) {
 			defer f.Close()
 			remoteFilename := filepath.Join("/tmp", filepath.Base(testFile))
 			for _, host := range []string{host1, host2} {
-				_, err := f.Seek(0, os.SEEK_SET)
+				_, err := f.Seek(0, io.SeekStart)
 				Expect(err).NotTo(HaveOccurred())
 				stdout, stderr, err := execAtWithStream(host, f, "dd", "of="+remoteFilename)
 				Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
@@ -86,7 +97,7 @@ func RunBeforeSuite(img string) {
 	remoteFilename := filepath.Join("/etc/cke", filepath.Base(ckeConfigPath))
 	for _, host := range []string{host1, host2} {
 		execSafeAt(host, "mkdir", "-p", "/etc/cke")
-		_, err := f.Seek(0, os.SEEK_SET)
+		_, err := f.Seek(0, io.SeekStart)
 		Expect(err).NotTo(HaveOccurred())
 		stdout, stderr, err := execAtWithStream(host, f, "sudo", "dd", "of="+remoteFilename)
 		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
@@ -119,4 +130,28 @@ func RunBeforeSuite(img string) {
 	ckecliSafe("kubernetes", "issue", ">", ".kube/config")
 
 	fmt.Println("Begin tests...")
-}
+})
+
+// This must be the only top-level test container.
+// Other tests and test containers must be listed in this.
+var _ = Describe("Test CKE", func() {
+	switch testSuite {
+	case "functions":
+		Context("ckecli", testCKECLI)
+		Context("kubernetes", testKubernetes)
+	case "operators":
+		Context("operators", func() {
+			testOperators(false)
+		})
+	case "robustness":
+		Context("operators", func() {
+			testStopCP()
+			testOperators(true)
+		})
+	case "upgrade":
+		Context("upgrade", func() {
+			testUpgrade()
+			Context("kubernetes", testKubernetes)
+		})
+	}
+})

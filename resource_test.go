@@ -145,19 +145,6 @@ spec:
 			false,
 		},
 		{
-			"ClusterNetworkPolicy",
-			`apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: default-deny
-spec:
-  podSelector: {}
-  policyTypes:
-  - Ingress`,
-			"NetworkPolicy//default-deny",
-			false,
-		},
-		{
 			"Role",
 			`kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
@@ -399,41 +386,32 @@ spec:
 			false,
 		},
 		{
-			"StatefulSet",
-			`apiVersion: apps/v1
-kind: StatefulSet
+			"No apiVersion",
+			`kind: ConfigMap
 metadata:
   name: web
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: nginx # has to match .spec.template.metadata.labels
-  serviceName: "nginx"
-  replicas: 3 # by default is 1
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: nginx # has to match .spec.selector.matchLabels
-    spec:
-      terminationGracePeriodSeconds: 10
-      containers:
-      - name: nginx
-        image: k8s.gcr.io/nginx-slim:0.8
-        ports:
-        - containerPort: 80
-          name: web
-        volumeMounts:
-        - name: www
-          mountPath: /usr/share/nginx/html
-  volumeClaimTemplates:
-  - metadata:
-      name: www
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      storageClassName: "my-storage-class"
-      resources:
-        requests:
-          storage: 1Gi`,
+  namespace: default
+`,
+			"",
+			true,
+		},
+		{
+			"No kind",
+			`apiVersion: v1
+metadata:
+  name: web
+  namespace: default
+`,
+			"",
+			true,
+		},
+		{
+			"No name",
+			`apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: default
+`,
 			"",
 			true,
 		},

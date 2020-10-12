@@ -13,8 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// TestOperators tests all CKE operators
-func TestOperators(isDegraded bool) {
+func testOperators(isDegraded bool) {
 	AfterEach(initializeControlPlane)
 
 	It("run all operators / commanders", func() {
@@ -162,7 +161,8 @@ func TestOperators(isDegraded bool) {
 				Effect: corev1.TaintEffectNoSchedule,
 			},
 		}
-		ckecliClusterSet(cluster)
+		_, err = ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
 
 		// reboot node2 and node4 to check bootstrap taints
 		rebootTime := time.Now()

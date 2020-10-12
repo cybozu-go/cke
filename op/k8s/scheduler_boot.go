@@ -76,7 +76,7 @@ type prepareSchedulerFilesCommand struct {
 func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	storage := inf.Storage()
 
-	ca, err := storage.GetCACertificate(ctx, "kubernetes")
+	ca, err := storage.GetCACertificate(ctx, cke.CAKubernetes)
 	if err != nil {
 		return err
 	}

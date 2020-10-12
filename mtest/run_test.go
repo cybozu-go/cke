@@ -304,23 +304,13 @@ func ckecliWithInput(input []byte, args ...string) ([]byte, []byte, error) {
 	return execAtWithInput(host1, input, args...)
 }
 
-func localTempFile(body string) *os.File {
-	f, err := ioutil.TempFile("", "cke-mtest")
-	Expect(err).NotTo(HaveOccurred())
-	_, err = f.WriteString(body)
-	Expect(err).NotTo(HaveOccurred())
-	err = f.Close()
-	Expect(err).NotTo(HaveOccurred())
-	return f
-}
-
 func remoteTempFile(body string) string {
 	f, err := ioutil.TempFile("", "cke-mtest")
 	Expect(err).NotTo(HaveOccurred())
 	defer f.Close()
 	_, err = f.WriteString(body)
 	Expect(err).NotTo(HaveOccurred())
-	_, err = f.Seek(0, os.SEEK_SET)
+	_, err = f.Seek(0, io.SeekStart)
 	Expect(err).NotTo(HaveOccurred())
 	remoteFile := filepath.Join("/tmp", filepath.Base(f.Name()))
 	_, _, err = execAtWithStream(host1, f, "dd", "of="+f.Name())
@@ -404,42 +394,11 @@ func ckecliClusterSet(cluster *cke.Cluster) (time.Time, error) {
 	return time.Now(), err
 }
 
-func stopManagementEtcd(client *ssh.Client) error {
-	command := "sudo systemctl stop my-etcd.service; sudo rm -rf /home/cybozu/default.etcd"
-	sess, err := client.NewSession()
-	if err != nil {
-		return err
-	}
-	defer sess.Close()
-	sess.Run(command)
-	return nil
-}
-
-func stopVault(client *ssh.Client) error {
-	command := "sudo systemctl stop my-vault.service"
-	sess, err := client.NewSession()
-	if err != nil {
-		return err
-	}
-	defer sess.Close()
-	sess.Run(command)
-	return nil
-}
-
 func setupCKE(img string) {
 	err := stopCKE()
 	Expect(err).NotTo(HaveOccurred())
 	err = runCKE(img)
 	Expect(err).NotTo(HaveOccurred())
-}
-
-type checkError struct {
-	Ops    []string
-	Status *cke.ClusterStatus
-}
-
-func (e checkError) Error() string {
-	return strings.Join(e.Ops, ",")
 }
 
 func checkCluster(c *cke.Cluster, ts time.Time) error {
@@ -497,10 +456,6 @@ func setFailurePoint(failurePoint, code string) {
 
 func injectFailure(failurePoint string) {
 	setFailurePoint(failurePoint, "panic(\"cke-mtest\")")
-}
-
-func deleteFailure(failurePoint string) {
-	setFailurePoint(failurePoint, "")
 }
 
 func etcdctl(crt, key, ca string, args ...string) ([]byte, []byte, error) {

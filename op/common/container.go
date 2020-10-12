@@ -151,7 +151,7 @@ func (c stopContainerCommand) Run(ctx context.Context, inf cke.Infrastructure, _
 			err = ce.Remove(c.name)
 			log.Info("stop container", map[string]interface{}{
 				"container": c.name,
-				"elapsed":   time.Now().Sub(begin).Seconds(),
+				"elapsed":   time.Since(begin).Seconds(),
 			})
 			return err
 		})
@@ -207,7 +207,7 @@ func (c killContainersCommand) Run(ctx context.Context, inf cke.Infrastructure, 
 	err := env.Wait()
 	log.Info("kill container", map[string]interface{}{
 		"container": c.name,
-		"elapsed":   time.Now().Sub(begin).Seconds(),
+		"elapsed":   time.Since(begin).Seconds(),
 	})
 	return err
 }

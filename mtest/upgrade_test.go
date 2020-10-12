@@ -7,8 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// TestUpgrade tests CKE upgrade operators
-func TestUpgrade() {
+func testUpgrade() {
 	It("tests Kubernetes before reboot", func() {
 		Eventually(func() error {
 			_, _, err := kubectl("get", "sa/default")

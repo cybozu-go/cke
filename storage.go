@@ -387,7 +387,6 @@ func (s Storage) WatchRecords(ctx context.Context, initialCount int64) (RecordCh
 				recordCh <- r
 			}
 		}
-		return
 	}()
 
 	return recordCh, nil
@@ -557,12 +556,7 @@ func (s Storage) GetAllResources(ctx context.Context) ([]ResourceDefinition, err
 	for _, kv := range resp.Kvs {
 		key := string(kv.Key[len(KeyResourcePrefix):])
 		parts := strings.Split(key, "/")
-		kind := Kind(parts[0])
-
-		if !kind.IsSupported() {
-			// ignore unsupported resources
-			continue
-		}
+		kind := parts[0]
 
 		var namespace, name string
 		switch len(parts) {

@@ -15,14 +15,20 @@ import (
 // CNAPIServer is the common name of API server for aggregation
 const CNAPIServer = "front-proxy-client"
 
-// CA keys in Vault
+// CA keys for etcd storage.
 const (
-	CAServer                = "cke/ca-server"
-	CAEtcdPeer              = "cke/ca-etcd-peer"
-	CAEtcdClient            = "cke/ca-etcd-client"
-	CAKubernetes            = "cke/ca-kubernetes"
-	CAKubernetesAggregation = "cke/ca-kubernetes-aggregation"
+	CAServer                = "server"
+	CAEtcdPeer              = "etcd-peer"
+	CAEtcdClient            = "etcd-client"
+	CAKubernetes            = "kubernetes"
+	CAKubernetesAggregation = "kubernetes-aggregation"
+	CAWebhook               = "kubernetes-webhook"
 )
+
+// VaultPKIKey returns a key string for Vault corresponding to a CA.
+func VaultPKIKey(caKey string) string {
+	return "cke/ca-" + caKey
+}
 
 // CAKeys is list of CA keys
 var CAKeys = []string{
@@ -31,6 +37,7 @@ var CAKeys = []string{
 	CAEtcdClient,
 	CAKubernetes,
 	CAKubernetesAggregation,
+	CAWebhook,
 }
 
 // Role name in Vault
@@ -365,24 +372,48 @@ func (a AggregationCA) IssueClientCertificate(ctx context.Context, inf Infrastru
 		})
 }
 
+// WebhookCA is a certificate authority for kubernetes admission webhooks
+type WebhookCA struct{}
+
+// IssueCertificate issues TLS server certificate
+// `namespace` and `name` specifies the namespace/name of a webhook Service.
+func (WebhookCA) IssueCertificate(ctx context.Context, inf Infrastructure, namespace, name string) (cert, key string, err error) {
+	altNames := []string{name, name + "." + namespace, name + "." + namespace + ".svc"}
+	return issueCertificate(inf, CAWebhook, RoleSystem, false,
+		map[string]interface{}{
+			"ttl":               "175200h",
+			"max_ttl":           "175200h",
+			"enforce_hostnames": "false",
+			"allow_any_name":    "true",
+			"server_flag":       "true",
+			"client_flag":       "false",
+		},
+		map[string]interface{}{
+			"common_name":          namespace + "/" + name,
+			"alt_names":            strings.Join(altNames, ","),
+			"exclude_cn_from_sans": "true",
+		})
+}
+
 func issueCertificate(inf Infrastructure, ca, role string, onetime bool, roleOpts, certOpts map[string]interface{}) (crt, key string, err error) {
+	pkiKey := VaultPKIKey(ca)
 	client, err := inf.Vault()
 	if err != nil {
 		return "", "", err
 	}
 
-	err = addRole(client, ca, role, roleOpts)
+	err = addRole(client, pkiKey, role, roleOpts)
 	if err != nil {
 		return "", "", err
 	}
 
-	secret, err := client.Logical().Write(path.Join(ca, "issue", role), certOpts)
+	secret, err := client.Logical().Write(path.Join(pkiKey, "issue", role), certOpts)
 	if err != nil {
 		return "", "", err
 	}
 	crt = secret.Data["certificate"].(string)
 	if onetime {
-		if err := deleteRole(client, ca, role); err != nil {
+		if err := deleteRole(client, pkiKey, role); err != nil {
 			return "", "", err
 		}
 	}
