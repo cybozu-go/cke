@@ -73,7 +73,7 @@ spec:
       hostNetwork: true
       tolerations:
         - operator: Exists
-      terminationGracePeriodSeconds: 0
+      terminationGracePeriodSeconds: 1
       serviceAccountName: cke-node-dns
       containers:
         - name: unbound
