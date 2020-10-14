@@ -210,13 +210,19 @@ func createPKI(ctx context.Context, vc *vault.Client, ca caParams) error {
 		return nil
 	}
 
-	return vc.Sys().Mount(pkiKey, &vault.MountInput{
+	err = vc.Sys().Mount(pkiKey, &vault.MountInput{
 		Type: "pki",
 		Config: vault.MountConfigInput{
 			MaxLeaseTTL:     ttl100Year,
 			DefaultLeaseTTL: ttl10Year,
 		},
 	})
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("mounted pki on %s\n", pkiKey)
+	return nil
 }
 
 func createRootCA(ctx context.Context, vc *vault.Client, ca caParams) error {
@@ -242,6 +248,8 @@ func createRootCA(ctx context.Context, vc *vault.Client, ca caParams) error {
 	if !ok {
 		return fmt.Errorf("failed to issue ca: %#v", secret.Warnings)
 	}
+
+	fmt.Printf("issued root certificate for %s\n", pkiKey)
 	return storage.PutCACertificate(ctx, ca.key, secret.Data["certificate"].(string))
 }
 
@@ -261,7 +269,13 @@ func createKV(ctx context.Context, vc *vault.Client) error {
 		Type:    "kv",
 		Options: map[string]string{"version": "1"},
 	}
-	return vc.Sys().Mount(cke.CKESecret, kv1)
+	err = vc.Sys().Mount(cke.CKESecret, kv1)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("mounted kv version 1 on %s\n", cke.CKESecret)
+	return nil
 }
 
 var vaultInitCfg struct {
