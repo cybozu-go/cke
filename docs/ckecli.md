@@ -10,6 +10,48 @@ $ ckecli [--config FILE] <subcommand> args...
 | `--config`  | `/etc/cke/config.yml` | config file path    |
 | `--version` |                       | show ckecli version |
 
+- [`ckecli cluster`](#ckecli-cluster)
+  - [`ckecli cluster set FILE`](#ckecli-cluster-set-file)
+  - [`ckecli cluster get`](#ckecli-cluster-get)
+- [`ckecli constraints`](#ckecli-constraints)
+  - [`ckecli constraints set NAME VALUE`](#ckecli-constraints-set-name-value)
+  - [`ckecli constraints show`](#ckecli-constraints-show)
+- [`ckecli vault`](#ckecli-vault)
+  - [`ckecli vault init`](#ckecli-vault-init)
+  - [`ckecli vault config JSON`](#ckecli-vault-config-json)
+  - [`ckecli vault ssh-privkey [--host=HOST] FILE`](#ckecli-vault-ssh-privkey---hosthost-file)
+  - [`ckecli vault enckey`](#ckecli-vault-enckey)
+- [`ckecli ca`](#ckecli-ca)
+  - [`ckecli ca set NAME PEM`](#ckecli-ca-set-name-pem)
+  - [`ckecli ca get NAME`](#ckecli-ca-get-name)
+- [`ckecli leader`](#ckecli-leader)
+- [`ckecli history [OPTION]...`](#ckecli-history-option)
+- [`ckecli images`](#ckecli-images)
+- [`ckecli etcd`](#ckecli-etcd)
+  - [`ckecli etcd user-add NAME PREFIX`](#ckecli-etcd-user-add-name-prefix)
+  - [`ckecli etcd issue [--ttl=TTL] [--output=FORMAT] NAME`](#ckecli-etcd-issue---ttlttl---outputformat-name)
+  - [`ckecli etcd root-issue [--output=FORMAT]`](#ckecli-etcd-root-issue---outputformat)
+  - [`ckecli etcd local-backup`](#ckecli-etcd-local-backup)
+  - [`ckecli etcd backup list`](#ckecli-etcd-backup-list)
+  - [`ckecli etcd backup get BACKUP_NAME`](#ckecli-etcd-backup-get-backup_name)
+- [`ckecli kubernetes`](#ckecli-kubernetes)
+  - [`ckecli kubernetes issue [--ttl=TTL] [--group=GROUPNAME] [--user=USERNAME]`](#ckecli-kubernetes-issue---ttlttl---groupgroupname---userusername)
+- [`ckecli resource`](#ckecli-resource)
+  - [`ckecli resource list`](#ckecli-resource-list)
+  - [`ckecli resource set FILE`](#ckecli-resource-set-file)
+  - [`ckecli resource delete FILE`](#ckecli-resource-delete-file)
+- [`ckecli ssh [user@]NODE [COMMAND...]`](#ckecli-ssh-usernode-command)
+- [`ckecli scp [-r] [[user@]NODE1:]FILE1 ... [[user@]NODE2:]FILE2`](#ckecli-scp--r-usernode1file1--usernode2file2)
+- [`ckecli sabakan`](#ckecli-sabakan)
+  - [`ckecli sabakan enable|disable`](#ckecli-sabakan-enabledisable)
+  - [`ckecli sabakan set-url URL`](#ckecli-sabakan-set-url-url)
+  - [`ckecli sabakan get-url`](#ckecli-sabakan-get-url)
+  - [`ckecli sabakan set-template FILE`](#ckecli-sabakan-set-template-file)
+  - [`ckecli sabakan get-template`](#ckecli-sabakan-get-template)
+  - [`ckecli sabakan set-variables FILE`](#ckecli-sabakan-set-variables-file)
+  - [`ckecli sabakan get-variables`](#ckecli-sabakan-get-variables)
+- [`ckecli status`](#ckecli-status)
+
 ## `ckecli cluster`
 
 ### `ckecli cluster set FILE`
@@ -136,6 +178,28 @@ This subcommand is for human to operate etcd server.
 | Option     | Default value | Description                   |
 | ---------- | ------------- | ----------------------------- |
 | `--output` | `json`        | output format (`json`,`file`) |
+
+### `ckecli etcd local-backup`
+
+This command takes a snapshot of CKE-managed etcd that stores Kubernetes data.
+
+The snapshots are saved in a directory specified with `--dir` flag
+with this format: `etcd-YYYYMMDD-hhmmss.backup`
+
+The date and time is UTC.
+
+Old backups are automatically removed when the number of backup files
+exceed the maximum specified with `--max-backups` flag.
+
+```
+Usage:
+  ckecli etcd local-backup [flags]
+
+Flags:
+      --dir string        the directory to keep the backup files (default "/var/cke/etcd-backups")
+  -h, --help              help for local-backup
+      --max-backups int   the maximum number of backups to keep (default 10)
+```
 
 ### `ckecli etcd backup list`
 

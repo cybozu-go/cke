@@ -3,6 +3,10 @@ package mtest
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/cybozu-go/cke"
 	. "github.com/onsi/ginkgo"
@@ -36,6 +40,31 @@ func testCKECLI() {
 		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
 		stdout, stderr, err = etcdctl(rc, rk, rca, "put", "/a", "test")
 		Expect(err).To(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
+	})
+
+	It("should be able to take backups locally", func() {
+		dir, err := ioutil.TempDir("", "")
+		Expect(err).NotTo(HaveOccurred())
+		defer func() {
+			os.RemoveAll(dir)
+		}()
+
+		ckecliSafe("etcd", "local-backup", "--dir="+dir)
+
+		out := execSafeAt(host1, "ls", dir)
+		names := strings.Fields(string(out))
+		Expect(names).To(HaveLen(1))
+		oldest := names[0]
+		Expect(oldest).To(HavePrefix("etcd-"))
+
+		time.Sleep(2 * time.Second)
+		ckecliSafe("etcd", "local-backup", "--dir="+dir, "--max-backups=2")
+		time.Sleep(2 * time.Second)
+		ckecliSafe("etcd", "local-backup", "--dir="+dir, "--max-backups=2")
+		out = execSafeAt(host1, "ls", dir)
+		names = strings.Fields(string(out))
+		Expect(names).To(HaveLen(2))
+		Expect(names).NotTo(ContainElement(oldest))
 	})
 
 	It("should connect to the CKE managed etcd", func() {

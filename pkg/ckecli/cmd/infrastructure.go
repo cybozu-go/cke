@@ -55,8 +55,8 @@ func (i *cliInfrastructure) Vault() (*vault.Client, error) {
 	return vc, nil
 }
 
-// endpoints are ignored.
-func (i *cliInfrastructure) NewEtcdClient(ctx context.Context, endpoints []string) (*clientv3.Client, error) {
+// The second argument is not used.
+func (i *cliInfrastructure) NewEtcdClient(ctx context.Context, _ []string) (*clientv3.Client, error) {
 	if i.etcd != nil {
 		return i.etcd, nil
 	}
@@ -66,7 +66,7 @@ func (i *cliInfrastructure) NewEtcdClient(ctx context.Context, endpoints []strin
 		return nil, err
 	}
 
-	endpoints = []string{}
+	endpoints := []string{}
 	for _, n := range cluster.Nodes {
 		if n.ControlPlane {
 			endpoints = append(endpoints, fmt.Sprintf("https://%s:2379", n.Address))
