@@ -5,6 +5,17 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.18.2] - 2020-10-18
+
+### Added
+
+- `ckecli etcd local-backup` to take backups of CKE-managed etcd (#375).
+
+### Changed
+
+- Change `terminationGracePeriodSeconds` for node DNS pods from 0 to 1 (#373).
+- `ckecli vault init` outputs messages about what it has done (#374).
+
 ## [1.18.1] - 2020-10-12
 
 ### Added
@@ -47,7 +58,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.18.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.18.2...HEAD
+[1.18.2]: https://github.com/cybozu-go/cke/compare/v1.18.1...v1.18.2
 [1.18.1]: https://github.com/cybozu-go/cke/compare/v1.18.0...v1.18.1
 [1.18.0]: https://github.com/cybozu-go/cke/compare/v1.18.0-rc.1...v1.18.0
 [1.18.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.17.11...v1.18.0-rc.1
