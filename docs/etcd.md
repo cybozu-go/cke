@@ -81,7 +81,7 @@ Backup
 There are two ways to take backups of CKE-managed etcd.
 
 1. Use `ckecli etcd local-backup` to take and save a snapshot of etcd locally.
-2. Use `ckecli etcd backup` to configure CronJob to save snapshots in S3-compatible storage periodically.
+2. Configure CronJob to save snapshots in a filesystem given through a PVC.
 
 The former is described in [ckecli.md](ckecli.md##ckecli-etcd-local-backup).
 
