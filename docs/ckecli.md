@@ -203,13 +203,13 @@ Flags:
 
 ### `ckecli etcd backup list`
 
-List etcd backup files.
+List etcd backup files stored in the Kubernetes cluster.
 
 ### `ckecli etcd backup get BACKUP_NAME`
 
-Download etcd backup file to current directory.
+Download an etcd backup file stored in the Kubernetes cluster to the current directory.
 
-BACKUP_NAME is the name of backup file.
+`BACKUP_NAME` is the name of backup file.
 
 ## `ckecli kubernetes`
 

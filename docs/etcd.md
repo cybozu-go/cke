@@ -78,86 +78,102 @@ The domain name is `cke-etcd.kube-system.svc.<cluster-domain>`.
 Backup
 ------
 
+There are two ways to take backups of CKE-managed etcd.
+
+1. Use `ckecli etcd local-backup` to take and save a snapshot of etcd locally.
+2. Use `ckecli etcd backup` to configure CronJob to save snapshots in S3-compatible storage periodically.
+
+The former is described in [ckecli.md](ckecli.md##ckecli-etcd-local-backup).
+
+The rest are the descriptions of the latter.
+
 When the etcd backup is enabled on cluster configuration, [etcdbackup][] `Pod` and `CronJob` are deployed on Kubernetes cluster to manage compressed etcd snapshot.
 Before enable etcd backup, you need to create `PersistentVolume` and `PersistentVolumeClaim` to store the backup data.
 
 1. Deploy `PersistentVolume` and `PersistentVolumeClaim`. This is example of using local persistent volume in particular node.
-```yaml
----
-kind: StorageClass
-apiVersion: storage.k8s.io/v1
-metadata:
-  name: local-storage
-provisioner: kubernetes.io/no-provisioner
-volumeBindingMode: WaitForFirstConsumer
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: etcdbackup-pv
-spec:
-  capacity:
-    storage: 2Gi
-  accessModes:
-  - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: local-storage
-  local:
-    path: /mnt/disks/etcdbackup
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-      - matchExpressions:
-        - key: kubernetes.io/hostname
-          operator: In
-          values:
-          - 10.0.0.101
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: etcdbackup-pvc
-  namespace: kube-system
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 2Gi
-  storageClassName: local-storage
-```
+
+    ```yaml
+    ---
+    kind: StorageClass
+    apiVersion: storage.k8s.io/v1
+    metadata:
+      name: local-storage
+    provisioner: kubernetes.io/no-provisioner
+    volumeBindingMode: WaitForFirstConsumer
+    ---
+    apiVersion: v1
+    kind: PersistentVolume
+    metadata:
+      name: etcdbackup-pv
+    spec:
+      capacity:
+        storage: 2Gi
+      accessModes:
+      - ReadWriteOnce
+      persistentVolumeReclaimPolicy: Retain
+      storageClassName: local-storage
+      local:
+        path: /mnt/disks/etcdbackup
+      nodeAffinity:
+        required:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+              - 10.0.0.101
+    ---
+    kind: PersistentVolumeClaim
+    apiVersion: v1
+    metadata:
+      name: etcdbackup-pvc
+      namespace: kube-system
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 2Gi
+      storageClassName: local-storage
+    ```
+
 2. Enable etcd backup in `cluster.yml` and set cron schedule. For example:
-```yaml
-options:
-  kubelet:
-    extra_binds:            # Bind mounts local directory for local persistent volume
-    - source: /mnt/disks
-      destination: /mnt/disks
-      read_only: false
-etcd_backup:
-  enabled: enable           # Enable etcd backup
-  pvc_name: etcdbackup-pvc  # Make sure this name is same as `PersistentVolumeClaim` name.
-  schedule: "0 * * * *"     # Cron job format
-  rotate: 14                # Keep a number of backups
-```
+
+    ```yaml
+    options:
+      kubelet:
+        extra_binds:            # Bind mounts local directory for local persistent volume
+        - source: /mnt/disks
+          destination: /mnt/disks
+          read_only: false
+    etcd_backup:
+      enabled: enable           # Enable etcd backup
+      pvc_name: etcdbackup-pvc  # Make sure this name is same as `PersistentVolumeClaim` name.
+      schedule: "0 * * * *"     # Cron job format
+      rotate: 14                # Keep a number of backups
+    ```
+
 3. Run `ckecli cluster set cluster.yml` to deploy etcd backup `CronJob`.
 4. You can find etcd backups in persistent volume after etcd backup `Job` is completed.
-```console
-$ kubectl get job -n kube-system
-NAME                    COMPLETIONS   DURATION   AGE
-etcdbackup-1545803760   1/1           7s         2m23s
 
-$ ckecli etcd backup list
-["snapshot-20181226_054710.db.gz"]
+    ```console
+    $ kubectl get job -n kube-system
+    NAME                    COMPLETIONS   DURATION   AGE
+    etcdbackup-1545803760   1/1           7s         2m23s
+    
+    $ ckecli etcd backup list
+    ["snapshot-20181226_054710.db.gz"]
+    
+    $ ls -l /mnt/disks/etcdbackup/
+    -rw-r--r--. 1 root root 506231 Dec 26 05:47 snapshot-20181226_054710.db.gz
+    ...
+    ```
 
-$ ls -l /mnt/disks/etcdbackup/
--rw-r--r--. 1 root root 506231 Dec 26 05:47 snapshot-20181226_054710.db.gz
-...
-```
-5. Also, You can download it.
-```console
-$ ckecli etcd backup get snapshot-20181226_054710.db.gz
-```
+5. You can download it too.
+
+    ```console
+    $ ckecli etcd backup get snapshot-20181226_054710.db.gz
+    ```
 
 [etcd]: https://github.com/etcd-io/etcd
 [RBAC]: https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/authentication.md
