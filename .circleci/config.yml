@@ -88,6 +88,10 @@ jobs:
     docker:
       - image: docker:stable
     steps:
+      - run:
+          name: Install tools
+          command: |
+            apk add --no-cache git
       - checkout
       - attach_workspace:
           at: /tmp/workspace
