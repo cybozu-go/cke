@@ -7,6 +7,7 @@ a YAML or JSON object with these fields:
 
 - [Node](#node)
 - [Taint](#taint)
+- [Reboot](#reboot)
 - [EtcdBackup](#etcdbackup)
 - [Options](#options)
   - [ServiceParams](#serviceparams)
@@ -25,8 +26,9 @@ a YAML or JSON object with these fields:
 | `service_subnet`      | true     | string       | CIDR subnet for k8s `Service`.                                   |
 | `dns_servers`         | false    | array        | List of upstream DNS server IP addresses.                        |
 | `dns_service`         | false    | string       | Upstream DNS service name with namespace as `namespace/service`. |
-| `etcd_backup`         | false    | `EtcdBackup` | See EtcdBackup.                                                  |
-| `options`             | false    | `Options`    | See options.                                                     |
+| `reboot`              | false    | `Reboot`     | See [Reboot](#reboot).                                           |
+| `etcd_backup`         | false    | `EtcdBackup` | See [EtcdBackup](#etcdbackup).                                   |
+| `options`             | false    | `Options`    | See [Options](#options).                                         |
 
 * Upstream DNS servers can be specified one of the following ways:
     * List server IP addresses in `dns_servers`.
@@ -63,6 +65,24 @@ Taint
 | `key`    | true     | string | The taint key to be applied to a node.                                                                                              |
 | `value`  | false    | string | The taint value corresponding to the taint key.                                                                                     |
 | `effect` | true     | string | The effect of the taint on pods that do not tolerate the taint. Valid effects are `NoSchedule`, `PreferNoSchedule` and `NoExecute`. |
+
+Reboot
+------
+
+| Name                   | Required | Type                             | Description                                       |
+| ---------------------- | -------- | -------------------------------- | ------------------------------------------------- |
+| `command`              | true     | string                           | A command template to reboot and wait for a node. |
+| `protected-namespaces` | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.           |
+
+`command` is a [Go template](https://golang.org/pkg/text/template/) string.
+This template is executed with the [Node data object](cluster.md#node) as the input data.
+CKE expects the command (1) to reboot the node and (2) to wait for the boot-up of the node.
+The command should return zero if reboot has completed.
+If reboot failed or timeout exceeded, the command should return non-zero.
+
+`protected-namespaces` is a label selector for the namespaces where the Pods are deleted gracefully with the Kubernetes eviction API.
+The Pods in the non-protected namespaces are deleted without respecting PodDisruptionBudget.
+If not given, all namespaces are protected.
 
 EtcdBackup
 ----------

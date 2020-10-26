@@ -108,6 +108,21 @@ configuration.
 
 Sabakan URL.
 
+`reboots/`
+----------
+
+The reboot queue.
+
+### `reboots/write-index`
+
+The next index to write reboot queue entry formatted as a decimal string.
+
+### `reboots/data/<16-digit HEX string>`
+
+Each entry of reboot queue is stored with this type of key.
+
+The value is JSON formatted [RebootQueueEntry](reboot.md#rebootqueueentry).
+
 <a name="status"></a>
 `status`
 --------

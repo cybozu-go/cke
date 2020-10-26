@@ -12,6 +12,7 @@ CKE should cover:
     * Bootstrapping from scratch.
     * Boot from fully stopped status.
     * Adding/Removing nodes.
+    * Rebooting nodes.
     * Upgrading Kubernetes and etcd.
     * HA control planes.
     * Host-local DNS cache service.
