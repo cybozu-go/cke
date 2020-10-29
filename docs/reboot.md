@@ -23,11 +23,11 @@ Data schema
 
 ### `RebootQueueEntry`
 
-| Name     | Type     | Description                                |
-| -------- | -------- | ------------------------------------------ |
-| `index`  | uint64   | Index number of entry.                     |
-| `nodes`  | []string | A list of IP addresses of nodes to reboot. |
-| `status` | string   | One of `queued`, `rebooting`, `cancelled`. |
+| Name     | Type     | Description                                   |
+| -------- | -------- | --------------------------------------------- |
+| `index`  | string   | Index number of entry, formatted as a string. |
+| `nodes`  | []string | A list of IP addresses of nodes to reboot.    |
+| `status` | string   | One of `queued`, `rebooting`, `cancelled`.    |
 
 
 Detailed behavior

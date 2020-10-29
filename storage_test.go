@@ -627,6 +627,121 @@ func testStorageSabakan(t *testing.T) {
 	}
 }
 
+func testStorageReboot(t *testing.T) {
+	t.Parallel()
+
+	client := newEtcdClient(t)
+	defer client.Close()
+	storage := Storage{client}
+	ctx := context.Background()
+
+	s, err := concurrency.NewSession(client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	e := concurrency.NewElection(s, KeyLeader)
+	err = e.Campaign(ctx, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	leaderKey := e.Key()
+
+	_, err = storage.GetRebootsEntry(ctx, 0)
+	if err != ErrNotFound {
+		t.Error("unexptected error:", err)
+	}
+
+	_, err = storage.GetRebootsFrontEntry(ctx)
+	if err != ErrNotFound {
+		t.Error("unexptected error:", err)
+	}
+
+	ents, err := storage.GetRebootsEntries(ctx)
+	if err != nil {
+		t.Fatal("GetRebootsEntries failed:", err)
+	}
+	if len(ents) != 0 {
+		t.Error("Unknown entries:", ents)
+	}
+
+	err = storage.DeleteRebootsEntry(ctx, leaderKey, 0)
+	if err != nil {
+		t.Fatal("DeleteRebootsEntry failed:", err)
+	}
+
+	nodes := []string{
+		"1.2.3.4",
+		"5.6.7.8",
+	}
+	entry := NewRebootQueueEntry(nodes)
+	err = storage.RegisterRebootsEntry(ctx, entry)
+	if err != nil {
+		t.Fatal("RegisterRebootsEntry failed:", err)
+	}
+
+	nodes2 := []string{
+		"12.34.56.78",
+	}
+	entry2 := NewRebootQueueEntry(nodes2)
+	err = storage.RegisterRebootsEntry(ctx, entry2)
+	if err != nil {
+		t.Fatal("RegisterRebootsEntry failed:", err)
+	}
+
+	ent, err := storage.GetRebootsEntry(ctx, 1)
+	if err != nil {
+		t.Fatal("GetRebootsEntry failed:", err)
+	}
+	if !cmp.Equal(ent, entry2) {
+		t.Error("GetRebootsEntry returned unexpected result:", cmp.Diff(ent, entry2))
+	}
+
+	ent, err = storage.GetRebootsFrontEntry(ctx)
+	if err != nil {
+		t.Fatal("GetRebootsFrontEntry failed:", err)
+	}
+	if !cmp.Equal(ent, entry) {
+		t.Error("GetRebootsFrontEntry returned unexpected result:", cmp.Diff(ent, entry))
+	}
+
+	entries := []*RebootQueueEntry{entry, entry2}
+	ents, err = storage.GetRebootsEntries(ctx)
+	if err != nil {
+		t.Fatal("GetRebootsEntries failed:", err)
+	}
+	if !cmp.Equal(ents, entries) {
+		t.Error("GetRebootsEntries returned unexpected result:", cmp.Diff(ents, entries))
+	}
+
+	entry.Status = RebootStatusRebooting
+	err = storage.UpdateRebootsEntry(ctx, entry)
+	if err != nil {
+		t.Fatal("UpdateRebootsEntry failed:", err)
+	}
+	ent, err = storage.GetRebootsEntry(ctx, 0)
+	if err != nil {
+		t.Fatal("GetRebootsEntry failed:", err)
+	}
+	if !cmp.Equal(ent, entry) {
+		t.Error("GetRebootsFrontEntry returned unexpected result:", cmp.Diff(ent, entry))
+	}
+
+	err = storage.DeleteRebootsEntry(ctx, leaderKey, 0)
+	if err != nil {
+		t.Fatal("DeleteRebootsEntry failed:", err)
+	}
+	_, err = storage.GetRebootsEntry(ctx, 0)
+	if err != ErrNotFound {
+		t.Error("unexptected error:", err)
+	}
+	err = storage.UpdateRebootsEntry(ctx, entry)
+	if err == nil {
+		t.Error("UpdateRebootsEntry succeeded for deleted entry")
+	}
+}
+
 func testStatus(t *testing.T) {
 	t.Parallel()
 
@@ -677,5 +792,6 @@ func TestStorage(t *testing.T) {
 	t.Run("Maint", testStorageMaint)
 	t.Run("Resource", testStorageResource)
 	t.Run("Sabakan", testStorageSabakan)
+	t.Run("Reboot", testStorageReboot)
 	t.Run("Status", testStatus)
 }

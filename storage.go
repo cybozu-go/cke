@@ -30,6 +30,8 @@ const (
 	KeyClusterRevision       = "cluster-revision"
 	KeyConstraints           = "constraints"
 	KeyLeader                = "leader/"
+	KeyRebootsPrefix         = "reboots/data/"
+	KeyRebootsWriteIndex     = "reboots/write-index"
 	KeyRecords               = "records/"
 	KeyRecordID              = "records"
 	KeyResourcePrefix        = "resource/"
@@ -683,6 +685,179 @@ func (s Storage) SetSabakanURL(ctx context.Context, url string) error {
 // The URL must be an absolute URL pointing GraphQL endpoint.
 func (s Storage) GetSabakanURL(ctx context.Context) (string, error) {
 	return s.getStringValue(ctx, KeySabakanURL)
+}
+
+func rebootsEntryKey(index int64) string {
+	return fmt.Sprintf("%s%016x", KeyRebootsPrefix, index)
+}
+
+// RegisterRebootsEntry enqueues a reboot queue entry to the reboot queue.
+// "Index" of the entry is retrieved and updated in this method. The given value is ignored.
+func (s Storage) RegisterRebootsEntry(ctx context.Context, r *RebootQueueEntry) error {
+RETRY:
+	var writeIndex, writeIndexRev int64
+	resp, err := s.Get(ctx, KeyRebootsWriteIndex)
+	if err != nil {
+		return err
+	}
+	if resp.Count != 0 {
+		value, err := strconv.ParseInt(string(resp.Kvs[0].Value), 10, 64)
+		if err != nil {
+			return err
+		}
+		writeIndex = value
+		writeIndexRev = resp.Kvs[0].ModRevision
+	}
+
+	r.Index = writeIndex
+	data, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+
+	nextWriteIndex := strconv.FormatInt(writeIndex+1, 10)
+	txnResp, err := s.Txn(ctx).
+		If(
+			clientv3.Compare(clientv3.ModRevision(KeyRebootsWriteIndex), "=", writeIndexRev),
+		).
+		Then(
+			clientv3.OpPut(rebootsEntryKey(writeIndex), string(data)),
+			clientv3.OpPut(KeyRebootsWriteIndex, nextWriteIndex),
+		).
+		Commit()
+	if err != nil {
+		return err
+	}
+	if !txnResp.Succeeded {
+		goto RETRY
+	}
+
+	return nil
+}
+
+// UpdateRebootsEntry updates existing reboot queue entry.
+// It always overwrites the contents with a CAS loop.
+// If the entry is not found in the reboot queue, this returns ErrNotFound.
+func (s Storage) UpdateRebootsEntry(ctx context.Context, r *RebootQueueEntry) error {
+	key := rebootsEntryKey(r.Index)
+	data, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+
+RETRY:
+	resp, err := s.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+	if resp.Count == 0 {
+		return ErrNotFound
+	}
+
+	rev := resp.Kvs[0].ModRevision
+	txnResp, err := s.Txn(ctx).
+		If(
+			clientv3.Compare(clientv3.ModRevision(key), "=", rev),
+		).
+		Then(
+			clientv3.OpPut(key, string(data)),
+		).
+		Commit()
+	if err != nil {
+		return err
+	}
+	if !txnResp.Succeeded {
+		goto RETRY
+	}
+
+	return nil
+}
+
+// GetRebootsEntry loads the entry specified by the index from the reboot queue.
+// If the pointed entry is not found, this returns ErrNotFound.
+func (s Storage) GetRebootsEntry(ctx context.Context, index int64) (*RebootQueueEntry, error) {
+	resp, err := s.Get(ctx, rebootsEntryKey(index))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Kvs) == 0 {
+		return nil, ErrNotFound
+	}
+
+	r := new(RebootQueueEntry)
+	err = json.Unmarshal(resp.Kvs[0].Value, r)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func (s Storage) getRebootsEntries(ctx context.Context, count int64) ([]*RebootQueueEntry, error) {
+	opts := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+		clientv3.WithSort(clientv3.SortByKey, clientv3.SortAscend),
+	}
+	if count > 0 {
+		opts = append(opts, clientv3.WithLimit(count))
+	}
+	resp, err := s.Get(ctx, KeyRebootsPrefix, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Kvs) == 0 {
+		return nil, nil
+	}
+
+	reboots := make([]*RebootQueueEntry, len(resp.Kvs))
+	for i, kv := range resp.Kvs {
+		r := new(RebootQueueEntry)
+		err = json.Unmarshal(kv.Value, r)
+		if err != nil {
+			return nil, err
+		}
+		reboots[i] = r
+	}
+
+	return reboots, nil
+}
+
+// GetRebootsEntries loads the entries from the reboot queue.
+func (s Storage) GetRebootsEntries(ctx context.Context) ([]*RebootQueueEntry, error) {
+	return s.getRebootsEntries(ctx, 0)
+}
+
+// GetRebootsFrontEntry loads the front entry from the reboot queue.
+// If the queue is empty, this returns ErrNotFound.
+func (s Storage) GetRebootsFrontEntry(ctx context.Context) (*RebootQueueEntry, error) {
+	reboots, err := s.getRebootsEntries(ctx, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(reboots) == 0 {
+		return nil, ErrNotFound
+	}
+
+	return reboots[0], nil
+}
+
+// DeleteRebootsEntry deletes the entry specified by the index from the reboot queue.
+func (s Storage) DeleteRebootsEntry(ctx context.Context, leaderKey string, index int64) error {
+	resp, err := s.Txn(ctx).
+		If(clientv3util.KeyExists(leaderKey)).
+		Then(clientv3.OpDelete(rebootsEntryKey(index))).
+		Commit()
+	if err != nil {
+		return err
+	}
+	if !resp.Succeeded {
+		return ErrNoLeader
+	}
+
+	return nil
 }
 
 // SetStatus stores the server status.
