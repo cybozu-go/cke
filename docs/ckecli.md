@@ -42,6 +42,10 @@ $ ckecli [--config FILE] <subcommand> args...
   - [`ckecli resource delete FILE`](#ckecli-resource-delete-file)
 - [`ckecli ssh [user@]NODE [COMMAND...]`](#ckecli-ssh-usernode-command)
 - [`ckecli scp [-r] [[user@]NODE1:]FILE1 ... [[user@]NODE2:]FILE2`](#ckecli-scp--r-usernode1file1--usernode2file2)
+- [`ckecli reboot-queue`, `ckecli rq`](#ckecli-reboot-queue-ckecli-rq)
+  - [`ckecli reboot-queue add FILE`](#ckecli-reboot-queue-add-file)
+  - [`ckecli reboot-queue list`](#ckecli-reboot-queue-list)
+  - [`ckecli reboot-queue cancel INDEX`](#ckecli-reboot-queue-cancel-index)
 - [`ckecli sabakan`](#ckecli-sabakan)
   - [`ckecli sabakan enable|disable`](#ckecli-sabakan-enabledisable)
   - [`ckecli sabakan set-url URL`](#ckecli-sabakan-set-url-url)
@@ -73,6 +77,7 @@ Set a constraint on the cluster configuration.
 - `control-plane-count`
 - `minimum-workers`
 - `maximum-workers`
+- `reboot-maximum-unreachable`
 
 ### `ckecli constraints show`
 
@@ -267,6 +272,25 @@ Copy files between hosts via scp.
 | Option | Default value | Description                          |
 | ------ | ------------- | ------------------------------------ |
 | `-r`   | `false`       | Recursively copy entire directories. |
+
+## `ckecli reboot-queue`, `ckecli rq`
+
+`rq` is an alias of `reboot-queue`.
+
+### `ckecli reboot-queue add FILE`
+
+Append the nodes written in `FILE` to the reboot queue.
+The nodes should be specified with their IP addresses.
+If `FILE` is `-`, the contents are read from stdin.
+
+### `ckecli reboot-queue list`
+
+List the entries in the reboot queue.
+The output is a list of [entries](reboot.md#rebootqueueentry) formatted in JSON.
+
+### `ckecli reboot-queue cancel INDEX`
+
+Cancel the specified reboot queue entry.
 
 ## `ckecli sabakan`
 
