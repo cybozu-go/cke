@@ -12,6 +12,7 @@ import (
 
 	"github.com/containernetworking/cni/libcni"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -216,6 +217,14 @@ func (p KubeletParams) GetConfigV1Beta1(base *kubeletv1beta1.KubeletConfiguratio
 	return &cfg, nil
 }
 
+// Reboot is a set of configurations for reboot.
+type Reboot struct {
+	Command                []string              `json:"command"`
+	EvictionTimeoutSeconds *int                  `json:"eviction_timeout_seconds,omitempty"`
+	CommandTimeoutSeconds  *int                  `json:"command_timeout_seconds,omitempty"`
+	ProtectedNamespaces    *metav1.LabelSelector `json:"protected_namespaces,omitempty"`
+}
+
 // EtcdBackup is a set of configurations for etcdbackup.
 type EtcdBackup struct {
 	Enabled  bool   `json:"enabled"`
@@ -244,6 +253,7 @@ type Cluster struct {
 	ServiceSubnet string     `json:"service_subnet"`
 	DNSServers    []string   `json:"dns_servers"`
 	DNSService    string     `json:"dns_service"`
+	Reboot        Reboot     `json:"reboot"`
 	EtcdBackup    EtcdBackup `json:"etcd_backup"`
 	Options       Options    `json:"options"`
 }
@@ -285,6 +295,11 @@ func (c *Cluster) Validate(isTmpl bool) error {
 		if len(fields) != 2 {
 			return errors.New("invalid DNS service (no namespace?): " + c.DNSService)
 		}
+	}
+
+	err = validateReboot(c.Reboot)
+	if err != nil {
+		return err
 	}
 
 	err = validateEtcdBackup(c.EtcdBackup)
@@ -409,6 +424,21 @@ func filterNodes(nodes []*Node, f func(n *Node) bool) []*Node {
 		}
 	}
 	return filtered
+}
+
+func validateReboot(reboot Reboot) error {
+	if reboot.EvictionTimeoutSeconds != nil && *reboot.EvictionTimeoutSeconds <= 0 {
+		return errors.New("eviction_timeout_seconds must be positive")
+	}
+	if reboot.CommandTimeoutSeconds != nil && *reboot.CommandTimeoutSeconds < 0 {
+		return errors.New("command_timeout_seconds must not be negative")
+	}
+	// nil is safe for LabelSelectorAsSelector
+	_, err := metav1.LabelSelectorAsSelector(reboot.ProtectedNamespaces)
+	if err != nil {
+		return fmt.Errorf("invalid label selector: %w", err)
+	}
+	return nil
 }
 
 func validateEtcdBackup(etcdBackup EtcdBackup) error {

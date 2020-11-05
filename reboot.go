@@ -25,8 +25,3 @@ func NewRebootQueueEntry(nodes []string) *RebootQueueEntry {
 		Status: RebootStatusQueued,
 	}
 }
-
-// Cancel cancels the entry.
-func (r *RebootQueueEntry) Cancel() {
-	r.Status = RebootStatusCancelled
-}

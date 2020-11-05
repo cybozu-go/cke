@@ -4,9 +4,10 @@ import "errors"
 
 // Constraints is a set of conditions that a cluster must satisfy
 type Constraints struct {
-	ControlPlaneCount int `json:"control-plane-count"`
-	MinimumWorkers    int `json:"minimum-workers"`
-	MaximumWorkers    int `json:"maximum-workers"`
+	ControlPlaneCount        int `json:"control-plane-count"`
+	MinimumWorkers           int `json:"minimum-workers"`
+	MaximumWorkers           int `json:"maximum-workers"`
+	RebootMaximumUnreachable int `json:"maximum-unreachable-nodes-for-reboot"`
 }
 
 // Check checks the cluster satisfies the constraints
@@ -36,8 +37,9 @@ func (c *Constraints) Check(cluster *Cluster) error {
 // DefaultConstraints returns the default constraints
 func DefaultConstraints() *Constraints {
 	return &Constraints{
-		ControlPlaneCount: 1,
-		MinimumWorkers:    1,
-		MaximumWorkers:    0,
+		ControlPlaneCount:        1,
+		MinimumWorkers:           1,
+		MaximumWorkers:           0,
+		RebootMaximumUnreachable: 0,
 	}
 }

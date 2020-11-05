@@ -36,18 +36,19 @@ Detailed behavior
 An administrator issues a reboot request using `ckecli reboot-queue add`.
 The command writes a reboot queue entry and increments `reboots/write-index` atomically.
 
-1. Check the reboot queue to find an entry. If the entry's status is `cancelled`, remove it and check the queue again. If there is no entry, return from this routine.
-2. Check the number of unreachable nodes. If it exceeds `reboot-maximum-unreachable` in the constraints, return from this routine.
-3. Update the entry status to `rebooting`.
-4. For each node in `nodes`, do the following in parallel:
-   1. Cordon the node.
-   2. Drain the Pods on the node using Kubernetes eviction API.  DaemonSet-managed Pods are ignored. The Pods not in `protected-namespaces` are deleted immediately.
-   3. Wait for the deletion of the Pods.
-   4. Reboot and wait for the node using `.reboot.command` in the cluster configuration.
-   5. Uncordon the node.
-   6. Record the success/failure status in the history record.
-   7. If any of the above steps fails or times out, it skips the succeeding steps.
-5. Remove the entry.
+The queue is processed by CKE as follows:
+
+1. Check the number of unreachable nodes. If it exceeds `maximum-unreachable-nodes-for-reboot` in the constraints, it doesn't process the queue.
+2. Check the reboot queue to find an entry. If the entry's status is `cancelled`, remove it and check the queue again. If there is no entry, CKE stops the processing.
+3. For the first entry in the reboot queue, do the following steps.
+   1. Update the entry status to `rebooting`.
+   2. Cordon the nodes in the entry.
+   3. Call the eviction API for Pods running on the target nodes.  DaemonSet-managed Pods are ignored.  If pods not in the `protected_namespaces` fail to be evicted, they are deleted instead.
+   4. Wait for the deletion of the Pods.  If this step exceeds a deadline specified in the cluster configuration, the operation is aborted and the queue entry is left as is.
+   5. Reboot the nodes using `.reboot.command` in the cluster configuration. In this step, all the nodes are rebooted simultaneously. If some of the nodes won't get back ready within the deadline specified in the cluster configuration, CKE gives up waiting for them (no error).
+   6. Uncordon the nodes.
+   7. Record the status in the history record.  It includes the list of nodes that failed to reboot.
+   8. Remove the entry.
 
 
 [LabelSelector]: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors

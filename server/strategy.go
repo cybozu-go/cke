@@ -17,7 +17,7 @@ import (
 
 // DecideOps returns the next operations to do and the operation phase.
 // This returns nil when no operations need to be done.
-func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition) ([]cke.Operator, cke.OperationPhase) {
+func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, reboot *cke.RebootQueueEntry) ([]cke.Operator, cke.OperationPhase) {
 	nf := NewNodeFilter(c, cs)
 
 	// 0. Execute upgrade operation if necessary
@@ -77,6 +77,15 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDe
 	// 8. Stop and delete control plane services running on non control plane nodes.
 	if ops := cleanOps(c, nf); len(ops) > 0 {
 		return ops, cke.PhaseStopCP
+	}
+
+	// 9. Reboot nodes if reboot request has been arrived to the reboot queue, and the number of unreachable nodes is less than a threshold.
+	if ops := rebootOps(c, reboot, nf); len(ops) > 0 {
+		if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, true)) > constraints.RebootMaximumUnreachable {
+			log.Warn("cannot reboot nodes because too many nodes are unreachable", nil)
+			return nil, cke.PhaseRebootNodes
+		}
+		return ops, cke.PhaseRebootNodes
 	}
 
 	return nil, cke.PhaseCompleted
@@ -537,4 +546,38 @@ func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 		ops = append(ops, op.EtcdRiversStopOp(etcdRivers))
 	}
 	return ops
+}
+
+func rebootOps(c *cke.Cluster, entry *cke.RebootQueueEntry, nf *NodeFilter) []cke.Operator {
+	if entry == nil {
+		return nil
+	}
+	if entry.Status == cke.RebootStatusCancelled {
+		return []cke.Operator{op.RebootDequeueOp(entry.Index)}
+	}
+	if len(c.Reboot.Command) == 0 {
+		log.Warn("reboot command is not specified in the cluster configuration", nil)
+		return nil
+	}
+
+	var nodes []*cke.Node
+OUTER:
+	for _, rebootNode := range entry.Nodes {
+		for _, clusterNode := range c.Nodes {
+			if rebootNode == clusterNode.Address {
+				nodes = append(nodes, clusterNode)
+				continue OUTER
+			}
+		}
+		log.Warn("skipped rebooting a node because it is not found in the cluster", map[string]interface{}{
+			"node": rebootNode,
+		})
+	}
+	if len(nodes) > 0 {
+		return []cke.Operator{
+			op.RebootOp(nf.HealthyAPIServer(), nodes, entry.Index, &c.Reboot),
+			op.RebootDequeueOp(entry.Index),
+		}
+	}
+	return []cke.Operator{op.RebootDequeueOp(entry.Index)}
 }

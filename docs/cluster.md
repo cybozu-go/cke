@@ -69,20 +69,28 @@ Taint
 Reboot
 ------
 
-| Name                   | Required | Type                             | Description                                       |
-| ---------------------- | -------- | -------------------------------- | ------------------------------------------------- |
-| `command`              | true     | string                           | A command template to reboot and wait for a node. |
-| `protected-namespaces` | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.           |
+| Name                       | Required | Type                             | Description                                                  |
+| -------------------------- | -------- | -------------------------------- | ------------------------------------------------------------ |
+| `command`                  | true     | []string                         | A command to reboot and wait for a node to get back.         |
+| `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default is nil.     |
+| `command_timeout_seconds`  | false    | *int                             | Deadline for rebooting. Zero means infinity. Default is nil. |
+| `protected_namespaces`     | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                      |
 
-`command` is a [Go template](https://golang.org/pkg/text/template/) string.
-This template is executed with the [Node data object](cluster.md#node) as the input data.
-CKE expects the command (1) to reboot the node and (2) to wait for the boot-up of the node.
+`command` is the command (1) to reboot the node and (2) to wait for the boot-up of the node.
+CKE sends a [Node data object](cluster.md#node) serialized into JSON to its standard input.
 The command should return zero if reboot has completed.
 If reboot failed or timeout exceeded, the command should return non-zero.
 
-`protected-namespaces` is a label selector for the namespaces where the Pods are deleted gracefully with the Kubernetes eviction API.
-The Pods in the non-protected namespaces are deleted without respecting PodDisruptionBudget.
-If not given, all namespaces are protected.
+If `eviction_timeout_seconds` is nil, 10 minutes is used as the default.
+
+If `command_timeout_seconds` is nil or zero, no deadline is set.
+
+CKE tries to delete Pods in the `protected_namespaces` gracefully with the Kubernetes eviction API.
+If any of the Pods cannot be deleted, it aborts the operation.
+
+The Pods in the non-protected namespaces are also tried to be deleted gracefully with the Kubernetes eviction API, but they would be simply deleted if eviction is denied.
+
+If `protected_namespaces` is not given, all namespaces are protected.
 
 EtcdBackup
 ----------
