@@ -224,9 +224,6 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		log.Error("failed to initialize infrastructure", map[string]interface{}{
 			log.FnError: err,
 		})
-		if c.addon != nil {
-			return c.addon.Do(ctx, leaderKey)
-		}
 		// lint:ignore nilerr  Try again.
 		return nil
 	}
@@ -259,12 +256,26 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return nil
 	}
 
+	constraints, err := inf.Storage().GetConstraints(ctx)
+	if err != nil {
+		return err
+	}
+
 	rcs, err := inf.Storage().GetAllResources(ctx)
 	if err != nil {
 		return err
 	}
 
-	ops, phase := DecideOps(cluster, status, rcs)
+	reboot, err := inf.Storage().GetRebootsFrontEntry(ctx)
+	switch err {
+	case nil:
+	case cke.ErrNotFound:
+		reboot = nil
+	default:
+		return err
+	}
+
+	ops, phase := DecideOps(cluster, status, constraints, rcs, reboot)
 
 	st := &cke.ServerStatus{
 		Phase:     phase,
@@ -367,6 +378,10 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		// return errCommandFailure instead of err as command failure need to be
 		// handled gracefully.
 		return errCommandFailure
+	}
+
+	if iop, ok := op.(cke.InfoOperator); ok {
+		record.SetInfo(iop.Info())
 	}
 
 	record.Complete()

@@ -77,7 +77,7 @@ Set a constraint on the cluster configuration.
 - `control-plane-count`
 - `minimum-workers`
 - `maximum-workers`
-- `reboot-maximum-unreachable`
+- `maximum-unreachable-nodes-for-reboot`
 
 ### `ckecli constraints show`
 

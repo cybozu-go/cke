@@ -15,6 +15,12 @@ type Operator interface {
 	Targets() []string
 }
 
+// InfoOperator is an extension of Operator that provides some information after the operation
+type InfoOperator interface {
+	Operator
+	Info() string
+}
+
 // Commander is a single step to proceed an operation
 type Commander interface {
 	// Run executes the command

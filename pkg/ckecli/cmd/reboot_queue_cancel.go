@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
@@ -25,7 +26,7 @@ var rebootQueueCancelCmd = &cobra.Command{
 				return err
 			}
 
-			entry.Cancel()
+			entry.Status = cke.RebootStatusCancelled
 			return storage.UpdateRebootsEntry(ctx, entry)
 		})
 		well.Stop()

@@ -33,7 +33,13 @@ const (
 
 var (
 	testDefaultDNSServers = []string{"8.8.8.8"}
-	testResources         = []cke.ResourceDefinition{
+	testConstraints       = &cke.Constraints{
+		ControlPlaneCount:        3,
+		MinimumWorkers:           1,
+		MaximumWorkers:           6,
+		RebootMaximumUnreachable: 1,
+	}
+	testResources = []cke.ResourceDefinition{
 		{
 			Key:        "Namespace/foo",
 			Kind:       "Namespace",
@@ -53,9 +59,11 @@ var (
 )
 
 type testData struct {
-	Cluster   *cke.Cluster
-	Status    *cke.ClusterStatus
-	Resources []cke.ResourceDefinition
+	Cluster     *cke.Cluster
+	Status      *cke.ClusterStatus
+	Constraints *cke.Constraints
+	Resources   []cke.ResourceDefinition
+	Reboot      *cke.RebootQueueEntry
 }
 
 func (d testData) ControlPlane() (nodes []*cke.Node) {
@@ -166,9 +174,10 @@ func newData() testData {
 	}
 
 	return testData{
-		Cluster:   cluster,
-		Status:    status,
-		Resources: testResources,
+		Cluster:     cluster,
+		Status:      status,
+		Constraints: testConstraints,
+		Resources:   testResources,
 	}
 }
 
@@ -519,6 +528,16 @@ func (d testData) withSSHNotConnectedNonCPWorker(num int) testData {
 func (d testData) withSSHNotConnectedNodes() testData {
 	d.withSSHNotConnectedCP()
 	d.withSSHNotConnectedNonCPWorker(1)
+	return d
+}
+
+func (d testData) withRebootConfig() testData {
+	d.Cluster.Reboot.Command = []string{"reboot"}
+	return d
+}
+
+func (d testData) withRebootEntry(entry *cke.RebootQueueEntry) testData {
+	d.Reboot = entry
 	return d
 }
 
@@ -1997,11 +2016,64 @@ func TestDecideOps(t *testing.T) {
 			}).withSSHNotConnectedCP(),
 			ExpectedOps: nil,
 		},
+		{
+			Name: "RebootWithoutConfig",
+			Input: newData().withK8sResourceReady().withRebootEntry(&cke.RebootQueueEntry{
+				Index:  1,
+				Nodes:  []string{nodeNames[0], nodeNames[1]},
+				Status: cke.RebootStatusQueued,
+			}),
+			ExpectedOps:        nil,
+			ExpectedTargetNums: nil,
+		},
+		{
+			Name: "Reboot",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
+				Index:  1,
+				Nodes:  []string{nodeNames[0], nodeNames[1]},
+				Status: cke.RebootStatusQueued,
+			}),
+			ExpectedOps: []string{"reboot", "rebootDequeue"},
+			ExpectedTargetNums: map[string]int{
+				"reboot":        2,
+				"rebootDequeue": 0,
+			},
+		},
+		{
+			Name: "RebootInvalidNode",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
+				Index:  1,
+				Nodes:  []string{"0.0.0.0"},
+				Status: cke.RebootStatusQueued,
+			}),
+			ExpectedOps:        []string{"rebootDequeue"},
+			ExpectedTargetNums: nil,
+		},
+		{
+			Name: "SkipReboot",
+			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(2).withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
+				Index:  1,
+				Nodes:  []string{nodeNames[0], nodeNames[1]},
+				Status: cke.RebootStatusQueued,
+			}),
+			ExpectedOps:        nil,
+			ExpectedTargetNums: nil,
+		},
+		{
+			Name: "CancelReboot",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
+				Index:  1,
+				Nodes:  []string{nodeNames[0], nodeNames[1]},
+				Status: cke.RebootStatusCancelled,
+			}),
+			ExpectedOps:        []string{"rebootDequeue"},
+			ExpectedTargetNums: nil,
+		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Resources)
+			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, c.Input.Reboot)
 			if len(ops) == 0 && len(c.ExpectedOps) == 0 {
 				return
 			}
