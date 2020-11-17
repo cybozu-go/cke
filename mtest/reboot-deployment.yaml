@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: reboot-sample
+  labels:
+    reboot-test: sample
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: reboot-sample
+  name: sample
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      reboot-app: sample
+  template:
+    metadata:
+      labels:
+        reboot-app: sample
+    spec:
+      containers:
+        - name: ubuntu
+          image: quay.io/cybozu/testhttpd:0
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  namespace: reboot-sample
+  name: sample
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      reboot-app: sample

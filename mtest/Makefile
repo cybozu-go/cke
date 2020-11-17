@@ -49,10 +49,11 @@ KUBECTL := $(abspath $(OUTPUT))/kubectl
 LOCALPVYAML := $(realpath ./local-pv.yml)
 NGINXYAML := $(realpath ./nginx.yml)
 POLICYYAML := $(realpath ./mtest-policy.yml)
+REBOOTYAML := $(realpath ./reboot-deployment.yaml)
 WEBHOOKYAML := $(realpath ./webhook-resources.yaml)
 
 export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL \
-	POLICYYAML NGINXYAML LOCALPVYAML WEBHOOKYAML
+	POLICYYAML REBOOTYAML NGINXYAML LOCALPVYAML WEBHOOKYAML
 
 CONTAINERD_FILES = \
 	$(OUTPUT)/containerd \

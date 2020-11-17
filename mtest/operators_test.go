@@ -4,14 +4,203 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"time"
 
 	"github.com/cybozu-go/cke"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func waitRebootCompletion(cluster *cke.Cluster) {
+	ts := time.Now()
+	Eventually(func() error {
+		var entries []*cke.RebootQueueEntry
+		data := ckecliSafe("reboot-queue", "list")
+		err := json.Unmarshal(data, &entries)
+		if err != nil {
+			return err
+		}
+		if len(entries) != 0 {
+			return fmt.Errorf("reboot entry is remaining")
+		}
+		return checkCluster(cluster, ts)
+	}).Should(Succeed())
+}
+
+func testRebootOperations(cluster *cke.Cluster) {
+	By("Rebooting nodes")
+	// this will run:
+	// - RebootOp
+	// - RebootDequeueOp
+	rebootTargets := node1
+	_, _, err := ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
+	rebootTargets = node2 + "\n" + node3
+	_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
+	waitRebootCompletion(cluster)
+
+	out, stderr, err := execAtWithInput(host1, ckecliSafe("history", "-n", "2"), "jq", "-s", ".")
+	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+	var history []*cke.Record
+	err = json.Unmarshal(out, &history)
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(history).Should(HaveLen(2))
+	Expect(history[0].Operation).To(Equal("rebootDequeue"))
+	Expect(history[1].Operation).To(Equal("reboot"))
+	Expect(history[1].Targets).Should(HaveLen(2))
+
+	By("Reboot operation gives up waiting node startup if deadline is exceeded")
+	previousCommand := cluster.Reboot.Command
+	cluster.Reboot.Command = []string{"sleep", "3600"}
+	_, err = ckecliClusterSet(cluster)
+	// wait for the previous reconciliation to be done
+	time.Sleep(time.Second * 3)
+
+	Expect(err).ShouldNot(HaveOccurred())
+	rebootTargets = node1
+	ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
+	waitRebootCompletion(cluster)
+
+	out, stderr, err = execAtWithInput(host1, ckecliSafe("history", "-n", "2"), "jq", "-s", ".")
+	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+	err = json.Unmarshal(out, &history)
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(history).Should(HaveLen(2))
+	Expect(history[0].Operation).To(Equal("rebootDequeue"))
+	Expect(history[1].Operation).To(Equal("reboot"))
+	Expect(history[1].Info).Should(HavePrefix("failed to reboot some node"))
+
+	cluster.Reboot.Command = previousCommand
+	_, err = ckecliClusterSet(cluster)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	By("Preparing a deployment to test protected_namespaces")
+	rd, err := ioutil.ReadFile(rebootYAMLPath)
+	Expect(err).ShouldNot(HaveOccurred())
+	_, stderr, err = kubectlWithInput(rd, "apply", "-f", "-")
+	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+	psp, err := ioutil.ReadFile(policyYAMLPath)
+	Expect(err).ShouldNot(HaveOccurred())
+	_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n=reboot-sample")
+	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+	Eventually(func() error {
+		out, _, err = kubectl("get", "-n=reboot-sample", "deployments/sample", "-o=json")
+		if err != nil {
+			return err
+		}
+
+		var deploy appsv1.Deployment
+		err = json.Unmarshal(out, &deploy)
+		if err != nil {
+			return err
+		}
+		if deploy.Status.ReadyReplicas != 3 {
+			return fmt.Errorf("deployment is not ready")
+		}
+		return nil
+	}).Should(Succeed())
+
+	out, _, err = kubectl("get", "-n=reboot-sample", "pod", "-l=reboot-app=sample", "-o=json")
+	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+	var pods corev1.PodList
+	err = json.Unmarshal(out, &pods)
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(pods.Items).Should(HaveLen(3))
+
+	By("Reboot operation will protect all pods if protected_namespaces is nil")
+	nodeName := pods.Items[0].Spec.NodeName
+	_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
+
+	Eventually(func() error {
+		// It checks the second record because reboot operation is retried immediately
+		out, _, err := execAtWithInput(host1, ckecliSafe("history", "-n", "2"), "jq", "-s", ".")
+		if err != nil {
+			return err
+		}
+		var history []*cke.Record
+		err = json.Unmarshal(out, &history)
+		if err != nil {
+			return err
+		}
+		if len(history) != 2 {
+			return fmt.Errorf("CKE history is missing")
+		}
+
+		r := history[1]
+		desired := (r.Operation == "reboot") && (r.Status == cke.StatusCancelled) && len(r.Targets) == 1 && (r.Targets[0] == nodeName) && strings.HasPrefix(r.Error, "failed to evict pod")
+		if !desired {
+			return fmt.Errorf("operation has not been completed appropriately")
+		}
+		return nil
+	}).Should(Succeed())
+
+	ckecliSafe("reboot-queue", "cancel", "3")
+	waitRebootCompletion(cluster)
+
+	By("Reboot operation will protect pods in protected namespaces")
+	cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
+		MatchLabels: map[string]string{"reboot-test": "sample"},
+	}
+	_, err = ckecliClusterSet(cluster)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	nodeName = pods.Items[1].Spec.NodeName
+	_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
+
+	Eventually(func() error {
+		// It checks the second record because reboot operation is retried immediately
+		out, _, err := execAtWithInput(host1, ckecliSafe("history", "-n", "2"), "jq", "-s", ".")
+		if err != nil {
+			return err
+		}
+		var history []*cke.Record
+		err = json.Unmarshal(out, &history)
+		if err != nil {
+			return err
+		}
+		if len(history) != 2 {
+			return fmt.Errorf("CKE history is missing")
+		}
+
+		r := history[1]
+		desired := (r.Operation == "reboot") && (r.Status == cke.StatusCancelled) && len(r.Targets) == 1 && (r.Targets[0] == nodeName) && strings.HasPrefix(r.Error, "failed to evict pod")
+		if !desired {
+			return fmt.Errorf("operation has not been completed appropriately")
+		}
+		return nil
+	}).Should(Succeed())
+
+	ckecliSafe("reboot-queue", "cancel", "4")
+	waitRebootCompletion(cluster)
+
+	By("Reboot operation deletes non-protected pods")
+	cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
+		MatchLabels: map[string]string{"reboot-test": "test"},
+	}
+	_, err = ckecliClusterSet(cluster)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	nodeName = pods.Items[2].Spec.NodeName
+	_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
+	waitRebootCompletion(cluster)
+
+	By("Uncordoning nodes failed to reboot")
+	_, _, err = kubectl("uncordon", pods.Items[0].Spec.NodeName)
+	Expect(err).ShouldNot(HaveOccurred())
+	_, _, err = kubectl("uncordon", pods.Items[1].Spec.NodeName)
+	Expect(err).ShouldNot(HaveOccurred())
+}
 
 func testOperators(isDegraded bool) {
 	AfterEach(initializeControlPlane)
@@ -95,6 +284,10 @@ func testOperators(isDegraded bool) {
 			Eventually(func() error {
 				return checkCluster(cluster, ts)
 			}).Should(Succeed())
+		}
+
+		if !isDegraded {
+			testRebootOperations(cluster)
 		}
 
 		By("Removing a control plane node from the cluster")
