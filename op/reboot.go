@@ -16,6 +16,7 @@ import (
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
@@ -214,7 +215,9 @@ func listProtectedNamespaces(ctx context.Context, cs *kubernetes.Clientset, ls *
 
 func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, n *cke.Node, protected map[string]bool) ([]*corev1.Pod, error) {
 	var targets []*corev1.Pod
-	podList, err := cs.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	podList, err := cs.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
+		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": n.Nodename()}).String(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -235,8 +238,9 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, n *cke.
 			if err != nil {
 				return nil, err
 			}
+			log.Warn(fmt.Sprintf("deleted non-protected pod %s/%s", pod.Namespace, pod.Name), nil)
 		case err != nil:
-			return nil, err
+			return nil, fmt.Errorf("failed to evict pod %s/%s: %w", pod.Namespace, pod.Name, err)
 		}
 	}
 	return targets, nil
@@ -264,10 +268,10 @@ OUTER:
 			select {
 			case <-ctx.Done():
 				msg := fmt.Sprintf("aborted waiting for pod eviction: %s/%s", p.Namespace, p.Name)
-				log.Warn(msg, nil)
+				log.Error(msg, nil)
 				return fmt.Errorf(msg)
 			case <-time.After(time.Second * 5):
-				log.Warn("waiting for pods to be deleted...", nil)
+				log.Info("waiting for pods to be deleted...", nil)
 			}
 		}
 	}
@@ -337,7 +341,7 @@ func (c rebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string
 			err = command.Run()
 			if err != nil {
 				c.notifyFailedNode(n)
-				log.Warn("failed on rebooting "+n.Nodename(), map[string]interface{}{
+				log.Error("failed on rebooting "+n.Nodename(), map[string]interface{}{
 					log.FnError: err,
 				})
 			}
