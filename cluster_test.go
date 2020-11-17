@@ -60,6 +60,33 @@ func testClusterYAML(t *testing.T) {
 	if c.DNSService != "kube-system/dns" {
 		t.Error(`c.DNSService != "kube-system/dns"`)
 	}
+	if len(c.Reboot.Command) != 1 {
+		t.Fatal(`len(c.Reboot.Command) != 1`)
+	}
+	if c.Reboot.Command[0] != "true" {
+		t.Error(`c.Reboot.Command[0] != "true"`)
+	}
+	if c.Reboot.EvictionTimeoutSeconds == nil {
+		t.Fatal(`c.Reboot.EvictionTimeoutSeconds == nil`)
+	}
+	if *c.Reboot.EvictionTimeoutSeconds != 60 {
+		t.Error(`*c.Reboot.EvictionTimeoutSeconds != 60`)
+	}
+	if c.Reboot.CommandTimeoutSeconds == nil {
+		t.Fatal(`c.Reboot.CommandTimeoutSeconds == nil`)
+	}
+	if *c.Reboot.CommandTimeoutSeconds != 120 {
+		t.Error(`*c.Reboot.CommandTimeoutSeconds != 120`)
+	}
+	if c.Reboot.ProtectedNamespaces == nil {
+		t.Fatal(`c.Reboot.ProtectedNamespaces == nil`)
+	}
+	if c.Reboot.ProtectedNamespaces.MatchLabels == nil {
+		t.Fatal(`c.Reboot.ProtectedNamespaces.MatchLabels == nil`)
+	}
+	if c.Reboot.ProtectedNamespaces.MatchLabels["app"] != "sample" {
+		t.Error(`c.Reboot.ProtectedNamespaces.MatchLabels["app"] != "sample"`)
+	}
 	if !reflect.DeepEqual(c.EtcdBackup, EtcdBackup{Enabled: true, PVCName: "etcdbackup-pvc", Schedule: "*/1 * * * *"}) {
 		t.Error(`!reflect.DeepEqual(c.EtcdBackup, EtcdBackup{Enabled:true, PVCName:"etcdbackup-pvc", Schedule:"*/1 * * * *"})`)
 	}
