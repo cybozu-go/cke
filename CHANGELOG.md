@@ -5,6 +5,16 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.18.3] - 2020-11-18
+
+### Added
+
+- Added node maintenance feature (#381, #382, #383).
+
+### Fixed
+
+- Fixed preStop command for cluster-dns (#378).
+
 ## [1.18.2] - 2020-10-18
 
 ### Added
@@ -58,7 +68,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.18.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.18.3...HEAD
+[1.18.3]: https://github.com/cybozu-go/cke/compare/v1.18.2...v1.18.3
 [1.18.2]: https://github.com/cybozu-go/cke/compare/v1.18.1...v1.18.2
 [1.18.1]: https://github.com/cybozu-go/cke/compare/v1.18.0...v1.18.1
 [1.18.0]: https://github.com/cybozu-go/cke/compare/v1.18.0-rc.1...v1.18.0
