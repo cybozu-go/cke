@@ -9,6 +9,13 @@ nodes:
 service_subnet: 12.34.56.00/24
 dns_servers: ["1.1.1.1", "8.8.8.8"]
 dns_service: kube-system/dns
+reboot:
+  command: ["true"]
+  eviction_timeout_seconds: 60
+  command_timeout_seconds: 120
+  protected_namespaces:
+    matchLabels:
+      app: sample
 etcd_backup:
   enabled: true
   pvc_name: etcdbackup-pvc

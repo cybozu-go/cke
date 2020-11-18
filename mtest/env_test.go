@@ -22,6 +22,7 @@ var (
 	localPVYAMLPath = os.Getenv("LOCALPVYAML")
 	nginxYAMLPath   = os.Getenv("NGINXYAML")
 	policyYAMLPath  = os.Getenv("POLICYYAML")
+	rebootYAMLPath  = os.Getenv("REBOOTYAML")
 	webhookYAMLPath = os.Getenv("WEBHOOKYAML")
 	testSuite       = os.Getenv("SUITE")
 
