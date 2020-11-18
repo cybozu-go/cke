@@ -16,16 +16,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func numRebootEntries() (int, error) {
+	var entries []*cke.RebootQueueEntry
+	data, stderr, err := ckecli("reboot-queue", "list")
+	if err != nil {
+		return 0, fmt.Errorf("%w, stdout: %s, stderr: %s", err, data, stderr)
+	}
+	err = json.Unmarshal(data, &entries)
+	if err != nil {
+		return 0, err
+	}
+	return len(entries), nil
+}
+
 func waitRebootCompletion(cluster *cke.Cluster) {
 	ts := time.Now()
-	Eventually(func() error {
-		var entries []*cke.RebootQueueEntry
-		data := ckecliSafe("reboot-queue", "list")
-		err := json.Unmarshal(data, &entries)
+	EventuallyWithOffset(1, func() error {
+		num, err := numRebootEntries()
 		if err != nil {
 			return err
 		}
-		if len(entries) != 0 {
+		if num != 0 {
 			return fmt.Errorf("reboot entry is remaining")
 		}
 		return checkCluster(cluster, ts)
@@ -45,16 +56,6 @@ func testRebootOperations(cluster *cke.Cluster) {
 	Expect(err).ShouldNot(HaveOccurred())
 	waitRebootCompletion(cluster)
 
-	out, stderr, err := execAtWithInput(host1, ckecliSafe("history", "-n", "2"), "jq", "-s", ".")
-	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
-	var history []*cke.Record
-	err = json.Unmarshal(out, &history)
-	Expect(err).ShouldNot(HaveOccurred())
-	Expect(history).Should(HaveLen(2))
-	Expect(history[0].Operation).To(Equal("rebootDequeue"))
-	Expect(history[1].Operation).To(Equal("reboot"))
-	Expect(history[1].Targets).Should(HaveLen(2))
-
 	By("Reboot operation gives up waiting node startup if deadline is exceeded")
 	previousCommand := cluster.Reboot.Command
 	cluster.Reboot.Command = []string{"sleep", "3600"}
@@ -65,16 +66,10 @@ func testRebootOperations(cluster *cke.Cluster) {
 	Expect(err).ShouldNot(HaveOccurred())
 	rebootTargets = node1
 	ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
+	ts := time.Now()
 	waitRebootCompletion(cluster)
-
-	out, stderr, err = execAtWithInput(host1, ckecliSafe("history", "-n", "2"), "jq", "-s", ".")
-	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
-	err = json.Unmarshal(out, &history)
-	Expect(err).ShouldNot(HaveOccurred())
-	Expect(history).Should(HaveLen(2))
-	Expect(history[0].Operation).To(Equal("rebootDequeue"))
-	Expect(history[1].Operation).To(Equal("reboot"))
-	Expect(history[1].Info).Should(HavePrefix("failed to reboot some node"))
+	timeout := time.Second * time.Duration(*cluster.Reboot.CommandTimeoutSeconds)
+	Expect(time.Now()).To(BeTemporally(">", ts.Add(timeout)))
 
 	cluster.Reboot.Command = previousCommand
 	_, err = ckecliClusterSet(cluster)
@@ -83,7 +78,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	By("Preparing a deployment to test protected_namespaces")
 	rd, err := ioutil.ReadFile(rebootYAMLPath)
 	Expect(err).ShouldNot(HaveOccurred())
-	_, stderr, err = kubectlWithInput(rd, "apply", "-f", "-")
+	_, stderr, err := kubectlWithInput(rd, "apply", "-f", "-")
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
 	psp, err := ioutil.ReadFile(policyYAMLPath)
@@ -92,7 +87,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
 	Eventually(func() error {
-		out, _, err = kubectl("get", "-n=reboot-sample", "deployments/sample", "-o=json")
+		out, _, err := kubectl("get", "-n=reboot-sample", "deployments/sample", "-o=json")
 		if err != nil {
 			return err
 		}
@@ -108,7 +103,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 		return nil
 	}).Should(Succeed())
 
-	out, _, err = kubectl("get", "-n=reboot-sample", "pod", "-l=reboot-app=sample", "-o=json")
+	out, _, err := kubectl("get", "-n=reboot-sample", "pod", "-l=reboot-app=sample", "-o=json")
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 	var pods corev1.PodList
 	err = json.Unmarshal(out, &pods)
@@ -120,28 +115,16 @@ func testRebootOperations(cluster *cke.Cluster) {
 	_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	Eventually(func() error {
-		// It checks the second record because reboot operation is retried immediately
-		out, _, err := execAtWithInput(host1, ckecliSafe("history", "-n", "2"), "jq", "-s", ".")
+	Consistently(func() error {
+		num, err := numRebootEntries()
 		if err != nil {
 			return err
 		}
-		var history []*cke.Record
-		err = json.Unmarshal(out, &history)
-		if err != nil {
-			return err
-		}
-		if len(history) != 2 {
-			return fmt.Errorf("CKE history is missing")
-		}
-
-		r := history[1]
-		desired := (r.Operation == "reboot") && (r.Status == cke.StatusCancelled) && len(r.Targets) == 1 && (r.Targets[0] == nodeName) && strings.HasPrefix(r.Error, "failed to evict pod")
-		if !desired {
-			return fmt.Errorf("operation has not been completed appropriately")
+		if num != 0 {
+			return fmt.Errorf("reboot entry is remaining")
 		}
 		return nil
-	}).Should(Succeed())
+	}, time.Second*60).Should(HaveOccurred())
 
 	ckecliSafe("reboot-queue", "cancel", "3")
 	waitRebootCompletion(cluster)
@@ -157,28 +140,16 @@ func testRebootOperations(cluster *cke.Cluster) {
 	_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
 
-	Eventually(func() error {
-		// It checks the second record because reboot operation is retried immediately
-		out, _, err := execAtWithInput(host1, ckecliSafe("history", "-n", "2"), "jq", "-s", ".")
+	Consistently(func() error {
+		num, err := numRebootEntries()
 		if err != nil {
 			return err
 		}
-		var history []*cke.Record
-		err = json.Unmarshal(out, &history)
-		if err != nil {
-			return err
-		}
-		if len(history) != 2 {
-			return fmt.Errorf("CKE history is missing")
-		}
-
-		r := history[1]
-		desired := (r.Operation == "reboot") && (r.Status == cke.StatusCancelled) && len(r.Targets) == 1 && (r.Targets[0] == nodeName) && strings.HasPrefix(r.Error, "failed to evict pod")
-		if !desired {
-			return fmt.Errorf("operation has not been completed appropriately")
+		if num != 0 {
+			return fmt.Errorf("reboot entry is remaining")
 		}
 		return nil
-	}).Should(Succeed())
+	}, time.Second*60).Should(HaveOccurred())
 
 	ckecliSafe("reboot-queue", "cancel", "4")
 	waitRebootCompletion(cluster)

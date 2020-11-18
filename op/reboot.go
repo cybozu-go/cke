@@ -238,7 +238,10 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, n *cke.
 			if err != nil {
 				return nil, err
 			}
-			log.Warn(fmt.Sprintf("deleted non-protected pod %s/%s", pod.Namespace, pod.Name), nil)
+			log.Warn("deleted non-protected pod", map[string]interface{}{
+				"namespace": pod.Namespace,
+				"name":      pod.Name,
+			})
 		case err != nil:
 			return nil, fmt.Errorf("failed to evict pod %s/%s: %w", pod.Namespace, pod.Name, err)
 		}
@@ -267,9 +270,12 @@ OUTER:
 			}
 			select {
 			case <-ctx.Done():
-				msg := fmt.Sprintf("aborted waiting for pod eviction: %s/%s", p.Namespace, p.Name)
-				log.Error(msg, nil)
-				return fmt.Errorf(msg)
+				msg := "aborted waiting for pod eviction"
+				log.Error(msg, map[string]interface{}{
+					"namespace": p.Namespace,
+					"name":      p.Name,
+				})
+				return fmt.Errorf(fmt.Sprintf("%s: %s/%s", msg, p.Namespace, p.Name))
 			case <-time.After(time.Second * 5):
 				log.Info("waiting for pods to be deleted...", nil)
 			}
@@ -341,8 +347,9 @@ func (c rebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string
 			err = command.Run()
 			if err != nil {
 				c.notifyFailedNode(n)
-				log.Error("failed on rebooting "+n.Nodename(), map[string]interface{}{
+				log.Warn("failed on rebooting node", map[string]interface{}{
 					log.FnError: err,
+					"node":      n.Nodename(),
 				})
 			}
 			return nil
