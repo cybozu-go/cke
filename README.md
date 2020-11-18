@@ -35,8 +35,6 @@ Features
     CKE can bootstrap a Kubernetes and [etcd][] cluster from scratch.
     CKE can also add or remove nodes to/from the Kubernetes and etcd cluster.
 
-    CKE can [reboot specified nodes gracefully](docs/reboot.md) using the Kubernetes eviction API.
-
 * In-place and fast upgrade of Kubernetes
 
     A version of CKE corresponds strictly to a single version of Kubernetes.
@@ -46,6 +44,10 @@ Features
     its managed Kubernetes without draining nodes.  The time taken for
     the upgrade is not proportional to the number of nodes, so it is
     very fast.
+
+* Graceful rebooting of nodes
+
+    CKE can [reboot specified nodes gracefully](docs/reboot.md) using the Kubernetes eviction API.
 
 * Managed etcd cluster
 
