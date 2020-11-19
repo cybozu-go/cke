@@ -653,11 +653,6 @@ func testStorageReboot(t *testing.T) {
 		t.Error("unexptected error:", err)
 	}
 
-	_, err = storage.GetRebootsFrontEntry(ctx)
-	if err != ErrNotFound {
-		t.Error("unexptected error:", err)
-	}
-
 	ents, err := storage.GetRebootsEntries(ctx)
 	if err != nil {
 		t.Fatal("GetRebootsEntries failed:", err)
@@ -698,14 +693,6 @@ func testStorageReboot(t *testing.T) {
 		t.Error("GetRebootsEntry returned unexpected result:", cmp.Diff(ent, entry2))
 	}
 
-	ent, err = storage.GetRebootsFrontEntry(ctx)
-	if err != nil {
-		t.Fatal("GetRebootsFrontEntry failed:", err)
-	}
-	if !cmp.Equal(ent, entry) {
-		t.Error("GetRebootsFrontEntry returned unexpected result:", cmp.Diff(ent, entry))
-	}
-
 	entries := []*RebootQueueEntry{entry, entry2}
 	ents, err = storage.GetRebootsEntries(ctx)
 	if err != nil {
@@ -725,7 +712,7 @@ func testStorageReboot(t *testing.T) {
 		t.Fatal("GetRebootsEntry failed:", err)
 	}
 	if !cmp.Equal(ent, entry) {
-		t.Error("GetRebootsFrontEntry returned unexpected result:", cmp.Diff(ent, entry))
+		t.Error("GetRebootsEntry returned unexpected result:", cmp.Diff(ent, entry))
 	}
 
 	err = storage.DeleteRebootsEntry(ctx, leaderKey, 0)

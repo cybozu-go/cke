@@ -794,13 +794,11 @@ func (s Storage) GetRebootsEntry(ctx context.Context, index int64) (*RebootQueue
 	return r, nil
 }
 
-func (s Storage) getRebootsEntries(ctx context.Context, count int64) ([]*RebootQueueEntry, error) {
+// GetRebootsEntries loads the entries from the reboot queue.
+func (s Storage) GetRebootsEntries(ctx context.Context) ([]*RebootQueueEntry, error) {
 	opts := []clientv3.OpOption{
 		clientv3.WithPrefix(),
 		clientv3.WithSort(clientv3.SortByKey, clientv3.SortAscend),
-	}
-	if count > 0 {
-		opts = append(opts, clientv3.WithLimit(count))
 	}
 	resp, err := s.Get(ctx, KeyRebootsPrefix, opts...)
 	if err != nil {
@@ -822,26 +820,6 @@ func (s Storage) getRebootsEntries(ctx context.Context, count int64) ([]*RebootQ
 	}
 
 	return reboots, nil
-}
-
-// GetRebootsEntries loads the entries from the reboot queue.
-func (s Storage) GetRebootsEntries(ctx context.Context) ([]*RebootQueueEntry, error) {
-	return s.getRebootsEntries(ctx, 0)
-}
-
-// GetRebootsFrontEntry loads the front entry from the reboot queue.
-// If the queue is empty, this returns ErrNotFound.
-func (s Storage) GetRebootsFrontEntry(ctx context.Context) (*RebootQueueEntry, error) {
-	reboots, err := s.getRebootsEntries(ctx, 1)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(reboots) == 0 {
-		return nil, ErrNotFound
-	}
-
-	return reboots[0], nil
 }
 
 // DeleteRebootsEntry deletes the entry specified by the index from the reboot queue.

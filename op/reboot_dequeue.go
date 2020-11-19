@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/metrics"
 )
 
 type rebootDequeueOp struct {
@@ -41,7 +42,12 @@ type rebootDequeueCommand struct {
 }
 
 func (c rebootDequeueCommand) Run(ctx context.Context, inf cke.Infrastructure, leaderKey string) error {
-	return inf.Storage().DeleteRebootsEntry(ctx, leaderKey, c.index)
+	err := inf.Storage().DeleteRebootsEntry(ctx, leaderKey, c.index)
+	if err != nil {
+		return err
+	}
+	metrics.DecrementReboot()
+	return nil
 }
 
 func (c rebootDequeueCommand) Command() cke.Command {

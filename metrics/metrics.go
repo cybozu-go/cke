@@ -33,6 +33,14 @@ var operationPhaseTimestampSeconds = prometheus.NewGauge(
 	},
 )
 
+var rebootQueueEntries = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "reboot_queue_entries",
+		Help:      "The number of reboot queue entries remaining.",
+	},
+)
+
 var sabakanIntegrationSuccessful = prometheus.NewGauge(
 	prometheus.GaugeOpts{
 		Namespace: namespace,
