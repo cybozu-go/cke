@@ -244,6 +244,7 @@ jobs:
             tar xzf /tmp/workspace/sonobuoy.tar.gz -C /tmp/upload --strip-components=4 plugins/e2e/results/global/e2e.log plugins/e2e/results/global/junit_01.xml
             sed "s/vX\.Y\.Z/${CIRCLE_TAG}/" sonobuoy/README.md > /tmp/upload/README.md
             sed "s/vX\.Y\.Z/${CIRCLE_TAG}/" sonobuoy/PRODUCT.yaml > /tmp/upload/PRODUCT.yaml
+            GOBIN=/tmp/upload go install -mod=vendor ./pkg/cke ./pkg/ckecli
       - run:
           name: Release to GitHub
           command: |
