@@ -39,6 +39,20 @@ func isOperationPhaseAvailable(_ context.Context, _ storage) (bool, error) {
 	return isLeader, nil
 }
 
+// UpdateReboot updates "reboot_queue_entries".
+func UpdateReboot(numEntries int) {
+	rebootQueueEntries.Set(float64(numEntries))
+}
+
+// DecrementReboot decrements "reboot_queue_entries".
+func DecrementReboot() {
+	rebootQueueEntries.Dec()
+}
+
+func isRebootAvailable(_ context.Context, _ storage) (bool, error) {
+	return isLeader, nil
+}
+
 // UpdateSabakanIntegration updates Sabakan integration metrics.
 func UpdateSabakanIntegration(isSuccessful bool, workersByRole map[string]int, unusedMachines int, ts time.Time) {
 	sabakanIntegrationTimestampSeconds.Set(float64(ts.Unix()))

@@ -40,6 +40,12 @@ type updateOperationPhaseTestCase struct {
 	expected operationPhaseExpected
 }
 
+type updateRebootTestCase struct {
+	name     string
+	input    int
+	expected float64
+}
+
 type sabakanInput struct {
 	isLeader       bool
 	enabled        bool
@@ -64,6 +70,7 @@ type updateSabakanIntegrationTestCase struct {
 func TestMetricsUpdater(t *testing.T) {
 	t.Run("UpdateLeader", testUpdateLeader)
 	t.Run("UpdateOperationPhase", testUpdateOperationPhase)
+	t.Run("UpdateReboot", testUpdateReboot)
 	t.Run("UpdateSabakanIntegration", testUpdateSabakanIntegration)
 }
 
@@ -227,6 +234,62 @@ func testUpdateOperationPhase(t *testing.T) {
 			}
 			if !tt.expected.returned && metricsFamilyFound {
 				t.Errorf("metrics cke_operation_phase should not be returned")
+			}
+		})
+	}
+}
+
+func testUpdateReboot(t *testing.T) {
+	testCases := []updateRebootTestCase{
+		{
+			name:     "zero",
+			input:    0,
+			expected: 0,
+		},
+		{
+			name:     "one",
+			input:    1,
+			expected: 1,
+		},
+		{
+			name:     "two",
+			input:    2,
+			expected: 2,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			defer ctx.Done()
+
+			collector, _ := newTestCollector()
+			handler := GetHandler(collector)
+
+			UpdateReboot(tt.input)
+
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/metrics", nil)
+			handler.ServeHTTP(w, req)
+
+			metricsFamily, err := parseMetrics(w.Result())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			metricsFound := false
+			for _, mf := range metricsFamily {
+				if *mf.Name != "cke_reboot_queue_entries" {
+					continue
+				}
+				for _, m := range mf.Metric {
+					metricsFound = true
+					if *m.Gauge.Value != tt.expected {
+						t.Errorf("value for cke_reboot_queue_entries is wrong.  expected: %f, actual: %f", tt.expected, *m.Gauge.Value)
+					}
+				}
+			}
+			if !metricsFound {
+				t.Errorf("metrics reboot_queue_entries was not found")
 			}
 		})
 	}

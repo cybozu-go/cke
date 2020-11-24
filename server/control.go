@@ -266,15 +266,15 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return err
 	}
 
-	reboot, err := inf.Storage().GetRebootsFrontEntry(ctx)
-	switch err {
-	case nil:
-	case cke.ErrNotFound:
-		reboot = nil
-	default:
+	re, err := inf.Storage().GetRebootsEntries(ctx)
+	if err != nil {
 		return err
 	}
-
+	metrics.UpdateReboot(len(re))
+	var reboot *cke.RebootQueueEntry
+	if len(re) > 0 {
+		reboot = re[0]
+	}
 	ops, phase := DecideOps(cluster, status, constraints, rcs, reboot)
 
 	st := &cke.ServerStatus{
