@@ -320,7 +320,6 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 			ContainerRuntimeEndpoint: "/var/run/k8s-containerd.sock",
 		})
 
-		var oomScoreAdj int32 = -1000
 		webhookEnabled := true
 		st.Config = &kubeletv1beta1.KubeletConfiguration{
 			TypeMeta: metav1.TypeMeta{
@@ -330,7 +329,6 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 			ClusterDomain:         domain,
 			RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
 			HealthzBindAddress:    "0.0.0.0",
-			OOMScoreAdj:           &oomScoreAdj,
 			ContainerLogMaxSize:   "20Mi",
 			TLSCertFile:           "/etc/kubernetes/pki/kubelet.crt",
 			TLSPrivateKeyFile:     "/etc/kubernetes/pki/kubelet.key",

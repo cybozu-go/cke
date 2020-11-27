@@ -107,7 +107,6 @@ func newKubeletConfiguration(cert, key, ca string, params cke.KubeletParams) kub
 	base := &kubeletv1beta1.KubeletConfiguration{
 		RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
 		HealthzBindAddress:    "0.0.0.0",
-		OOMScoreAdj:           int32Pointer(-1000),
 	}
 
 	// This won't raise an error because of prior validation
