@@ -57,7 +57,6 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 	baseExpected := kubeletv1beta1.KubeletConfiguration{
 		ReadOnlyPort:          0,
 		HealthzBindAddress:    "0.0.0.0",
-		OOMScoreAdj:           int32Pointer(-1000),
 		FailSwapOn:            boolPointer(true),
 		RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
 		TLSCertFile:           "/etc/kubernetes/pki/kubelet.crt",
