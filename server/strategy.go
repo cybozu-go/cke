@@ -81,11 +81,13 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 
 	// 9. Reboot nodes if reboot request has been arrived to the reboot queue, and the number of unreachable nodes is less than a threshold.
 	if ops := rebootOps(c, reboot, nf); len(ops) > 0 {
-		if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, true)) > constraints.RebootMaximumUnreachable {
-			log.Warn("cannot reboot nodes because too many nodes are unreachable", nil)
-			return nil, cke.PhaseRebootNodes
+		if len(nf.HealthyAPIServerNodes()) > 0 {
+			if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, true)) > constraints.RebootMaximumUnreachable {
+				log.Warn("cannot reboot nodes because too many nodes are unreachable", nil)
+				return nil, cke.PhaseRebootNodes
+			}
+			return ops, cke.PhaseRebootNodes
 		}
-		return ops, cke.PhaseRebootNodes
 	}
 
 	return nil, cke.PhaseCompleted
@@ -575,7 +577,7 @@ OUTER:
 	}
 	if len(nodes) > 0 {
 		return []cke.Operator{
-			op.RebootOp(nf.HealthyAPIServer(), nodes, entry.Index, &c.Reboot),
+			op.RebootOp(nf.HealthyAPIServerNodes(), nodes, entry.Index, &c.Reboot),
 			op.RebootDequeueOp(entry.Index),
 		}
 	}

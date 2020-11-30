@@ -26,11 +26,11 @@ import (
 const defaultEvictionTimeoutSeconds = 600
 
 type rebootOp struct {
-	apiserver *cke.Node
-	nodes     []*cke.Node
-	index     int64
-	config    *cke.Reboot
-	step      int
+	apiservers []*cke.Node
+	nodes      []*cke.Node
+	index      int64
+	config     *cke.Reboot
+	step       int
 
 	mu          sync.Mutex
 	failedNodes []string
@@ -43,12 +43,12 @@ func (o *rebootOp) notifyFailedNode(n *cke.Node) {
 }
 
 // RebootOp returns an Operator to reboot nodes.
-func RebootOp(apiserver *cke.Node, nodes []*cke.Node, index int64, config *cke.Reboot) cke.InfoOperator {
+func RebootOp(apiservers []*cke.Node, nodes []*cke.Node, index int64, config *cke.Reboot) cke.InfoOperator {
 	return &rebootOp{
-		apiserver: apiserver,
-		nodes:     nodes,
-		index:     index,
-		config:    config,
+		apiservers: apiservers,
+		nodes:      nodes,
+		index:      index,
+		config:     config,
 	}
 }
 
@@ -64,7 +64,7 @@ func (o *rebootOp) NextCommand() cke.Commander {
 	case 1:
 		o.step++
 		return cordonCommand{
-			apiserver:     o.apiserver,
+			apiservers:    o.apiservers,
 			nodes:         o.nodes,
 			unschedulable: true,
 		}
@@ -72,7 +72,7 @@ func (o *rebootOp) NextCommand() cke.Commander {
 		o.step++
 		return drainCommand{
 			timeoutSeconds:      o.config.EvictionTimeoutSeconds,
-			apiserver:           o.apiserver,
+			apiserver:           o.apiservers[0],
 			nodes:               o.nodes,
 			protectedNamespaces: o.config.ProtectedNamespaces,
 		}
@@ -87,7 +87,7 @@ func (o *rebootOp) NextCommand() cke.Commander {
 	case 4:
 		o.step++
 		return cordonCommand{
-			apiserver:     o.apiserver,
+			apiservers:    o.apiservers,
 			nodes:         o.nodes,
 			unschedulable: false,
 		}
@@ -132,13 +132,20 @@ func (c rebootStartCommand) Command() cke.Command {
 }
 
 type cordonCommand struct {
-	apiserver     *cke.Node
+	apiservers    []*cke.Node
 	nodes         []*cke.Node
 	unschedulable bool
 }
 
 func (c cordonCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	cs, err := inf.K8sClient(ctx, c.apiserver)
+	var cs *kubernetes.Clientset
+	var err error
+	for _, server := range c.apiservers {
+		cs, err = inf.K8sClient(ctx, server)
+		if err == nil {
+			break
+		}
+	}
 	if err != nil {
 		return err
 	}
