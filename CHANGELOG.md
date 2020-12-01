@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.18.6] - 2020-12-01
+
+### Fixed
+
+- Uncordon nodes in a separate operation. (#391)
+
 ## [1.18.5] - 2020-12-01
 
 ### Changed
@@ -80,7 +86,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.18.5...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.18.6...HEAD
+[1.18.6]: https://github.com/cybozu-go/cke/compare/v1.18.5...v1.18.6
 [1.18.5]: https://github.com/cybozu-go/cke/compare/v1.18.4...v1.18.5
 [1.18.4]: https://github.com/cybozu-go/cke/compare/v1.18.3...v1.18.4
 [1.18.3]: https://github.com/cybozu-go/cke/compare/v1.18.2...v1.18.3
