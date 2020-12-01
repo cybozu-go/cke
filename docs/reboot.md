@@ -46,9 +46,9 @@ The queue is processed by CKE as follows:
    3. Call the eviction API for Pods running on the target nodes.  DaemonSet-managed Pods are ignored.  If pods not in the `protected_namespaces` fail to be evicted, they are deleted instead.
    4. Wait for the deletion of the Pods.  If this step exceeds a deadline specified in the cluster configuration, the operation is aborted and the queue entry is left as is.
    5. Reboot the nodes using `.reboot.command` in the cluster configuration. In this step, all the nodes are rebooted simultaneously. If some of the nodes won't get back ready within the deadline specified in the cluster configuration, CKE gives up waiting for them (no error).
-   6. Uncordon the nodes.
-   7. Record the status in the history record.  It includes the list of nodes that failed to reboot.
-   8. Remove the entry.
+   6. Record the status in the history record.  It includes the list of nodes that failed to reboot.
+   7. Remove the entry.
+   8. Uncordon the nodes.
 
 
 [LabelSelector]: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors

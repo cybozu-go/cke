@@ -2015,6 +2015,27 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: nil,
 		},
 		{
+			Name: "UncordonNodes",
+			Input: newData().withK8sResourceReady().withRebootConfig().with(func(d testData) {
+				d.Status.Kubernetes.Nodes[0].Spec.Unschedulable = true
+				d.Status.Kubernetes.Nodes[0].Annotations = map[string]string{
+					op.CKEAnnotationReboot: "true",
+				}
+			}),
+			ExpectedOps: []string{"reboot-uncordon"},
+			ExpectedTargetNums: map[string]int{
+				"reboot-uncordon": 1,
+			},
+		},
+		{
+			Name: "SkipManuallyCordondedNodes",
+			Input: newData().withK8sResourceReady().withRebootConfig().with(func(d testData) {
+				d.Status.Kubernetes.Nodes[0].Spec.Unschedulable = true
+			}),
+			ExpectedOps:        nil,
+			ExpectedTargetNums: nil,
+		},
+		{
 			Name: "RebootWithoutConfig",
 			Input: newData().withK8sResourceReady().withRebootEntry(&cke.RebootQueueEntry{
 				Index:  1,
@@ -2031,10 +2052,10 @@ func TestDecideOps(t *testing.T) {
 				Nodes:  []string{nodeNames[0], nodeNames[1]},
 				Status: cke.RebootStatusQueued,
 			}),
-			ExpectedOps: []string{"reboot", "rebootDequeue"},
+			ExpectedOps: []string{"reboot", "reboot-dequeue"},
 			ExpectedTargetNums: map[string]int{
-				"reboot":        2,
-				"rebootDequeue": 0,
+				"reboot":         2,
+				"reboot-dequeue": 0,
 			},
 		},
 		{
@@ -2044,7 +2065,7 @@ func TestDecideOps(t *testing.T) {
 				Nodes:  []string{"0.0.0.0"},
 				Status: cke.RebootStatusQueued,
 			}),
-			ExpectedOps:        []string{"rebootDequeue"},
+			ExpectedOps:        []string{"reboot-dequeue"},
 			ExpectedTargetNums: nil,
 		},
 		{
@@ -2064,7 +2085,7 @@ func TestDecideOps(t *testing.T) {
 				Nodes:  []string{nodeNames[0], nodeNames[1]},
 				Status: cke.RebootStatusCancelled,
 			}),
-			ExpectedOps:        []string{"rebootDequeue"},
+			ExpectedOps:        []string{"reboot-dequeue"},
 			ExpectedTargetNums: nil,
 		},
 	}
