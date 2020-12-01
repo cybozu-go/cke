@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -43,11 +44,35 @@ func waitRebootCompletion(cluster *cke.Cluster) {
 	}).Should(Succeed())
 }
 
+func checkCordon(nodes ...string) {
+	EventuallyWithOffset(1, func() error {
+		for _, name := range nodes {
+			stdout, stderr, err := kubectl("get", "nodes", name, "-o=json")
+			if err != nil {
+				return fmt.Errorf("stderr: %s, err: %w", stderr, err)
+			}
+			var node corev1.Node
+			err = json.Unmarshal(stdout, &node)
+			if err != nil {
+				return err
+			}
+			if node.Spec.Unschedulable {
+				return fmt.Errorf("node %s is unschedulable", name)
+			}
+			if node.Annotations[op.CKEAnnotationReboot] == "true" {
+				return fmt.Errorf("node %s is annotated as a reboot target", name)
+			}
+		}
+		return nil
+	}).Should(Succeed())
+}
+
 func testRebootOperations(cluster *cke.Cluster) {
 	By("Rebooting nodes")
 	// this will run:
 	// - RebootOp
 	// - RebootDequeueOp
+	// - RebootUncordonOp
 	rebootTargets := node1
 	_, _, err := ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
@@ -55,6 +80,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
 	waitRebootCompletion(cluster)
+	checkCordon(node1, node2, node3)
 
 	By("Reboot operation gives up waiting node startup if deadline is exceeded")
 	previousCommand := cluster.Reboot.Command
@@ -68,6 +94,8 @@ func testRebootOperations(cluster *cke.Cluster) {
 	ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	ts := time.Now()
 	waitRebootCompletion(cluster)
+	checkCordon(node1)
+
 	timeout := time.Second * time.Duration(*cluster.Reboot.CommandTimeoutSeconds)
 	Expect(time.Now()).To(BeTemporally(">", ts.Add(timeout)))
 
@@ -128,6 +156,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 
 	ckecliSafe("reboot-queue", "cancel", "3")
 	waitRebootCompletion(cluster)
+	checkCordon(nodeName)
 
 	By("Reboot operation will protect pods in protected namespaces")
 	cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
@@ -153,6 +182,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 
 	ckecliSafe("reboot-queue", "cancel", "4")
 	waitRebootCompletion(cluster)
+	checkCordon(nodeName)
 
 	By("Reboot operation deletes non-protected pods")
 	cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
@@ -165,12 +195,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
 	waitRebootCompletion(cluster)
-
-	By("Uncordoning nodes failed to reboot")
-	_, _, err = kubectl("uncordon", pods.Items[0].Spec.NodeName)
-	Expect(err).ShouldNot(HaveOccurred())
-	_, _, err = kubectl("uncordon", pods.Items[1].Spec.NodeName)
-	Expect(err).ShouldNot(HaveOccurred())
+	checkCordon(nodeName)
 }
 
 func testOperators(isDegraded bool) {

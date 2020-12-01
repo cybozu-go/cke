@@ -21,7 +21,7 @@ func RebootDequeueOp(index int64) cke.Operator {
 }
 
 func (o *rebootDequeueOp) Name() string {
-	return "rebootDequeue"
+	return "reboot-dequeue"
 }
 
 func (o *rebootDequeueOp) NextCommand() cke.Commander {

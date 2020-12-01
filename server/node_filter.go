@@ -715,6 +715,9 @@ func (nf *NodeFilter) UnhealthyAPIServerNodes() (nodes []*cke.Node) {
 }
 
 func isInternal(name string) bool {
+	if name == op.CKEAnnotationReboot {
+		return false
+	}
 	if strings.HasPrefix(name, "cke.cybozu.com/") {
 		return true
 	}
@@ -895,6 +898,17 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node, taintCP bool) bool {
 	}
 
 	return false
+}
+
+// CordonedNodes returns nodes that are cordoned and annotated as reboot operation targets.
+func (nf *NodeFilter) CordonedNodes() (nodes []*corev1.Node) {
+	for i := range nf.status.Kubernetes.Nodes {
+		n := &nf.status.Kubernetes.Nodes[i]
+		if n.Spec.Unschedulable && n.Annotations[op.CKEAnnotationReboot] == "true" {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
 }
 
 // SSHNotConnectedNodes returns nodes that are not connected via SSH out of targets.

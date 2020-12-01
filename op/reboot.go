@@ -63,9 +63,13 @@ func (o *rebootOp) NextCommand() cke.Commander {
 		return rebootStartCommand{index: o.index}
 	case 1:
 		o.step++
+		nodeNames := make([]string, len(o.nodes))
+		for i := range o.nodes {
+			nodeNames[i] = o.nodes[i].Nodename()
+		}
 		return cordonCommand{
 			apiserver:     o.apiserver,
-			nodes:         o.nodes,
+			nodeNames:     nodeNames,
 			unschedulable: true,
 		}
 	case 2:
@@ -83,13 +87,6 @@ func (o *rebootOp) NextCommand() cke.Commander {
 			timeoutSeconds:   o.config.CommandTimeoutSeconds,
 			nodes:            o.nodes,
 			notifyFailedNode: o.notifyFailedNode,
-		}
-	case 4:
-		o.step++
-		return cordonCommand{
-			apiserver:     o.apiserver,
-			nodes:         o.nodes,
-			unschedulable: false,
 		}
 	default:
 		return nil
@@ -109,6 +106,41 @@ func (o *rebootOp) Info() string {
 		return ""
 	}
 	return fmt.Sprintf("failed to reboot some nodes: %v", o.failedNodes)
+}
+
+type rebootUncordonOp struct {
+	apiserver *cke.Node
+	nodeNames []string
+	finished  bool
+}
+
+// RebootUncordonOp returns an Operator to uncordon nodes.
+func RebootUncordonOp(apiserver *cke.Node, nodeNames []string) cke.Operator {
+	return &rebootUncordonOp{
+		apiserver: apiserver,
+		nodeNames: nodeNames,
+	}
+}
+
+func (o *rebootUncordonOp) Name() string {
+	return "reboot-uncordon"
+}
+
+func (o *rebootUncordonOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+
+	o.finished = true
+	return cordonCommand{
+		apiserver:     o.apiserver,
+		nodeNames:     o.nodeNames,
+		unschedulable: false,
+	}
+}
+
+func (o *rebootUncordonOp) Targets() []string {
+	return o.nodeNames
 }
 
 type rebootStartCommand struct {
@@ -133,7 +165,7 @@ func (c rebootStartCommand) Command() cke.Command {
 
 type cordonCommand struct {
 	apiserver     *cke.Node
-	nodes         []*cke.Node
+	nodeNames     []string
 	unschedulable bool
 }
 
@@ -144,8 +176,8 @@ func (c cordonCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string
 	}
 
 	nodesAPI := cs.CoreV1().Nodes()
-	for _, ckeNode := range c.nodes {
-		n, err := nodesAPI.Get(ctx, ckeNode.Nodename(), metav1.GetOptions{})
+	for _, name := range c.nodeNames {
+		n, err := nodesAPI.Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -158,6 +190,14 @@ func (c cordonCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string
 			return err
 		}
 		n.Spec.Unschedulable = c.unschedulable
+		if c.unschedulable {
+			if n.Annotations == nil {
+				n.Annotations = make(map[string]string)
+			}
+			n.Annotations[CKEAnnotationReboot] = "true"
+		} else {
+			delete(n.Annotations, CKEAnnotationReboot)
+		}
 		newData, err := json.Marshal(n)
 		if err != nil {
 			return err
@@ -175,13 +215,9 @@ func (c cordonCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string
 }
 
 func (c cordonCommand) Command() cke.Command {
-	ipAddresses := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		ipAddresses[i] = n.Address
-	}
 	return cke.Command{
 		Name:   "cordonCommand",
-		Target: strings.Join(ipAddresses, ","),
+		Target: strings.Join(c.nodeNames, ","),
 	}
 }
 

@@ -65,6 +65,9 @@ const (
 	// EtcdBackupAppName is application name for etcdbackup
 	EtcdBackupAppName = "etcdbackup"
 
+	// CKEAnnotationReboot is the annotation to mark reboot targets
+	CKEAnnotationReboot = "cke.cybozu.com/reboot"
+
 	// PolicyConfigPath is a path for scheduler extender policy
 	PolicyConfigPath = "/etc/kubernetes/scheduler/policy.cfg"
 	// SchedulerConfigPath is a path for scheduler extender config

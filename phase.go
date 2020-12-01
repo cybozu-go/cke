@@ -18,6 +18,7 @@ const (
 	PhaseEtcdMaintain    = OperationPhase("etcd-maintain")
 	PhaseK8sMaintain     = OperationPhase("k8s-maintain")
 	PhaseStopCP          = OperationPhase("stop-control-plane")
+	PhaseUncordonNodes   = OperationPhase("uncordon-nodes")
 	PhaseRebootNodes     = OperationPhase("reboot-nodes")
 	PhaseCompleted       = OperationPhase("completed")
 )
@@ -35,6 +36,7 @@ var AllOperationPhases = []OperationPhase{
 	PhaseEtcdMaintain,
 	PhaseK8sMaintain,
 	PhaseStopCP,
+	PhaseUncordonNodes,
 	PhaseRebootNodes,
 	PhaseCompleted,
 }
