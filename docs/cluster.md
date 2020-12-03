@@ -237,3 +237,4 @@ It should end with either `.conf` or `.conflist`.
 
 [CRI]: https://github.com/kubernetes/kubernetes/blob/242a97307b34076d5d8f5bbeb154fa4d97c9ef1d/docs/devel/container-runtime-interface.md
 [log rotation for CRI runtime]: https://github.com/kubernetes/kubernetes/issues/58823
+[LabelSelector]: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
