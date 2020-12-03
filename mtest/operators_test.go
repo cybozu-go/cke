@@ -91,7 +91,8 @@ func testRebootOperations(cluster *cke.Cluster) {
 
 	Expect(err).ShouldNot(HaveOccurred())
 	rebootTargets = node1
-	ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
+	_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
 	ts := time.Now()
 	waitRebootCompletion(cluster)
 	checkCordon(node1)
@@ -102,6 +103,28 @@ func testRebootOperations(cluster *cke.Cluster) {
 	cluster.Reboot.Command = previousCommand
 	_, err = ckecliClusterSet(cluster)
 	Expect(err).ShouldNot(HaveOccurred())
+
+	By("ckecli reboot-queue disable disables reboot queue processing")
+	ckecliSafe("reboot-queue", "disable")
+	// wait for the previous reconciliation to be done
+	time.Sleep(time.Second * 3)
+	_, _, err = ckecliWithInput([]byte(node1), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
+	Consistently(func() error {
+		num, err := numRebootEntries()
+		if err != nil {
+			return err
+		}
+		if num != 0 {
+			return fmt.Errorf("reboot entry is remaining")
+		}
+		return nil
+	}, time.Second*60).Should(HaveOccurred())
+
+	By("ckecli reboot-queue enable enables reboot queue processing")
+	ckecliSafe("reboot-queue", "enable")
+	waitRebootCompletion(cluster)
+	checkCordon(node1)
 
 	By("Preparing a deployment to test protected_namespaces")
 	rd, err := ioutil.ReadFile(rebootYAMLPath)
@@ -154,7 +177,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 		return nil
 	}, time.Second*60).Should(HaveOccurred())
 
-	ckecliSafe("reboot-queue", "cancel", "3")
+	ckecliSafe("reboot-queue", "cancel", "4")
 	waitRebootCompletion(cluster)
 	checkCordon(nodeName)
 
@@ -180,7 +203,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 		return nil
 	}, time.Second*60).Should(HaveOccurred())
 
-	ckecliSafe("reboot-queue", "cancel", "4")
+	ckecliSafe("reboot-queue", "cancel", "5")
 	waitRebootCompletion(cluster)
 	checkCordon(nodeName)
 

@@ -113,6 +113,10 @@ Sabakan URL.
 
 The reboot queue.
 
+### `reboots/disabled`
+
+If this key exists and its value is `true`, reboot queue is not processed.
+
 ### `reboots/write-index`
 
 The next index to write reboot queue entry formatted as a decimal string.
