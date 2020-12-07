@@ -698,16 +698,18 @@ func (s Storage) IsRebootQueueDisabled(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 
-	if bytes.Equal([]byte("true"), resp.Kvs[0].Value) {
-		return true, nil
-	}
-	return false, nil
+	return bytes.Equal([]byte("true"), resp.Kvs[0].Value), nil
 }
 
 // EnableRebootQueue enables reboot queue processing when flag is true.
 // When flag is false, reboot queue is not processed.
 func (s Storage) EnableRebootQueue(ctx context.Context, flag bool) error {
-	val := fmt.Sprint(!flag)
+	var val string
+	if flag {
+		val = "false"
+	} else {
+		val = "true"
+	}
 	_, err := s.Put(ctx, KeyRebootsDisabled, val)
 	return err
 }

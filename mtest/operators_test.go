@@ -1,6 +1,7 @@
 package mtest
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/well"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -177,7 +179,17 @@ func testRebootOperations(cluster *cke.Cluster) {
 		return nil
 	}, time.Second*60).Should(HaveOccurred())
 
-	ckecliSafe("reboot-queue", "cancel", "4")
+	env := well.NewEnvironment(context.Background())
+	env.Go(func(ctx context.Context) error {
+		for i := 0; i < 5; i++ {
+			// ignore error because the entry may have been deleted
+			ckecli("reboot-queue", "cancel", "4")
+			time.Sleep(time.Second)
+		}
+		return nil
+	})
+	env.Stop()
+	env.Wait()
 	waitRebootCompletion(cluster)
 	checkCordon(nodeName)
 
@@ -203,7 +215,17 @@ func testRebootOperations(cluster *cke.Cluster) {
 		return nil
 	}, time.Second*60).Should(HaveOccurred())
 
-	ckecliSafe("reboot-queue", "cancel", "5")
+	env = well.NewEnvironment(context.Background())
+	env.Go(func(ctx context.Context) error {
+		for i := 0; i < 5; i++ {
+			// ignore error because the entry may have been deleted
+			ckecli("reboot-queue", "cancel", "5")
+			time.Sleep(time.Second)
+		}
+		return nil
+	})
+	env.Stop()
+	env.Wait()
 	waitRebootCompletion(cluster)
 	checkCordon(nodeName)
 

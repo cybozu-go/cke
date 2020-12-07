@@ -280,7 +280,7 @@ Copy files between hosts via scp.
 
 ### `ckecli reboot-queue enable|disable`
 
-Enable/Disables processing reboot queue entries.
+Enable/Disable processing reboot queue entries.
 
 ### `ckecli reboot-queue add FILE`
 
