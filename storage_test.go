@@ -650,7 +650,7 @@ func testStorageReboot(t *testing.T) {
 
 	_, err = storage.GetRebootsEntry(ctx, 0)
 	if err != ErrNotFound {
-		t.Error("unexptected error:", err)
+		t.Error("unexpected error:", err)
 	}
 
 	ents, err := storage.GetRebootsEntries(ctx)
@@ -721,11 +721,43 @@ func testStorageReboot(t *testing.T) {
 	}
 	_, err = storage.GetRebootsEntry(ctx, 0)
 	if err != ErrNotFound {
-		t.Error("unexptected error:", err)
+		t.Error("unexpected error:", err)
 	}
 	err = storage.UpdateRebootsEntry(ctx, entry)
 	if err == nil {
 		t.Error("UpdateRebootsEntry succeeded for deleted entry")
+	}
+
+	disabled, err := storage.IsRebootQueueDisabled(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disabled {
+		t.Error("reboot queue should not be disabled by default")
+	}
+
+	err = storage.EnableRebootQueue(ctx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disabled, err = storage.IsRebootQueueDisabled(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !disabled {
+		t.Error("reboot queue could not be disabled")
+	}
+
+	err = storage.EnableRebootQueue(ctx, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disabled, err = storage.IsRebootQueueDisabled(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disabled {
+		t.Error("reboot queue could not be re-enabled")
 	}
 }
 

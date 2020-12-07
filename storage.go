@@ -30,6 +30,7 @@ const (
 	KeyClusterRevision       = "cluster-revision"
 	KeyConstraints           = "constraints"
 	KeyLeader                = "leader/"
+	KeyRebootsDisabled       = "reboots/disabled"
 	KeyRebootsPrefix         = "reboots/data/"
 	KeyRebootsWriteIndex     = "reboots/write-index"
 	KeyRecords               = "records/"
@@ -685,6 +686,32 @@ func (s Storage) SetSabakanURL(ctx context.Context, url string) error {
 // The URL must be an absolute URL pointing GraphQL endpoint.
 func (s Storage) GetSabakanURL(ctx context.Context) (string, error) {
 	return s.getStringValue(ctx, KeySabakanURL)
+}
+
+// IsRebootQueueDisabled returns true if reboot queue is disabled.
+func (s Storage) IsRebootQueueDisabled(ctx context.Context) (bool, error) {
+	resp, err := s.Get(ctx, KeyRebootsDisabled)
+	if err != nil {
+		return false, err
+	}
+	if resp.Count == 0 {
+		return false, nil
+	}
+
+	return bytes.Equal([]byte("true"), resp.Kvs[0].Value), nil
+}
+
+// EnableRebootQueue enables reboot queue processing when flag is true.
+// When flag is false, reboot queue is not processed.
+func (s Storage) EnableRebootQueue(ctx context.Context, flag bool) error {
+	var val string
+	if flag {
+		val = "false"
+	} else {
+		val = "true"
+	}
+	_, err := s.Put(ctx, KeyRebootsDisabled, val)
+	return err
 }
 
 func rebootsEntryKey(index int64) string {

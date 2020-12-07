@@ -43,6 +43,7 @@ $ ckecli [--config FILE] <subcommand> args...
 - [`ckecli ssh [user@]NODE [COMMAND...]`](#ckecli-ssh-usernode-command)
 - [`ckecli scp [-r] [[user@]NODE1:]FILE1 ... [[user@]NODE2:]FILE2`](#ckecli-scp--r-usernode1file1--usernode2file2)
 - [`ckecli reboot-queue`, `ckecli rq`](#ckecli-reboot-queue-ckecli-rq)
+  - [`ckecli reboot-queue enable|disable`](#ckecli-reboot-queue-enabledisable)
   - [`ckecli reboot-queue add FILE`](#ckecli-reboot-queue-add-file)
   - [`ckecli reboot-queue list`](#ckecli-reboot-queue-list)
   - [`ckecli reboot-queue cancel INDEX`](#ckecli-reboot-queue-cancel-index)
@@ -276,6 +277,10 @@ Copy files between hosts via scp.
 ## `ckecli reboot-queue`, `ckecli rq`
 
 `rq` is an alias of `reboot-queue`.
+
+### `ckecli reboot-queue enable|disable`
+
+Enable/Disable processing reboot queue entries.
 
 ### `ckecli reboot-queue add FILE`
 
