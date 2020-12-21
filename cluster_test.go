@@ -131,6 +131,21 @@ rules:
 	if *kubeSchedulerConfig.HealthzBindAddress != "0.0.0.0" {
 		t.Error(`*kubeSchedulerConfig.HealthzBindAddress != "0.0.0.0"`)
 	}
+	if len(kubeSchedulerConfig.Profiles) != 1 {
+		t.Error(`kubeSchedulerConfig.Profiles != 1"`)
+	}
+	if *kubeSchedulerConfig.Profiles[0].SchedulerName != "default-scheduler" {
+		t.Error(`*kubeSchedulerConfig.Profiles != default-scheduler"`)
+	}
+	if kubeSchedulerConfig.Profiles[0].Plugins.Score.Disabled[0].Name != "PodTopologySpread" {
+		t.Error(`kubeSchedulerConfig.Profiles[0].Plugins.Score.Disabled[0].Name != "PodTopologySpread"`)
+	}
+	if kubeSchedulerConfig.Profiles[0].Plugins.Score.Enabled[0].Name != "PodTopologySpread" {
+		t.Error(`kubeSchedulerConfig.Profiles[0].Plugins.Score.Enabled[0].Name != "PodTopologySpread"`)
+	}
+	if *kubeSchedulerConfig.Profiles[0].Plugins.Score.Enabled[0].Weight != int32(500) {
+		t.Error(`*kubeSchedulerConfig.Profiles[0].Plugins.Score.Enabled[0].Weight != int32(500)`)
+	}
 	if c.Options.Kubelet.Domain != "my.domain" {
 		t.Error(`c.Options.Kubelet.Domain != "my.domain"`)
 	}
