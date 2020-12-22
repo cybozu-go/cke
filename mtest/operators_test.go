@@ -560,14 +560,17 @@ func testOperators(isDegraded bool) {
 		// - KubeClusterDNSUpdateOp
 		cluster.Options.Etcd.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.ControllerManager.ExtraEnvvar = map[string]string{"AAA": "aaa"}
-		cluster.Options.Scheduler.ExtraEnvvar = map[string]string{"AAA": "aaa"}
-		cluster.Options.Scheduler.Extenders = []string{"urlPrefix: http://127.0.0.1:8000"}
-		cluster.Options.Scheduler.Predicates = []string{"name: some_predicate"}
-		cluster.Options.Scheduler.Priorities = []string{"name: some_priority"}
 		cluster.Options.Proxy.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Kubelet.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Kubelet.Domain = "neconeco"
 		clusterSetAndWait(cluster)
+
+		cluster.Options.Scheduler.ExtraEnvvar = map[string]string{"AAA": "aaa"}
+		cluster.Options.Scheduler.Extenders = []string{"urlPrefix: http://127.0.0.1:8000"}
+		cluster.Options.Scheduler.Predicates = []string{"name: some_predicate"}
+		cluster.Options.Scheduler.Priorities = []string{"name: some_priority"}
+		_, err = ckecliClusterSet(cluster)
+		Expect(err).Should(HaveOccurred())
 	})
 
 	It("updates Node resources", func() {
