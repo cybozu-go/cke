@@ -130,9 +130,30 @@ type SchedulerParams struct {
 	Config        *unstructured.Unstructured `json:"config,omitempty"`
 }
 
+const (
+	// SchedulerAPIv1alpha1 is API version of kubescheduler, v1alpha1.
+	SchedulerAPIv1alpha1 = "v1alpha1"
+
+	// SchedulerAPIv1alpha2 is API version of kubescheduler, v1alpha2.
+	SchedulerAPIv1alpha2 = "v1alpha2"
+)
+
 // IsConfigV1Alpha1 returns whether params is v1alpha1.
 func (p SchedulerParams) IsConfigV1Alpha1() bool {
 	return p.Config == nil
+}
+
+// GetAPIversion returns API version of KubeSchedulerConfiguration.
+func (p SchedulerParams) GetAPIversion() (string, error) {
+	if p.Config == nil {
+		return SchedulerAPIv1alpha1, nil
+	}
+
+	if len(p.Extenders) > 0 || len(p.Predicates) > 0 || len(p.Priorities) > 0 {
+		return "", fmt.Errorf("both Config and Extenders/Predicates/Priorities should not be configured: %#v", p)
+	}
+
+	return p.Config.GetAPIVersion(), nil
 }
 
 // GetConfigV1Alpha2 returns *schedulerv1alpha2.KubeSchedulerConfiguration.
@@ -559,7 +580,12 @@ func validateOptions(opts Options) error {
 		}
 	}
 
-	if opts.Scheduler.IsConfigV1Alpha1() {
+	version, err := opts.Scheduler.GetAPIversion()
+	if err != nil {
+		return err
+	}
+	switch version {
+	case SchedulerAPIv1alpha1:
 		for _, e := range opts.Scheduler.Extenders {
 			config := schedulerv1.Extender{}
 			err = yaml.Unmarshal([]byte(e), &config)
@@ -595,13 +621,14 @@ func validateOptions(opts Options) error {
 				return errors.New("no name is provided")
 			}
 		}
-	} else {
+	case SchedulerAPIv1alpha2:
 		base := schedulerv1alpha2.KubeSchedulerConfiguration{}
 		_, err := opts.Scheduler.GetConfigV1Alpha2(&base)
 		if err != nil {
 			return err
 		}
-		// nothing to check
+	default:
+		return errors.New("unsupported scheduler API version was given: " + version)
 	}
 
 	return nil

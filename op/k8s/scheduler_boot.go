@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/cybozu-go/cke"
@@ -93,7 +94,12 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		return err
 	}
 
-	if c.params.IsConfigV1Alpha1() {
+	version, err := c.params.GetAPIversion()
+	if err != nil {
+		return err
+	}
+	switch version {
+	case cke.SchedulerAPIv1alpha1:
 		g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
 			var extenders []schedulerv1.Extender
 			for _, extStr := range c.params.Extenders {
@@ -154,13 +160,15 @@ leaderElection:
 		return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
 			return []byte(schedulerConfig), nil
 		})
+	case cke.SchedulerAPIv1alpha2:
+		g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
+			cfg := GenerateSchedulerConfiguration(c.params)
+			return yaml.Marshal(cfg)
+		}
+		return c.files.AddFile(ctx, op.SchedulerConfigPath, g)
+	default:
+		return errors.New("unsupported scheduler API version was given: " + version)
 	}
-
-	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		cfg := GenerateSchedulerConfiguration(c.params)
-		return yaml.Marshal(cfg)
-	}
-	return c.files.AddFile(ctx, op.SchedulerConfigPath, g)
 }
 
 func (c prepareSchedulerFilesCommand) Command() cke.Command {
