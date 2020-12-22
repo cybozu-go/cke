@@ -360,19 +360,13 @@ func (nf *NodeFilter) SchedulerStoppedNodes() (nodes []*cke.Node) {
 // SchedulerOutdatedNodes returns nodes that are running kube-scheduler with outdated image or params.
 func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) []*cke.Node {
 	version, err := params.GetAPIversion()
-	// TODO
-	if err != nil {
-		return nf.schedulerOutdatedNodesV1Alpha2(params)
-	}
-	switch version {
-	case cke.SchedulerAPIv1alpha1:
+	switch {
+	case version == cke.SchedulerAPIv1alpha1:
 		return nf.schedulerOutdatedNodesV1Alpha1(params)
-	case cke.SchedulerAPIv1alpha2:
-		return nf.schedulerOutdatedNodesV1Alpha2(params)
-	// TODO
-	default:
+	case version == cke.SchedulerAPIv1alpha2 || err != nil:
 		return nf.schedulerOutdatedNodesV1Alpha2(params)
 	}
+	return nil
 }
 
 func (nf *NodeFilter) schedulerOutdatedNodesV1Alpha2(params cke.SchedulerParams) (nodes []*cke.Node) {

@@ -132,16 +132,11 @@ type SchedulerParams struct {
 
 const (
 	// SchedulerAPIv1alpha1 is API version of kubescheduler, v1alpha1.
-	SchedulerAPIv1alpha1 = "v1alpha1"
+	SchedulerAPIv1alpha1 = "kubescheduler.config.k8s.io/v1alpha1"
 
 	// SchedulerAPIv1alpha2 is API version of kubescheduler, v1alpha2.
-	SchedulerAPIv1alpha2 = "v1alpha2"
+	SchedulerAPIv1alpha2 = "kubescheduler.config.k8s.io/v1alpha2"
 )
-
-// IsConfigV1Alpha1 returns whether params is v1alpha1.
-func (p SchedulerParams) IsConfigV1Alpha1() bool {
-	return p.Config == nil
-}
 
 // GetAPIversion returns API version of KubeSchedulerConfiguration.
 func (p SchedulerParams) GetAPIversion() (string, error) {
@@ -158,9 +153,14 @@ func (p SchedulerParams) GetAPIversion() (string, error) {
 
 // GetConfigV1Alpha2 returns *schedulerv1alpha2.KubeSchedulerConfiguration.
 func (p SchedulerParams) GetConfigV1Alpha2(base *schedulerv1alpha2.KubeSchedulerConfiguration) (*schedulerv1alpha2.KubeSchedulerConfiguration, error) {
+	if base == nil {
+		return nil, errors.New("base should not be nil")
+	}
 	cfg := *base
-	if p.Config == nil {
-		return nil, errors.New("api version mismatch")
+
+	version, err := p.GetAPIversion()
+	if version != SchedulerAPIv1alpha2 || err != nil {
+		return nil, errors.New("api version mismatch: " + version)
 	}
 
 	if p.Config.GetAPIVersion() != schedulerv1alpha2.SchemeGroupVersion.String() {
