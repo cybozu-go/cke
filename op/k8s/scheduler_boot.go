@@ -9,9 +9,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
-	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -100,51 +98,21 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	}
 	switch version {
 	case cke.SchedulerAPIv1alpha1:
-		g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
-			var extenders []schedulerv1.Extender
-			for _, extStr := range c.params.Extenders {
-				conf := new(schedulerv1.Extender)
-				err = yaml.Unmarshal([]byte(extStr), conf)
-				if err != nil {
-					return nil, err
-				}
-				extenders = append(extenders, *conf)
-			}
-
-			var predicates []schedulerv1.PredicatePolicy
-			for _, extStr := range c.params.Predicates {
-				conf := new(schedulerv1.PredicatePolicy)
-				err = yaml.Unmarshal([]byte(extStr), conf)
-				if err != nil {
-					return nil, err
-				}
-				predicates = append(predicates, *conf)
-			}
-
-			var priorities []schedulerv1.PriorityPolicy
-			for _, extStr := range c.params.Priorities {
-				conf := new(schedulerv1.PriorityPolicy)
-				err = yaml.Unmarshal([]byte(extStr), conf)
-				if err != nil {
-					return nil, err
-				}
-				priorities = append(priorities, *conf)
-			}
-
-			policy := schedulerv1.Policy{
-				TypeMeta:   metav1.TypeMeta{Kind: "Policy", APIVersion: "v1"},
-				Extenders:  extenders,
-				Predicates: predicates,
-				Priorities: priorities,
+		// Create v1 Policy for scheduler extender
+		err := c.files.AddFile(ctx, op.PolicyConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+			policy, err := GenerateSchedulerPolicyV1(c.params)
+			if err != nil {
+				return nil, err
 			}
 			return json.Marshal(policy)
-		}
-		err = c.files.AddFile(ctx, op.PolicyConfigPath, g)
+		})
 		if err != nil {
 			return err
 		}
 
-		schedulerConfig := fmt.Sprintf(`apiVersion: kubescheduler.config.k8s.io/v1alpha1
+		// Create v1alpha1 KubeSchedulerConfiguration
+		return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+			return []byte(fmt.Sprintf(`apiVersion: kubescheduler.config.k8s.io/v1alpha1
 kind: KubeSchedulerConfiguration
 schedulerName: default-scheduler
 clientConnection:
@@ -155,17 +123,14 @@ algorithmSource:
       path: %s
 leaderElection:
   leaderElect: true
-`, op.SchedulerKubeConfigPath, op.PolicyConfigPath)
-
-		return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
-			return []byte(schedulerConfig), nil
+`, op.SchedulerKubeConfigPath, op.PolicyConfigPath)), nil
 		})
+
 	case cke.SchedulerAPIv1alpha2:
-		g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
-			cfg := GenerateSchedulerConfiguration(c.params)
+		return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+			cfg := GenerateSchedulerConfigurationV1Alpha2(c.params)
 			return yaml.Marshal(cfg)
-		}
-		return c.files.AddFile(ctx, op.SchedulerConfigPath, g)
+		})
 	default:
 		return errors.New("unsupported scheduler API version was given: " + version)
 	}

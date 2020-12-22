@@ -45,7 +45,7 @@ func TestGenerateSchedulerConfiguration(t *testing.T) {
 		PodMaxBackoffSeconds: &podMaxBackoffSeconds,
 	}
 
-	conf := GenerateSchedulerConfiguration(input)
+	conf := GenerateSchedulerConfigurationV1Alpha2(input)
 	if !reflect.DeepEqual(conf, expected) {
 		t.Errorf("GenerateSchedulerConfiguration() generated unexpected result:\n%s", cmp.Diff(conf, expected))
 	}

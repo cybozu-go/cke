@@ -15,7 +15,6 @@ import (
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"sigs.k8s.io/yaml"
 )
 
 // NodeFilter filters nodes to
@@ -359,59 +358,32 @@ func (nf *NodeFilter) SchedulerStoppedNodes() (nodes []*cke.Node) {
 }
 
 // SchedulerOutdatedNodes returns nodes that are running kube-scheduler with outdated image or params.
-func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) (nodes []*cke.Node) {
+func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) []*cke.Node {
+	version, err := params.GetAPIversion()
+	// TODO
+	if err != nil {
+		return nf.schedulerOutdatedNodesV1Alpha2(params)
+	}
+	switch version {
+	case cke.SchedulerAPIv1alpha1:
+		return nf.schedulerOutdatedNodesV1Alpha1(params)
+	case cke.SchedulerAPIv1alpha2:
+		return nf.schedulerOutdatedNodesV1Alpha2(params)
+	// TODO
+	default:
+		return nf.schedulerOutdatedNodesV1Alpha2(params)
+	}
+}
+
+func (nf *NodeFilter) schedulerOutdatedNodesV1Alpha2(params cke.SchedulerParams) (nodes []*cke.Node) {
 	currentBuiltIn := k8s.SchedulerParams()
 	currentExtra := nf.cluster.Options.Scheduler
 
-	var extenders []schedulerv1.Extender
-	for _, ext := range params.Extenders {
-		conf := new(schedulerv1.Extender)
-		err := yaml.Unmarshal([]byte(ext), conf)
-		if err != nil {
-			log.Warn("failed to unmarshal extender config", map[string]interface{}{
-				log.FnError: err,
-				"config":    ext,
-			})
-			panic(err)
-		}
-		extenders = append(extenders, *conf)
-	}
-
-	var predicates []schedulerv1.PredicatePolicy
-	for _, ext := range params.Predicates {
-		conf := new(schedulerv1.PredicatePolicy)
-		err := yaml.Unmarshal([]byte(ext), conf)
-		if err != nil {
-			log.Warn("failed to unmarshal predicates config", map[string]interface{}{
-				log.FnError: err,
-				"config":    ext,
-			})
-			panic(err)
-		}
-		predicates = append(predicates, *conf)
-	}
-
-	var priorities []schedulerv1.PriorityPolicy
-	for _, ext := range params.Priorities {
-		conf := new(schedulerv1.PriorityPolicy)
-		err := yaml.Unmarshal([]byte(ext), conf)
-		if err != nil {
-			log.Warn("failed to unmarshal priorities config", map[string]interface{}{
-				log.FnError: err,
-				"config":    ext,
-			})
-			panic(err)
-		}
-		priorities = append(priorities, *conf)
-	}
-
 	for _, n := range nf.cp {
 		st := nf.nodeStatus(n).Scheduler
-		var currentConfig schedulerv1alpha2.KubeSchedulerConfiguration
+		currentConfig := k8s.GenerateSchedulerConfigurationV1Alpha2(params)
+
 		var runningConfig schedulerv1alpha2.KubeSchedulerConfiguration
-		if !params.IsConfigV1Alpha1() {
-			currentConfig = k8s.GenerateSchedulerConfiguration(params)
-		}
 		if st.Config != nil {
 			runningConfig = *st.Config
 		}
@@ -424,13 +396,7 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) (nodes 
 			fallthrough
 		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
 			fallthrough
-		case params.IsConfigV1Alpha1() && !equalExtenders(extenders, st.Extenders):
-			fallthrough
-		case params.IsConfigV1Alpha1() && !equalPredicates(predicates, st.Predicates):
-			fallthrough
-		case params.IsConfigV1Alpha1() && !equalPriorities(priorities, st.Priorities):
-			fallthrough
-		case !params.IsConfigV1Alpha1() && !reflect.DeepEqual(currentConfig, *st.Config):
+		case !reflect.DeepEqual(currentConfig, runningConfig):
 			log.Debug("node has been appended", map[string]interface{}{
 				"node":                       n.Nodename(),
 				"st_builtin_args":            st.BuiltInParams.ExtraArguments,
@@ -447,11 +413,66 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) (nodes 
 				"current_extra_extenders":    currentExtra.Extenders,
 				"current_extra_predicates":   currentExtra.Predicates,
 				"current_extra_priorities":   currentExtra.Priorities,
-				"current_extenders_configs":  extenders,
-				"current_predicates_configs": predicates,
-				"current_priorities_configs": priorities,
+				"current_extenders_configs":  params.Extenders,
+				"current_predicates_configs": params.Predicates,
+				"current_priorities_configs": params.Priorities,
 				"config":                     currentConfig,
 				"diff":                       cmp.Diff(currentConfig, runningConfig),
+			})
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
+func (nf *NodeFilter) schedulerOutdatedNodesV1Alpha1(params cke.SchedulerParams) (nodes []*cke.Node) {
+	currentBuiltIn := k8s.SchedulerParams()
+	currentExtra := nf.cluster.Options.Scheduler
+
+	policy, err := k8s.GenerateSchedulerPolicyV1(params)
+	if err != nil {
+		log.Warn("failed to unmarshal predicates config", map[string]interface{}{
+			log.FnError: err,
+			"params":    params,
+		})
+		panic(err)
+	}
+
+	for _, n := range nf.cp {
+		st := nf.nodeStatus(n).Scheduler
+		switch {
+		case !st.Running:
+			// stopped nodes are excluded
+		case cke.KubernetesImage.Name() != st.Image:
+			fallthrough
+		case !currentBuiltIn.Equal(st.BuiltInParams):
+			fallthrough
+		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
+			fallthrough
+		case !equalExtenders(policy.Extenders, st.Extenders):
+			fallthrough
+		case !equalPredicates(policy.Predicates, st.Predicates):
+			fallthrough
+		case !equalPriorities(policy.Priorities, st.Priorities):
+			log.Debug("node has been appended", map[string]interface{}{
+				"node":                       n.Nodename(),
+				"st_builtin_args":            st.BuiltInParams.ExtraArguments,
+				"st_builtin_env":             st.BuiltInParams.ExtraEnvvar,
+				"st_extra_args":              st.ExtraParams.ExtraArguments,
+				"st_extra_env":               st.ExtraParams.ExtraEnvvar,
+				"st_extra_extenders":         st.Extenders,
+				"st_extra_predicates":        st.Predicates,
+				"st_extra_priorities":        st.Priorities,
+				"current_builtin_args":       currentBuiltIn.ExtraArguments,
+				"current_builtin_env":        currentBuiltIn.ExtraEnvvar,
+				"current_extra_args":         currentExtra.ExtraArguments,
+				"current_extra_env":          currentExtra.ExtraEnvvar,
+				"current_extra_extenders":    currentExtra.Extenders,
+				"current_extra_predicates":   currentExtra.Predicates,
+				"current_extra_priorities":   currentExtra.Priorities,
+				"current_extenders_configs":  policy.Extenders,
+				"current_predicates_configs": policy.Predicates,
+				"current_priorities_configs": policy.Priorities,
 			})
 			nodes = append(nodes, n)
 		}
