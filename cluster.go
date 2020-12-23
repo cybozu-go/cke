@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
+	schedulerv1alpha1 "k8s.io/kube-scheduler/config/v1alpha1"
 	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -130,18 +131,10 @@ type SchedulerParams struct {
 	Config        *unstructured.Unstructured `json:"config,omitempty"`
 }
 
-const (
-	// SchedulerAPIv1alpha1 is API version of kubescheduler, v1alpha1.
-	SchedulerAPIv1alpha1 = "kubescheduler.config.k8s.io/v1alpha1"
-
-	// SchedulerAPIv1alpha2 is API version of kubescheduler, v1alpha2.
-	SchedulerAPIv1alpha2 = "kubescheduler.config.k8s.io/v1alpha2"
-)
-
 // GetAPIversion returns API version of KubeSchedulerConfiguration.
 func (p SchedulerParams) GetAPIversion() (string, error) {
 	if p.Config == nil {
-		return SchedulerAPIv1alpha1, nil
+		return schedulerv1alpha1.SchemeGroupVersion.String(), nil
 	}
 
 	if len(p.Extenders) > 0 || len(p.Predicates) > 0 || len(p.Priorities) > 0 {
@@ -156,16 +149,17 @@ func (p SchedulerParams) GetConfigV1Alpha2(base *schedulerv1alpha2.KubeScheduler
 	if base == nil {
 		return nil, errors.New("base should not be nil")
 	}
-	cfg := *base
 
 	version, err := p.GetAPIversion()
-	if version != SchedulerAPIv1alpha2 || err != nil {
-		return nil, errors.New("api version mismatch: " + version)
+	if err != nil {
+		return nil, err
 	}
 
-	if p.Config.GetAPIVersion() != schedulerv1alpha2.SchemeGroupVersion.String() {
+	if version != schedulerv1alpha2.SchemeGroupVersion.String() {
 		return nil, fmt.Errorf("unexpected kube-scheduler API version: %s", p.Config.GetAPIVersion())
 	}
+
+	cfg := *base
 	if p.Config.GetKind() != "KubeSchedulerConfiguration" {
 		return nil, fmt.Errorf("wrong kind for kube-scheduler config: %s", p.Config.GetKind())
 	}
@@ -199,6 +193,9 @@ type KubeletParams struct {
 
 // GetConfigV1Beta1 returns *kubeletv1beta1.KubeletConfiguration.
 func (p KubeletParams) GetConfigV1Beta1(base *kubeletv1beta1.KubeletConfiguration) (*kubeletv1beta1.KubeletConfiguration, error) {
+	if base == nil {
+		return nil, errors.New("base should not be nil")
+	}
 	cfg := *base
 	if p.Config == nil {
 		if p.CgroupDriver != "" {
@@ -585,7 +582,7 @@ func validateOptions(opts Options) error {
 		return err
 	}
 	switch version {
-	case SchedulerAPIv1alpha1:
+	case schedulerv1alpha1.SchemeGroupVersion.String():
 		for _, e := range opts.Scheduler.Extenders {
 			config := schedulerv1.Extender{}
 			err = yaml.Unmarshal([]byte(e), &config)
@@ -621,7 +618,7 @@ func validateOptions(opts Options) error {
 				return errors.New("no name is provided")
 			}
 		}
-	case SchedulerAPIv1alpha2:
+	case schedulerv1alpha2.SchemeGroupVersion.String():
 		base := schedulerv1alpha2.KubeSchedulerConfiguration{}
 		_, err := opts.Scheduler.GetConfigV1Alpha2(&base)
 		if err != nil {

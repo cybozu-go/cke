@@ -11,6 +11,9 @@ import (
 	"github.com/cybozu-go/cke/op/common"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/yaml"
+
+	schedulerv1alpha1 "k8s.io/kube-scheduler/config/v1alpha1"
+	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
 )
 
 type schedulerBootOp struct {
@@ -97,7 +100,7 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		return err
 	}
 	switch version {
-	case cke.SchedulerAPIv1alpha1:
+	case schedulerv1alpha1.SchemeGroupVersion.String():
 		// Create v1 Policy for scheduler extender
 		err := c.files.AddFile(ctx, op.PolicyConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
 			policy, err := GenerateSchedulerPolicyV1(c.params)
@@ -126,7 +129,7 @@ leaderElection:
 `, op.SchedulerKubeConfigPath, op.PolicyConfigPath)), nil
 		})
 
-	case cke.SchedulerAPIv1alpha2:
+	case schedulerv1alpha2.SchemeGroupVersion.String():
 		return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
 			cfg := GenerateSchedulerConfigurationV1Alpha2(c.params)
 			return yaml.Marshal(cfg)
