@@ -440,8 +440,6 @@ func (nf *NodeFilter) schedulerOutdatedNodesV1Alpha1(params cke.SchedulerParams)
 		return nil
 	}
 
-	currentConfig := k8s.GenerateSchedulerConfigurationV1Alpha2(params)
-
 	for _, n := range nf.cp {
 		st := nf.nodeStatus(n).Scheduler
 		var runningConfig schedulerv1alpha2.KubeSchedulerConfiguration
@@ -482,7 +480,6 @@ func (nf *NodeFilter) schedulerOutdatedNodesV1Alpha1(params cke.SchedulerParams)
 				"current_extenders_configs":  policy.Extenders,
 				"current_predicates_configs": policy.Predicates,
 				"current_priorities_configs": policy.Priorities,
-				"current_config":             currentConfig,
 				"running_config":             runningConfig,
 			})
 			nodes = append(nodes, n)

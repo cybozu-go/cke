@@ -156,7 +156,7 @@ func (p SchedulerParams) GetConfigV1Alpha2(base *schedulerv1alpha2.KubeScheduler
 	}
 
 	if version != schedulerv1alpha2.SchemeGroupVersion.String() {
-		return nil, fmt.Errorf("unexpected kube-scheduler API version: %s", p.Config.GetAPIVersion())
+		return nil, fmt.Errorf("unexpected kube-scheduler API version: %s", version)
 	}
 
 	cfg := *base
