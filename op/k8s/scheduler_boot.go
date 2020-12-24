@@ -131,7 +131,11 @@ leaderElection:
 
 	case schedulerv1alpha2.SchemeGroupVersion.String():
 		return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
-			cfg := GenerateSchedulerConfigurationV1Alpha2(c.params)
+			cfg, err := GenerateSchedulerConfigurationV1Alpha2(c.params)
+			if err != nil {
+				return nil, err
+			}
+
 			return yaml.Marshal(cfg)
 		})
 	default:

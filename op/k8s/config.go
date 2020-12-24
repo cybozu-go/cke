@@ -96,13 +96,13 @@ func GenerateSchedulerPolicyV1(params cke.SchedulerParams) (*schedulerv1.Policy,
 }
 
 // GenerateSchedulerConfigurationV1Alpha2 generates scheduler configuration for v1alpha2.
-func GenerateSchedulerConfigurationV1Alpha2(params cke.SchedulerParams) schedulerv1alpha2.KubeSchedulerConfiguration {
+func GenerateSchedulerConfigurationV1Alpha2(params cke.SchedulerParams) (*schedulerv1alpha2.KubeSchedulerConfiguration, error) {
 	// default values
 	base := schedulerv1alpha2.KubeSchedulerConfiguration{}
 
 	c, err := params.GetConfigV1Alpha2(&base)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	// forced values
@@ -115,7 +115,7 @@ func GenerateSchedulerConfigurationV1Alpha2(params cke.SchedulerParams) schedule
 		},
 	}
 
-	return *c
+	return c, nil
 }
 
 func proxyKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Config {
