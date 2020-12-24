@@ -384,7 +384,7 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) []*cke.
 func (nf *NodeFilter) schedulerOutdatedNodesV1Alpha2(params cke.SchedulerParams) (nodes []*cke.Node) {
 	currentBuiltIn := k8s.SchedulerParams()
 	currentExtra := nf.cluster.Options.Scheduler
-	currentConfig, err := k8s.GenerateSchedulerConfigurationV1Alpha2(params)
+	ptr, err := k8s.GenerateSchedulerConfigurationV1Alpha2(params)
 	if err != nil {
 		log.Error("failed to generate scheduler config for v1alpha2", map[string]interface{}{
 			log.FnError: err,
@@ -392,6 +392,11 @@ func (nf *NodeFilter) schedulerOutdatedNodesV1Alpha2(params cke.SchedulerParams)
 		})
 		return nil
 	}
+	if ptr == nil {
+		log.Error("currentConfig should not be nil", map[string]interface{}{})
+		return nil
+	}
+	currentConfig := *ptr
 
 	for _, n := range nf.cp {
 		st := nf.nodeStatus(n).Scheduler
