@@ -296,7 +296,7 @@ func decideClusterDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesC
 		}
 	}
 	base := &v1beta1.KubeletConfiguration{}
-	kubeletConfig, err := c.Options.Kubelet.GetConfigV1Beta1(base)
+	kubeletConfig, err := c.Options.Kubelet.OverwriteBaseConfigV1Beta1(base)
 	if err != nil {
 		panic(err)
 	}
@@ -330,7 +330,7 @@ func decideNodeDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClus
 	}
 
 	base := &v1beta1.KubeletConfiguration{}
-	kubeletConfig, err := c.Options.Kubelet.GetConfigV1Beta1(base)
+	kubeletConfig, err := c.Options.Kubelet.OverwriteBaseConfigV1Beta1(base)
 	if err != nil {
 		panic(err)
 	}
