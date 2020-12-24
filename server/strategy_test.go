@@ -865,6 +865,18 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
+			Name: "RestartScheduler8",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Scheduler.Extenders = []string{"some-extender"}
+			}).withSSHNotConnectedNodes(),
+			ExpectedOps: []string{
+				"wait-kubernetes",
+			},
+			ExpectedTargetNums: map[string]int{
+				"wait-kubernetes": 1,
+			},
+		},
+		{
 			Name:  "RestartKubelet",
 			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{

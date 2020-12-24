@@ -1,6 +1,7 @@
 package cke
 
 import (
+	"errors"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -146,6 +147,14 @@ rules:
 	if *kubeSchedulerConfig.Profiles[0].Plugins.Score.Enabled[0].Weight != int32(500) {
 		t.Error(`*kubeSchedulerConfig.Profiles[0].Plugins.Score.Enabled[0].Weight != int32(500)`)
 	}
+
+	kubeSchedulerExtenderName := "test-extender"
+	c.Options.Scheduler.Extenders = []string{kubeSchedulerExtenderName}
+	_, err = c.Options.Scheduler.GetAPIversion()
+	if err == nil {
+		t.Fatal(errors.New("kube-scheduler configuration must not have its Extenders/Predicates/Priorities parameters when its Config parameter is set"))
+	}
+
 	if c.Options.Kubelet.Domain != "my.domain" {
 		t.Error(`c.Options.Kubelet.Domain != "my.domain"`)
 	}
