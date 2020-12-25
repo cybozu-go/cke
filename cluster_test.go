@@ -114,7 +114,7 @@ rules:
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
 	}
 	kubeSchedulerHealthz := "0.0.0.0"
-	kubeSchedulerConfig, err := c.Options.Scheduler.OverwriteBaseConfigV1Alpha2(&schedulerv1alpha2.KubeSchedulerConfiguration{
+	kubeSchedulerConfig, err := c.Options.Scheduler.MergeConfigV1Alpha2(&schedulerv1alpha2.KubeSchedulerConfiguration{
 		HealthzBindAddress: &kubeSchedulerHealthz,
 	})
 	if err != nil {
@@ -198,7 +198,7 @@ rules:
 	if len(c.Options.Kubelet.CNIConfFile.Content) == 0 {
 		t.Error(`len(c.Options.Kubelet.CNIConfFile.Content) == 0`)
 	}
-	kubeletConfig, err := c.Options.Kubelet.OverwriteBaseConfigV1Beta1(&kubeletv1beta1.KubeletConfiguration{
+	kubeletConfig, err := c.Options.Kubelet.MergeConfigV1Beta1(&kubeletv1beta1.KubeletConfiguration{
 		ClusterDomain: "hoge.com",
 	})
 	if err != nil {
@@ -238,12 +238,12 @@ func testClusterYAML117(t *testing.T) {
 	if !reflect.DeepEqual(c.Options.Scheduler.Priorities, []string{"name: some_priority"}) {
 		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Priorities, []string{"name: some_priority"}`)
 	}
-	_, err = c.Options.Scheduler.OverwriteBaseConfigV1Alpha2(&schedulerv1alpha2.KubeSchedulerConfiguration{})
+	_, err = c.Options.Scheduler.MergeConfigV1Alpha2(&schedulerv1alpha2.KubeSchedulerConfiguration{})
 	if err == nil {
 		t.Error(`c.Options.Scheduler.GetConfigV1Alpha2() should fail`)
 	}
 
-	kubeletConfig, err := c.Options.Kubelet.OverwriteBaseConfigV1Beta1(&kubeletv1beta1.KubeletConfiguration{
+	kubeletConfig, err := c.Options.Kubelet.MergeConfigV1Beta1(&kubeletv1beta1.KubeletConfiguration{
 		ClusterDomain:       "hoge.com",
 		ContainerLogMaxSize: "5Mi",
 	})

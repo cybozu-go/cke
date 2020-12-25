@@ -100,7 +100,7 @@ func GenerateSchedulerConfigurationV1Alpha2(params cke.SchedulerParams) (*schedu
 	// default values
 	base := schedulerv1alpha2.KubeSchedulerConfiguration{}
 
-	c, err := params.OverwriteBaseConfigV1Alpha2(&base)
+	c, err := params.MergeConfigV1Alpha2(&base)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func newKubeletConfiguration(cert, key, ca string, params cke.KubeletParams) kub
 	}
 
 	// This won't raise an error because of prior validation
-	c, err := params.OverwriteBaseConfigV1Beta1(base)
+	c, err := params.MergeConfigV1Beta1(base)
 	if err != nil {
 		panic(err)
 	}
