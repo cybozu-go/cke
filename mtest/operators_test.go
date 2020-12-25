@@ -550,7 +550,7 @@ func testOperators(isDegraded bool) {
 			runCKE(ckeImageURL)
 		}
 
-		By("Changing options")
+		By("Changing options to have scheduler field contain both Config and Extenders/Predicates/Priorities")
 		// this will run these ops:
 		// - EtcdRestartOp
 		// - ControllerManagerRestartOp

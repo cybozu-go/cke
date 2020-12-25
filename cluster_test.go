@@ -1,7 +1,6 @@
 package cke
 
 import (
-	"errors"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -148,14 +147,20 @@ rules:
 		t.Error(`*kubeSchedulerConfig.Profiles[0].Plugins.Score.Enabled[0].Weight != int32(500)`)
 	}
 
+	version, err := c.Options.Scheduler.GetAPIversion()
+	if err != nil {
+		t.Fatalf("failed to get get API version: %v", err)
+	}
+	expected := schedulerv1alpha2.SchemeGroupVersion.String()
+	if version != expected {
+		t.Errorf("version should be %s: %s", expected, version)
+	}
+
 	kubeSchedulerExtenderName := "test-extender"
 	c.Options.Scheduler.Extenders = []string{kubeSchedulerExtenderName}
-	version, err := c.Options.Scheduler.GetAPIversion()
+	_, err = c.Options.Scheduler.GetAPIversion()
 	if err == nil {
-		t.Fatal(errors.New("kube-scheduler configuration must not have its Extenders/Predicates/Priorities parameters when its Config parameter is set"))
-	}
-	if version != schedulerv1alpha2.SchemeGroupVersion.String() {
-		t.Errorf(`version != "%s"`, schedulerv1alpha2.SchemeGroupVersion.String())
+		t.Fatal("kube-scheduler configuration must not have its Extenders/Predicates/Priorities parameters when its Config parameter is set")
 	}
 
 	if c.Options.Kubelet.Domain != "my.domain" {
