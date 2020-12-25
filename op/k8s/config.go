@@ -6,7 +6,6 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
-	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,6 +16,7 @@ import (
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"sigs.k8s.io/yaml"
 )
 
 var (

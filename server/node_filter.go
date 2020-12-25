@@ -393,7 +393,7 @@ func (nf *NodeFilter) schedulerOutdatedNodesV1Alpha2(params cke.SchedulerParams)
 		return nil
 	}
 	if ptr == nil {
-		log.Error("currentConfig should not be nil", map[string]interface{}{})
+		log.Error("ptr should not be nil", map[string]interface{}{})
 		return nil
 	}
 	currentConfig := *ptr
