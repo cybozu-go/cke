@@ -390,8 +390,11 @@ func ckecliClusterSet(cluster *cke.Cluster) (time.Time, error) {
 	data := string(y) + "\npod_subnet: 10.1.0.0/16"
 
 	rf := remoteTempFile(data)
-	_, _, err = ckecli("cluster", "set", rf)
-	return time.Now(), err
+	stdout, stderr, err := ckecli("cluster", "set", rf)
+	if err != nil {
+		return time.Now(), fmt.Errorf("failed to execute cluster set command. stdout: %v, stderr: %v, err: %v", string(stdout), string(stderr), err)
+	}
+	return time.Now(), nil
 }
 
 func setupCKE(img string) {

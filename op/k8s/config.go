@@ -13,8 +13,10 @@ import (
 	apiserverv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/client-go/tools/clientcmd/api"
 	componentv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -53,14 +55,54 @@ func schedulerKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.C
 	return cke.Kubeconfig(cluster, "system:kube-scheduler", ca, clientCrt, clientKey)
 }
 
-// GenerateSchedulerConfiguration generates scheduler configuration.
-func GenerateSchedulerConfiguration(params cke.SchedulerParams) schedulerv1alpha2.KubeSchedulerConfiguration {
+// GenerateSchedulerPolicyV1 generates scheduler policy.
+func GenerateSchedulerPolicyV1(params cke.SchedulerParams) (*schedulerv1.Policy, error) {
+	var extenders []schedulerv1.Extender
+	for _, extStr := range params.Extenders {
+		conf := new(schedulerv1.Extender)
+		err := yaml.Unmarshal([]byte(extStr), conf)
+		if err != nil {
+			return nil, err
+		}
+		extenders = append(extenders, *conf)
+	}
+
+	var predicates []schedulerv1.PredicatePolicy
+	for _, extStr := range params.Predicates {
+		conf := new(schedulerv1.PredicatePolicy)
+		err := yaml.Unmarshal([]byte(extStr), conf)
+		if err != nil {
+			return nil, err
+		}
+		predicates = append(predicates, *conf)
+	}
+
+	var priorities []schedulerv1.PriorityPolicy
+	for _, extStr := range params.Priorities {
+		conf := new(schedulerv1.PriorityPolicy)
+		err := yaml.Unmarshal([]byte(extStr), conf)
+		if err != nil {
+			return nil, err
+		}
+		priorities = append(priorities, *conf)
+	}
+
+	return &schedulerv1.Policy{
+		TypeMeta:   metav1.TypeMeta{Kind: "Policy", APIVersion: "v1"},
+		Extenders:  extenders,
+		Predicates: predicates,
+		Priorities: priorities,
+	}, nil
+}
+
+// GenerateSchedulerConfigurationV1Alpha2 generates scheduler configuration for v1alpha2.
+func GenerateSchedulerConfigurationV1Alpha2(params cke.SchedulerParams) (*schedulerv1alpha2.KubeSchedulerConfiguration, error) {
 	// default values
 	base := schedulerv1alpha2.KubeSchedulerConfiguration{}
 
-	c, err := params.GetConfigV1Alpha2(&base)
+	c, err := params.MergeConfigV1Alpha2(&base)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	// forced values
@@ -73,7 +115,7 @@ func GenerateSchedulerConfiguration(params cke.SchedulerParams) schedulerv1alpha
 		},
 	}
 
-	return *c
+	return c, nil
 }
 
 func proxyKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Config {
@@ -110,7 +152,7 @@ func newKubeletConfiguration(cert, key, ca string, params cke.KubeletParams) kub
 	}
 
 	// This won't raise an error because of prior validation
-	c, err := params.GetConfigV1Beta1(base)
+	c, err := params.MergeConfigV1Beta1(base)
 	if err != nil {
 		panic(err)
 	}

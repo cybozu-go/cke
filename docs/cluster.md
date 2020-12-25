@@ -218,7 +218,9 @@ Elements of `extenders`, `predicates` and `priorities` are contents of
 [`PriorityPolicy`](https://github.com/kubernetes/kube-scheduler/blob/release-1.18/config/v1/types.go#L60)
 in JSON format, respectively.
 
-If `config` is specified, the following fields are ignored: `extenders`, `predicates`, `priorities`.
+`config` should be used only for `v1alpha2.KubeSchedulerConfiguration`.
+If you want to configure `v1alpha1.KubeSchedulerConfiguration`, please use the `extenders`, `predicates`, and `priorities` fields.
+CKE does not allow users to configure both `config` and more than one of `extenders`, `predicates`, and `priorities`, so please configure either of them.
 
 Some fields in `config` have CKE-defined default values.
 Some other fields are forced to have certain values.

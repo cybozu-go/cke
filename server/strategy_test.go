@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	componentv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
+	schedulerv1alpha1 "k8s.io/kube-scheduler/config/v1alpha1"
 	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
@@ -271,7 +272,7 @@ func (d testData) withControllerManager(name, serviceSubnet string) testData {
 	return d
 }
 
-func (d testData) withScheduler() testData {
+func (d testData) withSchedulerV1Alpha2() testData {
 	for _, n := range d.ControlPlane() {
 		st := &d.NodeStatus(n).Scheduler
 		st.Running = true
@@ -364,7 +365,7 @@ func (d testData) withAllServices() testData {
 	d.withHealthyEtcd()
 	d.withAPIServer(testServiceSubnet)
 	d.withControllerManager(testClusterName, testServiceSubnet)
-	d.withScheduler()
+	d.withSchedulerV1Alpha2()
 	d.withKubelet(testDefaultDNSDomain, testDefaultDNSAddr, false)
 	d.withProxy()
 	return d
@@ -862,6 +863,84 @@ func TestDecideOps(t *testing.T) {
 			},
 			ExpectedTargetNums: map[string]int{
 				"kube-scheduler-restart": 1,
+			},
+		},
+		// This test should be deleted after Extenders/Priorities/Prioritizes fields are purged.
+		{
+			Name: "RestartScheduler8",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Scheduler.Extenders = []string{`{ "foo": "some-extender" }`}
+			}),
+			ExpectedOps: []string{
+				"wait-kubernetes",
+			},
+			ExpectedTargetNums: map[string]int{
+				"wait-kubernetes": 1,
+			},
+		},
+		// This test should be deleted after Extenders/Priorities/Prioritizes fields are purged.
+		{
+			Name: "RestartScheduler9",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Scheduler.Config = nil
+				d.Cluster.Options.Scheduler.Extenders = []string{`{ "foo": "some-extender" }`}
+			}),
+			ExpectedOps: []string{
+				"kube-scheduler-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-scheduler-restart": 3,
+			},
+		},
+		// This test should be deleted after Extenders/Priorities/Prioritizes fields are purged.
+		{
+			Name: "RestartScheduler10",
+			Input: newData().withAllServices().withSchedulerV1Alpha1().with(func(d testData) {
+				schedulerConfig := &unstructured.Unstructured{}
+				schedulerConfig.SetGroupVersionKind(schedulerv1alpha2.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
+				schedulerConfig.Object["healthzBindAddress"] = "0.0.0.0"
+				d.Cluster.Options.Scheduler.Config = schedulerConfig
+				d.Cluster.Options.Scheduler.Extenders = nil
+				d.Cluster.Options.Scheduler.Priorities = nil
+				d.Cluster.Options.Scheduler.Predicates = nil
+			}),
+			ExpectedOps: []string{
+				"kube-scheduler-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-scheduler-restart": 3,
+			},
+		},
+		// This test should be deleted after cke accepts except for v1alpha2 on Config field
+		{
+			Name: "RestartScheduler11",
+			Input: newData().withAllServices().with(func(d testData) {
+				schedulerConfig := &unstructured.Unstructured{}
+				schedulerConfig.SetGroupVersionKind(schedulerv1.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
+				schedulerConfig.Object["healthzBindAddress"] = "1.2.3.4"
+				d.Cluster.Options.Scheduler.Config = schedulerConfig
+			}),
+			ExpectedOps: []string{
+				"wait-kubernetes",
+			},
+			ExpectedTargetNums: map[string]int{
+				"wait-kubernetes": 1,
+			},
+		},
+		// This test should be deleted after cke accepts except for v1alpha2 on Config field
+		{
+			Name: "RestartScheduler12",
+			Input: newData().withAllServices().with(func(d testData) {
+				schedulerConfig := &unstructured.Unstructured{}
+				schedulerConfig.SetGroupVersionKind(schedulerv1alpha1.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
+				schedulerConfig.Object["healthzBindAddress"] = "1.2.3.4"
+				d.Cluster.Options.Scheduler.Config = schedulerConfig
+			}),
+			ExpectedOps: []string{
+				"wait-kubernetes",
+			},
+			ExpectedTargetNums: map[string]int{
+				"wait-kubernetes": 1,
 			},
 		},
 		{

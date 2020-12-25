@@ -113,7 +113,7 @@ rules:
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
 	}
 	kubeSchedulerHealthz := "0.0.0.0"
-	kubeSchedulerConfig, err := c.Options.Scheduler.GetConfigV1Alpha2(&schedulerv1alpha2.KubeSchedulerConfiguration{
+	kubeSchedulerConfig, err := c.Options.Scheduler.MergeConfigV1Alpha2(&schedulerv1alpha2.KubeSchedulerConfiguration{
 		HealthzBindAddress: &kubeSchedulerHealthz,
 	})
 	if err != nil {
@@ -146,6 +146,23 @@ rules:
 	if *kubeSchedulerConfig.Profiles[0].Plugins.Score.Enabled[0].Weight != int32(500) {
 		t.Error(`*kubeSchedulerConfig.Profiles[0].Plugins.Score.Enabled[0].Weight != int32(500)`)
 	}
+
+	version, err := c.Options.Scheduler.GetAPIversion()
+	if err != nil {
+		t.Fatalf("failed to get get API version: %v", err)
+	}
+	expected := schedulerv1alpha2.SchemeGroupVersion.String()
+	if version != expected {
+		t.Errorf("version should be %s: %s", expected, version)
+	}
+
+	kubeSchedulerExtenderName := "test-extender"
+	c.Options.Scheduler.Extenders = []string{kubeSchedulerExtenderName}
+	_, err = c.Options.Scheduler.GetAPIversion()
+	if err == nil {
+		t.Fatal("kube-scheduler configuration must not have its Extenders/Predicates/Priorities parameters when its Config parameter is set")
+	}
+
 	if c.Options.Kubelet.Domain != "my.domain" {
 		t.Error(`c.Options.Kubelet.Domain != "my.domain"`)
 	}
@@ -189,7 +206,7 @@ rules:
 	if len(c.Options.Kubelet.CNIConfFile.Content) == 0 {
 		t.Error(`len(c.Options.Kubelet.CNIConfFile.Content) == 0`)
 	}
-	kubeletConfig, err := c.Options.Kubelet.GetConfigV1Beta1(&kubeletv1beta1.KubeletConfiguration{
+	kubeletConfig, err := c.Options.Kubelet.MergeConfigV1Beta1(&kubeletv1beta1.KubeletConfiguration{
 		ClusterDomain: "hoge.com",
 	})
 	if err != nil {
@@ -229,12 +246,12 @@ func testClusterYAML117(t *testing.T) {
 	if !reflect.DeepEqual(c.Options.Scheduler.Priorities, []string{"name: some_priority"}) {
 		t.Error(`!reflect.DeepEqual(c.Options.Scheduler.Priorities, []string{"name: some_priority"}`)
 	}
-	_, err = c.Options.Scheduler.GetConfigV1Alpha2(&schedulerv1alpha2.KubeSchedulerConfiguration{})
+	_, err = c.Options.Scheduler.MergeConfigV1Alpha2(&schedulerv1alpha2.KubeSchedulerConfiguration{})
 	if err == nil {
 		t.Error(`c.Options.Scheduler.GetConfigV1Alpha2() should fail`)
 	}
 
-	kubeletConfig, err := c.Options.Kubelet.GetConfigV1Beta1(&kubeletv1beta1.KubeletConfiguration{
+	kubeletConfig, err := c.Options.Kubelet.MergeConfigV1Beta1(&kubeletv1beta1.KubeletConfiguration{
 		ClusterDomain:       "hoge.com",
 		ContainerLogMaxSize: "5Mi",
 	})
