@@ -138,10 +138,14 @@ func (p SchedulerParams) GetAPIversion() (string, error) {
 	}
 
 	if len(p.Extenders) > 0 || len(p.Predicates) > 0 || len(p.Priorities) > 0 {
-		return "", fmt.Errorf("both Config and Extenders/Predicates/Priorities should not be configured: %#v", p)
+		return "", fmt.Errorf("both Config and extenders/predicates/priorities should not be configured: %#v", p)
 	}
 
-	return p.Config.GetAPIVersion(), nil
+	v := p.Config.GetAPIVersion()
+	if v == schedulerv1alpha1.SchemeGroupVersion.String() {
+		return "", fmt.Errorf("config for KubeSchedulerConfiguration in v1alpha1 should be made with extenders/predicates/priorities fields")
+	}
+	return v, nil
 }
 
 // MergeConfigV1Alpha2 merges the input struct with Connfig field and returns *schedulerv1alpha2.KubeSchedulerConfiguration.

@@ -150,9 +150,12 @@ rules:
 
 	kubeSchedulerExtenderName := "test-extender"
 	c.Options.Scheduler.Extenders = []string{kubeSchedulerExtenderName}
-	_, err = c.Options.Scheduler.GetAPIversion()
+	version, err := c.Options.Scheduler.GetAPIversion()
 	if err == nil {
 		t.Fatal(errors.New("kube-scheduler configuration must not have its Extenders/Predicates/Priorities parameters when its Config parameter is set"))
+	}
+	if version != schedulerv1alpha2.SchemeGroupVersion.String() {
+		t.Errorf(`version != "%s"`, schedulerv1alpha2.SchemeGroupVersion.String())
 	}
 
 	if c.Options.Kubelet.Domain != "my.domain" {
