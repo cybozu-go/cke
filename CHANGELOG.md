@@ -5,6 +5,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.18.8] - 2021-01-06
+
+### Changed
+- Validate KubeSchedulerConfiguration API version (#399)
+
 ## [1.18.7] - 2020-12-07
 
 ### Added
@@ -92,7 +97,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.18.7...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.18.8...HEAD
+[1.18.8]: https://github.com/cybozu-go/cke/compare/v1.18.7...v1.18.8
 [1.18.7]: https://github.com/cybozu-go/cke/compare/v1.18.6...v1.18.7
 [1.18.6]: https://github.com/cybozu-go/cke/compare/v1.18.5...v1.18.6
 [1.18.5]: https://github.com/cybozu-go/cke/compare/v1.18.4...v1.18.5
