@@ -195,7 +195,7 @@ type KubeletParams struct {
 	Config                   *unstructured.Unstructured `json:"config,omitempty"`
 }
 
-// MergeConfigV1Beta1 merges the input struct with Connfig and returns *kubeletv1beta1.KubeletConfiguration.
+// MergeConfigV1Beta1 merges the input struct with Config and returns *kubeletv1beta1.KubeletConfiguration.
 func (p KubeletParams) MergeConfigV1Beta1(base *kubeletv1beta1.KubeletConfiguration) (*kubeletv1beta1.KubeletConfiguration, error) {
 	if base == nil {
 		return nil, errors.New("base should not be nil")
@@ -218,6 +218,10 @@ func (p KubeletParams) MergeConfigV1Beta1(base *kubeletv1beta1.KubeletConfigurat
 			cfg.ContainerLogMaxFiles = &maxFiles
 		}
 		return &cfg, nil
+	}
+
+	if p.CgroupDriver != "" || p.Domain != "" || p.AllowSwap || p.ContainerLogMaxSize != "" || p.ContainerLogMaxFiles != 0 {
+		return nil, fmt.Errorf("both Config and domin/allow_swap/container_log_max_size/container_log_max_files should not be configured: %#v", p)
 	}
 
 	if p.Config.GetAPIVersion() != kubeletv1beta1.SchemeGroupVersion.String() {

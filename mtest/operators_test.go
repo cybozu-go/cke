@@ -562,7 +562,6 @@ func testOperators(isDegraded bool) {
 		cluster.Options.ControllerManager.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Proxy.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Kubelet.ExtraEnvvar = map[string]string{"AAA": "aaa"}
-		cluster.Options.Kubelet.Domain = "neconeco"
 		clusterSetAndWait(cluster)
 
 		cluster.Options.Scheduler.ExtraEnvvar = map[string]string{"AAA": "aaa"}

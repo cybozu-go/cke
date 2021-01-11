@@ -190,7 +190,8 @@ CNI configuration file specified by `cni_conf_file` will be put in `/etc/cni/net
 on all nodes.  The file is created only when `kubelet` starts on the node; it will *not* be
 updated later on.
 
-If `config` is specified, the following fields are ignored: `domain`, `allow_swap`, `container_log_max_size`, `container_log_max_files`.
+CKE does not allow users to configure both `config` and the following fields:  `cgroup_driver`, `domain`, `allow_swap`, `container_log_max_size`, `container_log_max_files`.
+If both are set, CKE ignores updating the kubelet configuration.
 
 Some fields in `config` have CKE-defined default values.
 Some other fields are forced to have certain values.

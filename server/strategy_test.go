@@ -1047,7 +1047,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet10",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.Cluster.Options.Kubelet.CgroupDriver = "systemd"
+				d.Cluster.Options.Kubelet.Config.Object["cgroupDriver"] = "systemd"
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"wait-kubernetes",

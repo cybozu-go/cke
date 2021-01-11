@@ -669,9 +669,17 @@ func kubeletRuntimeChanged(running, current cke.ServiceParams) bool {
 		}
 	}
 	if runningRuntime != currentRuntime {
+		log.Warn("runtime mismatch", map[string]interface{}{
+			"runningRuntime": runningRuntime,
+			"currentRuntime": currentRuntime,
+		})
 		return true
 	}
 	if runningRuntimeEndpoint != currentRuntimeEndpoint {
+		log.Warn("endpoint mismatch", map[string]interface{}{
+			"runningRuntimeEndpoint": runningRuntimeEndpoint,
+			"currentRuntimeEndpoint": currentRuntimeEndpoint,
+		})
 		return true
 	}
 	return false

@@ -115,15 +115,6 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 			},
 			Expected: *expected1,
 		},
-		{
-			Name: "with config",
-			Input: cke.KubeletParams{
-				CgroupDriver:        "systemd",
-				ContainerLogMaxSize: "5Mi",
-				Config:              cfg,
-			},
-			Expected: *expected2,
-		},
 	}
 
 	for _, c := range cases {
