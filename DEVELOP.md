@@ -33,29 +33,29 @@ For example, CKE 1.16.x corresponds to Kubernetes 1.16.x.
 
 We should keep a maintenance branch for old (e.g. 1.16) Kubernetes:
 
-When the `master` branch of CKE is updated for a new Kubernetes minor version (e.g. 1.17),
+When the `main` branch of CKE is updated for a new Kubernetes minor version (e.g. 1.17),
 we should keep a maintenance branch for old (e.g. 1.16) Kubernetes.
 
 Run the following commands to create such a branch:
 
 ```console
 $ git fetch origin
-$ git checkout -b release-1.16 origin/master
+$ git checkout -b release-1.16 origin/main
 $ git push -u origin release-1.16
 ```
 
-When vulnerabilities or critical issues are found in the master branch, 
+When vulnerabilities or critical issues are found in the main branch, 
 we should backport the fixes to an older branch.
 
 Run following commands to backport:
 
 ```
 $ git checkout release-1.16
-$ git cherry-pick <commit from master>
+$ git cherry-pick <commit from main>
 ```
 
 Then, release it. 
-https://github.com/cybozu-go/cke/blob/master/RELEASE.md
+https://github.com/cybozu-go/cke/blob/main/RELEASE.md
 
 ### Update `k8s.io` modules
 

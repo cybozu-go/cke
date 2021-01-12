@@ -179,4 +179,4 @@ Before enable etcd backup, you need to create `PersistentVolume` and `Persistent
 [RBAC]: https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/authentication.md
 [Endpoints]: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
 [PersistentVolume]: https://kubernetes.io/docs/concepts/storage/persistent-volumes
-[etcdbackup]: https://github.com/cybozu/neco-containers/tree/master/cke-tools/src/cmd/etcdbackup
+[etcdbackup]: https://github.com/cybozu/neco-containers/tree/main/cke-tools/src/cmd/etcdbackup

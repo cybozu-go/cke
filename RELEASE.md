@@ -17,15 +17,15 @@ If kubernetes MINOR version supported by CKE is updated, create a new branch `re
 where `X` and `Y` are MAJOR and MINOR version of the latest release of CKE.
 
 For example, if the last release of CKE was tagged as `v1.12.3` and want to start
-development for Kubernetes 1.13 on master, create `release-1.12` branch as follows:
+development for Kubernetes 1.13 on main, create `release-1.12` branch as follows:
 
 ```console
 $ git checkout -b release-1.12 v1.12.3
 $ git push origin -u release-1.12:release-1.12
 ```
 
-Remove old changes from `CHANGELOG.md` of master branch.
-The `CHANGELOG.md` of master branch should only describe changes related to the latest release-X.Y.
+Remove old changes from `CHANGELOG.md` of main branch.
+The `CHANGELOG.md` of main branch should only describe changes related to the latest release-X.Y.
 Changes in the old versions are described in each branch's CHANGELOG.md.
 
 `release-*` branches are protected from removal and force push.
@@ -56,7 +56,7 @@ Bump version
 ------------
 
 1. Determine a new version number.  Let it write `$VERSION` as `VERSION=x.y.z`.
-2. Checkout `master` branch.
+2. Checkout `main` branch.
 3. Make a branch by `git neco dev "bump-$VERSION"`
 4. Update `version.go`.
 5. Edit `CHANGELOG.md` for the new version ([example][]).
@@ -71,7 +71,7 @@ Bump version
 9. Make a tag and push it.
 
     ```console
-    $ git checkout master
+    $ git checkout main
     $ git pull
     $ git tag "v$VERSION"
     $ git push origin "v$VERSION"

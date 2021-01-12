@@ -166,7 +166,7 @@ CKE maintains this Endpoints object on behalf of the API servers.
 - `kube-proxy` runs in IPVS mode.
 - [PodSecurityPolicy][] is not enabled.
 
-[rivers]: https://github.com/cybozu/neco-containers/tree/master/cke-tools/src/cmd/rivers
+[rivers]: https://github.com/cybozu/neco-containers/tree/main/cke-tools/src/cmd/rivers
 [unbound]: https://www.nlnetlabs.nl/projects/unbound/
 [webhook]: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
 [ValidatingWebhookConfiguration]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#validatingwebhookconfiguration-v1-admissionregistration-k8s-io
