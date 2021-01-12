@@ -11,7 +11,7 @@ These deployment supports only [Docker] container runtime.
 - `kube-controller-manager`
 - `kube-scheduler`
 - `kubelet`
-- [rivers](https://github.com/cybozu/neco-containers/tree/master/cke-tools/src/cmd/rivers)
+- [rivers](https://github.com/cybozu/neco-containers/tree/main/cke-tools/src/cmd/rivers)
 
 Kubernetes Pods
 ---------------

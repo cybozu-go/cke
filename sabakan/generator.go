@@ -22,9 +22,9 @@ var (
 
 // MachineToNode converts sabakan.Machine to cke.Node.
 // Add taints, labels, and annotations according to the rules:
-//  - https://github.com/cybozu-go/cke/blob/master/docs/sabakan-integration.md#taint-nodes
-//  - https://github.com/cybozu-go/cke/blob/master/docs/sabakan-integration.md#node-labels
-//  - https://github.com/cybozu-go/cke/blob/master/docs/sabakan-integration.md#node-annotations
+//  - https://github.com/cybozu-go/cke/blob/main/docs/sabakan-integration.md#taint-nodes
+//  - https://github.com/cybozu-go/cke/blob/main/docs/sabakan-integration.md#node-labels
+//  - https://github.com/cybozu-go/cke/blob/main/docs/sabakan-integration.md#node-annotations
 func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 	n := &cke.Node{
 		Address:      m.Spec.IPv4[0],
