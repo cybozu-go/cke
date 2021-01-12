@@ -11,8 +11,7 @@ else
 SUDO = sudo
 endif
 GO111MODULE = on
-GOFLAGS = -mod=vendor
-export GO111MODULE GOFLAGS
+export GO111MODULE
 
 SONOBUOY_URL = https://github.com/vmware-tanzu/sonobuoy/releases/download/v$(SONOBUOY_VERSION)/sonobuoy_$(SONOBUOY_VERSION)_linux_amd64.tar.gz
 KUBECTL_URL = https://storage.googleapis.com/kubernetes-release/release/v$(KUBECTL_VERSION)/bin/linux/amd64/kubectl
