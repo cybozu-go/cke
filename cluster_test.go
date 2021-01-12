@@ -206,6 +206,43 @@ rules:
 	if len(c.Options.Kubelet.CNIConfFile.Content) == 0 {
 		t.Error(`len(c.Options.Kubelet.CNIConfFile.Content) == 0`)
 	}
+
+	// cke-template can specify kubelet configuration by specific parameters: domain, allow_swap, cgroup_driver, container_log_max_size, container_log_max_files
+	// Or directly write KubeletConfiguration inside of the cke-template.
+	kubeletConfigYAML := `
+name: test
+options:
+  kubelet:
+    config:
+      apiVersion: kubelet.config.k8s.io/v1beta1
+      kind: KubeletConfiguration
+      clusterDomain: my.domain2
+      failSwapOn: true
+      cgroupDriver: systemd
+      containerLogMaxSize: "10Mi"
+      containerLogMaxFiles: 5
+`
+	c = new(Cluster)
+	err = yaml.Unmarshal([]byte(kubeletConfigYAML), c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if c.Options.Kubelet.Config.Object["clusterDomain"] != "my.domain2" {
+		t.Error(`c.Options.Kubelet.Config.Object["clusterDomain"] != "my.domain2"`)
+	}
+	if c.Options.Kubelet.Config.Object["failSwapOn"] != true {
+		t.Error(`c.Options.Kubelet.Config.Object["failSwapOn"] != true`)
+	}
+	if c.Options.Kubelet.Config.Object["cgroupDriver"] != "systemd" {
+		t.Error(`c.Options.Kubelet.Config.Object["cgroupDriver"] != "systemd"`)
+	}
+	if c.Options.Kubelet.Config.Object["containerLogMaxSize"] != "10Mi" {
+		t.Error(`c.Options.Kubelet.Config.Object["containerLogMaxSize"] != "10"`)
+	}
+	if c.Options.Kubelet.Config.Object["containerLogMaxFiles"] != int64(5) {
+		t.Error(`c.Options.Kubelet.Config.Object["containerLogMaxFiles"] != 5`)
+	}
 }
 
 func testClusterYAML117(t *testing.T) {
