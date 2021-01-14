@@ -12,9 +12,7 @@ import (
 	"github.com/cybozu-go/log"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
-	schedulerv1 "k8s.io/kube-scheduler/config/v1"
-	schedulerv1alpha1 "k8s.io/kube-scheduler/config/v1alpha1"
-	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
+	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
@@ -358,51 +356,16 @@ func (nf *NodeFilter) SchedulerStoppedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-// SchedulerOutdatedNodes returns nodes that are running kube-scheduler with outdated image or params.
-func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) []*cke.Node {
-	version, err := params.GetAPIversion()
-	if err != nil {
-		log.Error("failed to get API version", map[string]interface{}{
-			log.FnError: err,
-		})
-		return nil
-	}
-	switch version {
-	case schedulerv1alpha1.SchemeGroupVersion.String():
-		return nf.schedulerOutdatedNodesV1Alpha1(params)
-	case schedulerv1alpha2.SchemeGroupVersion.String():
-		return nf.schedulerOutdatedNodesV1Alpha2(params)
-	default:
-		log.Error("unsupported version was given", map[string]interface{}{
-			log.FnError: err,
-			"version":   version,
-		})
-		return nil
-	}
-}
-
-func (nf *NodeFilter) schedulerOutdatedNodesV1Alpha2(params cke.SchedulerParams) (nodes []*cke.Node) {
+func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) (nodes []*cke.Node) {
 	currentBuiltIn := k8s.SchedulerParams()
 	currentExtra := nf.cluster.Options.Scheduler
-	ptr, err := k8s.GenerateSchedulerConfigurationV1Alpha2(params)
-	if err != nil {
-		log.Error("failed to generate scheduler config for v1alpha2", map[string]interface{}{
-			log.FnError: err,
-			"params":    params,
-		})
-		return nil
-	}
-	if ptr == nil {
-		log.Error("ptr should not be nil", map[string]interface{}{})
-		return nil
-	}
-	currentConfig := *ptr
+	currentConfig := k8s.GenerateSchedulerConfiguration(params)
 
 	for _, n := range nf.cp {
 		st := nf.nodeStatus(n).Scheduler
-		var runningConfig schedulerv1alpha2.KubeSchedulerConfiguration
+		var runningConfig *schedulerv1beta1.KubeSchedulerConfiguration
 		if st.Config != nil {
-			runningConfig = *st.Config
+			runningConfig = st.Config
 		}
 		switch {
 		case !st.Running:
@@ -414,126 +377,23 @@ func (nf *NodeFilter) schedulerOutdatedNodesV1Alpha2(params cke.SchedulerParams)
 		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
 			fallthrough
 		case !reflect.DeepEqual(currentConfig, runningConfig):
-			log.Debug("node has been appended", map[string]interface{}{
-				"node":                     n.Nodename(),
-				"st_builtin_args":          st.BuiltInParams.ExtraArguments,
-				"st_builtin_env":           st.BuiltInParams.ExtraEnvvar,
-				"st_extra_args":            st.ExtraParams.ExtraArguments,
-				"st_extra_env":             st.ExtraParams.ExtraEnvvar,
-				"st_extra_extenders":       st.Extenders,
-				"st_extra_predicates":      st.Predicates,
-				"st_extra_priorities":      st.Priorities,
-				"current_builtin_args":     currentBuiltIn.ExtraArguments,
-				"current_builtin_env":      currentBuiltIn.ExtraEnvvar,
-				"current_extra_args":       currentExtra.ExtraArguments,
-				"current_extra_env":        currentExtra.ExtraEnvvar,
-				"current_extra_extenders":  currentExtra.Extenders,
-				"current_extra_predicates": currentExtra.Predicates,
-				"current_extra_priorities": currentExtra.Priorities,
-				"config":                   currentConfig,
-				"diff":                     cmp.Diff(currentConfig, runningConfig),
+			log.Debug("kube-scheduler outdated", map[string]interface{}{
+				"node":                 n.Nodename(),
+				"st_builtin_args":      st.BuiltInParams.ExtraArguments,
+				"st_builtin_env":       st.BuiltInParams.ExtraEnvvar,
+				"st_extra_args":        st.ExtraParams.ExtraArguments,
+				"st_extra_env":         st.ExtraParams.ExtraEnvvar,
+				"current_builtin_args": currentBuiltIn.ExtraArguments,
+				"current_builtin_env":  currentBuiltIn.ExtraEnvvar,
+				"current_extra_args":   currentExtra.ExtraArguments,
+				"current_extra_env":    currentExtra.ExtraEnvvar,
+				"config":               currentConfig,
+				"diff":                 cmp.Diff(currentConfig, runningConfig),
 			})
 			nodes = append(nodes, n)
 		}
 	}
 	return nodes
-}
-
-func (nf *NodeFilter) schedulerOutdatedNodesV1Alpha1(params cke.SchedulerParams) (nodes []*cke.Node) {
-	currentBuiltIn := k8s.SchedulerParams()
-	currentExtra := nf.cluster.Options.Scheduler
-
-	policy, err := k8s.GenerateSchedulerPolicyV1(params)
-	if err != nil {
-		log.Error("failed to generate scheduler policy", map[string]interface{}{
-			log.FnError: err,
-			"params":    params,
-		})
-		return nil
-	}
-
-	for _, n := range nf.cp {
-		st := nf.nodeStatus(n).Scheduler
-		var runningConfig schedulerv1alpha2.KubeSchedulerConfiguration
-		if st.Config != nil {
-			runningConfig = *st.Config
-		}
-
-		switch {
-		case !st.Running:
-			// stopped nodes are excluded
-		case cke.KubernetesImage.Name() != st.Image:
-			fallthrough
-		case !currentBuiltIn.Equal(st.BuiltInParams):
-			fallthrough
-		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
-			fallthrough
-		case !equalExtenders(policy.Extenders, st.Extenders):
-			fallthrough
-		case !equalPredicates(policy.Predicates, st.Predicates):
-			fallthrough
-		case !equalPriorities(policy.Priorities, st.Priorities):
-			log.Debug("node has been appended", map[string]interface{}{
-				"node":                       n.Nodename(),
-				"st_builtin_args":            st.BuiltInParams.ExtraArguments,
-				"st_builtin_env":             st.BuiltInParams.ExtraEnvvar,
-				"st_extra_args":              st.ExtraParams.ExtraArguments,
-				"st_extra_env":               st.ExtraParams.ExtraEnvvar,
-				"st_extra_extenders":         st.Extenders,
-				"st_extra_predicates":        st.Predicates,
-				"st_extra_priorities":        st.Priorities,
-				"current_builtin_args":       currentBuiltIn.ExtraArguments,
-				"current_builtin_env":        currentBuiltIn.ExtraEnvvar,
-				"current_extra_args":         currentExtra.ExtraArguments,
-				"current_extra_env":          currentExtra.ExtraEnvvar,
-				"current_extra_extenders":    currentExtra.Extenders,
-				"current_extra_predicates":   currentExtra.Predicates,
-				"current_extra_priorities":   currentExtra.Priorities,
-				"current_extenders_configs":  policy.Extenders,
-				"current_predicates_configs": policy.Predicates,
-				"current_priorities_configs": policy.Priorities,
-				"running_config":             runningConfig,
-			})
-			nodes = append(nodes, n)
-		}
-	}
-	return nodes
-}
-
-func equalExtenders(configs1, configs2 []schedulerv1.Extender) bool {
-	if len(configs1) != len(configs2) {
-		return false
-	}
-	for i := range configs1 {
-		if !reflect.DeepEqual(configs1[i], configs2[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func equalPredicates(configs1, configs2 []schedulerv1.PredicatePolicy) bool {
-	if len(configs1) != len(configs2) {
-		return false
-	}
-	for i := range configs1 {
-		if !reflect.DeepEqual(configs1[i], configs2[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func equalPriorities(configs1, configs2 []schedulerv1.PriorityPolicy) bool {
-	if len(configs1) != len(configs2) {
-		return false
-	}
-	for i := range configs1 {
-		if !reflect.DeepEqual(configs1[i], configs2[i]) {
-			return false
-		}
-	}
-	return true
 }
 
 // KubeletStoppedNodes returns nodes that are not running kubelet.
@@ -573,14 +433,10 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 		if st.Config != nil {
 			// CgroupDriver should be kept while node is running.
 			currentConfig.CgroupDriver = st.Config.CgroupDriver
-
-			// APIVersion and Kind should be ignored
-			currentConfig.APIVersion = st.Config.APIVersion
-			currentConfig.Kind = st.Config.Kind
 		}
-		var runningConfig kubeletv1beta1.KubeletConfiguration
+		var runningConfig *kubeletv1beta1.KubeletConfiguration
 		if st.Config != nil {
-			runningConfig = *st.Config
+			runningConfig = st.Config
 		}
 		switch {
 		case !st.Running:
@@ -591,15 +447,24 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 			fallthrough
 		case st.Config == nil:
 			fallthrough
-		case !reflect.DeepEqual(&currentConfig, st.Config):
-			log.Debug("kubelet restarting because", map[string]interface{}{
-				"config": currentConfig,
-				"diff":   cmp.Diff(currentConfig, runningConfig),
-			})
+		case !reflect.DeepEqual(currentConfig, st.Config):
 			fallthrough
 		case !kubeletEqualParams(st.BuiltInParams, currentBuiltIn):
 			fallthrough
 		case !currentExtra.Equal(st.ExtraParams):
+			log.Debug("kubelet outdated", map[string]interface{}{
+				"node":                 n.Nodename(),
+				"st_builtin_args":      st.BuiltInParams.ExtraArguments,
+				"st_builtin_env":       st.BuiltInParams.ExtraEnvvar,
+				"st_extra_args":        st.ExtraParams.ExtraArguments,
+				"st_extra_env":         st.ExtraParams.ExtraEnvvar,
+				"current_builtin_args": currentBuiltIn.ExtraArguments,
+				"current_builtin_env":  currentBuiltIn.ExtraEnvvar,
+				"current_extra_args":   currentExtra.ExtraArguments,
+				"current_extra_env":    currentExtra.ExtraEnvvar,
+				"config":               currentConfig,
+				"diff":                 cmp.Diff(currentConfig, runningConfig),
+			})
 			nodes = append(nodes, n)
 		}
 	}

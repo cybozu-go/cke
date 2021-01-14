@@ -39,7 +39,6 @@ type apiServerRestartOp struct {
 	cps   []*cke.Node
 
 	serviceSubnet string
-	domain        string
 	params        cke.APIServerParams
 
 	step  int
@@ -47,12 +46,11 @@ type apiServerRestartOp struct {
 }
 
 // APIServerRestartOp returns an Operator to restart kube-apiserver
-func APIServerRestartOp(nodes, cps []*cke.Node, serviceSubnet, domain string, params cke.APIServerParams) cke.Operator {
+func APIServerRestartOp(nodes, cps []*cke.Node, serviceSubnet string, params cke.APIServerParams) cke.Operator {
 	return &apiServerRestartOp{
 		nodes:         nodes,
 		cps:           cps,
 		serviceSubnet: serviceSubnet,
-		domain:        domain,
 		params:        params,
 		files:         common.NewFilesBuilder(nodes),
 	}
@@ -72,7 +70,7 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 		return common.MakeDirsCommandWithMode(o.nodes, []string{encryptionConfigDir}, "700")
 	case 2:
 		o.step++
-		return prepareAPIServerFilesCommand{o.files, o.serviceSubnet, o.domain, o.params}
+		return prepareAPIServerFilesCommand{o.files, o.serviceSubnet, o.params}
 	case 3:
 		o.step++
 		return o.files
@@ -109,7 +107,6 @@ func (o *apiServerRestartOp) Targets() []string {
 type prepareAPIServerFilesCommand struct {
 	files         *common.FilesBuilder
 	serviceSubnet string
-	domain        string
 	params        cke.APIServerParams
 }
 
@@ -118,7 +115,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 
 	// server (and client) certs of API server.
 	f := func(ctx context.Context, n *cke.Node) (cert, key []byte, err error) {
-		c, k, e := cke.KubernetesCA{}.IssueForAPIServer(ctx, inf, n, c.serviceSubnet, c.domain)
+		c, k, e := cke.KubernetesCA{}.IssueForAPIServer(ctx, inf, n, c.serviceSubnet)
 		if e != nil {
 			return nil, nil, e
 		}

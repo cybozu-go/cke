@@ -16,17 +16,15 @@ type bootOp struct {
 	params    cke.EtcdParams
 	step      int
 	files     *common.FilesBuilder
-	domain    string
 }
 
 // BootOp returns an Operator to bootstrap etcd cluster.
-func BootOp(nodes []*cke.Node, params cke.EtcdParams, domain string) cke.Operator {
+func BootOp(nodes []*cke.Node, params cke.EtcdParams) cke.Operator {
 	return &bootOp{
 		endpoints: etcdEndpoints(nodes),
 		nodes:     nodes,
 		params:    params,
 		files:     common.NewFilesBuilder(nodes),
-		domain:    domain,
 	}
 }
 
@@ -43,7 +41,7 @@ func (o *bootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.EtcdImage)
 	case 1:
 		o.step++
-		return prepareEtcdCertificatesCommand{o.files, o.domain}
+		return prepareEtcdCertificatesCommand{o.files}
 	case 2:
 		o.step++
 		return o.files

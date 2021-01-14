@@ -44,7 +44,7 @@ options:
       env1: val1
   kube-scheduler:
     config:
-      apiVersion: kubescheduler.config.k8s.io/v1alpha2
+      apiVersion: kubescheduler.config.k8s.io/v1beta1
       kind: KubeSchedulerConfiguration
       PodMaxBackoffSeconds: 100
       leaderElection:
@@ -66,13 +66,8 @@ options:
     extra_args:
       - arg1
   kubelet:
-    domain: my.domain
-    allow_swap: true
-    cgroup_driver: systemd
     container_runtime: remote
-    container_runtime_endpoint: /var/run/k8s-containerd.sock
-    container_log_max_size: 10Mi
-    container_log_max_files: 5
+    cri_endpoint: /var/run/k8s-containerd.sock
     boot_taints:
       - key: taint1
         value: tainted
@@ -89,4 +84,8 @@ options:
     config:
       apiVersion: kubelet.config.k8s.io/v1beta1
       kind: KubeletConfiguration
+      clusterDomain: my.domain
+      failSwapOn: false
+      cgroupDriver: systemd
+      containerLogMaxSize: 10Mi
       containerLogMaxFiles: 10

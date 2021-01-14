@@ -2,18 +2,11 @@ package k8s
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/yaml"
-
-	schedulerv1alpha1 "k8s.io/kube-scheduler/config/v1alpha1"
-	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
 )
 
 type schedulerBootOp struct {
@@ -95,52 +88,10 @@ func (c prepareSchedulerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		return err
 	}
 
-	version, err := c.params.GetAPIversion()
-	if err != nil {
-		return err
-	}
-	switch version {
-	case schedulerv1alpha1.SchemeGroupVersion.String():
-		// Create v1 Policy for scheduler extender
-		err := c.files.AddFile(ctx, op.PolicyConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
-			policy, err := GenerateSchedulerPolicyV1(c.params)
-			if err != nil {
-				return nil, err
-			}
-			return json.Marshal(policy)
-		})
-		if err != nil {
-			return err
-		}
-
-		// Create v1alpha1 KubeSchedulerConfiguration
-		return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
-			return []byte(fmt.Sprintf(`apiVersion: kubescheduler.config.k8s.io/v1alpha1
-kind: KubeSchedulerConfiguration
-schedulerName: default-scheduler
-clientConnection:
-  kubeconfig: %s
-algorithmSource:
-  policy:
-    file:
-      path: %s
-leaderElection:
-  leaderElect: true
-`, op.SchedulerKubeConfigPath, op.PolicyConfigPath)), nil
-		})
-
-	case schedulerv1alpha2.SchemeGroupVersion.String():
-		return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
-			cfg, err := GenerateSchedulerConfigurationV1Alpha2(c.params)
-			if err != nil {
-				return nil, err
-			}
-
-			return yaml.Marshal(cfg)
-		})
-	default:
-		return errors.New("unsupported scheduler API version was given: " + version)
-	}
+	return c.files.AddFile(ctx, op.SchedulerConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		cfg := GenerateSchedulerConfiguration(c.params)
+		return encodeToYAML(cfg)
+	})
 }
 
 func (c prepareSchedulerFilesCommand) Command() cke.Command {

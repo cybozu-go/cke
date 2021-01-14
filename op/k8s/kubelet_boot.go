@@ -184,7 +184,7 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 
 	g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
 		cfg := GenerateKubeletConfiguration(c.params, n.Address)
-		return encodeToYAML(&cfg)
+		return encodeToYAML(cfg)
 	}
 	err := c.files.AddFile(ctx, kubeletConfigPath, g)
 	if err != nil {
@@ -373,8 +373,8 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 		args = append(args, "--container-runtime="+params.ContainerRuntime)
 		args = append(args, "--runtime-request-timeout=15m")
 	}
-	if len(params.ContainerRuntimeEndpoint) != 0 {
-		args = append(args, "--container-runtime-endpoint="+params.ContainerRuntimeEndpoint)
+	if len(params.CRIEndpoint) != 0 {
+		args = append(args, "--container-runtime-endpoint="+params.CRIEndpoint)
 	}
 	return cke.ServiceParams{
 		ExtraArguments: args,

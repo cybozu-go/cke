@@ -4,7 +4,7 @@ Container Runtime support
 CKE deployed containers
 -----------------------
 
-These deployment supports only [Docker] container runtime.
+The following programs are run as Docker containers.
 
 - `etcd`
 - `kube-apiserver`
@@ -16,24 +16,9 @@ These deployment supports only [Docker] container runtime.
 Kubernetes Pods
 ---------------
 
-CKE project is testing Kubernetes deployment with container runtime as follows.
+CKE has tested only with [containerd][].
 
-- [Docker]
-
-  If Docker socket path is not default, add runtime options to `cluster.yml`.
-
-```yaml
-options:
-  kubelet:
-    container_runtime: docker
-    container_runtime_endpoint: /path/to/docker/socket
-```
-
-  `container_runtime_endpoint` is `/var/run/dockershim.sock` by default.
-
-- [containerd] v1.2
-
-  To use containerd as container runtime for the Pods, add runtime option to `cluster.yml`.
+To use containerd, add the following configurations to `cluster.yml`.
 
 ```yaml
 options:
@@ -43,9 +28,7 @@ options:
     - source: /var/lib/containerd
       destination: /var/lib/containerd
       read_only: false
-    container_runtime: remote
-    container_runtime_endpoint: /path/to/containerd/socket
+    cri_endpoint: /path/to/containerd/socket
 ```
 
-[Docker]: https://www.docker.com/
 [containerd]: https://containerd.io/

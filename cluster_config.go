@@ -1,9 +1,10 @@
 package cke
 
 const (
-	defaultEtcdVolumeName   = "etcd-cke"
-	defaultClusterDomain    = "cluster.local"
-	defaultEtcdBackupRotate = 14
+	defaultEtcdVolumeName           = "etcd-cke"
+	defaultContainerRuntime         = "remote"
+	defaultContainerRuntimeEndpoint = "/run/containerd/containerd.sock"
+	defaultEtcdBackupRotate         = 14
 )
 
 // NewCluster creates Cluster
@@ -14,7 +15,8 @@ func NewCluster() *Cluster {
 				VolumeName: defaultEtcdVolumeName,
 			},
 			Kubelet: KubeletParams{
-				Domain: defaultClusterDomain,
+				ContainerRuntime: defaultContainerRuntime,
+				CRIEndpoint:      defaultContainerRuntimeEndpoint,
 			},
 		},
 		EtcdBackup: EtcdBackup{

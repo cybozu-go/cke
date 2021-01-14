@@ -68,8 +68,6 @@ const (
 	// CKEAnnotationReboot is the annotation to mark reboot targets
 	CKEAnnotationReboot = "cke.cybozu.com/reboot"
 
-	// PolicyConfigPath is a path for scheduler extender policy
-	PolicyConfigPath = "/etc/kubernetes/scheduler/policy.cfg"
 	// SchedulerConfigPath is a path for scheduler extender config
 	SchedulerConfigPath = "/etc/kubernetes/scheduler/config.yml"
 	// SchedulerKubeConfigPath is a path for scheduler kubeconfig

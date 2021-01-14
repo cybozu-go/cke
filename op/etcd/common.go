@@ -90,13 +90,12 @@ func BuiltInParams(node *cke.Node, initialCluster []string, state string) cke.Se
 }
 
 type prepareEtcdCertificatesCommand struct {
-	files  *common.FilesBuilder
-	domain string
+	files *common.FilesBuilder
 }
 
 func (c prepareEtcdCertificatesCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	f := func(ctx context.Context, n *cke.Node) (cert, key []byte, err error) {
-		c, k, e := cke.EtcdCA{}.IssueServerCert(ctx, inf, n, c.domain)
+		c, k, e := cke.EtcdCA{}.IssueServerCert(ctx, inf, n)
 		if e != nil {
 			return nil, nil, e
 		}

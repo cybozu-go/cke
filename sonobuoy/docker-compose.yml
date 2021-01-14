@@ -16,6 +16,7 @@ services:
     restart: always
     entrypoint:
       - /usr/local/bin/cke
+      - --loglevel=debug
   setup:
     container_name: setup
     image: quay.io/cybozu/ubuntu-debug:18.04

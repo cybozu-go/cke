@@ -17,6 +17,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
 func numRebootEntries() (int, error) {
@@ -550,7 +552,7 @@ func testOperators(isDegraded bool) {
 			runCKE(ckeImageURL)
 		}
 
-		By("Changing options to have scheduler field contain both Config and Extenders/Predicates/Priorities")
+		By("Changing service options")
 		// this will run these ops:
 		// - EtcdRestartOp
 		// - ControllerManagerRestartOp
@@ -560,17 +562,14 @@ func testOperators(isDegraded bool) {
 		// - KubeClusterDNSUpdateOp
 		cluster.Options.Etcd.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.ControllerManager.ExtraEnvvar = map[string]string{"AAA": "aaa"}
+		cluster.Options.Scheduler.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Proxy.ExtraEnvvar = map[string]string{"AAA": "aaa"}
 		cluster.Options.Kubelet.ExtraEnvvar = map[string]string{"AAA": "aaa"}
-		cluster.Options.Kubelet.Domain = "neconeco"
+		config := &unstructured.Unstructured{}
+		config.SetGroupVersionKind(kubeletv1beta1.SchemeGroupVersion.WithKind("KubeletConfiguration"))
+		config.Object["clusterDomain"] = "neco.neco"
+		cluster.Options.Kubelet.Config = config
 		clusterSetAndWait(cluster)
-
-		cluster.Options.Scheduler.ExtraEnvvar = map[string]string{"AAA": "aaa"}
-		cluster.Options.Scheduler.Extenders = []string{"urlPrefix: http://127.0.0.1:8000"}
-		cluster.Options.Scheduler.Predicates = []string{"name: some_predicate"}
-		cluster.Options.Scheduler.Priorities = []string{"name: some_priority"}
-		_, err = ckecliClusterSet(cluster)
-		Expect(err).Should(HaveOccurred())
 	})
 
 	It("updates Node resources", func() {

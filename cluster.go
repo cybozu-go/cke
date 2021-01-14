@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/url"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -17,9 +16,7 @@ import (
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	schedulerv1 "k8s.io/kube-scheduler/config/v1"
-	schedulerv1alpha1 "k8s.io/kube-scheduler/config/v1alpha1"
-	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
+	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"sigs.k8s.io/yaml"
 )
@@ -125,45 +122,24 @@ type CNIConfFile struct {
 // SchedulerParams is a set of extra parameters for kube-scheduler.
 type SchedulerParams struct {
 	ServiceParams `json:",inline"`
-	Extenders     []string                   `json:"extenders"`
-	Predicates    []string                   `json:"predicates"`
-	Priorities    []string                   `json:"priorities"`
 	Config        *unstructured.Unstructured `json:"config,omitempty"`
 }
 
-// GetAPIversion returns API version of KubeSchedulerConfiguration.
-func (p SchedulerParams) GetAPIversion() (string, error) {
-	if p.Config == nil {
-		return schedulerv1alpha1.SchemeGroupVersion.String(), nil
-	}
-
-	if len(p.Extenders) > 0 || len(p.Predicates) > 0 || len(p.Priorities) > 0 {
-		return "", fmt.Errorf("both Config and extenders/predicates/priorities should not be configured: %#v", p)
-	}
-
-	v := p.Config.GetAPIVersion()
-	if v == schedulerv1alpha1.SchemeGroupVersion.String() {
-		return "", fmt.Errorf("config for KubeSchedulerConfiguration in v1alpha1 should be made with extenders/predicates/priorities fields")
-	}
-	return v, nil
-}
-
-// MergeConfigV1Alpha2 merges the input struct with Connfig field and returns *schedulerv1alpha2.KubeSchedulerConfiguration.
-func (p SchedulerParams) MergeConfigV1Alpha2(base *schedulerv1alpha2.KubeSchedulerConfiguration) (*schedulerv1alpha2.KubeSchedulerConfiguration, error) {
-	if base == nil {
-		return nil, errors.New("base should not be nil")
-	}
-
-	version, err := p.GetAPIversion()
-	if err != nil {
-		return nil, err
-	}
-
-	if version != schedulerv1alpha2.SchemeGroupVersion.String() {
-		return nil, fmt.Errorf("unexpected kube-scheduler API version: %s", version)
-	}
-
+// MergeConfig merges the input struct `base`.
+func (p SchedulerParams) MergeConfig(base *schedulerv1beta1.KubeSchedulerConfiguration) (*schedulerv1beta1.KubeSchedulerConfiguration, error) {
+	// FOR IMPLEMENTORS.
+	// DO NOT SUPPORT MORE THAN ONE ComponentConfig VERSIONS.
+	// When we need to upgrade the component config version, users will
+	// stop CKE, update cluster.yml in etcd, then start the new CKE.
+	// So, CKE should only support the latest config version.
 	cfg := *base
+	if p.Config == nil {
+		return &cfg, nil
+	}
+
+	if p.Config.GetAPIVersion() != schedulerv1beta1.SchemeGroupVersion.String() {
+		return nil, fmt.Errorf("unexpected kube-scheduler API version: %s", p.Config.GetAPIVersion())
+	}
 	if p.Config.GetKind() != "KubeSchedulerConfiguration" {
 		return nil, fmt.Errorf("wrong kind for kube-scheduler config: %s", p.Config.GetKind())
 	}
@@ -177,46 +153,29 @@ func (p SchedulerParams) MergeConfigV1Alpha2(base *schedulerv1alpha2.KubeSchedul
 		return nil, err
 	}
 
+	cfg.TypeMeta = metav1.TypeMeta{}
 	return &cfg, nil
 }
 
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
-	ServiceParams            `json:",inline"`
-	CgroupDriver             string                     `json:"cgroup_driver,omitempty"`
-	ContainerRuntime         string                     `json:"container_runtime"`
-	ContainerRuntimeEndpoint string                     `json:"container_runtime_endpoint"`
-	ContainerLogMaxSize      string                     `json:"container_log_max_size"`
-	ContainerLogMaxFiles     int32                      `json:"container_log_max_files"`
-	Domain                   string                     `json:"domain"`
-	AllowSwap                bool                       `json:"allow_swap"`
-	BootTaints               []corev1.Taint             `json:"boot_taints"`
-	CNIConfFile              CNIConfFile                `json:"cni_conf_file"`
-	Config                   *unstructured.Unstructured `json:"config,omitempty"`
+	ServiceParams    `json:",inline"`
+	BootTaints       []corev1.Taint             `json:"boot_taints"`
+	CNIConfFile      CNIConfFile                `json:"cni_conf_file"`
+	Config           *unstructured.Unstructured `json:"config,omitempty"`
+	ContainerRuntime string                     `json:"container_runtime"`
+	CRIEndpoint      string                     `json:"cri_endpoint"`
 }
 
-// MergeConfigV1Beta1 merges the input struct with Connfig and returns *kubeletv1beta1.KubeletConfiguration.
-func (p KubeletParams) MergeConfigV1Beta1(base *kubeletv1beta1.KubeletConfiguration) (*kubeletv1beta1.KubeletConfiguration, error) {
-	if base == nil {
-		return nil, errors.New("base should not be nil")
-	}
+// MergeConfig merges the input struct with `base`.
+func (p KubeletParams) MergeConfig(base *kubeletv1beta1.KubeletConfiguration) (*kubeletv1beta1.KubeletConfiguration, error) {
+	// FOR IMPLEMENTORS.
+	// DO NOT SUPPORT MORE THAN ONE ComponentConfig VERSIONS.
+	// When we need to upgrade the component config version, users will
+	// stop CKE, update cluster.yml in etcd, then start the new CKE.
+	// So, CKE should only support the latest config version.
 	cfg := *base
 	if p.Config == nil {
-		if p.CgroupDriver != "" {
-			cfg.CgroupDriver = p.CgroupDriver
-		}
-		if p.Domain != "" {
-			cfg.ClusterDomain = p.Domain
-		}
-		failSwapOn := !p.AllowSwap
-		cfg.FailSwapOn = &failSwapOn
-		if p.ContainerLogMaxSize != "" {
-			cfg.ContainerLogMaxSize = p.ContainerLogMaxSize
-		}
-		if p.ContainerLogMaxFiles != 0 {
-			maxFiles := p.ContainerLogMaxFiles
-			cfg.ContainerLogMaxFiles = &maxFiles
-		}
 		return &cfg, nil
 	}
 
@@ -236,6 +195,7 @@ func (p KubeletParams) MergeConfigV1Beta1(base *kubeletv1beta1.KubeletConfigurat
 		return nil, err
 	}
 
+	cfg.TypeMeta = metav1.TypeMeta{}
 	return &cfg, nil
 }
 
@@ -515,7 +475,7 @@ func validateOptions(opts Options) error {
 	}
 
 	base := &kubeletv1beta1.KubeletConfiguration{}
-	kubeletConfig, err := opts.Kubelet.MergeConfigV1Beta1(base)
+	kubeletConfig, err := opts.Kubelet.MergeConfig(base)
 	if err != nil {
 		return err
 	}
@@ -532,8 +492,8 @@ func validateOptions(opts Options) error {
 		if opts.Kubelet.ContainerRuntime != "remote" && opts.Kubelet.ContainerRuntime != "docker" {
 			return errors.New("kubelet.container_runtime should be 'docker' or 'remote'")
 		}
-		if opts.Kubelet.ContainerRuntime == "remote" && len(opts.Kubelet.ContainerRuntimeEndpoint) == 0 {
-			return errors.New("kubelet.container_runtime_endpoint should not be empty")
+		if opts.Kubelet.ContainerRuntime == "remote" && len(opts.Kubelet.CRIEndpoint) == 0 {
+			return errors.New("kubelet.cri_endpoint should not be empty")
 		}
 	}
 	if len(opts.Kubelet.CNIConfFile.Content) != 0 && len(opts.Kubelet.CNIConfFile.Name) == 0 {
@@ -581,55 +541,8 @@ func validateOptions(opts Options) error {
 		}
 	}
 
-	version, err := opts.Scheduler.GetAPIversion()
-	if err != nil {
+	if _, err := opts.Scheduler.MergeConfig(&schedulerv1beta1.KubeSchedulerConfiguration{}); err != nil {
 		return err
-	}
-	switch version {
-	case schedulerv1alpha1.SchemeGroupVersion.String():
-		for _, e := range opts.Scheduler.Extenders {
-			config := schedulerv1.Extender{}
-			err = yaml.Unmarshal([]byte(e), &config)
-			if err != nil {
-				return err
-			}
-			if len(config.URLPrefix) == 0 {
-				return errors.New("no urlPrefix is provided")
-			}
-			if _, err = url.Parse(config.URLPrefix); err != nil {
-				return err
-			}
-		}
-
-		for _, e := range opts.Scheduler.Predicates {
-			config := schedulerv1.PredicatePolicy{}
-			err = yaml.Unmarshal([]byte(e), &config)
-			if err != nil {
-				return err
-			}
-			if len(config.Name) == 0 {
-				return errors.New("no name is provided")
-			}
-		}
-
-		for _, e := range opts.Scheduler.Priorities {
-			config := schedulerv1.PriorityPolicy{}
-			err = yaml.Unmarshal([]byte(e), &config)
-			if err != nil {
-				return err
-			}
-			if len(config.Name) == 0 {
-				return errors.New("no name is provided")
-			}
-		}
-	case schedulerv1alpha2.SchemeGroupVersion.String():
-		base := schedulerv1alpha2.KubeSchedulerConfiguration{}
-		_, err := opts.Scheduler.MergeConfigV1Alpha2(&base)
-		if err != nil {
-			return err
-		}
-	default:
-		return errors.New("unsupported scheduler API version was given: " + version)
 	}
 
 	return nil

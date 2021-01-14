@@ -145,15 +145,6 @@ jobs:
       - run-mtest:
           runtime: remote
           suite: functions
-  mtest-containerd-functions-oldstylecluster:
-    docker:
-      - image: google/cloud-sdk
-    steps:
-      - checkout
-      - run-mtest:
-          runtime: remote
-          suite: functions
-          cluster: cke-cluster-old.yml
   mtest-containerd-operators:
     docker:
       - image: google/cloud-sdk
@@ -170,23 +161,6 @@ jobs:
       - run-mtest:
           runtime: remote
           suite: robustness
-  mtest-upgrade:
-    docker:
-      - image: google/cloud-sdk
-    steps:
-      - checkout
-      - run-mtest:
-          runtime: remote
-          suite: upgrade
-          cluster: cke-cluster-old.yml
-  mtest-docker-functions:
-    docker:
-      - image: google/cloud-sdk
-    steps:
-      - checkout
-      - run-mtest:
-          runtime: docker
-          suite: functions
   compose:
     machine:
       image: circleci/classic:edge
@@ -262,15 +236,9 @@ workflows:
       - build-image:
           requires:
             - build
-      - mtest-docker-functions
       - mtest-containerd-functions
-      - mtest-containerd-functions-oldstylecluster
       - mtest-containerd-operators
       - mtest-containerd-robustness
-      - mtest-upgrade:
-          filters:
-            branches:
-              ignore: ["main", "/release-.*/", "/bump-.*/"]
       - compose
   conformance:
     jobs:

@@ -15,8 +15,8 @@ a YAML or JSON object with these fields:
   - [EtcdParams](#etcdparams)
   - [APIServerParams](#apiserverparams)
   - [KubeletParams](#kubeletparams)
-  - [SchedulerParams](#schedulerparams)
   - [CNIConfFile](#cniconffile)
+  - [SchedulerParams](#schedulerparams)
 
 | Name                  | Required | Type         | Description                                                      |
 | --------------------- | -------- | ------------ | ---------------------------------------------------------------- |
@@ -49,32 +49,30 @@ A `Node` has these fields:
 | `annotations`   | false    | object    | Node annotations.                                              |
 | `labels`        | false    | object    | Node labels.                                                   |
 | `taints`        | false    | `[]Taint` | Node taints.                                                   |
-|                 |
 
 `annotations`, `labels`, and `taints` are added or updated, but not removed.
 This is because other applications may edit their own annotations, labels, or taints.
 
-Note that annotations, labels, and taints whose names contain `cke.cybozu.com/` or start with `node-role.kubernetes.io/` are
-reserved for CKE internal usage, therefore should not be used.
+Note that annotations, labels, and taints whose names contain `cke.cybozu.com/` or start with `node-role.kubernetes.io/` are reserved for CKE internal usage, therefore should not be used.
 
 Taint
 -----
 
-| Name     | Required | Type   | Description                                                                                                                         |
-| -------- | -------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `key`    | true     | string | The taint key to be applied to a node.                                                                                              |
-| `value`  | false    | string | The taint value corresponding to the taint key.                                                                                     |
-| `effect` | true     | string | The effect of the taint on pods that do not tolerate the taint. Valid effects are `NoSchedule`, `PreferNoSchedule` and `NoExecute`. |
+| Name     | Required | Type   | Description                                      |
+| -------- | -------- | ------ | ------------------------------------------------ |
+| `key`    | true     | string | The taint key to be applied to a node.           |
+| `value`  | false    | string | The taint value corresponding to the taint key.  |
+| `effect` | true     | string | `NoSchedule`, `PreferNoSchedule` or `NoExecute`. |
 
 Reboot
 ------
 
-| Name                       | Required | Type                             | Description                                                  |
-| -------------------------- | -------- | -------------------------------- | ------------------------------------------------------------ |
-| `command`                  | true     | []string                         | A command to reboot and wait for a node to get back.         |
-| `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default is nil.     |
-| `command_timeout_seconds`  | false    | *int                             | Deadline for rebooting. Zero means infinity. Default is nil. |
-| `protected_namespaces`     | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                      |
+| Name                       | Required | Type                             | Description                                                            |
+| -------------------------- | -------- | -------------------------------- | ---------------------------------------------------------------------- |
+| `command`                  | true     | array                            | A command to reboot and wait for a node to get back.  List of strings. |
+| `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default is nil.               |
+| `command_timeout_seconds`  | false    | *int                             | Deadline for rebooting. Zero means infinity. Default is nil.           |
+| `protected_namespaces`     | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                                |
 
 `command` is the command (1) to reboot the node and (2) to wait for the boot-up of the node.
 CKE sends a [Node data object](cluster.md#node) serialized into JSON to its standard input.
@@ -155,33 +153,30 @@ Options
 
 | Name                | Required | Type   | Description                                           |
 | ------------------- | -------- | ------ | ----------------------------------------------------- |
+| `audit_log_enabled` | false    | bool   | If true, audit log will be logged to standard output. |
+| `audit_log_policy`  | false    | string | Audit policy configuration in yaml format.            |
 | `extra_args`        | false    | array  | Extra command-line arguments.  List of strings.       |
 | `extra_binds`       | false    | array  | Extra bind mounts.  List of `Mount`.                  |
 | `extra_env`         | false    | object | Extra environment variables.                          |
-| `audit_log_enabled` | false    | bool   | If true, audit log will be logged to standard output. |
-| `audit_log_policy`  | false    | string | Audit policy configuration in yaml format.            |
 
 ### KubeletParams
 
-| Name                         | Required | Type                          | Description                                                                                                                                                         |
-| ---------------------------- | -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `domain`                     | false    | string                        | The base domain for the cluster.  Default: `cluster.local`.                                                                                                         |
-| `allow_swap`                 | false    | bool                          | Do not fail even when swap is on.                                                                                                                                   |
-| `boot_taints`                | false    | `[]Taint`                     | Bootstrap node taints.                                                                                                                                              |
-| `extra_args`                 | false    | array                         | Extra command-line arguments.  List of strings.                                                                                                                     |
-| `extra_binds`                | false    | array                         | Extra bind mounts.  List of `Mount`.                                                                                                                                |
-| `extra_env`                  | false    | object                        | Extra environment variables.                                                                                                                                        |
-| `cgroup_driver`              | false    | string                        | Driver that the kubelet uses to manipulate cgroups on the host. `cgroupfs` (default) or `systemd`.                                                                  |
-| `container_runtime`          | false    | string                        | Container runtime for Pod. Default: `docker`. You have to choose `docker` or `remote` which supports [CRI][].                                                       |
-| `container_runtime_endpoint` | false    | string                        | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/var/run/dockershim.sock`.                                               |
-| `container_log_max_size`     | false    | string                        | Equivalent to the [log rotation for CRI runtime]. Size of log file size. If the file size becomes bigger than given size, the log file is rotated. Default: `10Mi`. |
-| `container_log_max_files`    | false    | int                           | Equivalent to the [log rotation for CRI runtime]. Number of rotated log files for keeping in the storage. Default: `5`.                                             |
-| `cni_conf_file`              | false    | CNIConfFile                   | CNI configuration file.                                                                                                                                             |
-| `config`                     | false    | *v1beta1.KubeletConfiguration | https://pkg.go.dev/k8s.io/kubelet/config/v1beta1?tab=doc#KubeletConfiguration                                                                                       |
+| Name                | Required | Type                            | Description                                                                                                                  |
+| ------------------- | -------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `boot_taints`       | false    | `[]Taint`                       | Bootstrap node taints.                                                                                                       |
+| `cni_conf_file`     | false    | `CNIConfFile`                   | CNI configuration file.                                                                                                      |
+| `config`            | false    | `*v1beta1.KubeletConfiguration` | See below.                                                                                                                   |
+| `container_runtime` | false    | string                          | Container runtime for Pod. Default: `remote`. You have to choose `docker` or `remote` which supports [CRI][].                |
+| `cri_endpoint`      | false    | string                          | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/run/containerd/containerd.sock`. |
+| `extra_args`        | false    | array                           | Extra command-line arguments.  List of strings.                                                                              |
+| `extra_binds`       | false    | array                           | Extra bind mounts.  List of `Mount`.                                                                                         |
+| `extra_env`         | false    | object                          | Extra environment variables.                                                                                                 |
 
 Taints in `boot_taints` are added to a Node in the following cases:
-(1) when that Node is registered with Kubernetes by kubelet, or
-(2) when the kubelet on that Node is being booted while the Node resource is already registered.
+
+- when that Node is registered with Kubernetes by `kubelet`, or
+- when `kubelet` on that Node is being booted while the Node resource is already registered.
+
 Those taints can be removed manually when they are no longer needed.
 Note that the second case happens when the physical node is rebooted without resource manipulation.
 If you want to add taints only at Node registration, use kubelet's `--register-with-taints` options in `extra_args`.
@@ -190,41 +185,13 @@ CNI configuration file specified by `cni_conf_file` will be put in `/etc/cni/net
 on all nodes.  The file is created only when `kubelet` starts on the node; it will *not* be
 updated later on.
 
-If `config` is specified, the following fields are ignored: `domain`, `allow_swap`, `container_log_max_size`, `container_log_max_files`.
+`config` must be a partial [`v1beta1.KubeletConfiguration`](https://pkg.go.dev/k8s.io/kubelet@v0.19.6/config/v1beta1#KubeletConfiguration).
 
-Some fields in `config` have CKE-defined default values.
-Some other fields are forced to have certain values.
+Fields in `config` may have default values.  Some fields are overwritten by CKE.
 Please see the source code for more details.
 
-#### known issue
-
-`cgroup_driver` should not be modified along with other kubelet parameters.
-
-### SchedulerParams
-
-| Name          | Required | Type                                 | Description                                           |
-| ------------- | -------- | ------------------------------------ | ----------------------------------------------------- |
-| `extenders`   | false    | `[]string`                           | Extender parameters                                   |
-| `predicates`  | false    | `[]string`                           | Predicate parameters                                  |
-| `priorities`  | false    | `[]string`                           | Priority parameters                                   |
-| `extra_args`  | false    | array                                | Extra command-line arguments.  List of strings.       |
-| `extra_binds` | false    | array                                | Extra bind mounts.  List of `Mount`.                  |
-| `extra_env`   | false    | object                               | Extra environment variables.                          |
-| `config`      | false    | *v1alpha2.KubeSchedulerConfiguration | https://pkg.go.dev/k8s.io/kops/pkg/apis/kops/v1alpha2 |
-
-Elements of `extenders`, `predicates` and `priorities` are contents of
-[`Extender`](https://github.com/kubernetes/kube-scheduler/blob/release-1.18/config/v1/types.go#L190),
-[`PredicatePolicy`](https://github.com/kubernetes/kube-scheduler/blob/release-1.18/config/v1/types.go#L50) and
-[`PriorityPolicy`](https://github.com/kubernetes/kube-scheduler/blob/release-1.18/config/v1/types.go#L60)
-in JSON format, respectively.
-
-`config` should be used only for `v1alpha2.KubeSchedulerConfiguration`.
-If you want to configure `v1alpha1.KubeSchedulerConfiguration`, please use the `extenders`, `predicates`, and `priorities` fields.
-CKE does not allow users to configure both `config` and more than one of `extenders`, `predicates`, and `priorities`, so please configure either of them.
-
-Some fields in `config` have CKE-defined default values.
-Some other fields are forced to have certain values.
-Please see the source code for more details.
+The use of `docker` for `container_runtime` is deprecated.
+In the future, the Docker support will be removed altogether.
 
 ### CNIConfFile
 
@@ -236,6 +203,19 @@ Please see the source code for more details.
 `name` is the filename of CNI configuration file.
 It should end with either `.conf` or `.conflist`.
 
+### SchedulerParams
+
+| Name          | Required | Type                                  | Description                                     |
+| ------------- | -------- | ------------------------------------- | ----------------------------------------------- |
+| `config`      | false    | `*v1beta1.KubeSchedulerConfiguration` | See below.                                      |
+| `extra_args`  | false    | array                                 | Extra command-line arguments.  List of strings. |
+| `extra_binds` | false    | array                                 | Extra bind mounts.  List of `Mount`.            |
+| `extra_env`   | false    | object                                | Extra environment variables.                    |
+
+`config` must be a partial [`v1beta1.KubeSchedulerConfiguration`](https://pkg.go.dev/k8s.io/kube-scheduler@v0.19.6/config/v1beta1#KubeSchedulerConfiguration).
+
+Fields in `config` may have default values.  Some fields are overwritten by CKE.
+Please see the source code for more details.
 
 [CRI]: https://github.com/kubernetes/kubernetes/blob/242a97307b34076d5d8f5bbeb154fa4d97c9ef1d/docs/devel/container-runtime-interface.md
 [log rotation for CRI runtime]: https://github.com/kubernetes/kubernetes/issues/58823

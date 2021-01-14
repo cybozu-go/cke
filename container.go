@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-
-	"github.com/moby/moby/api/types"
 )
 
 const (
@@ -300,6 +298,18 @@ func (c docker) Exists(name string) (bool, error) {
 	return len(id) != 0, nil
 }
 
+// this is a partial copy of ContainerJSON in github.com/moby/moby/api/types
+type containerJSON struct {
+	Name   string
+	Config struct {
+		Image  string
+		Labels map[string]string
+	}
+	State struct {
+		Running bool
+	}
+}
+
 func (c docker) Inspect(names []string) (map[string]ServiceStatus, error) {
 	retryCount := 0
 RETRY:
@@ -326,7 +336,7 @@ RETRY:
 		goto RETRY
 	}
 
-	var djs []types.ContainerJSON
+	var djs []containerJSON
 	err = json.Unmarshal(stdout, &djs)
 	if err != nil {
 		return nil, err
