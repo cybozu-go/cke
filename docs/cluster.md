@@ -15,7 +15,6 @@ a YAML or JSON object with these fields:
   - [EtcdParams](#etcdparams)
   - [APIServerParams](#apiserverparams)
   - [KubeletParams](#kubeletparams)
-  - [CNIConfFile](#cniconffile)
   - [SchedulerParams](#schedulerparams)
 
 | Name                  | Required | Type         | Description                                                      |
@@ -172,6 +171,11 @@ Options
 | `extra_binds`       | false    | array                           | Extra bind mounts.  List of `Mount`.                                                                                         |
 | `extra_env`         | false    | object                          | Extra environment variables.                                                                                                 |
 
+The use of `docker` for `container_runtime` is deprecated.
+In the future, the Docker support will be removed altogether.
+
+#### Boot taints
+
 Taints in `boot_taints` are added to a Node in the following cases:
 
 - when that Node is registered with Kubernetes by `kubelet`, or
@@ -181,17 +185,28 @@ Those taints can be removed manually when they are no longer needed.
 Note that the second case happens when the physical node is rebooted without resource manipulation.
 If you want to add taints only at Node registration, use kubelet's `--register-with-taints` options in `extra_args`.
 
+#### KubeletConfiguration
+
+`config` must be a partial [`v1beta1.KubeletConfiguration`](https://pkg.go.dev/k8s.io/kubelet@v0.19.6/config/v1beta1#KubeletConfiguration).
+
+Fields that are described as _This field should not be updated without a full node reboot._ won't be updated on the running node for safety.  Such fields include `CgroupDriver` or `QOSReserved`.
+
+Fields in the below table have default values:
+
+| Name                    | Value             |
+| ----------------------- | ----------------- |
+| `ClusterDomain`         | `cluster.local`   |
+| `RuntimeRequestTimeout` | `15m`             |
+| `HealthzBindAddress`    | `0.0.0.0`         |
+| `VolumePluginDir`       | `/opt/volume/bin` |
+
+`TLSCertFile`, `TLSPrivateKeyFile`, `Authentication`, `Authorization`, and `ClusterDNS` are managed by CKE and are not configurable.
+
+#### CNIConfFile
+
 CNI configuration file specified by `cni_conf_file` will be put in `/etc/cni/net.d` directory
 on all nodes.  The file is created only when `kubelet` starts on the node; it will *not* be
 updated later on.
-
-`config` must be a partial [`v1beta1.KubeletConfiguration`](https://pkg.go.dev/k8s.io/kubelet@v0.19.6/config/v1beta1#KubeletConfiguration).  Fields that are described as "This field should not be updated without a full node reboot." won't be updated on the running node for safety.  Such fields include `CgroupDriver` or `QOSReserved`.
-`ClusterDomain` (`cluster.local`), `RuntimeRequestTimeout` (`15m`), and `HealthzBindAddress` (`0.0.0.0`) have default values.  `TLSCertFile`, `TLSPrivateKeyFile`, `Authentication`, `Authorization`, and `ClusterDNS` are managed by CKE and are not configurable.
-
-The use of `docker` for `container_runtime` is deprecated.
-In the future, the Docker support will be removed altogether.
-
-### CNIConfFile
 
 | Name      | Required | Type   | Description                 |
 | --------- | -------- | ------ | --------------------------- |

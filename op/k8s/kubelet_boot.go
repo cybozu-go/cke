@@ -376,11 +376,9 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 		"--hostname-override=" + n.Nodename(),
 		"--pod-infra-container-image=" + cke.PauseImage.Name(),
 		"--network-plugin=cni",
-		"--volume-plugin-dir=/opt/volume/bin",
 	}
 	if len(params.ContainerRuntime) != 0 {
 		args = append(args, "--container-runtime="+params.ContainerRuntime)
-		args = append(args, "--runtime-request-timeout=15m")
 	}
 	if len(params.CRIEndpoint) != 0 {
 		args = append(args, "--container-runtime-endpoint="+params.CRIEndpoint)

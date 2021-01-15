@@ -46,6 +46,7 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 		ClusterDomain:         "cluster.local",
 		RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
 		HealthzBindAddress:    "0.0.0.0",
+		VolumePluginDir:       "/opt/volume/bin",
 		TLSCertFile:           "/etc/kubernetes/pki/kubelet.crt",
 		TLSPrivateKeyFile:     "/etc/kubernetes/pki/kubelet.key",
 		Authentication: kubeletv1beta1.KubeletAuthentication{

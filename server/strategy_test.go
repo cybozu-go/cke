@@ -303,6 +303,7 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 			ClusterDomain:         domain,
 			RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
 			HealthzBindAddress:    "0.0.0.0",
+			VolumePluginDir:       "/opt/volume/bin",
 			ContainerLogMaxSize:   "20Mi",
 			TLSCertFile:           "/etc/kubernetes/pki/kubelet.crt",
 			TLSPrivateKeyFile:     "/etc/kubernetes/pki/kubelet.key",

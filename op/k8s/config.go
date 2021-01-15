@@ -113,6 +113,7 @@ func GenerateKubeletConfiguration(params cke.KubeletParams, nodeAddress string, 
 		ClusterDomain:         "cluster.local",
 		RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
 		HealthzBindAddress:    "0.0.0.0",
+		VolumePluginDir:       "/opt/volume/bin",
 	}
 
 	// This won't raise an error because of prior validation
