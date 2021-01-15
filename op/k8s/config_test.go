@@ -63,6 +63,9 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 	expected.ContainerLogMaxSize = "100Mi"
 	expected.CgroupDriver = "systemd"
 
+	expected2 := expected.DeepCopy()
+	expected2.CgroupDriver = ""
+
 	cfg := &unstructured.Unstructured{}
 	cfg.SetGroupVersionKind(kubeletv1beta1.SchemeGroupVersion.WithKind("KubeletConfiguration"))
 	cfg.Object["failSwapOn"] = false
@@ -72,6 +75,7 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 	cases := []struct {
 		Name     string
 		Input    cke.KubeletParams
+		Running  *kubeletv1beta1.KubeletConfiguration
 		Expected *kubeletv1beta1.KubeletConfiguration
 	}{
 		{
@@ -86,10 +90,18 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 			},
 			Expected: expected,
 		},
+		{
+			Name: "with running config",
+			Input: cke.KubeletParams{
+				Config: cfg,
+			},
+			Running:  &kubeletv1beta1.KubeletConfiguration{},
+			Expected: expected2,
+		},
 	}
 
 	for _, c := range cases {
-		conf := GenerateKubeletConfiguration(c.Input, "1.2.3.4")
+		conf := GenerateKubeletConfiguration(c.Input, "1.2.3.4", c.Running)
 		if !cmp.Equal(conf, c.Expected) {
 			t.Errorf("case %q: GenerateKubeletConfiguration() generated unexpected result:\n%s", c.Name, cmp.Diff(conf, c.Expected))
 		}

@@ -12,8 +12,6 @@ import (
 	"github.com/cybozu-go/log"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
-	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
-	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
 // NodeFilter filters nodes to
@@ -363,10 +361,8 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) (nodes 
 
 	for _, n := range nf.cp {
 		st := nf.nodeStatus(n).Scheduler
-		var runningConfig *schedulerv1beta1.KubeSchedulerConfiguration
-		if st.Config != nil {
-			runningConfig = st.Config
-		}
+		runningConfig := st.Config
+
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
@@ -428,16 +424,10 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 
 	for _, n := range nf.cluster.Nodes {
 		st := nf.nodeStatus(n).Kubelet
-		currentConfig := k8s.GenerateKubeletConfiguration(currentOpts, n.Address)
+		currentConfig := k8s.GenerateKubeletConfiguration(currentOpts, n.Address, st.Config)
 		currentBuiltIn := k8s.KubeletServiceParams(n, currentOpts)
-		if st.Config != nil {
-			// CgroupDriver should be kept while node is running.
-			currentConfig.CgroupDriver = st.Config.CgroupDriver
-		}
-		var runningConfig *kubeletv1beta1.KubeletConfiguration
-		if st.Config != nil {
-			runningConfig = st.Config
-		}
+		runningConfig := st.Config
+
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
@@ -445,9 +435,7 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 			log.Warn("kubelet's container runtime cannot be changed", nil)
 		case cke.KubernetesImage.Name() != st.Image:
 			fallthrough
-		case st.Config == nil:
-			fallthrough
-		case !reflect.DeepEqual(currentConfig, st.Config):
+		case !reflect.DeepEqual(currentConfig, runningConfig):
 			fallthrough
 		case !kubeletEqualParams(st.BuiltInParams, currentBuiltIn):
 			fallthrough

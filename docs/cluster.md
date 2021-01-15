@@ -185,10 +185,8 @@ CNI configuration file specified by `cni_conf_file` will be put in `/etc/cni/net
 on all nodes.  The file is created only when `kubelet` starts on the node; it will *not* be
 updated later on.
 
-`config` must be a partial [`v1beta1.KubeletConfiguration`](https://pkg.go.dev/k8s.io/kubelet@v0.19.6/config/v1beta1#KubeletConfiguration).
-
-Fields in `config` may have default values.  Some fields are overwritten by CKE.
-Please see the source code for more details.
+`config` must be a partial [`v1beta1.KubeletConfiguration`](https://pkg.go.dev/k8s.io/kubelet@v0.19.6/config/v1beta1#KubeletConfiguration).  Fields that are described as "This field should not be updated without a full node reboot." won't be updated on the running node for safety.  Such fields include `CgroupDriver` or `QOSReserved`.
+`ClusterDomain` (`cluster.local`), `RuntimeRequestTimeout` (`15m`), and `HealthzBindAddress` (`0.0.0.0`) have default values.  `TLSCertFile`, `TLSPrivateKeyFile`, `Authentication`, `Authorization`, and `ClusterDNS` are managed by CKE and are not configurable.
 
 The use of `docker` for `container_runtime` is deprecated.
 In the future, the Docker support will be removed altogether.

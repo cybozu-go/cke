@@ -101,7 +101,13 @@ func kubeletKubeconfig(cluster string, n *cke.Node, caPath, certPath, keyPath st
 	return cfg
 }
 
-func newKubeletConfiguration(cert, key, ca string, params cke.KubeletParams) *kubeletv1beta1.KubeletConfiguration {
+// GenerateKubeletConfiguration generates kubelet configuration.
+// `params` must be validated beforehand.
+func GenerateKubeletConfiguration(params cke.KubeletParams, nodeAddress string, running *kubeletv1beta1.KubeletConfiguration) *kubeletv1beta1.KubeletConfiguration {
+	caPath := op.K8sPKIPath("ca.crt")
+	tlsCertPath := op.K8sPKIPath("kubelet.crt")
+	tlsKeyPath := op.K8sPKIPath("kubelet.key")
+
 	// default values
 	base := &kubeletv1beta1.KubeletConfiguration{
 		ClusterDomain:         "cluster.local",
@@ -116,24 +122,32 @@ func newKubeletConfiguration(cert, key, ca string, params cke.KubeletParams) *ku
 	}
 
 	// forced values
-	c.TLSCertFile = cert
-	c.TLSPrivateKeyFile = key
+	c.TLSCertFile = tlsCertPath
+	c.TLSPrivateKeyFile = tlsKeyPath
 	c.Authentication = kubeletv1beta1.KubeletAuthentication{
-		X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: ca},
+		X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: caPath},
 		Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: pointer.BoolPtr(true)},
 	}
 	c.Authorization = kubeletv1beta1.KubeletAuthorization{Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook}
+	c.ClusterDNS = []string{nodeAddress}
 
+	if running != nil {
+		// Keep the running configurations while the node is running.
+		// All these fields are described as:
+		//     This field should not be updated without a full node
+		//     reboot. It is safest to keep this value the same as the local config.
+		//
+		// ref:  https://pkg.go.dev/k8s.io/kubelet/config/v1beta1#KubeletConfiguration
+		c.KubeletCgroups = running.KubeletCgroups
+		c.SystemCgroups = running.SystemCgroups
+		c.CgroupRoot = running.CgroupRoot
+		c.CgroupsPerQOS = running.CgroupsPerQOS
+		c.CgroupDriver = running.CgroupDriver
+		c.CPUManagerPolicy = running.CPUManagerPolicy
+		c.TopologyManagerPolicy = running.TopologyManagerPolicy
+		c.QOSReserved = running.QOSReserved
+		c.SystemReservedCgroup = running.SystemReservedCgroup
+		c.KubeReservedCgroup = running.KubeReservedCgroup
+	}
 	return c
-}
-
-// GenerateKubeletConfiguration generates kubelet configuration.
-// `params` must be validated beforehand.
-func GenerateKubeletConfiguration(params cke.KubeletParams, nodeAddress string) *kubeletv1beta1.KubeletConfiguration {
-	caPath := op.K8sPKIPath("ca.crt")
-	tlsCertPath := op.K8sPKIPath("kubelet.crt")
-	tlsKeyPath := op.K8sPKIPath("kubelet.key")
-	cfg := newKubeletConfiguration(tlsCertPath, tlsKeyPath, caPath, params)
-	cfg.ClusterDNS = []string{nodeAddress}
-	return cfg
 }

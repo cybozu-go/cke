@@ -57,7 +57,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 5. Run or restart kubernetes components.
-	if ops := k8sOps(c, nf); len(ops) > 0 {
+	if ops := k8sOps(c, nf, cs); len(ops) > 0 {
 		return ops, cke.PhaseK8sStart
 	}
 
@@ -111,7 +111,7 @@ func riversOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	return ops
 }
 
-func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
+func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []cke.Operator) {
 	// For cp nodes
 	if nodes := nf.SSHConnectedNodes(nf.APIServerStoppedNodes(), true, false); len(nodes) > 0 {
 		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.APIServer))
@@ -135,13 +135,14 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	// For all nodes
 	apiServer := nf.HealthyAPIServer()
 	if nodes := nf.SSHConnectedNodes(nf.KubeletUnrecognizedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet))
+		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.KubeletStoppedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletBootOp(nodes, nf.KubeletStoppedRegisteredNodes(), apiServer, c.Name, c.Options.Kubelet))
+		ops = append(ops, k8s.KubeletBootOp(nodes, nf.KubeletStoppedRegisteredNodes(),
+			apiServer, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.KubeletOutdatedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet))
+		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.ProxyStoppedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeProxyBootOp(nodes, c.Name, c.Options.Proxy))
