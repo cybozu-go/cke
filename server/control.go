@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -59,6 +60,12 @@ RETRY:
 	log.Info("I am the leader", map[string]interface{}{
 		"session": c.session.Lease(),
 	})
+
+	if c.addon != nil {
+		if err := c.addon.Init(ctx, leaderKey); err != nil {
+			return fmt.Errorf("failed to init the addon: %w", err)
+		}
+	}
 
 	err = c.runLoop(ctx, leaderKey)
 	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), c.timeout)

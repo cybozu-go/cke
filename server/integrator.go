@@ -18,6 +18,9 @@ type Integrator interface {
 	// If the integrator does not implement StartWatch, simply return nil.
 	StartWatch(context.Context, chan<- struct{}) error
 
+	// Init is called just once when the server becomes a new leader.
+	Init(ctx context.Context, leaderKey string) error
+
 	// Do does something for CKE.  leaderKey is an etcd object key that
 	// exists as long as the current process is the leader.
 	Do(ctx context.Context, leaderKey string) error
