@@ -239,7 +239,7 @@ func (k KubernetesCA) IssueForAPIServer(ctx context.Context, inf Infrastructure,
 	if err != nil {
 		return "", "", err
 	}
-	kubeSvcAddr := netutil.IntToIP4(netutil.IP4ToInt(ip) + 1)
+	kubeSvcAddr := netutil.IPAdd(ip, 1)
 
 	return issueCertificate(inf, CAKubernetes, RoleSystem, false,
 		map[string]interface{}{
