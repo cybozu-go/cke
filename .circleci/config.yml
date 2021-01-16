@@ -67,7 +67,7 @@ commands:
 jobs:
   build:
     docker:
-      - image: quay.io/cybozu/golang:1.13-bionic
+      - image: quay.io/cybozu/golang:1.15-focal
       - image: quay.io/coreos/etcd:v3.3
     working_directory: /work
     steps:
@@ -205,7 +205,7 @@ jobs:
           path: /tmp/sonobuoy.tar.gz
   github-release:
     docker:
-      - image: quay.io/cybozu/golang:1.13-bionic
+      - image: quay.io/cybozu/golang:1.15-focal
     steps:
       - checkout
       - attach_workspace:

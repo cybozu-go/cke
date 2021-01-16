@@ -1,5 +1,5 @@
 # CKE container
-FROM quay.io/cybozu/ubuntu:18.04
+FROM quay.io/cybozu/ubuntu:20.04
 
 COPY cke /usr/local/cke/bin/cke
 COPY ckecli /usr/local/cke/bin/ckecli
