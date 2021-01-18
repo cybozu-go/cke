@@ -288,6 +288,8 @@ Append the nodes written in `FILE` to the reboot queue.
 The nodes should be specified with their IP addresses.
 If `FILE` is `-`, the contents are read from stdin.
 
+For safety, multiple control plane nodes cannot be enqueued in one entry.
+
 ### `ckecli reboot-queue list`
 
 List the entries in the reboot queue.
