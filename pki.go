@@ -109,16 +109,12 @@ func deleteRole(client *vault.Client, ca, role string) error {
 type EtcdCA struct{}
 
 // IssueServerCert issues TLS server certificates.
-func (e EtcdCA) IssueServerCert(ctx context.Context, inf Infrastructure, node *Node, domain string) (crt, key string, err error) {
+func (e EtcdCA) IssueServerCert(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
 	altNames := []string{
 		"localhost",
 		"cke-etcd",
 		"cke-etcd.kube-system",
 		"cke-etcd.kube-system.svc",
-	}
-	d := strings.Split(domain, ".")
-	for i := range d {
-		altNames = append(altNames, "cke-etcd.kube-system.svc."+strings.Join(d[0:i+1], "."))
 	}
 	return issueCertificate(inf, CAServer, RoleSystem, false,
 		map[string]interface{}{
@@ -232,22 +228,18 @@ func (k KubernetesCA) IssueUserCert(ctx context.Context, inf Infrastructure, use
 }
 
 // IssueForAPIServer issues TLS certificate for API servers.
-func (k KubernetesCA) IssueForAPIServer(ctx context.Context, inf Infrastructure, n *Node, serviceSubnet, domain string) (crt, key string, err error) {
+func (k KubernetesCA) IssueForAPIServer(ctx context.Context, inf Infrastructure, n *Node, serviceSubnet string) (crt, key string, err error) {
 	altNames := []string{
 		"localhost",
 		"kubernetes",
 		"kubernetes.default",
 		"kubernetes.default.svc",
 	}
-	d := strings.Split(domain, ".")
-	for i := range d {
-		altNames = append(altNames, "kubernetes.default.svc."+strings.Join(d[0:i+1], "."))
-	}
 	ip, _, err := net.ParseCIDR(serviceSubnet)
 	if err != nil {
 		return "", "", err
 	}
-	kubeSvcAddr := netutil.IntToIP4(netutil.IP4ToInt(ip) + 1)
+	kubeSvcAddr := netutil.IPAdd(ip, 1)
 
 	return issueCertificate(inf, CAKubernetes, RoleSystem, false,
 		map[string]interface{}{

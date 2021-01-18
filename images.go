@@ -10,12 +10,12 @@ func (i Image) Name() string {
 
 // Container image definitions
 const (
-	EtcdImage       = Image("quay.io/cybozu/etcd:3.3.25.1")
-	KubernetesImage = Image("quay.io/cybozu/kubernetes:1.18.9.1")
-	ToolsImage      = Image("quay.io/cybozu/cke-tools:1.7.2")
-	PauseImage      = Image("quay.io/cybozu/pause:3.2.0.1")
-	CoreDNSImage    = Image("quay.io/cybozu/coredns:1.7.0.1")
-	UnboundImage    = Image("quay.io/cybozu/unbound:1.11.0.1")
+	EtcdImage       = Image("quay.io/cybozu/etcd:3.3.25.3")
+	KubernetesImage = Image("quay.io/cybozu/kubernetes:1.19.7.1")
+	ToolsImage      = Image("quay.io/cybozu/cke-tools:1.7.4")
+	PauseImage      = Image("quay.io/cybozu/pause:3.2.0.2")
+	CoreDNSImage    = Image("quay.io/cybozu/coredns:1.8.0.1")
+	UnboundImage    = Image("quay.io/cybozu/unbound:1.13.0.1")
 )
 
 // AllImages return container images list used by CKE

@@ -49,11 +49,12 @@ func (o *removeMemberOp) Targets() []string {
 	for i, m := range o.members {
 		ip, err := op.GuessMemberName(m)
 		if err != nil {
+			strID := strconv.FormatUint(m.ID, 10)
 			log.Warn("missing member name", map[string]interface{}{
 				log.FnError: err,
-				"member_id": string(m.ID),
+				"member_id": strID,
 			})
-			ips[i] = string(m.ID)
+			ips[i] = strID
 			continue
 		}
 		ips[i] = ip

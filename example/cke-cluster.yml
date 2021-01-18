@@ -11,10 +11,11 @@ service_subnet: 10.100.0.0/16
 dns_servers: ["8.8.8.8", "1.1.1.1"]
 options:
   kubelet:
-    extra_args:
-      - "--volume-plugin-dir=/var/lib/kubelet/volumeplugins"
+    config:
+      apiVersion: kubelet.config.k8s.io/v1beta1
+      kind: KubeletConfiguration
+      volumePluginDir: /var/lib/kubelet/volumeplugins
   kube-controller-manager:
     extra_args:
-      - "--flex-volume-plugin-dir=/var/lib/kubelet/volumeplugins"
       - "--allocate-node-cidrs=true"
       - "--cluster-cidr=192.168.0.0/16"

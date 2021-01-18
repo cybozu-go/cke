@@ -16,6 +16,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func testKubernetes() {
@@ -136,7 +137,7 @@ func testKubernetes() {
 }`, node)
 		overrideFile := remoteTempFile(overrides)
 		_, stderr, err = kubectl("run",
-			"-n="+namespace, "--image=quay.io/cybozu/ubuntu:18.04", "--overrides=\"$(cat "+overrideFile+")\"", "--restart=Never",
+			"-n="+namespace, "--image=quay.io/cybozu/ubuntu:20.04", "--overrides=\"$(cat "+overrideFile+")\"", "--restart=Never",
 			"client", "--", "pause")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
@@ -171,12 +172,10 @@ func testKubernetes() {
 		}
 
 		By("updating domain name to neco.local")
-		before := cluster.Options.Kubelet.Domain
 		if cluster.Options.Kubelet.Config == nil {
-			cluster.Options.Kubelet.Domain = "neco.local"
-		} else {
-			cluster.Options.Kubelet.Config.Object["clusterDomain"] = "neco.local"
+			cluster.Options.Kubelet.Config = &unstructured.Unstructured{}
 		}
+		cluster.Options.Kubelet.Config.UnstructuredContent()["clusterDomain"] = "neco.local"
 		clusterSetAndWait(cluster)
 
 		stdout, stderr, err := kubectl("get", "-n=kube-system", "pods", "--selector=cke.cybozu.com/appname=node-dns", "-o=json")
@@ -201,7 +200,10 @@ func testKubernetes() {
 			return errors.New("unbound.conf is not updated")
 		}).Should(Succeed())
 
-		cluster.Options.Kubelet.Domain = before
+		cluster = getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
 		clusterSetAndWait(cluster)
 	})
 
@@ -245,7 +247,7 @@ func testKubernetes() {
 		}).Should(Succeed())
 
 		By("querying www.google.com using node DNS from ubuntu pod")
-		_, stderr, err = kubectl("run", "-n="+namespace, "--image=quay.io/cybozu/ubuntu:18.04", "--restart=Never",
+		_, stderr, err = kubectl("run", "-n="+namespace, "--image=quay.io/cybozu/ubuntu:20.04", "--restart=Never",
 			"client", "--", "pause")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		Eventually(func() error {

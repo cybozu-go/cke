@@ -49,8 +49,16 @@ func (ig integrator) StartWatch(ctx context.Context, ch chan<- struct{}) error {
 	return nil
 }
 
-// Do references WaitSecs in ctx to change the wait second value.
+func (ig integrator) Init(ctx context.Context, leaderKey string) error {
+	return ig.run(ctx, leaderKey, true)
+}
+
 func (ig integrator) Do(ctx context.Context, leaderKey string) error {
+	return ig.run(ctx, leaderKey, false)
+}
+
+// Do references WaitSecs in ctx to change the wait second value.
+func (ig integrator) run(ctx context.Context, leaderKey string, onlyRegenerate bool) error {
 	st := cke.Storage{Client: ig.etcd}
 
 	disabled, err := st.IsSabakanDisabled(ctx)
@@ -108,14 +116,21 @@ func (ig integrator) Do(ctx context.Context, leaderKey string) error {
 	}
 
 	var newc *cke.Cluster
-	if cluster == nil {
-		newc, err = g.Generate()
-	} else {
-		newc, err = g.Update(cluster)
-		if newc == nil && err == nil && tmplUpdated {
+	if onlyRegenerate {
+		if cluster != nil && tmplUpdated {
 			newc, err = g.Regenerate(cluster)
 		}
+	} else {
+		if cluster == nil {
+			newc, err = g.Generate()
+		} else {
+			newc, err = g.Update(cluster)
+			if newc == nil && err == nil && tmplUpdated {
+				newc, err = g.Regenerate(cluster)
+			}
+		}
 	}
+
 	if err != nil {
 		metrics.UpdateSabakanIntegration(false, nil, 0, time.Now().UTC())
 		log.Warn("sabakan: failed to generate cluster", map[string]interface{}{

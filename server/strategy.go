@@ -12,7 +12,6 @@ import (
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubelet/config/v1beta1"
 )
 
 // DecideOps returns the next operations to do and the operation phase.
@@ -44,12 +43,12 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 			log.Warn("cannot bootstrap etcd for unreachable nodes", nil)
 			return nil, cke.PhaseEtcdBootAborted
 		}
-		return []cke.Operator{etcd.BootOp(nf.ControlPlane(), c.Options.Etcd, c.Options.Kubelet.Domain)}, cke.PhaseEtcdBoot
+		return []cke.Operator{etcd.BootOp(nf.ControlPlane(), c.Options.Etcd)}, cke.PhaseEtcdBoot
 	}
 
 	// 3. Start etcd containers.
 	if nodes := nf.SSHConnectedNodes(nf.EtcdStoppedMembers(), true, false); len(nodes) > 0 {
-		return []cke.Operator{etcd.StartOp(nodes, c.Options.Etcd, c.Options.Kubelet.Domain)}, cke.PhaseEtcdStart
+		return []cke.Operator{etcd.StartOp(nodes, c.Options.Etcd)}, cke.PhaseEtcdStart
 	}
 
 	// 4. Wait for etcd cluster to become ready
@@ -58,7 +57,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 5. Run or restart kubernetes components.
-	if ops := k8sOps(c, nf); len(ops) > 0 {
+	if ops := k8sOps(c, nf, cs); len(ops) > 0 {
 		return ops, cke.PhaseK8sStart
 	}
 
@@ -112,13 +111,13 @@ func riversOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	return ops
 }
 
-func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
+func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []cke.Operator) {
 	// For cp nodes
 	if nodes := nf.SSHConnectedNodes(nf.APIServerStoppedNodes(), true, false); len(nodes) > 0 {
-		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.Kubelet.Domain, c.Options.APIServer))
+		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.APIServer))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.APIServerOutdatedNodes(), true, false); len(nodes) > 0 {
-		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.Kubelet.Domain, c.Options.APIServer))
+		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.APIServer))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.ControllerManagerStoppedNodes(), true, false); len(nodes) > 0 {
 		ops = append(ops, k8s.ControllerManagerBootOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
@@ -136,13 +135,14 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	// For all nodes
 	apiServer := nf.HealthyAPIServer()
 	if nodes := nf.SSHConnectedNodes(nf.KubeletUnrecognizedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet))
+		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.KubeletStoppedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletBootOp(nodes, nf.KubeletStoppedRegisteredNodes(), apiServer, c.Name, c.Options.Kubelet))
+		ops = append(ops, k8s.KubeletBootOp(nodes, nf.KubeletStoppedRegisteredNodes(),
+			apiServer, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.KubeletOutdatedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet))
+		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.ProxyStoppedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeProxyBootOp(nodes, c.Name, c.Options.Proxy))
@@ -164,7 +164,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 		return etcd.DestroyMemberOp(nf.ControlPlane(), nf.SSHConnectedNodes(nodes, false, true), ids)
 	}
 	if nodes := nf.EtcdUnstartedMembers(); len(nodes) > 0 {
-		return etcd.AddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)
+		return etcd.AddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
 	}
 
 	if !nf.EtcdIsGood() {
@@ -177,7 +177,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	// all members are in sync.
 
 	if nodes := nf.EtcdNewMembers(); len(nodes) > 0 {
-		return etcd.AddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd, c.Options.Kubelet.Domain)
+		return etcd.AddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
 	}
 	if members := nf.EtcdNonClusterMembers(true); len(members) > 0 {
 		return etcd.RemoveMemberOp(nf.ControlPlane(), members)
@@ -295,11 +295,8 @@ func decideClusterDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesC
 			desiredDNSServers = []string{ip}
 		}
 	}
-	base := &v1beta1.KubeletConfiguration{}
-	kubeletConfig, err := c.Options.Kubelet.MergeConfigV1Beta1(base)
-	if err != nil {
-		panic(err)
-	}
+
+	kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
 	desiredClusterDomain := kubeletConfig.ClusterDomain
 
 	if ks.ClusterDNS.ConfigMap == nil {
@@ -329,11 +326,7 @@ func decideNodeDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClus
 		}
 	}
 
-	base := &v1beta1.KubeletConfiguration{}
-	kubeletConfig, err := c.Options.Kubelet.MergeConfigV1Beta1(base)
-	if err != nil {
-		panic(err)
-	}
+	kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
 	desiredClusterDomain := kubeletConfig.ClusterDomain
 
 	if ks.NodeDNS.ConfigMap == nil {

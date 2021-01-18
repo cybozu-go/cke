@@ -9,16 +9,16 @@ import (
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	componentv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
+	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"k8s.io/utils/pointer"
 )
 
 func TestGenerateSchedulerConfiguration(t *testing.T) {
 	t.Parallel()
 
 	cfg := &unstructured.Unstructured{}
-	cfg.SetGroupVersionKind(schedulerv1alpha2.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
+	cfg.SetGroupVersionKind(schedulerv1beta1.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
 	cfg.Object["leaderElection"] = map[string]interface{}{
 		"leaderElect": false,
 	}
@@ -28,31 +28,13 @@ func TestGenerateSchedulerConfiguration(t *testing.T) {
 		Config: cfg,
 	}
 
-	var podMaxBackoffSeconds int64 = 100
-	expected := schedulerv1alpha2.KubeSchedulerConfiguration{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KubeSchedulerConfiguration",
-			APIVersion: "kubescheduler.config.k8s.io/v1alpha2",
-		},
-		LeaderElection: schedulerv1alpha2.KubeSchedulerLeaderElectionConfiguration{
-			LeaderElectionConfiguration: componentv1alpha1.LeaderElectionConfiguration{
-				LeaderElect: boolPointer(true),
-			},
-		},
-		ClientConnection: componentv1alpha1.ClientConnectionConfiguration{
-			Kubeconfig: "/etc/kubernetes/scheduler/kubeconfig",
-		},
-		PodMaxBackoffSeconds: &podMaxBackoffSeconds,
-	}
+	expected := &schedulerv1beta1.KubeSchedulerConfiguration{}
+	expected.LeaderElection.LeaderElect = pointer.BoolPtr(true)
+	expected.ClientConnection.Kubeconfig = "/etc/kubernetes/scheduler/kubeconfig"
+	expected.PodMaxBackoffSeconds = pointer.Int64Ptr(100)
 
-	conf, err := GenerateSchedulerConfigurationV1Alpha2(input)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if conf == nil {
-		t.Fatal("conf should not be nil")
-	}
-	if !reflect.DeepEqual(*conf, expected) {
+	conf := GenerateSchedulerConfiguration(input)
+	if !reflect.DeepEqual(conf, expected) {
 		t.Errorf("GenerateSchedulerConfiguration() generated unexpected result:\n%s", cmp.Diff(conf, expected))
 	}
 }
@@ -60,16 +42,16 @@ func TestGenerateSchedulerConfiguration(t *testing.T) {
 func TestGenerateKubeletConfiguration(t *testing.T) {
 	t.Parallel()
 
-	baseExpected := kubeletv1beta1.KubeletConfiguration{
-		ReadOnlyPort:          0,
-		HealthzBindAddress:    "0.0.0.0",
-		FailSwapOn:            boolPointer(true),
+	baseExpected := &kubeletv1beta1.KubeletConfiguration{
+		ClusterDomain:         "cluster.local",
 		RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
+		HealthzBindAddress:    "0.0.0.0",
+		VolumePluginDir:       "/opt/volume/bin",
 		TLSCertFile:           "/etc/kubernetes/pki/kubelet.crt",
 		TLSPrivateKeyFile:     "/etc/kubernetes/pki/kubelet.key",
 		Authentication: kubeletv1beta1.KubeletAuthentication{
 			X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: "/etc/kubernetes/pki/ca.crt"},
-			Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: boolPointer(true)},
+			Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: pointer.BoolPtr(true)},
 		},
 		Authorization: kubeletv1beta1.KubeletAuthorization{
 			Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook,
@@ -77,27 +59,25 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 		ClusterDNS: []string{"1.2.3.4"},
 	}
 
-	expected1 := baseExpected.DeepCopy()
-	expected1.FailSwapOn = boolPointer(false)
-	expected1.ClusterDomain = "foo.local"
-	expected1.CgroupDriver = "systemd"
-	expected1.ContainerLogMaxSize = "5Mi"
-	expected1.ContainerLogMaxFiles = int32Pointer(10)
+	expected := baseExpected.DeepCopy()
+	expected.FailSwapOn = pointer.BoolPtr(false)
+	expected.ContainerLogMaxSize = "100Mi"
+	expected.CgroupDriver = "systemd"
 
-	expected2 := baseExpected.DeepCopy()
-	expected2.FailSwapOn = nil
-	expected2.ContainerLogMaxSize = "100Mi"
-	expected2.APIVersion = "kubelet.config.k8s.io/v1beta1"
-	expected2.Kind = "KubeletConfiguration"
+	expected2 := expected.DeepCopy()
+	expected2.CgroupDriver = ""
 
 	cfg := &unstructured.Unstructured{}
 	cfg.SetGroupVersionKind(kubeletv1beta1.SchemeGroupVersion.WithKind("KubeletConfiguration"))
+	cfg.Object["failSwapOn"] = false
 	cfg.Object["containerLogMaxSize"] = "100Mi"
+	cfg.Object["cgroupDriver"] = "systemd"
 
 	cases := []struct {
 		Name     string
 		Input    cke.KubeletParams
-		Expected kubeletv1beta1.KubeletConfiguration
+		Running  *kubeletv1beta1.KubeletConfiguration
+		Expected *kubeletv1beta1.KubeletConfiguration
 	}{
 		{
 			Name:     "base",
@@ -105,30 +85,25 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 			Expected: baseExpected,
 		},
 		{
-			Name: "no config",
-			Input: cke.KubeletParams{
-				AllowSwap:            true,
-				Domain:               "foo.local",
-				CgroupDriver:         "systemd",
-				ContainerLogMaxSize:  "5Mi",
-				ContainerLogMaxFiles: 10,
-			},
-			Expected: *expected1,
-		},
-		{
 			Name: "with config",
 			Input: cke.KubeletParams{
-				CgroupDriver:        "systemd",
-				ContainerLogMaxSize: "5Mi",
-				Config:              cfg,
+				Config: cfg,
 			},
-			Expected: *expected2,
+			Expected: expected,
+		},
+		{
+			Name: "with running config",
+			Input: cke.KubeletParams{
+				Config: cfg,
+			},
+			Running:  &kubeletv1beta1.KubeletConfiguration{},
+			Expected: expected2,
 		},
 	}
 
 	for _, c := range cases {
-		conf := GenerateKubeletConfiguration(c.Input, "1.2.3.4")
-		if !reflect.DeepEqual(conf, c.Expected) {
+		conf := GenerateKubeletConfiguration(c.Input, "1.2.3.4", c.Running)
+		if !cmp.Equal(conf, c.Expected) {
 			t.Errorf("case %q: GenerateKubeletConfiguration() generated unexpected result:\n%s", c.Name, cmp.Diff(conf, c.Expected))
 		}
 	}

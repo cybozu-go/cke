@@ -18,10 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	componentv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	schedulerv1 "k8s.io/kube-scheduler/config/v1"
-	schedulerv1alpha1 "k8s.io/kube-scheduler/config/v1alpha1"
-	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
+	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
@@ -119,7 +116,7 @@ func newData() testData {
 		DNSServers:    testDefaultDNSServers,
 	}
 	schedulerConfig := &unstructured.Unstructured{}
-	schedulerConfig.SetGroupVersionKind(schedulerv1alpha2.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
+	schedulerConfig.SetGroupVersionKind(schedulerv1beta1.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
 	schedulerConfig.Object["healthzBindAddress"] = "0.0.0.0"
 	cluster.Options.Scheduler = cke.SchedulerParams{
 		Config: schedulerConfig,
@@ -129,9 +126,9 @@ func newData() testData {
 	kubeletConfig.Object["containerLogMaxSize"] = "20Mi"
 	kubeletConfig.Object["clusterDomain"] = testDefaultDNSDomain
 	cluster.Options.Kubelet = cke.KubeletParams{
-		ContainerRuntime:         "remote",
-		ContainerRuntimeEndpoint: "/var/run/k8s-containerd.sock",
-		Config:                   kubeletConfig,
+		ContainerRuntime: "remote",
+		CRIEndpoint:      "/var/run/k8s-containerd.sock",
+		Config:           kubeletConfig,
 	}
 
 	nodeReadyStatus := corev1.NodeStatus{
@@ -272,7 +269,7 @@ func (d testData) withControllerManager(name, serviceSubnet string) testData {
 	return d
 }
 
-func (d testData) withSchedulerV1Alpha2() testData {
+func (d testData) withScheduler() testData {
 	for _, n := range d.ControlPlane() {
 		st := &d.NodeStatus(n).Scheduler
 		st.Running = true
@@ -282,30 +279,10 @@ func (d testData) withSchedulerV1Alpha2() testData {
 
 		address := "0.0.0.0"
 		leaderElect := true
-		st.Config = &schedulerv1alpha2.KubeSchedulerConfiguration{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "kubescheduler.config.k8s.io/v1alpha2",
-				Kind:       "KubeSchedulerConfiguration",
-			},
-			ClientConnection: componentv1alpha1.ClientConnectionConfiguration{
-				Kubeconfig: op.SchedulerKubeConfigPath,
-			},
-			LeaderElection: schedulerv1alpha2.KubeSchedulerLeaderElectionConfiguration{
-				LeaderElectionConfiguration: componentv1alpha1.LeaderElectionConfiguration{
-					LeaderElect: &leaderElect,
-				},
-			},
-			HealthzBindAddress: &address,
-		}
-	}
-	return d
-}
-
-func (d testData) withSchedulerV1Alpha1() testData {
-	d.Cluster.Options.Scheduler.Config = nil
-	for _, n := range d.ControlPlane() {
-		st := &d.NodeStatus(n).Scheduler
-		st.Config = nil
+		st.Config = &schedulerv1beta1.KubeSchedulerConfiguration{}
+		st.Config.ClientConnection.Kubeconfig = op.SchedulerKubeConfigPath
+		st.Config.LeaderElection.LeaderElect = &leaderElect
+		st.Config.HealthzBindAddress = &address
 	}
 	return d
 }
@@ -317,19 +294,16 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st.IsHealthy = true
 		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.KubeletServiceParams(n, cke.KubeletParams{
-			ContainerRuntime:         "remote",
-			ContainerRuntimeEndpoint: "/var/run/k8s-containerd.sock",
+			ContainerRuntime: "remote",
+			CRIEndpoint:      "/var/run/k8s-containerd.sock",
 		})
 
 		webhookEnabled := true
 		st.Config = &kubeletv1beta1.KubeletConfiguration{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "kubelet.config.k8s.io/v1beta1",
-				Kind:       "KubeletConfiguration",
-			},
 			ClusterDomain:         domain,
 			RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
 			HealthzBindAddress:    "0.0.0.0",
+			VolumePluginDir:       "/opt/volume/bin",
 			ContainerLogMaxSize:   "20Mi",
 			TLSCertFile:           "/etc/kubernetes/pki/kubelet.crt",
 			TLSPrivateKeyFile:     "/etc/kubernetes/pki/kubelet.key",
@@ -365,7 +339,7 @@ func (d testData) withAllServices() testData {
 	d.withHealthyEtcd()
 	d.withAPIServer(testServiceSubnet)
 	d.withControllerManager(testClusterName, testServiceSubnet)
-	d.withSchedulerV1Alpha2()
+	d.withScheduler()
 	d.withKubelet(testDefaultDNSDomain, testDefaultDNSAddr, false)
 	d.withProxy()
 	return d
@@ -815,45 +789,6 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "RestartScheduler4",
-			Input: newData().withAllServices().withSchedulerV1Alpha1().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Extenders = []schedulerv1.Extender{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
-				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Extenders = []schedulerv1.Extender{{URLPrefix: `urlPrefix: http://127.0.0.1:8001`}}
-			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-scheduler-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-scheduler-restart": 1,
-			},
-		},
-		{
-			Name: "RestartScheduler5",
-			Input: newData().withAllServices().withSchedulerV1Alpha1().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Predicates = []schedulerv1.PredicatePolicy{{Name: `some_predicate`}}
-				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Predicates = []schedulerv1.PredicatePolicy{{Name: `some_predicate`}}
-			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-scheduler-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-scheduler-restart": 1,
-			},
-		},
-		{
-			Name: "RestartScheduler6",
-			Input: newData().withAllServices().withSchedulerV1Alpha1().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Priorities = []schedulerv1.PriorityPolicy{{Name: `some_priority`}}
-				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Priorities = []schedulerv1.PriorityPolicy{{Name: `some_priority`}}
-			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-scheduler-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-scheduler-restart": 1,
-			},
-		},
-		{
-			Name: "RestartScheduler7",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Config.HealthzBindAddress = nil
 				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Config.HealthzBindAddress = nil
@@ -863,84 +798,6 @@ func TestDecideOps(t *testing.T) {
 			},
 			ExpectedTargetNums: map[string]int{
 				"kube-scheduler-restart": 1,
-			},
-		},
-		// This test should be deleted after Extenders/Priorities/Prioritizes fields are purged.
-		{
-			Name: "RestartScheduler8",
-			Input: newData().withAllServices().with(func(d testData) {
-				d.Cluster.Options.Scheduler.Extenders = []string{`{ "foo": "some-extender" }`}
-			}),
-			ExpectedOps: []string{
-				"wait-kubernetes",
-			},
-			ExpectedTargetNums: map[string]int{
-				"wait-kubernetes": 1,
-			},
-		},
-		// This test should be deleted after Extenders/Priorities/Prioritizes fields are purged.
-		{
-			Name: "RestartScheduler9",
-			Input: newData().withAllServices().with(func(d testData) {
-				d.Cluster.Options.Scheduler.Config = nil
-				d.Cluster.Options.Scheduler.Extenders = []string{`{ "foo": "some-extender" }`}
-			}),
-			ExpectedOps: []string{
-				"kube-scheduler-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-scheduler-restart": 3,
-			},
-		},
-		// This test should be deleted after Extenders/Priorities/Prioritizes fields are purged.
-		{
-			Name: "RestartScheduler10",
-			Input: newData().withAllServices().withSchedulerV1Alpha1().with(func(d testData) {
-				schedulerConfig := &unstructured.Unstructured{}
-				schedulerConfig.SetGroupVersionKind(schedulerv1alpha2.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
-				schedulerConfig.Object["healthzBindAddress"] = "0.0.0.0"
-				d.Cluster.Options.Scheduler.Config = schedulerConfig
-				d.Cluster.Options.Scheduler.Extenders = nil
-				d.Cluster.Options.Scheduler.Priorities = nil
-				d.Cluster.Options.Scheduler.Predicates = nil
-			}),
-			ExpectedOps: []string{
-				"kube-scheduler-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-scheduler-restart": 3,
-			},
-		},
-		// This test should be deleted after cke accepts except for v1alpha2 on Config field
-		{
-			Name: "RestartScheduler11",
-			Input: newData().withAllServices().with(func(d testData) {
-				schedulerConfig := &unstructured.Unstructured{}
-				schedulerConfig.SetGroupVersionKind(schedulerv1.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
-				schedulerConfig.Object["healthzBindAddress"] = "1.2.3.4"
-				d.Cluster.Options.Scheduler.Config = schedulerConfig
-			}),
-			ExpectedOps: []string{
-				"wait-kubernetes",
-			},
-			ExpectedTargetNums: map[string]int{
-				"wait-kubernetes": 1,
-			},
-		},
-		// This test should be deleted after cke accepts except for v1alpha2 on Config field
-		{
-			Name: "RestartScheduler12",
-			Input: newData().withAllServices().with(func(d testData) {
-				schedulerConfig := &unstructured.Unstructured{}
-				schedulerConfig.SetGroupVersionKind(schedulerv1alpha1.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
-				schedulerConfig.Object["healthzBindAddress"] = "1.2.3.4"
-				d.Cluster.Options.Scheduler.Config = schedulerConfig
-			}),
-			ExpectedOps: []string{
-				"wait-kubernetes",
-			},
-			ExpectedTargetNums: map[string]int{
-				"wait-kubernetes": 1,
 			},
 		},
 		{
@@ -1038,7 +895,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet9",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.Cluster.Options.Kubelet.ContainerRuntimeEndpoint = "/var/run/dockershim.sock"
+				d.Cluster.Options.Kubelet.CRIEndpoint = "/var/run/dockershim.sock"
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"wait-kubernetes",
@@ -1046,15 +903,6 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "RestartKubelet10",
-			Input: newData().withAllServices().with(func(d testData) {
-				d.Cluster.Options.Kubelet.CgroupDriver = "systemd"
-			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"wait-kubernetes",
-			},
-		},
-		{
-			Name: "RestartKubelet11",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[:3]
 			}).withSSHNotConnectedNodes(),

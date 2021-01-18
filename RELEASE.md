@@ -3,35 +3,13 @@ Release procedure
 
 This document describes how to release a new version of cke.
 
-Versioning
-----------
+## Versioning
 
 Given a version number MAJOR.MINOR.PATCH.
 The MAJOR and MINOR version matches that of Kubernetes.
 The patch version is increased with CKE update.
 
-Maintain old k8s version
-------------------------
-
-If kubernetes MINOR version supported by CKE is updated, create a new branch `release-X.Y`
-where `X` and `Y` are MAJOR and MINOR version of the latest release of CKE.
-
-For example, if the last release of CKE was tagged as `v1.12.3` and want to start
-development for Kubernetes 1.13 on main, create `release-1.12` branch as follows:
-
-```console
-$ git checkout -b release-1.12 v1.12.3
-$ git push origin -u release-1.12:release-1.12
-```
-
-Remove old changes from `CHANGELOG.md` of main branch.
-The `CHANGELOG.md` of main branch should only describe changes related to the latest release-X.Y.
-Changes in the old versions are described in each branch's CHANGELOG.md.
-
-`release-*` branches are protected from removal and force push.
-
-Prepare change log entries
---------------------------
+## Prepare change log entries
 
 Add notable changes since the last release to [CHANGELOG.md](CHANGELOG.md).
 It should look like:
@@ -52,8 +30,7 @@ It should look like:
 (snip)
 ```
 
-Bump version
-------------
+## Bump version
 
 1. Determine a new version number.  Let it write `$VERSION` as `VERSION=x.y.z`.
 2. Checkout `main` branch.
@@ -83,8 +60,7 @@ CircleCI also creates a GitHub release automatically after running [sonobuoy](./
 So, **DO NOT MANUALLY CREATE GITHUB RELEASES**.  The test results will be attached to the GitHub
 release that can be submitted to [cncf/k8s-conformance](https://github.com/cncf/k8s-conformance).
 
-Maintain docker-compose
------------------------
+## Maintain docker-compose
 
 After new CKE released, update cke image on docker-compose.yml.
 

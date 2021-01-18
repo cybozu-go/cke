@@ -4,8 +4,7 @@ import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	schedulerv1 "k8s.io/kube-scheduler/config/v1"
-	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
+	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
@@ -138,11 +137,8 @@ type KubeComponentStatus struct {
 // SchedulerStatus represents kube-scheduler status and health
 type SchedulerStatus struct {
 	ServiceStatus
-	IsHealthy  bool
-	Extenders  []schedulerv1.Extender
-	Predicates []schedulerv1.PredicatePolicy
-	Priorities []schedulerv1.PriorityPolicy
-	Config     *schedulerv1alpha2.KubeSchedulerConfiguration
+	IsHealthy bool
+	Config    *schedulerv1beta1.KubeSchedulerConfiguration
 }
 
 // KubeletStatus represents kubelet status and health

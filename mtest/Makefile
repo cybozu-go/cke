@@ -17,14 +17,14 @@ ifeq ($(CONTAINER_RUNTIME),remote)
 RUNTIME_ENDPOINT = unix:///var/run/k8s-containerd.sock
 endif
 PLACEMAT = /usr/bin/placemat
-GINKGO = env GOFLAGS=-mod=vendor $(GOPATH)/bin/ginkgo --failFast -v
+GINKGO = $(GOPATH)/bin/ginkgo --failFast -v
 CURL = curl -fsL
 MANAGEMENT_ETCD_VERSION = 3.3.25
-VAULT_VERSION = 1.2.2
-K8S_VERSION = 1.18.9
+VAULT_VERSION = 1.6.1
+K8S_VERSION = 1.19.7
 PLACEMAT_DATADIR = /var/scratch/placemat
 CONTAINERD_VERSION = 1.4.3
-CRITOOLS_VERSION = 1.18.0
+CRITOOLS_VERSION = 1.19.0
 CT_VERSION = 0.6.1
 CT = /usr/local/bin/ct
 SUDO = sudo
@@ -122,7 +122,7 @@ $(OUTPUT)/vault: $(VAULT_ARCHIVE)
 $(OUTPUT)/cke $(OUTPUT)/ckecli: FORCE
 	mkdir -p $(OUTPUT)
 	cd ..; gofail enable op/etcd && \
-		if GOBIN=$(realpath $(OUTPUT)) go install -mod=vendor ./pkg/$(notdir $@); then \
+		if GOBIN=$(realpath $(OUTPUT)) go install ./pkg/$(notdir $@); then \
 			gofail disable op/etcd; \
 		else \
 			gofail disable op/etcd; \
@@ -315,7 +315,7 @@ clean:
 	rm -rf $(OUTPUT)
 
 setup:
-	go install -mod=vendor github.com/onsi/ginkgo/ginkgo github.com/etcd-io/gofail
+	go install github.com/onsi/ginkgo/ginkgo github.com/etcd-io/gofail
 	$(SUDO) apt-get update
 	$(SUDO) apt-get -y install --no-install-recommends $(PACKAGES)
 

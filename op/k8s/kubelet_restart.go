@@ -7,25 +7,28 @@ import (
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 	"k8s.io/client-go/tools/clientcmd"
+	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
 type kubeletRestartOp struct {
 	nodes []*cke.Node
 
-	cluster string
-	params  cke.KubeletParams
+	cluster      string
+	params       cke.KubeletParams
+	nodeStatuses map[string]*cke.NodeStatus
 
 	step  int
 	files *common.FilesBuilder
 }
 
 // KubeletRestartOp returns an Operator to restart kubelet
-func KubeletRestartOp(nodes []*cke.Node, cluster string, params cke.KubeletParams) cke.Operator {
+func KubeletRestartOp(nodes []*cke.Node, cluster string, params cke.KubeletParams, ns map[string]*cke.NodeStatus) cke.Operator {
 	return &kubeletRestartOp{
-		nodes:   nodes,
-		cluster: cluster,
-		params:  params,
-		files:   common.NewFilesBuilder(nodes),
+		nodes:        nodes,
+		cluster:      cluster,
+		params:       params,
+		nodeStatuses: ns,
+		files:        common.NewFilesBuilder(nodes),
 	}
 }
 
@@ -40,7 +43,7 @@ func (o *kubeletRestartOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.KubernetesImage)
 	case 1:
 		o.step++
-		return prepareKubeletConfigCommand{o.cluster, o.params, o.files}
+		return prepareKubeletConfigCommand{o.cluster, o.params, o.nodeStatuses, o.files}
 	case 2:
 		o.step++
 		return o.files
@@ -77,15 +80,21 @@ func (o *kubeletRestartOp) Targets() []string {
 }
 
 type prepareKubeletConfigCommand struct {
-	cluster string
-	params  cke.KubeletParams
-	files   *common.FilesBuilder
+	cluster      string
+	params       cke.KubeletParams
+	nodeStatuses map[string]*cke.NodeStatus
+	files        *common.FilesBuilder
 }
 
 func (c prepareKubeletConfigCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		cfg := GenerateKubeletConfiguration(c.params, n.Address)
-		return encodeToYAML(&cfg)
+		ns := c.nodeStatuses[n.Address]
+		var running *kubeletv1beta1.KubeletConfiguration
+		if ns != nil {
+			running = ns.Kubelet.Config
+		}
+		cfg := GenerateKubeletConfiguration(c.params, n.Address, running)
+		return encodeToYAML(cfg)
 	}
 	err := c.files.AddFile(ctx, kubeletConfigPath, g)
 	if err != nil {

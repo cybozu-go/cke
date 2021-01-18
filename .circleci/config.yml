@@ -67,7 +67,7 @@ commands:
 jobs:
   build:
     docker:
-      - image: quay.io/cybozu/golang:1.13-bionic
+      - image: quay.io/cybozu/golang:1.15-focal
       - image: quay.io/coreos/etcd:v3.3
     working_directory: /work
     steps:
@@ -145,15 +145,6 @@ jobs:
       - run-mtest:
           runtime: remote
           suite: functions
-  mtest-containerd-functions-oldstylecluster:
-    docker:
-      - image: google/cloud-sdk
-    steps:
-      - checkout
-      - run-mtest:
-          runtime: remote
-          suite: functions
-          cluster: cke-cluster-old.yml
   mtest-containerd-operators:
     docker:
       - image: google/cloud-sdk
@@ -170,23 +161,6 @@ jobs:
       - run-mtest:
           runtime: remote
           suite: robustness
-  mtest-upgrade:
-    docker:
-      - image: google/cloud-sdk
-    steps:
-      - checkout
-      - run-mtest:
-          runtime: remote
-          suite: upgrade
-          cluster: cke-cluster-old.yml
-  mtest-docker-functions:
-    docker:
-      - image: google/cloud-sdk
-    steps:
-      - checkout
-      - run-mtest:
-          runtime: docker
-          suite: functions
   compose:
     machine:
       image: circleci/classic:edge
@@ -231,7 +205,7 @@ jobs:
           path: /tmp/sonobuoy.tar.gz
   github-release:
     docker:
-      - image: quay.io/cybozu/golang:1.13-bionic
+      - image: quay.io/cybozu/golang:1.15-focal
     steps:
       - checkout
       - attach_workspace:
@@ -244,7 +218,7 @@ jobs:
             tar xzf /tmp/workspace/sonobuoy.tar.gz -C /tmp/upload --strip-components=4 plugins/e2e/results/global/e2e.log plugins/e2e/results/global/junit_01.xml
             sed "s/vX\.Y\.Z/${CIRCLE_TAG}/" sonobuoy/README.md > /tmp/upload/README.md
             sed "s/vX\.Y\.Z/${CIRCLE_TAG}/" sonobuoy/PRODUCT.yaml > /tmp/upload/PRODUCT.yaml
-            GOBIN=/tmp/upload go install -mod=vendor ./pkg/cke ./pkg/ckecli
+            GOBIN=/tmp/upload go install ./pkg/cke ./pkg/ckecli
       - run:
           name: Release to GitHub
           command: |
@@ -262,15 +236,9 @@ workflows:
       - build-image:
           requires:
             - build
-      - mtest-docker-functions
       - mtest-containerd-functions
-      - mtest-containerd-functions-oldstylecluster
       - mtest-containerd-operators
       - mtest-containerd-robustness
-      - mtest-upgrade:
-          filters:
-            branches:
-              ignore: ["main", "/release-.*/", "/bump-.*/"]
       - compose
   conformance:
     jobs:

@@ -22,7 +22,7 @@ options:
     - --enable-admission-plugins=PodSecurityPolicy
   kube-scheduler:
     config:
-      apiVersion: kubescheduler.config.k8s.io/v1alpha2
+      apiVersion: kubescheduler.config.k8s.io/v1beta1
       kind: KubeSchedulerConfiguration
       profiles:
         - schedulerName: default-scheduler
@@ -43,7 +43,7 @@ options:
       destination: /var/lib/k8s-containerd
       read_only: false
     container_runtime: __RUNTIME__
-    container_runtime_endpoint: __RUNTIME_ENDPOINT__
+    cri_endpoint: __RUNTIME_ENDPOINT__
     cni_conf_file:
       name: 98-bridge.conf
       content: |

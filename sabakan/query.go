@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -196,7 +197,8 @@ func doQuery(ctx context.Context, url string, vars *QueryVariables, hc *well.HTT
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("sabakan returns %d", resp.StatusCode)
+		data, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("sabakan returns %d: %s", resp.StatusCode, string(data))
 	}
 
 	var result struct {

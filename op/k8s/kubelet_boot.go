@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/retry"
+	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
 const (
@@ -28,21 +29,23 @@ type kubeletBootOp struct {
 	registeredNodes []*cke.Node
 	apiServer       *cke.Node
 
-	cluster string
-	params  cke.KubeletParams
+	cluster      string
+	params       cke.KubeletParams
+	nodeStatuses map[string]*cke.NodeStatus
 
 	step  int
 	files *common.FilesBuilder
 }
 
 // KubeletBootOp returns an Operator to boot kubelet.
-func KubeletBootOp(nodes, registeredNodes []*cke.Node, apiServer *cke.Node, cluster string, params cke.KubeletParams) cke.Operator {
+func KubeletBootOp(nodes, registeredNodes []*cke.Node, apiServer *cke.Node, cluster string, params cke.KubeletParams, ns map[string]*cke.NodeStatus) cke.Operator {
 	return &kubeletBootOp{
 		nodes:           nodes,
 		registeredNodes: registeredNodes,
 		apiServer:       apiServer,
 		cluster:         cluster,
 		params:          params,
+		nodeStatuses:    ns,
 		files:           common.NewFilesBuilder(nodes),
 	}
 }
@@ -76,7 +79,7 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 		return common.MakeDirsCommand(o.nodes, dirs)
 	case 3:
 		o.step++
-		return prepareKubeletFilesCommand{o.cluster, o.params, o.files}
+		return prepareKubeletFilesCommand{o.cluster, o.params, o.nodeStatuses, o.files}
 	case 4:
 		o.step++
 		return o.files
@@ -163,9 +166,10 @@ func (c emptyDirCommand) Command() cke.Command {
 }
 
 type prepareKubeletFilesCommand struct {
-	cluster string
-	params  cke.KubeletParams
-	files   *common.FilesBuilder
+	cluster      string
+	params       cke.KubeletParams
+	nodeStatuses map[string]*cke.NodeStatus
+	files        *common.FilesBuilder
 }
 
 func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
@@ -183,8 +187,13 @@ func (c prepareKubeletFilesCommand) Run(ctx context.Context, inf cke.Infrastruct
 	}
 
 	g := func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		cfg := GenerateKubeletConfiguration(c.params, n.Address)
-		return encodeToYAML(&cfg)
+		ns := c.nodeStatuses[n.Address]
+		var running *kubeletv1beta1.KubeletConfiguration
+		if ns != nil {
+			running = ns.Kubelet.Config
+		}
+		cfg := GenerateKubeletConfiguration(c.params, n.Address, running)
+		return encodeToYAML(cfg)
 	}
 	err := c.files.AddFile(ctx, kubeletConfigPath, g)
 	if err != nil {
@@ -367,14 +376,12 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 		"--hostname-override=" + n.Nodename(),
 		"--pod-infra-container-image=" + cke.PauseImage.Name(),
 		"--network-plugin=cni",
-		"--volume-plugin-dir=/opt/volume/bin",
 	}
 	if len(params.ContainerRuntime) != 0 {
 		args = append(args, "--container-runtime="+params.ContainerRuntime)
-		args = append(args, "--runtime-request-timeout=15m")
 	}
-	if len(params.ContainerRuntimeEndpoint) != 0 {
-		args = append(args, "--container-runtime-endpoint="+params.ContainerRuntimeEndpoint)
+	if len(params.CRIEndpoint) != 0 {
+		args = append(args, "--container-runtime-endpoint="+params.CRIEndpoint)
 	}
 	return cke.ServiceParams{
 		ExtraArguments: args,

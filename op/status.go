@@ -25,9 +25,7 @@ import (
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
-	schedulerv1 "k8s.io/kube-scheduler/config/v1"
-	schedulerv1alpha1 "k8s.io/kube-scheduler/config/v1alpha1"
-	schedulerv1alpha2 "k8s.io/kube-scheduler/config/v1alpha2"
+	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
@@ -116,8 +114,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			})
 		}
 
-		var schedulerConfig unstructured.Unstructured
-		configStr, _, err := agent.Run(fmt.Sprintf("cat %s", SchedulerConfigPath))
+		cfgData, _, err := agent.Run(fmt.Sprintf("cat %s", SchedulerConfigPath))
 		if err != nil {
 			log.Error("failed to cat "+SchedulerConfigPath, map[string]interface{}{
 				log.FnError: err,
@@ -125,52 +122,14 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			})
 			return nil, err
 		}
-		_, _, err = decUnstructured.Decode(configStr, nil, &schedulerConfig)
-		if err != nil {
-			log.Error("failed to unmarshal component config yaml to unstructured", map[string]interface{}{
-				log.FnError: err,
-				"node":      node.Address,
-				"data":      configStr,
-			})
-			return nil, err
-		}
-
-		if schedulerConfig.GetAPIVersion() == schedulerv1alpha1.SchemeGroupVersion.String() {
-			var policy schedulerv1.Policy
-			// Testing policy file existence is needed for backward compatibility
-			policyStr, _, err := agent.Run(fmt.Sprintf("if [ -f %s ]; then cat %s; fi",
-				PolicyConfigPath, PolicyConfigPath))
-			if err != nil {
-				log.Error("failed to cat "+PolicyConfigPath, map[string]interface{}{
-					log.FnError: err,
-					"node":      node.Address,
-				})
-				return nil, err
+		config := &schedulerv1beta1.KubeSchedulerConfiguration{}
+		_, _, err = decUnstructured.Decode(cfgData, nil, config)
+		if err == nil {
+			// Nullify TypeMeta for later comparison using reflect.DeepEqual
+			if config.APIVersion == schedulerv1beta1.SchemeGroupVersion.String() {
+				config.TypeMeta = metav1.TypeMeta{}
 			}
-			_, _, err = decUnstructured.Decode(policyStr, nil, &policy)
-			if err != nil {
-				log.Error("failed to unmarshal policy config json", map[string]interface{}{
-					log.FnError: err,
-					"node":      node.Address,
-					"data":      policyStr,
-				})
-				return nil, err
-			}
-			status.Scheduler.Extenders = policy.Extenders
-			status.Scheduler.Predicates = policy.Predicates
-			status.Scheduler.Priorities = policy.Priorities
-		} else {
-			schedulerConfigV1Alpha2 := schedulerv1alpha2.KubeSchedulerConfiguration{}
-			_, _, err = decUnstructured.Decode(configStr, nil, &schedulerConfigV1Alpha2)
-			if err != nil {
-				log.Error("failed to unmarshal component config yaml", map[string]interface{}{
-					log.FnError: err,
-					"node":      node.Address,
-					"data":      configStr,
-				})
-				return nil, err
-			}
-			status.Scheduler.Config = &schedulerConfigV1Alpha2
+			status.Scheduler.Config = config
 		}
 	}
 
@@ -200,6 +159,10 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			var v kubeletv1beta1.KubeletConfiguration
 			_, _, err = decUnstructured.Decode(cfgData, nil, &v)
 			if err == nil {
+				// Nullify TypeMeta for later comparison using reflect.DeepEqual
+				if v.APIVersion == kubeletv1beta1.SchemeGroupVersion.String() {
+					v.TypeMeta = metav1.TypeMeta{}
+				}
 				status.Kubelet.Config = &v
 			}
 		}
