@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -39,19 +40,13 @@ If FILE is -, the contents are read from stdin.`,
 		entry := cke.NewRebootQueueEntry(nodes)
 
 		well.Go(func(ctx context.Context) error {
-			// Check nodes actually exist
 			cluster, err := storage.GetCluster(ctx)
 			if err != nil {
 				return err
 			}
-		OUTER:
-			for _, rebootNode := range nodes {
-				for _, clusterNode := range cluster.Nodes {
-					if rebootNode == clusterNode.Address {
-						continue OUTER
-					}
-				}
-				return fmt.Errorf("%s is not a valid node IP address", rebootNode)
+			err = validateNodes(nodes, cluster)
+			if err != nil {
+				return err
 			}
 
 			return storage.RegisterRebootsEntry(ctx, entry)
@@ -59,6 +54,28 @@ If FILE is -, the contents are read from stdin.`,
 		well.Stop()
 		return well.Wait()
 	},
+}
+
+func validateNodes(nodes []string, cluster *cke.Cluster) error {
+	numCPs := 0
+OUTER:
+	for _, rebootNode := range nodes {
+		for _, clusterNode := range cluster.Nodes {
+			if rebootNode == clusterNode.Address {
+				if clusterNode.ControlPlane {
+					numCPs++
+				}
+				continue OUTER
+			}
+		}
+		return fmt.Errorf("%s is not a valid node IP address", rebootNode)
+	}
+
+	if numCPs > 1 {
+		return errors.New("multiple control planes cannot be enqueued in one entry")
+	}
+
+	return nil
 }
 
 func init() {

@@ -80,11 +80,11 @@ func testRebootOperations(cluster *cke.Cluster) {
 	rebootTargets := node1
 	_, _, err := ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
-	rebootTargets = node2 + "\n" + node3
+	rebootTargets = node2 + "\n" + node4
 	_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
 	waitRebootCompletion(cluster)
-	checkCordon(node1, node2, node3)
+	checkCordon(node1, node2, node4)
 
 	By("Reboot operation gives up waiting node startup if deadline is exceeded")
 	previousCommand := cluster.Reboot.Command
