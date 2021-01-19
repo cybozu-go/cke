@@ -5,6 +5,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.19.0] - 2021-01-20
+
+### Added
+- ckecli: prevent rebooting multiple control plane nodes. (#405)
+
 ## [1.19.0-rc.1] - 2021-01-15
 
 ### Added
@@ -33,5 +38,6 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.19.0-rc.1...HEAD
-[1.19.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.18.81...v1.19.0-rc.1
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.19.0...HEAD
+[1.19.0]: https://github.com/cybozu-go/cke/compare/v1.19.0-rc.1...v1.19.0
+[1.19.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.18.8...v1.19.0-rc.1
