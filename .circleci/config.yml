@@ -169,6 +169,14 @@ jobs:
       - checkout:
           path: ~/work
       - run:
+          name: Check image consistency
+          command: |
+            REV=$(awk '/const Version/ {print $4}' ../version.go | sed -E 's/^"(1.[[:digit:]]+).*/\1/')
+            COMPOSE_REV=$(sed -nE 's,.*quay.io/cybozu/cke:(.*)$,\1,p' docker-compose.yml)
+            if [ "$REV" != "$COMPOSE_REV" ]; then
+                echo Update CKE branch tag in example/docker-compose.yml
+            fi
+      - run:
           name: docker-compose build
           command: docker-compose build
       - run:
