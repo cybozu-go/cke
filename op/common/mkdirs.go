@@ -47,7 +47,7 @@ func (c makeDirsCommand) Run(ctx context.Context, inf cke.Infrastructure, _ stri
 	}
 
 	args := append([]string{
-		"/usr/local/cke-tools/bin/make_directories",
+		"make_directories",
 		"--mode=" + c.mode,
 	}, dests...)
 	arg := strings.Join(args, " ")

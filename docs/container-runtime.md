@@ -11,7 +11,7 @@ The following programs are run as Docker containers.
 - `kube-controller-manager`
 - `kube-scheduler`
 - `kubelet`
-- [rivers](https://github.com/cybozu/neco-containers/tree/main/cke-tools/src/cmd/rivers)
+- [rivers](../tools/rivers)
 
 Kubernetes Pods
 ---------------

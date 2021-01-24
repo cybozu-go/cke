@@ -13,7 +13,7 @@ metadata:
   namespace: kube-system
 data:
   config.yml: |
-    backup-dir: /etcdbackup
+    backup-dir: /backup
     listen: 0.0.0.0:8080
     rotate: {{ .Rotate }}
     etcd:
@@ -46,14 +46,14 @@ spec:
   - name: etcdbackup
     image: ` + cke.ToolsImage.Name() + `
     command:
-      - /usr/local/cke-tools/bin/etcdbackup
+      - etcdbackup
     args: ['-config', '/config/config.yml']
     ports:
       - containerPort: 8080
     volumeMounts:
       - mountPath: /etcd-certs
         name: etcd-certs
-      - mountPath: /etcdbackup
+      - mountPath: /backup
         name: etcdbackup
       - mountPath: /config
         name: config
@@ -91,7 +91,7 @@ spec:
             runAsUser: 10000
           containers:
             - name: etcdbackup
-              image: ` + cke.ToolsImage.Name() + `
+              image: quay.io/cybozu/ubuntu:20.04
               command:
                 - curl
                 - -s

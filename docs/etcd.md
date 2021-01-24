@@ -87,7 +87,7 @@ The former is described in [ckecli.md](ckecli.md##ckecli-etcd-local-backup).
 
 The rest are the descriptions of the latter.
 
-When the etcd backup is enabled on cluster configuration, [etcdbackup][] `Pod` and `CronJob` are deployed on Kubernetes cluster to manage compressed etcd snapshot.
+When the etcd backup is enabled on cluster configuration, [etcdbackup](../tools/etcdbackup) `Pod` and `CronJob` are deployed on Kubernetes cluster to manage compressed etcd snapshot.
 Before enable etcd backup, you need to create `PersistentVolume` and `PersistentVolumeClaim` to store the backup data.
 
 1. Deploy `PersistentVolume` and `PersistentVolumeClaim`. This is example of using local persistent volume in particular node.
@@ -179,4 +179,3 @@ Before enable etcd backup, you need to create `PersistentVolume` and `Persistent
 [RBAC]: https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/authentication.md
 [Endpoints]: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
 [PersistentVolume]: https://kubernetes.io/docs/concepts/storage/persistent-volumes
-[etcdbackup]: https://github.com/cybozu/neco-containers/tree/main/cke-tools/src/cmd/etcdbackup

@@ -139,7 +139,7 @@ type emptyDirCommand struct {
 
 func (c emptyDirCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	dest := filepath.Join("/mnt", c.dir)
-	arg := "/usr/local/cke-tools/bin/empty-dir " + dest
+	arg := "empty-dir " + dest
 
 	bind := cke.Mount{
 		Source:      c.dir,
@@ -256,7 +256,7 @@ func (c installCNICommand) Run(ctx context.Context, inf cke.Infrastructure, _ st
 		n := n
 		ce := inf.Engine(n.Address)
 		env.Go(func(ctx context.Context) error {
-			return ce.Run(cke.ToolsImage, binds, "/usr/local/cke-tools/bin/install-cni")
+			return ce.Run(cke.ToolsImage, binds, "install-cni")
 		})
 	}
 	env.Stop()
