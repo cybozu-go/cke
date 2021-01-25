@@ -10,8 +10,7 @@ There are following types of test suites.
 
 1. functions
 
-    This suite tests `ckecli` command and kubernetes workloads deployments which
-    related cluster configuration such as etcdbackup.
+    This suite tests `ckecli` command and kubernetes workloads deployments.
     It also tests user defined kubernetes resources.
 
 2. operators

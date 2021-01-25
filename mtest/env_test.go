@@ -19,7 +19,6 @@ var (
 	ckeImagePath    = os.Getenv("CKE_IMAGE")
 	ckeImageURL     = os.Getenv("CKE_IMAGE_URL")
 	kubectlPath     = os.Getenv("KUBECTL")
-	localPVYAMLPath = os.Getenv("LOCALPVYAML")
 	nginxYAMLPath   = os.Getenv("NGINXYAML")
 	policyYAMLPath  = os.Getenv("POLICYYAML")
 	rebootYAMLPath  = os.Getenv("REBOOTYAML")

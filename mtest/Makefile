@@ -48,14 +48,13 @@ CKE_IMAGE_URL := quay.io/cybozu/cke:dev
 CKECLUSTER := $(abspath $(OUTPUT))/cke-cluster.yml
 CKECONFIG := $(abspath $(OUTPUT))/cke.yml
 KUBECTL := $(abspath $(OUTPUT))/kubectl
-LOCALPVYAML := $(realpath ./local-pv.yml)
 NGINXYAML := $(realpath ./nginx.yml)
 POLICYYAML := $(realpath ./mtest-policy.yml)
 REBOOTYAML := $(realpath ./reboot-deployment.yaml)
 WEBHOOKYAML := $(realpath ./webhook-resources.yaml)
 
 export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL \
-	POLICYYAML REBOOTYAML NGINXYAML LOCALPVYAML WEBHOOKYAML
+	POLICYYAML REBOOTYAML NGINXYAML WEBHOOKYAML
 
 CONTAINERD_FILES = \
 	$(OUTPUT)/containerd \
@@ -71,7 +70,6 @@ TEST_DEPS = \
 PLACEMAT_DEPS = \
 	$(CONTAINERD_FILES) \
 	$(COREOS_IMAGE) \
-	$(ETCD_BACKUP) \
 	$(OUTPUT)/cke-cluster.yml \
 	$(OUTPUT)/cluster.yml \
 	$(OUTPUT)/crictl \

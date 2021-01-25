@@ -32,8 +32,6 @@ $ ckecli [--config FILE] <subcommand> args...
   - [`ckecli etcd issue [--ttl=TTL] [--output=FORMAT] NAME`](#ckecli-etcd-issue---ttlttl---outputformat-name)
   - [`ckecli etcd root-issue [--output=FORMAT]`](#ckecli-etcd-root-issue---outputformat)
   - [`ckecli etcd local-backup`](#ckecli-etcd-local-backup)
-  - [`ckecli etcd backup list`](#ckecli-etcd-backup-list)
-  - [`ckecli etcd backup get BACKUP_NAME`](#ckecli-etcd-backup-get-backup_name)
 - [`ckecli kubernetes`](#ckecli-kubernetes)
   - [`ckecli kubernetes issue [--ttl=TTL] [--group=GROUPNAME] [--user=USERNAME]`](#ckecli-kubernetes-issue---ttlttl---groupgroupname---userusername)
 - [`ckecli resource`](#ckecli-resource)
@@ -206,16 +204,6 @@ Flags:
   -h, --help              help for local-backup
       --max-backups int   the maximum number of backups to keep (default 10)
 ```
-
-### `ckecli etcd backup list`
-
-List etcd backup files stored in the Kubernetes cluster.
-
-### `ckecli etcd backup get BACKUP_NAME`
-
-Download an etcd backup file stored in the Kubernetes cluster to the current directory.
-
-`BACKUP_NAME` is the name of backup file.
 
 ## `ckecli kubernetes`
 

@@ -36,9 +36,6 @@ options:
               - name: '*'
   kubelet:
     extra_binds:
-    - source: /mnt/disks
-      destination: /mnt/disks
-      read_only: false
     - source: /var/lib/k8s-containerd
       destination: /var/lib/k8s-containerd
       read_only: false
@@ -68,9 +65,3 @@ options:
       clusterDomain: cluster.local
       containerLogMaxSize: "1000"
       containerLogMaxFiles: 3
-
-etcd_backup:
-  enabled: false
-  pvc_name: etcdbackup-pvc
-  schedule: "* * * * *"
-  rotate: 14

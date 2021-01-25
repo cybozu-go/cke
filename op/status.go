@@ -344,11 +344,6 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	s.EtcdBackup, err = getEtcdBackupStatus(ctx, inf, n)
-	if err != nil {
-		return cke.KubernetesClusterStatus{}, err
-	}
-
 	resources, err := inf.Storage().GetAllResources(ctx)
 	if err != nil {
 		return cke.KubernetesClusterStatus{}, err
@@ -451,62 +446,6 @@ func getNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) 
 	case k8serr.IsNotFound(err):
 	default:
 		return cke.NodeDNSStatus{}, err
-	}
-
-	return s, nil
-}
-
-func getEtcdBackupStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.EtcdBackupStatus, error) {
-	clientset, err := inf.K8sClient(ctx, n)
-	if err != nil {
-		return cke.EtcdBackupStatus{}, err
-	}
-
-	s := cke.EtcdBackupStatus{}
-
-	config, err := clientset.CoreV1().ConfigMaps("kube-system").Get(ctx, EtcdBackupAppName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.ConfigMap = config
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.EtcdBackupStatus{}, err
-	}
-
-	pod, err := clientset.CoreV1().Pods("kube-system").Get(ctx, EtcdBackupAppName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.Pod = pod
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.EtcdBackupStatus{}, err
-	}
-
-	service, err := clientset.CoreV1().Services("kube-system").Get(ctx, EtcdBackupAppName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.Service = service
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.EtcdBackupStatus{}, err
-	}
-
-	secret, err := clientset.CoreV1().Secrets("kube-system").Get(ctx, EtcdBackupAppName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.Secret = secret
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.EtcdBackupStatus{}, err
-	}
-
-	job, err := clientset.BatchV1beta1().CronJobs("kube-system").Get(ctx, EtcdBackupAppName, metav1.GetOptions{})
-	switch {
-	case err == nil:
-		s.CronJob = job
-	case k8serr.IsNotFound(err):
-	default:
-		return cke.EtcdBackupStatus{}, err
 	}
 
 	return s, nil

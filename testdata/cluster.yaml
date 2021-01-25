@@ -16,10 +16,6 @@ reboot:
   protected_namespaces:
     matchLabels:
       app: sample
-etcd_backup:
-  enabled: true
-  pvc_name: etcdbackup-pvc
-  schedule: "*/1 * * * *"
 options:
   etcd:
     volume_name: myetcd
