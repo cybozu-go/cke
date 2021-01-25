@@ -19,15 +19,6 @@ var Resources = []cke.ResourceDefinition{
 		Definition: []byte("apiVersion: v1\nkind: ServiceAccount\nmetadata:\n  name: cke-cluster-dns\n  namespace: kube-system\n  annotations:\n    cke.cybozu.com/revision: \"1\"\n"),
 	},
 	{
-		Key:        "ServiceAccount/kube-system/cke-etcdbackup",
-		Kind:       "ServiceAccount",
-		Namespace:  "kube-system",
-		Name:       "cke-etcdbackup",
-		Revision:   1,
-		Image:      "",
-		Definition: []byte("apiVersion: v1\nkind: ServiceAccount\nmetadata:\n  name: cke-etcdbackup\n  namespace: kube-system\n  annotations:\n    cke.cybozu.com/revision: \"1\"\n"),
-	},
-	{
 		Key:        "ServiceAccount/kube-system/cke-node-dns",
 		Kind:       "ServiceAccount",
 		Namespace:  "kube-system",
@@ -91,15 +82,6 @@ var Resources = []cke.ResourceDefinition{
 		Definition: []byte("apiVersion: policy/v1beta1\nkind: PodSecurityPolicy\nmetadata:\n  name: cke-restricted\n  annotations:\n    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'docker/default'\n    seccomp.security.alpha.kubernetes.io/defaultProfileName:  'docker/default'\n    cke.cybozu.com/revision: \"1\"\nspec:\n  privileged: false\n  # Required to prevent escalations to root.\n  allowPrivilegeEscalation: false\n  # This is redundant with non-root + disallow privilege escalation,\n  # but we can provide it for defense in depth.\n  requiredDropCapabilities:\n    - ALL\n  # Allow core volume types.\n  volumes:\n    - 'configMap'\n    - 'emptyDir'\n    - 'projected'\n    - 'secret'\n    - 'downwardAPI'\n    # Assume that persistentVolumes set up by the cluster admin are safe to use.\n    - 'persistentVolumeClaim'\n  hostNetwork: false\n  hostIPC: false\n  hostPID: false\n  runAsUser:\n    # Require the container to run without root privileges.\n    rule: 'MustRunAsNonRoot'\n  seLinux:\n    # This policy assumes the nodes are using AppArmor rather than SELinux.\n    rule: 'RunAsAny'\n  supplementalGroups:\n    rule: 'MustRunAs'\n    ranges:\n      # Forbid adding the root group.\n      - min: 1\n        max: 65535\n  fsGroup:\n    rule: 'MustRunAs'\n    ranges:\n      # Forbid adding the root group.\n      - min: 1\n        max: 65535\n  readOnlyRootFilesystem: true\n"),
 	},
 	{
-		Key:        "Role/kube-system/system:etcdbackup",
-		Kind:       "Role",
-		Namespace:  "kube-system",
-		Name:       "system:etcdbackup",
-		Revision:   1,
-		Image:      "",
-		Definition: []byte("\nkind: Role\napiVersion: rbac.authorization.k8s.io/v1\nmetadata:\n  name: system:etcdbackup\n  namespace: kube-system\n  labels:\n    kubernetes.io/bootstrapping: rbac-defaults\n  annotations:\n    cke.cybozu.com/revision: \"1\"\n    # turn on auto-reconciliation\n    # https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation\n    rbac.authorization.kubernetes.io/autoupdate: \"true\"\nrules:\n  - apiGroups: [\"policy\"]\n    resources: [\"podsecuritypolicies\"]\n    verbs: [\"use\"]\n    resourceNames: [\"cke-restricted\"]\n"),
-	},
-	{
 		Key:        "Role/kube-system/system:node-dns",
 		Kind:       "Role",
 		Namespace:  "kube-system",
@@ -107,15 +89,6 @@ var Resources = []cke.ResourceDefinition{
 		Revision:   1,
 		Image:      "",
 		Definition: []byte("\nkind: Role\napiVersion: rbac.authorization.k8s.io/v1\nmetadata:\n  name: system:node-dns\n  namespace: kube-system\n  labels:\n    kubernetes.io/bootstrapping: rbac-defaults\n  annotations:\n    cke.cybozu.com/revision: \"1\"\n    # turn on auto-reconciliation\n    # https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation\n    rbac.authorization.kubernetes.io/autoupdate: \"true\"\nrules:\n  - apiGroups: [\"policy\"]\n    resources: [\"podsecuritypolicies\"]\n    verbs: [\"use\"]\n    resourceNames: [\"cke-node-dns\"]\n"),
-	},
-	{
-		Key:        "RoleBinding/kube-system/system:etcdbackup",
-		Kind:       "RoleBinding",
-		Namespace:  "kube-system",
-		Name:       "system:etcdbackup",
-		Revision:   1,
-		Image:      "",
-		Definition: []byte("\nkind: RoleBinding\napiVersion: rbac.authorization.k8s.io/v1\nmetadata:\n  name: system:etcdbackup\n  namespace: kube-system\n  labels:\n    kubernetes.io/bootstrapping: rbac-defaults\n  annotations:\n    cke.cybozu.com/revision: \"1\"\n    rbac.authorization.kubernetes.io/autoupdate: \"true\"\nroleRef:\n  apiGroup: rbac.authorization.k8s.io\n  kind: Role\n  name: system:etcdbackup\nsubjects:\n- kind: ServiceAccount\n  name: cke-etcdbackup\n  namespace: kube-system\n"),
 	},
 	{
 		Key:        "RoleBinding/kube-system/system:node-dns",

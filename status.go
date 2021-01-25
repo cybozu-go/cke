@@ -2,7 +2,6 @@ package cke
 
 import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
@@ -26,15 +25,6 @@ type NodeDNSStatus struct {
 	ConfigMap *corev1.ConfigMap
 }
 
-// EtcdBackupStatus is the status of etcdbackup
-type EtcdBackupStatus struct {
-	ConfigMap *corev1.ConfigMap
-	CronJob   *batchv1beta1.CronJob
-	Pod       *corev1.Pod
-	Secret    *corev1.Secret
-	Service   *corev1.Service
-}
-
 // KubernetesClusterStatus contains kubernetes cluster configurations
 type KubernetesClusterStatus struct {
 	IsControlPlaneReady bool
@@ -45,7 +35,6 @@ type KubernetesClusterStatus struct {
 	MasterEndpoints     *corev1.Endpoints
 	EtcdService         *corev1.Service
 	EtcdEndpoints       *corev1.Endpoints
-	EtcdBackup          EtcdBackupStatus
 	ResourceStatuses    map[string]ResourceStatus
 }
 

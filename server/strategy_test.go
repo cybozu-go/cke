@@ -14,7 +14,6 @@ import (
 	"github.com/cybozu-go/cke/op/nodedns"
 	"github.com/cybozu-go/cke/static"
 	"github.com/google/go-cmp/cmp"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -405,52 +404,6 @@ func (d testData) withK8sResourceReady() testData {
 		},
 	}
 
-	return d
-}
-
-func (d testData) withEtcdBackup() testData {
-	d.withK8sResourceReady()
-	d.Cluster.EtcdBackup = cke.EtcdBackup{
-		Enabled:  true,
-		PVCName:  "etcdbackup-pvc",
-		Schedule: "*/1 * * * *",
-		Rotate:   14,
-	}
-	d.Status.Kubernetes.EtcdBackup.Pod = &corev1.Pod{
-		Spec: corev1.PodSpec{
-			Volumes: []corev1.Volume{
-				{
-					Name: "etcdbackup",
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: "etcdbackup-pvc",
-						},
-					},
-				},
-			},
-		},
-	}
-	d.Status.Kubernetes.EtcdBackup.Service = &corev1.Service{}
-	d.Status.Kubernetes.EtcdBackup.ConfigMap = &corev1.ConfigMap{
-		Data: map[string]string{
-			"config.yml": `backup-dir: /backup
-listen: 0.0.0.0:8080
-rotate: 14
-etcd:
-  endpoints: 
-    - https://cke-etcd:2379
-  tls-ca-file: /etcd-certs/ca
-  tls-cert-file: /etcd-certs/cert
-  tls-key-file: /etcd-certs/key
-`,
-		},
-	}
-	d.Status.Kubernetes.EtcdBackup.Secret = &corev1.Secret{}
-	d.Status.Kubernetes.EtcdBackup.CronJob = &batchv1beta1.CronJob{
-		Spec: batchv1beta1.CronJobSpec{
-			Schedule: "*/1 * * * *",
-		},
-	}
 	return d
 }
 
@@ -965,9 +918,6 @@ func TestDecideOps(t *testing.T) {
 				"create-endpoints",
 				"create-endpoints",
 				"create-etcd-service",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
 				"resource-apply",
 				"resource-apply",
 				"resource-apply",
@@ -1786,80 +1736,6 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Etcd.Image = ""
 			}),
 			ExpectedOps: []string{"etcd-restart"},
-		},
-		{
-			Name: "EtcdBackupCreate",
-			Input: newData().withEtcdBackup().with(func(d testData) {
-				d.Status.Kubernetes.EtcdBackup.ConfigMap = nil
-				d.Status.Kubernetes.EtcdBackup.Secret = nil
-				d.Status.Kubernetes.EtcdBackup.CronJob = nil
-				d.Status.Kubernetes.EtcdBackup.Service = nil
-				d.Status.Kubernetes.EtcdBackup.Pod = nil
-			}),
-			ExpectedOps: []string{"etcdbackup-configmap-create", "etcdbackup-job-create", "etcdbackup-pod-create", "etcdbackup-secret-create", "etcdbackup-service-create"},
-		},
-		{
-			Name: "EtcdBackupConfigMapCreate",
-			Input: newData().withEtcdBackup().with(func(d testData) {
-				d.Status.Kubernetes.EtcdBackup.ConfigMap = nil
-			}),
-			ExpectedOps: []string{"etcdbackup-configmap-create"},
-		},
-		{
-			Name: "EtcdBackupSecretCreate",
-			Input: newData().withEtcdBackup().with(func(d testData) {
-				d.Status.Kubernetes.EtcdBackup.Secret = nil
-			}),
-			ExpectedOps: []string{"etcdbackup-secret-create"},
-		},
-		{
-			Name: "EtcdBackupJobCreate",
-			Input: newData().withEtcdBackup().with(func(d testData) {
-				d.Status.Kubernetes.EtcdBackup.CronJob = nil
-			}),
-			ExpectedOps: []string{"etcdbackup-job-create"},
-		},
-		{
-			Name: "EtcdBackupPodCreate",
-			Input: newData().withEtcdBackup().with(func(d testData) {
-				d.Status.Kubernetes.EtcdBackup.Pod = nil
-			}),
-			ExpectedOps: []string{"etcdbackup-pod-create"},
-		},
-		{
-			Name: "EtcdBackupServiceCreate",
-			Input: newData().withEtcdBackup().with(func(d testData) {
-				d.Status.Kubernetes.EtcdBackup.Service = nil
-			}),
-			ExpectedOps: []string{"etcdbackup-service-create"},
-		},
-		{
-			Name: "EtcdBackupPodUpdate",
-			Input: newData().withEtcdBackup().with(func(d testData) {
-				d.Cluster.EtcdBackup.PVCName = "new-pvc-name"
-			}),
-			ExpectedOps: []string{"etcdbackup-pod-update"},
-		},
-		{
-			Name: "EtcdBackupJobUpdate",
-			Input: newData().withEtcdBackup().with(func(d testData) {
-				d.Cluster.EtcdBackup.Schedule = "* */0 * * *"
-			}),
-			ExpectedOps: []string{"etcdbackup-job-update"},
-		},
-		{
-			Name: "EtcdBackupConfigMapUpdate",
-			Input: newData().withEtcdBackup().with(func(d testData) {
-				d.Cluster.EtcdBackup.Rotate = 10
-			}),
-			ExpectedOps: []string{"etcdbackup-configmap-update"},
-		},
-		{
-			Name: "EtcdBackupRemove",
-			Input: newData().withEtcdBackup().with(func(d testData) {
-				d.Cluster.EtcdBackup.Enabled = false
-			}),
-			ExpectedOps: []string{"etcdbackup-configmap-remove", "etcdbackup-job-remove", "etcdbackup-pod-remove", "etcdbackup-secret-remove", "etcdbackup-service-remove"},
 		},
 		{
 			Name: "Clean",

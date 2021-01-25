@@ -3,7 +3,7 @@ TAG = quay.io/cybozu/cke-tools:dev
 GOBUILD = CGO_ENABLED=0 go build -ldflags="-w -s"
 
 .PHONY: all
-all: bin/empty-dir bin/etcdbackup bin/install-cni bin/make_directories bin/rivers bin/write_files plugins
+all: bin/empty-dir bin/install-cni bin/make_directories bin/rivers bin/write_files plugins
 
 .PHONY: image
 image: all
@@ -12,10 +12,6 @@ image: all
 bin/empty-dir:
 	mkdir -p bin
 	$(GOBUILD) -o $@ ./empty-dir
-
-bin/etcdbackup:
-	mkdir -p bin
-	$(GOBUILD) -o $@ ./etcdbackup
 
 bin/install-cni:
 	mkdir -p bin

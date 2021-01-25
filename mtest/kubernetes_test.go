@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -261,92 +260,6 @@ func testKubernetes() {
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		_, stderr, err = kubectl("-n", "kube-system", "get", "endpoints/cke-etcd")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-	})
-
-	It("can backup etcd snapshot", func() {
-		By("deploying local persistent volume")
-		pv, err := ioutil.ReadFile(localPVYAMLPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		_, stderr, err := kubectlWithInput(pv, "create", "-f", "-")
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-
-		By("enabling etcd backup")
-		cluster := getCluster()
-		for i := 0; i < 3; i++ {
-			cluster.Nodes[i].ControlPlane = true
-		}
-		cluster.EtcdBackup.Enabled = true
-		clusterSetAndWait(cluster)
-
-		By("getting hostIP of etcdbackup Pod")
-		var hostIP string
-		Eventually(func() error {
-			stdout, _, err := kubectl("-n", "kube-system", "get", "pods/etcdbackup", "-o", "json")
-			if err != nil {
-				return err
-			}
-			var pod corev1.Pod
-			if err := json.Unmarshal(stdout, &pod); err != nil {
-				return err
-			}
-			hostIP = pod.Status.HostIP
-			if hostIP == "" {
-				return fmt.Errorf("etcdbackup pod is not scheduled: %s", pod.String())
-			}
-			return nil
-		}).Should(Succeed())
-
-		By("deploying cluster-dns to etcdbackup Pod running hostIP")
-		clusterDNSPatch := fmt.Sprintf(`{ "spec": { "template": { "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" } } } } } }`, hostIP)
-		patchFile := remoteTempFile(clusterDNSPatch)
-		_, stderr, err = kubectl("patch", "deployment", "cluster-dns", "-n", "kube-system", "--patch=\"$(cat "+patchFile+")\"")
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-
-		By("deploying etcdbackup CronJob to etcdbackup Pod running hostIP")
-		etcdbackupPatch := fmt.Sprintf(`{"spec": { "jobTemplate": { "spec": { "template": { "spec": { "nodeSelector": { "kubernetes.io/hostname": "%s" } } } } } } }`, hostIP)
-		patchFile = remoteTempFile(etcdbackupPatch)
-		_, stderr, err = kubectl("patch", "cronjob", "etcdbackup", "-n", "kube-system", "--patch=\"$(cat "+patchFile+")\"")
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-
-		By("checking etcd backup job status")
-		Eventually(func() error {
-			stdout, stderr, err := kubectl("-n", "kube-system", "get", "job", "--sort-by=.metadata.creationTimestamp", "-o", "json")
-			if err != nil {
-				return fmt.Errorf("%v: stderr=%s", err, stderr)
-			}
-
-			var jobs batchv1.JobList
-			err = json.Unmarshal(stdout, &jobs)
-			if err != nil {
-				return err
-			}
-
-			if len(jobs.Items) < 1 {
-				return fmt.Errorf("no etcd backup jobs, JobList: %v", jobs)
-			}
-			if jobs.Items[len(jobs.Items)-1].Status.Succeeded != 1 {
-				return fmt.Errorf(".Succeeded is not 1, JobList: %v", jobs)
-			}
-
-			return nil
-		}).Should(Succeed())
-
-		By("checking etcd snapshot is correct")
-		stdout := ckecliSafe("etcd", "backup", "list")
-		var list []string
-		err = json.Unmarshal(stdout, &list)
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-		Expect(list[0]).To(ContainSubstring("snapshot-"))
-
-		ckecliSafe("etcd", "backup", "get", list[0])
-		_, stderr, err = execAt(host1, "gunzip", "snapshot-*.db.gz")
-		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
-		stdout, stderr, err = execAt(host1, "env", "ETCDCTL_API=3", "/opt/bin/etcdctl", "snapshot", "status", "snapshot-*.db")
-		Expect(err).NotTo(HaveOccurred(), "stdout=%s, stderr=%s", stdout, stderr)
-
-		By("confirming etcdbackup CronJob is removed when etcdbackup is disabled")
-		cluster.EtcdBackup.Enabled = false
-		clusterSetAndWait(cluster)
 	})
 
 	It("can output audit log", func() {

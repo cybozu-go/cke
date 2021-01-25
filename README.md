@@ -53,7 +53,6 @@ Features
 
     CKE manages an etcd cluster for Kubernetes.
     Other applications may also store their data in the same etcd cluster.
-    Backups of etcd data are automatically taken by CKE.
 
     Details are described in [docs/etcd.md](docs/etcd.md).
 

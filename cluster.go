@@ -207,14 +207,6 @@ type Reboot struct {
 	ProtectedNamespaces    *metav1.LabelSelector `json:"protected_namespaces,omitempty"`
 }
 
-// EtcdBackup is a set of configurations for etcdbackup.
-type EtcdBackup struct {
-	Enabled  bool   `json:"enabled"`
-	PVCName  string `json:"pvc_name"`
-	Schedule string `json:"schedule"`
-	Rotate   int    `json:"rotate,omitempty"`
-}
-
 // Options is a set of optional parameters for k8s components.
 type Options struct {
 	Etcd              EtcdParams      `json:"etcd"`
@@ -229,15 +221,14 @@ type Options struct {
 
 // Cluster is a set of configurations for a etcd/Kubernetes cluster.
 type Cluster struct {
-	Name          string     `json:"name"`
-	Nodes         []*Node    `json:"nodes"`
-	TaintCP       bool       `json:"taint_control_plane"`
-	ServiceSubnet string     `json:"service_subnet"`
-	DNSServers    []string   `json:"dns_servers"`
-	DNSService    string     `json:"dns_service"`
-	Reboot        Reboot     `json:"reboot"`
-	EtcdBackup    EtcdBackup `json:"etcd_backup"`
-	Options       Options    `json:"options"`
+	Name          string   `json:"name"`
+	Nodes         []*Node  `json:"nodes"`
+	TaintCP       bool     `json:"taint_control_plane"`
+	ServiceSubnet string   `json:"service_subnet"`
+	DNSServers    []string `json:"dns_servers"`
+	DNSService    string   `json:"dns_service"`
+	Reboot        Reboot   `json:"reboot"`
+	Options       Options  `json:"options"`
 }
 
 // Validate validates the cluster definition.
@@ -280,11 +271,6 @@ func (c *Cluster) Validate(isTmpl bool) error {
 	}
 
 	err = validateReboot(c.Reboot)
-	if err != nil {
-		return err
-	}
-
-	err = validateEtcdBackup(c.EtcdBackup)
 	if err != nil {
 		return err
 	}
@@ -419,19 +405,6 @@ func validateReboot(reboot Reboot) error {
 	_, err := metav1.LabelSelectorAsSelector(reboot.ProtectedNamespaces)
 	if err != nil {
 		return fmt.Errorf("invalid label selector: %w", err)
-	}
-	return nil
-}
-
-func validateEtcdBackup(etcdBackup EtcdBackup) error {
-	if !etcdBackup.Enabled {
-		return nil
-	}
-	if len(etcdBackup.PVCName) == 0 {
-		return errors.New("pvc_name is empty")
-	}
-	if len(etcdBackup.Schedule) == 0 {
-		return errors.New("schedule is empty")
 	}
 	return nil
 }

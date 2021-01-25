@@ -62,8 +62,6 @@ const (
 
 	// CKELabelAppName is application name
 	CKELabelAppName = "cke.cybozu.com/appname"
-	// EtcdBackupAppName is application name for etcdbackup
-	EtcdBackupAppName = "etcdbackup"
 
 	// CKEAnnotationReboot is the annotation to mark reboot targets
 	CKEAnnotationReboot = "cke.cybozu.com/reboot"

@@ -8,7 +8,6 @@ a YAML or JSON object with these fields:
 - [Node](#node)
 - [Taint](#taint)
 - [Reboot](#reboot)
-- [EtcdBackup](#etcdbackup)
 - [Options](#options)
   - [ServiceParams](#serviceparams)
   - [Mount](#mount)
@@ -17,17 +16,16 @@ a YAML or JSON object with these fields:
   - [KubeletParams](#kubeletparams)
   - [SchedulerParams](#schedulerparams)
 
-| Name                  | Required | Type         | Description                                                      |
-| --------------------- | -------- | ------------ | ---------------------------------------------------------------- |
-| `name`                | true     | string       | The k8s cluster name.                                            |
-| `nodes`               | true     | array        | `Node` list.                                                     |
-| `taint_control_plane` | false    | bool         | If true, taint contorl plane nodes.                              |
-| `service_subnet`      | true     | string       | CIDR subnet for k8s `Service`.                                   |
-| `dns_servers`         | false    | array        | List of upstream DNS server IP addresses.                        |
-| `dns_service`         | false    | string       | Upstream DNS service name with namespace as `namespace/service`. |
-| `reboot`              | false    | `Reboot`     | See [Reboot](#reboot).                                           |
-| `etcd_backup`         | false    | `EtcdBackup` | See [EtcdBackup](#etcdbackup).                                   |
-| `options`             | false    | `Options`    | See [Options](#options).                                         |
+| Name                  | Required | Type      | Description                                                      |
+| --------------------- | -------- | --------- | ---------------------------------------------------------------- |
+| `name`                | true     | string    | The k8s cluster name.                                            |
+| `nodes`               | true     | array     | `Node` list.                                                     |
+| `taint_control_plane` | false    | bool      | If true, taint contorl plane nodes.                              |
+| `service_subnet`      | true     | string    | CIDR subnet for k8s `Service`.                                   |
+| `dns_servers`         | false    | array     | List of upstream DNS server IP addresses.                        |
+| `dns_service`         | false    | string    | Upstream DNS service name with namespace as `namespace/service`. |
+| `reboot`              | false    | `Reboot`  | See [Reboot](#reboot).                                           |
+| `options`             | false    | `Options` | See [Options](#options).                                         |
 
 * Upstream DNS servers can be specified one of the following ways:
     * List server IP addresses in `dns_servers`.
@@ -88,16 +86,6 @@ If any of the Pods cannot be deleted, it aborts the operation.
 The Pods in the non-protected namespaces are also tried to be deleted gracefully with the Kubernetes eviction API, but they would be simply deleted if eviction is denied.
 
 If `protected_namespaces` is not given, all namespaces are protected.
-
-EtcdBackup
-----------
-
-| Name       | Required | Type   | Description                                                      |
-| ---------- | -------- | ------ | ---------------------------------------------------------------- |
-| `enabled`  | true     | bool   | If true, periodic etcd backup will be run.                       |
-| `pvc_name` | true     | string | The name of `PersistentVolumeClaim` where backup data is stored. |
-| `schedule` | true     | string | The schedule for etcd backup in Cron format.                     |
-| `rotate`   | false    | int    | Keep a number of backup files. Default: 14.                      |
 
 Options
 -------

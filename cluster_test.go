@@ -87,9 +87,6 @@ func testClusterYAML(t *testing.T) {
 	if c.Reboot.ProtectedNamespaces.MatchLabels["app"] != "sample" {
 		t.Error(`c.Reboot.ProtectedNamespaces.MatchLabels["app"] != "sample"`)
 	}
-	if !reflect.DeepEqual(c.EtcdBackup, EtcdBackup{Enabled: true, PVCName: "etcdbackup-pvc", Schedule: "*/1 * * * *"}) {
-		t.Error(`!reflect.DeepEqual(c.EtcdBackup, EtcdBackup{Enabled:true, PVCName:"etcdbackup-pvc", Schedule:"*/1 * * * *"})`)
-	}
 	if c.Options.Etcd.VolumeName != "myetcd" {
 		t.Error(`c.Options.Etcd.VolumeName != "myetcd"`)
 	}
@@ -244,32 +241,6 @@ func testClusterValidate(t *testing.T) {
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
 				DNSService:    "hoge",
-			},
-			true,
-		},
-		{
-			"invalid etcd backup PVC name",
-			Cluster{
-				Name:          "testcluster",
-				ServiceSubnet: "10.0.0.0/14",
-				EtcdBackup: EtcdBackup{
-					Enabled:  true,
-					PVCName:  "",
-					Schedule: "*/1 * * * *",
-				},
-			},
-			true,
-		},
-		{
-			"invalid etcd backup schedule",
-			Cluster{
-				Name:          "testcluster",
-				ServiceSubnet: "10.0.0.0/14",
-				EtcdBackup: EtcdBackup{
-					Enabled:  true,
-					PVCName:  "etcdbackup-pvc",
-					Schedule: "",
-				},
 			},
 			true,
 		},
