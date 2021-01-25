@@ -265,7 +265,7 @@ jobs:
         command: |
           docker login -u $QUAY_USER -p $QUAY_PASSWORD quay.io
           TAG=quay.io/cybozu/cke-tools:$(echo $CIRCLE_TAG | cut -c 7-)
-          docker build --no-cache -t $TAG
+          docker build --no-cache -t $TAG tools
           docker push $TAG
 
 workflows:
