@@ -433,7 +433,7 @@ func (d testData) withEtcdBackup() testData {
 	d.Status.Kubernetes.EtcdBackup.Service = &corev1.Service{}
 	d.Status.Kubernetes.EtcdBackup.ConfigMap = &corev1.ConfigMap{
 		Data: map[string]string{
-			"config.yml": `backup-dir: /etcdbackup
+			"config.yml": `backup-dir: /backup
 listen: 0.0.0.0:8080
 rotate: 14
 etcd:

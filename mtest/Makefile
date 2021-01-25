@@ -1,5 +1,13 @@
 # Makefile for multi-host testing using ginkgo
 
+# tool versions
+MANAGEMENT_ETCD_VERSION = 3.3.25
+VAULT_VERSION = 1.6.1
+K8S_VERSION = 1.19.7
+CONTAINERD_VERSION = 1.4.3
+CRITOOLS_VERSION = 1.19.0
+CT_VERSION = 0.6.1
+
 # configuration variables
 BRIDGE_ADDRESS = 10.0.0.1
 ## 'HOST' runs CKE and management etcd
@@ -19,13 +27,7 @@ endif
 PLACEMAT = /usr/bin/placemat
 GINKGO = $(GOPATH)/bin/ginkgo --failFast -v
 CURL = curl -fsL
-MANAGEMENT_ETCD_VERSION = 3.3.25
-VAULT_VERSION = 1.6.1
-K8S_VERSION = 1.19.7
 PLACEMAT_DATADIR = /var/scratch/placemat
-CONTAINERD_VERSION = 1.4.3
-CRITOOLS_VERSION = 1.19.0
-CT_VERSION = 0.6.1
 CT = /usr/local/bin/ct
 SUDO = sudo
 PACKAGES = libseccomp-dev automake autoconf libtool

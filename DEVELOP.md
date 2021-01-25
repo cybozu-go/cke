@@ -26,16 +26,6 @@ $ git push -u origin release-1.16
 
 Then, clear the change log entries in `CHANGELOG.md`.
 
-## Back-porting fixes
-
-When vulnerabilities or critical issues are found in the main branch, 
-consider back-porting the fixes to older branches as follows:
-
-```
-$ git checkout release-1.16
-$ git cherry-pick <commit from main>
-```
-
 ### Update `k8s.io` modules
 
 CKE uses `k8s.io/client-go`.
@@ -49,7 +39,25 @@ $ go get k8s.io/client-go@${VERSION} k8s.io/api@${VERSION} k8s.io/apimachinery@v
          k8s.io/apiserver@${VERSION} k8s.io/kube-scheduler@${VERSION} k8s.io/kubelet@${VERSION}
 ```
 
-### Update the Kubernetes resource definitions embedded in CKE.
+### Update the Kubernetes resource definitions embedded in CKE
 
 The Kubernetes resource definitions embedded in CKE is defined in `./static/resource.go`.
 This needs to be updated by `make static` whenever `images.go` updates.
+
+### Update `cke-tools`
+
+Edit [`tools/Makefile`](tools/Makefile) and update `CNI_PLUGIN_VERSION` for the latest release.
+Edit [`tools/CHANGELOG.md`](tools/CHANGELOG.md) to prepare the new version.
+
+After these changes are merged, create and push a tag like `tools-1.17.0`.
+Read [`tools/RELEASE.md`](tools/RELEASE.md) for details.
+
+## Back-porting fixes
+
+When vulnerabilities or critical issues are found in the main branch, 
+consider back-porting the fixes to older branches as follows:
+
+```
+$ git checkout release-1.16
+$ git cherry-pick <commit from main>
+```

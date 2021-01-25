@@ -169,6 +169,14 @@ jobs:
       - checkout:
           path: ~/work
       - run:
+          name: Check image consistency
+          command: |
+            REV=$(awk '/const Version/ {print $4}' ../version.go | sed -E 's/^"(1.[[:digit:]]+).*/\1/')
+            COMPOSE_REV=$(sed -nE 's,.*quay.io/cybozu/cke:(.*)$,\1,p' docker-compose.yml)
+            if [ "$REV" != "$COMPOSE_REV" ]; then
+                echo Update CKE branch tag in example/docker-compose.yml
+            fi
+      - run:
           name: docker-compose build
           command: docker-compose build
       - run:
@@ -227,12 +235,45 @@ jobs:
               prerelease="-prerelease"
             fi
             ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -n ${CIRCLE_TAG} $prerelease ${CIRCLE_TAG} /tmp/upload
+  build-tools:
+    docker:
+    - image: quay.io/cybozu/golang:1.15-focal
+    steps:
+    - checkout
+    - run:
+        command: |
+          cd tools
+          make all
+          tar czf /tmp/tools.tgz bin plugins/LICENSE plugins/bin
+    - persist_to_workspace:
+        root: /tmp
+        paths: ["tools.tgz"]
+  push-tools:
+    docker:
+    - image: docker:stable
+    steps:
+    - run:
+        name: Install tools
+        command: apk add --no-cache git
+    - checkout
+    - attach_workspace:
+        at: /tmp/workspace
+    - run: tar -C tools -xzf /tmp/workspace/tools.tgz
+    - setup_remote_docker
+    - run: 
+        name: Push cke-tools image to Quay.io
+        command: |
+          docker login -u $QUAY_USER -p $QUAY_PASSWORD quay.io
+          TAG=quay.io/cybozu/cke-tools:$(echo $CIRCLE_TAG | cut -c 7-)
+          docker build --no-cache -t $TAG
+          docker push $TAG
 
 workflows:
   version: 2
   main:
     jobs:
       - build
+      - build-tools
       - build-image:
           requires:
             - build
@@ -287,3 +328,19 @@ workflows:
               ignore: /.*/
             tags:
               only: /^v.*/
+  release-tools:
+    jobs:
+      - build-tools:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^tools-.*/
+      - push-tools:
+          requires:
+          - build-tools
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^tools-.*/
