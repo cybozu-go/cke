@@ -22,6 +22,7 @@ $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --image vmx-enabled \
   --boot-disk-type ${DISK_TYPE} \
   --boot-disk-size ${BOOT_DISK_SIZE} \
+  --subnet sonobuoy \
   --metadata shutdown-at=$(date -Iseconds -d+4hours)
 
 ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
@@ -35,6 +36,7 @@ for i in $(seq 3); do
     --image-family cos-stable \
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
+    --subnet sonobuoy --can-ip-forward \
     --metadata-from-file user-data=/tmp/worker.cfg \
     --metadata shutdown-at=$(date -Iseconds -d+4hours),cos-update-strategy=update_disabled
 done
