@@ -13,6 +13,7 @@ a YAML or JSON object with these fields:
   - [Mount](#mount)
   - [EtcdParams](#etcdparams)
   - [APIServerParams](#apiserverparams)
+  - [ProxyParams](#proxyparams)
   - [KubeletParams](#kubeletparams)
   - [SchedulerParams](#schedulerparams)
 
@@ -100,7 +101,7 @@ Options
 | `kube-api`                | false    | `APIServerParams` | Extra arguments for API server.         |
 | `kube-controller-manager` | false    | `ServiceParams`   | Extra arguments for controller manager. |
 | `kube-scheduler`          | false    | `SchedulerParams` | Extra arguments for scheduler.          |
-| `kube-proxy`              | false    | `ServiceParams`   | Extra arguments for kube-proxy.         |
+| `kube-proxy`              | false    | `ProxyParams`     | Extra arguments for kube-proxy.         |
 | `kubelet`                 | false    | `KubeletParams`   | Extra arguments for kubelet.            |
 
 ### ServiceParams
@@ -145,6 +146,17 @@ Options
 | `extra_args`        | false    | array  | Extra command-line arguments.  List of strings.       |
 | `extra_binds`       | false    | array  | Extra bind mounts.  List of `Mount`.                  |
 | `extra_env`         | false    | object | Extra environment variables.                          |
+
+### ProxyParams
+
+| Name          | Required | Type   | Description                                          |
+| ------------- | -------- | ------ | ---------------------------------------------------- |
+| `mode`        | false    | string | One of `userspace`, `iptables`, or `ipvs` (default). |
+| `extra_args`  | false    | array  | Extra command-line arguments.  List of strings.      |
+| `extra_binds` | false    | array  | Extra bind mounts.  List of `Mount`.                 |
+| `extra_env`   | false    | object | Extra environment variables.                         |
+
+Changing `mode` requires full node restarts.
 
 ### KubeletParams
 

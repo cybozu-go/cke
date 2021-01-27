@@ -144,6 +144,10 @@ rules:
 		t.Error(`*kubeSchedulerConfig.Profiles[0].Plugins.Score.Enabled[0].Weight != int32(500)`)
 	}
 
+	if c.Options.Proxy.Mode != ProxyModeIptables {
+		t.Error(`c.Options.Proxy.Mode != ProxyModeIptables`)
+	}
+
 	if c.Options.Kubelet.ContainerRuntime != "remote" {
 		t.Error(`c.Options.Kubelet.ContainerRuntime != "remote"`)
 	}
@@ -289,6 +293,19 @@ rules:
 				},
 			},
 			false,
+		},
+		{
+			"invalid proxy mode",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Options: Options{
+					Proxy: ProxyParams{
+						Mode: "foo",
+					},
+				},
+			},
+			true,
 		},
 		{
 			"invalid domain",
@@ -513,6 +530,9 @@ rules:
 				ServiceSubnet: "10.0.0.0/14",
 				DNSService:    "kube-system/dns",
 				Options: Options{
+					Proxy: ProxyParams{
+						Mode: ProxyModeIptables,
+					},
 					Kubelet: KubeletParams{
 						BootTaints: []corev1.Taint{
 							{

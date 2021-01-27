@@ -327,7 +327,7 @@ func (d testData) withProxy() testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.KubernetesImage.Name()
-		st.BuiltInParams = k8s.ProxyParams(n)
+		st.BuiltInParams = k8s.ProxyParams(n, "ipvs")
 	}
 	return d
 }

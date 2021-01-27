@@ -59,6 +59,7 @@ options:
       extra_args:
       - arg1
   kube-proxy:
+    mode: iptables
     extra_args:
       - arg1
   kubelet:

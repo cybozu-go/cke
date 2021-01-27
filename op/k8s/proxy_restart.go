@@ -10,14 +10,14 @@ type kubeProxyRestartOp struct {
 	nodes []*cke.Node
 
 	cluster string
-	params  cke.ServiceParams
+	params  cke.ProxyParams
 
 	step  int
 	files *common.FilesBuilder
 }
 
 // KubeProxyRestartOp returns an Operator to restart kube-proxy.
-func KubeProxyRestartOp(nodes []*cke.Node, cluster string, params cke.ServiceParams) cke.Operator {
+func KubeProxyRestartOp(nodes []*cke.Node, cluster string, params cke.ProxyParams) cke.Operator {
 	return &kubeProxyRestartOp{
 		nodes:   nodes,
 		cluster: cluster,
@@ -49,13 +49,13 @@ func (o *kubeProxyRestartOp) NextCommand() cke.Commander {
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			params := ProxyParams(n)
+			params := ProxyParams(n, string(o.params.GetMode()))
 			paramsMap[n.Address] = params
 		}
 		return common.RunContainerCommand(o.nodes, op.KubeProxyContainerName, cke.KubernetesImage,
 			common.WithOpts(opts),
 			common.WithParamsMap(paramsMap),
-			common.WithExtra(o.params),
+			common.WithExtra(o.params.ServiceParams),
 			common.WithRestart())
 	default:
 		return nil

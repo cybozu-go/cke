@@ -157,6 +157,39 @@ func (p SchedulerParams) MergeConfig(base *schedulerv1beta1.KubeSchedulerConfigu
 	return &cfg, nil
 }
 
+// ProxyParams is a set of extra parameters for kube-proxy.
+type ProxyParams struct {
+	ServiceParams `json:",inline"`
+	Mode          ProxyMode `json:"mode"`
+}
+
+// GetMode returns the proxy mode.
+func (p ProxyParams) GetMode() ProxyMode {
+	if len(p.Mode) == 0 {
+		return ProxyModeIPVS
+	}
+	return p.Mode
+}
+
+// ProxyMode is a type for kube-proxy's --proxy-mode argument.
+type ProxyMode string
+
+const (
+	ProxyModeUserspace ProxyMode = "userspace"
+	ProxyModeIptables  ProxyMode = "iptables"
+	ProxyModeIPVS      ProxyMode = "ipvs"
+)
+
+// Validate validates ProxyMode
+func (m ProxyMode) Validate() error {
+	switch m {
+	case ProxyModeUserspace, ProxyModeIptables, ProxyModeIPVS:
+		return nil
+	}
+
+	return errors.New("invalid proxy mode " + string(m))
+}
+
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
 	ServiceParams    `json:",inline"`
@@ -215,7 +248,7 @@ type Options struct {
 	APIServer         APIServerParams `json:"kube-api"`
 	ControllerManager ServiceParams   `json:"kube-controller-manager"`
 	Scheduler         SchedulerParams `json:"kube-scheduler"`
-	Proxy             ServiceParams   `json:"kube-proxy"`
+	Proxy             ProxyParams     `json:"kube-proxy"`
 	Kubelet           KubeletParams   `json:"kubelet"`
 }
 
@@ -516,6 +549,12 @@ func validateOptions(opts Options) error {
 
 	if _, err := opts.Scheduler.MergeConfig(&schedulerv1beta1.KubeSchedulerConfiguration{}); err != nil {
 		return err
+	}
+
+	if len(opts.Proxy.Mode) > 0 {
+		if err := opts.Proxy.Mode.Validate(); err != nil {
+			return err
+		}
 	}
 
 	return nil
