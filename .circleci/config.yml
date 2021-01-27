@@ -211,6 +211,10 @@ jobs:
             - sonobuoy.tar.gz
       - store_artifacts:
           path: /tmp/sonobuoy.tar.gz
+      - run:
+          name: Check failures
+          command: |
+            grep "failed tests: 0" /tmp/e2e-check.log
   github-release:
     docker:
       - image: quay.io/cybozu/golang:1.15-focal
