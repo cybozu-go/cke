@@ -73,7 +73,7 @@ cd sonobuoy
 make setup
 make run
 make sonobuoy
-mv sonobuoy.tar.gz /tmp
+mv sonobuoy.tar.gz e2e-check.log /tmp
 EOF
 chmod +x run.sh
 
@@ -92,6 +92,7 @@ $GCLOUD compute ssh --zone=${ZONE} cybozu@${INSTANCE_NAME}-0 --command='sudo -H 
 RET=$?
 if [ "$RET" -eq 0 ]; then
   $GCLOUD compute scp --zone=${ZONE} cybozu@${INSTANCE_NAME}-0:/tmp/sonobuoy.tar.gz /tmp/sonobuoy.tar.gz
+  $GCLOUD compute scp --zone=${ZONE} cybozu@${INSTANCE_NAME}-0:/tmp/e2e-check.log /tmp/e2e-check.log
 fi
 
 exit $RET

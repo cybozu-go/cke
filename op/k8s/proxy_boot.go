@@ -13,14 +13,14 @@ type kubeProxyBootOp struct {
 	nodes []*cke.Node
 
 	cluster string
-	params  cke.ServiceParams
+	params  cke.ProxyParams
 
 	step  int
 	files *common.FilesBuilder
 }
 
 // KubeProxyBootOp returns an Operator to boot kube-proxy.
-func KubeProxyBootOp(nodes []*cke.Node, cluster string, params cke.ServiceParams) cke.Operator {
+func KubeProxyBootOp(nodes []*cke.Node, cluster string, params cke.ProxyParams) cke.Operator {
 	return &kubeProxyBootOp{
 		nodes:   nodes,
 		cluster: cluster,
@@ -52,13 +52,13 @@ func (o *kubeProxyBootOp) NextCommand() cke.Commander {
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			params := ProxyParams(n)
+			params := ProxyParams(n, string(o.params.GetMode()))
 			paramsMap[n.Address] = params
 		}
 		return common.RunContainerCommand(o.nodes, op.KubeProxyContainerName, cke.KubernetesImage,
 			common.WithOpts(opts),
 			common.WithParamsMap(paramsMap),
-			common.WithExtra(o.params))
+			common.WithExtra(o.params.ServiceParams))
 	default:
 		return nil
 	}
@@ -103,10 +103,10 @@ func (c prepareProxyFilesCommand) Command() cke.Command {
 }
 
 // ProxyParams returns parameters for kube-proxy.
-func ProxyParams(n *cke.Node) cke.ServiceParams {
+func ProxyParams(n *cke.Node, mode string) cke.ServiceParams {
 	args := []string{
 		"kube-proxy",
-		"--proxy-mode=ipvs",
+		"--proxy-mode=" + mode,
 		"--hostname-override=" + n.Nodename(),
 		"--kubeconfig=/etc/kubernetes/proxy/kubeconfig",
 	}

@@ -560,7 +560,7 @@ func (nf *NodeFilter) ProxyOutdatedNodes() (nodes []*cke.Node) {
 
 	for _, n := range nf.cluster.Nodes {
 		st := nf.nodeStatus(n).Proxy
-		currentBuiltIn := k8s.ProxyParams(n)
+		currentBuiltIn := k8s.ProxyParams(n, string(currentExtra.GetMode()))
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
