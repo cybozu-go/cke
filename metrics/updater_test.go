@@ -40,10 +40,20 @@ type updateOperationPhaseTestCase struct {
 	expected operationPhaseExpected
 }
 
+type rebootInput struct {
+	num    int
+	enable bool
+}
+
+type rebootOutput struct {
+	num    float64
+	enable float64
+}
+
 type updateRebootTestCase struct {
 	name     string
-	input    int
-	expected float64
+	input    rebootInput
+	expected rebootOutput
 }
 
 type sabakanInput struct {
@@ -242,19 +252,48 @@ func testUpdateOperationPhase(t *testing.T) {
 func testUpdateReboot(t *testing.T) {
 	testCases := []updateRebootTestCase{
 		{
-			name:     "zero",
-			input:    0,
-			expected: 0,
+			name: "zero",
+			input: rebootInput{
+				num:    0,
+				enable: true,
+			},
+			expected: rebootOutput{
+				num:    0,
+				enable: 1,
+			},
 		},
 		{
-			name:     "one",
-			input:    1,
-			expected: 1,
+			name: "one",
+			input: rebootInput{
+				num:    1,
+				enable: true,
+			},
+			expected: rebootOutput{
+				num:    1,
+				enable: 1,
+			},
 		},
 		{
-			name:     "two",
-			input:    2,
-			expected: 2,
+			name: "two",
+			input: rebootInput{
+				num:    2,
+				enable: true,
+			},
+			expected: rebootOutput{
+				num:    2,
+				enable: 1,
+			},
+		},
+		{
+			name: "disable",
+			input: rebootInput{
+				num:    3,
+				enable: false,
+			},
+			expected: rebootOutput{
+				num:    3,
+				enable: 0,
+			},
 		},
 	}
 	for _, tt := range testCases {
@@ -265,7 +304,7 @@ func testUpdateReboot(t *testing.T) {
 			collector, _ := newTestCollector()
 			handler := GetHandler(collector)
 
-			UpdateReboot(tt.input)
+			UpdateReboot(tt.input.num, tt.input.enable)
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/metrics", nil)
@@ -276,20 +315,35 @@ func testUpdateReboot(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			metricsFound := false
+			metricsEntryFound := false
 			for _, mf := range metricsFamily {
 				if *mf.Name != "cke_reboot_queue_entries" {
 					continue
 				}
 				for _, m := range mf.Metric {
-					metricsFound = true
-					if *m.Gauge.Value != tt.expected {
+					metricsEntryFound = true
+					if *m.Gauge.Value != tt.expected.num {
 						t.Errorf("value for cke_reboot_queue_entries is wrong.  expected: %f, actual: %f", tt.expected, *m.Gauge.Value)
 					}
 				}
 			}
-			if !metricsFound {
+			if !metricsEntryFound {
 				t.Errorf("metrics reboot_queue_entries was not found")
+			}
+			metricsEnableFound := false
+			for _, mf := range metricsFamily {
+				if *mf.Name != "cke_reboot_queue_enable" {
+					continue
+				}
+				for _, m := range mf.Metric {
+					metricsEnableFound = true
+					if *m.Gauge.Value != tt.expected.num {
+						t.Errorf("value for cke_reboot_queue_enable is wrong.  expected: %f, actual: %f", tt.expected, *m.Gauge.Value)
+					}
+				}
+			}
+			if !metricsEnableFound {
+				t.Errorf("metrics reboot_queue_enable was not found")
 			}
 		})
 	}

@@ -40,8 +40,14 @@ func isOperationPhaseAvailable(_ context.Context, _ storage) (bool, error) {
 }
 
 // UpdateReboot updates "reboot_queue_entries".
-func UpdateReboot(numEntries int) {
+func UpdateReboot(numEntries int, enabled bool) {
 	rebootQueueEntries.Set(float64(numEntries))
+
+	var flag float64
+	if enabled {
+		flag = 1
+	}
+	rebootQueueEnable.Set(flag)
 }
 
 // DecrementReboot decrements "reboot_queue_entries".

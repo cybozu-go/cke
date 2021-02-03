@@ -277,18 +277,19 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	if err != nil {
 		return err
 	}
-	metrics.UpdateReboot(len(re))
+	disabled, err := inf.Storage().IsRebootQueueDisabled(ctx)
+	if err != nil {
+		return err
+	}
 
 	var reboot *cke.RebootQueueEntry
 	if len(re) > 0 {
-		disabled, err := inf.Storage().IsRebootQueueDisabled(ctx)
-		if err != nil {
-			return err
-		}
 		if !disabled {
 			reboot = re[0]
 		}
 	}
+	metrics.UpdateReboot(len(re), !disabled)
+
 	ops, phase := DecideOps(cluster, status, constraints, rcs, reboot)
 
 	st := &cke.ServerStatus{

@@ -41,6 +41,14 @@ var rebootQueueEntries = prometheus.NewGauge(
 	},
 )
 
+var rebootQueueEnable = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "reboot_queue_enable",
+		Help:      "1 if reboot queue is enabled and ready to be processed.",
+	},
+)
+
 var sabakanIntegrationSuccessful = prometheus.NewGauge(
 	prometheus.GaugeOpts{
 		Namespace: namespace,
