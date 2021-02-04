@@ -42,11 +42,13 @@ $ ckecli [--config FILE] <subcommand> args...
 - [`ckecli scp [-r] [[user@]NODE1:]FILE1 ... [[user@]NODE2:]FILE2`](#ckecli-scp--r-usernode1file1--usernode2file2)
 - [`ckecli reboot-queue`, `ckecli rq`](#ckecli-reboot-queue-ckecli-rq)
   - [`ckecli reboot-queue enable|disable`](#ckecli-reboot-queue-enabledisable)
+  - [`ckecli reboot-queue is-enabled`](#ckecli-reboot-queue-is-enabled)
   - [`ckecli reboot-queue add FILE`](#ckecli-reboot-queue-add-file)
   - [`ckecli reboot-queue list`](#ckecli-reboot-queue-list)
   - [`ckecli reboot-queue cancel INDEX`](#ckecli-reboot-queue-cancel-index)
 - [`ckecli sabakan`](#ckecli-sabakan)
   - [`ckecli sabakan enable|disable`](#ckecli-sabakan-enabledisable)
+  - [`ckecli sabakan is-enabled`](#ckecli-sabakan-is-enabled)
   - [`ckecli sabakan set-url URL`](#ckecli-sabakan-set-url-url)
   - [`ckecli sabakan get-url`](#ckecli-sabakan-get-url)
   - [`ckecli sabakan set-template FILE`](#ckecli-sabakan-set-template-file)
@@ -270,6 +272,11 @@ Copy files between hosts via scp.
 
 Enable/Disable processing reboot queue entries.
 
+### `ckecli reboot-queue is-enabled`
+
+Show reboot queue is enabled or disabled.
+It displays `true` or `false`.
+
 ### `ckecli reboot-queue add FILE`
 
 Append the nodes written in `FILE` to the reboot queue.
@@ -299,6 +306,11 @@ The integration will run when:
 - It is *not* disabled, and
 - URL of sabakan is set with `ckecli sabakan set-url`, and
 - Cluster configuration template is set with `ckecli sabakan set-template`.
+
+### `ckecli sabakan is-enabled`
+
+Show sabakan integration is enabled or disabled.
+It displays `true` or `false`.
 
 ### `ckecli sabakan set-url URL`
 
