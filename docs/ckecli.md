@@ -275,6 +275,7 @@ Enable/Disable processing reboot queue entries.
 ### `ckecli reboot-queue is-enabled`
 
 Show reboot queue is enabled or disabled.
+It displays `true` or `false`.
 
 ### `ckecli reboot-queue add FILE`
 
@@ -309,6 +310,7 @@ The integration will run when:
 ### `ckecli sabakan is-enabled`
 
 Show sabakan integration is enabled or disabled.
+It displays `true` or `false`.
 
 ### `ckecli sabakan set-url URL`
 

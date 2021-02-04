@@ -11,13 +11,16 @@ import (
 var sabakanIsEnabledCmd = &cobra.Command{
 	Use:   "is-enabled",
 	Short: "show sabakan integration status",
-	Long:  `Show sabakan integration status.`,
+	Long:  `Show whether sabakan integration is enabled or not.  "true" if enabled.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		well.Go(func(ctx context.Context) error {
 			disabled, err := storage.IsSabakanDisabled(ctx)
+			if err != nil {
+				return err
+			}
 			fmt.Println(!disabled)
-			return err
+			return nil
 		})
 		well.Stop()
 		return well.Wait()
