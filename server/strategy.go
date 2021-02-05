@@ -88,6 +88,10 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 			log.Warn("cannot reboot nodes because too many nodes are unreachable", nil)
 			return nil, cke.PhaseRebootNodes
 		}
+		if !nf.EtcdIsGood() {
+			log.Warn("cannot reboot nodes because etcd cluster is not responding and in-sync", nil)
+			return nil, cke.PhaseRebootNodes
+		}
 		return ops, cke.PhaseRebootNodes
 	}
 
