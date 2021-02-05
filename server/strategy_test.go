@@ -1882,6 +1882,18 @@ func TestDecideOps(t *testing.T) {
 			ExpectedTargetNums: nil,
 		},
 		{
+			Name: "SkipReboot2",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
+				Index:  1,
+				Nodes:  []string{nodeNames[0], nodeNames[1]},
+				Status: cke.RebootStatusQueued,
+			}).with(func(d testData) {
+				delete(d.Status.Etcd.InSyncMembers, "10.0.0.11")
+			}),
+			ExpectedOps:        nil,
+			ExpectedTargetNums: nil,
+		},
+		{
 			Name: "CancelReboot",
 			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
 				Index:  1,
