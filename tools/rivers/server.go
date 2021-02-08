@@ -18,25 +18,25 @@ const (
 	copyBufferSize = 64 << 10
 )
 
-// Config presents TCP servers
+// Config represents TCP servers
 type Config struct {
 	ShutdownTimeout time.Duration
 	Logger          *log.Logger
 	Dialer          *net.Dialer
 }
 
-// Server presents TCP proxy server
+// Server represents TCP proxy server
 type Server struct {
 	well.Server
 
-	upstreams []string
+	upstreams []*Upstream
 	logger    *log.Logger
 	dialer    *net.Dialer
 	pool      sync.Pool
 }
 
 // NewServer creates a new Server
-func NewServer(upstreams []string, cfg Config) *Server {
+func NewServer(upstreams []*Upstream, cfg Config) *Server {
 	dialer := cfg.Dialer
 	if dialer == nil {
 		dialer = &net.Dialer{}
@@ -71,14 +71,6 @@ func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
 	fields[log.FnType] = "access"
 	fields["client_addr"] = conn.RemoteAddr().String()
 
-	destConn, err := s.randomUpstream()
-	if err != nil {
-		fields[log.FnError] = err.Error()
-		s.logger.Error("failed to connect to upstream servers", fields)
-		return
-	}
-	defer destConn.Close()
-
 	tc, ok := conn.(*net.TCPConn)
 	if !ok {
 		s.logger.Error("non-TCP connection", map[string]interface{}{
@@ -87,9 +79,23 @@ func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
 		return
 	}
 
+	destConn, u, err := s.randomUpstream()
+	if err != nil {
+		fields[log.FnError] = err.Error()
+		s.logger.Error("failed to connect to upstream servers", fields)
+		return
+	}
+	defer destConn.Close()
+
+	u.AddConn(conn, func() {
+		conn.Close()
+		destConn.Close()
+	})
+	defer u.RemoveConn(conn)
+
 	st := time.Now()
 	env := well.NewEnvironment(ctx)
-	env.Go(func(ctx context.Context) error {
+	env.Go(func(_ context.Context) error {
 		buf := s.pool.Get().(*[]byte)
 		_, err := io.CopyBuffer(destConn, tc, *buf)
 		s.pool.Put(buf)
@@ -99,7 +105,7 @@ func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
 		tc.CloseRead()
 		return err
 	})
-	env.Go(func(ctx context.Context) error {
+	env.Go(func(_ context.Context) error {
 		buf := s.pool.Get().(*[]byte)
 		_, err := io.CopyBuffer(tc, destConn, *buf)
 		s.pool.Put(buf)
@@ -122,21 +128,26 @@ func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
 	s.logger.Info("proxy ends", fields)
 }
 
-func (s *Server) randomUpstream() (net.Conn, error) {
-	ups := make([]string, len(s.upstreams))
+func (s *Server) randomUpstream() (net.Conn, *Upstream, error) {
+	ups := make([]*Upstream, len(s.upstreams))
 	copy(ups, s.upstreams)
 	rand.Shuffle(len(ups), func(i, j int) {
 		ups[i], ups[j] = ups[j], ups[i]
 	})
 	for _, u := range ups {
-		conn, err := s.dialer.Dial("tcp", u)
+		if !u.IsHealthy() {
+			continue
+		}
+
+		a := u.address
+		conn, err := s.dialer.Dial("tcp", a)
 		if err == nil {
-			return conn, nil
+			return conn, u, nil
 		}
 
 		s.logger.Warn("failed to connect to proxy server", map[string]interface{}{
-			"upstream": u,
+			"upstream": a,
 		})
 	}
-	return nil, errors.New("no available upstreams servers")
+	return nil, nil, errors.New("no available upstreams servers")
 }
