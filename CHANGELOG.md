@@ -5,6 +5,14 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.19.3] - 2021-02-09
+
+### Changed
+- node-dns: update Pods in bulk. (#420)
+- Skip reboot if etcd cluster is not responding and in-sync. (#417)
+- Update cke-tools to 1.19.2
+    - `rivers` now checks connectivity to the upstream servers periodically.
+
 ## [1.19.2] - 2021-01-28
 
 ### Added
@@ -54,7 +62,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.19.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.19.3...HEAD
+[1.19.3]: https://github.com/cybozu-go/cke/compare/v1.19.2...v1.19.3
 [1.19.2]: https://github.com/cybozu-go/cke/compare/v1.19.1...v1.19.2
 [1.19.1]: https://github.com/cybozu-go/cke/compare/v1.19.0...v1.19.1
 [1.19.0]: https://github.com/cybozu-go/cke/compare/v1.19.0-rc.1...v1.19.0
