@@ -74,8 +74,10 @@ func run() error {
 	upstreamAddresses := strings.Split(*flgUpstreams, ",")
 	upstreams := make([]*Upstream, len(upstreamAddresses))
 	for i, a := range upstreamAddresses {
-		upstreams[i] = &Upstream{}
-		upstreams[i].address = a
+		upstreams[i] = &Upstream{
+			address: a,
+			conns:   make(map[net.Conn]func()),
+		}
 	}
 
 	var dialer = &net.Dialer{DualStack: true}
