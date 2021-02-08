@@ -15,7 +15,7 @@ import (
 
 var (
 	flgListen          = flag.String("listen", "", "Listen address and port (address:port)")
-	flgUpstreams       = flag.String("upstreams", "", "Comma-separated upstream servers (addr1:port1,addr2:port2")
+	flgUpstreams       = flag.String("upstreams", "", "Comma-separated upstream servers (addr1:port1,addr2:port2)")
 	flgShutdownTimeout = flag.String("shutdown-timeout", "10s", "Timeout for server shutting-down gracefully (disabled if specified \"0\")")
 	flgDialTimeout     = flag.String("dial-timeout", "10s", "Timeout for dial to an upstream server")
 	flgDialKeepAlive   = flag.String("dial-keep-alive", "15s", "Interval between keep-alive probes")
@@ -74,8 +74,10 @@ func run() error {
 	upstreamAddresses := strings.Split(*flgUpstreams, ",")
 	upstreams := make([]*Upstream, len(upstreamAddresses))
 	for i, a := range upstreamAddresses {
-		upstreams[i] = &Upstream{}
-		upstreams[i].address = a
+		upstreams[i] = &Upstream{
+			address: a,
+			conns:   make(map[net.Conn]func()),
+		}
 	}
 
 	var dialer = &net.Dialer{DualStack: true}

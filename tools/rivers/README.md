@@ -38,5 +38,5 @@ The upstream server is selected at random.
   -shutdown-timeout string
         Timeout for server shutting-down gracefully (disabled if specified "0") (default "10s")
   -upstreams string
-        Comma-separated upstream servers (addr1:port1,addr2:port2
+        Comma-separated upstream servers (addr1:port1,addr2:port2)
 ```
