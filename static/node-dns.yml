@@ -53,7 +53,7 @@ metadata:
   namespace: kube-system
   annotations:
     cke.cybozu.com/image: "{{ .unbound }}"
-    cke.cybozu.com/revision: "1"
+    cke.cybozu.com/revision: "2"
 spec:
   selector:
     matchLabels:
@@ -61,7 +61,7 @@ spec:
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 1
+      maxUnavailable: 35%
   template:
     metadata:
       labels:
