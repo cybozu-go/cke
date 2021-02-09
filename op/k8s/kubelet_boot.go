@@ -374,8 +374,10 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 		"--config=/etc/kubernetes/kubelet/config.yml",
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--hostname-override=" + n.Nodename(),
-		"--pod-infra-container-image=" + cke.PauseImage.Name(),
 		"--network-plugin=cni",
+	}
+	if params.ContainerRuntime == "docker" {
+		args = append(args, "--pod-infra-container-image="+cke.PauseImage.Name())
 	}
 	if len(params.ContainerRuntime) != 0 {
 		args = append(args, "--container-runtime="+params.ContainerRuntime)

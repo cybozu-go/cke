@@ -257,14 +257,12 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 		"--etcd-compaction-interval=0",
 
 		"--bind-address=0.0.0.0",
-		"--insecure-port=0",
 		"--client-ca-file=" + op.K8sPKIPath("ca.crt"),
 		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),
 		"--tls-private-key-file=" + op.K8sPKIPath("apiserver.key"),
 		"--kubelet-certificate-authority=" + op.K8sPKIPath("ca.crt"),
 		"--kubelet-client-certificate=" + op.K8sPKIPath("apiserver.crt"),
 		"--kubelet-client-key=" + op.K8sPKIPath("apiserver.key"),
-		"--kubelet-https=true",
 
 		"--enable-admission-plugins=" + strings.Join(admissionPlugins, ","),
 

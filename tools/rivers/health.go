@@ -67,7 +67,10 @@ func (hc *HealthChecker) doHealthCheck(ctx context.Context, first bool) {
 	var wg sync.WaitGroup
 	for _, tu := range hc.upstreams {
 		wg.Add(1)
+
 		go func(u *Upstream) {
+			defer wg.Done()
+
 			conn, err := hc.dialer.DialContext(ctx, "tcp", u.address)
 			if errors.Is(err, context.Canceled) {
 				return

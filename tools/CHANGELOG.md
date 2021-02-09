@@ -2,6 +2,12 @@
 
 cke-tools related changes.
 
+## 1.19.2 - 2021-02-09
+
+### Changed
+
+- rivers: fix a bug in health checker (#423)
+
 ## 1.19.1 - 2021-02-08
 
 ### Added
