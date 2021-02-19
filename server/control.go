@@ -309,6 +309,14 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return nil
 	}
 
+	// Reflect sabakan machine status when CKE does not need to do
+	// anything except for rebooting nodes.
+	if c.addon != nil && phase == cke.PhaseRebootNodes {
+		if err := c.addon.Do(ctx, leaderKey); err != nil {
+			return err
+		}
+	}
+
 	for _, op := range ops {
 		err := runOp(ctx, op, leaderKey, storage, inf)
 		switch err {
