@@ -1,0 +1,128 @@
+name: main
+on:
+  pull_request:
+  push:
+    branches:
+      - 'main'
+env:
+  go-version: 1.15
+jobs:
+  build:
+    name: Build CKE
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go-version }}
+      - name: Check static resources
+        run: |
+            cp ./static/resources.go /tmp/resources.go
+            make static
+            cmp /tmp/resources.go ./static/resources.go
+      - run: docker run -d --network host quay.io/coreos/etcd:v3.3
+      - run: make test-tools
+      - run: make test GOBIN=$(pwd)/docker
+      - name: build-image
+        run: docker build -t quay.io/cybozu/cke:latest ./docker
+  mtest:
+    name: Mtest
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        suite: [functions, robustness, operators]
+    env:
+      INSTANCE_NAME: cke-${{ matrix.suite }}-${{ github.run_number }}
+      SUITE: ${{ matrix.suite }}
+      CLUSTER: "cke-cluster.yml"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go-version }}
+      - name: Set up Cloud SDK for cke
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: ${{ secrets.NECO_TEST_PROJECT_ID }}
+          service_account_key: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
+          export_default_credentials: true
+      - name: Watch cke logs
+        run: |
+            if [ -f .skip ]; then exit 0; fi
+            ./bin/watch_service cke &
+      - name: Start mtest
+        run: |
+          if [ ${{ github.event_name }} = "pull_request" ]; then
+            GITHUB_SHA=$(cat ${GITHUB_EVENT_PATH} | jq -r '.pull_request.head.sha')
+          fi
+          ./bin/run-mtest.sh ${SUITE} ${CLUSTER}
+        timeout-minutes: 120
+      - name: Set the instance lifetime
+        if: failure()
+        run: |
+          . ./bin/env
+          $GCLOUD compute instances add-metadata ${INSTANCE_NAME} --zone ${ZONE} \
+          --metadata shutdown-at=$(date -Iseconds -d+30minutes)
+      - name: Notify to Slack
+        if: failure()
+        run: |
+          . ./bin/env
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"blocks\": [
+              {
+                \"type\": \"section\",
+                \"text\": {
+                  \"type\": \"mrkdwn\",
+                  \"text\": \"Failed: ${{ github.actor }}'s workflow (${{ github.workflow }}) in <https://github.com/${{ github.repository }}/runs/${{ github.run_id }}> (${{ github.ref }}) \n Do you extend the lifetime of ${INSTANCE_NAME}?\"
+                },
+                \"accessory\": {
+                  \"type\": \"button\",
+                  \"text\": {
+                    \"type\": \"plain_text\",
+                    \"text\": \"Extend\",
+                    \"emoji\": true
+                  },
+                  \"value\": \"${INSTANCE_NAME}\"
+                }
+              }
+            ]
+          }" ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Delete CI instance
+        if: ${{ success() }}
+        run: |
+          . ./bin/env
+          $GCLOUD compute instances delete ${INSTANCE_NAME} --zone ${ZONE}
+  compose:
+    name: Compose test
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Set up Cloud SDK for cke
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: ${{ secrets.NECO_TEST_PROJECT_ID }}
+          service_account_key: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
+          export_default_credentials: true
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go-version }}
+      - name: Check image consistency
+        run: |
+          REV=$(awk '/const Version/ {print $4}' ../version.go | sed -E 's/^"(1.[[:digit:]]+).*/\1/')
+          COMPOSE_REV=$(sed -nE 's,.*quay.io/cybozu/cke:(.*)$,\1,p' docker-compose.yml)
+          if [ "$REV" != "$COMPOSE_REV" ]; then
+              echo Update CKE branch tag in example/docker-compose.yml
+          fi
+        working-directory: ./example
+      - name: Set up compose test
+        run: |
+          docker-compose build
+          docker-compose up -d
+          ./wait-up.sh
+        working-directory: ./example
+      - name: Run compose test
+        run: docker-compose run setup /opt/setup/test.sh
+        working-directory: ./example
+      - name: Clean up
+        run: docker-compose down
+        working-directory: ./example

@@ -1,0 +1,117 @@
+name: release
+on:
+  push:
+    tags:
+      - 'v*'
+env:
+  go-version: 1.15
+jobs:
+  sonobuoy:
+    name: Run sonobuoy
+    runs-on: ubuntu-20.04
+    env:
+      INSTANCE_NAME: cke-sonobuoy-${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go-version }}
+      - name: Set up Cloud SDK for cke
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: ${{ secrets.NECO_TEST_PROJECT_ID }}
+          service_account_key: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
+          export_default_credentials: true
+      - name: Run sonobuoy
+        run: |
+          if [ ${{ github.event_name }} = "pull_request" ]; then
+            GITHUB_SHA=$(cat ${GITHUB_EVENT_PATH} | jq -r '.pull_request.head.sha')
+          fi
+          ./bin/run-sonobuoy.sh
+        timeout-minutes: 240
+      - name: Check failures
+        run: |
+          grep "failed tests: 0" /tmp/e2e-check.log
+      - name: Upload sonobuoy test result
+        uses: actions/upload-artifact@v2
+        with:
+          name: sonobuoy-test
+          path: /tmp/sonobuoy.tar.gz
+          retention-days: 1
+  release-cke-image:
+    if: startsWith(github.ref, 'refs/tags/v')
+    name: Release CKE Image
+    needs: sonobuoy
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go-version }}
+      - name: Check static resources
+        run: |
+            cp ./static/resources.go /tmp/resources.go
+            make static
+            cmp /tmp/resources.go ./static/resources.go
+      - run: make test-tools
+      - run: make test GOBIN=$(pwd)/docker
+      - run: docker build -t quay.io/cybozu/cke:latest ./docker
+      - name: Push docker image to Quay.io
+        run: |
+          echo ${{ secrets.QUAY_PASSWORD }} | docker login -u ${{ secrets.QUAY_USER }} --password-stdin quay.io
+          echo "pushing CKE image ..."
+          TAG=${GITHUB_REF#refs/tags/v}
+          docker tag quay.io/cybozu/cke:latest quay.io/cybozu/cke:$TAG
+          docker push quay.io/cybozu/cke:$TAG
+          if echo $TAG | grep -q -e - ; then
+              echo ===== Skip pushing branch tags for pre-release $TAG =====
+              exit 0
+          fi
+          BRANCH=$(echo $TAG | cut -d "." -f 1-2)
+          docker tag quay.io/cybozu/cke:latest quay.io/cybozu/cke:$BRANCH
+          docker push quay.io/cybozu/cke:$BRANCH
+  release-github:
+    name: Release on GitHub
+    runs-on: ubuntu-20.04
+    needs: release-cke-image
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download sonobuoy test
+        uses: actions/download-artifact@v2
+        with:
+          name: sonobuoy-test
+      - name: Prepare files
+        run: |
+          mkdir /tmp/upload
+          cp ./sonobuoy.tar.gz /tmp/upload
+          tar xzf ./sonobuoy.tar.gz -C /tmp/upload --strip-components=4 plugins/e2e/results/global/e2e.log plugins/e2e/results/global/junit_01.xml
+          TAG=${GITHUB_REF#refs/tags/v}
+          sed "s/vX\.Y\.Z/${TAG}/" sonobuoy/README.md > /tmp/upload/README.md
+          sed "s/vX\.Y\.Z/${TAG}/" sonobuoy/PRODUCT.yaml > /tmp/upload/PRODUCT.yaml
+          GOBIN=/tmp/upload go install ./pkg/cke ./pkg/ckecli
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            See [CHANGELOG.md](./CHANGELOG.md) for details.
+          draft: false
+          prerelease: ${{ contains(github.ref, '-') }}
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            /tmp/upload/cke
+            /tmp/upload/ckecli
+            /tmp/upload/e2e.log
+            /tmp/upload/junit_01.xml
+            /tmp/upload/PRODUCT.yaml
+            /tmp/upload/README.md
+            /tmp/upload/sonobuoy.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

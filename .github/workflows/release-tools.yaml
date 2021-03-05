@@ -1,0 +1,24 @@
+name: release-tools
+on:
+  push:
+    tags:
+      - 'tools-*'
+jobs:
+  release-cke-tools:
+    name: Release CKE tools image
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
+      - name: Build CKE tools
+        run: |
+          cd tools
+          make all
+      - name: Push cke-tools image to Quay.io
+        run:
+          echo ${{ secrets.QUAY_PASSWORD }} | docker login -u ${{ secrets.QUAY_USER }} --password-stdin quay.io
+          TAG=${GITHUB_REF#refs/tags/v}
+          docker build --no-cache -t $TAG tools
+          docker push $TAG

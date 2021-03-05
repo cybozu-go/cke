@@ -129,7 +129,7 @@ func testKubernetes() {
 		_, stderr, err = kubectl("run",
 			"-n="+namespace, "--image=quay.io/cybozu/ubuntu:20.04", "--overrides=\"$(cat "+overrideFile+")\"", "--restart=Never",
 			"client", "--", "pause")
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s, err: %v", stderr, err)
 
 		By("waiting pods are ready")
 		Eventually(func() error {

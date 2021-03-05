@@ -62,10 +62,10 @@ export GOPATH
 PATH=/usr/local/go/bin:\$GOPATH/bin:\$PATH
 export PATH
 
-git clone https://github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME} \
-    \$HOME/go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
-cd \$HOME/go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
-git checkout -qf ${CIRCLE_SHA1}
+git clone https://github.com/${GITHUB_REPOSITORY} \
+    \$HOME/go/src/github.com/${GITHUB_REPOSITORY}
+cd \$HOME/go/src/github.com/${GITHUB_REPOSITORY}
+git checkout -qf ${GITHUB_SHA}
 
 cd sonobuoy
 make setup
