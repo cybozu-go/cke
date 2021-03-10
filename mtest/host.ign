@@ -60,7 +60,7 @@
       {
         "name": "data.mount",
         "enable": true,
-        "contents": "[Mount]\nWhat=/dev/vdb1\nWhere=/data\nType=vfat\nOptions=ro\n\n[Install]\nWantedBy=local-fs.target"
+        "contents": "[Mount]\nWhat=data\nWhere=/data\nType=9p\nOptions=ro\n\n[Install]\nWantedBy=local-fs.target"
       }
     ]
   }

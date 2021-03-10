@@ -28,6 +28,12 @@ storage:
         inline: br_netfilter
       mode: 0644
 
+    - path: "/etc/resolv.conf"
+      filesystem: root
+      contents:
+        inline: nameserver 8.8.8.8
+      mode: 0644
+
     - path: "/etc/sysctl.d/br_netfilter.conf"
       filesystem: root
       contents:
@@ -237,13 +243,16 @@ systemd:
     - name: locksmithd.service
       mask: true
 
+    - name: systemd-resolved.service
+      mask: true
+
     - name: data.mount
       enable: true
       contents: |
         [Mount]
-        What=/dev/vdb1
+        What=data
         Where=/data
-        Type=vfat
+        Type=9p
         Options=ro
 
         [Install]

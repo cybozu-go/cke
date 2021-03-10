@@ -24,7 +24,7 @@ CONTAINER_RUNTIME = remote
 ifeq ($(CONTAINER_RUNTIME),remote)
 RUNTIME_ENDPOINT = unix:///var/run/k8s-containerd.sock
 endif
-PLACEMAT = /usr/bin/placemat
+PLACEMAT = /usr/bin/placemat2
 GINKGO = $(GOPATH)/bin/ginkgo --failFast -v
 CURL = curl -fsL
 PLACEMAT_DATADIR = /var/scratch/placemat
@@ -42,10 +42,11 @@ VAULT_ARCHIVE := vault_$(VAULT_VERSION)_linux_amd64.zip
 KUBECTL_URL := https://storage.googleapis.com/kubernetes-release/release/v$(K8S_VERSION)/bin/linux/amd64/kubectl
 SSH_PRIVKEY = $(realpath ./mtest_key)
 OUTPUT := ./output
+DATA_DIR := $(abspath $(OUTPUT))/data
 COREOS_IMAGE := flatcar_production_qemu_image.img
 CKE_IMAGE := $(abspath $(OUTPUT))/cke.img
 CKE_IMAGE_URL := quay.io/cybozu/cke:dev
-CKECLUSTER := $(abspath $(OUTPUT))/cke-cluster.yml
+CKECLUSTER := $(DATA_DIR)/cluster.yml
 CKECONFIG := $(abspath $(OUTPUT))/cke.yml
 KUBECTL := $(abspath $(OUTPUT))/kubectl
 NGINXYAML := $(realpath ./nginx.yml)
@@ -57,11 +58,11 @@ export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL \
 	POLICYYAML REBOOTYAML NGINXYAML WEBHOOKYAML
 
 CONTAINERD_FILES = \
-	$(OUTPUT)/containerd \
-	$(OUTPUT)/containerd-shim \
-	$(OUTPUT)/containerd-shim-runc-v1 \
-	$(OUTPUT)/containerd-shim-runc-v2 \
-	$(OUTPUT)/ctr
+	$(DATA_DIR)/containerd \
+	$(DATA_DIR)/containerd-shim \
+	$(DATA_DIR)/containerd-shim-runc-v1 \
+	$(DATA_DIR)/containerd-shim-runc-v2 \
+	$(DATA_DIR)/ctr
 
 TEST_DEPS = \
 	$(OUTPUT)/cke.img \
@@ -70,23 +71,23 @@ TEST_DEPS = \
 PLACEMAT_DEPS = \
 	$(CONTAINERD_FILES) \
 	$(COREOS_IMAGE) \
-	$(OUTPUT)/cke-cluster.yml \
 	$(OUTPUT)/cluster.yml \
-	$(OUTPUT)/crictl \
-	$(OUTPUT)/etcd \
-	$(OUTPUT)/etcdctl \
 	$(OUTPUT)/host1.ign \
 	$(OUTPUT)/host2.ign \
 	$(OUTPUT)/kubectl \
-	$(OUTPUT)/mtest_key \
 	$(OUTPUT)/node1.ign \
 	$(OUTPUT)/node2.ign \
 	$(OUTPUT)/node3.ign \
 	$(OUTPUT)/node4.ign \
 	$(OUTPUT)/node5.ign \
 	$(OUTPUT)/node6.ign \
-	$(OUTPUT)/setup-cke.sh \
-	$(OUTPUT)/vault
+	$(DATA_DIR)/cluster.yml \
+	$(DATA_DIR)/crictl \
+	$(DATA_DIR)/etcd \
+	$(DATA_DIR)/etcdctl \
+	$(DATA_DIR)/mtest_key \
+	$(DATA_DIR)/setup-cke.sh \
+	$(DATA_DIR)/vault
 
 all:
 	@echo "Specify one of these targets:"
@@ -109,14 +110,14 @@ $(COREOS_IMAGE):
 	$(CURL) -o $@.bz2 https://stable.release.flatcar-linux.net/amd64-usr/current/$@.bz2
 	bunzip2 -q $@.bz2
 
-$(OUTPUT)/etcd $(OUTPUT)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
-	mkdir -p $(OUTPUT)
-	tar -C $(OUTPUT) -x -z --wildcards --strip-components 1 -f $< '*/$(notdir $@)' --warning=no-unknown-keyword
+$(DATA_DIR)/etcd $(DATA_DIR)/etcdctl: $(MANAGEMENT_ETCD_ARCHIVE)
+	mkdir -p $(DATA_DIR)
+	tar -C $(DATA_DIR) -x -z --wildcards --strip-components 1 -f $< '*/$(notdir $@)' --warning=no-unknown-keyword
 	touch $@
 
-$(OUTPUT)/vault: $(VAULT_ARCHIVE)
-	mkdir -p $(OUTPUT)
-	unzip $< -d $(OUTPUT)
+$(DATA_DIR)/vault: $(VAULT_ARCHIVE)
+	mkdir -p $(DATA_DIR)
+	unzip $< -d $(DATA_DIR)
 	touch $@
 
 $(OUTPUT)/cke $(OUTPUT)/ckecli: FORCE
@@ -146,18 +147,19 @@ $(OUTPUT)/kubectl:
 	curl -o $@ -Lf $(KUBECTL_URL)
 	chmod a+x $@
 
-$(OUTPUT)/setup-cke.sh: setup-cke.sh
-	mkdir -p $(OUTPUT)
+$(DATA_DIR)/setup-cke.sh: setup-cke.sh
+	mkdir -p $(DATA_DIR)
 	cp $< $@
 	chmod a+x $@
 
-$(OUTPUT)/mtest_key: $(SSH_PRIVKEY)
-	mkdir -p $(OUTPUT)
+$(DATA_DIR)/mtest_key: $(SSH_PRIVKEY)
+	mkdir -p $(DATA_DIR)
 	cp $< $@
 
 $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
+		-e 's#__DATA_DIR__#$(DATA_DIR)#' \
 		-e 's/__COREOS_IMAGE__/$(COREOS_IMAGE)/' $< > $@
 
 $(OUTPUT)/host1.ign: host.ign
@@ -261,8 +263,8 @@ $(OUTPUT)/node6.ign: $(OUTPUT)/node.ign
 		-e 's/__NODE6__/$(NODE6)/' \
 		-e 's/__NODE_ADDRESS__/$(NODE6)/' $< > $@
 
-$(OUTPUT)/cke-cluster.yml: $(CLUSTER)
-	mkdir -p $(OUTPUT)
+$(DATA_DIR)/cluster.yml: $(CLUSTER)
+	mkdir -p $(DATA_DIR)
 	sed -e 's/__NODE1__/$(NODE1)/' \
 		-e 's/__NODE2__/$(NODE2)/' \
 		-e 's/__NODE3__/$(NODE3)/' \
@@ -280,16 +282,16 @@ $(OUTPUT)/cke.yml: cke.yml
 	sed -e 's/__HOST1__/$(HOST1)/' $< > $@
 
 unpack-containerd:
-	mkdir -p $(OUTPUT)
+	mkdir -p $(DATA_DIR)
 	$(CURL) https://github.com/containerd/containerd/releases/download/v$(CONTAINERD_VERSION)/containerd-$(CONTAINERD_VERSION)-linux-amd64.tar.gz | \
-	tar xzf - --strip-components=1 -C $(OUTPUT) bin/containerd bin/containerd-shim bin/containerd-shim-runc-v1 bin/containerd-shim-runc-v2 bin/ctr --warning=no-unknown-keyword
+	tar xzf - --strip-components=1 -C $(DATA_DIR) bin/containerd bin/containerd-shim bin/containerd-shim-runc-v1 bin/containerd-shim-runc-v2 bin/ctr --warning=no-unknown-keyword
 
 $(CONTAINERD_FILES): unpack-containerd
 
-$(OUTPUT)/crictl:
-	mkdir -p $(OUTPUT)
+$(DATA_DIR)/crictl:
+	mkdir -p $(DATA_DIR)
 	$(CURL) -o crictl.tar.gz https://github.com/kubernetes-sigs/cri-tools/releases/download/v$(CRITOOLS_VERSION)/crictl-v$(CRITOOLS_VERSION)-linux-amd64.tar.gz
-	tar zxvf crictl.tar.gz -C $(OUTPUT) --warning=no-unknown-keyword
+	tar zxvf crictl.tar.gz -C $(DATA_DIR) --warning=no-unknown-keyword
 
 # Targets
 test: $(TEST_DEPS)
@@ -301,7 +303,7 @@ bootstrap: $(TEST_DEPS)
 placemat: $(PLACEMAT_DEPS)
 	sudo rm -rf $(PLACEMAT_DATADIR)
 	sudo rm -rf $(VM_SHARED_DIR)
-	sudo systemd-run --unit=placemat.service $(PLACEMAT) -enable-virtfs $(abspath output/cluster.yml)
+	sudo systemd-run --unit=placemat.service $(PLACEMAT) $(abspath output/cluster.yml)
 	@echo 'Placemat is running.  To kill it, do "make stop".'
 
 stop:
