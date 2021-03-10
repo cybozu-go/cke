@@ -5,34 +5,6 @@ type: external
 use-nat: true
 address: __BRIDGE_ADDRESS__/24
 ---
-kind: DataFolder
-name: data
-files:
-  - name: cluster.yml
-    file: cke-cluster.yml
-  - name: etcd
-    file: etcd
-  - name: etcdctl
-    file: etcdctl
-  - name: vault
-    file: vault
-  - name: setup-cke.sh
-    file: setup-cke.sh
-  - name: mtest_key
-    file: mtest_key
-  - name: containerd
-    file: containerd
-  - name: containerd-shim
-    file: containerd-shim
-  - name: containerd-shim-runc-v1
-    file: containerd-shim-runc-v1
-  - name: containerd-shim-runc-v2
-    file: containerd-shim-runc-v2
-  - name: ctr
-    file: ctr
-  - name: crictl
-    file: crictl
----
 kind: Image
 name: coreos
 file: ../__COREOS_IMAGE__
@@ -49,9 +21,9 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: vvfat
+  - kind: hostPath
     name: data
-    folder: data
+    path: __DATA_DIR__
 ---
 kind: Node
 name: host2
@@ -65,9 +37,9 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: vvfat
+  - kind: hostPath
     name: data
-    folder: data
+    path: __DATA_DIR__
 ---
 kind: Node
 name: node1
@@ -81,9 +53,9 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: vvfat
+  - kind: hostPath
     name: data
-    folder: data
+    path: __DATA_DIR__
 ---
 kind: Node
 name: node2
@@ -97,9 +69,9 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: vvfat
+  - kind: hostPath
     name: data
-    folder: data
+    path: __DATA_DIR__
 ---
 kind: Node
 name: node3
@@ -113,9 +85,9 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: vvfat
+  - kind: hostPath
     name: data
-    folder: data
+    path: __DATA_DIR__
 ---
 kind: Node
 name: node4
@@ -129,9 +101,9 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: vvfat
+  - kind: hostPath
     name: data
-    folder: data
+    path: __DATA_DIR__
 ---
 kind: Node
 name: node5
@@ -145,9 +117,9 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: vvfat
+  - kind: hostPath
     name: data
-    folder: data
+    path: __DATA_DIR__
 ---
 kind: Node
 name: node6
@@ -161,6 +133,6 @@ volumes:
     name: root
     image: coreos
     copy-on-write: true
-  - kind: vvfat
+  - kind: hostPath
     name: data
-    folder: data
+    path: __DATA_DIR__
