@@ -262,7 +262,7 @@ func testKubernetes() {
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 	})
 
-	It("can output audit log", func() {
+	It("can output audit log to journal log", func() {
 		By("confirming journald does not have audit log")
 		logs, _, err := execAt(node1, "sudo", "journalctl", "CONTAINER_NAME=kube-apiserver", "-p", "6..6", "-q")
 		Expect(err).ShouldNot(HaveOccurred())
@@ -278,6 +278,7 @@ func testKubernetes() {
 kind: Policy
 rules:
 - level: Metadata`
+		cluster.Options.APIServer.AuditLogPath = ""
 		clusterSetAndWait(cluster)
 		logs, _, err = execAt(node1, "sudo", "journalctl", "CONTAINER_NAME=kube-apiserver", "-p", "6..6", "-q")
 		Expect(err).ShouldNot(HaveOccurred())
@@ -310,6 +311,43 @@ rules:
 		}
 		Expect(currentPolicyFile).ShouldNot(BeEmpty())
 		Expect(currentPolicyFile).ShouldNot(Equal(policyFile))
+
+		By("disabling audit log")
+		cluster.Options.APIServer.AuditLogEnabled = false
+		cluster.Options.APIServer.AuditLogPolicy = ""
+		clusterSetAndWait(cluster)
+	})
+
+	It("can output audit log to a file", func() {
+		By("confirming audit log file is not yet created")
+		_, _, err := execAt(node1, "sudo", "ls", "/var/log/audit/audit.log")
+		Expect(err).Should(HaveOccurred())
+
+		By("enabling audit log")
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		cluster.Options.APIServer.AuditLogEnabled = true
+		cluster.Options.APIServer.AuditLogPolicy = `apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: Metadata`
+		cluster.Options.APIServer.AuditLogPath = "/var/log/audit/audit.log"
+		clusterSetAndWait(cluster)
+		logs, _, err := execAt(node1, "sudo", "cat", "/var/log/audit/audit.log")
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(logs).ShouldNot(BeEmpty())
+		status, _, err := getClusterStatus(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
+		var policyFile string
+		for _, v := range status.NodeStatuses[node1].APIServer.BuiltInParams.ExtraArguments {
+			if strings.HasPrefix(v, "--audit-policy-file=") {
+				policyFile = v
+				break
+			}
+		}
+		Expect(policyFile).ShouldNot(BeEmpty())
 
 		By("disabling audit log")
 		cluster.Options.APIServer.AuditLogEnabled = false

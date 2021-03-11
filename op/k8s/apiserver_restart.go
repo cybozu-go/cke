@@ -84,7 +84,7 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			paramsMap[n.Address] = APIServerParams(o.cps, n.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy)
+			paramsMap[n.Address] = APIServerParams(o.cps, n.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy, o.params.AuditLogPath)
 		}
 		return common.RunContainerCommand(o.nodes,
 			op.KubeAPIServerContainerName, cke.KubernetesImage,
@@ -245,7 +245,7 @@ func auditPolicyFilePath(policy string) string {
 }
 
 // APIServerParams returns parameters for API server.
-func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet string, auditLogEnabeled bool, auditLogPolicy string) cke.ServiceParams {
+func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet string, auditLogEnabeled bool, auditLogPolicy string, auditLogPath string) cke.ServiceParams {
 	args := []string{
 		"kube-apiserver",
 		"--allow-privileged",
@@ -290,7 +290,11 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 		"--encryption-provider-config=" + encryptionConfigFile,
 	}
 	if auditLogEnabeled {
-		args = append(args, "--audit-log-path=-")
+		logPath := "-"
+		if auditLogPath != "" {
+			logPath = auditLogPath
+		}
+		args = append(args, "--audit-log-path="+logPath)
 		args = append(args, "--audit-policy-file="+auditPolicyFilePath(auditLogPolicy))
 	}
 
