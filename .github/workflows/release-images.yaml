@@ -5,6 +5,8 @@ on:
       - 'v*'
 env:
   go-version: 1.15
+  tag: ${GITHUB_REF#refs/tags/v}
+  prerelease: ${{ contains(github.ref, '-') }}
 jobs:
   sonobuoy:
     name: Run sonobuoy
@@ -39,7 +41,6 @@ jobs:
           path: /tmp/sonobuoy.tar.gz
           retention-days: 1
   release-cke-image:
-    if: startsWith(github.ref, 'refs/tags/v')
     name: Release CKE Image
     needs: sonobuoy
     runs-on: ubuntu-20.04
@@ -60,21 +61,21 @@ jobs:
         run: |
           echo ${{ secrets.QUAY_PASSWORD }} | docker login -u ${{ secrets.QUAY_USER }} --password-stdin quay.io
           echo "pushing CKE image ..."
-          TAG=${GITHUB_REF#refs/tags/v}
-          docker tag quay.io/cybozu/cke:latest quay.io/cybozu/cke:$TAG
-          docker push quay.io/cybozu/cke:$TAG
-          if echo $TAG | grep -q -e - ; then
-              echo ===== Skip pushing branch tags for pre-release $TAG =====
+          docker tag quay.io/cybozu/cke:latest quay.io/cybozu/cke:${{ env.tag }}
+          docker push quay.io/cybozu/cke:${{ env.tag }}
+          if ${{ env.prerelease }} ; then
+              echo ===== Skip pushing branch tags for pre-release ${{ env.tag }} =====
               exit 0
           fi
-          BRANCH=$(echo $TAG | cut -d "." -f 1-2)
+          BRANCH=$(echo ${{ env.tag }} | cut -d "." -f 1-2)
           docker tag quay.io/cybozu/cke:latest quay.io/cybozu/cke:$BRANCH
           docker push quay.io/cybozu/cke:$BRANCH
   release-github:
     name: Release on GitHub
     runs-on: ubuntu-20.04
+    container:
+      image: 1.16.2.1_focal
     needs: release-cke-image
-    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Download sonobuoy test
         uses: actions/download-artifact@v2
@@ -85,33 +86,14 @@ jobs:
           mkdir /tmp/upload
           cp ./sonobuoy.tar.gz /tmp/upload
           tar xzf ./sonobuoy.tar.gz -C /tmp/upload --strip-components=4 plugins/e2e/results/global/e2e.log plugins/e2e/results/global/junit_01.xml
-          TAG=${GITHUB_REF#refs/tags/v}
-          sed "s/vX\.Y\.Z/${TAG}/" sonobuoy/README.md > /tmp/upload/README.md
-          sed "s/vX\.Y\.Z/${TAG}/" sonobuoy/PRODUCT.yaml > /tmp/upload/PRODUCT.yaml
+          sed "s/vX\.Y\.Z/${{ env.tag }}/" sonobuoy/README.md > /tmp/upload/README.md
+          sed "s/vX\.Y\.Z/${{ env.tag }}/" sonobuoy/PRODUCT.yaml > /tmp/upload/PRODUCT.yaml
           GOBIN=/tmp/upload go install ./pkg/cke ./pkg/ckecli
       - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            See [CHANGELOG.md](./CHANGELOG.md) for details.
-          draft: false
-          prerelease: ${{ contains(github.ref, '-') }}
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: |
-            /tmp/upload/cke
-            /tmp/upload/ckecli
-            /tmp/upload/e2e.log
-            /tmp/upload/junit_01.xml
-            /tmp/upload/PRODUCT.yaml
-            /tmp/upload/README.md
-            /tmp/upload/sonobuoy.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER=$(echo ${{ github.repository }} | cut -d '/' -f 1)
+          REPOSITORY=$(echo ${{ github.repository }} | cut -d '/' -f 2)
+          if ${{ env.prerelease }}; then
+            PRERELEASE="-prerelease"
+          fi
+          ghr -t ${{ secrets.GITHUB_TOKEN }} -u ${OWNER} -r ${REPOSITORY} -n ${{ env.tag }} ${PRERELEASE} -b "See [CHANGELOG.md](./CHANGELOG.md) for details." ${{ env.tag }} /tmp/upload/*

@@ -28,6 +28,7 @@ jobs:
   mtest:
     name: Mtest
     runs-on: ubuntu-20.04
+    needs: build
     strategy:
       matrix:
         suite: [functions, robustness, operators]
