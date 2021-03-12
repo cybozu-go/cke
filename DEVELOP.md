@@ -3,10 +3,7 @@ How to develop CKE
 
 ## Go environment
 
-Use Go 1.15 or higher.
-
-CKE uses [Go modules](https://github.com/golang/go/wiki/Modules) to manage dependencies.
-So you must either set `GO111MODULE=on` environment variable or checkout CKE out of `GOPATH`.
+Use Go 1.16 or higher.
 
 ## Starting development for a new Kubernetes minor release
 

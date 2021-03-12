@@ -67,7 +67,7 @@ commands:
 jobs:
   build:
     docker:
-      - image: quay.io/cybozu/golang:1.15-focal
+      - image: quay.io/cybozu/golang:1.16-focal
       - image: quay.io/coreos/etcd:v3.3
     working_directory: /work
     steps:
@@ -217,7 +217,7 @@ jobs:
             grep "failed tests: 0" /tmp/e2e-check.log
   github-release:
     docker:
-      - image: quay.io/cybozu/golang:1.15-focal
+      - image: quay.io/cybozu/golang:1.16-focal
     steps:
       - checkout
       - attach_workspace:
@@ -241,7 +241,7 @@ jobs:
             ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -n ${CIRCLE_TAG} $prerelease ${CIRCLE_TAG} /tmp/upload
   build-tools:
     docker:
-    - image: quay.io/cybozu/golang:1.15-focal
+    - image: quay.io/cybozu/golang:1.16-focal
     steps:
     - checkout
     - run:
