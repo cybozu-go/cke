@@ -54,9 +54,9 @@ It should look like:
     $ git push origin "v$VERSION"
     ```
 
-Then CircleCI automatically builds and pushes the tagged container image to [quay.io](https://quay.io/cybozu/cke).
+Then GitHub Actions automatically builds and pushes the tagged container image to [quay.io](https://quay.io/cybozu/cke).
 
-CircleCI also creates a GitHub release automatically after running [sonobuoy](./sonobuoy) tests.
+GitHub Actions also creates a GitHub release automatically after running [sonobuoy](./sonobuoy) tests.
 So, **DO NOT MANUALLY CREATE GITHUB RELEASES**.  The test results will be attached to the GitHub
 release that can be submitted to [cncf/k8s-conformance](https://github.com/cncf/k8s-conformance).
 

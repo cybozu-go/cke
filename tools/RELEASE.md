@@ -16,6 +16,6 @@ The patch version is increased with `cke-tools` update.
 3. Tag the head commit as `tools-X.Y.Z` where `X.Y.Z` is the new semantic version of `cke-tools`.
 4. Push the tag to GitHub.
 
-CircleCI will build and push the new image as `quay.io/cybozu/cke-tools:X.Y.Z`.
+GitHub Actions will build and push the new image as `quay.io/cybozu/cke-tools:X.Y.Z`.
 
 [semver]: https://semver.org/spec/v2.0.0.html
