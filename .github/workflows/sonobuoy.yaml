@@ -8,14 +8,14 @@ jobs:
     name: Run sonobuoy
     runs-on: ubuntu-20.04
     env:
-      INSTANCE_NAME: cke-sonobuoy-${{ github.run_number }}
+      INSTANCE_NAME: cke-sonobuoy-${{ github.run_number }}-$(TZ=Asia/Tokyo date +%H%M%S)
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
         with:
           go-version: ${{ env.go-version }}
       - name: Set up Cloud SDK for cke
-        uses: google-github-actions/setup-gcloud@master
+        uses: google-github-actions/setup-gcloud@v0.2.1
         with:
           project_id: ${{ secrets.NECO_TEST_PROJECT_ID }}
           service_account_key: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}

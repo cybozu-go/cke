@@ -42,11 +42,11 @@ nilerr:
 .PHONY: goimports
 goimports:
 	if ! which goimports >/dev/null; then \
-		cd /tmp; env GOFLAGS= GO111MODULE=on go get golang.org/x/tools/cmd/goimports; \
+		env GOFLAGS= go install golang.org/x/tools/cmd/goimports; \
 	fi
 
 .PHONY: custom-checker
 custom-checker:
 	if ! which custom-checker >/dev/null; then \
-		cd /tmp; env GOFLAGS= GO111MODULE=on go get github.com/cybozu/neco-containers/golang/analyzer/cmd/custom-checker; \
+		env GOFLAGS= go install github.com/cybozu/neco-containers/golang/analyzer/cmd/custom-checker; \
 	fi

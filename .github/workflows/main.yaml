@@ -33,7 +33,7 @@ jobs:
       matrix:
         suite: [functions, robustness, operators]
     env:
-      INSTANCE_NAME: cke-${{ matrix.suite }}-${{ github.run_number }}
+      INSTANCE_NAME: cke-${{ matrix.suite }}-${{ github.run_number }}-$(TZ=Asia/Tokyo date +%H%M%S)
       SUITE: ${{ matrix.suite }}
       CLUSTER: "cke-cluster.yml"
     steps:
@@ -42,7 +42,7 @@ jobs:
         with:
           go-version: ${{ env.go-version }}
       - name: Set up Cloud SDK for cke
-        uses: google-github-actions/setup-gcloud@master
+        uses: google-github-actions/setup-gcloud@v0.2.1
         with:
           project_id: ${{ secrets.NECO_TEST_PROJECT_ID }}
           service_account_key: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Set up Cloud SDK for cke
-        uses: google-github-actions/setup-gcloud@master
+        uses: google-github-actions/setup-gcloud@v0.2.1
         with:
           project_id: ${{ secrets.NECO_TEST_PROJECT_ID }}
           service_account_key: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
