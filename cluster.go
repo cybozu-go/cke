@@ -111,6 +111,7 @@ type APIServerParams struct {
 	ServiceParams   `json:",inline"`
 	AuditLogEnabled bool   `json:"audit_log_enabled"`
 	AuditLogPolicy  string `json:"audit_log_policy"`
+	AuditLogPath    string `json:"audit_log_path"`
 }
 
 // CNIConfFile is a config file for CNI plugin deployed on worker nodes by CKE.

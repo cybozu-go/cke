@@ -298,7 +298,7 @@ func (nf *NodeFilter) APIServerOutdatedNodes() (nodes []*cke.Node) {
 	for _, n := range nf.cp {
 		st := nf.nodeStatus(n).APIServer
 		currentBuiltIn := k8s.APIServerParams(nf.ControlPlane(), n.Address, nf.cluster.ServiceSubnet,
-			currentExtra.AuditLogEnabled, currentExtra.AuditLogPolicy)
+			currentExtra.AuditLogEnabled, currentExtra.AuditLogPolicy, currentExtra.AuditLogPath)
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded

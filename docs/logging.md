@@ -28,7 +28,9 @@ To view general logs of a apiserver, use `journalctl` as follows:
 $ sudo journalctl CONTAINER_NAME=kube-apiserver -p 3
 ```
 
-To view audit-logs of a apiserver, use `journalctl` as follows:
+You can send the audit log of a apiserver to either of journal log or file.
+
+If the log is sent to journal log, you can see it using `journalctl` as follows:
 
 ```console
 $ sudo journalctl CONTAINER_NAME=kube-apiserver -p 6..6

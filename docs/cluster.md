@@ -139,13 +139,14 @@ Options
 
 ### APIServerParams
 
-| Name                | Required | Type   | Description                                           |
-| ------------------- | -------- | ------ | ----------------------------------------------------- |
-| `audit_log_enabled` | false    | bool   | If true, audit log will be logged to standard output. |
-| `audit_log_policy`  | false    | string | Audit policy configuration in yaml format.            |
-| `extra_args`        | false    | array  | Extra command-line arguments.  List of strings.       |
-| `extra_binds`       | false    | array  | Extra bind mounts.  List of `Mount`.                  |
-| `extra_env`         | false    | object | Extra environment variables.                          |
+| Name                | Required | Type   | Description                                              |
+| ------------------- | -------- | ------ | -------------------------------------------------------- |
+| `audit_log_enabled` | false    | bool   | If true, audit log will be logged to the specified path. |
+| `audit_log_policy`  | false    | string | Audit policy configuration in yaml format.               |
+| `audit_log_path`    | false    | string | Audit log output path. Default is standard output.       |
+| `extra_args`        | false    | array  | Extra command-line arguments.  List of strings.          |
+| `extra_binds`       | false    | array  | Extra bind mounts.  List of `Mount`.                     |
+| `extra_env`         | false    | object | Extra environment variables.                             |
 
 ### ProxyParams
 

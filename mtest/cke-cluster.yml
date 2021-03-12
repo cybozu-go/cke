@@ -20,6 +20,10 @@ options:
   kube-api:
     extra_args:
     - --enable-admission-plugins=PodSecurityPolicy
+    extra_binds:
+    - source: /var/log/audit
+      destination: /var/log/audit
+      read_only: false
   kube-scheduler:
     config:
       apiVersion: kubescheduler.config.k8s.io/v1beta1
