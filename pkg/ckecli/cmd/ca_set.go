@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"io/ioutil"
+	"os"
 
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
@@ -37,7 +37,7 @@ In fact, these CA should be created in Vault.`,
 		}
 
 		var err error
-		caData, err = ioutil.ReadFile(args[1])
+		caData, err = os.ReadFile(args[1])
 		if err != nil {
 			return err
 		}

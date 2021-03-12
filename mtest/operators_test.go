@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 
@@ -131,12 +131,12 @@ func testRebootOperations(cluster *cke.Cluster) {
 	checkCordon(node1)
 
 	By("Preparing a deployment to test protected_namespaces")
-	rd, err := ioutil.ReadFile(rebootYAMLPath)
+	rd, err := os.ReadFile(rebootYAMLPath)
 	Expect(err).ShouldNot(HaveOccurred())
 	_, stderr, err := kubectlWithInput(rd, "apply", "-f", "-")
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
-	psp, err := ioutil.ReadFile(policyYAMLPath)
+	psp, err := os.ReadFile(policyYAMLPath)
 	Expect(err).ShouldNot(HaveOccurred())
 	_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n=reboot-sample")
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)

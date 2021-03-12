@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
@@ -20,7 +20,7 @@ The file must be either YAML or JSON.`,
 
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		b, err := ioutil.ReadFile(args[0])
+		b, err := os.ReadFile(args[0])
 		if err != nil {
 			return err
 		}

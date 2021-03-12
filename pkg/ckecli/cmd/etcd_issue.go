@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/cybozu-go/cke"
@@ -66,15 +65,15 @@ NAME is the username of etcd user to be authenticated.`,
 			cacertFile := "etcd-ca.crt"
 			certFile := fmt.Sprintf("etcd-%s.crt", username)
 			keyFile := fmt.Sprintf("etcd-%s.key", username)
-			err = ioutil.WriteFile(cacertFile, []byte(cacert), 0644)
+			err = os.WriteFile(cacertFile, []byte(cacert), 0644)
 			if err != nil {
 				return err
 			}
-			err = ioutil.WriteFile(certFile, []byte(cert), 0644)
+			err = os.WriteFile(certFile, []byte(cert), 0644)
 			if err != nil {
 				return err
 			}
-			err = ioutil.WriteFile(keyFile, []byte(key), 0600)
+			err = os.WriteFile(keyFile, []byte(key), 0600)
 			if err != nil {
 				return err
 			}

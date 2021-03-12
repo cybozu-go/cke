@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -119,7 +118,7 @@ func parsePrivateKey(keyPath string) (ssh.Signer, error) {
 	}
 	defer f.Close()
 
-	data, err := ioutil.ReadAll(f)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
@@ -305,9 +304,12 @@ func ckecliWithInput(input []byte, args ...string) ([]byte, []byte, error) {
 }
 
 func remoteTempFile(body string) string {
-	f, err := ioutil.TempFile("", "cke-mtest")
+	f, err := os.CreateTemp("", "cke-mtest")
 	Expect(err).NotTo(HaveOccurred())
-	defer f.Close()
+	defer func() {
+		f.Close()
+		os.Remove(f.Name())
+	}()
 	_, err = f.WriteString(body)
 	Expect(err).NotTo(HaveOccurred())
 	_, err = f.Seek(0, io.SeekStart)
@@ -319,7 +321,7 @@ func remoteTempFile(body string) string {
 }
 
 func getCluster() *cke.Cluster {
-	b, err := ioutil.ReadFile(ckeClusterPath)
+	b, err := os.ReadFile(ckeClusterPath)
 	Expect(err).NotTo(HaveOccurred())
 
 	var cluster cke.Cluster

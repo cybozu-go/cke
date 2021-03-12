@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -22,7 +21,7 @@ func main() {
 }
 
 func subMain() error {
-	files, err := ioutil.ReadDir(cniDir)
+	files, err := os.ReadDir(cniDir)
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", cniDir, err)
 	}

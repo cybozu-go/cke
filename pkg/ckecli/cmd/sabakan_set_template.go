@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"context"
+	"os"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/sabakan"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
-	"io/ioutil"
 	"sigs.k8s.io/yaml"
 )
 
@@ -23,7 +23,7 @@ just one control-plane node and one non contorl-plane node.`,
 
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		b, err := ioutil.ReadFile(args[0])
+		b, err := os.ReadFile(args[0])
 		if err != nil {
 			return err
 		}

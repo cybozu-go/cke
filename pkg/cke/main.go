@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
@@ -28,7 +28,7 @@ var (
 )
 
 func loadConfig(p string) (*etcdutil.Config, error) {
-	b, err := ioutil.ReadFile(p)
+	b, err := os.ReadFile(p)
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,6 @@
 package cke
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
@@ -23,7 +22,7 @@ func testMain(m *testing.M) int {
 		os.Exit(code)
 	}
 
-	etcdPath, err := ioutil.TempDir("", "cke-test")
+	etcdPath, err := os.MkdirTemp("", "cke-test")
 	if err != nil {
 		log.ErrorExit(err)
 	}
