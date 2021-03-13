@@ -5,6 +5,14 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.19.5] - 2021-03-13
+
+### Added
+- New option `audit_log_path` in `APIServerParams` (#429)
+
+### Changed
+- server: reflect sabakan machine status while rebooting nodes (#425)
+
 ## [1.19.4] - 2021-02-19
 
 ### Changed
