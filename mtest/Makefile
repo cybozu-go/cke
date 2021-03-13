@@ -49,13 +49,8 @@ CKE_IMAGE_URL := quay.io/cybozu/cke:dev
 CKECLUSTER := $(DATA_DIR)/cluster.yml
 CKECONFIG := $(abspath $(OUTPUT))/cke.yml
 KUBECTL := $(abspath $(OUTPUT))/kubectl
-NGINXYAML := $(realpath ./nginx.yml)
-POLICYYAML := $(realpath ./mtest-policy.yml)
-REBOOTYAML := $(realpath ./reboot-deployment.yaml)
-WEBHOOKYAML := $(realpath ./webhook-resources.yaml)
 
-export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL \
-	POLICYYAML REBOOTYAML NGINXYAML WEBHOOKYAML
+export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL
 
 CONTAINERD_FILES = \
 	$(DATA_DIR)/containerd \

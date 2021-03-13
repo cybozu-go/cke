@@ -6,7 +6,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -24,9 +23,7 @@ func testKubernetes() {
 		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		psp, err := os.ReadFile(policyYAMLPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n="+namespace)
+		_, stderr, err = kubectlWithInput(policyYAML, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		By("waiting the default service account gets created")
@@ -39,9 +36,7 @@ func testKubernetes() {
 		}).Should(Succeed())
 
 		By("running nginx")
-		nginx, err := os.ReadFile(nginxYAMLPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		_, stderr, err = kubectlWithInput(nginx, "apply", "-f", "-", "-n="+namespace)
+		_, stderr, err = kubectlWithInput(nginxYAML, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		By("checking nginx pod status")
@@ -96,9 +91,7 @@ func testKubernetes() {
 		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		psp, err := os.ReadFile(policyYAMLPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n="+namespace)
+		_, stderr, err = kubectlWithInput(policyYAML, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		var node string
@@ -122,9 +115,7 @@ func testKubernetes() {
 		}).Should(Succeed())
 
 		By("deploying Service resource")
-		nginx, err := os.ReadFile(nginxYAMLPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		_, stderr, err = kubectlWithInput(nginx, "apply", "-f", "-", "-n="+namespace)
+		_, stderr, err = kubectlWithInput(nginxYAML, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		_, stderr, err = kubectl("expose", "-n="+namespace, "pod", "nginx", "--port=8000")
@@ -211,9 +202,7 @@ func testKubernetes() {
 		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		psp, err := os.ReadFile(policyYAMLPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		_, stderr, err = kubectlWithInput(psp, "apply", "-f", "-", "-n="+namespace)
+		_, stderr, err = kubectlWithInput(policyYAML, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		for _, name := range []string{
@@ -429,14 +418,9 @@ metadata:
 
 	It("embed certificates for webhooks", func() {
 		By("set user-defined resource")
-		resources, err := os.ReadFile(webhookYAMLPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		_, _, err = ckecliWithInput(resources, "resource", "set", "-")
-		if err != nil {
-			// skip remaining test because old ckecli does not support these resources
-			return
-		}
-		defer ckecliWithInput(resources, "resource", "delete", "-")
+		_, _, err := ckecliWithInput(webhookYAML, "resource", "set", "-")
+		Expect(err).NotTo(HaveOccurred())
+		defer ckecliWithInput(webhookYAML, "resource", "delete", "-")
 		ts := time.Now()
 
 		cluster := getCluster()
