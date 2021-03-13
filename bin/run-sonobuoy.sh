@@ -59,8 +59,6 @@ cat >run.sh <<EOF
 # Run sonobuoy
 GOPATH=\$HOME/go
 export GOPATH
-GO111MODULE=on
-export GO111MODULE
 PATH=/usr/local/go/bin:\$GOPATH/bin:\$PATH
 export PATH
 

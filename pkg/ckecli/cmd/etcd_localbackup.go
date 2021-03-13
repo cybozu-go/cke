@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -107,7 +106,7 @@ func backup(ctx context.Context, etcd *clientv3.Client) error {
 }
 
 func removeOldBackups() error {
-	fis, err := ioutil.ReadDir(config.dir)
+	fis, err := os.ReadDir(config.dir)
 	if err != nil {
 		return err
 	}

@@ -1,5 +1,7 @@
 module github.com/cybozu-go/cke
 
+go 1.16
+
 replace google.golang.org/grpc => google.golang.org/grpc v1.26.0
 
 require (
@@ -34,5 +36,3 @@ require (
 	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009
 	sigs.k8s.io/yaml v1.2.0
 )
-
-go 1.13

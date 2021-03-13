@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/cybozu-go/cke"
@@ -33,7 +33,7 @@ If FILE is -, the contents are read from stdin.`,
 			defer f.Close()
 		}
 
-		data, err := ioutil.ReadAll(f)
+		data, err := io.ReadAll(f)
 		if err != nil {
 			return err
 		}

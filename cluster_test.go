@@ -1,7 +1,7 @@
 package cke
 
 import (
-	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 
@@ -16,7 +16,7 @@ import (
 func testClusterYAML(t *testing.T) {
 	t.Parallel()
 
-	b, err := ioutil.ReadFile("testdata/cluster.yaml")
+	b, err := os.ReadFile("testdata/cluster.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}

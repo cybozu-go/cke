@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
@@ -20,7 +20,7 @@ var (
 )
 
 func loadConfig(p string) (*etcdutil.Config, error) {
-	b, err := ioutil.ReadFile(p)
+	b, err := os.ReadFile(p)
 	if err != nil {
 		return nil, err
 	}

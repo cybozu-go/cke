@@ -3,7 +3,6 @@ package mtest
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -43,7 +42,7 @@ func testCKECLI() {
 	})
 
 	It("should be able to take backups locally", func() {
-		dir, err := ioutil.TempDir("", "")
+		dir, err := os.MkdirTemp("", "")
 		Expect(err).NotTo(HaveOccurred())
 		defer func() {
 			os.RemoveAll(dir)

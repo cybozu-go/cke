@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/cybozu-go/cke"
@@ -57,15 +56,15 @@ var etcdRootIssueCmd = &cobra.Command{
 			cacertFile := "etcd-ca.crt"
 			certFile := "etcd-root.crt"
 			keyFile := "etcd-root.key"
-			err = ioutil.WriteFile(cacertFile, []byte(cacert), 0644)
+			err = os.WriteFile(cacertFile, []byte(cacert), 0644)
 			if err != nil {
 				return err
 			}
-			err = ioutil.WriteFile(certFile, []byte(cert), 0644)
+			err = os.WriteFile(certFile, []byte(cert), 0644)
 			if err != nil {
 				return err
 			}
-			err = ioutil.WriteFile(keyFile, []byte(key), 0600)
+			err = os.WriteFile(keyFile, []byte(key), 0600)
 			if err != nil {
 				return err
 			}
