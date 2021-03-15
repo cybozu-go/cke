@@ -5,7 +5,7 @@ on:
     branches:
       - 'main'
 env:
-  go-version: 1.15
+  go-version: 1.16
 jobs:
   build:
     name: Build CKE
@@ -48,9 +48,7 @@ jobs:
           service_account_key: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
           export_default_credentials: true
       - name: Watch cke logs
-        run: |
-            if [ -f .skip ]; then exit 0; fi
-            ./bin/watch_service cke &
+        run: ./bin/watch_service cke >  cke-service.log &
       - name: Start mtest
         run: |
           if [ ${{ github.event_name }} = "pull_request" ]; then
@@ -58,6 +56,9 @@ jobs:
           fi
           ./bin/run-mtest.sh ${SUITE} ${CLUSTER}
         timeout-minutes: 120
+      - name: Show cke logs
+        if: always()
+        run: cat cke-service.log
       - name: Set the instance lifetime
         if: failure()
         run: |
