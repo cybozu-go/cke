@@ -3,9 +3,10 @@ on:
   pull_request:
   push:
     branches:
-      - '*'
+      - 'main'
 env:
   go-version: 1.16
+  filename: "main.yaml"
 jobs:
   build:
     name: Build CKE
@@ -70,7 +71,7 @@ jobs:
         if: ${{ failure() ||  cancelled() }}
         run: |
           . ./bin/env
-          if [[ github.event_name == 'pull_request' ]]; then
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
               BRANCH_NAME=${GITHUB_HEAD_REF}
           else
               BRANCH_NAME=${GITHUB_REF#refs/heads/}
@@ -81,7 +82,7 @@ jobs:
                 \"type\": \"section\",
                 \"text\": {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"Failed: ${{ github.actor }}'s workflow (${{ github.workflow }}) in <https://github.com/${{ github.repository }}/actions/workflows/${{ github.workflow }}|${{ github.repository }}> (<https://github.com/${{ github.repository }}/actions/workflows/${{ github.workflow }}?query=branch%3A${BRANCH_NAME}|${BRANCH_NAME}>) \n Do you extend the lifetime of ${INSTANCE_NAME}?\"
+                  \"text\": \"Failed: ${{ github.actor }}'s workflow (${{ github.workflow }}) in <https://github.com/${{ github.repository }}/actions/workflows/${{ env.filename }}|${{ github.repository }}> (<https://github.com/${{ github.repository }}/actions/workflows/${{ env.filename }}?query=branch%3A${BRANCH_NAME}|${BRANCH_NAME}>) \n Do you extend the lifetime of ${INSTANCE_NAME}?\"
                 },
                 \"accessory\": {
                   \"type\": \"button\",
