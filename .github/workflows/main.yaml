@@ -33,7 +33,6 @@ jobs:
       matrix:
         suite: [functions, robustness, operators]
     env:
-      INSTANCE_NAME: cke-${{ matrix.suite }}-${{ github.run_number }}-$(TZ=Asia/Tokyo date +%H%M%S)
       SUITE: ${{ matrix.suite }}
       CLUSTER: "cke-cluster.yml"
     steps:
@@ -47,6 +46,8 @@ jobs:
           project_id: ${{ secrets.NECO_TEST_PROJECT_ID }}
           service_account_key: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
           export_default_credentials: true
+      - name: Set GCP instance name
+        run: echo "INSTANCE_NAME=cke-${{ matrix.suite }}-${{ github.run_number }}-$(TZ=Asia/Tokyo date +%H%M%S)" >> $GITHUB_ENV
       - name: Watch cke logs
         run: ./bin/watch_service cke >  cke-service.log &
       - name: Start mtest

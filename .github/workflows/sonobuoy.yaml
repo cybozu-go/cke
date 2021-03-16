@@ -7,8 +7,6 @@ jobs:
   sonobuoy:
     name: Run sonobuoy
     runs-on: ubuntu-20.04
-    env:
-      INSTANCE_NAME: cke-sonobuoy-${{ github.run_number }}-$(TZ=Asia/Tokyo date +%H%M%S)
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -20,6 +18,8 @@ jobs:
           project_id: ${{ secrets.NECO_TEST_PROJECT_ID }}
           service_account_key: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
           export_default_credentials: true
+      - name: Set GCP instance name
+        run: echo "INSTANCE_NAME=cke-${{ matrix.suite }}-${{ github.run_number }}-$(TZ=Asia/Tokyo date +%H%M%S)" >> $GITHUB_ENV
       - name: Run sonobuoy
         run: ./bin/run-sonobuoy.sh
         timeout-minutes: 240
