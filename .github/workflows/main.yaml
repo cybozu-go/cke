@@ -3,7 +3,7 @@ on:
   pull_request:
   push:
     branches:
-      - 'main'
+      - '*'
 env:
   go-version: 1.16
 jobs:
@@ -58,25 +58,30 @@ jobs:
           ./bin/run-mtest.sh ${SUITE} ${CLUSTER}
         timeout-minutes: 120
       - name: Show cke logs
-        if: always()
+        if: ${{ always() }}
         run: cat cke-service.log
       - name: Set the instance lifetime
-        if: failure()
+        if: ${{ failure() ||  cancelled() }}
         run: |
           . ./bin/env
           $GCLOUD compute instances add-metadata ${INSTANCE_NAME} --zone ${ZONE} \
           --metadata shutdown-at=$(date -Iseconds -d+30minutes)
       - name: Notify to Slack
-        if: failure()
+        if: ${{ failure() ||  cancelled() }}
         run: |
           . ./bin/env
+          if [[ github.event_name == 'pull_request' ]]; then
+              BRANCH_NAME=${GITHUB_HEAD_REF}
+          else
+              BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          fi
           curl -X POST -H 'Content-type: application/json' --data "{
             \"blocks\": [
               {
                 \"type\": \"section\",
                 \"text\": {
                   \"type\": \"mrkdwn\",
-                  \"text\": \"Failed: ${{ github.actor }}'s workflow (${{ github.workflow }}) in <https://github.com/${{ github.repository }}/runs/${{ github.run_id }}> (${{ github.ref }}) \n Do you extend the lifetime of ${INSTANCE_NAME}?\"
+                  \"text\": \"Failed: ${{ github.actor }}'s workflow (${{ github.workflow }}) in <https://github.com/${{ github.repository }}/actions/workflows/${{ github.workflow }}|${{ github.repository }}> (<https://github.com/${{ github.repository }}/actions/workflows/${{ github.workflow }}?query=branch%3A${BRANCH_NAME}|${BRANCH_NAME}>) \n Do you extend the lifetime of ${INSTANCE_NAME}?\"
                 },
                 \"accessory\": {
                   \"type\": \"button\",
