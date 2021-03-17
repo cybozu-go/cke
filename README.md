@@ -1,5 +1,5 @@
 [![GitHub release](https://img.shields.io/github/release/cybozu-go/cke.svg?maxAge=60)][releases]
-[![CircleCI](https://circleci.com/gh/cybozu-go/cke.svg?style=svg)](https://circleci.com/gh/cybozu-go/cke)
+[![CI](https://github.com/cybozu-go/cke/workflows/main/badge.svg)](https://github.com/cybozu-go/cke/actions)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/cybozu-go/cke)](https://pkg.go.dev/github.com/cybozu-go/cke)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cybozu-go/cke)](https://goreportcard.com/report/github.com/cybozu-go/cke)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3391/badge)](https://bestpractices.coreinfrastructure.org/projects/3391)

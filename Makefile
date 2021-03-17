@@ -20,14 +20,14 @@ test: test-tools
 	go vet ./...
 
 .PHONY: static
-static:
+static: goimports
 	go generate ./static
 	git add ./static/resources.go
 
 .PHONY: test-tools
-test-tools: staticcheck
+test-tools: staticcheck nilerr goimports custom-checker
 
-.PHONY: staticcheck nilerr
+.PHONY: staticcheck
 staticcheck:
 	if ! which staticcheck >/dev/null; then \
 		env GOFLAGS= go install honnef.co/go/tools/cmd/staticcheck@latest; \
@@ -37,4 +37,16 @@ staticcheck:
 nilerr:
 	if ! which nilerr >/dev/null; then \
 		env GOFLAGS= go install github.com/gostaticanalysis/nilerr/cmd/nilerr@latest; \
+	fi
+
+.PHONY: goimports
+goimports:
+	if ! which goimports >/dev/null; then \
+		env GOFLAGS= go install golang.org/x/tools/cmd/goimports@latest; \
+	fi
+
+.PHONY: custom-checker
+custom-checker:
+	if ! which custom-checker >/dev/null; then \
+		env GOFLAGS= go install github.com/cybozu/neco-containers/golang/analyzer/cmd/custom-checker@latest; \
 	fi

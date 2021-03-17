@@ -16,8 +16,8 @@ const (
 )
 
 func testMain(m *testing.M) int {
-	circleci := os.Getenv("CIRCLECI") == "true"
-	if circleci {
+	ci := os.Getenv("CI") == "true"
+	if ci {
 		code := m.Run()
 		os.Exit(code)
 	}
@@ -55,8 +55,8 @@ func TestMain(m *testing.M) {
 
 func newEtcdClient(t *testing.T) *clientv3.Client {
 	var clientURL string
-	circleci := os.Getenv("CIRCLECI") == "true"
-	if circleci {
+	ci := os.Getenv("CI") == "true"
+	if ci {
 		clientURL = "http://localhost:2379"
 	} else {
 		clientURL = etcdClientURL

@@ -1,8 +1,7 @@
 #!/bin/sh -ex
 
-CONTAINER_RUNTIME=$1
-SUITE=$2
-CLUSTER=$3
+SUITE=$1
+CLUSTER=$2
 
 . $(dirname $0)/env
 
@@ -42,10 +41,10 @@ export GOPATH
 PATH=/usr/local/go/bin:\$GOPATH/bin:\$PATH
 export PATH
 
-git clone https://github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME} \
-    \$HOME/go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
-cd \$HOME/go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
-git checkout -qf ${CIRCLE_SHA1}
+git clone https://github.com/${GITHUB_REPOSITORY} \
+    \$HOME/go/src/github.com/${GITHUB_REPOSITORY}
+cd \$HOME/go/src/github.com/${GITHUB_REPOSITORY}
+git checkout -qf ${GITHUB_SHA}
 
 cd mtest
 cp /assets/etcd-*.tar.gz .
@@ -54,7 +53,7 @@ cp /assets/flatcar_production_qemu_image.img .
 make setup
 make placemat SUITE=${SUITE} CLUSTER="${CLUSTER}"
 sleep 3
-exec make test CONTAINER_RUNTIME=${CONTAINER_RUNTIME} SUITE=${SUITE} CLUSTER="${CLUSTER}"
+exec make test CONTAINER_RUNTIME=remote SUITE=${SUITE} CLUSTER="${CLUSTER}"
 EOF
 chmod +x run.sh
 
