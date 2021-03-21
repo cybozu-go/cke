@@ -112,6 +112,7 @@ This repository contains these programs:
 
 * `cke`: the service.
 * `ckecli`: CLI tool for `cke`.
+* `cke-localproxy`: an optional service to run kube-proxy on the same host as CKE.
 
 To see their usage, run them with `-h` option.
 
@@ -136,7 +137,7 @@ $ docker run -d --read-only \
     quay.io/cybozu/cke:1.18 [options...]
 ```
 
-### Install `ckecli` to host file system
+### Install `ckecli` and `cke-localproxy` to a host directory
 
 ```console
 $ docker run --rm -u root:root \
