@@ -3,6 +3,7 @@ FROM quay.io/cybozu/ubuntu:20.04
 
 COPY cke /usr/local/cke/bin/cke
 COPY ckecli /usr/local/cke/bin/ckecli
+COPY cke-localproxy /usr/local/cke/bin/cke-localproxy
 COPY install-tools /usr/local/cke/install-tools
 
 RUN chmod -R +xr /usr/local/cke

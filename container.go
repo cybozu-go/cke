@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	ckeLabelName = "com.cybozu.cke"
+	// CKELabelName is the name of a Docker label used by CKE.
+	CKELabelName = "com.cybozu.cke"
 )
 
 // ContainerEngine defines interfaces for a container engine.
@@ -20,11 +21,11 @@ type ContainerEngine interface {
 	// PullImage pulls an image.
 	PullImage(img Image) error
 	// Run runs a container as a foreground process.
-	Run(img Image, binds []Mount, command string) error
+	Run(img Image, binds []Mount, command string, args ...string) error
 	// RunWithInput runs a container as a foreground process with stdin as a string.
-	RunWithInput(img Image, binds []Mount, command, input string) error
+	RunWithInput(img Image, binds []Mount, command, input string, args ...string) error
 	/// RunWithOutput runs a container as a foreground process and get stdout and stderr.
-	RunWithOutput(img Image, binds []Mount, command string) ([]byte, []byte, error)
+	RunWithOutput(img Image, binds []Mount, command string, args ...string) ([]byte, []byte, error)
 	// RunSystem runs the named container as a system service.
 	RunSystem(name string, img Image, opts []string, params, extra ServiceParams) error
 	// Exists returns if named system container exists.
@@ -78,8 +79,8 @@ func (c docker) PullImage(img Image) error {
 	return nil
 }
 
-func (c docker) Run(img Image, binds []Mount, command string) error {
-	args := []string{
+func (c docker) Run(img Image, binds []Mount, command string, args ...string) error {
+	runArgs := []string{
 		"docker",
 		"run",
 		"--log-driver=journald",
@@ -93,16 +94,17 @@ func (c docker) Run(img Image, binds []Mount, command string) error {
 		if m.ReadOnly {
 			o = "ro"
 		}
-		args = append(args, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
+		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	args = append(args, img.Name(), command)
+	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, args...)
 
-	_, _, err := c.agent.Run(strings.Join(args, " "))
+	_, _, err := c.agent.Run(strings.Join(runArgs, " "))
 	return err
 }
 
-func (c docker) RunWithInput(img Image, binds []Mount, command, input string) error {
-	args := []string{
+func (c docker) RunWithInput(img Image, binds []Mount, command, input string, args ...string) error {
+	runArgs := []string{
 		"docker",
 		"run",
 		"--log-driver=journald",
@@ -117,15 +119,16 @@ func (c docker) RunWithInput(img Image, binds []Mount, command, input string) er
 		if m.ReadOnly {
 			o = "ro"
 		}
-		args = append(args, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
+		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	args = append(args, img.Name(), command)
+	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, args...)
 
-	return c.agent.RunWithInput(strings.Join(args, " "), input)
+	return c.agent.RunWithInput(strings.Join(runArgs, " "), input)
 }
 
-func (c docker) RunWithOutput(img Image, binds []Mount, command string) ([]byte, []byte, error) {
-	args := []string{
+func (c docker) RunWithOutput(img Image, binds []Mount, command string, args ...string) ([]byte, []byte, error) {
+	runArgs := []string{
 		"docker",
 		"run",
 		"--log-driver=journald",
@@ -139,11 +142,12 @@ func (c docker) RunWithOutput(img Image, binds []Mount, command string) ([]byte,
 		if m.ReadOnly {
 			o = "ro"
 		}
-		args = append(args, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
+		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	args = append(args, img.Name(), command)
+	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, args...)
 
-	stdout, stderr, err := c.agent.Run(strings.Join(args, " "))
+	stdout, stderr, err := c.agent.Run(strings.Join(runArgs, " "))
 
 	return stdout, stderr, err
 }
@@ -201,7 +205,7 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 	if err != nil {
 		return err
 	}
-	labelFile, err := c.putData(ckeLabelName + "=" + string(data))
+	labelFile, err := c.putData(CKELabelName + "=" + string(data))
 	if err != nil {
 		return err
 	}
@@ -347,7 +351,7 @@ RETRY:
 		name := strings.TrimPrefix(dj.Name, "/")
 
 		var params ckeLabel
-		label := dj.Config.Labels[ckeLabelName]
+		label := dj.Config.Labels[CKELabelName]
 
 		err = json.Unmarshal([]byte(label), &params)
 		if err != nil {

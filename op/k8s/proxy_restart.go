@@ -10,6 +10,7 @@ type kubeProxyRestartOp struct {
 	nodes []*cke.Node
 
 	cluster string
+	ap      string
 	params  cke.ProxyParams
 
 	step  int
@@ -17,10 +18,11 @@ type kubeProxyRestartOp struct {
 }
 
 // KubeProxyRestartOp returns an Operator to restart kube-proxy.
-func KubeProxyRestartOp(nodes []*cke.Node, cluster string, params cke.ProxyParams) cke.Operator {
+func KubeProxyRestartOp(nodes []*cke.Node, cluster, ap string, params cke.ProxyParams) cke.Operator {
 	return &kubeProxyRestartOp{
 		nodes:   nodes,
 		cluster: cluster,
+		ap:      ap,
 		params:  params,
 		files:   common.NewFilesBuilder(nodes),
 	}
@@ -37,7 +39,7 @@ func (o *kubeProxyRestartOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.KubernetesImage)
 	case 1:
 		o.step++
-		return prepareProxyFilesCommand{o.cluster, o.files}
+		return prepareProxyFilesCommand{o.cluster, o.ap, o.files}
 	case 2:
 		o.step++
 		return o.files

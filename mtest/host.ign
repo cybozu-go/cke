@@ -16,6 +16,12 @@
       },
       {
         "filesystem": "root",
+        "path": "/etc/resolv.conf",
+        "mode": 420,
+        "contents": { "source": "data:,nameserver%208.8.8.8%0A" }
+      },
+      {
+        "filesystem": "root",
         "path": "/etc/cke/config.yml",
         "mode": 420,
         "contents": { "source": "data:,endpoints%3a%0d%0a%20%20%2d%20http%3a%2f%2f__HOST1__%3a2379%0d%0a" }
@@ -56,6 +62,10 @@
       {
         "mask": true,
         "name": "locksmithd.service"
+      },
+      {
+        "mask": true,
+        "name": "systemd-resolved.service"
       },
       {
         "name": "data.mount",

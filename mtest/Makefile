@@ -115,7 +115,7 @@ $(DATA_DIR)/vault: $(VAULT_ARCHIVE)
 	unzip $< -d $(DATA_DIR)
 	touch $@
 
-$(OUTPUT)/cke $(OUTPUT)/ckecli: FORCE
+$(OUTPUT)/cke $(OUTPUT)/ckecli $(OUTPUT)/cke-localproxy: FORCE
 	mkdir -p $(OUTPUT)
 	cd ..; gofail enable op/etcd && \
 		if GOBIN=$(realpath $(OUTPUT)) go install ./pkg/$(notdir $@); then \
@@ -125,10 +125,11 @@ $(OUTPUT)/cke $(OUTPUT)/ckecli: FORCE
 			exit 1; \
 		fi
 
-$(OUTPUT)/cke.img: $(OUTPUT)/cke $(OUTPUT)/ckecli
+$(OUTPUT)/cke.img: $(OUTPUT)/cke $(OUTPUT)/ckecli $(OUTPUT)/cke-localproxy
 	cp ../LICENSE $(shell pwd)/../docker
 	cp $(OUTPUT)/cke ../docker/
 	cp $(OUTPUT)/ckecli ../docker/
+	cp $(OUTPUT)/cke-localproxy ../docker/
 	sudo docker build --no-cache --rm=false -t $(CKE_IMAGE_URL) ../docker/
 	mkdir -p $(OUTPUT)
 	rm -f $@
@@ -150,6 +151,7 @@ $(DATA_DIR)/setup-cke.sh: setup-cke.sh
 $(DATA_DIR)/mtest_key: $(SSH_PRIVKEY)
 	mkdir -p $(DATA_DIR)
 	cp $< $@
+	chmod 644 $@
 
 $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)

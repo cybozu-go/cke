@@ -46,17 +46,13 @@ func (c makeDirsCommand) Run(ctx context.Context, inf cke.Infrastructure, _ stri
 		binds = append(binds, m)
 	}
 
-	args := append([]string{
-		"make_directories",
-		"--mode=" + c.mode,
-	}, dests...)
-	arg := strings.Join(args, " ")
+	args := append([]string{"--mode=" + c.mode}, dests...)
 
 	env := well.NewEnvironment(ctx)
 	for _, n := range c.nodes {
 		ce := inf.Engine(n.Address)
 		env.Go(func(ctx context.Context) error {
-			return ce.Run(cke.ToolsImage, binds, arg)
+			return ce.Run(cke.ToolsImage, binds, "make_directories", args...)
 		})
 	}
 	env.Stop()

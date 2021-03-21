@@ -13,6 +13,7 @@ type kubeProxyBootOp struct {
 	nodes []*cke.Node
 
 	cluster string
+	ap      string
 	params  cke.ProxyParams
 
 	step  int
@@ -20,9 +21,10 @@ type kubeProxyBootOp struct {
 }
 
 // KubeProxyBootOp returns an Operator to boot kube-proxy.
-func KubeProxyBootOp(nodes []*cke.Node, cluster string, params cke.ProxyParams) cke.Operator {
+func KubeProxyBootOp(nodes []*cke.Node, cluster, ap string, params cke.ProxyParams) cke.Operator {
 	return &kubeProxyBootOp{
 		nodes:   nodes,
+		ap:      ap,
 		cluster: cluster,
 		params:  params,
 		files:   common.NewFilesBuilder(nodes),
@@ -40,7 +42,7 @@ func (o *kubeProxyBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.KubernetesImage)
 	case 1:
 		o.step++
-		return prepareProxyFilesCommand{o.cluster, o.files}
+		return prepareProxyFilesCommand{o.cluster, o.ap, o.files}
 	case 2:
 		o.step++
 		return o.files
@@ -74,6 +76,7 @@ func (o *kubeProxyBootOp) Targets() []string {
 
 type prepareProxyFilesCommand struct {
 	cluster string
+	ap      string
 	files   *common.FilesBuilder
 }
 
@@ -90,7 +93,7 @@ func (c prepareProxyFilesCommand) Run(ctx context.Context, inf cke.Infrastructur
 		if err != nil {
 			return nil, err
 		}
-		cfg := proxyKubeconfig(c.cluster, ca, crt, key)
+		cfg := proxyKubeconfig(c.cluster, ca, crt, key, c.ap)
 		return clientcmd.Write(*cfg)
 	}
 	return c.files.AddFile(ctx, kubeconfigPath, g)

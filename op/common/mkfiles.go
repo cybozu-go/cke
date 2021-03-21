@@ -137,9 +137,8 @@ func (c *FilesBuilder) Run(ctx context.Context, inf cke.Infrastructure, _ string
 			}
 			data := buf.String()
 
-			arg := "write_files /mnt"
 			ce := inf.Engine(n.Address)
-			return ce.RunWithInput(cke.ToolsImage, binds, arg, data)
+			return ce.RunWithInput(cke.ToolsImage, binds, "write_files", data, "/mnt")
 		})
 	}
 	env.Stop()
