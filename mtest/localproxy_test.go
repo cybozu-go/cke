@@ -33,7 +33,7 @@ func testLocalProxy() {
 		Consistently(func() error {
 			stdout, stderr, err := execAt(host1, "docker", "ps", "--format={{.Names}}")
 			if err != nil {
-				return fmt.Errorf("ipvsadm failed: %s: %w", stderr, err)
+				return fmt.Errorf("docker ps failed: %s: %w", stderr, err)
 			}
 
 			if bytes.Contains(stdout, []byte("cke-unbound")) {
