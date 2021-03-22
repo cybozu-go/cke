@@ -1,6 +1,9 @@
 cke command reference
 =====================
 
+`cke` installs and maintains a Kubernetes cluster.
+It uses etcd as data storage and to elect a leader instance.
+
 Usage
 -----
 

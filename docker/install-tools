@@ -3,4 +3,5 @@
 DEST=/host
 
 cp --remove-destination /usr/local/cke/bin/ckecli $DEST/ckecli
-chmod 755 $DEST/ckecli
+cp --remove-destination /usr/local/cke/bin/cke-localproxy $DEST/cke-localproxy
+chmod 755 $DEST/ckecli $DEST/cke-localproxy

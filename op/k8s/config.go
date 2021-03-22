@@ -75,8 +75,11 @@ func GenerateSchedulerConfiguration(params cke.SchedulerParams) *schedulerv1beta
 	return c
 }
 
-func proxyKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.Config {
-	return cke.Kubeconfig(cluster, "system:kube-proxy", ca, clientCrt, clientKey)
+func proxyKubeconfig(cluster, ca, clientCrt, clientKey, server string) *api.Config {
+	if server == "" {
+		return cke.Kubeconfig(cluster, "system:kube-proxy", ca, clientCrt, clientKey)
+	}
+	return cke.UserKubeconfig(cluster, "system:kube-proxy", ca, clientCrt, clientKey, server)
 }
 
 func kubeletKubeconfig(cluster string, n *cke.Node, caPath, certPath, keyPath string) *api.Config {

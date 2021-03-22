@@ -49,12 +49,67 @@ func (c *certCache) get(issue func() (cert, key []byte, err error)) (cert, key [
 	return
 }
 
-var kubeHTTP struct {
+// KubeHTTP provides TLS client certificate to access kube-apiserver.
+// The certificate is cached in memory in order to avoid excessive certificate issuance.
+type KubeHTTP struct {
 	once   sync.Once
 	cache  *certCache
 	err    error
 	ca     string
 	client *well.HTTPClient
+}
+
+// Init initializes KubeHTTP.
+func (k *KubeHTTP) Init(ctx context.Context, inf Infrastructure) error {
+	k.once.Do(func() {
+		cache := &certCache{
+			lifetime: time.Hour * 24,
+		}
+		k.cache = cache
+
+		ca, err := inf.Storage().GetCACertificate(ctx, CAKubernetes)
+		if err != nil {
+			k.err = err
+			return
+		}
+		k.ca = ca
+
+		cp := x509.NewCertPool()
+		cp.AppendCertsFromPEM([]byte(k.ca))
+		k.client = &well.HTTPClient{
+			Client: &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+						RootCAs: cp,
+					},
+				},
+			},
+		}
+	})
+
+	return k.err
+}
+
+// CACert returns the CA certificate of kube-apiserver.
+func (k *KubeHTTP) CACert() string {
+	return k.ca
+}
+
+// GetCert retrieves cached TLS client certificate to access kube-apiserver.
+func (k *KubeHTTP) GetCert(ctx context.Context, inf Infrastructure) (cert, key []byte, err error) {
+	issue := func() (cert, key []byte, err error) {
+		c, k, e := KubernetesCA{}.IssueUserCert(ctx, inf, RoleAdmin, AdminGroup, "25h")
+		if e != nil {
+			return nil, nil, e
+		}
+		return []byte(c), []byte(k), nil
+	}
+	return k.cache.get(issue)
+}
+
+// Client returns a HTTP client to acess kube-apiserver.
+func (k *KubeHTTP) Client() *well.HTTPClient {
+	return k.client
 }
 
 func setVaultClient(client *vault.Client) {
@@ -86,6 +141,8 @@ type Infrastructure interface {
 	HTTPSClient(ctx context.Context) (*well.HTTPClient, error)
 }
 
+var kubeHTTP KubeHTTP
+
 type ckeInfrastructure struct {
 	agents  map[string]Agent
 	storage Storage
@@ -105,45 +162,12 @@ type ckeInfrastructure struct {
 }
 
 func (i *ckeInfrastructure) init(ctx context.Context) error {
-	kubeHTTP.once.Do(func() {
-		cache := &certCache{
-			lifetime: time.Hour * 24,
-		}
-		kubeHTTP.cache = cache
-
-		ca, err := i.Storage().GetCACertificate(ctx, CAKubernetes)
-		if err != nil {
-			kubeHTTP.err = err
-			return
-		}
-		kubeHTTP.ca = ca
-
-		cp := x509.NewCertPool()
-		cp.AppendCertsFromPEM([]byte(kubeHTTP.ca))
-		kubeHTTP.client = &well.HTTPClient{
-			Client: &http.Client{
-				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{
-						RootCAs: cp,
-					},
-				},
-			},
-		}
-	})
-
-	if kubeHTTP.err != nil {
-		return kubeHTTP.err
+	if err := kubeHTTP.Init(ctx, i); err != nil {
+		return err
 	}
 
 	i.once.Do(func() {
-		issue := func() (cert, key []byte, err error) {
-			c, k, e := KubernetesCA{}.IssueUserCert(ctx, i, RoleAdmin, AdminGroup, "25h")
-			if e != nil {
-				return nil, nil, e
-			}
-			return []byte(c), []byte(k), nil
-		}
-		cert, key, err := kubeHTTP.cache.get(issue)
+		cert, key, err := kubeHTTP.GetCert(ctx, i)
 		if err != nil {
 			i.initErr = err
 			return
@@ -281,7 +305,7 @@ func (i *ckeInfrastructure) K8sConfig(ctx context.Context, n *Node) (*rest.Confi
 		TLSClientConfig: rest.TLSClientConfig{
 			CertData: i.kubeCert,
 			KeyData:  i.kubeKey,
-			CAData:   []byte(kubeHTTP.ca),
+			CAData:   []byte(kubeHTTP.CACert()),
 		},
 		Timeout: 5 * time.Second,
 	}, nil
@@ -304,5 +328,5 @@ func (i *ckeInfrastructure) HTTPSClient(ctx context.Context) (*well.HTTPClient, 
 	if err != nil {
 		return nil, err
 	}
-	return kubeHTTP.client, nil
+	return kubeHTTP.Client(), nil
 }

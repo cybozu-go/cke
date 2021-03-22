@@ -5,6 +5,9 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Added
+- New optional service `cke-localproxy` (#433)
+
 ## [1.19.5] - 2021-03-13
 
 ### Added

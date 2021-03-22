@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
@@ -29,12 +30,15 @@ var kubernetesIssueCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			cpNodes := cke.ControlPlanes(cluster.Nodes)
-			if len(cpNodes) == 0 {
-				return errors.New("no control plane")
-			}
 
-			server := "https://" + cpNodes[0].Address + ":6443"
+			server := "https://kubernetes.default.svc"
+			if _, err := net.LookupHost("kubernetes.default.svc"); err != nil {
+				cpNodes := cke.ControlPlanes(cluster.Nodes)
+				if len(cpNodes) == 0 {
+					return errors.New("no control plane")
+				}
+				server = "https://" + cpNodes[0].Address + ":6443"
+			}
 
 			cacert, err := storage.GetCACertificate(ctx, cke.CAKubernetes)
 			if err != nil {

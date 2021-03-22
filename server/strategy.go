@@ -148,10 +148,10 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []cke.Op
 		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.ProxyStoppedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeProxyBootOp(nodes, c.Name, c.Options.Proxy))
+		ops = append(ops, k8s.KubeProxyBootOp(nodes, c.Name, "", c.Options.Proxy))
 	}
 	if nodes := nf.SSHConnectedNodes(nf.ProxyOutdatedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeProxyRestartOp(nodes, c.Name, c.Options.Proxy))
+		ops = append(ops, k8s.KubeProxyRestartOp(nodes, c.Name, "", c.Options.Proxy))
 	}
 	return ops
 }
