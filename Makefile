@@ -9,23 +9,29 @@ all: test
 setup:
 	curl -fsL https://github.com/etcd-io/etcd/releases/download/v$(ETCD_VERSION)/etcd-v$(ETCD_VERSION)-linux-amd64.tar.gz | sudo tar -xzf - --strip-components=1 -C /usr/local/bin etcd-v$(ETCD_VERSION)-linux-amd64/etcd etcd-v$(ETCD_VERSION)-linux-amd64/etcdctl
 
-.PHONY: test
-test: test-tools
+.PHONY: lint
+lint: lint-tools
 	test -z "$$(gofmt -s -l . | tee /dev/stderr)"
 	staticcheck ./...
 	test -z "$$(nilerr ./... 2>&1 | tee /dev/stderr)"
 	test -z "$$(custom-checker -restrictpkg.packages=html/template,log ./... 2>&1 | tee /dev/stderr)"
-	go install ./pkg/...
-	go test -race -v ./...
 	go vet ./...
+
+.PHONY: test
+test:
+	go test -race -v ./...
+
+.PHONY: install
+install:
+	go install ./pkg/...
 
 .PHONY: static
 static: goimports
 	go generate ./static
 	git add ./static/resources.go
 
-.PHONY: test-tools
-test-tools: staticcheck nilerr goimports custom-checker
+.PHONY: lint-tools
+lint-tools: staticcheck nilerr goimports custom-checker
 
 .PHONY: staticcheck
 staticcheck:
