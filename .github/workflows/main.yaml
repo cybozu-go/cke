@@ -22,10 +22,9 @@ jobs:
             make static
             cmp /tmp/resources.go ./static/resources.go
       - run: docker run -d --network host quay.io/coreos/etcd:v3.3
-      - run: make test-tools
-      - run: make test GOBIN=$(pwd)/docker
-      - name: build-image
-        run: docker build -t quay.io/cybozu/cke:latest ./docker
+      - run: make test
+      - run: make install GOBIN=$(pwd)/docker
+      - run: docker build -t quay.io/cybozu/cke:latest ./docker
   mtest:
     name: Mtest
     runs-on: ubuntu-20.04

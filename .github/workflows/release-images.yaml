@@ -49,13 +49,7 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: ${{ env.go-version }}
-      - name: Check static resources
-        run: |
-            cp ./static/resources.go /tmp/resources.go
-            make static
-            cmp /tmp/resources.go ./static/resources.go
-      - run: make test-tools
-      - run: make test GOBIN=$(pwd)/docker
+      - run: make install GOBIN=$(pwd)/docker
       - run: docker build -t quay.io/cybozu/cke:latest ./docker
       - name: Push docker image to Quay.io
         run: |
