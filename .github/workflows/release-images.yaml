@@ -68,7 +68,7 @@ jobs:
     name: Release on GitHub
     runs-on: ubuntu-20.04
     container:
-      image: golang:1.16.2.1_focal
+      image: quay.io/cybozu/golang:1.16-focal
     needs: release-cke-image
     steps:
       - name: Download sonobuoy test
@@ -90,4 +90,4 @@ jobs:
           if ${{ env.prerelease }}; then
             PRERELEASE="-prerelease"
           fi
-          ghr -t ${{ secrets.GITHUB_TOKEN }} -u ${OWNER} -r ${REPOSITORY} -n ${{ env.tag }} ${PRERELEASE} -b "See [CHANGELOG.md](./CHANGELOG.md) for details." ${{ env.tag }} /tmp/upload/*
+          ghr -t ${{ secrets.GITHUB_TOKEN }} -u ${OWNER} -r ${REPOSITORY} -n ${{ env.tag }} ${PRERELEASE} -b "See [CHANGELOG.md](./CHANGELOG.md) for details." ${{ env.tag }} /tmp/upload/
