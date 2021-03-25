@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.19.7-rc.1] - 2021-03-25
+
+No changes. Only for fixing GitHub release workflow.
+
 ## [1.19.6] - 2021-03-22
 
 ### Added
@@ -80,7 +84,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.19.6...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.19.7-rc.1...HEAD
+[1.19.7-rc.1]: https://github.com/cybozu-go/cke/compare/v1.19.6...v1.19.7-rc.1
 [1.19.6]: https://github.com/cybozu-go/cke/compare/v1.19.5...v1.19.6
 [1.19.5]: https://github.com/cybozu-go/cke/compare/v1.19.4...v1.19.5
 [1.19.4]: https://github.com/cybozu-go/cke/compare/v1.19.3...v1.19.4
