@@ -68,7 +68,7 @@ jobs:
     name: Release on GitHub
     runs-on: ubuntu-20.04
     container:
-      image: 1.16.2.1_focal
+      image: golang:1.16.2.1_focal
     needs: release-cke-image
     steps:
       - name: Download sonobuoy test
