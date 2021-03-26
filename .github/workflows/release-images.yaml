@@ -71,6 +71,7 @@ jobs:
       image: quay.io/cybozu/golang:1.16-focal
     needs: release-cke-image
     steps:
+      - uses: actions/checkout@v2
       - name: Download sonobuoy test
         uses: actions/download-artifact@v2
         with:
