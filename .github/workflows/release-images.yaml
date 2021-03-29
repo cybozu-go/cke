@@ -81,8 +81,8 @@ jobs:
           mkdir /tmp/upload
           cp ./sonobuoy.tar.gz /tmp/upload
           tar xzf ./sonobuoy.tar.gz -C /tmp/upload --strip-components=4 plugins/e2e/results/global/e2e.log plugins/e2e/results/global/junit_01.xml
-          sed "s/vX\.Y\.Z/${{ env.tag }}/" sonobuoy/README.md > /tmp/upload/README.md
-          sed "s/vX\.Y\.Z/${{ env.tag }}/" sonobuoy/PRODUCT.yaml > /tmp/upload/PRODUCT.yaml
+          sed "s/vX\.Y\.Z/v${{ env.tag }}/" sonobuoy/README.md > /tmp/upload/README.md
+          sed "s/vX\.Y\.Z/v${{ env.tag }}/" sonobuoy/PRODUCT.yaml > /tmp/upload/PRODUCT.yaml
           GOBIN=/tmp/upload go install ./pkg/cke ./pkg/ckecli
       - name: Create release
         run: |
@@ -91,4 +91,4 @@ jobs:
           if ${{ env.prerelease }}; then
             PRERELEASE="-prerelease"
           fi
-          ghr -t ${{ secrets.GITHUB_TOKEN }} -u ${OWNER} -r ${REPOSITORY} -n ${{ env.tag }} ${PRERELEASE} -b "See [CHANGELOG.md](./CHANGELOG.md) for details." ${{ env.tag }} /tmp/upload/
+          ghr -t ${{ secrets.GITHUB_TOKEN }} -u ${OWNER} -r ${REPOSITORY} -n v${{ env.tag }} ${PRERELEASE} -b "See [CHANGELOG.md](./CHANGELOG.md) for details." v${{ env.tag }} /tmp/upload/
