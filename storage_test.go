@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/google/go-cmp/cmp"
 )
@@ -123,6 +124,14 @@ func testStorageConstraints(t *testing.T) {
 	}
 }
 
+func checkLeaderKey(ctx context.Context, s Storage, leaderKey string) (bool, error) {
+	resp, err := s.Get(ctx, leaderKey, clientv3.WithKeysOnly())
+	if err != nil {
+		return false, err
+	}
+	return len(resp.Kvs) > 0, nil
+}
+
 func testStorageRecord(t *testing.T) {
 	t.Parallel()
 
@@ -152,7 +161,7 @@ func testStorageRecord(t *testing.T) {
 
 	leaderKey := e.Key()
 
-	isLeader, err := storage.IsLeader(ctx, leaderKey)
+	isLeader, err := checkLeaderKey(ctx, storage, leaderKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,7 +330,7 @@ func testStorageRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	isLeader, err = storage.IsLeader(ctx, leaderKey)
+	isLeader, err = checkLeaderKey(ctx, storage, leaderKey)
 	if err != nil {
 		t.Fatal(err)
 	}

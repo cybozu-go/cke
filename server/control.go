@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/metrics"
@@ -35,6 +36,8 @@ func NewController(s *concurrency.Session, interval, gcInterval, timeout time.Du
 
 // Run execute procedures with leader elections
 func (c Controller) Run(ctx context.Context) error {
+	metrics.UpdateLeader(false)
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		return err
@@ -42,24 +45,46 @@ func (c Controller) Run(ctx context.Context) error {
 
 	e := concurrency.NewElection(c.session, cke.KeyLeader)
 
-RETRY:
+	// When the etcd is stopping, the Campaign will hang up.
+	// So check the session and exit if the session is closed.
+	doneCh := make(chan error)
+	go func() {
+		doneCh <- e.Campaign(ctx, hostname)
+	}()
 	select {
+	case <-ctx.Done():
+		return ctx.Err()
 	case <-c.session.Done():
-		return errors.New("session has been orphaned")
-	default:
+		return errors.New("failed to campaign: session is closed")
+	case err := <-doneCh:
+		if err != nil {
+			return fmt.Errorf("failed to campaign: %s", err.Error())
+		}
 	}
-
-	metrics.UpdateLeader(false)
-	err = e.Campaign(ctx, hostname)
-	if err != nil {
-		return err
-	}
-	metrics.UpdateLeader(true)
 
 	leaderKey := e.Key()
 	log.Info("I am the leader", map[string]interface{}{
 		"session": c.session.Lease(),
 	})
+	metrics.UpdateLeader(true)
+
+	// Release the leader before terminating.
+	defer func() {
+		select {
+		case <-c.session.Done():
+			log.Warn("session is closed, skip resign", nil)
+			return
+		default:
+			ctxWithTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			err := e.Resign(ctxWithTimeout)
+			if err != nil {
+				log.Error("failed to resign", map[string]interface{}{
+					log.FnError: err,
+				})
+			}
+		}
+	}()
 
 	if c.addon != nil {
 		if err := c.addon.Init(ctx, leaderKey); err != nil {
@@ -67,18 +92,7 @@ RETRY:
 		}
 	}
 
-	err = c.runLoop(ctx, leaderKey)
-	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), c.timeout)
-	err2 := e.Resign(ctxWithTimeout)
-	cancel()
-	if err2 != nil {
-		return err2
-	}
-	if err == cke.ErrNoLeader {
-		log.Warn("lost the leadership", nil)
-		goto RETRY
-	}
-	return err
+	return c.runLoop(ctx, leaderKey)
 }
 
 func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
@@ -97,6 +111,32 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 			return c.addon.StartWatch(ctx, addonChan)
 		})
 	}
+
+	// Watch my leadership.
+	env.Go(func(ctx context.Context) error {
+		ch := c.session.Client().Watch(ctx, leaderKey, clientv3.WithFilterPut())
+		for {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-c.session.Done():
+				return errors.New("session is closed")
+			case resp, ok := <-ch:
+				if !ok {
+					return errors.New("watch is closed")
+				}
+				if resp.Err() != nil {
+					return resp.Err()
+				}
+				for _, ev := range resp.Events {
+					if ev.Type == clientv3.EventTypeDelete {
+						return errors.New("leader key is deleted")
+					}
+				}
+			}
+		}
+	})
+
 	env.Go(func(ctx context.Context) error {
 		return startWatcher(ctx, c.session.Client(), watchChan)
 	})
@@ -188,17 +228,6 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 
 	storage := cke.Storage{
 		Client: c.session.Client(),
-	}
-
-	// Check my leadership.
-	// This check is not mandatory because every update operation checks leadership by itself.
-	// This check helps early detection of losing leadership even if no update occurs for a while.
-	isLeader, err := storage.IsLeader(ctx, leaderKey)
-	if err != nil {
-		return err
-	}
-	if !isLeader {
-		return cke.ErrNoLeader
 	}
 
 	ts := time.Now().UTC()
