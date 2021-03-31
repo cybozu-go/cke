@@ -227,6 +227,15 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 
 	inf, err := cke.NewInfrastructure(ctx, cluster, storage)
 	if err != nil {
+		// When the vault token is revoked, the following error will be returned. In this case, CKE can not continue any operations.
+		// Error: "Error making API request.\n\nURL: GET <<URL>>\nCode: 403. Errors:\n\n* permission denied"
+		if strings.Contains(err.Error(), "403") {
+			log.Error("vault token was revoked", map[string]interface{}{
+				log.FnError: err,
+			})
+			return err
+		}
+
 		wait = true
 		log.Error("failed to initialize infrastructure", map[string]interface{}{
 			log.FnError: err,
