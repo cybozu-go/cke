@@ -93,7 +93,15 @@ func main() {
 	if err != nil {
 		log.ErrorExit(err)
 	}
-	defer session.Close()
+	defer func() {
+		// Checking the session to avoid an error caused by duplicated closing.
+		select {
+		case <-session.Done():
+			return
+		default:
+			session.Close()
+		}
+	}()
 
 	timeout, err := time.ParseDuration(cfg.Timeout)
 	if err != nil {
