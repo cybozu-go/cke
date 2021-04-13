@@ -5,6 +5,10 @@ GOBUILD = CGO_ENABLED=0 go build -ldflags="-w -s"
 .PHONY: all
 all: bin/empty-dir bin/install-cni bin/make_directories bin/rivers bin/write_files plugins
 
+.PHONY: test
+test:
+	go test -v ./...
+
 .PHONY: image
 image: all
 	docker build --no-cache -t $(TAG) .
