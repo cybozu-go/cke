@@ -15,7 +15,7 @@ import (
 type HealthCheckerConfig struct {
 	CheckInterval time.Duration
 	Logger        *log.Logger
-	Dialer        *net.Dialer
+	Dialer        Dialer
 }
 
 // HealthChecker represents upstream health checker
@@ -23,7 +23,7 @@ type HealthChecker struct {
 	upstreams     []*Upstream
 	checkInterval time.Duration
 	logger        *log.Logger
-	dialer        *net.Dialer
+	dialer        Dialer
 }
 
 // NewHealthChecker creates a new health checker

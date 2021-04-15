@@ -18,11 +18,16 @@ const (
 	copyBufferSize = 64 << 10
 )
 
+type Dialer interface {
+	Dial(network, address string) (net.Conn, error)
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
 // Config represents TCP servers
 type Config struct {
 	ShutdownTimeout time.Duration
 	Logger          *log.Logger
-	Dialer          *net.Dialer
+	Dialer          Dialer
 }
 
 // Server represents TCP proxy server
@@ -31,7 +36,7 @@ type Server struct {
 
 	upstreams []*Upstream
 	logger    *log.Logger
-	dialer    *net.Dialer
+	dialer    Dialer
 	pool      sync.Pool
 }
 
