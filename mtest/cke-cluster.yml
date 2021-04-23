@@ -18,8 +18,6 @@ reboot:
   command_timeout_seconds: 30
 options:
   kube-api:
-    extra_args:
-    - --enable-admission-plugins=PodSecurityPolicy
     extra_binds:
     - source: /var/log/audit
       destination: /var/log/audit

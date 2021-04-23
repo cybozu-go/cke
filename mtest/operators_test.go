@@ -133,9 +133,6 @@ func testRebootOperations(cluster *cke.Cluster) {
 	_, stderr, err := kubectlWithInput(rebootYAML, "apply", "-f", "-")
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
-	_, stderr, err = kubectlWithInput(policyYAML, "apply", "-f", "-", "-n=reboot-sample")
-	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
-
 	Eventually(func() error {
 		out, _, err := kubectl("get", "-n=reboot-sample", "deployments/sample", "-o=json")
 		if err != nil {
