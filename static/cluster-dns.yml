@@ -26,10 +26,6 @@ rules:
       - pods
       - namespaces
     verbs: ["list", "watch"]
-  - apiGroups: ["policy"]
-    resources: ["podsecuritypolicies"]
-    verbs: ["use"]
-    resourceNames: ["cke-restricted"]
 ---
 
 kind: ClusterRoleBinding

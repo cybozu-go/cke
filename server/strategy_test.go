@@ -928,11 +928,6 @@ func TestDecideOps(t *testing.T) {
 				"resource-apply",
 				"resource-apply",
 				"resource-apply",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
 			},
 		},
 		{
