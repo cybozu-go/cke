@@ -63,7 +63,6 @@ options:
     extra_args:
       - arg1
   kubelet:
-    container_runtime: remote
     cri_endpoint: /var/run/k8s-containerd.sock
     boot_taints:
       - key: taint1

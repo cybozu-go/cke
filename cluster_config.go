@@ -2,7 +2,6 @@ package cke
 
 const (
 	defaultEtcdVolumeName           = "etcd-cke"
-	defaultContainerRuntime         = "remote"
 	defaultContainerRuntimeEndpoint = "/run/containerd/containerd.sock"
 )
 
@@ -14,8 +13,7 @@ func NewCluster() *Cluster {
 				VolumeName: defaultEtcdVolumeName,
 			},
 			Kubelet: KubeletParams{
-				ContainerRuntime: defaultContainerRuntime,
-				CRIEndpoint:      defaultContainerRuntimeEndpoint,
+				CRIEndpoint: defaultContainerRuntimeEndpoint,
 			},
 		},
 	}

@@ -125,9 +125,8 @@ func newData() testData {
 	kubeletConfig.Object["containerLogMaxSize"] = "20Mi"
 	kubeletConfig.Object["clusterDomain"] = testDefaultDNSDomain
 	cluster.Options.Kubelet = cke.KubeletParams{
-		ContainerRuntime: "remote",
-		CRIEndpoint:      "/var/run/k8s-containerd.sock",
-		Config:           kubeletConfig,
+		CRIEndpoint: "/var/run/k8s-containerd.sock",
+		Config:      kubeletConfig,
 	}
 
 	nodeReadyStatus := corev1.NodeStatus{
@@ -293,8 +292,7 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st.IsHealthy = true
 		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.KubeletServiceParams(n, cke.KubeletParams{
-			ContainerRuntime: "remote",
-			CRIEndpoint:      "/var/run/k8s-containerd.sock",
+			CRIEndpoint: "/var/run/k8s-containerd.sock",
 		})
 
 		webhookEnabled := true
@@ -840,15 +838,6 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet8",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.Cluster.Options.Kubelet.ContainerRuntime = "docker"
-			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"wait-kubernetes",
-			},
-		},
-		{
-			Name: "RestartKubelet9",
-			Input: newData().withAllServices().with(func(d testData) {
 				d.Cluster.Options.Kubelet.CRIEndpoint = "/var/run/dockershim.sock"
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
@@ -856,7 +845,7 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
-			Name: "RestartKubelet10",
+			Name: "RestartKubelet9",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[:3]
 			}).withSSHNotConnectedNodes(),

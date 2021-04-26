@@ -166,14 +166,10 @@ Changing `mode` requires full node restarts.
 | `boot_taints`       | false    | `[]Taint`                       | Bootstrap node taints.                                                                                                       |
 | `cni_conf_file`     | false    | `CNIConfFile`                   | CNI configuration file.                                                                                                      |
 | `config`            | false    | `*v1beta1.KubeletConfiguration` | See below.                                                                                                                   |
-| `container_runtime` | false    | string                          | Container runtime for Pod. Default: `remote`. You have to choose `docker` or `remote` which supports [CRI][].                |
-| `cri_endpoint`      | false    | string                          | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/run/containerd/containerd.sock`. |
+| `cri_endpoint`      | false    | string                          | Path of the runtime socket. Default: `/run/containerd/containerd.sock`.                                                      |
 | `extra_args`        | false    | array                           | Extra command-line arguments.  List of strings.                                                                              |
 | `extra_binds`       | false    | array                           | Extra bind mounts.  List of `Mount`.                                                                                         |
 | `extra_env`         | false    | object                          | Extra environment variables.                                                                                                 |
-
-The use of `docker` for `container_runtime` is deprecated.
-In the future, the Docker support will be removed altogether.
 
 #### Boot taints
 

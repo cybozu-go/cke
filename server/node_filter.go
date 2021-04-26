@@ -497,38 +497,22 @@ func (nf *NodeFilter) NonClusterNodes() (nodes []*corev1.Node) {
 }
 
 func kubeletRuntimeChanged(running, current cke.ServiceParams) bool {
-	runningRuntime := ""
 	runningRuntimeEndpoint := ""
 	for _, arg := range running.ExtraArguments {
-		if strings.HasPrefix(arg, "--container-runtime=") {
-			runningRuntime = arg
-			continue
-		}
 		if strings.HasPrefix(arg, "--container-runtime-endpoint=") {
 			runningRuntimeEndpoint = arg
-			continue
+			break
 		}
 	}
 
-	currentRuntime := ""
 	currentRuntimeEndpoint := ""
 	for _, arg := range current.ExtraArguments {
-		if strings.HasPrefix(arg, "--container-runtime=") {
-			currentRuntime = arg
-			continue
-		}
 		if strings.HasPrefix(arg, "--container-runtime-endpoint=") {
 			currentRuntimeEndpoint = arg
-			continue
+			break
 		}
 	}
-	if runningRuntime != currentRuntime {
-		return true
-	}
-	if runningRuntimeEndpoint != currentRuntimeEndpoint {
-		return true
-	}
-	return false
+	return runningRuntimeEndpoint != currentRuntimeEndpoint
 }
 
 func kubeletEqualParams(running, current cke.ServiceParams) bool {

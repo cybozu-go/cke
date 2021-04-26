@@ -41,7 +41,6 @@ options:
     - source: /var/lib/k8s-containerd
       destination: /var/lib/k8s-containerd
       read_only: false
-    container_runtime: __RUNTIME__
     cri_endpoint: __RUNTIME_ENDPOINT__
     cni_conf_file:
       name: 98-bridge.conf

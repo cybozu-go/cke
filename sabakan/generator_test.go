@@ -280,6 +280,11 @@ func testGenerate(t *testing.T) {
 				Taints:       []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoExecute}},
 			},
 		},
+		Options: cke.Options{
+			Kubelet: cke.KubeletParams{
+				CRIEndpoint: "/var/run/k8s-containerd.sock",
+			},
+		},
 	}
 
 	// generated cluster w/o nodes
@@ -396,6 +401,11 @@ func testRegenerate(t *testing.T) {
 				ControlPlane: false,
 			},
 		},
+		Options: cke.Options{
+			Kubelet: cke.KubeletParams{
+				CRIEndpoint: "/var/run/k8s-containerd.sock",
+			},
+		},
 	}
 
 	// generated cluster w/o nodes
@@ -505,6 +515,11 @@ func testUpdate(t *testing.T) {
 			{
 				User:         "cybozu",
 				ControlPlane: false,
+			},
+		},
+		Options: cke.Options{
+			Kubelet: cke.KubeletParams{
+				CRIEndpoint: "/var/run/k8s-containerd.sock",
 			},
 		},
 	}
@@ -916,6 +931,11 @@ func testRegenerateAfterUpdate(t *testing.T) {
 				ControlPlane: false,
 			},
 		},
+		Options: cke.Options{
+			Kubelet: cke.KubeletParams{
+				CRIEndpoint: "/var/run/k8s-containerd.sock",
+			},
+		},
 	}
 
 	g := NewGenerator(tmpl, cke.DefaultConstraints(), machines, testBaseTS)
@@ -1107,6 +1127,11 @@ func testWeighted(t *testing.T) {
 				Name:          "test",
 				ServiceSubnet: "10.0.0.0/14",
 				Nodes:         append(tt.tmplWorkers, tt.tmplCP),
+				Options: cke.Options{
+					Kubelet: cke.KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
 			}
 
 			g := NewGenerator(tmpl, tt.cstr, machines, testBaseTS)
@@ -1244,6 +1269,11 @@ func testRackDistribution(t *testing.T) {
 				},
 			},
 		},
+		Options: cke.Options{
+			Kubelet: cke.KubeletParams{
+				CRIEndpoint: "/var/run/k8s-containerd.sock",
+			},
+		},
 	}
 	baseConstraints := &cke.Constraints{
 		ControlPlaneCount: 3,
@@ -1359,6 +1389,11 @@ func testRackDistribution(t *testing.T) {
 			Name:          "test",
 			ServiceSubnet: "10.0.0.0/14",
 			Nodes:         []*cke.Node{},
+			Options: cke.Options{
+				Kubelet: cke.KubeletParams{
+					CRIEndpoint: "/var/run/k8s-containerd.sock",
+				},
+			},
 		}
 		for i, n := range baseTemplate.Nodes {
 			if i == 1 {

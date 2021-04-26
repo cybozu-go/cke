@@ -193,12 +193,11 @@ func (m ProxyMode) Validate() error {
 
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
-	ServiceParams    `json:",inline"`
-	BootTaints       []corev1.Taint             `json:"boot_taints"`
-	CNIConfFile      CNIConfFile                `json:"cni_conf_file"`
-	Config           *unstructured.Unstructured `json:"config,omitempty"`
-	ContainerRuntime string                     `json:"container_runtime"`
-	CRIEndpoint      string                     `json:"cri_endpoint"`
+	ServiceParams `json:",inline"`
+	BootTaints    []corev1.Taint             `json:"boot_taints"`
+	CNIConfFile   CNIConfFile                `json:"cni_conf_file"`
+	Config        *unstructured.Unstructured `json:"config,omitempty"`
+	CRIEndpoint   string                     `json:"cri_endpoint"`
 }
 
 // MergeConfig merges the input struct with `base`.
@@ -495,13 +494,8 @@ func validateOptions(opts Options) error {
 				kubeletConfig.ClusterDomain, strings.Join(msgs, ";"))
 		}
 	}
-	if len(opts.Kubelet.ContainerRuntime) > 0 {
-		if opts.Kubelet.ContainerRuntime != "remote" && opts.Kubelet.ContainerRuntime != "docker" {
-			return errors.New("kubelet.container_runtime should be 'docker' or 'remote'")
-		}
-		if opts.Kubelet.ContainerRuntime == "remote" && len(opts.Kubelet.CRIEndpoint) == 0 {
-			return errors.New("kubelet.cri_endpoint should not be empty")
-		}
+	if len(opts.Kubelet.CRIEndpoint) == 0 {
+		return errors.New("kubelet.cri_endpoint should not be empty")
 	}
 	if len(opts.Kubelet.CNIConfFile.Content) != 0 && len(opts.Kubelet.CNIConfFile.Name) == 0 {
 		return fmt.Errorf("kubelet.cni_conf_file.name should not be empty when kubelet.cni_conf_file.content is not empty")
