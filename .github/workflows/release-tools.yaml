@@ -19,6 +19,6 @@ jobs:
       - name: Push cke-tools image to Quay.io
         run: |
           echo ${{ secrets.QUAY_PASSWORD }} | docker login -u ${{ secrets.QUAY_USER }} --password-stdin quay.io
-          TAG=${GITHUB_REF#refs/tags/v}
+          TAG=quay.io/cybozu/cke-tools:${GITHUB_REF#refs/tags/tools-}
           docker build --no-cache -t $TAG tools
           docker push $TAG
