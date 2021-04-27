@@ -294,11 +294,12 @@ func (nf *NodeFilter) APIServerStoppedNodes() (nodes []*cke.Node) {
 // APIServerOutdatedNodes returns nodes that are running API server with outdated image or params.
 func (nf *NodeFilter) APIServerOutdatedNodes() (nodes []*cke.Node) {
 	currentExtra := nf.cluster.Options.APIServer
+	kubeletConfig := k8s.GenerateKubeletConfiguration(nf.cluster.Options.Kubelet, "0.0.0.0", nil)
 
 	for _, n := range nf.cp {
 		st := nf.nodeStatus(n).APIServer
-		currentBuiltIn := k8s.APIServerParams(nf.ControlPlane(), n.Address, nf.cluster.ServiceSubnet,
-			currentExtra.AuditLogEnabled, currentExtra.AuditLogPolicy, currentExtra.AuditLogPath)
+		currentBuiltIn := k8s.APIServerParams(n.Address, nf.cluster.ServiceSubnet,
+			currentExtra.AuditLogEnabled, currentExtra.AuditLogPolicy, currentExtra.AuditLogPath, kubeletConfig.ClusterDomain)
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded

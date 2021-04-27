@@ -199,6 +199,15 @@ func testKubernetes() {
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
+		By("waiting the default service account gets created")
+		Eventually(func() error {
+			_, stderr, err := kubectl("get", "sa/default", "-o", "json", "-n="+namespace)
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+			return nil
+		}).Should(Succeed())
+
 		for _, name := range []string{
 			"configmaps/node-dns",
 			"daemonsets/node-dns",

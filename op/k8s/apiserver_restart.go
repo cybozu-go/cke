@@ -40,17 +40,19 @@ type apiServerRestartOp struct {
 
 	serviceSubnet string
 	params        cke.APIServerParams
+	clusterDomain string
 
 	step  int
 	files *common.FilesBuilder
 }
 
 // APIServerRestartOp returns an Operator to restart kube-apiserver
-func APIServerRestartOp(nodes, cps []*cke.Node, serviceSubnet string, params cke.APIServerParams) cke.Operator {
+func APIServerRestartOp(nodes, cps []*cke.Node, serviceSubnet string, params cke.APIServerParams, clusterDomain string) cke.Operator {
 	return &apiServerRestartOp{
 		nodes:         nodes,
 		cps:           cps,
 		serviceSubnet: serviceSubnet,
+		clusterDomain: clusterDomain,
 		params:        params,
 		files:         common.NewFilesBuilder(nodes),
 	}
@@ -84,7 +86,7 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			paramsMap[n.Address] = APIServerParams(o.cps, n.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy, o.params.AuditLogPath)
+			paramsMap[n.Address] = APIServerParams(n.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy, o.params.AuditLogPath, o.clusterDomain)
 		}
 		return common.RunContainerCommand(o.nodes,
 			op.KubeAPIServerContainerName, cke.KubernetesImage,
@@ -172,11 +174,14 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 	if err != nil {
 		return err
 	}
-	saCertData := []byte(saCert)
-	g = func(ctx context.Context, n *cke.Node) ([]byte, error) {
-		return saCertData, nil
+	saKey, err := storage.GetServiceAccountKey(ctx)
+	if err != nil {
+		return err
 	}
-	err = c.files.AddFile(ctx, op.K8sPKIPath("service-account.crt"), g)
+	f = func(ctx context.Context, n *cke.Node) (cert, key []byte, err error) {
+		return []byte(saCert), []byte(saKey), nil
+	}
+	err = c.files.AddKeyPair(ctx, op.K8sPKIPath("service-account"), f)
 	if err != nil {
 		return err
 	}
@@ -245,7 +250,7 @@ func auditPolicyFilePath(policy string) string {
 }
 
 // APIServerParams returns parameters for API server.
-func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet string, auditLogEnabeled bool, auditLogPolicy string, auditLogPath string) cke.ServiceParams {
+func APIServerParams(advertiseAddress, serviceSubnet string, auditLogEnabled bool, auditLogPolicy, auditLogPath string, clusterDomain string) cke.ServiceParams {
 	args := []string{
 		"kube-apiserver",
 		"--allow-privileged",
@@ -267,7 +272,9 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 		"--enable-admission-plugins=" + strings.Join(admissionPlugins, ","),
 
 		// for service accounts
+		"--service-account-issuer=https://kubernetes.default.svc." + clusterDomain,
 		"--service-account-key-file=" + op.K8sPKIPath("service-account.crt"),
+		"--service-account-signing-key-file=" + op.K8sPKIPath("service-account.key"),
 		"--service-account-lookup",
 
 		// for aggregation
@@ -289,7 +296,7 @@ func APIServerParams(controlPlanes []*cke.Node, advertiseAddress, serviceSubnet 
 		"--service-cluster-ip-range=" + serviceSubnet,
 		"--encryption-provider-config=" + encryptionConfigFile,
 	}
-	if auditLogEnabeled {
+	if auditLogEnabled {
 		logPath := "-"
 		if auditLogPath != "" {
 			logPath = auditLogPath

@@ -19,13 +19,23 @@ metadata:
     # https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation
     rbac.authorization.kubernetes.io/autoupdate: "true"
 rules:
-  - apiGroups: [""]
+  - apiGroups:
+      - ""
     resources:
       - endpoints
       - services
       - pods
       - namespaces
-    verbs: ["list", "watch"]
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
+    verbs:
+      - list
+      - watch
 ---
 
 kind: ClusterRoleBinding

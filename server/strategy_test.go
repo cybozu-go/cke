@@ -246,13 +246,13 @@ func (d testData) withHealthyEtcd() testData {
 	return d
 }
 
-func (d testData) withAPIServer(serviceSubnet string) testData {
+func (d testData) withAPIServer(serviceSubnet, domain string) testData {
 	for _, n := range d.ControlPlane() {
 		st := &d.NodeStatus(n).APIServer
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.KubernetesImage.Name()
-		st.BuiltInParams = k8s.APIServerParams(d.ControlPlane(), n.Address, serviceSubnet, false, "", "")
+		st.BuiltInParams = k8s.APIServerParams(n.Address, serviceSubnet, false, "", "", domain)
 	}
 	return d
 }
@@ -336,7 +336,7 @@ func (d testData) withAllServices() testData {
 	d.withRivers()
 	d.withEtcdRivers()
 	d.withHealthyEtcd()
-	d.withAPIServer(testServiceSubnet)
+	d.withAPIServer(testServiceSubnet, testDefaultDNSDomain)
 	d.withControllerManager(testClusterName, testServiceSubnet)
 	d.withScheduler()
 	d.withKubelet(testDefaultDNSDomain, testDefaultDNSAddr, false)
@@ -622,7 +622,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name:  "BootK8sFromPartiallyRunning",
-			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withAPIServer(testServiceSubnet),
+			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withAPIServer(testServiceSubnet, testDefaultDNSDomain),
 			ExpectedOps: []string{
 				"kube-controller-manager-bootstrap",
 				"kube-proxy-bootstrap",
@@ -632,7 +632,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name:  "RestartAPIServer",
-			Input: newData().withAllServices().withAPIServer("11.22.33.0/24").withSSHNotConnectedNodes(),
+			Input: newData().withAllServices().withAPIServer("11.22.33.0/24", testDefaultDNSDomain).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-apiserver-restart",
 			},
@@ -948,6 +948,7 @@ func TestDecideOps(t *testing.T) {
 				d.Cluster.Options.Kubelet.Config.Object["clusterDomain"] = "neco.local"
 			}),
 			ExpectedOps: []string{
+				"kube-apiserver-restart",
 				"kubelet-restart",
 			},
 		},
@@ -958,7 +959,7 @@ func TestDecideOps(t *testing.T) {
 				for _, st := range d.Status.NodeStatuses {
 					st.Kubelet.Config.ClusterDomain = "neco.local"
 				}
-			}),
+			}).withAPIServer(testServiceSubnet, "neco.local"),
 			ExpectedOps: []string{
 				"update-cluster-dns-configmap",
 				"update-node-dns-configmap",

@@ -66,14 +66,14 @@ func testMachineToNode(t *testing.T) {
 	if res1.Labels["topology.kubernetes.io/zone"] != "rack0" {
 		t.Error(`res1.Labels["topology.kubernetes.io/zone"] != "rack0", actual:`, res1.Labels)
 	}
-	if res1.Labels["failure-domain.beta.kubernetes.io/zone"] != "rack0" {
-		t.Error(`res1.Labels["failure-domain.beta.kubernetes.io/zone"] != "rack0", actual:`, res1.Labels)
-	}
 	if res1.Labels["node-role.kubernetes.io/worker"] != "true" {
 		t.Error(`res1.Lables["node-role.kubernetes.io/worker"] != "true", actual:`, res1.Labels)
 	}
 	if res1.Labels["node-role.kubernetes.io/master"] != "true" {
 		t.Error(`res1.Lables["node-role.kubernetes.io/master"] != "true", actual:`, res1.Labels)
+	}
+	if res1.Labels["node-role.kubernetes.io/control-plane"] != "true" {
+		t.Error(`res1.Lables["node-role.kubernetes.io/control-plane"] != "true", actual:`, res1.Labels)
 	}
 	if !containsTaint(res1.Taints, corev1.Taint{Key: "foo", Effect: corev1.TaintEffectNoSchedule}) {
 		t.Error(`res1.Taints do not have corev1.Taint{Key"foo", Effect: corev1.TaintEffectNoSchedule}, actual:`, res1.Taints)
