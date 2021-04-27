@@ -30,6 +30,7 @@ require (
 	k8s.io/apimachinery v0.20.6
 	k8s.io/apiserver v0.20.6
 	k8s.io/client-go v0.20.6
+	k8s.io/kube-proxy v0.20.6
 	k8s.io/kube-scheduler v0.20.6
 	k8s.io/kubelet v0.20.6
 	k8s.io/utils v0.0.0-20210305010621-2afb4311ab10

@@ -39,7 +39,7 @@ func (o *kubeProxyRestartOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.KubernetesImage)
 	case 1:
 		o.step++
-		return prepareProxyFilesCommand{o.cluster, o.ap, o.files}
+		return prepareProxyFilesCommand{cluster: o.cluster, ap: o.ap, files: o.files, params: o.params}
 	case 2:
 		o.step++
 		return o.files
@@ -51,7 +51,7 @@ func (o *kubeProxyRestartOp) NextCommand() cke.Commander {
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			params := ProxyParams(n, string(o.params.GetMode()))
+			params := ProxyParams()
 			paramsMap[n.Address] = params
 		}
 		return common.RunContainerCommand(o.nodes, op.KubeProxyContainerName, cke.KubernetesImage,

@@ -2,11 +2,17 @@ package k8s
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
 	"k8s.io/client-go/tools/clientcmd"
+)
+
+const (
+	proxyKubeconfigPath = "/etc/kubernetes/proxy/kubeconfig"
+	proxyConfigPath     = "/etc/kubernetes/proxy/config.yml"
 )
 
 type kubeProxyBootOp struct {
@@ -42,7 +48,7 @@ func (o *kubeProxyBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(o.nodes, cke.KubernetesImage)
 	case 1:
 		o.step++
-		return prepareProxyFilesCommand{o.cluster, o.ap, o.files}
+		return prepareProxyFilesCommand{cluster: o.cluster, ap: o.ap, files: o.files, params: o.params}
 	case 2:
 		o.step++
 		return o.files
@@ -54,7 +60,7 @@ func (o *kubeProxyBootOp) NextCommand() cke.Commander {
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			params := ProxyParams(n, string(o.params.GetMode()))
+			params := ProxyParams()
 			paramsMap[n.Address] = params
 		}
 		return common.RunContainerCommand(o.nodes, op.KubeProxyContainerName, cke.KubernetesImage,
@@ -78,10 +84,10 @@ type prepareProxyFilesCommand struct {
 	cluster string
 	ap      string
 	files   *common.FilesBuilder
+	params  cke.ProxyParams
 }
 
 func (c prepareProxyFilesCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	const kubeconfigPath = "/etc/kubernetes/proxy/kubeconfig"
 	storage := inf.Storage()
 
 	ca, err := storage.GetCACertificate(ctx, "kubernetes")
@@ -96,7 +102,14 @@ func (c prepareProxyFilesCommand) Run(ctx context.Context, inf cke.Infrastructur
 		cfg := proxyKubeconfig(c.cluster, ca, crt, key, c.ap)
 		return clientcmd.Write(*cfg)
 	}
-	return c.files.AddFile(ctx, kubeconfigPath, g)
+	if err := c.files.AddFile(ctx, proxyKubeconfigPath, g); err != nil {
+		return err
+	}
+
+	return c.files.AddFile(ctx, proxyConfigPath, func(ctx context.Context, n *cke.Node) ([]byte, error) {
+		cfg := GenerateProxyConfiguration(c.params, n)
+		return encodeToYAML(cfg)
+	})
 }
 
 func (c prepareProxyFilesCommand) Command() cke.Command {
@@ -106,12 +119,10 @@ func (c prepareProxyFilesCommand) Command() cke.Command {
 }
 
 // ProxyParams returns parameters for kube-proxy.
-func ProxyParams(n *cke.Node, mode string) cke.ServiceParams {
+func ProxyParams() cke.ServiceParams {
 	args := []string{
 		"kube-proxy",
-		"--proxy-mode=" + mode,
-		"--hostname-override=" + n.Nodename(),
-		"--kubeconfig=/etc/kubernetes/proxy/kubeconfig",
+		fmt.Sprintf("--config=%s", proxyConfigPath),
 	}
 	return cke.ServiceParams{
 		ExtraArguments: args,

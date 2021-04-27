@@ -349,7 +349,7 @@ func (c waitForKubeletReadyCommand) Run(ctx context.Context, inf cke.Infrastruct
 
 func (c waitForKubeletReadyCommand) try(ctx context.Context, inf cke.Infrastructure) error {
 	for _, node := range c.nodes {
-		isReady, err := op.CheckKubeletHealthz(ctx, inf, node.Address, 10248)
+		isReady, err := op.CheckHealthz(ctx, inf, node.Address, 10248)
 		if err != nil {
 			return err
 		}

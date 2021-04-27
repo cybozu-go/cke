@@ -66,3 +66,10 @@ options:
       clusterDomain: cluster.local
       containerLogMaxSize: "1000"
       containerLogMaxFiles: 3
+  kube-proxy:
+    config:
+      apiVersion: kubeproxy.config.k8s.io/v1alpha1
+      kind: KubeProxyConfiguration
+      mode: ipvs
+      ipvs:
+        strictARP: true

@@ -540,12 +540,14 @@ func (nf *NodeFilter) ProxyStoppedNodes() (nodes []*cke.Node) {
 }
 
 // ProxyOutdatedNodes returns nodes that are running kube-proxy with outdated image or params.
-func (nf *NodeFilter) ProxyOutdatedNodes() (nodes []*cke.Node) {
+func (nf *NodeFilter) ProxyOutdatedNodes(params cke.ProxyParams) (nodes []*cke.Node) {
 	currentExtra := nf.cluster.Options.Proxy
 
 	for _, n := range nf.cluster.Nodes {
 		st := nf.nodeStatus(n).Proxy
-		currentBuiltIn := k8s.ProxyParams(n, string(currentExtra.GetMode()))
+		currentBuiltIn := k8s.ProxyParams()
+		currentConfig := k8s.GenerateProxyConfiguration(params, n)
+		runningConfig := st.Config
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
@@ -554,6 +556,21 @@ func (nf *NodeFilter) ProxyOutdatedNodes() (nodes []*cke.Node) {
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
 		case !currentExtra.Equal(st.ExtraParams):
+			fallthrough
+		case !reflect.DeepEqual(currentConfig, runningConfig):
+			log.Debug("proxy outdated", map[string]interface{}{
+				"node":                 n.Nodename(),
+				"st_builtin_args":      st.BuiltInParams.ExtraArguments,
+				"st_builtin_env":       st.BuiltInParams.ExtraEnvvar,
+				"st_extra_args":        st.ExtraParams.ExtraArguments,
+				"st_extra_env":         st.ExtraParams.ExtraEnvvar,
+				"current_builtin_args": currentBuiltIn.ExtraArguments,
+				"current_builtin_env":  currentBuiltIn.ExtraEnvvar,
+				"current_extra_args":   currentExtra.ExtraArguments,
+				"current_extra_env":    currentExtra.ExtraEnvvar,
+				"config":               currentConfig,
+				"diff":                 cmp.Diff(currentConfig, runningConfig),
+			})
 			nodes = append(nodes, n)
 		}
 	}

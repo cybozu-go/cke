@@ -3,6 +3,7 @@ package cke
 import (
 	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	corev1 "k8s.io/api/core/v1"
+	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
@@ -95,7 +96,7 @@ type NodeStatus struct {
 	APIServer         KubeComponentStatus
 	ControllerManager KubeComponentStatus
 	Scheduler         SchedulerStatus
-	Proxy             KubeComponentStatus
+	Proxy             ProxyStatus
 	Kubelet           KubeletStatus
 	Labels            map[string]string // are labels for k8s Node resource.
 }
@@ -135,4 +136,11 @@ type KubeletStatus struct {
 	ServiceStatus
 	IsHealthy bool
 	Config    *kubeletv1beta1.KubeletConfiguration
+}
+
+// ProxyStatus represents kubelet status and health
+type ProxyStatus struct {
+	ServiceStatus
+	IsHealthy bool
+	Config    *proxyv1alpha1.KubeProxyConfiguration
 }

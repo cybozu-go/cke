@@ -17,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
@@ -325,7 +326,15 @@ func (d testData) withProxy() testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.KubernetesImage.Name()
-		st.BuiltInParams = k8s.ProxyParams(n, "ipvs")
+		st.BuiltInParams = k8s.ProxyParams()
+		st.Config = &proxyv1alpha1.KubeProxyConfiguration{}
+		st.Config.HostnameOverride = n.Nodename()
+		st.Config.MetricsBindAddress = "0.0.0.0"
+		st.Config.Conntrack = proxyv1alpha1.KubeProxyConntrackConfiguration{
+			TCPEstablishedTimeout: &metav1.Duration{Duration: 24 * time.Hour},
+			TCPCloseWaitTimeout:   &metav1.Duration{Duration: 1 * time.Hour},
+		}
+		st.Config.ClientConnection.Kubeconfig = "/etc/kubernetes/proxy/kubeconfig"
 	}
 	return d
 }
@@ -887,6 +896,19 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.ExtraParams.ExtraArguments = []string{"foo"}
+			}).withSSHNotConnectedNodes(),
+			ExpectedOps: []string{
+				"kube-proxy-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-proxy-restart": 1,
+			},
+		},
+		{
+			Name: "RestartProxy4",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.Config.Mode = cke.ProxyModeIPVS
+				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.Config.Mode = cke.ProxyModeIPVS
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-proxy-restart",
