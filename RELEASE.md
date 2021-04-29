@@ -33,8 +33,12 @@ It should look like:
 ## Bump version
 
 1. Determine a new version number.  Let it write `$VERSION` as `VERSION=x.y.z`.
-2. Checkout `main` branch.
-3. Make a branch by `git neco dev "bump-$VERSION"`
+2. Make a branch to release
+
+    ```console
+    $ git neco dev "$VERSION"`
+    ```
+
 4. Update `version.go`.
 5. Edit `CHANGELOG.md` for the new version ([example][]).
 6. Commit the change and create a pull request.
@@ -43,14 +47,15 @@ It should look like:
     $ git commit -a -m "Bump version to $VERSION"
     $ git neco review
     ```
+
 7. Make sure that Sonobuoy test has been passed when updating to `x.y.0` and its RC.
 8. Merge the pull request.
-9. Make a tag and push it.
+9. Add a git tag to the main HEAD, then push it.
 
     ```console
     $ git checkout main
     $ git pull
-    $ git tag "v$VERSION"
+    $ git tag -a -m "Release v$VERSION" "v$VERSION"
     $ git push origin "v$VERSION"
     ```
 
