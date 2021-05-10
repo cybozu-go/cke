@@ -150,14 +150,25 @@ Options
 
 ### ProxyParams
 
-| Name          | Required | Type   | Description                                          |
-| ------------- | -------- | ------ | ---------------------------------------------------- |
-| `mode`        | false    | string | One of `userspace`, `iptables`, or `ipvs` (default). |
-| `extra_args`  | false    | array  | Extra command-line arguments.  List of strings.      |
-| `extra_binds` | false    | array  | Extra bind mounts.  List of `Mount`.                 |
-| `extra_env`   | false    | object | Extra environment variables.                         |
+| Name          | Required | Type                               | Description                                     |
+| ------------- | -------- | ---------------------------------- | ----------------------------------------------- |
+| `config`      | false    | `*v1alpha1.KubeProxyConfiguration` | See below.                                      |
+| `extra_args`  | false    | array                              | Extra command-line arguments.  List of strings. |
+| `extra_binds` | false    | array                              | Extra bind mounts.  List of `Mount`.            |
+| `extra_env`   | false    | object                             | Extra environment variables.                    |
 
-Changing `mode` requires full node restarts.
+`config` must be a partial [`v1alpha1.KubeProxyConfiguration`](https://pkg.go.dev/k8s.io/kube-proxy@v0.20.6/config/v1alpha1#KubeProxyConfiguration).
+Fields in the below table have default values:
+
+| Name                                                    | Value                                          |
+| ------------------------------------------------------- | ---------------------------------------------- |
+| `HostnameOverride`                                      | Host name or address if the host name is empty |
+| `MetricsBindAddress`                                    | `0.0.0.0`                                      |
+| `KubeProxyConntrackConfiguration.TCPEstablishedTimeout` | `24h`                                          |
+| `KubeProxyConntrackConfiguration.TCPCloseWaitTimeout`   | `1h`                                           |
+
+`ClientConnection.Kubeconfig` is managed by CKE and are not configurable.
+Changing `KubeProxyConfiguration.Mode` requires full node restarts.
 
 ### KubeletParams
 
@@ -166,14 +177,10 @@ Changing `mode` requires full node restarts.
 | `boot_taints`       | false    | `[]Taint`                       | Bootstrap node taints.                                                                                                       |
 | `cni_conf_file`     | false    | `CNIConfFile`                   | CNI configuration file.                                                                                                      |
 | `config`            | false    | `*v1beta1.KubeletConfiguration` | See below.                                                                                                                   |
-| `container_runtime` | false    | string                          | Container runtime for Pod. Default: `remote`. You have to choose `docker` or `remote` which supports [CRI][].                |
-| `cri_endpoint`      | false    | string                          | Path of the runtime socket. It is required when `container_runtime` is `remote`. Default: `/run/containerd/containerd.sock`. |
+| `cri_endpoint`      | false    | string                          | Path of the runtime socket. Default: `/run/containerd/containerd.sock`.                                                      |
 | `extra_args`        | false    | array                           | Extra command-line arguments.  List of strings.                                                                              |
 | `extra_binds`       | false    | array                           | Extra bind mounts.  List of `Mount`.                                                                                         |
 | `extra_env`         | false    | object                          | Extra environment variables.                                                                                                 |
-
-The use of `docker` for `container_runtime` is deprecated.
-In the future, the Docker support will be removed altogether.
 
 #### Boot taints
 
@@ -188,7 +195,7 @@ If you want to add taints only at Node registration, use kubelet's `--register-w
 
 #### KubeletConfiguration
 
-`config` must be a partial [`v1beta1.KubeletConfiguration`](https://pkg.go.dev/k8s.io/kubelet@v0.19.6/config/v1beta1#KubeletConfiguration).
+`config` must be a partial [`v1beta1.KubeletConfiguration`](https://pkg.go.dev/k8s.io/kubelet@v0.20.6/config/v1beta1#KubeletConfiguration).
 
 Fields that are described as _This field should not be updated without a full node reboot._ won't be updated on the running node for safety.  Such fields include `CgroupDriver` or `QOSReserved`.
 
@@ -226,7 +233,7 @@ It should end with either `.conf` or `.conflist`.
 | `extra_binds` | false    | array                                 | Extra bind mounts.  List of `Mount`.            |
 | `extra_env`   | false    | object                                | Extra environment variables.                    |
 
-`config` must be a partial [`v1beta1.KubeSchedulerConfiguration`](https://pkg.go.dev/k8s.io/kube-scheduler@v0.19.6/config/v1beta1#KubeSchedulerConfiguration).
+`config` must be a partial [`v1beta1.KubeSchedulerConfiguration`](https://pkg.go.dev/k8s.io/kube-scheduler@v0.20.6/config/v1beta1#KubeSchedulerConfiguration).
 
 Fields in `config` may have default values.  Some fields are overwritten by CKE.
 Please see the source code for more details.

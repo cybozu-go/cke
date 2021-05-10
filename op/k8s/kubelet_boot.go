@@ -71,7 +71,6 @@ func (o *kubeletBootOp) NextCommand() cke.Commander {
 			cniBinDir,
 			cniConfDir,
 			cniVarDir,
-			"/var/lib/dockershim",
 			"/var/log/pods",
 			"/var/log/containers",
 			"/opt/volume/bin",
@@ -350,7 +349,7 @@ func (c waitForKubeletReadyCommand) Run(ctx context.Context, inf cke.Infrastruct
 
 func (c waitForKubeletReadyCommand) try(ctx context.Context, inf cke.Infrastructure) error {
 	for _, node := range c.nodes {
-		isReady, err := op.CheckKubeletHealthz(ctx, inf, node.Address, 10248)
+		isReady, err := op.CheckHealthz(ctx, inf, node.Address, 10248)
 		if err != nil {
 			return err
 		}
@@ -376,12 +375,7 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 		"--hostname-override=" + n.Nodename(),
 		"--network-plugin=cni",
 	}
-	if params.ContainerRuntime == "docker" {
-		args = append(args, "--pod-infra-container-image="+cke.PauseImage.Name())
-	}
-	if len(params.ContainerRuntime) != 0 {
-		args = append(args, "--container-runtime="+params.ContainerRuntime)
-	}
+	args = append(args, "--container-runtime=remote")
 	if len(params.CRIEndpoint) != 0 {
 		args = append(args, "--container-runtime-endpoint="+params.CRIEndpoint)
 	}
@@ -431,13 +425,6 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 				ReadOnly:    false,
 				Propagation: cke.PropagationShared,
 				Label:       cke.LabelShared,
-			},
-			{
-				Source:      "/var/lib/dockershim",
-				Destination: "/var/lib/dockershim",
-				ReadOnly:    false,
-				Propagation: "",
-				Label:       cke.LabelPrivate,
 			},
 			{
 				Source:      "/var/log/pods",

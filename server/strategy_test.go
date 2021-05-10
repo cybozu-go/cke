@@ -17,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
@@ -125,9 +126,8 @@ func newData() testData {
 	kubeletConfig.Object["containerLogMaxSize"] = "20Mi"
 	kubeletConfig.Object["clusterDomain"] = testDefaultDNSDomain
 	cluster.Options.Kubelet = cke.KubeletParams{
-		ContainerRuntime: "remote",
-		CRIEndpoint:      "/var/run/k8s-containerd.sock",
-		Config:           kubeletConfig,
+		CRIEndpoint: "/var/run/k8s-containerd.sock",
+		Config:      kubeletConfig,
 	}
 
 	nodeReadyStatus := corev1.NodeStatus{
@@ -246,13 +246,13 @@ func (d testData) withHealthyEtcd() testData {
 	return d
 }
 
-func (d testData) withAPIServer(serviceSubnet string) testData {
+func (d testData) withAPIServer(serviceSubnet, domain string) testData {
 	for _, n := range d.ControlPlane() {
 		st := &d.NodeStatus(n).APIServer
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.KubernetesImage.Name()
-		st.BuiltInParams = k8s.APIServerParams(d.ControlPlane(), n.Address, serviceSubnet, false, "", "")
+		st.BuiltInParams = k8s.APIServerParams(n.Address, serviceSubnet, false, "", "", domain)
 	}
 	return d
 }
@@ -293,8 +293,7 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st.IsHealthy = true
 		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.KubeletServiceParams(n, cke.KubeletParams{
-			ContainerRuntime: "remote",
-			CRIEndpoint:      "/var/run/k8s-containerd.sock",
+			CRIEndpoint: "/var/run/k8s-containerd.sock",
 		})
 
 		webhookEnabled := true
@@ -327,7 +326,15 @@ func (d testData) withProxy() testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.KubernetesImage.Name()
-		st.BuiltInParams = k8s.ProxyParams(n, "ipvs")
+		st.BuiltInParams = k8s.ProxyParams()
+		st.Config = &proxyv1alpha1.KubeProxyConfiguration{}
+		st.Config.HostnameOverride = n.Nodename()
+		st.Config.MetricsBindAddress = "0.0.0.0"
+		st.Config.Conntrack = proxyv1alpha1.KubeProxyConntrackConfiguration{
+			TCPEstablishedTimeout: &metav1.Duration{Duration: 24 * time.Hour},
+			TCPCloseWaitTimeout:   &metav1.Duration{Duration: 1 * time.Hour},
+		}
+		st.Config.ClientConnection.Kubeconfig = "/etc/kubernetes/proxy/kubeconfig"
 	}
 	return d
 }
@@ -336,7 +343,7 @@ func (d testData) withAllServices() testData {
 	d.withRivers()
 	d.withEtcdRivers()
 	d.withHealthyEtcd()
-	d.withAPIServer(testServiceSubnet)
+	d.withAPIServer(testServiceSubnet, testDefaultDNSDomain)
 	d.withControllerManager(testClusterName, testServiceSubnet)
 	d.withScheduler()
 	d.withKubelet(testDefaultDNSDomain, testDefaultDNSAddr, false)
@@ -622,7 +629,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name:  "BootK8sFromPartiallyRunning",
-			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withAPIServer(testServiceSubnet),
+			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withAPIServer(testServiceSubnet, testDefaultDNSDomain),
 			ExpectedOps: []string{
 				"kube-controller-manager-bootstrap",
 				"kube-proxy-bootstrap",
@@ -632,7 +639,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name:  "RestartAPIServer",
-			Input: newData().withAllServices().withAPIServer("11.22.33.0/24").withSSHNotConnectedNodes(),
+			Input: newData().withAllServices().withAPIServer("11.22.33.0/24", testDefaultDNSDomain).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-apiserver-restart",
 			},
@@ -840,15 +847,6 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartKubelet8",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.Cluster.Options.Kubelet.ContainerRuntime = "docker"
-			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"wait-kubernetes",
-			},
-		},
-		{
-			Name: "RestartKubelet9",
-			Input: newData().withAllServices().with(func(d testData) {
 				d.Cluster.Options.Kubelet.CRIEndpoint = "/var/run/dockershim.sock"
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
@@ -856,7 +854,7 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
-			Name: "RestartKubelet10",
+			Name: "RestartKubelet9",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[:3]
 			}).withSSHNotConnectedNodes(),
@@ -907,6 +905,19 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
+			Name: "RestartProxy4",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.Config.Mode = cke.ProxyModeIPVS
+				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.Config.Mode = cke.ProxyModeIPVS
+			}).withSSHNotConnectedNodes(),
+			ExpectedOps: []string{
+				"kube-proxy-restart",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-proxy-restart": 1,
+			},
+		},
+		{
 			Name:        "WaitKube",
 			Input:       newData().withAllServices(),
 			ExpectedOps: []string{"wait-kubernetes"},
@@ -919,11 +930,6 @@ func TestDecideOps(t *testing.T) {
 				"create-endpoints",
 				"create-endpoints",
 				"create-etcd-service",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
 				"resource-apply",
 				"resource-apply",
 				"resource-apply",
@@ -953,6 +959,7 @@ func TestDecideOps(t *testing.T) {
 				d.Cluster.Options.Kubelet.Config.Object["clusterDomain"] = "neco.local"
 			}),
 			ExpectedOps: []string{
+				"kube-apiserver-restart",
 				"kubelet-restart",
 			},
 		},
@@ -963,7 +970,7 @@ func TestDecideOps(t *testing.T) {
 				for _, st := range d.Status.NodeStatuses {
 					st.Kubelet.Config.ClusterDomain = "neco.local"
 				}
-			}),
+			}).withAPIServer(testServiceSubnet, "neco.local"),
 			ExpectedOps: []string{
 				"update-cluster-dns-configmap",
 				"update-node-dns-configmap",

@@ -12,6 +12,7 @@ import (
 	k8sjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	apiserverv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/client-go/tools/clientcmd/api"
+	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
@@ -30,6 +31,9 @@ func init() {
 		panic(err)
 	}
 	if err := schedulerv1beta1.AddToScheme(scm); err != nil {
+		panic(err)
+	}
+	if err := proxyv1alpha1.AddToScheme(scm); err != nil {
 		panic(err)
 	}
 	resourceEncoder = k8sjson.NewSerializerWithOptions(k8sjson.DefaultMetaFactory, scm, scm,
@@ -71,6 +75,30 @@ func GenerateSchedulerConfiguration(params cke.SchedulerParams) *schedulerv1beta
 	// forced values
 	c.ClientConnection.Kubeconfig = op.SchedulerKubeConfigPath
 	c.LeaderElection.LeaderElect = pointer.BoolPtr(true)
+
+	return c
+}
+
+// GenerateProxyConfiguration generates proxy configuration.
+// `params` must be validated beforehand.
+func GenerateProxyConfiguration(params cke.ProxyParams, n *cke.Node) *proxyv1alpha1.KubeProxyConfiguration {
+	// default values
+	base := proxyv1alpha1.KubeProxyConfiguration{
+		HostnameOverride:   n.Nodename(),
+		MetricsBindAddress: "0.0.0.0",
+		Conntrack: proxyv1alpha1.KubeProxyConntrackConfiguration{
+			TCPEstablishedTimeout: &metav1.Duration{Duration: 24 * time.Hour},
+			TCPCloseWaitTimeout:   &metav1.Duration{Duration: 1 * time.Hour},
+		},
+	}
+
+	c, err := params.MergeConfig(&base)
+	if err != nil {
+		panic(err)
+	}
+
+	// forced values
+	c.ClientConnection.Kubeconfig = proxyKubeconfigPath
 
 	return c
 }

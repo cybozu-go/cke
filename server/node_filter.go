@@ -294,11 +294,12 @@ func (nf *NodeFilter) APIServerStoppedNodes() (nodes []*cke.Node) {
 // APIServerOutdatedNodes returns nodes that are running API server with outdated image or params.
 func (nf *NodeFilter) APIServerOutdatedNodes() (nodes []*cke.Node) {
 	currentExtra := nf.cluster.Options.APIServer
+	kubeletConfig := k8s.GenerateKubeletConfiguration(nf.cluster.Options.Kubelet, "0.0.0.0", nil)
 
 	for _, n := range nf.cp {
 		st := nf.nodeStatus(n).APIServer
-		currentBuiltIn := k8s.APIServerParams(nf.ControlPlane(), n.Address, nf.cluster.ServiceSubnet,
-			currentExtra.AuditLogEnabled, currentExtra.AuditLogPolicy, currentExtra.AuditLogPath)
+		currentBuiltIn := k8s.APIServerParams(n.Address, nf.cluster.ServiceSubnet,
+			currentExtra.AuditLogEnabled, currentExtra.AuditLogPolicy, currentExtra.AuditLogPath, kubeletConfig.ClusterDomain)
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
@@ -496,38 +497,22 @@ func (nf *NodeFilter) NonClusterNodes() (nodes []*corev1.Node) {
 }
 
 func kubeletRuntimeChanged(running, current cke.ServiceParams) bool {
-	runningRuntime := ""
 	runningRuntimeEndpoint := ""
 	for _, arg := range running.ExtraArguments {
-		if strings.HasPrefix(arg, "--container-runtime=") {
-			runningRuntime = arg
-			continue
-		}
 		if strings.HasPrefix(arg, "--container-runtime-endpoint=") {
 			runningRuntimeEndpoint = arg
-			continue
+			break
 		}
 	}
 
-	currentRuntime := ""
 	currentRuntimeEndpoint := ""
 	for _, arg := range current.ExtraArguments {
-		if strings.HasPrefix(arg, "--container-runtime=") {
-			currentRuntime = arg
-			continue
-		}
 		if strings.HasPrefix(arg, "--container-runtime-endpoint=") {
 			currentRuntimeEndpoint = arg
-			continue
+			break
 		}
 	}
-	if runningRuntime != currentRuntime {
-		return true
-	}
-	if runningRuntimeEndpoint != currentRuntimeEndpoint {
-		return true
-	}
-	return false
+	return runningRuntimeEndpoint != currentRuntimeEndpoint
 }
 
 func kubeletEqualParams(running, current cke.ServiceParams) bool {
@@ -555,12 +540,14 @@ func (nf *NodeFilter) ProxyStoppedNodes() (nodes []*cke.Node) {
 }
 
 // ProxyOutdatedNodes returns nodes that are running kube-proxy with outdated image or params.
-func (nf *NodeFilter) ProxyOutdatedNodes() (nodes []*cke.Node) {
+func (nf *NodeFilter) ProxyOutdatedNodes(params cke.ProxyParams) (nodes []*cke.Node) {
 	currentExtra := nf.cluster.Options.Proxy
 
 	for _, n := range nf.cluster.Nodes {
 		st := nf.nodeStatus(n).Proxy
-		currentBuiltIn := k8s.ProxyParams(n, string(currentExtra.GetMode()))
+		currentBuiltIn := k8s.ProxyParams()
+		currentConfig := k8s.GenerateProxyConfiguration(params, n)
+		runningConfig := st.Config
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
@@ -569,6 +556,21 @@ func (nf *NodeFilter) ProxyOutdatedNodes() (nodes []*cke.Node) {
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
 		case !currentExtra.Equal(st.ExtraParams):
+			fallthrough
+		case !reflect.DeepEqual(currentConfig, runningConfig):
+			log.Debug("proxy outdated", map[string]interface{}{
+				"node":                 n.Nodename(),
+				"st_builtin_args":      st.BuiltInParams.ExtraArguments,
+				"st_builtin_env":       st.BuiltInParams.ExtraEnvvar,
+				"st_extra_args":        st.ExtraParams.ExtraArguments,
+				"st_extra_env":         st.ExtraParams.ExtraEnvvar,
+				"current_builtin_args": currentBuiltIn.ExtraArguments,
+				"current_builtin_env":  currentBuiltIn.ExtraEnvvar,
+				"current_extra_args":   currentExtra.ExtraArguments,
+				"current_extra_env":    currentExtra.ExtraEnvvar,
+				"config":               currentConfig,
+				"diff":                 cmp.Diff(currentConfig, runningConfig),
+			})
 			nodes = append(nodes, n)
 		}
 	}

@@ -2,11 +2,11 @@
 
 # tool versions
 MANAGEMENT_ETCD_VERSION = 3.3.25
-VAULT_VERSION = 1.6.4
-K8S_VERSION = 1.19.7
-CONTAINERD_VERSION = 1.4.3
-CRITOOLS_VERSION = 1.19.0
-CT_VERSION = 0.6.1
+VAULT_VERSION = 1.7.1
+K8S_VERSION = 1.20.6
+CONTAINERD_VERSION = 1.5.0
+CRITOOLS_VERSION = 1.20.0
+CT_VERSION = 0.9.0
 
 # configuration variables
 BRIDGE_ADDRESS = 10.0.0.1
@@ -20,10 +20,7 @@ NODE3 = 10.0.0.103
 NODE4 = 10.0.0.104
 NODE5 = 10.0.0.105
 NODE6 = 10.0.0.106
-CONTAINER_RUNTIME = remote
-ifeq ($(CONTAINER_RUNTIME),remote)
 RUNTIME_ENDPOINT = unix:///var/run/k8s-containerd.sock
-endif
 PLACEMAT = /usr/bin/placemat2
 GINKGO = $(GOPATH)/bin/ginkgo --failFast -v
 CURL = curl -fsL
@@ -268,7 +265,6 @@ $(DATA_DIR)/cluster.yml: $(CLUSTER)
 		-e 's/__NODE4__/$(NODE4)/' \
 		-e 's/__NODE5__/$(NODE5)/' \
 		-e 's/__NODE6__/$(NODE6)/' \
-		-e 's/__RUNTIME__/$(CONTAINER_RUNTIME)/' \
 		-e 's|__RUNTIME_ENDPOINT__|$(RUNTIME_ENDPOINT)|' $< > $@
 ifeq ($(SUITE),robustness)
 	sed -i -e '/address: $(NODE5)/a\    user: cybozu\n  - address: 10.0.0.107' $@

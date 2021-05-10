@@ -16,6 +16,7 @@ import (
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -133,7 +134,7 @@ func (p SchedulerParams) MergeConfig(base *schedulerv1beta1.KubeSchedulerConfigu
 	// When we need to upgrade the component config version, users will
 	// stop CKE, update cluster.yml in etcd, then start the new CKE.
 	// So, CKE should only support the latest config version.
-	cfg := *base
+	cfg := *base.DeepCopy()
 	if p.Config == nil {
 		return &cfg, nil
 	}
@@ -161,44 +162,76 @@ func (p SchedulerParams) MergeConfig(base *schedulerv1beta1.KubeSchedulerConfigu
 // ProxyParams is a set of extra parameters for kube-proxy.
 type ProxyParams struct {
 	ServiceParams `json:",inline"`
-	Mode          ProxyMode `json:"mode"`
+	Config        *unstructured.Unstructured `json:"config,omitempty"`
 }
 
 // GetMode returns the proxy mode.
-func (p ProxyParams) GetMode() ProxyMode {
-	if len(p.Mode) == 0 {
-		return ProxyModeIPVS
+func (p ProxyParams) GetMode() string {
+	mode := p.Config.UnstructuredContent()["Mode"].(string)
+	if len(mode) == 0 {
+		return string(ProxyModeIPVS)
 	}
-	return p.Mode
+	return mode
+}
+
+// MergeConfig merges the input struct with `base`.
+func (p ProxyParams) MergeConfig(base *proxyv1alpha1.KubeProxyConfiguration) (*proxyv1alpha1.KubeProxyConfiguration, error) {
+	// FOR IMPLEMENTORS.
+	// DO NOT SUPPORT MORE THAN ONE ComponentConfig VERSIONS.
+	// When we need to upgrade the component config version, users will
+	// stop CKE, update cluster.yml in etcd, then start the new CKE.
+	// So, CKE should only support the latest config version.
+	cfg := *base.DeepCopy()
+	if p.Config == nil {
+		return &cfg, nil
+	}
+
+	if p.Config.GetAPIVersion() != proxyv1alpha1.SchemeGroupVersion.String() {
+		return nil, fmt.Errorf("unexpected kube-proxy API version: %s", p.Config.GetAPIVersion())
+	}
+	if p.Config.GetKind() != "KubeProxyConfiguration" {
+		return nil, fmt.Errorf("wrong kind for kube-proxy config: %s", p.Config.GetKind())
+	}
+
+	data, err := json.Marshal(p.Config)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, &cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.TypeMeta = metav1.TypeMeta{}
+	return &cfg, nil
 }
 
 // ProxyMode is a type for kube-proxy's --proxy-mode argument.
 type ProxyMode string
 
 const (
-	ProxyModeUserspace ProxyMode = "userspace"
-	ProxyModeIptables  ProxyMode = "iptables"
-	ProxyModeIPVS      ProxyMode = "ipvs"
+	ProxyModeUserspace proxyv1alpha1.ProxyMode = "userspace"
+	ProxyModeIptables  proxyv1alpha1.ProxyMode = "iptables"
+	ProxyModeIPVS      proxyv1alpha1.ProxyMode = "ipvs"
 )
 
-// Validate validates ProxyMode
-func (m ProxyMode) Validate() error {
-	switch m {
+// ValidateProxyMode validates ProxyMode
+func ValidateProxyMode(mode proxyv1alpha1.ProxyMode) error {
+	switch mode {
 	case ProxyModeUserspace, ProxyModeIptables, ProxyModeIPVS:
 		return nil
 	}
 
-	return errors.New("invalid proxy mode " + string(m))
+	return errors.New("invalid proxy mode " + string(mode))
 }
 
 // KubeletParams is a set of extra parameters for kubelet.
 type KubeletParams struct {
-	ServiceParams    `json:",inline"`
-	BootTaints       []corev1.Taint             `json:"boot_taints"`
-	CNIConfFile      CNIConfFile                `json:"cni_conf_file"`
-	Config           *unstructured.Unstructured `json:"config,omitempty"`
-	ContainerRuntime string                     `json:"container_runtime"`
-	CRIEndpoint      string                     `json:"cri_endpoint"`
+	ServiceParams `json:",inline"`
+	BootTaints    []corev1.Taint             `json:"boot_taints"`
+	CNIConfFile   CNIConfFile                `json:"cni_conf_file"`
+	Config        *unstructured.Unstructured `json:"config,omitempty"`
+	CRIEndpoint   string                     `json:"cri_endpoint"`
 }
 
 // MergeConfig merges the input struct with `base`.
@@ -208,7 +241,7 @@ func (p KubeletParams) MergeConfig(base *kubeletv1beta1.KubeletConfiguration) (*
 	// When we need to upgrade the component config version, users will
 	// stop CKE, update cluster.yml in etcd, then start the new CKE.
 	// So, CKE should only support the latest config version.
-	cfg := *base
+	cfg := *base.DeepCopy()
 	if p.Config == nil {
 		return &cfg, nil
 	}
@@ -495,13 +528,8 @@ func validateOptions(opts Options) error {
 				kubeletConfig.ClusterDomain, strings.Join(msgs, ";"))
 		}
 	}
-	if len(opts.Kubelet.ContainerRuntime) > 0 {
-		if opts.Kubelet.ContainerRuntime != "remote" && opts.Kubelet.ContainerRuntime != "docker" {
-			return errors.New("kubelet.container_runtime should be 'docker' or 'remote'")
-		}
-		if opts.Kubelet.ContainerRuntime == "remote" && len(opts.Kubelet.CRIEndpoint) == 0 {
-			return errors.New("kubelet.cri_endpoint should not be empty")
-		}
+	if len(opts.Kubelet.CRIEndpoint) == 0 {
+		return errors.New("kubelet.cri_endpoint should not be empty")
 	}
 	if len(opts.Kubelet.CNIConfFile.Content) != 0 && len(opts.Kubelet.CNIConfFile.Name) == 0 {
 		return fmt.Errorf("kubelet.cni_conf_file.name should not be empty when kubelet.cni_conf_file.content is not empty")
@@ -552,8 +580,12 @@ func validateOptions(opts Options) error {
 		return err
 	}
 
-	if len(opts.Proxy.Mode) > 0 {
-		if err := opts.Proxy.Mode.Validate(); err != nil {
+	p, err := opts.Proxy.MergeConfig(&proxyv1alpha1.KubeProxyConfiguration{})
+	if err != nil {
+		return err
+	}
+	if len(p.Mode) != 0 {
+		if err := ValidateProxyMode(p.Mode); err != nil {
 			return err
 		}
 	}

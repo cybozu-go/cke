@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
+	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
@@ -133,20 +134,39 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 		}
 	}
 
-	// TODO: due to the following bug, health status cannot be checked for proxy.
-	// https://github.com/kubernetes/kubernetes/issues/65118
-	status.Proxy = cke.KubeComponentStatus{
+	status.Proxy = cke.ProxyStatus{
 		ServiceStatus: ss[KubeProxyContainerName],
 		IsHealthy:     false,
 	}
-	status.Proxy.IsHealthy = status.Proxy.Running
+	if status.Proxy.Running {
+		status.Proxy.IsHealthy, err = CheckHealthz(ctx, inf, node.Address, 10249)
+		if err != nil {
+			log.Warn("failed to check proxy health", map[string]interface{}{
+				log.FnError: err,
+				"node":      node.Address,
+			})
+		}
+
+		cfgData, _, err := agent.Run("cat /etc/kubernetes/proxy/config.yml")
+		if err == nil {
+			var v proxyv1alpha1.KubeProxyConfiguration
+			_, _, err = decUnstructured.Decode(cfgData, nil, &v)
+			if err == nil {
+				// Nullify TypeMeta for later comparison using reflect.DeepEqual
+				if v.APIVersion == proxyv1alpha1.SchemeGroupVersion.String() {
+					v.TypeMeta = metav1.TypeMeta{}
+				}
+				status.Proxy.Config = &v
+			}
+		}
+	}
 
 	status.Kubelet = cke.KubeletStatus{
 		ServiceStatus: ss[KubeletContainerName],
 		IsHealthy:     false,
 	}
 	if status.Kubelet.Running {
-		status.Kubelet.IsHealthy, err = CheckKubeletHealthz(ctx, inf, node.Address, 10248)
+		status.Kubelet.IsHealthy, err = CheckHealthz(ctx, inf, node.Address, 10248)
 		if err != nil {
 			log.Warn("failed to check kubelet health", map[string]interface{}{
 				log.FnError: err,
@@ -451,8 +471,8 @@ func getNodeDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) 
 	return s, nil
 }
 
-// CheckKubeletHealthz checks that Kubelet is healthy
-func CheckKubeletHealthz(ctx context.Context, inf cke.Infrastructure, addr string, port uint16) (bool, error) {
+// CheckHealthz checks that Kubelet is healthy
+func CheckHealthz(ctx context.Context, inf cke.Infrastructure, addr string, port uint16) (bool, error) {
 	healthzURL := "http://" + addr + ":" + strconv.FormatUint(uint64(port), 10) + "/healthz"
 	req, err := http.NewRequest("GET", healthzURL, nil)
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -144,13 +145,20 @@ rules:
 		t.Error(`*kubeSchedulerConfig.Profiles[0].Plugins.Score.Enabled[0].Weight != int32(500)`)
 	}
 
-	if c.Options.Proxy.Mode != ProxyModeIptables {
-		t.Error(`c.Options.Proxy.Mode != ProxyModeIptables`)
+	proxyConfig, err := c.Options.Proxy.MergeConfig(&proxyv1alpha1.KubeProxyConfiguration{
+		Mode:               ProxyModeIPVS,
+		HealthzBindAddress: "0.0.0.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if proxyConfig.Mode != ProxyModeIptables {
+		t.Error(`proxyConfig.Mode != ProxyModeIptables`)
+	}
+	if proxyConfig.HealthzBindAddress != "0.0.0.0" {
+		t.Error(`proxyConfig.HealthzBindAddress != 0.0.0.0`)
 	}
 
-	if c.Options.Kubelet.ContainerRuntime != "remote" {
-		t.Error(`c.Options.Kubelet.ContainerRuntime != "remote"`)
-	}
 	if c.Options.Kubelet.CRIEndpoint != "/var/run/k8s-containerd.sock" {
 		t.Error(`c.Options.Kubelet.ContainerRuntimeEndpoint != "/var/run/k8s-containerd.sock"`)
 	}
@@ -219,6 +227,11 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "",
 				ServiceSubnet: "10.0.0.0/14",
+				Options: Options{
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
 			},
 			true,
 		},
@@ -227,6 +240,11 @@ func testClusterValidate(t *testing.T) {
 			Cluster{
 				Name:          "testcluster",
 				ServiceSubnet: "",
+				Options: Options{
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
 			},
 			true,
 		},
@@ -236,6 +254,11 @@ func testClusterValidate(t *testing.T) {
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
 				DNSServers:    []string{"a.b.c.d"},
+				Options: Options{
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
 			},
 			true,
 		},
@@ -245,6 +268,11 @@ func testClusterValidate(t *testing.T) {
 				Name:          "testcluster",
 				ServiceSubnet: "10.0.0.0/14",
 				DNSService:    "hoge",
+				Options: Options{
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
 			},
 			true,
 		},
@@ -257,6 +285,9 @@ func testClusterValidate(t *testing.T) {
 					APIServer: APIServerParams{
 						AuditLogEnabled: true,
 						AuditLogPolicy:  "",
+					},
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -271,6 +302,9 @@ func testClusterValidate(t *testing.T) {
 					APIServer: APIServerParams{
 						AuditLogEnabled: true,
 						AuditLogPolicy:  "test",
+					},
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -290,6 +324,9 @@ rules:
 - level: Metadata
 `,
 					},
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
 				},
 			},
 			false,
@@ -301,7 +338,16 @@ rules:
 				ServiceSubnet: "10.0.0.0/14",
 				Options: Options{
 					Proxy: ProxyParams{
-						Mode: "foo",
+						Config: &unstructured.Unstructured{
+							Object: map[string]interface{}{
+								"apiVersion": "kubeproxy.config.k8s.io/v1alpha1",
+								"kind":       "KubeProxyConfiguration",
+								"mode":       "foo",
+							},
+						},
+					},
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -321,6 +367,7 @@ rules:
 								"clusterDomain": "a_b.c",
 							},
 						},
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -333,21 +380,8 @@ rules:
 				ServiceSubnet: "10.0.0.0/14",
 				Options: Options{
 					Kubelet: KubeletParams{
-						Config: &unstructured.Unstructured{},
-					},
-				},
-			},
-			true,
-		},
-		{
-			"invalid container_runtime",
-			Cluster{
-				Name:          "testcluster",
-				ServiceSubnet: "10.0.0.0/14",
-				Options: Options{
-					Kubelet: KubeletParams{
-						ContainerRuntime: "test",
-						CRIEndpoint:      "/var/run/dockershim.sock",
+						Config:      &unstructured.Unstructured{},
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -360,8 +394,7 @@ rules:
 				ServiceSubnet: "10.0.0.0/14",
 				Options: Options{
 					Kubelet: KubeletParams{
-						ContainerRuntime: "remote",
-						CRIEndpoint:      "",
+						CRIEndpoint: "",
 					},
 				},
 			},
@@ -381,6 +414,7 @@ rules:
 								Effect: "NoSchedule",
 							},
 						},
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -400,6 +434,7 @@ rules:
 								Effect: "NoSchedule",
 							},
 						},
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -419,6 +454,7 @@ rules:
 								Effect: "NoSchedule",
 							},
 						},
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -438,6 +474,7 @@ rules:
 								Effect: "NoNoNo",
 							},
 						},
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -454,6 +491,7 @@ rules:
 							Name:    "aaa&&.txt",
 							Content: `{"a":"b"}`,
 						},
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -470,6 +508,7 @@ rules:
 							Name:    "",
 							Content: `{"a":"b"}`,
 						},
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -486,6 +525,7 @@ rules:
 							Name:    "99.loopback.conf",
 							Content: "<aaa>",
 						},
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -499,6 +539,9 @@ rules:
 				Options: Options{
 					Scheduler: SchedulerParams{
 						Config: &unstructured.Unstructured{},
+					},
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -520,6 +563,11 @@ rules:
 						User:    "another",
 					},
 				},
+				Options: Options{
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
 			},
 			true,
 		},
@@ -531,7 +579,13 @@ rules:
 				DNSService:    "kube-system/dns",
 				Options: Options{
 					Proxy: ProxyParams{
-						Mode: ProxyModeIptables,
+						Config: &unstructured.Unstructured{
+							Object: map[string]interface{}{
+								"apiVersion": "kubeproxy.config.k8s.io/v1alpha1",
+								"kind":       "KubeProxyConfiguration",
+								"mode":       ProxyModeIptables,
+							},
+						},
 					},
 					Kubelet: KubeletParams{
 						BootTaints: []corev1.Taint{
@@ -541,6 +595,7 @@ rules:
 								Effect: "NoSchedule",
 							},
 						},
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},

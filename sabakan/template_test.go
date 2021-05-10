@@ -28,6 +28,11 @@ func TestClusterValidate(t *testing.T) {
 						User: "another",
 					},
 				},
+				Options: cke.Options{
+					Kubelet: cke.KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
 			},
 			false,
 		},
@@ -54,6 +59,11 @@ func TestClusterValidate(t *testing.T) {
 						},
 					},
 				},
+				Options: cke.Options{
+					Kubelet: cke.KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
 			},
 			false,
 		},
@@ -72,6 +82,11 @@ func TestClusterValidate(t *testing.T) {
 						Labels: map[string]string{
 							"cke.cybozu.com/weight": "1.0",
 						},
+					},
+				},
+				Options: cke.Options{
+					Kubelet: cke.KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},

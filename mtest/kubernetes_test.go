@@ -23,8 +23,6 @@ func testKubernetes() {
 		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		_, stderr, err = kubectlWithInput(policyYAML, "apply", "-f", "-", "-n="+namespace)
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		By("waiting the default service account gets created")
 		Eventually(func() error {
@@ -90,8 +88,6 @@ func testKubernetes() {
 		namespace := fmt.Sprintf("mtest-%d", getRandomNumber().Int())
 		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		_, stderr, err = kubectlWithInput(policyYAML, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		var node string
@@ -202,13 +198,19 @@ func testKubernetes() {
 		By("creating namespace " + namespace)
 		_, stderr, err := kubectl("create", "namespace", namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		_, stderr, err = kubectlWithInput(policyYAML, "apply", "-f", "-", "-n="+namespace)
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		By("waiting the default service account gets created")
+		Eventually(func() error {
+			_, stderr, err := kubectl("get", "sa/default", "-o", "json", "-n="+namespace)
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+			return nil
+		}).Should(Succeed())
 
 		for _, name := range []string{
 			"configmaps/node-dns",
 			"daemonsets/node-dns",
-			"serviceaccounts/cke-node-dns",
 		} {
 			_, stderr, err := kubectl("-n", "kube-system", "get", name)
 			Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)

@@ -12,7 +12,6 @@ a Kubernetes cluster bootstrapped by CKE.
 - [Data encryption at rest](#data-encryption-at-rest)
   - [Rationale for not using `kms`](#rationale-for-not-using-kms)
 - [Pre-installed Kubernetes resources](#pre-installed-kubernetes-resources)
-  - [Pod security policies](#pod-security-policies)
   - [Service accounts](#service-accounts)
   - [RBAC roles](#rbac-roles)
   - [Kubernetes Endpoints](#kubernetes-endpoints)
@@ -123,11 +122,6 @@ are no reasons to choose `kms`.
 
 CKE installs and maintains following Kubernetes resources other than DNS ones.
 
-### Pod security policies
-
-Though CKE does not enable [PodSecurityPolicy][] by default, it prepares necessary policies
-for resources managed by CKE to be ready for enabling [PodSecurityPolicy][].
-
 ### Service accounts
 
 - `cke-node-dns` in `kube-system` is the service account for node-local DNS cache servers.
@@ -164,7 +158,6 @@ CKE maintains this Endpoints object on behalf of the API servers.
 ## Default settings
 
 - `kube-proxy` runs in IPVS mode.
-- [PodSecurityPolicy][] is not enabled.
 
 [unbound]: https://www.nlnetlabs.nl/projects/unbound/
 [webhook]: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
@@ -177,4 +170,3 @@ CKE maintains this Endpoints object on behalf of the API servers.
 [Secret]: https://kubernetes.io/docs/concepts/configuration/secret/
 [CNI]: https://github.com/containernetworking/cni
 [CNI plugins]: https://github.com/containernetworking/plugins
-[PodSecurityPolicy]: https://kubernetes.io/docs/concepts/policy/pod-security-policy/

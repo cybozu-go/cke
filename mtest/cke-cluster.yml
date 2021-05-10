@@ -18,8 +18,6 @@ reboot:
   command_timeout_seconds: 30
 options:
   kube-api:
-    extra_args:
-    - --enable-admission-plugins=PodSecurityPolicy
     extra_binds:
     - source: /var/log/audit
       destination: /var/log/audit
@@ -43,7 +41,6 @@ options:
     - source: /var/lib/k8s-containerd
       destination: /var/lib/k8s-containerd
       read_only: false
-    container_runtime: __RUNTIME__
     cri_endpoint: __RUNTIME_ENDPOINT__
     cni_conf_file:
       name: 98-bridge.conf
@@ -69,3 +66,10 @@ options:
       clusterDomain: cluster.local
       containerLogMaxSize: "1000"
       containerLogMaxFiles: 3
+  kube-proxy:
+    config:
+      apiVersion: kubeproxy.config.k8s.io/v1alpha1
+      kind: KubeProxyConfiguration
+      mode: ipvs
+      ipvs:
+        strictARP: true

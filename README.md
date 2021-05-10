@@ -72,7 +72,6 @@ Features
 
     * HA control plane.
     * [RBAC][] is enabled.
-    * Ready for [PodSecurityPolicy][]
     * Ready for API [aggregation](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/).
     * `Secret` data are [encrypted at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
     * [CNI][] network plugins.
@@ -171,7 +170,6 @@ CKE is licensed under MIT license.
 [cri-o]: https://cri-o.io/
 [Vault]: https://www.vaultproject.io
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
-[PodSecurityPolicy]: https://kubernetes.io/docs/concepts/policy/pod-security-policy/
 [CNI]: https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/
 [CoreDNS]: https://coredns.io/
 [sabakan]: https://github.com/cybozu-go/sabakan

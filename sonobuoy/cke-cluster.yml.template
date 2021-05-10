@@ -20,4 +20,7 @@ options:
       - "--allocate-node-cidrs=true"
       - "--cluster-cidr=192.168.0.0/16"
   kube-proxy:
-    mode: iptables
+    config:
+      apiVersion: kubeproxy.config.k8s.io/v1alpha1
+      kind: KubeProxyConfiguration
+      mode: ipvs

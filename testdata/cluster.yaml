@@ -59,11 +59,13 @@ options:
       extra_args:
       - arg1
   kube-proxy:
-    mode: iptables
+    config:
+      apiVersion: kubeproxy.config.k8s.io/v1alpha1
+      kind: KubeProxyConfiguration
+      mode: iptables
     extra_args:
       - arg1
   kubelet:
-    container_runtime: remote
     cri_endpoint: /var/run/k8s-containerd.sock
     boot_taints:
       - key: taint1
