@@ -134,7 +134,7 @@ func (p SchedulerParams) MergeConfig(base *schedulerv1beta1.KubeSchedulerConfigu
 	// When we need to upgrade the component config version, users will
 	// stop CKE, update cluster.yml in etcd, then start the new CKE.
 	// So, CKE should only support the latest config version.
-	cfg := *base
+	cfg := *base.DeepCopy()
 	if p.Config == nil {
 		return &cfg, nil
 	}
@@ -181,7 +181,7 @@ func (p ProxyParams) MergeConfig(base *proxyv1alpha1.KubeProxyConfiguration) (*p
 	// When we need to upgrade the component config version, users will
 	// stop CKE, update cluster.yml in etcd, then start the new CKE.
 	// So, CKE should only support the latest config version.
-	cfg := *base
+	cfg := *base.DeepCopy()
 	if p.Config == nil {
 		return &cfg, nil
 	}
@@ -241,7 +241,7 @@ func (p KubeletParams) MergeConfig(base *kubeletv1beta1.KubeletConfiguration) (*
 	// When we need to upgrade the component config version, users will
 	// stop CKE, update cluster.yml in etcd, then start the new CKE.
 	// So, CKE should only support the latest config version.
-	cfg := *base
+	cfg := *base.DeepCopy()
 	if p.Config == nil {
 		return &cfg, nil
 	}
