@@ -2,7 +2,7 @@ version: '2'
 services:
   cke:
     container_name: cke
-    image: quay.io/cybozu/cke:1.20.0-rc.1
+    image: quay.io/cybozu/cke:1.20.0
     networks:
       app_net:
         ipv4_address: 172.30.0.11
