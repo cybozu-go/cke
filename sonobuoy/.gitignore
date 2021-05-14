@@ -3,3 +3,4 @@
 /.vagrant
 /.kubeconfig
 /sonobuoy.tar.gz
+/worker.ign
