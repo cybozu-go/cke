@@ -1,0 +1,45 @@
+passwd:
+  users:
+    - name: cke
+      ssh_authorized_keys:
+        - "PUBLIC_KEY"
+      groups:
+        - docker
+        - sudo
+storage:
+  files:
+    - path: "/etc/sysctl.d/br_netfilter.conf"
+      filesystem: root
+      contents:
+        inline: |
+          net.bridge.bridge-nf-call-iptables  = 1
+          net.ipv4.ip_forward                 = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+      mode: 0644
+    - path: "/opt/bin/setup-iptables-rules"
+      filesystem: root
+      contents:
+        inline: |
+          #!/bin/sh
+          iptables -w -A INPUT -p tcp -j ACCEPT
+          iptables -w -A INPUT -p udp -j ACCEPT
+      mode: 0755
+systemd:
+  units:
+  - name: systemd-resolved.service
+    mask: true
+  - name: setup-iptables-rules.service
+    enabled: true
+    contents: |
+      [Unit]
+        Description=Setup iptables rules
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/bin/setup-iptables-rules
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=multi-user.target

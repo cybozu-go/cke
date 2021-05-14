@@ -24,19 +24,21 @@ $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --boot-disk-size ${BOOT_DISK_SIZE} \
   --metadata shutdown-at=$(date -Iseconds -d+4hours)
 
+cd $(dirname $0)/../sonobuoy
+make worker.ign
 ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
-sed -e "s#PUBLIC_KEY#$(cat gcp_rsa.pub)#g" $(dirname $0)/../sonobuoy/worker.cfg > /tmp/worker.cfg
+sed -e "s#PUBLIC_KEY#$(cat gcp_rsa.pub)#g" ./worker.ign > /tmp/worker.ign
 
 for i in $(seq 3); do
   $GCLOUD compute instances create ${INSTANCE_NAME}-${i} \
     --zone ${ZONE} \
     --machine-type ${MACHINE_TYPE_WORKER} \
-    --image-project cos-cloud \
-    --image-family cos-stable \
+    --image-project kinvolk-public \
+    --image-family flatcar-stable \
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
-    --metadata-from-file user-data=/tmp/worker.cfg \
-    --metadata shutdown-at=$(date -Iseconds -d+4hours),cos-update-strategy=update_disabled
+    --metadata-from-file user-data=/tmp/worker.ign \
+    --metadata shutdown-at=$(date -Iseconds -d+4hours)
 done
 
 trap delete_instance INT QUIT TERM 0
@@ -81,7 +83,7 @@ WORKER3_ADDRESS=$($GCLOUD compute instances describe ${INSTANCE_NAME}-3 --zone $
 
 sed -e "s|@WORKER1_ADDRESS@|${WORKER1_ADDRESS}|" \
   -e "s|@WORKER2_ADDRESS@|${WORKER2_ADDRESS}|" \
-  -e "s|@WORKER3_ADDRESS@|${WORKER3_ADDRESS}|" $(dirname $0)/../sonobuoy/cke-cluster.yml.template > cke-cluster.yml
+  -e "s|@WORKER3_ADDRESS@|${WORKER3_ADDRESS}|" ./cke-cluster.yml.template > cke-cluster.yml
 
 $GCLOUD compute scp --zone=${ZONE} run.sh cybozu@${INSTANCE_NAME}-0:
 $GCLOUD compute scp --zone=${ZONE} cke-cluster.yml cybozu@${INSTANCE_NAME}-0:

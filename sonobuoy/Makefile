@@ -2,6 +2,7 @@
 SONOBUOY_VERSION = 0.50.0
 KUBECTL_VERSION = 1.20.7
 DOCKER_COMPOSE_VERSION = 1.29.1
+CT_VERSION = 0.9.0
 
 ### Unconfigurable
 CURL = curl -fsL
@@ -16,8 +17,10 @@ KUBECTL_URL = https://storage.googleapis.com/kubernetes-release/release/v$(KUBEC
 DOCKER_COMPOSE_URL = https://github.com/docker/compose/releases/download/$(DOCKER_COMPOSE_VERSION)/docker-compose-Linux-x86_64
 CKECLI = ./bin/ckecli --config=./cke.config
 KUBECONFIG := $(shell pwd)/.kubeconfig
+CT = $(shell pwd)/bin/ct
 export KUBECONFIG
 
+.PHONY: all
 all:
 	@echo "Available targets:"
 	@echo "    run              Run CKE and install Kubernetes into GCP Instances."
@@ -40,6 +43,7 @@ bin/sonobuoy:
 	mkdir -p bin
 	$(CURL) $(SONOBUOY_URL) | tar xzf - -C bin sonobuoy
 
+.PHONY: run
 run: bin/cke bin/ckecli bin/kubectl
 	mkdir -p etcd-data
 	/usr/local/bin/docker-compose up -d
@@ -54,6 +58,7 @@ run: bin/cke bin/ckecli bin/kubectl
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get nodes --no-headers | grep Ready | wc -l)" = 3 ]; then break; fi; done
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system deployments/cluster-dns -o json | jq .status.readyReplicas)" = 2 ]; then break; fi; done
 
+.PHONY: sonobuoy
 sonobuoy: bin/sonobuoy
 	$(CKECLI) kubernetes issue --ttl=10h > .kubeconfig
 	time ./bin/sonobuoy run --mode=certified-conformance --timeout=14400 --wait
@@ -61,14 +66,17 @@ sonobuoy: bin/sonobuoy
 	./bin/sonobuoy e2e sonobuoy.tar.gz 2>&1 | tee e2e-check.log
 	./bin/sonobuoy delete
 
+.PHONY: clean
 clean:
 	-/usr/local/bin/docker-compose down
 	$(SUDO) rm -rf bin etcd-data
 
+.PHONY: setup
 setup:
 	$(SUDO) $(CURL) -o /usr/local/bin/docker-compose $(DOCKER_COMPOSE_URL)
 	$(SUDO) chmod +x /usr/local/bin/docker-compose
 
+.PHONY: run-on-vagrant
 run-on-vagrant: bin/cke bin/ckecli bin/kubectl
 	mkdir -p etcd-data
 	/usr/local/bin/docker-compose up -d
@@ -84,8 +92,16 @@ run-on-vagrant: bin/cke bin/ckecli bin/kubectl
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get nodes --no-headers | grep Ready | wc -l)" = 3 ]; then break; fi; done
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system deployments/cluster-dns -o json | jq .status.readyReplicas)" = 2 ]; then break; fi; done
 
+.PHONY: setup-vagrant
 setup-vagrant: setup
 	$(SUDO) apt-get update
 	$(SUDO) apt-get install -y virtualbox vagrant
 
-.PHONY: all run sonobuoy clean setup run-on-vagrant setup-vagrant
+$(CT):
+	mkdir -p bin
+	$(CURL) -o ct https://github.com/coreos/container-linux-config-transpiler/releases/download/v$(CT_VERSION)/ct-v$(CT_VERSION)-x86_64-unknown-linux-gnu
+	chmod +x ct
+	$(SUDO) mv ct $@
+
+worker.ign: worker-ign.yml $(CT)
+	$(CT) -in-file=$< -pretty -out-file=$@
