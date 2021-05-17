@@ -23,9 +23,9 @@ var Resources = []cke.ResourceDefinition{
 		Kind:       "ClusterRole",
 		Namespace:  "",
 		Name:       "system:cluster-dns",
-		Revision:   1,
+		Revision:   2,
 		Image:      "",
-		Definition: []byte("\nkind: ClusterRole\napiVersion: rbac.authorization.k8s.io/v1\nmetadata:\n  name: system:cluster-dns\n  labels:\n    kubernetes.io/bootstrapping: rbac-defaults\n  annotations:\n    cke.cybozu.com/revision: \"1\"\n    # turn on auto-reconciliation\n    # https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation\n    rbac.authorization.kubernetes.io/autoupdate: \"true\"\nrules:\n  - apiGroups:\n      - \"\"\n    resources:\n      - endpoints\n      - services\n      - pods\n      - namespaces\n    verbs:\n      - list\n      - watch\n  - apiGroups:\n      - discovery.k8s.io\n    resources:\n      - endpointslices\n    verbs:\n      - list\n      - watch\n"),
+		Definition: []byte("\nkind: ClusterRole\napiVersion: rbac.authorization.k8s.io/v1\nmetadata:\n  name: system:cluster-dns\n  labels:\n    kubernetes.io/bootstrapping: rbac-defaults\n  annotations:\n    cke.cybozu.com/revision: \"2\"\n    # turn on auto-reconciliation\n    # https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation\n    rbac.authorization.kubernetes.io/autoupdate: \"true\"\nrules:\n  - apiGroups:\n      - \"\"\n    resources:\n      - endpoints\n      - services\n      - pods\n      - namespaces\n    verbs:\n      - list\n      - watch\n  - apiGroups:\n      - discovery.k8s.io\n    resources:\n      - endpointslices\n    verbs:\n      - list\n      - watch\n"),
 	},
 	{
 		Key:        "ClusterRole/system:kube-apiserver-to-kubelet",
