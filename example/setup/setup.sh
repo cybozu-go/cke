@@ -14,7 +14,6 @@ function retry() {
 
 export VAULT_ADDR=http://172.30.0.13:8200
 export VAULT_TOKEN=cybozu
-export ETCDCTL_API=3
 
 # wait for preparation of vault
 retry curl ${VAULT_ADDR}/v1/sys/health

@@ -15,13 +15,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/server"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/well"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"go.etcd.io/etcd/clientv3"
 	"golang.org/x/crypto/ssh"
 	"sigs.k8s.io/yaml"
 )
@@ -461,7 +461,7 @@ func injectFailure(failurePoint string) {
 }
 
 func etcdctl(crt, key, ca string, args ...string) ([]byte, []byte, error) {
-	args = append([]string{"env", "ETCDCTL_API=3", "/opt/bin/etcdctl", "--endpoints=https://" + node1 + ":2379,https://" + node2 + ":2379,https://" + node3 + ":2379",
+	args = append([]string{"/opt/bin/etcdctl", "--endpoints=https://" + node1 + ":2379,https://" + node2 + ":2379,https://" + node3 + ":2379",
 		"--cert=" + crt, "--key=" + key, "--cacert=" + ca}, args...)
 	return execAt(host1, args...)
 }

@@ -10,11 +10,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	vault "github.com/hashicorp/vault/api"
+	"go.etcd.io/etcd/clientv3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )

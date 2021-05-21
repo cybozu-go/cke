@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/clusterdns"
@@ -14,6 +13,7 @@ import (
 	"github.com/cybozu-go/cke/op/nodedns"
 	"github.com/cybozu-go/cke/static"
 	"github.com/google/go-cmp/cmp"
+	"go.etcd.io/etcd/etcdserver/etcdserverpb"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

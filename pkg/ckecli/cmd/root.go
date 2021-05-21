@@ -3,12 +3,12 @@ package cmd
 import (
 	"os"
 
-	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
+	"go.etcd.io/etcd/clientv3"
 	"sigs.k8s.io/yaml"
 )
 

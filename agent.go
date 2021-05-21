@@ -93,7 +93,7 @@ func SSHAgent(node *Node, privkey string) (Agent, error) {
 		return nil, err
 	}
 
-	a := sshAgent{
+	a := &sshAgent{
 		node:   node,
 		client: ssh.NewClient(clientConn, channelCh, reqCh),
 		conn:   conn,
@@ -107,22 +107,22 @@ func SSHAgent(node *Node, privkey string) (Agent, error) {
 	return a, nil
 }
 
-func (a sshAgent) Close() error {
+func (a *sshAgent) Close() error {
 	err := a.client.Close()
 	a.client = nil
 	return err
 }
 
-func (a sshAgent) Run(command string) ([]byte, []byte, error) {
+func (a *sshAgent) Run(command string) ([]byte, []byte, error) {
 	return a.RunWithTimeout(command, "", DefaultRunTimeout)
 }
 
-func (a sshAgent) RunWithInput(command, input string) error {
+func (a *sshAgent) RunWithInput(command, input string) error {
 	_, _, err := a.RunWithTimeout(command, input, DefaultRunTimeout)
 	return err
 }
 
-func (a sshAgent) RunWithTimeout(command, input string, timeout time.Duration) ([]byte, []byte, error) {
+func (a *sshAgent) RunWithTimeout(command, input string, timeout time.Duration) ([]byte, []byte, error) {
 	if timeout > 0 {
 		err := a.conn.SetDeadline(time.Now().Add(timeout))
 		if err != nil {

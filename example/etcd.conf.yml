@@ -30,11 +30,8 @@ initial-cluster-token: 'etcd-cluster-1'
 # Initial cluster state ('new' or 'existing').
 initial-cluster-state: 'new'
 
-# Accept etcd V2 client requests
-enable-v2: false
-
 # Enable runtime profiling data via HTTP server
 enable-pprof: true
 
 # Specify 'stdout' or 'stderr' to skip journald logging even when running under systemd.
-log-outputs: stderr
+log-outputs: [stderr]

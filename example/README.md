@@ -39,7 +39,7 @@ $ docker ps
 CONTAINER ID        IMAGE                      COMMAND                  CREATED             STATUS              PORTS                                  NAMES
 844ea90ab7b5        quay.io/cybozu/cke:1.15    "/entrypoint.sh"         12 seconds ago      Up 10 seconds                                              cke
 9617f2dc36c5        quay.io/cybozu/vault:1.1   "/entrypoint.sh"         14 seconds ago      Up 12 seconds       0.0.0.0:8200-8201->8200-8201/tcp       vault
-7140fa308dc3        quay.io/cybozu/etcd:3.3    "/entrypoint.sh"         16 seconds ago      Up 14 seconds       0.0.0.0:2379-2380->2379-2380/tcp       etcd
+7140fa308dc3        quay.io/cybozu/etcd:3.4    "/entrypoint.sh"         16 seconds ago      Up 14 seconds       0.0.0.0:2379-2380->2379-2380/tcp       etcd
 ```
 
 ## Setup node VMs

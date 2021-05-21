@@ -5,9 +5,9 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
+	"go.etcd.io/etcd/clientv3"
 )
 
 const (
