@@ -56,7 +56,7 @@ services:
       - /entrypoint.sh
   etcd:
     container_name: etcd
-    image: quay.io/cybozu/etcd:3.3
+    image: quay.io/cybozu/etcd:3.4
     networks:
       app_net:
         ipv4_address: 172.30.0.14

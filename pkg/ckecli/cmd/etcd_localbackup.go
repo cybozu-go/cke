@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/snapshot"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
+	"go.etcd.io/etcd/clientv3"
+	"go.etcd.io/etcd/clientv3/snapshot"
 )
 
 var config struct {

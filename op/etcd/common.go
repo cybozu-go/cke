@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
+	"go.etcd.io/etcd/clientv3"
 )
 
 func etcdEndpoints(nodes []*cke.Node) []string {

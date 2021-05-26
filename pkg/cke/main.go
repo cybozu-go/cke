@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/metrics"
 	"github.com/cybozu-go/cke/sabakan"
@@ -15,6 +14,7 @@ import (
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/pflag"
+	"go.etcd.io/etcd/clientv3/concurrency"
 	"sigs.k8s.io/yaml"
 )
 

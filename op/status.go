@@ -11,11 +11,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
+	"go.etcd.io/etcd/clientv3"
+	"go.etcd.io/etcd/etcdserver/etcdserverpb"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

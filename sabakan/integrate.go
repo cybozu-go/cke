@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/metrics"
 	"github.com/cybozu-go/cke/server"
 	"github.com/cybozu-go/log"
+	"go.etcd.io/etcd/clientv3"
 )
 
 type sabakanContextKey string

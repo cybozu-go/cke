@@ -20,7 +20,6 @@ $ CERT=$(ckecli etcd root-issue)
 $ echo "$CERT" | jq -r .ca_certificate > /tmp/etcd-ca.crt
 $ echo "$CERT" | jq -r .certificate > /tmp/etcd-root.crt
 $ echo "$CERT" | jq -r .private_key > /tmp/etcd-root.key
-$ export ETCDCTL_API=3
 $ export ETCDCTL_CACERT=/tmp/etcd-ca.crt
 $ export ETCDCTL_CERT=/tmp/etcd-root.crt
 $ export ETCDCTL_KEY=/tmp/etcd-root.key

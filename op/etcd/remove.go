@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/coreos/etcd/etcdserver/etcdserverpb"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/log"
+	"go.etcd.io/etcd/etcdserver/etcdserverpb"
 )
 
 type removeMemberOp struct {

@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	v3 "github.com/coreos/etcd/clientv3"
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	v3 "go.etcd.io/etcd/clientv3"
 )
 
 type logger struct{}
