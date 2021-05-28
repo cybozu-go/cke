@@ -56,7 +56,6 @@ func BuiltInParams(node *cke.Node, initialCluster []string, state string) cke.Se
 		"--peer-key-file=" + op.EtcdPKIPath("peer.key"),
 		"--peer-client-cert-auth=true",
 		"--peer-trusted-ca-file=" + op.EtcdPKIPath("ca-peer.crt"),
-		"--enable-v2=false",
 		"--enable-pprof=true",
 		"--auto-compaction-mode=periodic",
 		// Mimic the default --etcd-compaction-interval of kube-apiserver (= 5 minutes).
