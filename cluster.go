@@ -288,14 +288,15 @@ type Options struct {
 
 // Cluster is a set of configurations for a etcd/Kubernetes cluster.
 type Cluster struct {
-	Name          string   `json:"name"`
-	Nodes         []*Node  `json:"nodes"`
-	TaintCP       bool     `json:"taint_control_plane"`
-	ServiceSubnet string   `json:"service_subnet"`
-	DNSServers    []string `json:"dns_servers"`
-	DNSService    string   `json:"dns_service"`
-	Reboot        Reboot   `json:"reboot"`
-	Options       Options  `json:"options"`
+	Name             string   `json:"name"`
+	Nodes            []*Node  `json:"nodes"`
+	TaintCP          bool     `json:"taint_control_plane"`
+	DisableKubeProxy bool     `json:"disable_kube_proxy"`
+	ServiceSubnet    string   `json:"service_subnet"`
+	DNSServers       []string `json:"dns_servers"`
+	DNSService       string   `json:"dns_service"`
+	Reboot           Reboot   `json:"reboot"`
+	Options          Options  `json:"options"`
 }
 
 // Validate validates the cluster definition.

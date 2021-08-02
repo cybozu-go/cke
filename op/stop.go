@@ -55,6 +55,14 @@ func SchedulerStopOp(nodes []*cke.Node) cke.Operator {
 	}
 }
 
+// ProxyStopOp returns an Operator to stop kube-proxy
+func ProxyStopOp(nodes []*cke.Node) cke.Operator {
+	return &containerStopOp{
+		nodes: nodes,
+		name:  KubeProxyContainerName,
+	}
+}
+
 // EtcdStopOp returns an Operator to stop etcd
 func EtcdStopOp(nodes []*cke.Node) cke.Operator {
 	return &containerStopOp{
