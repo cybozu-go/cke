@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.20.4] - 2021-08-26
+
+- Add disable kube-proxy function (#472)
+
 ## [1.20.3] - 2021-05-27
 
 - Use etcd 3.4.16 for Kubernetes cluster (#465)
@@ -48,7 +52,8 @@ No change from 1.20.0-rc.1
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.20.3...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.20.4...HEAD
+[1.20.4]: https://github.com/cybozu-go/cke/compare/v1.20.3...v1.20.4
 [1.20.3]: https://github.com/cybozu-go/cke/compare/v1.20.2...v1.20.3
 [1.20.2]: https://github.com/cybozu-go/cke/compare/v1.20.1...v1.20.2
 [1.20.1]: https://github.com/cybozu-go/cke/compare/v1.20.0...v1.20.1
