@@ -644,6 +644,22 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
+			Name:  "BootK8sWithoutProxy",
+			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withSSHNotConnectedNodes().withDisableProxy(),
+			ExpectedOps: []string{
+				"kube-apiserver-restart",
+				"kube-controller-manager-bootstrap",
+				"kube-scheduler-bootstrap",
+				"kubelet-bootstrap",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-apiserver-restart":            2,
+				"kube-controller-manager-bootstrap": 2,
+				"kube-scheduler-bootstrap":          2,
+				"kubelet-bootstrap":                 4,
+			},
+		},
+		{
 			Name:  "RestartAPIServer",
 			Input: newData().withAllServices().withAPIServer("11.22.33.0/24", testDefaultDNSDomain).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
@@ -921,22 +937,6 @@ func TestDecideOps(t *testing.T) {
 			},
 			ExpectedTargetNums: map[string]int{
 				"kube-proxy-restart": 1,
-			},
-		},
-		{
-			Name:  "DisableProxy",
-			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withSSHNotConnectedNodes().withDisableProxy(),
-			ExpectedOps: []string{
-				"kube-apiserver-restart",
-				"kube-controller-manager-bootstrap",
-				"kube-scheduler-bootstrap",
-				"kubelet-bootstrap",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-apiserver-restart":            2,
-				"kube-controller-manager-bootstrap": 2,
-				"kube-scheduler-bootstrap":          2,
-				"kubelet-bootstrap":                 4,
 			},
 		},
 		{
