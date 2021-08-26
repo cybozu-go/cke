@@ -155,6 +155,9 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []cke.Op
 	if nodes := nf.SSHConnectedNodes(nf.ProxyOutdatedNodes(c.Options.Proxy), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeProxyRestartOp(nodes, c.Name, "", c.Options.Proxy))
 	}
+	if nodes := nf.SSHConnectedNodes(nf.ProxyRunningUnexpectedlyNodes(), true, true); len(nodes) > 0 {
+		ops = append(ops, op.ProxyStopOp(nodes))
+	}
 	return ops
 }
 

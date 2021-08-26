@@ -70,3 +70,11 @@ func EtcdRiversStopOp(nodes []*cke.Node) cke.Operator {
 		name:  EtcdRiversContainerName,
 	}
 }
+
+// ProxyStopOp returns an Operator to stop kube-proxy
+func ProxyStopOp(nodes []*cke.Node) cke.Operator {
+	return &containerStopOp{
+		nodes: nodes,
+		name:  KubeProxyContainerName,
+	}
+}

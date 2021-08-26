@@ -162,6 +162,7 @@ func (p SchedulerParams) MergeConfig(base *schedulerv1beta1.KubeSchedulerConfigu
 // ProxyParams is a set of extra parameters for kube-proxy.
 type ProxyParams struct {
 	ServiceParams `json:",inline"`
+	Disable       bool                       `json:"disable,omitempty"`
 	Config        *unstructured.Unstructured `json:"config,omitempty"`
 }
 

@@ -476,6 +476,11 @@ func (d testData) withRebootEntry(entry *cke.RebootQueueEntry) testData {
 	return d
 }
 
+func (d testData) withDisableProxy() testData {
+	d.Cluster.Options.Proxy.Disable = true
+	return d
+}
+
 func TestDecideOps(t *testing.T) {
 	t.Parallel()
 
@@ -636,6 +641,22 @@ func TestDecideOps(t *testing.T) {
 				"kube-proxy-bootstrap",
 				"kube-scheduler-bootstrap",
 				"kubelet-bootstrap",
+			},
+		},
+		{
+			Name:  "BootK8sWithoutProxy",
+			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withSSHNotConnectedNodes().withDisableProxy(),
+			ExpectedOps: []string{
+				"kube-apiserver-restart",
+				"kube-controller-manager-bootstrap",
+				"kube-scheduler-bootstrap",
+				"kubelet-bootstrap",
+			},
+			ExpectedTargetNums: map[string]int{
+				"kube-apiserver-restart":            2,
+				"kube-controller-manager-bootstrap": 2,
+				"kube-scheduler-bootstrap":          2,
+				"kubelet-bootstrap":                 4,
 			},
 		},
 		{
@@ -916,6 +937,14 @@ func TestDecideOps(t *testing.T) {
 			},
 			ExpectedTargetNums: map[string]int{
 				"kube-proxy-restart": 1,
+			},
+		},
+		{
+			Name:        "StopProxy",
+			Input:       newData().withAllServices().withDisableProxy(),
+			ExpectedOps: []string{"stop-kube-proxy"},
+			ExpectedTargetNums: map[string]int{
+				"stop-kube-proxy": 6,
 			},
 		},
 		{
