@@ -531,6 +531,10 @@ func kubeletEqualParams(running, current cke.ServiceParams) bool {
 
 // ProxyStoppedNodes returns nodes that are not running kube-proxy.
 func (nf *NodeFilter) ProxyStoppedNodes() (nodes []*cke.Node) {
+	if nf.cluster.Options.Proxy.Disable {
+		return nil
+	}
+
 	for _, n := range nf.cluster.Nodes {
 		if !nf.nodeStatus(n).Proxy.Running {
 			nodes = append(nodes, n)
@@ -539,8 +543,25 @@ func (nf *NodeFilter) ProxyStoppedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
+// ProxyRunningUnexpectedlyNodes returns nodes that are running kube-proxy unexpectedly.
+func (nf *NodeFilter) ProxyRunningUnexpectedlyNodes() (nodes []*cke.Node) {
+	if !nf.cluster.Options.Proxy.Disable {
+		return nil
+	}
+
+	for _, n := range nf.cluster.Nodes {
+		if nf.nodeStatus(n).Proxy.Running {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
 // ProxyOutdatedNodes returns nodes that are running kube-proxy with outdated image or params.
 func (nf *NodeFilter) ProxyOutdatedNodes(params cke.ProxyParams) (nodes []*cke.Node) {
+	if nf.cluster.Options.Proxy.Disable {
+		return nil
+	}
 	currentExtra := nf.cluster.Options.Proxy
 
 	for _, n := range nf.cluster.Nodes {
