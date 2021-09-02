@@ -20,13 +20,21 @@ import (
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
-func numRebootEntries() (int, error) {
+func getRebootEntries() ([]*cke.RebootQueueEntry, error) {
 	var entries []*cke.RebootQueueEntry
 	data, stderr, err := ckecli("reboot-queue", "list")
 	if err != nil {
-		return 0, fmt.Errorf("%w, stdout: %s, stderr: %s", err, data, stderr)
+		return nil, fmt.Errorf("%w, stdout: %s, stderr: %s", err, data, stderr)
 	}
 	err = json.Unmarshal(data, &entries)
+	if err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+func numRebootEntries() (int, error) {
+	entries, err := getRebootEntries()
 	if err != nil {
 		return 0, err
 	}
@@ -86,13 +94,13 @@ func testRebootOperations(cluster *cke.Cluster) {
 	checkCordon(node1, node2, node4)
 
 	By("Reboot operation gives up waiting node startup if deadline is exceeded")
-	previousCommand := cluster.Reboot.Command
+	originalRebootCommand := cluster.Reboot.Command
 	cluster.Reboot.Command = []string{"sleep", "3600"}
 	_, err = ckecliClusterSet(cluster)
+	Expect(err).ShouldNot(HaveOccurred())
 	// wait for the previous reconciliation to be done
 	time.Sleep(time.Second * 3)
 
-	Expect(err).ShouldNot(HaveOccurred())
 	rebootTargets = node1
 	_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
@@ -103,7 +111,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	timeout := time.Second * time.Duration(*cluster.Reboot.CommandTimeoutSeconds)
 	Expect(time.Now()).To(BeTemporally(">", ts.Add(timeout)))
 
-	cluster.Reboot.Command = previousCommand
+	cluster.Reboot.Command = originalRebootCommand
 	_, err = ckecliClusterSet(cluster)
 	Expect(err).ShouldNot(HaveOccurred())
 
@@ -128,6 +136,35 @@ func testRebootOperations(cluster *cke.Cluster) {
 	ckecliSafe("reboot-queue", "enable")
 	waitRebootCompletion(cluster)
 	checkCordon(node1)
+
+	By("ckecli reboot-queue cancel cancels the specified reboot queue entry")
+	ckecliSafe("reboot-queue", "disable")
+	_, _, err = ckecliWithInput([]byte(node1), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
+	ckecliSafe("reboot-queue", "cancel", "4")
+	entries, err := getRebootEntries()
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(entries).Should(HaveLen(1))
+	Expect(entries[0].Status).To(Equal(cke.RebootStatusCancelled))
+
+	ckecliSafe("reboot-queue", "enable")
+	waitRebootCompletion(cluster)
+
+	By("ckecli reboot-queue cancel-all cancels all the reboot queue entries")
+	ckecliSafe("reboot-queue", "disable")
+	_, _, err = ckecliWithInput([]byte(node1), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
+	_, _, err = ckecliWithInput([]byte(node2), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
+	ckecliSafe("reboot-queue", "cancel-all")
+	entries, err = getRebootEntries()
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(entries).Should(HaveLen(2))
+	Expect(entries[0].Status).To(Equal(cke.RebootStatusCancelled))
+	Expect(entries[1].Status).To(Equal(cke.RebootStatusCancelled))
+
+	ckecliSafe("reboot-queue", "enable")
+	waitRebootCompletion(cluster)
 
 	By("Preparing a deployment to test protected_namespaces")
 	_, stderr, err := kubectlWithInput(rebootYAML, "apply", "-f", "-")
@@ -177,7 +214,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	env.Go(func(ctx context.Context) error {
 		for i := 0; i < 5; i++ {
 			// ignore error because the entry may have been deleted
-			ckecli("reboot-queue", "cancel", "4")
+			ckecli("reboot-queue", "cancel-all")
 			time.Sleep(time.Second)
 		}
 		return nil
@@ -213,7 +250,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	env.Go(func(ctx context.Context) error {
 		for i := 0; i < 5; i++ {
 			// ignore error because the entry may have been deleted
-			ckecli("reboot-queue", "cancel", "5")
+			ckecli("reboot-queue", "cancel-all")
 			time.Sleep(time.Second)
 		}
 		return nil
