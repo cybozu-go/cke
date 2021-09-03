@@ -27,6 +27,10 @@ var rebootQueueCancelAllCmd = &cobra.Command{
 
 				entry.Status = cke.RebootStatusCancelled
 				err := storage.UpdateRebootsEntry(ctx, entry)
+				if err == cke.ErrNotFound {
+					// The entry has just finished
+					continue
+				}
 				if err != nil {
 					return err
 				}
