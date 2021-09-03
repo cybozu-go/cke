@@ -46,6 +46,7 @@ $ ckecli [--config FILE] <subcommand> args...
   - [`ckecli reboot-queue add FILE`](#ckecli-reboot-queue-add-file)
   - [`ckecli reboot-queue list`](#ckecli-reboot-queue-list)
   - [`ckecli reboot-queue cancel INDEX`](#ckecli-reboot-queue-cancel-index)
+  - [`ckecli reboot-queue cancel-all`](#ckecli-reboot-queue-cancel-all)
 - [`ckecli sabakan`](#ckecli-sabakan)
   - [`ckecli sabakan enable|disable`](#ckecli-sabakan-enabledisable)
   - [`ckecli sabakan is-enabled`](#ckecli-sabakan-is-enabled)
@@ -293,6 +294,10 @@ The output is a list of [entries](reboot.md#rebootqueueentry) formatted in JSON.
 ### `ckecli reboot-queue cancel INDEX`
 
 Cancel the specified reboot queue entry.
+
+### `ckecli reboot-queue cancel-all`
+
+Cancel all the reboot queue entries.
 
 ## `ckecli sabakan`
 
