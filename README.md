@@ -160,7 +160,7 @@ Feel free to send your pull requests!
 License
 -------
 
-CKE is licensed under MIT license.
+CKE is licensed under the Apache License, Version 2.0.
 
 [releases]: https://github.com/cybozu-go/cke/releases
 [Kubernetes]: https://kubernetes.io/
