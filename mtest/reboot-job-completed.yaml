@@ -1,0 +1,14 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: reboot-test
+  name: job-completed
+spec:
+  template:
+    spec:
+      containers:
+      - name: ubuntu
+        image: quay.io/cybozu/ubuntu:20.04
+        command: ["true"]
+      restartPolicy: Never
+  backoffLimit: 1

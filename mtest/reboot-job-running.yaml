@@ -1,0 +1,14 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: reboot-test
+  name: job-running
+spec:
+  template:
+    spec:
+      containers:
+      - name: ubuntu
+        image: quay.io/cybozu/ubuntu:20.04
+        command: ["sleep", "3600"]
+      restartPolicy: Never
+  backoffLimit: 1
