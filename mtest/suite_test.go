@@ -144,6 +144,7 @@ var _ = Describe("Test CKE", func() {
 		Context("operators", func() {
 			testOperators(false)
 		})
+		Context("reboot", testRebootOperations)
 	case "robustness":
 		Context("operators", func() {
 			testStopCP()
