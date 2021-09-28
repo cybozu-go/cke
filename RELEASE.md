@@ -36,21 +36,21 @@ It should look like:
 2. Make a branch to release
 
     ```console
-    $ git neco dev "$VERSION"`
+    $ git neco dev "$VERSION"
     ```
 
-4. Update `version.go`.
-5. Edit `CHANGELOG.md` for the new version ([example][]).
-6. Commit the change and create a pull request.
+3. Update `version.go`.
+4. Edit `CHANGELOG.md` for the new version ([example][]).
+5. Commit the change and create a pull request.
 
     ```console
     $ git commit -a -m "Bump version to $VERSION"
     $ git neco review
     ```
 
-7. Make sure that Sonobuoy test has been passed when updating to `x.y.0` and its RC.
-8. Merge the pull request.
-9. Add a git tag to the main HEAD, then push it.
+6. Make sure that Sonobuoy test has been passed when updating to `x.y.0` and its RC.
+7. Merge the pull request.
+8. Add a git tag to the main HEAD, then push it.
 
     ```console
     $ git checkout main

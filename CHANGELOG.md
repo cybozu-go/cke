@@ -5,6 +5,18 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.20.5] - 2021-09-28
+
+### Added
+- Implement ckecli rq cancel-all (#474)
+
+### Changed
+- Change LICENSE from MIT to Apache2.0 (#477)
+- Avoid to evict Job-managed pods when rebooting nodes (#478)
+
+### Fixed
+- Run with OpenSSH 8.6p1 (#480)
+
 ## [1.20.4] - 2021-08-26
 
 - Add disable kube-proxy function (#472)
@@ -52,7 +64,8 @@ No change from 1.20.0-rc.1
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.20.4...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.20.5...HEAD
+[1.20.5]: https://github.com/cybozu-go/cke/compare/v1.20.4...v1.20.5
 [1.20.4]: https://github.com/cybozu-go/cke/compare/v1.20.3...v1.20.4
 [1.20.3]: https://github.com/cybozu-go/cke/compare/v1.20.2...v1.20.3
 [1.20.2]: https://github.com/cybozu-go/cke/compare/v1.20.1...v1.20.2
