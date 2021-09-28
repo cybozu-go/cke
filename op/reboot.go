@@ -3,6 +3,7 @@ package op
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -249,6 +250,29 @@ func listProtectedNamespaces(ctx context.Context, cs *kubernetes.Clientset, ls *
 	return nss, nil
 }
 
+func existJobManagedPod(ctx context.Context, cs *kubernetes.Clientset, n *cke.Node) (bool, error) {
+	podList, err := cs.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
+		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": n.Nodename()}).String(),
+	})
+	if err != nil {
+		return false, err
+	}
+
+	for i := range podList.Items {
+		pod := &podList.Items[i]
+		owner := metav1.GetControllerOf(pod)
+		if owner == nil || owner.Kind != "Job" {
+			continue
+		}
+		// Ignore pending or completed pods.
+		if pod.Status.Phase == corev1.PodPending || pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			continue
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
 func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, n *cke.Node, protected map[string]bool) ([]*corev1.Pod, error) {
 	var targets []*corev1.Pod
 	podList, err := cs.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
@@ -260,7 +284,7 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, n *cke.
 	for _, pod := range podList.Items {
 		pod := pod
 		owner := metav1.GetControllerOf(&pod)
-		if owner != nil && owner.Kind == "DaemonSet" {
+		if owner != nil && (owner.Kind == "DaemonSet" || owner.Kind == "Job") {
 			continue
 		}
 		targets = append(targets, &pod)
@@ -329,6 +353,15 @@ func (c drainCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string)
 	protected, err := listProtectedNamespaces(ctx, cs, c.protectedNamespaces)
 	if err != nil {
 		return err
+	}
+
+	for _, n := range c.nodes {
+		exists, err := existJobManagedPod(ctx, cs, n)
+		if err != nil {
+			return err
+		} else if exists {
+			return errors.New("job-managed pods exist")
+		}
 	}
 
 	var targets []*corev1.Pod
