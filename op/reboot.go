@@ -293,7 +293,12 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, n *cke.
 		})
 		switch {
 		case apierrors.IsNotFound(err):
-		case apierrors.IsTooManyRequests(err) && !protected[pod.Namespace]:
+		case err != nil && !protected[pod.Namespace]:
+			log.Warn("failed to evict non-protected pod", map[string]interface{}{
+				"namespace": pod.Namespace,
+				"name":      pod.Name,
+				log.FnError: err,
+			})
 			err := cs.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 			if err != nil {
 				return nil, err
