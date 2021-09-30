@@ -32,8 +32,9 @@ Therefore, when `k8s.io/client-go` is updated as follows, dependent modules are 
 
 ```console
 $ VERSION=v0.17.4
-$ go get k8s.io/client-go@${VERSION} k8s.io/api@${VERSION} k8s.io/apimachinery@v${VERSION} \
-         k8s.io/apiserver@${VERSION} k8s.io/kube-scheduler@${VERSION} k8s.io/kubelet@${VERSION}
+$ go get -d k8s.io/client-go@${VERSION} k8s.io/api@${VERSION} k8s.io/apimachinery@${VERSION} \
+            k8s.io/apiserver@${VERSION} k8s.io/kube-scheduler@${VERSION} k8s.io/kubelet@${VERSION} \
+            k8s.io/kube-proxy@${VERSION}
 ```
 
 ### Update the Kubernetes resource definitions embedded in CKE
