@@ -43,7 +43,7 @@ This needs to be updated by `make static` whenever `images.go` updates.
 
 ### Update `cke-tools`
 
-Edit [`tools/Makefile`](tools/Makefile) and update `CNI_PLUGIN_VERSION` for the latest release.
+Edit [`tools/Makefile`](tools/Makefile) and update `CNI_PLUGIN_VERSION` for the [latest release](https://github.com/containernetworking/plugins/releases).
 Edit [`tools/CHANGELOG.md`](tools/CHANGELOG.md) to prepare the new version.
 
 After these changes are merged, create and push a tag like `tools-1.17.0`.
