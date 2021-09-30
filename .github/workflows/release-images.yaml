@@ -4,7 +4,7 @@ on:
     tags:
       - 'v*'
 env:
-  go-version: 1.16
+  go-version: 1.17
   tag: ${GITHUB_REF#refs/tags/v}
   prerelease: ${{ contains(github.ref, '-') }}
 jobs:
@@ -68,7 +68,7 @@ jobs:
     name: Release on GitHub
     runs-on: ubuntu-20.04
     container:
-      image: quay.io/cybozu/golang:1.16-focal
+      image: quay.io/cybozu/golang:1.17-focal
     needs: release-cke-image
     steps:
       - uses: actions/checkout@v2
