@@ -14,22 +14,10 @@ import (
 const auditPolicyBasePath = "/etc/kubernetes/apiserver/audit-policy-%x.yaml"
 
 var (
-	// admissionPlugins is the recommended list of admission plugins.
+	// admissionPlugins is our recommended list of admission plugins in addition to the default ones.
 	// https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#is-there-a-recommended-set-of-admission-controllers-to-use
 	admissionPlugins = []string{
-		"NamespaceLifecycle",
-		"LimitRanger",
-		"ServiceAccount",
-		"Priority",
-		"DefaultTolerationSeconds",
-		"DefaultStorageClass",
-		"PersistentVolumeClaimResize",
-		"MutatingAdmissionWebhook",
-		"ValidatingAdmissionWebhook",
-		"ResourceQuota",
-		"StorageObjectInUseProtection",
-
-		// NodeRestriction is not in the list above, but added to restrict kubelet privilege.
+		// NodeRestriction restricts kubelet privilege.
 		"NodeRestriction",
 	}
 )
