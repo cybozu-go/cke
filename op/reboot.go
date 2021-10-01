@@ -249,7 +249,7 @@ func listProtectedNamespaces(ctx context.Context, cs *kubernetes.Clientset, ls *
 	return nss, nil
 }
 
-func verifyJobManagedPod(ctx context.Context, cs *kubernetes.Clientset, n *cke.Node) error {
+func checkJobPodNotExist(ctx context.Context, cs *kubernetes.Clientset, n *cke.Node) error {
 	podList, err := cs.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": n.Nodename()}).String(),
 	})
@@ -359,7 +359,7 @@ func (c drainCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string)
 	}
 
 	for _, n := range c.nodes {
-		err := verifyJobManagedPod(ctx, cs, n)
+		err := checkJobPodNotExist(ctx, cs, n)
 		if err != nil {
 			return err
 		}
