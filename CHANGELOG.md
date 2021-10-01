@@ -5,6 +5,24 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.21.0-rc.1] - 2021-10-01
+
+### Added
+
+- Enable "DenyServiceExternalIPs" admission plugin (#487)
+
+### Changed
+
+- Update images (#485)
+  - Kubernetes 1.21.5
+  - cke-tools 1.21.0
+  - pause 3.6
+  - CoreDNS 1.8.5
+  - Unbound 1.13.2
+- Use Go 1.17 (#485)
+- ckecli rq: Delete non-protected pod when Eviction API returns any kind of errors (#482)
+- Remove redundant list of admission plugins enabled by default (#487)
+
 ## Ancient changes
 
 - See [release-1.20/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.20/CHANGELOG.md) for changes in CKE 1.20.
@@ -17,4 +35,5 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.20.5...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.21.0-rc.1...HEAD
+[1.21.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.20.5...v1.21.0-rc.1
