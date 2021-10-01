@@ -19,6 +19,9 @@ var (
 	admissionPlugins = []string{
 		// NodeRestriction restricts kubelet privilege.
 		"NodeRestriction",
+		// DenyServiceExternalIPs prohibits use of .spec.externalIPs for Services.
+		// LoadBalancer-type Services are still usable.
+		"DenyServiceExternalIPs",
 	}
 )
 
