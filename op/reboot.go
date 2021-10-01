@@ -3,7 +3,6 @@ package op
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -250,14 +249,13 @@ func listProtectedNamespaces(ctx context.Context, cs *kubernetes.Clientset, ls *
 	return nss, nil
 }
 
-func existJobManagedPod(ctx context.Context, cs *kubernetes.Clientset, n *cke.Node) (bool, error) {
+func checkJobPodNotExist(ctx context.Context, cs *kubernetes.Clientset, n *cke.Node) error {
 	podList, err := cs.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": n.Nodename()}).String(),
 	})
 	if err != nil {
-		return false, err
+		return err
 	}
-
 	for i := range podList.Items {
 		pod := &podList.Items[i]
 		owner := metav1.GetControllerOf(pod)
@@ -268,9 +266,9 @@ func existJobManagedPod(ctx context.Context, cs *kubernetes.Clientset, n *cke.No
 		if pod.Status.Phase == corev1.PodPending || pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
 			continue
 		}
-		return true, nil
+		return fmt.Errorf("job-managed pods exist: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
 	}
-	return false, nil
+	return nil
 }
 
 func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, n *cke.Node, protected map[string]bool) ([]*corev1.Pod, error) {
@@ -293,7 +291,12 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, n *cke.
 		})
 		switch {
 		case apierrors.IsNotFound(err):
-		case apierrors.IsTooManyRequests(err) && !protected[pod.Namespace]:
+		case err != nil && !protected[pod.Namespace]:
+			log.Warn("failed to evict non-protected pod", map[string]interface{}{
+				"namespace": pod.Namespace,
+				"name":      pod.Name,
+				log.FnError: err,
+			})
 			err := cs.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 			if err != nil {
 				return nil, err
@@ -335,7 +338,7 @@ OUTER:
 					"namespace": p.Namespace,
 					"name":      p.Name,
 				})
-				return fmt.Errorf(fmt.Sprintf("%s: %s/%s", msg, p.Namespace, p.Name))
+				return fmt.Errorf("%s: %s/%s", msg, p.Namespace, p.Name)
 			case <-time.After(time.Second * 5):
 				log.Info("waiting for pods to be deleted...", nil)
 			}
@@ -356,11 +359,9 @@ func (c drainCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string)
 	}
 
 	for _, n := range c.nodes {
-		exists, err := existJobManagedPod(ctx, cs, n)
+		err := checkJobPodNotExist(ctx, cs, n)
 		if err != nil {
 			return err
-		} else if exists {
-			return errors.New("job-managed pods exist")
 		}
 	}
 
