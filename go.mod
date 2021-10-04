@@ -2,7 +2,10 @@ module github.com/cybozu-go/cke
 
 go 1.17
 
-replace google.golang.org/grpc => google.golang.org/grpc v1.26.0
+replace (
+	github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt v3.2.2+incompatible
+	google.golang.org/grpc => google.golang.org/grpc v1.26.0
+)
 
 require (
 	github.com/99designs/gqlgen v0.14.0
