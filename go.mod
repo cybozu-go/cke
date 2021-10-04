@@ -7,7 +7,7 @@ replace google.golang.org/grpc => google.golang.org/grpc v1.26.0
 require (
 	github.com/99designs/gqlgen v0.14.0
 	github.com/containernetworking/cni v1.0.1
-	github.com/cybozu-go/etcdutil v1.4.0
+	github.com/cybozu-go/etcdutil v1.4.1
 	github.com/cybozu-go/log v1.6.0
 	github.com/cybozu-go/netutil v1.4.1
 	github.com/cybozu-go/well v1.10.0
@@ -24,7 +24,7 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/vektah/gqlparser/v2 v2.2.0
-	go.etcd.io/etcd v0.5.0-alpha.5.0.20210512015243-d19fbe541bf9
+	go.etcd.io/etcd v0.5.0-alpha.5.0.20211004023027-19e2e70e4f50
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	k8s.io/api v0.21.5
 	k8s.io/apimachinery v0.21.5
@@ -46,12 +46,12 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-logr/logr v0.4.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang-jwt/jwt v3.2.1+incompatible // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/btree v1.0.0 // indirect
