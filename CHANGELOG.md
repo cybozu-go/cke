@@ -5,6 +5,16 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.21.0-rc.2] - 2021-10-12
+
+### Changed
+
+- Add FQDN to Subject Alternative Names in certificate for API servers (#493)
+- Maintain EndpointSlice for etcd and API servers as well as Endpoints (#494)
+- Use policy/v1 PodDisruptionBudget instead of policy/v1beta1 (#496)
+- Run Sonobuoy with Calico instead of flannel (#492)
+- Update how to run Sonobuoy (#495)
+
 ## [1.21.0-rc.1] - 2021-10-01
 
 ### Added
@@ -35,5 +45,6 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.21.0-rc.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.21.0-rc.2...HEAD
+[1.21.0-rc.2]: https://github.com/cybozu-go/cke/compare/v1.21.0-rc.1...v1.21.0-rc.2
 [1.21.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.20.5...v1.21.0-rc.1
