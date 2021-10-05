@@ -4,3 +4,7 @@
 /.kubeconfig
 /sonobuoy.tar.gz
 /worker.ign
+/cke-cluster.yml
+/gcp_rsa
+/gcp_rsa.pub
+/run.sh

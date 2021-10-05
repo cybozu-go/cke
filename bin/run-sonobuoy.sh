@@ -19,13 +19,15 @@ delete_instance
 $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --zone ${ZONE} \
   --machine-type ${MACHINE_TYPE_SONOBUOY} \
-  --image vmx-enabled \
+  --image-project ubuntu-os-cloud \
+  --image-family ubuntu-2004-lts \
   --boot-disk-type ${DISK_TYPE} \
   --boot-disk-size ${BOOT_DISK_SIZE} \
   --metadata shutdown-at=$(date -Iseconds -d+4hours)
 
 cd $(dirname $0)/../sonobuoy
 make worker.ign
+rm -f gcp_rsa gcp_rsa.pub
 ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
 sed -e "s#PUBLIC_KEY#$(cat gcp_rsa.pub)#g" ./worker.ign > /tmp/worker.ign
 
@@ -57,6 +59,22 @@ $GCLOUD compute scp --zone=${ZONE} ./gcp_rsa cybozu@${INSTANCE_NAME}-0:
 
 cat >run.sh <<EOF
 #!/bin/sh -ex
+
+# Install essential tools
+curl -fsSL -o docker.gpg https://download.docker.com/linux/ubuntu/gpg
+apt-key add docker.gpg
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    git \
+    make \
+    jq \
+    docker-ce \
+    docker-ce-cli
+
+curl -fsSL -O https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz
+rm -rf /usr/local/go && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
 
 # Run sonobuoy
 GOPATH=\$HOME/go

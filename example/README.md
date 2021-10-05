@@ -107,7 +107,9 @@ See [Install and Set Up kubectl](https://kubernetes.io/docs/tasks/tools/install-
 You can get a configuration file of kubectl to access Kubernetes cluster with the following command.
 
 ```console
-$ ./bin/ckecli --config=./cke.config kubernetes issue > $HOME/.kube/config
+$ ./bin/ckecli --config=./cke.config kubernetes issue > .kubeconfig
+$ KUBECONFIG=$(pwd)/.kubeconfig
+$ export KUBECONFIG
 ```
 
 ## Setup CNI plugin
@@ -115,13 +117,13 @@ $ ./bin/ckecli --config=./cke.config kubernetes issue > $HOME/.kube/config
 CKE itself does not install any network plugins.
 To implement the [Kubernetes networking model](https://kubernetes.io/docs/concepts/cluster-administration/networking/), you have to install [a plugin](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/).
 
-You can deploy flannel on Kubernetes cluster with the following command.
+You can deploy Calico on Kubernetes cluster with the following command.
 
 ```console
-$ kubectl apply -f kube-flannel.yaml
+$ kubectl apply -k .
 ```
 
-See [Flannel Documentation](https://github.com/coreos/flannel/blob/master/Documentation/kubernetes.md) for details.
+See [Calico Documentation](https://docs.projectcalico.org/getting-started/kubernetes/self-managed-onprem/onpremises) for details.
 
 After a few minutes, Kubernetes cluster will become ready.
 
