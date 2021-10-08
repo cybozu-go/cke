@@ -213,12 +213,13 @@ func (k KubernetesCA) IssueUserCert(ctx context.Context, inf Infrastructure, use
 }
 
 // IssueForAPIServer issues TLS certificate for API servers.
-func (k KubernetesCA) IssueForAPIServer(ctx context.Context, inf Infrastructure, n *Node, serviceSubnet string) (crt, key string, err error) {
+func (k KubernetesCA) IssueForAPIServer(ctx context.Context, inf Infrastructure, n *Node, serviceSubnet, clusterDomain string) (crt, key string, err error) {
 	altNames := []string{
 		"localhost",
 		"kubernetes",
 		"kubernetes.default",
 		"kubernetes.default.svc",
+		"kubernetes.default.svc." + clusterDomain,
 	}
 	ip, _, err := net.ParseCIDR(serviceSubnet)
 	if err != nil {
