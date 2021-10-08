@@ -63,7 +63,7 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 		return common.MakeDirsCommandWithMode(o.nodes, []string{encryptionConfigDir}, "700")
 	case 2:
 		o.step++
-		return prepareAPIServerFilesCommand{o.files, o.serviceSubnet, o.params}
+		return prepareAPIServerFilesCommand{o.files, o.serviceSubnet, o.clusterDomain, o.params}
 	case 3:
 		o.step++
 		return o.files
@@ -100,6 +100,7 @@ func (o *apiServerRestartOp) Targets() []string {
 type prepareAPIServerFilesCommand struct {
 	files         *common.FilesBuilder
 	serviceSubnet string
+	clusterDomain string
 	params        cke.APIServerParams
 }
 
@@ -108,7 +109,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 
 	// server (and client) certs of API server.
 	f := func(ctx context.Context, n *cke.Node) (cert, key []byte, err error) {
-		c, k, e := cke.KubernetesCA{}.IssueForAPIServer(ctx, inf, n, c.serviceSubnet)
+		c, k, e := cke.KubernetesCA{}.IssueForAPIServer(ctx, inf, n, c.serviceSubnet, c.clusterDomain)
 		if e != nil {
 			return nil, nil, e
 		}
