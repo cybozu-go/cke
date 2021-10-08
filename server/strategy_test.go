@@ -15,6 +15,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.etcd.io/etcd/etcdserver/etcdserverpb"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
@@ -382,6 +383,11 @@ func (d testData) withK8sResourceReady() testData {
 	ks.NodeDNS.ConfigMap = nodedns.ConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers)
 
 	ks.MasterEndpoints = &corev1.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"endpointslice.kubernetes.io/skip-mirror": "true",
+			},
+		},
 		Subsets: []corev1.EndpointSubset{
 			{
 				Addresses: []corev1.EndpointAddress{
@@ -393,6 +399,29 @@ func (d testData) withK8sResourceReady() testData {
 			},
 		},
 	}
+	endpointReady := true
+	masterPortName := "https"
+	var masterPort int32 = 6443
+	ks.MasterEndpointSlice = &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"endpointslice.kubernetes.io/managed-by": "cke.cybozu.com",
+				"kubernetes.io/service-name":             "kubernetes",
+			},
+		},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints: []discoveryv1.Endpoint{
+			{
+				Addresses: []string{
+					"10.0.0.11",
+					"10.0.0.12",
+					"10.0.0.13",
+				},
+				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
+			},
+		},
+		Ports: []discoveryv1.EndpointPort{{Name: &masterPortName, Port: &masterPort}},
+	}
 	ks.EtcdService = &corev1.Service{
 		Spec: corev1.ServiceSpec{
 			Ports:     []corev1.ServicePort{{Port: 2379}},
@@ -401,6 +430,11 @@ func (d testData) withK8sResourceReady() testData {
 		},
 	}
 	ks.EtcdEndpoints = &corev1.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"endpointslice.kubernetes.io/skip-mirror": "true",
+			},
+		},
 		Subsets: []corev1.EndpointSubset{
 			{
 				Addresses: []corev1.EndpointAddress{
@@ -411,6 +445,28 @@ func (d testData) withK8sResourceReady() testData {
 				Ports: []corev1.EndpointPort{{Port: 2379}},
 			},
 		},
+	}
+	etcdPortName := ""
+	var etcdPort int32 = 2379
+	ks.EtcdEndpointSlice = &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"endpointslice.kubernetes.io/managed-by": "cke.cybozu.com",
+				"kubernetes.io/service-name":             "cke-etcd",
+			},
+		},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints: []discoveryv1.Endpoint{
+			{
+				Addresses: []string{
+					"10.0.0.11",
+					"10.0.0.12",
+					"10.0.0.13",
+				},
+				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
+			},
+		},
+		Ports: []discoveryv1.EndpointPort{{Name: &etcdPortName, Port: &etcdPort}},
 	}
 
 	return d
@@ -959,6 +1015,8 @@ func TestDecideOps(t *testing.T) {
 				"create-cluster-dns-configmap",
 				"create-endpoints",
 				"create-endpoints",
+				"create-endpointslice",
+				"create-endpointslice",
 				"create-etcd-service",
 				"resource-apply",
 				"resource-apply",

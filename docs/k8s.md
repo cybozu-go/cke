@@ -139,12 +139,12 @@ CKE installs and maintains following Kubernetes resources other than DNS ones.
 
 ### Kubernetes Endpoints
 
-`kubernetes` Endpoints object in `default` namespace represents the endpoints of the API servers.
-CKE maintains this Endpoints object on behalf of the API servers.
+`kubernetes` Endpoints object and `kubernetes` EndpointSlice object, both in `default` namespace, represent the endpoints of the API servers.
+CKE maintains these objects on behalf of the API servers.
 
 ### Etcd Endpoints
 
-`cke-etcd` in `kube-system` namespace is a headless [Service](https://kubernetes.io/docs/concepts/services-networking/service/) and [Endpoints](https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors) to help applications find endpoints of CKE maintained etcd cluster.
+`cke-etcd` in `kube-system` namespace is a headless [Service](https://kubernetes.io/docs/concepts/services-networking/service/), [Endpoints](https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors) and [EndpointSlice](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/) to help applications find endpoints of CKE maintained etcd cluster.
 
 ## Unchangeable features
 
