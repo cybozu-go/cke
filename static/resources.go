@@ -79,7 +79,7 @@ var Resources = []cke.ResourceDefinition{
 		Name:       "cluster-dns-pdb",
 		Revision:   1,
 		Image:      "",
-		Definition: []byte("\napiVersion: policy/v1beta1\nkind: PodDisruptionBudget\nmetadata:\n  name: cluster-dns-pdb\n  namespace: kube-system\n  annotations:\n    cke.cybozu.com/revision: \"1\"\nspec:\n  maxUnavailable: 1\n  selector:\n    matchLabels:\n      cke.cybozu.com/appname: cluster-dns\n"),
+		Definition: []byte("\napiVersion: policy/v1\nkind: PodDisruptionBudget\nmetadata:\n  name: cluster-dns-pdb\n  namespace: kube-system\n  annotations:\n    cke.cybozu.com/revision: \"1\"\nspec:\n  maxUnavailable: 1\n  selector:\n    matchLabels:\n      cke.cybozu.com/appname: cluster-dns\n"),
 	},
 	{
 		Key:        "Service/kube-system/cluster-dns",
