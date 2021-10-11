@@ -3,6 +3,7 @@ package cke
 import (
 	"go.etcd.io/etcd/etcdserver/etcdserverpb"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
@@ -34,8 +35,10 @@ type KubernetesClusterStatus struct {
 	ClusterDNS          ClusterDNSStatus
 	NodeDNS             NodeDNSStatus
 	MasterEndpoints     *corev1.Endpoints
+	MasterEndpointSlice *discoveryv1.EndpointSlice
 	EtcdService         *corev1.Service
 	EtcdEndpoints       *corev1.Endpoints
+	EtcdEndpointSlice   *discoveryv1.EndpointSlice
 	ResourceStatuses    map[string]ResourceStatus
 }
 

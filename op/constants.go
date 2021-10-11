@@ -8,6 +8,8 @@ import (
 const (
 	// EtcdEndpointsName is the resource name for CKE-managed etcd
 	EtcdEndpointsName = "cke-etcd"
+	// EtcdEndpointSliceName is the resource name for CKE-managed etcd
+	EtcdEndpointSliceName = EtcdEndpointsName
 	// EtcdServiceName is the resource name for CKE-managed etcd
 	EtcdServiceName = EtcdEndpointsName
 

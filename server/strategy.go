@@ -10,6 +10,7 @@ import (
 	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -214,39 +215,25 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 
 	ops = append(ops, decideNodeDNSOps(apiServer, c, ks)...)
 
-	var cpReadyAddresses []corev1.EndpointAddress
+	var cpReadyAddresses []string
 	for _, n := range nf.HealthyAPIServerNodes() {
-		cpReadyAddresses = append(cpReadyAddresses, corev1.EndpointAddress{
-			IP: n.Address,
-		})
+		cpReadyAddresses = append(cpReadyAddresses, n.Address)
 	}
-	var cpNotReadyAddresses []corev1.EndpointAddress
+	var cpNotReadyAddresses []string
 	for _, n := range nf.UnhealthyAPIServerNodes() {
-		cpNotReadyAddresses = append(cpNotReadyAddresses, corev1.EndpointAddress{
-			IP: n.Address,
-		})
+		cpNotReadyAddresses = append(cpNotReadyAddresses, n.Address)
 	}
 
-	masterEP := &corev1.Endpoints{}
-	masterEP.Namespace = metav1.NamespaceDefault
-	masterEP.Name = "kubernetes"
-	masterEP.Subsets = []corev1.EndpointSubset{
-		{
-			Addresses:         cpReadyAddresses,
-			NotReadyAddresses: cpNotReadyAddresses,
-			Ports: []corev1.EndpointPort{
-				{
-					Name:     "https",
-					Port:     6443,
-					Protocol: corev1.ProtocolTCP,
-				},
-			},
-		},
-	}
-	epOp := decideEpOp(masterEP, ks.MasterEndpoints, apiServer)
-	if epOp != nil {
-		ops = append(ops, epOp)
-	}
+	masterEP := &endpointParams{}
+	masterEP.namespace = metav1.NamespaceDefault
+	masterEP.name = "kubernetes"
+	masterEP.readyIPs = cpReadyAddresses
+	masterEP.notReadyIPs = cpNotReadyAddresses
+	masterEP.portName = "https"
+	masterEP.port = 6443
+	masterEP.serviceName = "kubernetes"
+	epOps := decideEpEpsOps(masterEP, ks.MasterEndpoints, ks.MasterEndpointSlice, apiServer)
+	ops = append(ops, epOps...)
 
 	// Endpoints needs a corresponding Service.
 	// If an Endpoints lacks such a Service, it will be removed.
@@ -256,30 +243,18 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 		ops = append(ops, svcOp)
 	}
 
-	cpAddresses := make([]corev1.EndpointAddress, len(nf.ControlPlane()))
+	cpAddresses := make([]string, len(nf.ControlPlane()))
 	for i, cp := range nf.ControlPlane() {
-		cpAddresses[i] = corev1.EndpointAddress{
-			IP: cp.Address,
-		}
+		cpAddresses[i] = cp.Address
 	}
-	etcdEP := &corev1.Endpoints{}
-	etcdEP.Namespace = metav1.NamespaceSystem
-	etcdEP.Name = op.EtcdEndpointsName
-	etcdEP.Subsets = []corev1.EndpointSubset{
-		{
-			Addresses: cpAddresses,
-			Ports: []corev1.EndpointPort{
-				{
-					Port:     2379,
-					Protocol: corev1.ProtocolTCP,
-				},
-			},
-		},
-	}
-	epOp = decideEpOp(etcdEP, ks.EtcdEndpoints, apiServer)
-	if epOp != nil {
-		ops = append(ops, epOp)
-	}
+	etcdEP := &endpointParams{}
+	etcdEP.namespace = metav1.NamespaceSystem
+	etcdEP.name = op.EtcdEndpointsName
+	etcdEP.readyIPs = cpAddresses
+	etcdEP.port = 2379
+	etcdEP.serviceName = op.EtcdServiceName
+	epOps = decideEpEpsOps(etcdEP, ks.EtcdEndpoints, ks.EtcdEndpointSlice, apiServer)
+	ops = append(ops, epOps...)
 
 	if nodes := nf.OutdatedAttrsNodes(); len(nodes) > 0 {
 		ops = append(ops, op.KubeNodeUpdateOp(apiServer, nodes))
@@ -348,6 +323,96 @@ func decideNodeDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClus
 	return ops
 }
 
+type endpointParams struct {
+	namespace   string
+	name        string
+	readyIPs    []string
+	notReadyIPs []string
+	port        int32
+	portName    string
+	serviceName string
+}
+
+func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEPS *discoveryv1.EndpointSlice, apiserver *cke.Node) []cke.Operator {
+	var ops []cke.Operator
+
+	var readyAddresses []corev1.EndpointAddress
+	for _, ip := range expect.readyIPs {
+		readyAddresses = append(readyAddresses, corev1.EndpointAddress{
+			IP: ip,
+		})
+	}
+	var notReadyAddresses []corev1.EndpointAddress
+	for _, ip := range expect.notReadyIPs {
+		notReadyAddresses = append(notReadyAddresses, corev1.EndpointAddress{
+			IP: ip,
+		})
+	}
+
+	ep := &corev1.Endpoints{}
+	ep.Namespace = expect.namespace
+	ep.Name = expect.name
+	ep.Labels = map[string]string{
+		"endpointslice.kubernetes.io/skip-mirror": "true",
+	}
+	ep.Subsets = []corev1.EndpointSubset{
+		{
+			Addresses:         readyAddresses,
+			NotReadyAddresses: notReadyAddresses,
+			Ports: []corev1.EndpointPort{
+				{
+					Name: expect.portName,
+					Port: expect.port,
+				},
+			},
+		},
+	}
+	epOp := decideEpOp(ep, actualEP, apiserver)
+	if epOp != nil {
+		ops = append(ops, epOp)
+	}
+
+	eps := &discoveryv1.EndpointSlice{}
+	eps.Namespace = expect.namespace
+	eps.Name = expect.name
+	eps.Labels = map[string]string{
+		"endpointslice.kubernetes.io/managed-by": "cke.cybozu.com",
+		"kubernetes.io/service-name":             expect.serviceName,
+	}
+	eps.AddressType = discoveryv1.AddressTypeIPv4
+	eps.Endpoints = []discoveryv1.Endpoint{}
+	if len(expect.readyIPs) > 0 {
+		ready := true
+		eps.Endpoints = append(eps.Endpoints, discoveryv1.Endpoint{
+			Addresses: expect.readyIPs,
+			Conditions: discoveryv1.EndpointConditions{
+				Ready: &ready,
+			},
+		})
+	}
+	if len(expect.notReadyIPs) > 0 {
+		ready := false
+		eps.Endpoints = append(eps.Endpoints, discoveryv1.Endpoint{
+			Addresses: expect.notReadyIPs,
+			Conditions: discoveryv1.EndpointConditions{
+				Ready: &ready,
+			},
+		})
+	}
+	eps.Ports = []discoveryv1.EndpointPort{
+		{
+			Name: &expect.portName,
+			Port: &expect.port,
+		},
+	}
+	epsOp := decideEpsOp(eps, actualEPS, apiserver)
+	if epsOp != nil {
+		ops = append(ops, epsOp)
+	}
+
+	return ops
+}
+
 func decideEpOp(expect, actual *corev1.Endpoints, apiServer *cke.Node) cke.Operator {
 	if actual == nil {
 		return op.KubeEndpointsCreateOp(apiServer, expect)
@@ -356,6 +421,12 @@ func decideEpOp(expect, actual *corev1.Endpoints, apiServer *cke.Node) cke.Opera
 	updateOp := op.KubeEndpointsUpdateOp(apiServer, expect)
 	if len(actual.Subsets) != 1 {
 		return updateOp
+	}
+
+	for k, v := range expect.Labels {
+		if actual.Labels[k] != v {
+			return updateOp
+		}
 	}
 
 	subset := actual.Subsets[0]
@@ -385,6 +456,62 @@ func decideEpOp(expect, actual *corev1.Endpoints, apiServer *cke.Node) cke.Opera
 		if !endpoints[a.IP] {
 			return updateOp
 		}
+	}
+
+	return nil
+}
+
+func decideEpsOp(expect, actual *discoveryv1.EndpointSlice, apiServer *cke.Node) cke.Operator {
+	if actual == nil {
+		return op.KubeEndpointSliceCreateOp(apiServer, expect)
+	}
+
+	updateOp := op.KubeEndpointSliceUpdateOp(apiServer, expect)
+
+	for k, v := range expect.Labels {
+		if actual.Labels[k] != v {
+			return updateOp
+		}
+	}
+
+	if actual.AddressType != expect.AddressType {
+		return updateOp
+	}
+
+	if len(actual.Endpoints) != len(expect.Endpoints) {
+		return updateOp
+	}
+	for i := range actual.Endpoints {
+		actualEP := actual.Endpoints[i]
+		expectEP := expect.Endpoints[i]
+
+		if actualEP.Conditions.Ready == nil || *actualEP.Conditions.Ready != *expectEP.Conditions.Ready {
+			return updateOp
+		}
+
+		if len(actualEP.Addresses) != len(expectEP.Addresses) {
+			return updateOp
+		}
+
+		addresses := make(map[string]bool)
+		for _, a := range expectEP.Addresses {
+			addresses[a] = true
+		}
+		for _, a := range actualEP.Addresses {
+			if !addresses[a] {
+				return updateOp
+			}
+		}
+	}
+
+	if len(actual.Ports) != 1 {
+		return updateOp
+	}
+	if actual.Ports[0].Name == nil || *actual.Ports[0].Name != *expect.Ports[0].Name {
+		return updateOp
+	}
+	if actual.Ports[0].Port == nil || *actual.Ports[0].Port != *expect.Ports[0].Port {
+		return updateOp
 	}
 
 	return nil

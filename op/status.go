@@ -346,6 +346,16 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
+	epsAPI := clientset.DiscoveryV1().EndpointSlices
+	eps, err := epsAPI(metav1.NamespaceDefault).Get(ctx, "kubernetes", metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.MasterEndpointSlice = eps
+	case k8serr.IsNotFound(err):
+	default:
+		return cke.KubernetesClusterStatus{}, err
+	}
+
 	svc, err := clientset.CoreV1().Services(metav1.NamespaceSystem).Get(ctx, EtcdServiceName, metav1.GetOptions{})
 	switch {
 	case err == nil:
@@ -359,6 +369,15 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	switch {
 	case err == nil:
 		s.EtcdEndpoints = ep
+	case k8serr.IsNotFound(err):
+	default:
+		return cke.KubernetesClusterStatus{}, err
+	}
+
+	eps, err = epsAPI(metav1.NamespaceSystem).Get(ctx, EtcdEndpointSliceName, metav1.GetOptions{})
+	switch {
+	case err == nil:
+		s.EtcdEndpointSlice = eps
 	case k8serr.IsNotFound(err):
 	default:
 		return cke.KubernetesClusterStatus{}, err

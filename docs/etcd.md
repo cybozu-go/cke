@@ -63,11 +63,13 @@ Kubernetes, CKE exports the endpoint list as a Kubernetes resource.
 
 [`Endpoints`][Endpoints] is a Kubernetes resource to list service endpoints.
 CKE creates and maintains an `Endpoints` resource named `cke-etcd` in `kube-system` namespace.
+It also maintains an [`EndpointSlice`][EndpointSlice] resource with the same name in the same namespace.
 
 To view the contents, use `kubectl` as follows:
 
 ```console
 $ kubectl -n kube-system get endpoints/cke-etcd -o yaml
+$ kubectl -n kube-system get endpointslices/cke-etcd -o yaml
 ```
 
 Furthermore, these endpoints address records are registered at CoreDNS.
@@ -84,3 +86,4 @@ Read [ckecli.md](ckecli.md##ckecli-etcd-local-backup) about the usage.
 [etcd]: https://github.com/etcd-io/etcd
 [RBAC]: https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/authentication.md
 [Endpoints]: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
+[EndpointSlice]: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/
