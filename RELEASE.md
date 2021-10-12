@@ -48,7 +48,7 @@ It should look like:
     $ git neco review
     ```
 
-6. Make sure that Sonobuoy test has been passed when updating to `x.y.0` and its RC.
+6. When updating to `x.y.0` or its RC, run Sonobuoy test manually and make sure that it has been passed.
 7. Merge the pull request.
 8. Add a git tag to the main HEAD, then push it.
 
