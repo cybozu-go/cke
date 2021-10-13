@@ -17,7 +17,7 @@ spec:
         - name: ubuntu
           image: quay.io/cybozu/testhttpd:0
 ---
-apiVersion: policy/v1
+apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
   namespace: reboot-test
