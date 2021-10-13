@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.21.0-rc.3] - 2021-10-13
+
+### Changed
+
+- Revert "Use policy/v1 PodDisruptionBudget instead of policy/v1beta1" (#498)
+
 ## [1.21.0-rc.2] - 2021-10-12
 
 ### Changed
@@ -45,6 +51,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.21.0-rc.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.21.0-rc.3...HEAD
+[1.21.0-rc.3]: https://github.com/cybozu-go/cke/compare/v1.21.0-rc.2...v1.21.0-rc.3
 [1.21.0-rc.2]: https://github.com/cybozu-go/cke/compare/v1.21.0-rc.1...v1.21.0-rc.2
 [1.21.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.20.5...v1.21.0-rc.1
