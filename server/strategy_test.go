@@ -414,7 +414,17 @@ func (d testData) withK8sResourceReady() testData {
 			{
 				Addresses: []string{
 					"10.0.0.11",
+				},
+				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
+			},
+			{
+				Addresses: []string{
 					"10.0.0.12",
+				},
+				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
+			},
+			{
+				Addresses: []string{
 					"10.0.0.13",
 				},
 				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
@@ -460,7 +470,17 @@ func (d testData) withK8sResourceReady() testData {
 			{
 				Addresses: []string{
 					"10.0.0.11",
+				},
+				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
+			},
+			{
+				Addresses: []string{
 					"10.0.0.12",
+				},
+				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
+			},
+			{
+				Addresses: []string{
 					"10.0.0.13",
 				},
 				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},

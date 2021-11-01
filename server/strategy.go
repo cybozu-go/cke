@@ -380,24 +380,24 @@ func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEP
 		"kubernetes.io/service-name":             expect.serviceName,
 	}
 	eps.AddressType = discoveryv1.AddressTypeIPv4
-	eps.Endpoints = []discoveryv1.Endpoint{}
-	if len(expect.readyIPs) > 0 {
-		ready := true
-		eps.Endpoints = append(eps.Endpoints, discoveryv1.Endpoint{
-			Addresses: expect.readyIPs,
+	eps.Endpoints = make([]discoveryv1.Endpoint, len(expect.readyIPs)+len(expect.notReadyIPs))
+	readyTrue := true
+	for i := range expect.readyIPs {
+		eps.Endpoints[i] = discoveryv1.Endpoint{
+			Addresses: expect.readyIPs[i : i+1],
 			Conditions: discoveryv1.EndpointConditions{
-				Ready: &ready,
+				Ready: &readyTrue,
 			},
-		})
+		}
 	}
-	if len(expect.notReadyIPs) > 0 {
-		ready := false
-		eps.Endpoints = append(eps.Endpoints, discoveryv1.Endpoint{
-			Addresses: expect.notReadyIPs,
+	readyFalse := false
+	for i := range expect.notReadyIPs {
+		eps.Endpoints[len(expect.readyIPs)+i] = discoveryv1.Endpoint{
+			Addresses: expect.notReadyIPs[i : i+1],
 			Conditions: discoveryv1.EndpointConditions{
-				Ready: &ready,
+				Ready: &readyFalse,
 			},
-		})
+		}
 	}
 	eps.Ports = []discoveryv1.EndpointPort{
 		{
