@@ -215,13 +215,15 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 
 	ops = append(ops, decideNodeDNSOps(apiServer, c, ks)...)
 
-	var cpReadyAddresses []string
-	for _, n := range nf.HealthyAPIServerNodes() {
-		cpReadyAddresses = append(cpReadyAddresses, n.Address)
+	healthyAPIServerNodes := nf.HealthyAPIServerNodes()
+	cpReadyAddresses := make([]string, len(healthyAPIServerNodes))
+	for i, n := range healthyAPIServerNodes {
+		cpReadyAddresses[i] = n.Address
 	}
-	var cpNotReadyAddresses []string
-	for _, n := range nf.UnhealthyAPIServerNodes() {
-		cpNotReadyAddresses = append(cpNotReadyAddresses, n.Address)
+	unhealthyAPIServerNodes := nf.UnhealthyAPIServerNodes()
+	cpNotReadyAddresses := make([]string, len(unhealthyAPIServerNodes))
+	for i, n := range unhealthyAPIServerNodes {
+		cpNotReadyAddresses[i] = n.Address
 	}
 
 	masterEP := &endpointParams{}
@@ -336,17 +338,17 @@ type endpointParams struct {
 func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEPS *discoveryv1.EndpointSlice, apiserver *cke.Node) []cke.Operator {
 	var ops []cke.Operator
 
-	var readyAddresses []corev1.EndpointAddress
-	for _, ip := range expect.readyIPs {
-		readyAddresses = append(readyAddresses, corev1.EndpointAddress{
+	readyAddresses := make([]corev1.EndpointAddress, len(expect.readyIPs))
+	for i, ip := range expect.readyIPs {
+		readyAddresses[i] = corev1.EndpointAddress{
 			IP: ip,
-		})
+		}
 	}
-	var notReadyAddresses []corev1.EndpointAddress
-	for _, ip := range expect.notReadyIPs {
-		notReadyAddresses = append(notReadyAddresses, corev1.EndpointAddress{
+	notReadyAddresses := make([]corev1.EndpointAddress, len(expect.notReadyIPs))
+	for i, ip := range expect.notReadyIPs {
+		notReadyAddresses[i] = corev1.EndpointAddress{
 			IP: ip,
-		})
+		}
 	}
 
 	ep := &corev1.Endpoints{}
@@ -380,24 +382,24 @@ func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEP
 		"kubernetes.io/service-name":             expect.serviceName,
 	}
 	eps.AddressType = discoveryv1.AddressTypeIPv4
-	eps.Endpoints = []discoveryv1.Endpoint{}
-	if len(expect.readyIPs) > 0 {
-		ready := true
-		eps.Endpoints = append(eps.Endpoints, discoveryv1.Endpoint{
-			Addresses: expect.readyIPs,
+	eps.Endpoints = make([]discoveryv1.Endpoint, len(expect.readyIPs)+len(expect.notReadyIPs))
+	readyTrue := true
+	for i := range expect.readyIPs {
+		eps.Endpoints[i] = discoveryv1.Endpoint{
+			Addresses: expect.readyIPs[i : i+1],
 			Conditions: discoveryv1.EndpointConditions{
-				Ready: &ready,
+				Ready: &readyTrue,
 			},
-		})
+		}
 	}
-	if len(expect.notReadyIPs) > 0 {
-		ready := false
-		eps.Endpoints = append(eps.Endpoints, discoveryv1.Endpoint{
-			Addresses: expect.notReadyIPs,
+	readyFalse := false
+	for i := range expect.notReadyIPs {
+		eps.Endpoints[len(expect.readyIPs)+i] = discoveryv1.Endpoint{
+			Addresses: expect.notReadyIPs[i : i+1],
 			Conditions: discoveryv1.EndpointConditions{
-				Ready: &ready,
+				Ready: &readyFalse,
 			},
-		})
+		}
 	}
 	eps.Ports = []discoveryv1.EndpointPort{
 		{
@@ -646,9 +648,9 @@ func rebootUncordonOp(nf *NodeFilter) cke.Operator {
 	if len(attrNodes) == 0 {
 		return nil
 	}
-	var nodes []string
-	for _, n := range attrNodes {
-		nodes = append(nodes, n.Name)
+	nodes := make([]string, len(attrNodes))
+	for i, n := range attrNodes {
+		nodes[i] = n.Name
 	}
 	return op.RebootUncordonOp(nf.HealthyAPIServer(), nodes)
 }
