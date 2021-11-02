@@ -5,6 +5,14 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.21.1] - 2021-11-02
+
+### Changed
+
+- Update API version of PodDisruptionBudget (#500)
+- Update Kubernetes to 1.21.6 (#504)
+- Fix EndpointSlice to list endpoints rather than endpoint addresses (#505)
+
 ## [1.21.0] - 2021-10-19
 
 ### [Change log since v1.20.5][1.21.0]
@@ -85,7 +93,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.21.0...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.21.1...HEAD
+[1.21.1]: https://github.com/cybozu-go/cke/compare/v1.21.0...v1.21.1
 [1.21.0]: https://github.com/cybozu-go/cke/compare/v1.20.5...v1.21.0
 [1.21.0-rcdiff]: https://github.com/cybozu-go/cke/compare/v1.21.0-rc.3...v1.21.0
 [1.21.0-rc.3]: https://github.com/cybozu-go/cke/compare/v1.21.0-rc.2...v1.21.0-rc.3
