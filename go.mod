@@ -17,7 +17,6 @@ require (
 	github.com/etcd-io/gofail v0.0.0-20190801230047-ad7f989257ca
 	github.com/google/go-cmp v0.5.6
 	github.com/hashicorp/vault/api v1.1.1
-	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.16.0
@@ -29,6 +28,7 @@ require (
 	github.com/vektah/gqlparser/v2 v2.2.0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20211004023027-19e2e70e4f50
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
 	k8s.io/api v0.21.6
 	k8s.io/apimachinery v0.21.6
 	k8s.io/apiserver v0.21.6
@@ -101,7 +101,6 @@ require (
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c // indirect
 	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
-	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
 	golang.org/x/text v0.3.6 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	golang.org/x/tools v0.1.2 // indirect
