@@ -1125,6 +1125,20 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"update-endpoints"},
 		},
 		{
+			Name: "MasterEndpointSliceUpdate1",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.MasterEndpointSlice.Endpoints[0].Addresses = []string{}
+			}),
+			ExpectedOps: []string{"update-endpointslice"},
+		},
+		{
+			Name: "MasterEndpointSliceUpdate2",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.MasterEndpointSlice.Ports[0] = discoveryv1.EndpointPort{}
+			}),
+			ExpectedOps: []string{"update-endpointslice"},
+		},
+		{
 			Name: "EtcdServiceUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdService.Spec.Ports = []corev1.ServicePort{}
@@ -1151,6 +1165,20 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
 			ExpectedOps: []string{"update-endpoints"},
+		},
+		{
+			Name: "EtcdEndpointSliceUpdate1",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[0].Addresses = []string{}
+			}),
+			ExpectedOps: []string{"update-endpointslice"},
+		},
+		{
+			Name: "EtcdEndpointSliceUpdate2",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.EtcdEndpointSlice.Ports[0] = discoveryv1.EndpointPort{}
+			}),
+			ExpectedOps: []string{"update-endpointslice"},
 		},
 		{
 			Name: "UserResourceAdd",
