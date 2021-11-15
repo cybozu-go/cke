@@ -1181,6 +1181,16 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"update-endpointslice"},
 		},
 		{
+			Name: "EndpointsUpdateWithRebootEntry",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
+				Index:  1,
+				Nodes:  []string{nodeNames[2]},
+				Status: cke.RebootStatusQueued,
+			}),
+			ExpectedOps:        []string{"update-endpoints", "update-endpoints", "update-endpointslice", "update-endpointslice"},
+			ExpectedTargetNums: nil,
+		},
+		{
 			Name: "EndpointsWithRebootEntry",
 			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
 				Index:  1,
