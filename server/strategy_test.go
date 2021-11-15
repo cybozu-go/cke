@@ -1125,6 +1125,20 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"update-endpoints"},
 		},
 		{
+			Name: "MasterEndpointSliceUpdate1",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.MasterEndpointSlice.Endpoints[0].Addresses = []string{}
+			}),
+			ExpectedOps: []string{"update-endpointslice"},
+		},
+		{
+			Name: "MasterEndpointSliceUpdate2",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.MasterEndpointSlice.Ports[0] = discoveryv1.EndpointPort{}
+			}),
+			ExpectedOps: []string{"update-endpointslice"},
+		},
+		{
 			Name: "EtcdServiceUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdService.Spec.Ports = []corev1.ServicePort{}
@@ -1151,6 +1165,60 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
 			ExpectedOps: []string{"update-endpoints"},
+		},
+		{
+			Name: "EtcdEndpointSliceUpdate1",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[0].Addresses = []string{}
+			}),
+			ExpectedOps: []string{"update-endpointslice"},
+		},
+		{
+			Name: "EtcdEndpointSliceUpdate2",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.EtcdEndpointSlice.Ports[0] = discoveryv1.EndpointPort{}
+			}),
+			ExpectedOps: []string{"update-endpointslice"},
+		},
+		{
+			Name: "EndpointsUpdateWithRebootEntry",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
+				Index:  1,
+				Nodes:  []string{nodeNames[2]},
+				Status: cke.RebootStatusQueued,
+			}),
+			ExpectedOps:        []string{"update-endpoints", "update-endpoints", "update-endpointslice", "update-endpointslice"},
+			ExpectedTargetNums: nil,
+		},
+		{
+			Name: "EndpointsWithRebootEntry",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
+				Index:  1,
+				Nodes:  []string{nodeNames[2]},
+				Status: cke.RebootStatusQueued,
+			}).with(func(d testData) {
+				masterAddresses := d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses
+				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = masterAddresses[0:2]
+				d.Status.Kubernetes.MasterEndpoints.Subsets[0].NotReadyAddresses = masterAddresses[2:3]
+				etcdAddresses := d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses
+				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = etcdAddresses[0:2]
+				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].NotReadyAddresses = etcdAddresses[2:3]
+				endpointReady := false
+				d.Status.Kubernetes.MasterEndpointSlice.Endpoints[2].Conditions.Ready = &endpointReady
+				d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[2].Conditions.Ready = &endpointReady
+			}),
+			ExpectedOps:        []string{"reboot", "reboot-dequeue"},
+			ExpectedTargetNums: nil,
+		},
+		{
+			Name: "EndpointsWithCancelledRebootEntry",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
+				Index:  1,
+				Nodes:  []string{nodeNames[2]},
+				Status: cke.RebootStatusCancelled,
+			}),
+			ExpectedOps:        []string{"reboot-dequeue"},
+			ExpectedTargetNums: nil,
 		},
 		{
 			Name: "UserResourceAdd",
@@ -1958,7 +2026,7 @@ func TestDecideOps(t *testing.T) {
 			Name: "RebootWithoutConfig",
 			Input: newData().withK8sResourceReady().withRebootEntry(&cke.RebootQueueEntry{
 				Index:  1,
-				Nodes:  []string{nodeNames[0], nodeNames[1]},
+				Nodes:  []string{nodeNames[4], nodeNames[5]},
 				Status: cke.RebootStatusQueued,
 			}),
 			ExpectedOps:        nil,
@@ -1968,7 +2036,7 @@ func TestDecideOps(t *testing.T) {
 			Name: "Reboot",
 			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
 				Index:  1,
-				Nodes:  []string{nodeNames[0], nodeNames[1]},
+				Nodes:  []string{nodeNames[4], nodeNames[5]},
 				Status: cke.RebootStatusQueued,
 			}),
 			ExpectedOps: []string{"reboot", "reboot-dequeue"},
@@ -1991,7 +2059,7 @@ func TestDecideOps(t *testing.T) {
 			Name: "SkipReboot",
 			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(2).withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
 				Index:  1,
-				Nodes:  []string{nodeNames[0], nodeNames[1]},
+				Nodes:  []string{nodeNames[4], nodeNames[5]},
 				Status: cke.RebootStatusQueued,
 			}),
 			ExpectedOps:        nil,
@@ -2001,7 +2069,7 @@ func TestDecideOps(t *testing.T) {
 			Name: "SkipReboot2",
 			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
 				Index:  1,
-				Nodes:  []string{nodeNames[0], nodeNames[1]},
+				Nodes:  []string{nodeNames[4], nodeNames[5]},
 				Status: cke.RebootStatusQueued,
 			}).with(func(d testData) {
 				delete(d.Status.Etcd.InSyncMembers, "10.0.0.11")
@@ -2013,7 +2081,7 @@ func TestDecideOps(t *testing.T) {
 			Name: "CancelReboot",
 			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntry(&cke.RebootQueueEntry{
 				Index:  1,
-				Nodes:  []string{nodeNames[0], nodeNames[1]},
+				Nodes:  []string{nodeNames[4], nodeNames[5]},
 				Status: cke.RebootStatusCancelled,
 			}),
 			ExpectedOps:        []string{"reboot-dequeue"},

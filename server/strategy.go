@@ -69,7 +69,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 7. Maintain k8s resources.
-	if ops := k8sMaintOps(c, cs, resources, nf); len(ops) > 0 {
+	if ops := k8sMaintOps(c, cs, resources, reboot, nf); len(ops) > 0 {
 		return ops, cke.PhaseK8sMaintain
 	}
 
@@ -201,7 +201,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	return nil
 }
 
-func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition, nf *NodeFilter) (ops []cke.Operator) {
+func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition, reboot *cke.RebootQueueEntry, nf *NodeFilter) (ops []cke.Operator) {
 	ks := cs.Kubernetes
 	apiServer := nf.HealthyAPIServer()
 
@@ -215,22 +215,28 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 
 	ops = append(ops, decideNodeDNSOps(apiServer, c, ks)...)
 
-	healthyAPIServerNodes := nf.HealthyAPIServerNodes()
-	cpReadyAddresses := make([]string, len(healthyAPIServerNodes))
-	for i, n := range healthyAPIServerNodes {
-		cpReadyAddresses[i] = n.Address
+	var masterReadyAddresses, masterNotReadyAddresses []string
+OUTER_MASTER:
+	for _, n := range nf.HealthyAPIServerNodes() {
+		if reboot != nil && reboot.Status != cke.RebootStatusCancelled {
+			for _, r := range reboot.Nodes {
+				if n.Address == r {
+					masterNotReadyAddresses = append(masterNotReadyAddresses, n.Address)
+					continue OUTER_MASTER
+				}
+			}
+		}
+		masterReadyAddresses = append(masterReadyAddresses, n.Address)
 	}
-	unhealthyAPIServerNodes := nf.UnhealthyAPIServerNodes()
-	cpNotReadyAddresses := make([]string, len(unhealthyAPIServerNodes))
-	for i, n := range unhealthyAPIServerNodes {
-		cpNotReadyAddresses[i] = n.Address
+	for _, n := range nf.UnhealthyAPIServerNodes() {
+		masterNotReadyAddresses = append(masterNotReadyAddresses, n.Address)
 	}
 
 	masterEP := &endpointParams{}
 	masterEP.namespace = metav1.NamespaceDefault
 	masterEP.name = "kubernetes"
-	masterEP.readyIPs = cpReadyAddresses
-	masterEP.notReadyIPs = cpNotReadyAddresses
+	masterEP.readyIPs = masterReadyAddresses
+	masterEP.notReadyIPs = masterNotReadyAddresses
 	masterEP.portName = "https"
 	masterEP.port = 6443
 	masterEP.serviceName = "kubernetes"
@@ -245,14 +251,24 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 		ops = append(ops, svcOp)
 	}
 
-	cpAddresses := make([]string, len(nf.ControlPlane()))
-	for i, cp := range nf.ControlPlane() {
-		cpAddresses[i] = cp.Address
+	var etcdReadyAddresses, etcdNotReadyAddresses []string
+OUTER_ETCD:
+	for _, n := range nf.ControlPlane() {
+		if reboot != nil && reboot.Status != cke.RebootStatusCancelled {
+			for _, r := range reboot.Nodes {
+				if n.Address == r {
+					etcdNotReadyAddresses = append(etcdNotReadyAddresses, n.Address)
+					continue OUTER_ETCD
+				}
+			}
+		}
+		etcdReadyAddresses = append(etcdReadyAddresses, n.Address)
 	}
 	etcdEP := &endpointParams{}
 	etcdEP.namespace = metav1.NamespaceSystem
 	etcdEP.name = op.EtcdEndpointsName
-	etcdEP.readyIPs = cpAddresses
+	etcdEP.readyIPs = etcdReadyAddresses
+	etcdEP.notReadyIPs = etcdNotReadyAddresses
 	etcdEP.port = 2379
 	etcdEP.serviceName = op.EtcdServiceName
 	epOps = decideEpEpsOps(etcdEP, ks.EtcdEndpoints, ks.EtcdEndpointSlice, apiServer)
