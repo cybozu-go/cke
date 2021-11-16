@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.21.2] - 2021-11-16
+
+### Changed
+
+- Update Endpoints/EndpointSlices when rebooting CP Node (#512)
+
 ## [1.21.1] - 2021-11-02
 
 ### Changed
@@ -93,7 +99,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.21.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.21.2...HEAD
+[1.21.2]: https://github.com/cybozu-go/cke/compare/v1.21.1...v1.21.2
 [1.21.1]: https://github.com/cybozu-go/cke/compare/v1.21.0...v1.21.1
 [1.21.0]: https://github.com/cybozu-go/cke/compare/v1.20.5...v1.21.0
 [1.21.0-rcdiff]: https://github.com/cybozu-go/cke/compare/v1.21.0-rc.3...v1.21.0
