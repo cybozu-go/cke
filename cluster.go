@@ -11,6 +11,7 @@ import (
 
 	"github.com/containernetworking/cni/libcni"
 	corev1 "k8s.io/api/core/v1"
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	v1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -391,19 +392,13 @@ func validateNodeLabels(n *Node, fldPath *field.Path) error {
 
 // validateNodeAnnotations validates annotation names.
 // The validation logic references:
-// https://github.com/kubernetes/apimachinery/blob/60666be32c5de527b69dabe8e4400b4f0aa897de/pkg/api/validation/objectmeta.go#L50
+// https://github.com/kubernetes/apimachinery/blob/v0.21.7/pkg/api/validation/objectmeta.go#L186
 func validateNodeAnnotations(n *Node, fldPath *field.Path) error {
-	for k := range n.Annotations {
-		msgs := validation.IsQualifiedName(strings.ToLower(k))
-		if len(msgs) > 0 {
-			el := make(field.ErrorList, len(msgs))
-			for i, msg := range msgs {
-				el[i] = field.Invalid(fldPath, k, msg)
-			}
-			return el.ToAggregate()
-		}
+	el := apivalidation.ValidateAnnotations(n.Annotations, fldPath)
+	if len(el) == 0 {
+		return nil
 	}
-	return nil
+	return el.ToAggregate()
 }
 
 // validateNodeTaints validates taint names, values, and effects.
