@@ -2,6 +2,10 @@
 
 cke-tools related changes.
 
+## 1.22.0 - 2021-12-16
+
+- nothing changed
+
 ## 1.21.0 - 2021-09-30
 
 - Update CNI plugins to 1.0.1(#483)
