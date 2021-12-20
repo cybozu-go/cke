@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cke"
-	"go.etcd.io/etcd/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 func initStateless(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{}) (int64, error) {

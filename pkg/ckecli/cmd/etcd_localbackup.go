@@ -12,8 +12,8 @@ import (
 
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
-	"go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/clientv3/snapshot"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/etcdutl/v3/snapshot"
 )
 
 var config struct {

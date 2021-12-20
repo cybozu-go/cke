@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/clientv3/concurrency"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
 func testConfigVersion(t *testing.T) {

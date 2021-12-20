@@ -14,7 +14,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
 	vault "github.com/hashicorp/vault/api"
-	"go.etcd.io/etcd/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )

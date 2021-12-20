@@ -10,7 +10,7 @@ import (
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/log"
 	"github.com/google/go-cmp/cmp"
-	"go.etcd.io/etcd/etcdserver/etcdserverpb"
+	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	corev1 "k8s.io/api/core/v1"
 )
 
