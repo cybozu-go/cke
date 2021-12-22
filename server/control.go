@@ -12,8 +12,8 @@ import (
 	"github.com/cybozu-go/cke/metrics"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
-	"go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/clientv3/concurrency"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
 var (

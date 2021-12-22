@@ -7,7 +7,7 @@ import (
 
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
-	"go.etcd.io/etcd/clientv3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 const (

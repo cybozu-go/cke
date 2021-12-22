@@ -13,7 +13,7 @@ import (
 	"github.com/cybozu-go/cke/op/nodedns"
 	"github.com/cybozu-go/cke/static"
 	"github.com/google/go-cmp/cmp"
-	"go.etcd.io/etcd/etcdserver/etcdserverpb"
+	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
