@@ -61,7 +61,7 @@ sonobuoy: bin/sonobuoy
 	$(CKECLI) kubernetes issue --ttl=10h > .kubeconfig
 	time ./bin/sonobuoy run --mode=certified-conformance --timeout=14400 --wait
 	outfile=$$(./bin/sonobuoy retrieve) && mv $$outfile sonobuoy.tar.gz
-	./bin/sonobuoy e2e sonobuoy.tar.gz 2>&1 | tee e2e-check.log
+	./bin/sonobuoy run --rerun-failed sonobuoy.tar.gz 2>&1 | tee e2e-check.log
 	./bin/sonobuoy delete
 
 .PHONY: clean
