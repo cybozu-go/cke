@@ -25,4 +25,4 @@ jobs:
         timeout-minutes: 240
       - name: Check failures
         run: |
-          grep "failed tests: 0" /tmp/e2e-check.log
+          grep -F 'no tests failed for plugin "e2e" in tarball' /tmp/e2e-check.log
