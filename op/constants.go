@@ -72,6 +72,9 @@ const (
 	SchedulerConfigPath = "/etc/kubernetes/scheduler/config.yml"
 	// SchedulerKubeConfigPath is a path for scheduler kubeconfig
 	SchedulerKubeConfigPath = "/etc/kubernetes/scheduler/kubeconfig"
+
+	// ControllerManagerKubeConfigPath is a path for controller-manager kubeconfig
+	ControllerManagerKubeConfigPath = "/etc/kubernetes/controller-manager/kubeconfig"
 )
 
 // EtcdPKIPath returns a certificate file path for k8s.

@@ -71,7 +71,6 @@ type prepareControllerManagerFilesCommand struct {
 }
 
 func (c prepareControllerManagerFilesCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	const kubeconfigPath = "/etc/kubernetes/controller-manager/kubeconfig"
 	storage := inf.Storage()
 
 	ca, err := storage.GetCACertificate(ctx, cke.CAKubernetes)
@@ -86,7 +85,7 @@ func (c prepareControllerManagerFilesCommand) Run(ctx context.Context, inf cke.I
 		cfg := controllerManagerKubeconfig(c.cluster, ca, crt, key)
 		return clientcmd.Write(*cfg)
 	}
-	err = c.files.AddFile(ctx, kubeconfigPath, g)
+	err = c.files.AddFile(ctx, op.ControllerManagerKubeConfigPath, g)
 	if err != nil {
 		return err
 	}
@@ -114,7 +113,9 @@ func ControllerManagerParams(clusterName, serviceSubnet string) cke.ServiceParam
 		"kube-controller-manager",
 		"--cluster-name=" + clusterName,
 		"--service-cluster-ip-range=" + serviceSubnet,
-		"--kubeconfig=/etc/kubernetes/controller-manager/kubeconfig",
+		"--kubeconfig=" + op.ControllerManagerKubeConfigPath,
+		"--authentication-kubeconfig=" + op.ControllerManagerKubeConfigPath,
+		"--authorization-kubeconfig=" + op.ControllerManagerKubeConfigPath,
 
 		// ToDo: cluster signing
 		// https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/#a-note-to-cluster-administrators
