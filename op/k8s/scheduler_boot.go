@@ -105,6 +105,8 @@ func SchedulerParams() cke.ServiceParams {
 	args := []string{
 		"kube-scheduler",
 		"--config=" + op.SchedulerConfigPath,
+		"--authentication-kubeconfig=" + op.SchedulerKubeConfigPath,
+		"--authorization-kubeconfig=" + op.SchedulerKubeConfigPath,
 		// for healthz service
 		"--tls-cert-file=" + op.K8sPKIPath("apiserver.crt"),
 		"--tls-private-key-file=" + op.K8sPKIPath("apiserver.key"),
