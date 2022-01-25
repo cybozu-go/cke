@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.22.1] - 2022-01-25
+
+#### Fixed
+
+- add authn/authz kubeconfig options to controller-manager/scheduler (#524)
+
 ## [1.22.0] - 2022-01-04
 
 ### Changelog since 1.21.2, the latest version of 1.21.x
@@ -46,6 +52,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.22.0...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.22.1...HEAD
+[1.22.1]: https://github.com/cybozu-go/cke/compare/v1.22.0...v1.22.1
 [1.22.0]: https://github.com/cybozu-go/cke/compare/v1.21.2...v1.22.0
 [1.22.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.21.2...v1.22.0-rc.1
