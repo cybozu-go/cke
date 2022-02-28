@@ -5,7 +5,7 @@ metadata:
   namespace: kube-system
   annotations:
     cke.cybozu.com/image: "{{ .unbound }}"
-    cke.cybozu.com/revision: "2"
+    cke.cybozu.com/revision: "3"
 spec:
   selector:
     matchLabels:
@@ -13,7 +13,8 @@ spec:
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 35%
+      maxSurge: 35%
+      maxUnavailable: 0
   template:
     metadata:
       labels:
@@ -55,6 +56,8 @@ spec:
           volumeMounts:
             - name: config-volume
               mountPath: /etc/unbound
+            - name: var-run-unbound
+              mountPath: /var/run/unbound
         - name: reload
           image: {{ .unbound }}
           command:
@@ -68,6 +71,8 @@ spec:
           volumeMounts:
             - name: config-volume
               mountPath: /etc/unbound
+            - name: var-run-unbound
+              mountPath: /var/run/unbound
       volumes:
         - name: config-volume
           configMap:
@@ -75,3 +80,5 @@ spec:
             items:
             - key: unbound.conf
               path: unbound.conf
+        - name: var-run-unbound
+          emptyDir: {}

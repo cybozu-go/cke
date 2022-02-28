@@ -10,9 +10,10 @@ import (
 )
 
 type unboundConfigTemplate struct {
-	Domain    string
-	ClusterIP string
-	Upstreams []string
+	Domain       string
+	ClusterIP    string
+	Upstreams    []string
+	LocalControl bool
 }
 
 const unboundConfigTemplateText = `
@@ -36,6 +37,7 @@ server:
   infra-host-ttl: 60
   prefetch: yes
   tcp-upstream: yes
+  so-reuseport: yes
   local-zone: "10.in-addr.arpa." transparent
   local-zone: "168.192.in-addr.arpa." transparent
   local-zone: "16.172.in-addr.arpa." transparent
@@ -56,7 +58,7 @@ server:
   local-zone: "31.172.in-addr.arpa." transparent
 remote-control:
   control-enable: yes
-  control-interface: 127.0.0.1
+  control-interface: {{ if .LocalControl }} /var/run/unbound/unbound.sock {{ else }} 127.0.0.1 {{ end }}
   control-use-cert: no
 stub-zone:
   name: "{{ .Domain }}"
@@ -77,11 +79,12 @@ forward-zone:
 `
 
 // ConfigMap returns ConfigMap for unbound daemonset
-func ConfigMap(clusterIP, domain string, dnsServers []string) *corev1.ConfigMap {
+func ConfigMap(clusterIP, domain string, dnsServers []string, localControl bool) *corev1.ConfigMap {
 	var confTempl unboundConfigTemplate
 	confTempl.Domain = domain
 	confTempl.ClusterIP = clusterIP
 	confTempl.Upstreams = dnsServers
+	confTempl.LocalControl = localControl
 
 	tmpl := template.Must(template.New("").Parse(unboundConfigTemplateText))
 	unboundConf := new(bytes.Buffer)

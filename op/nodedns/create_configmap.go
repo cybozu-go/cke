@@ -64,7 +64,7 @@ func (c createConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure,
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		configMap := ConfigMap(c.clusterIP, c.domain, c.dnsServers)
+		configMap := ConfigMap(c.clusterIP, c.domain, c.dnsServers, true)
 		_, err = configs.Create(ctx, configMap, metav1.CreateOptions{})
 		if err != nil {
 			return err

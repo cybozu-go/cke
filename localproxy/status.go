@@ -122,7 +122,8 @@ func getStatus(ctx context.Context, inf cke.Infrastructure) (*status, error) {
 		}
 	}
 
-	unboundConfigMap := nodedns.ConfigMap(clusterDNS.Spec.ClusterIP, domain, dnsServers)
+	// configuration for cache name server of cke-localproxy should be (almost) same as that for node DNS.
+	unboundConfigMap := nodedns.ConfigMap(clusterDNS.Spec.ClusterIP, domain, dnsServers, false)
 
 	unboundRunning, unboundImage, err := isRunning("cke-unbound")
 	if err != nil {

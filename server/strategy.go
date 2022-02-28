@@ -332,7 +332,7 @@ func decideNodeDNSOps(apiServer *cke.Node, c *cke.Cluster, ks cke.KubernetesClus
 		ops = append(ops, nodedns.CreateConfigMapOp(apiServer, ks.ClusterDNS.ClusterIP, desiredClusterDomain, desiredDNSServers))
 	} else {
 		actualConfigData := ks.NodeDNS.ConfigMap.Data
-		expectedConfig := nodedns.ConfigMap(ks.ClusterDNS.ClusterIP, desiredClusterDomain, desiredDNSServers)
+		expectedConfig := nodedns.ConfigMap(ks.ClusterDNS.ClusterIP, desiredClusterDomain, desiredDNSServers, true)
 		if actualConfigData["unbound.conf"] != expectedConfig.Data["unbound.conf"] {
 			ops = append(ops, nodedns.UpdateConfigMapOp(apiServer, expectedConfig))
 		}
