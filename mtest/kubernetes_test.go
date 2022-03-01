@@ -244,6 +244,44 @@ func testKubernetes() {
 			_, _, err := kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "www.cybozu.com")
 			return err
 		}).Should(Succeed())
+
+		By("checking rollout restart of node DNS")
+		getNodeDnsPodList := func() (*corev1.PodList, error) {
+			stdout, stderr, err := kubectl("get", "pod", "-n", "kube-system", "-l", "cke.cybozu.com/appname=node-dns", "-o", "json")
+			if err != nil {
+				return nil, fmt.Errorf("stderr: %s, err: %w", stderr, err)
+			}
+			podList := corev1.PodList{}
+			err = json.Unmarshal(stdout, &podList)
+			if err != nil {
+				return nil, err
+			}
+			return &podList, nil
+		}
+		beforeList, err := getNodeDnsPodList()
+		Expect(err).NotTo(HaveOccurred())
+
+		_, stderr, err = kubectl("rollout", "restart", "-n", "kube-system", "daemonsets/node-dns")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		Eventually(func() error {
+			afterList, err := getNodeDnsPodList()
+			if err != nil {
+				return err
+			}
+			if len(afterList.Items) != len(beforeList.Items) {
+				return fmt.Errorf("rollout is not completed: before=%d, after=%d", len(beforeList.Items), len(afterList.Items))
+			}
+			for _, apod := range afterList.Items {
+				for _, bpod := range beforeList.Items {
+					if apod.Name == bpod.Name && apod.CreationTimestamp == bpod.CreationTimestamp {
+						return fmt.Errorf("rollout is not completed: pod %s is not restarted", apod.Name)
+					}
+				}
+			}
+
+			return nil
+		}, time.Minute*5).Should(Succeed())
 	})
 
 	It("has kube-system/cke-etcd Service and Endpoints", func() {
