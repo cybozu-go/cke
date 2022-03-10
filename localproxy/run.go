@@ -12,8 +12,9 @@ import (
 
 // LocalProxy is the controller of kube-proxy and unbound running on the same server as CKE.
 type LocalProxy struct {
-	Interval time.Duration
-	Storage  cke.Storage
+	Interval    time.Duration
+	Storage     cke.Storage
+	ProxyConfig *cke.ProxyParams
 
 	currentAP string
 }
@@ -45,6 +46,10 @@ func (c *LocalProxy) runOnce(ctx context.Context) error {
 	}
 	if err != nil {
 		return fmt.Errorf("failed to get cluster: %w", err)
+	}
+
+	if c.ProxyConfig != nil {
+		cluster.Options.Proxy = *c.ProxyConfig
 	}
 
 	st, err := getStatus(ctx, inf)

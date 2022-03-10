@@ -14,8 +14,9 @@ import (
 )
 
 var (
-	flgConfigPath = pflag.String("config", "/etc/cke/config.yml", "configuration file path")
-	flgInterval   = pflag.Duration("interval", 1*time.Minute, "check interval")
+	flgConfigPath      = pflag.String("config", "/etc/cke/config.yml", "configuration file path")
+	flgProxyConfigPath = pflag.String("config", "/etc/cke/proxy-config.yml", "configuration file path for proxy")
+	flgInterval        = pflag.Duration("interval", 1*time.Minute, "check interval")
 )
 
 func loadConfig(p string) (*etcdutil.Config, error) {
@@ -24,6 +25,23 @@ func loadConfig(p string) (*etcdutil.Config, error) {
 		return nil, err
 	}
 	cfg := cke.NewEtcdConfig()
+	err = yaml.Unmarshal(b, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
+func loadProxyConfig(p string) (*cke.ProxyParams, error) {
+	b, err := os.ReadFile(p)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	cfg := &cke.ProxyParams{}
 	err = yaml.Unmarshal(b, cfg)
 	if err != nil {
 		return nil, err
@@ -41,6 +59,11 @@ func main() {
 		log.ErrorExit(err)
 	}
 
+	proxyCfg, err := loadProxyConfig(*flgProxyConfigPath)
+	if err != nil {
+		log.ErrorExit(err)
+	}
+
 	etcd, err := etcdutil.NewClient(cfg)
 	if err != nil {
 		log.ErrorExit(err)
@@ -48,7 +71,7 @@ func main() {
 	defer etcd.Close()
 
 	// Controller
-	controller := localproxy.LocalProxy{Interval: *flgInterval, Storage: cke.Storage{Client: etcd}}
+	controller := localproxy.LocalProxy{Interval: *flgInterval, Storage: cke.Storage{Client: etcd}, ProxyConfig: proxyCfg}
 	well.Go(controller.Run)
 
 	err = well.Wait()
