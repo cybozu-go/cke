@@ -5,6 +5,13 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.22.2] - 2022-04-07
+
+#### Changed
+
+- surge update node-dns (#527)
+- Add `--experimental-initial-corrupt-check` flag for etcd (#529)
+
 ## [1.22.1] - 2022-01-25
 
 #### Fixed
@@ -52,7 +59,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.22.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.22.2...HEAD
+[1.22.2]: https://github.com/cybozu-go/cke/compare/v1.22.1...v1.22.2
 [1.22.1]: https://github.com/cybozu-go/cke/compare/v1.22.0...v1.22.1
 [1.22.0]: https://github.com/cybozu-go/cke/compare/v1.21.2...v1.22.0
 [1.22.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.21.2...v1.22.0-rc.1
