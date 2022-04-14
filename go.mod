@@ -14,16 +14,16 @@ require (
 	github.com/hashicorp/vault/api v1.3.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.32.1
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/pflag v1.0.5
 	github.com/vektah/gqlparser/v2 v2.2.0
-	go.etcd.io/etcd/api/v3 v3.5.1
-	go.etcd.io/etcd/client/v3 v3.5.1
-	go.etcd.io/etcd/etcdutl/v3 v3.5.1
-	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
+	go.etcd.io/etcd/api/v3 v3.5.3
+	go.etcd.io/etcd/client/v3 v3.5.3
+	go.etcd.io/etcd/etcdutl/v3 v3.5.3
+	golang.org/x/crypto v0.0.0-20220131195533-30dcbda58838
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	k8s.io/api v0.22.5
 	k8s.io/apimachinery v0.22.5
@@ -107,11 +107,11 @@ require (
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
-	go.etcd.io/etcd/client/pkg/v3 v3.5.1 // indirect
-	go.etcd.io/etcd/client/v2 v2.305.1 // indirect
-	go.etcd.io/etcd/pkg/v3 v3.5.1 // indirect
-	go.etcd.io/etcd/raft/v3 v3.5.1 // indirect
-	go.etcd.io/etcd/server/v3 v3.5.1 // indirect
+	go.etcd.io/etcd/client/pkg/v3 v3.5.3 // indirect
+	go.etcd.io/etcd/client/v2 v2.305.3 // indirect
+	go.etcd.io/etcd/pkg/v3 v3.5.3 // indirect
+	go.etcd.io/etcd/raft/v3 v3.5.3 // indirect
+	go.etcd.io/etcd/server/v3 v3.5.3 // indirect
 	go.opentelemetry.io/contrib v0.20.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0 // indirect
 	go.opentelemetry.io/otel v0.20.0 // indirect
