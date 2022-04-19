@@ -141,11 +141,39 @@ func testRebootOperations(cluster *cke.Cluster) {
 	waitRebootCompletion(cluster)
 	nodesShouldBeSchedulable(node1)
 
+	By("`.reboot.time` disables reboot queue processing")
+	now := time.Now()
+	from := fmt.Sprintf("%02d:00", now.Add(1*time.Hour).Hour())
+	to := fmt.Sprintf("%02d:00", now.Add(2*time.Hour).Hour())
+	cluster.Reboot.Time = cke.RebootTime{
+		From: from,
+		To:   to,
+	}
+	_, err = ckecliClusterSet(cluster)
+	Expect(err).ShouldNot(HaveOccurred())
+	// wait for the previous reconciliation to be done
+	time.Sleep(time.Second * 3)
+	_, _, err = ckecliWithInput([]byte(node1), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
+	rebootShouldNotProceed()
+
+	By("`.reboot.time` enables reboot queue processing")
+	cluster.Reboot.Time = cke.RebootTime{
+		From: "",
+		To:   "",
+	}
+	_, err = ckecliClusterSet(cluster)
+	Expect(err).ShouldNot(HaveOccurred())
+	// wait for the previous reconciliation to be done
+	time.Sleep(time.Second * 3)
+	waitRebootCompletion(cluster)
+	nodesShouldBeSchedulable(node1)
+
 	By("ckecli reboot-queue cancel cancels the specified reboot queue entry")
 	ckecliSafe("reboot-queue", "disable")
 	_, _, err = ckecliWithInput([]byte(node1), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
-	ckecliSafe("reboot-queue", "cancel", "4")
+	ckecliSafe("reboot-queue", "cancel", "5")
 	entries, err := getRebootEntries()
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(entries).Should(HaveLen(1))
