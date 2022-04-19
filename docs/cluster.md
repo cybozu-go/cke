@@ -71,6 +71,7 @@ Reboot
 | `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default is nil.               |
 | `command_timeout_seconds`  | false    | *int                             | Deadline for rebooting. Zero means infinity. Default is nil.           |
 | `protected_namespaces`     | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                                |
+| `time`                     | false    | RebootTime                       | Time to allow rebooting.                                               |
 
 `command` is the command (1) to reboot the node and (2) to wait for the boot-up of the node.
 CKE sends a [Node data object](cluster.md#node) serialized into JSON to its standard input.
@@ -87,6 +88,17 @@ If any of the Pods cannot be deleted, it aborts the operation.
 The Pods in the non-protected namespaces are also tried to be deleted gracefully with the Kubernetes eviction API, but they would be simply deleted if eviction is denied.
 
 If `protected_namespaces` is not given, all namespaces are protected.
+
+If `time` is not give, allow reboots at all times.
+
+### RebootTime
+
+| Name   | Required | Type   | Description                   |
+| ------ | -------- | ------ | ----------------------------- |
+| `from` | false    | string | Time to start reboot (HH:MM)  |
+| `to`   | false    | string | Time to finish reboot (HH:MM) |
+
+Reboot from the time specified in `from` to the time specified in `to`.
 
 Options
 -------

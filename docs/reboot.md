@@ -40,9 +40,10 @@ The command writes a reboot queue entry and increments `reboots/write-index` ato
 The queue is processed by CKE as follows:
 
 1. If `reboots/disabled` is `true`, it doesn't process the queue.
-2. Check the number of unreachable nodes. If it exceeds `maximum-unreachable-nodes-for-reboot` in the constraints, it doesn't process the queue.
-3. Check the reboot queue to find an entry. If the entry's status is `cancelled`, remove it and check the queue again. If there is no entry, CKE stops the processing.
-4. For the first entry in the reboot queue, do the following steps.
+2. If `.reboot.time` is specified, it doesn't process the queue outside of the specified time.
+3. Check the number of unreachable nodes. If it exceeds `maximum-unreachable-nodes-for-reboot` in the constraints, it doesn't process the queue.
+4. Check the reboot queue to find an entry. If the entry's status is `cancelled`, remove it and check the queue again. If there is no entry, CKE stops the processing.
+5. For the first entry in the reboot queue, do the following steps.
    1. Update the entry status to `rebooting`.
    2. Cordon the nodes in the entry.
    3. Check the existence of Job-managed Pods on the nodes. If even one pod exists, the operation is aborted.
