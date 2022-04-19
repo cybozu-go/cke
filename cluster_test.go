@@ -1,9 +1,11 @@
 package cke
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -87,6 +89,12 @@ func testClusterYAML(t *testing.T) {
 	}
 	if c.Reboot.ProtectedNamespaces.MatchLabels["app"] != "sample" {
 		t.Error(`c.Reboot.ProtectedNamespaces.MatchLabels["app"] != "sample"`)
+	}
+	if c.Reboot.Time.From != "18:00" {
+		t.Fatal(`c.Reboot.Time.From != "18:00"`)
+	}
+	if c.Reboot.Time.To != "09:00" {
+		t.Fatal(`c.Reboot.Time.To != "09:00"`)
 	}
 	if c.Options.Etcd.VolumeName != "myetcd" {
 		t.Error(`c.Options.Etcd.VolumeName != "myetcd"`)
@@ -772,9 +780,150 @@ func testNodename(t *testing.T) {
 
 }
 
+func testClusterValidateReboot(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		reboot  Reboot
+		wantErr bool
+	}{
+		{
+			name:    "no reboot time",
+			reboot:  Reboot{},
+			wantErr: false,
+		},
+		{
+			name: "invalid reboot time",
+			reboot: Reboot{
+				Time: RebootTime{
+					From: "from",
+					To:   "to",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid reboot time",
+			reboot: Reboot{
+				Time: RebootTime{
+					From: "18:00",
+					To:   "09:00",
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := validateReboot(tt.reboot); (err != nil) != tt.wantErr {
+				t.Errorf("validateReboot(%+v) error = %v, wantErr %v", tt.reboot, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func testIsRebootable(t *testing.T) {
+	t.Parallel()
+	timeFormat := "2006-01-02 15:04:05"
+	now := time.Now()
+	tm, err := time.Parse(timeFormat, fmt.Sprintf("%d-%02d-%02d 12:00:00", now.Year(), now.Month(), now.Day()))
+	if err != nil {
+		t.Errorf("Failure to parse time")
+	}
+	cases := []struct {
+		now        time.Time
+		rebootTime RebootTime
+		expect     bool
+	}{
+		{
+			tm,
+			RebootTime{
+				From: "",
+				To:   "",
+			},
+			true,
+		},
+		{
+			tm,
+			RebootTime{
+				From: "11:00",
+				To:   "",
+			},
+			true,
+		},
+		{
+			tm,
+			RebootTime{
+				From: "",
+				To:   "11:00",
+			},
+			true,
+		},
+		{
+			tm,
+			RebootTime{
+				From: "11:00",
+				To:   "13:00",
+			},
+			true,
+		},
+		{
+			tm,
+			RebootTime{
+				From: "13:00",
+				To:   "15:00",
+			},
+			false,
+		},
+		{
+			tm,
+			RebootTime{
+				From: "23:00",
+				To:   "13:00",
+			},
+			true,
+		},
+		{
+			tm,
+			RebootTime{
+				From: "11:00",
+				To:   "01:00",
+			},
+			true,
+		},
+		{
+			tm,
+			RebootTime{
+				From: "23:00",
+				To:   "11:00",
+			},
+			false,
+		},
+		{
+			tm,
+			RebootTime{
+				From: "13:00",
+				To:   "01:00",
+			},
+			false,
+		},
+	}
+	for _, c := range cases {
+		actual, err := c.rebootTime.IsRebootable(tm)
+		if err != nil {
+			t.Errorf("RebootTime.IsRebootable(%s) error = %v RebootTime = %v", tm, err, c.rebootTime)
+		}
+		if actual != c.expect {
+			t.Errorf("RebootTime.IsRebootable(%s) expect = %v actual = %v RebootTime=%v", tm, c.expect, actual, c.rebootTime)
+		}
+	}
+}
+
 func TestCluster(t *testing.T) {
 	t.Run("YAML", testClusterYAML)
 	t.Run("Validate", testClusterValidate)
 	t.Run("ValidateNode", testClusterValidateNode)
 	t.Run("Nodename", testNodename)
+	t.Run("ValidateReboot", testClusterValidateReboot)
+	t.Run("IsRebootable", testIsRebootable)
 }

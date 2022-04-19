@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/containernetworking/cni/libcni"
 	corev1 "k8s.io/api/core/v1"
@@ -274,6 +275,53 @@ type Reboot struct {
 	EvictionTimeoutSeconds *int                  `json:"eviction_timeout_seconds,omitempty"`
 	CommandTimeoutSeconds  *int                  `json:"command_timeout_seconds,omitempty"`
 	ProtectedNamespaces    *metav1.LabelSelector `json:"protected_namespaces,omitempty"`
+	Time                   RebootTime            `json:"time"`
+}
+
+type RebootTime struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+func (r RebootTime) isDisable() bool {
+	return r.From == "" || r.To == ""
+}
+
+func (r RebootTime) parseTime(now time.Time) (time.Time, time.Time, error) {
+	if r.isDisable() {
+		return time.Time{}, time.Time{}, nil
+	}
+	timeFormat := "2006-01-02 15:04:05"
+	from, err := time.Parse(timeFormat, fmt.Sprintf("%d-%02d-%02d "+r.From+":00", now.Year(), now.Month(), now.Day()))
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	to, err := time.Parse(timeFormat, fmt.Sprintf("%d-%02d-%02d "+r.To+":00", now.Year(), now.Month(), now.Day()))
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	return from, to, nil
+}
+
+func (r RebootTime) IsRebootable(now time.Time) (bool, error) {
+	if r.isDisable() {
+		return true, nil
+	}
+	from, to, err := r.parseTime(now)
+	if err != nil {
+		return false, err
+	}
+	if from.After(to) {
+		if now.Before(from) {
+			from = from.Add(-24 * time.Hour)
+		} else if now.After(to) {
+			to = to.Add(24 * time.Hour)
+		}
+	}
+	if now.After(from) && now.Before(to) {
+		return true, nil
+	}
+	return false, nil
 }
 
 // Options is a set of optional parameters for k8s components.
@@ -468,6 +516,10 @@ func validateReboot(reboot Reboot) error {
 	_, err := metav1.LabelSelectorAsSelector(reboot.ProtectedNamespaces)
 	if err != nil {
 		return fmt.Errorf("invalid label selector: %w", err)
+	}
+	_, _, err = reboot.Time.parseTime(time.Now())
+	if err != nil {
+		return fmt.Errorf("invalid reboot time: %w", err)
 	}
 	return nil
 }

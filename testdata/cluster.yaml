@@ -16,6 +16,9 @@ reboot:
   protected_namespaces:
     matchLabels:
       app: sample
+  time:
+    from: "18:00"
+    to: "09:00"
 options:
   etcd:
     volume_name: myetcd

@@ -323,7 +323,11 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		if err != nil {
 			return err
 		}
-		if !disabled {
+		rebootable, err := cluster.Reboot.Time.IsRebootable(time.Now())
+		if err != nil {
+			return err
+		}
+		if !disabled && rebootable {
 			reboot = re[0]
 		}
 	}
