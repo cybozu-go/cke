@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.22.4] - 2022-04-25
+
+#### Changed
+
+- Update etcd to 3.5.4 (#534)
+
 ## [1.22.3] - 2022-04-14
 
 #### Changed
@@ -65,7 +71,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.22.3...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.22.4...HEAD
+[1.22.4]: https://github.com/cybozu-go/cke/compare/v1.22.3...v1.22.4
 [1.22.3]: https://github.com/cybozu-go/cke/compare/v1.22.2...v1.22.3
 [1.22.2]: https://github.com/cybozu-go/cke/compare/v1.22.1...v1.22.2
 [1.22.1]: https://github.com/cybozu-go/cke/compare/v1.22.0...v1.22.1
