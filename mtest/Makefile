@@ -1,7 +1,7 @@
 # Makefile for multi-host testing using ginkgo
 
 # tool versions
-MANAGEMENT_ETCD_VERSION = 3.5.3
+MANAGEMENT_ETCD_VERSION = 3.5.4
 VAULT_VERSION = 1.8.2
 K8S_VERSION = 1.22.5
 CONTAINERD_VERSION = 1.5.8
