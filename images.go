@@ -16,7 +16,7 @@ const (
 	PauseImage           = Image("quay.io/cybozu/pause:3.6.0.1")
 	CoreDNSImage         = Image("quay.io/cybozu/coredns:1.8.6.1")
 	UnboundImage         = Image("quay.io/cybozu/unbound:1.14.0.1")
-	UnboundExporterImage = Image("quay.io/cybozu/unbound_exporter:0.4.1.1")
+	UnboundExporterImage = Image("quay.io/umezawatakeshi/unbound_exporter:0.4.1.2-test.1")
 )
 
 // AllImages return container images list used by CKE
