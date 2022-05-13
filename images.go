@@ -10,12 +10,13 @@ func (i Image) Name() string {
 
 // Container image definitions
 const (
-	EtcdImage       = Image("quay.io/cybozu/etcd:3.5.4.1")
-	KubernetesImage = Image("quay.io/cybozu/kubernetes:1.22.5.1")
-	ToolsImage      = Image("quay.io/cybozu/cke-tools:1.22.0")
-	PauseImage      = Image("quay.io/cybozu/pause:3.6.0.1")
-	CoreDNSImage    = Image("quay.io/cybozu/coredns:1.8.6.1")
-	UnboundImage    = Image("quay.io/cybozu/unbound:1.14.0.1")
+	EtcdImage            = Image("quay.io/cybozu/etcd:3.5.4.1")
+	KubernetesImage      = Image("quay.io/cybozu/kubernetes:1.22.5.1")
+	ToolsImage           = Image("quay.io/cybozu/cke-tools:1.22.0")
+	PauseImage           = Image("quay.io/cybozu/pause:3.6.0.1")
+	CoreDNSImage         = Image("quay.io/cybozu/coredns:1.8.6.1")
+	UnboundImage         = Image("quay.io/cybozu/unbound:1.14.0.1")
+	UnboundExporterImage = Image("quay.io/cybozu/unbound_exporter:0.4.1.1")
 )
 
 // AllImages return container images list used by CKE
@@ -27,5 +28,6 @@ func AllImages() []string {
 		PauseImage.Name(),
 		CoreDNSImage.Name(),
 		UnboundImage.Name(),
+		UnboundExporterImage.Name(),
 	}
 }

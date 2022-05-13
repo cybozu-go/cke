@@ -33,6 +33,7 @@ server:
   log-local-actions: yes
   log-servfail: yes
   rrset-roundrobin: yes
+  extended-statistics: yes
   pidfile: "/tmp/unbound.pid"
   infra-host-ttl: 60
   prefetch: yes
