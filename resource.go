@@ -232,7 +232,7 @@ type ResourceDefinition struct {
 	Namespace  string
 	Name       string
 	Revision   int64
-	Image      string
+	Image      string // may contains multiple images; we should not use this whole string as an image name.
 	Definition []byte
 }
 
