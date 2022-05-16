@@ -11,11 +11,12 @@ import (
 )
 
 // CoreDNSTemplateVersion is the version of CoreDNS template
-const CoreDNSTemplateVersion = "2"
+const CoreDNSTemplateVersion = "3"
 
 var clusterDNSTemplate = template.Must(template.New("").Parse(`.:1053 {
     errors
     health
+    ready
     log
     kubernetes {{ .Domain }} in-addr.arpa ip6.arpa {
       pods verified
