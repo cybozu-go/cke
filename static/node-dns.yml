@@ -4,8 +4,8 @@ metadata:
   name: node-dns
   namespace: kube-system
   annotations:
-    cke.cybozu.com/image: "{{ .unbound }}"
-    cke.cybozu.com/revision: "3"
+    cke.cybozu.com/image: "{{ .unbound }},{{ .unbound_exporter }}"
+    cke.cybozu.com/revision: "4"
 spec:
   selector:
     matchLabels:
@@ -71,6 +71,21 @@ spec:
           volumeMounts:
             - name: config-volume
               mountPath: /etc/unbound
+            - name: var-run-unbound
+              mountPath: /var/run/unbound
+        - name: exporter
+          image: {{ .unbound_exporter }}
+          args:
+          # must be same with the path written in /op/nodedns/nodedns.go
+          - --unbound.host=unix:///var/run/unbound/unbound.sock
+          - --web.reuse-port=true
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - all
+            readOnlyRootFilesystem: true
+          volumeMounts:
             - name: var-run-unbound
               mountPath: /var/run/unbound
       volumes:

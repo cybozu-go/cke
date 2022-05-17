@@ -245,6 +245,21 @@ func testKubernetes() {
 			return err
 		}).Should(Succeed())
 
+		By("getting metrics from unbound_exporter")
+		Eventually(func() error {
+			stdout, _, err := kubectl("exec", "-n=kube-system", "daemonset/node-dns", "-c", "unbound", "--", "curl", "-sSf", "http://127.0.0.1:9167/metrics")
+			if err != nil {
+				return err
+			}
+			if !strings.Contains(string(stdout), "unbound_up 1") {
+				return errors.New("exporter does not return unbound_up=1")
+			}
+			if !strings.Contains(string(stdout), `unbound_memory_caches_bytes{cache="message"}`) {
+				return errors.New("exporter does not return unbound_memory_caches_bytes")
+			}
+			return nil
+		}).Should(Succeed())
+
 		By("checking rollout restart of node DNS")
 		getNodeDnsPodList := func() (*corev1.PodList, error) {
 			stdout, stderr, err := kubectl("get", "pod", "-n", "kube-system", "-l", "cke.cybozu.com/appname=node-dns", "-o", "json")
