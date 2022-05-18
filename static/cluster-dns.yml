@@ -64,7 +64,7 @@ metadata:
   namespace: kube-system
   annotations:
     cke.cybozu.com/image: "{{ .coredns }}"
-    cke.cybozu.com/revision: "1"
+    cke.cybozu.com/revision: "2"
 spec:
   replicas: 2
   strategy:
@@ -129,10 +129,9 @@ spec:
           readOnlyRootFilesystem: true
         readinessProbe:
           httpGet:
-            path: /health
-            port: 8080
+            path: /ready
+            port: 8181
             scheme: HTTP
-          timeoutSeconds: 5
         livenessProbe:
           httpGet:
             path: /health
