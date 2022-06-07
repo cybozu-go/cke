@@ -131,12 +131,11 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 			}
 
 			_, err = nodesAPI.Patch(ctx, entry.Node, types.StrategicMergePatchType, []byte(`
-metadata:
-  labels:
-    `+CKEAnnotationReboot+`: "true"
-spec:
-  unschedulable: true
-}`), metav1.PatchOptions{})
+{
+	"metadata":{"labels":{"`+CKEAnnotationReboot+`": "true"}},
+	"spec":{"unschedulable": true}
+}
+`), metav1.PatchOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to cordon node %s: %v", entry.Node, err)
 			}
@@ -387,12 +386,11 @@ func (c uncordonCommand) Run(ctx context.Context, inf cke.Infrastructure, _ stri
 
 	for _, name := range c.nodeNames {
 		_, err = nodesAPI.Patch(ctx, name, types.StrategicMergePatchType, []byte(`
-metadata:
-  labels:
-    `+CKEAnnotationReboot+`: null
-spec:
-  unschedulable: null
-		}`), metav1.PatchOptions{})
+{
+	"metadata":{"labels":{"`+CKEAnnotationReboot+`": null}},
+	"spec":{"unschedulable": null}
+}
+`), metav1.PatchOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to uncordon node %s: %v", name, err)
 		}
@@ -560,19 +558,21 @@ func enumeratePods(ctx context.Context, cs *kubernetes.Clientset, node string,
 		pod := &podList.Items[i]
 		owner := metav1.GetControllerOf(pod)
 		if owner != nil {
-			if owner.Kind == "DaemonSet" {
+			switch owner.Kind {
+			case "DaemonSet":
 				continue
-			}
-			switch pod.Status.Phase {
-			case corev1.PodPending:
-			case corev1.PodSucceeded:
-			case corev1.PodFailed:
-			default:
-				err = jobPodHandler(pod)
-				if err != nil {
-					return err
+			case "Job":
+				switch pod.Status.Phase {
+				case corev1.PodPending:
+				case corev1.PodSucceeded:
+				case corev1.PodFailed:
+				default:
+					err = jobPodHandler(pod)
+					if err != nil {
+						return err
+					}
+					continue
 				}
-				continue
 			}
 		}
 		err = podHandler(pod)
