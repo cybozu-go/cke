@@ -41,6 +41,15 @@ var rebootQueueEntries = prometheus.NewGauge(
 	},
 )
 
+var rebootQueueItems = prometheus.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "reboot_queue_items",
+		Help:      "The number of reboot queue entries remaining per status.",
+	},
+	[]string{"status"},
+)
+
 var sabakanIntegrationSuccessful = prometheus.NewGauge(
 	prometheus.GaugeOpts{
 		Namespace: namespace,

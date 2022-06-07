@@ -13,7 +13,8 @@ nodes:
 service_subnet: 10.34.56.0/24
 dns_servers: ["8.8.8.8", "1.1.1.1"]
 reboot:
-  command: ["sleep", "5"]
+  reboot_command: ["sleep", "5"]
+  boot_check_command: ["true"]
   eviction_timeout_seconds: 30
   command_timeout_seconds: 30
 options:

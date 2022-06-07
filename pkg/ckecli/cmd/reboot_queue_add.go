@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -37,45 +36,38 @@ If FILE is -, the contents are read from stdin.`,
 			return err
 		}
 		nodes := strings.Fields(string(data))
-		entry := cke.NewRebootQueueEntry(nodes)
 
 		well.Go(func(ctx context.Context) error {
-			cluster, err := storage.GetCluster(ctx)
-			if err != nil {
-				return err
-			}
-			err = validateNodes(nodes, cluster)
-			if err != nil {
-				return err
-			}
+			for _, node := range nodes {
+				entry := cke.NewRebootQueueEntry(node)
+				cluster, err := storage.GetCluster(ctx)
+				if err != nil {
+					return err
+				}
+				err = validateNode(node, cluster)
+				if err != nil {
+					return err
+				}
 
-			return storage.RegisterRebootsEntry(ctx, entry)
+				err = storage.RegisterRebootsEntry(ctx, entry)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
 		})
 		well.Stop()
 		return well.Wait()
 	},
 }
 
-func validateNodes(nodes []string, cluster *cke.Cluster) error {
-	numCPs := 0
-OUTER:
-	for _, rebootNode := range nodes {
-		for _, clusterNode := range cluster.Nodes {
-			if rebootNode == clusterNode.Address {
-				if clusterNode.ControlPlane {
-					numCPs++
-				}
-				continue OUTER
-			}
+func validateNode(rebootNode string, cluster *cke.Cluster) error {
+	for _, clusterNode := range cluster.Nodes {
+		if rebootNode == clusterNode.Address {
+			return nil
 		}
-		return fmt.Errorf("%s is not a valid node IP address", rebootNode)
 	}
-
-	if numCPs > 1 {
-		return errors.New("multiple control planes cannot be enqueued in one entry")
-	}
-
-	return nil
+	return fmt.Errorf("%s is not a valid node IP address", rebootNode)
 }
 
 func init() {

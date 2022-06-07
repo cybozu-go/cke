@@ -39,14 +39,18 @@ func isOperationPhaseAvailable(_ context.Context, _ storage) (bool, error) {
 	return isLeader, nil
 }
 
-// UpdateReboot updates "reboot_queue_entries".
-func UpdateReboot(numEntries int) {
+// UpdateRebootQueueEntries updates "reboot_queue_entries".
+func UpdateRebootQueueEntries(numEntries int) {
 	rebootQueueEntries.Set(float64(numEntries))
 }
 
-// DecrementReboot decrements "reboot_queue_entries".
-func DecrementReboot() {
-	rebootQueueEntries.Dec()
+// UpdateRebootQueueEntries updates "reboot_queue_entries".
+func UpdateRebootQueueItems(counts map[string]int) {
+	for status, count := range counts {
+		rebootQueueItems.With(map[string]string{
+			"status": status,
+		}).Set(float64(count))
+	}
 }
 
 func isRebootAvailable(_ context.Context, _ storage) (bool, error) {

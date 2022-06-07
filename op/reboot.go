@@ -1,15 +1,17 @@
 package op
 
 import (
-	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"strconv"
+	"math/rand"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/metrics"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	corev1 "k8s.io/api/core/v1"
@@ -18,95 +20,324 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/json"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/client-go/kubernetes"
 )
 
-const defaultEvictionTimeoutSeconds = 600
+const drainBackOffBaseSeconds = 600
 
-type rebootOp struct {
-	apiserver *cke.Node
-	nodes     []*cke.Node
-	index     int64
+type rebootDrainStartOp struct {
+	finished bool
+
+	entries   []*cke.RebootQueueEntry
 	config    *cke.Reboot
-	step      int
+	apiserver *cke.Node
 
 	mu          sync.Mutex
 	failedNodes []string
 }
 
-func (o *rebootOp) notifyFailedNode(n *cke.Node) {
+func RebootDrainStartOp(apiserver *cke.Node, entries []*cke.RebootQueueEntry, config *cke.Reboot) cke.InfoOperator {
+	return &rebootDrainStartOp{
+		entries:   entries,
+		config:    config,
+		apiserver: apiserver,
+	}
+}
+
+type rebootDrainStartCommand struct {
+	entries             []*cke.RebootQueueEntry
+	protectedNamespaces *metav1.LabelSelector
+	apiserver           *cke.Node
+
+	notifyFailedNode func(string)
+}
+
+func (o *rebootDrainStartOp) Name() string {
+	return "reboot-drain-start"
+}
+
+func (o *rebootDrainStartOp) notifyFailedNode(node string) {
 	o.mu.Lock()
-	o.failedNodes = append(o.failedNodes, n.Nodename())
+	o.failedNodes = append(o.failedNodes, node)
 	o.mu.Unlock()
 }
 
-// RebootOp returns an Operator to reboot nodes.
-func RebootOp(apiserver *cke.Node, nodes []*cke.Node, index int64, config *cke.Reboot) cke.InfoOperator {
-	return &rebootOp{
-		apiserver: apiserver,
-		nodes:     nodes,
-		index:     index,
-		config:    config,
-	}
-}
-
-func (o *rebootOp) Name() string {
-	return "reboot"
-}
-
-func (o *rebootOp) NextCommand() cke.Commander {
-	switch o.step {
-	case 0:
-		o.step++
-		return rebootStartCommand{index: o.index}
-	case 1:
-		o.step++
-		nodeNames := make([]string, len(o.nodes))
-		for i := range o.nodes {
-			nodeNames[i] = o.nodes[i].Nodename()
-		}
-		return cordonCommand{
-			apiserver:     o.apiserver,
-			nodeNames:     nodeNames,
-			unschedulable: true,
-		}
-	case 2:
-		o.step++
-		return drainCommand{
-			timeoutSeconds:      o.config.EvictionTimeoutSeconds,
-			apiserver:           o.apiserver,
-			nodes:               o.nodes,
-			protectedNamespaces: o.config.ProtectedNamespaces,
-		}
-	case 3:
-		o.step++
-		return rebootCommand{
-			command:          o.config.Command,
-			timeoutSeconds:   o.config.CommandTimeoutSeconds,
-			nodes:            o.nodes,
-			notifyFailedNode: o.notifyFailedNode,
-		}
-	default:
-		return nil
-	}
-}
-
-func (o *rebootOp) Targets() []string {
-	ipAddresses := make([]string, len(o.nodes))
-	for i, n := range o.nodes {
-		ipAddresses[i] = n.Address
+func (o *rebootDrainStartOp) Targets() []string {
+	ipAddresses := make([]string, len(o.entries))
+	for i, entry := range o.entries {
+		ipAddresses[i] = entry.Node
 	}
 	return ipAddresses
 }
 
-func (o *rebootOp) Info() string {
+func (o *rebootDrainStartOp) Info() string {
+	if len(o.failedNodes) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("failed to drain some nodes: %v", o.failedNodes)
+}
+
+func (o *rebootDrainStartOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
+
+	return rebootDrainStartCommand{
+		entries:             o.entries,
+		protectedNamespaces: o.config.ProtectedNamespaces,
+		apiserver:           o.apiserver,
+		notifyFailedNode:    o.notifyFailedNode,
+	}
+}
+
+func (c rebootDrainStartCommand) Command() cke.Command {
+	ipAddresses := make([]string, len(c.entries))
+	for i, entry := range c.entries {
+		ipAddresses[i] = entry.Node
+	}
+	return cke.Command{
+		Name:   "rebootDrainStartCommand",
+		Target: strings.Join(ipAddresses, ","),
+	}
+}
+
+func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
+		return err
+	}
+	nodesAPI := cs.CoreV1().Nodes()
+
+	protected, err := listProtectedNamespaces(ctx, cs, c.protectedNamespaces)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range c.entries {
+		// Draining should be done sequentially.
+		// Parallel draining is relatively prone to deadlock.
+		err := func() error {
+			entry.Status = cke.RebootStatusDraining
+			entry.LastTransitionTime = time.Now()
+			err = inf.Storage().UpdateRebootsEntry(ctx, entry)
+			if err != nil {
+				return err
+			}
+
+			err = checkJobPodNotExist(ctx, cs, entry.Node)
+			if err != nil {
+				return err
+			}
+
+			_, err = nodesAPI.Patch(ctx, entry.Node, types.StrategicMergePatchType, []byte(`
+metadata:
+  labels:
+    `+CKEAnnotationReboot+`: "true"
+spec:
+  unschedulable: true
+}`), metav1.PatchOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to cordon node %s: %v", entry.Node, err)
+			}
+
+			err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}()
+		if err != nil {
+			c.notifyFailedNode(entry.Node)
+			err = drainBackOff(ctx, inf, entry, err)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+//
+
+type rebootRebootOp struct {
+	finished bool
+
+	entries []*cke.RebootQueueEntry
+	config  *cke.Reboot
+
+	mu          sync.Mutex
+	failedNodes []string
+}
+
+type rebootRebootCommand struct {
+	entries        []*cke.RebootQueueEntry
+	command        []string
+	timeoutSeconds *int
+
+	notifyFailedNode func(string)
+}
+
+func (o *rebootRebootOp) notifyFailedNode(node string) {
+	o.mu.Lock()
+	o.failedNodes = append(o.failedNodes, node)
+	o.mu.Unlock()
+}
+
+// RebootOp returns an Operator to reboot nodes.
+func RebootRebootOp(apiserver *cke.Node, entries []*cke.RebootQueueEntry, config *cke.Reboot) cke.InfoOperator {
+	return &rebootRebootOp{
+		entries: entries,
+		config:  config,
+	}
+}
+
+func (o *rebootRebootOp) Name() string {
+	return "reboot-reboot"
+}
+
+func (o *rebootRebootOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
+
+	return rebootRebootCommand{
+		entries:          o.entries,
+		command:          o.config.RebootCommand,
+		timeoutSeconds:   o.config.CommandTimeoutSeconds,
+		notifyFailedNode: o.notifyFailedNode,
+	}
+}
+
+func (o *rebootRebootOp) Targets() []string {
+	ipAddresses := make([]string, len(o.entries))
+	for i, entry := range o.entries {
+		ipAddresses[i] = entry.Node
+	}
+	return ipAddresses
+}
+
+func (o *rebootRebootOp) Info() string {
 	if len(o.failedNodes) == 0 {
 		return ""
 	}
 	return fmt.Sprintf("failed to reboot some nodes: %v", o.failedNodes)
 }
+
+func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+	if c.timeoutSeconds != nil && *c.timeoutSeconds != 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(*c.timeoutSeconds))
+		defer cancel()
+	}
+
+	env := well.NewEnvironment(ctx)
+	for _, entry := range c.entries {
+		entry := entry // save loop variable for goroutine
+
+		env.Go(func(ctx context.Context) error {
+			entry.Status = cke.RebootStatusRebooting
+			entry.LastTransitionTime = time.Now()
+			err := inf.Storage().UpdateRebootsEntry(ctx, entry)
+			if err != nil {
+				return err
+			}
+
+			args := append(c.command[1:], entry.Node)
+			command := well.CommandContext(ctx, c.command[0], args...)
+			err = command.Run()
+			if err != nil {
+				c.notifyFailedNode(entry.Node)
+				log.Warn("failed on rebooting node", map[string]interface{}{
+					log.FnError: err,
+					"node":      entry.Node,
+				})
+			}
+			return nil
+		})
+	}
+	env.Stop()
+	return env.Wait()
+}
+
+func (c rebootRebootCommand) Command() cke.Command {
+	ipAddresses := make([]string, len(c.entries))
+	for i, entry := range c.entries {
+		ipAddresses[i] = entry.Node
+	}
+	return cke.Command{
+		Name:   "rebootRebootCommand",
+		Target: strings.Join(ipAddresses, ","),
+	}
+}
+
+//
+
+type rebootDrainTimeoutOp struct {
+	finished bool
+
+	entries []*cke.RebootQueueEntry
+}
+
+func RebootDrainTimeoutOp(entries []*cke.RebootQueueEntry) cke.Operator {
+	return &rebootDrainTimeoutOp{
+		entries: entries,
+	}
+}
+
+type rebootDrainTimeoutCommand struct {
+	entries []*cke.RebootQueueEntry
+}
+
+func (o *rebootDrainTimeoutOp) Name() string {
+	return "reboot-drain-timeout"
+}
+
+func (o *rebootDrainTimeoutOp) Targets() []string {
+	ipAddresses := make([]string, len(o.entries))
+	for i, entry := range o.entries {
+		ipAddresses[i] = entry.Node
+	}
+	return ipAddresses
+}
+
+func (o *rebootDrainTimeoutOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
+
+	return rebootDrainTimeoutCommand{
+		entries: o.entries,
+	}
+}
+
+func (c rebootDrainTimeoutCommand) Command() cke.Command {
+	ipAddresses := make([]string, len(c.entries))
+	for i, entry := range c.entries {
+		ipAddresses[i] = entry.Node
+	}
+	return cke.Command{
+		Name:   "rebootDrainTimeoutCommand",
+		Target: strings.Join(ipAddresses, ","),
+	}
+}
+
+func (c rebootDrainTimeoutCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+	for _, entry := range c.entries {
+		err := drainBackOff(ctx, inf, entry, fmt.Errorf("drain timed out: %s", entry.Node))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+//
 
 type rebootUncordonOp struct {
 	apiserver *cke.Node
@@ -132,10 +363,9 @@ func (o *rebootUncordonOp) NextCommand() cke.Commander {
 	}
 
 	o.finished = true
-	return cordonCommand{
-		apiserver:     o.apiserver,
-		nodeNames:     o.nodeNames,
-		unschedulable: false,
+	return uncordonCommand{
+		apiserver: o.apiserver,
+		nodeNames: o.nodeNames,
 	}
 }
 
@@ -143,90 +373,154 @@ func (o *rebootUncordonOp) Targets() []string {
 	return o.nodeNames
 }
 
-type rebootStartCommand struct {
-	index int64
+type uncordonCommand struct {
+	apiserver *cke.Node
+	nodeNames []string
 }
 
-func (c rebootStartCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	entry, err := inf.Storage().GetRebootsEntry(ctx, c.index)
-	if err != nil {
-		return err
-	}
-	entry.Status = cke.RebootStatusRebooting
-	return inf.Storage().UpdateRebootsEntry(ctx, entry)
-}
-
-func (c rebootStartCommand) Command() cke.Command {
-	return cke.Command{
-		Name:   "rebootStartCommand",
-		Target: strconv.FormatInt(c.index, 10),
-	}
-}
-
-type cordonCommand struct {
-	apiserver     *cke.Node
-	nodeNames     []string
-	unschedulable bool
-}
-
-func (c cordonCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+func (c uncordonCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	cs, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
 		return err
 	}
-
 	nodesAPI := cs.CoreV1().Nodes()
-	for _, name := range c.nodeNames {
-		n, err := nodesAPI.Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		if n.Spec.Unschedulable == c.unschedulable {
-			continue
-		}
 
-		oldData, err := json.Marshal(n)
+	for _, name := range c.nodeNames {
+		_, err = nodesAPI.Patch(ctx, name, types.StrategicMergePatchType, []byte(`
+metadata:
+  labels:
+    `+CKEAnnotationReboot+`: null
+spec:
+  unschedulable: null
+		}`), metav1.PatchOptions{})
 		if err != nil {
-			return err
-		}
-		n.Spec.Unschedulable = c.unschedulable
-		if c.unschedulable {
-			if n.Annotations == nil {
-				n.Annotations = make(map[string]string)
-			}
-			n.Annotations[CKEAnnotationReboot] = "true"
-		} else {
-			delete(n.Annotations, CKEAnnotationReboot)
-		}
-		newData, err := json.Marshal(n)
-		if err != nil {
-			return err
-		}
-		patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, n)
-		if err != nil {
-			return fmt.Errorf("failed to create patch for node %s: %v", n.Name, err)
-		}
-		_, err = nodesAPI.Patch(ctx, n.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to patch node %s: %v", n.Name, err)
+			return fmt.Errorf("failed to uncordon node %s: %v", name, err)
 		}
 	}
 	return nil
 }
 
-func (c cordonCommand) Command() cke.Command {
+func (c uncordonCommand) Command() cke.Command {
 	return cke.Command{
-		Name:   "cordonCommand",
+		Name:   "uncordonCommand",
 		Target: strings.Join(c.nodeNames, ","),
 	}
 }
 
-type drainCommand struct {
-	timeoutSeconds      *int
-	apiserver           *cke.Node
-	nodes               []*cke.Node
-	protectedNamespaces *metav1.LabelSelector
+//
+
+type rebootDequeueOp struct {
+	finished bool
+
+	entries []*cke.RebootQueueEntry
 }
+
+// RebootDequeueOp returns an Operator to dequeue a reboot entry.
+func RebootDequeueOp(entries []*cke.RebootQueueEntry) cke.Operator {
+	return &rebootDequeueOp{
+		entries: entries,
+	}
+}
+
+func (o *rebootDequeueOp) Name() string {
+	return "reboot-dequeue"
+}
+
+func (o *rebootDequeueOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+
+	o.finished = true
+	return rebootDequeueCommand{
+		entries: o.entries,
+	}
+}
+
+func (o *rebootDequeueOp) Targets() []string {
+	ipAddresses := make([]string, len(o.entries))
+	for i, entry := range o.entries {
+		ipAddresses[i] = entry.Node
+	}
+	return ipAddresses
+}
+
+type rebootDequeueCommand struct {
+	entries []*cke.RebootQueueEntry
+}
+
+func (c rebootDequeueCommand) Run(ctx context.Context, inf cke.Infrastructure, leaderKey string) error {
+	for _, entry := range c.entries {
+		err := inf.Storage().DeleteRebootsEntry(ctx, leaderKey, entry.Index)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c rebootDequeueCommand) Command() cke.Command {
+	ipAddresses := make([]string, len(c.entries))
+	for i, entry := range c.entries {
+		ipAddresses[i] = entry.Node
+	}
+	return cke.Command{
+		Name:   "rebootDequeueCommand",
+		Target: strings.Join(ipAddresses, ","),
+	}
+}
+
+//
+
+type rebootRecalcMetricsOp struct {
+	finished bool
+}
+
+// RebootUncordonOp returns an Operator to uncordon nodes.
+func RebootRecalcMetricsOp() cke.Operator {
+	return &rebootRecalcMetricsOp{}
+}
+
+func (o *rebootRecalcMetricsOp) Name() string {
+	return "reboot-recalc-metrics"
+}
+
+func (o *rebootRecalcMetricsOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+
+	o.finished = true
+	return rebootRecalcMetricsCommand{}
+}
+
+func (o *rebootRecalcMetricsOp) Targets() []string {
+	return []string{}
+}
+
+type rebootRecalcMetricsCommand struct {
+}
+
+func (c rebootRecalcMetricsCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+	rqEntries, err := inf.Storage().GetRebootsEntries(ctx)
+	if err != nil {
+		return err
+	}
+	metrics.UpdateRebootQueueEntries(len(rqEntries))
+	rqEntries = cke.DedupRebootQueueEntries(rqEntries)
+	itemCounts := cke.CountRebootQueueEntries(rqEntries)
+	metrics.UpdateRebootQueueItems(itemCounts)
+
+	return nil
+}
+
+func (c rebootRecalcMetricsCommand) Command() cke.Command {
+	return cke.Command{
+		Name: "rebootRecalcMetricsCommand",
+	}
+}
+
+//
 
 func listProtectedNamespaces(ctx context.Context, cs *kubernetes.Clientset, ls *metav1.LabelSelector) (map[string]bool, error) {
 	selector, err := metav1.LabelSelectorAsSelector(ls)
@@ -249,43 +543,62 @@ func listProtectedNamespaces(ctx context.Context, cs *kubernetes.Clientset, ls *
 	return nss, nil
 }
 
-func checkJobPodNotExist(ctx context.Context, cs *kubernetes.Clientset, n *cke.Node) error {
+// enumeratePods enumerates Pods on a specified node.
+// It calls podHandler for each Pods not owned by Job nor DaemonSet and calls jobPodHandler for each running Pods owned by a Job.
+// If those handlers returns error, this function returns the error immediately.
+func enumeratePods(ctx context.Context, cs *kubernetes.Clientset, node string,
+	podHandler func(pod *corev1.Pod) error, jobPodHandler func(pod *corev1.Pod) error) error {
+
 	podList, err := cs.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": n.Nodename()}).String(),
+		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": node}).String(),
 	})
 	if err != nil {
 		return err
 	}
+
 	for i := range podList.Items {
 		pod := &podList.Items[i]
 		owner := metav1.GetControllerOf(pod)
-		if owner == nil || owner.Kind != "Job" {
-			continue
+		if owner != nil {
+			if owner.Kind == "DaemonSet" {
+				continue
+			}
+			switch pod.Status.Phase {
+			case corev1.PodPending:
+			case corev1.PodSucceeded:
+			case corev1.PodFailed:
+			default:
+				err = jobPodHandler(pod)
+				if err != nil {
+					return err
+				}
+				continue
+			}
 		}
-		// Ignore pending or completed pods.
-		if pod.Status.Phase == corev1.PodPending || pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
-			continue
+		err = podHandler(pod)
+		if err != nil {
+			return err
 		}
-		return fmt.Errorf("job-managed pods exist: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
 	}
+
 	return nil
 }
 
-func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, n *cke.Node, protected map[string]bool) ([]*corev1.Pod, error) {
-	var targets []*corev1.Pod
-	podList, err := cs.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": n.Nodename()}).String(),
+// checkJobPodNotExist checks running Pods on the specified Node.
+// It returns an error if a running Pod exists.
+func checkJobPodNotExist(ctx context.Context, cs *kubernetes.Clientset, node string) error {
+	return enumeratePods(ctx, cs, node, func(_ *corev1.Pod) error {
+		return nil
+	}, func(pod *corev1.Pod) error {
+		return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
 	})
-	if err != nil {
-		return nil, err
-	}
-	for _, pod := range podList.Items {
-		pod := pod
-		owner := metav1.GetControllerOf(&pod)
-		if owner != nil && (owner.Kind == "DaemonSet" || owner.Kind == "Job") {
-			continue
-		}
-		targets = append(targets, &pod)
+}
+
+// evictOrDeleteNodePod evicts or delete Pods on the specified Node.
+// It first tries eviction. If the eviction failed and the Pod's namespace is not protected, it deletes the Pod.
+// If a running Job Pod exists, this function returns an error.
+func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool) error {
+	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
 		err := cs.CoreV1().Pods(pod.Namespace).Evict(ctx, &policyv1beta1.Eviction{
 			ObjectMeta: metav1.ObjectMeta{Name: pod.Name, Namespace: pod.Namespace},
 		})
@@ -299,143 +612,185 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, n *cke.
 			})
 			err := cs.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 			if err != nil {
-				return nil, err
+				return err
 			}
 			log.Warn("deleted non-protected pod", map[string]interface{}{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
 			})
 		case err != nil:
-			return nil, fmt.Errorf("failed to evict pod %s/%s: %w", pod.Namespace, pod.Name, err)
+			return fmt.Errorf("failed to evict pod %s/%s: %w", pod.Namespace, pod.Name, err)
 		}
-	}
-	return targets, nil
+		return nil
+	}, func(pod *corev1.Pod) error {
+		return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
+	})
 }
 
-func waitPodDeletion(ctx context.Context, cs *kubernetes.Clientset, pods []*corev1.Pod, ts *int) error {
-	timeoutSeconds := defaultEvictionTimeoutSeconds
-	if ts != nil {
-		timeoutSeconds = *ts
-	}
-	ctx, cancel := context.WithTimeout(ctx, time.Second*time.Duration(timeoutSeconds))
-	defer cancel()
+// checkPodDeletion checks whether the evicted or deleted Pods are eventually deleted.
+// If those pods still exist, this function returns an error.
+func checkPodDeletion(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool) error {
+	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
+		return fmt.Errorf("pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
+	}, func(pod *corev1.Pod) error {
+		// This should not happen.
+		return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
+	})
+}
 
-OUTER:
-	for _, pod := range pods {
-		for {
-			p, err := cs.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
-			if apierrors.IsNotFound(err) || (p != nil && p.ObjectMeta.UID != pod.ObjectMeta.UID) {
-				// pod is deleted, or moved to another node
-				continue OUTER
-			}
-			if err != nil {
-				return err
-			}
-			select {
-			case <-ctx.Done():
-				msg := "aborted waiting for pod eviction"
-				log.Error(msg, map[string]interface{}{
-					"namespace": p.Namespace,
-					"name":      p.Name,
-				})
-				return fmt.Errorf("%s: %s/%s", msg, p.Namespace, p.Name)
-			case <-time.After(time.Second * 5):
-				log.Info("waiting for pods to be deleted...", nil)
-			}
-		}
+func drainBackOff(ctx context.Context, inf cke.Infrastructure, entry *cke.RebootQueueEntry, err error) error {
+	log.Warn("failed to drain node", map[string]interface{}{
+		"name":      entry.Node,
+		log.FnError: err,
+	})
+	entry.Status = cke.RebootStatusQueued
+	entry.LastTransitionTime = time.Now()
+	entry.DrainBackOffCount++
+	entry.DrainBackOffExpire = time.Now().Add(time.Second * time.Duration(drainBackOffBaseSeconds+rand.Int63n(int64(drainBackOffBaseSeconds*entry.DrainBackOffCount))))
+	err = inf.Storage().UpdateRebootsEntry(ctx, entry)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
-func (c drainCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	cs, err := inf.K8sClient(ctx, c.apiserver)
-	if err != nil {
-		return err
+// chooseDrainedNodes chooses nodes to be newly drained.
+// For now, this function does not check "drainability".
+func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []*cke.RebootQueueEntry) []*cke.RebootQueueEntry {
+	maxConcurrentReboots := cke.DefaultMaxConcurrentReboots
+	if c.Reboot.MaxConcurrentReboots != nil {
+		maxConcurrentReboots = *c.Reboot.MaxConcurrentReboots
 	}
+	now := time.Now()
 
-	protected, err := listProtectedNamespaces(ctx, cs, c.protectedNamespaces)
-	if err != nil {
-		return err
-	}
-
-	for _, n := range c.nodes {
-		err := checkJobPodNotExist(ctx, cs, n)
-		if err != nil {
-			return err
+	alreadyDrained := []*cke.RebootQueueEntry{}
+	apiServerAlreadyDrained := false
+	canBeDrained := []*cke.RebootQueueEntry{}
+	var apiServerCanBeDrained *cke.RebootQueueEntry
+	for _, entry := range rqEntries {
+		switch entry.Status {
+		case cke.RebootStatusDraining, cke.RebootStatusRebooting:
+			alreadyDrained = append(alreadyDrained, entry)
+			if apiServers[entry.Node] {
+				apiServerAlreadyDrained = true
+			}
+		case cke.RebootStatusQueued:
+			if entry.DrainBackOffExpire.After(now) {
+				continue
+			}
+			canBeDrained = append(canBeDrained, entry)
+			if apiServerCanBeDrained == nil && apiServers[entry.Node] {
+				apiServerCanBeDrained = entry
+			}
 		}
 	}
 
-	var targets []*corev1.Pod
-	for _, n := range c.nodes {
-		pods, err := evictOrDeleteNodePod(ctx, cs, n, protected)
-		if err != nil {
-			return err
+	// rules:
+	//   - API Servers are rebooted one by one.
+	//       - It is VERY important.
+	//   - API Servers are rebooted with higher priority than worker nodes.
+	//   - API Servers are not rebooted simultaneously with worker nodes.
+	if apiServerCanBeDrained != nil {
+		if len(alreadyDrained) == 0 {
+			return []*cke.RebootQueueEntry{apiServerCanBeDrained}
+		} else {
+			return nil
 		}
-		targets = append(targets, pods...)
 	}
-
-	return waitPodDeletion(ctx, cs, targets, c.timeoutSeconds)
-}
-
-func (c drainCommand) Command() cke.Command {
-	ipAddresses := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		ipAddresses[i] = n.Address
+	if apiServerAlreadyDrained {
+		return nil
 	}
-	return cke.Command{
-		Name:   "drainCommand",
-		Target: strings.Join(ipAddresses, ","),
+	if len(alreadyDrained)+len(canBeDrained) <= maxConcurrentReboots {
+		return canBeDrained
+	} else {
+		return canBeDrained[:maxConcurrentReboots-len(alreadyDrained)]
 	}
 }
 
-type rebootCommand struct {
-	command          []string
-	timeoutSeconds   *int
-	nodes            []*cke.Node
-	notifyFailedNode func(*cke.Node)
+func CheckDrainCompletion(ctx context.Context, inf cke.Infrastructure, apiserver *cke.Node, c *cke.Cluster, rqEntries []*cke.RebootQueueEntry) (completed []*cke.RebootQueueEntry, timedout []*cke.RebootQueueEntry, err error) {
+	evictionTimeoutSeconds := cke.DefaultRebootEvictionTimeoutSeconds
+	if c.Reboot.EvictionTimeoutSeconds != nil {
+		evictionTimeoutSeconds = *c.Reboot.EvictionTimeoutSeconds
+	}
+
+	cs, err := inf.K8sClient(ctx, apiserver)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	protected, err := listProtectedNamespaces(ctx, cs, c.Reboot.ProtectedNamespaces)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	t := time.Now().Add(time.Duration(-evictionTimeoutSeconds) * time.Second)
+
+	for _, entry := range rqEntries {
+		if !entry.ClusterMember(c) {
+			continue
+		}
+		if entry.Status != cke.RebootStatusDraining {
+			continue
+		}
+
+		if checkPodDeletion(ctx, cs, entry.Node, protected) != nil {
+			completed = append(completed, entry)
+		} else if entry.LastTransitionTime.Before(t) {
+			timedout = append(timedout, entry)
+		}
+	}
+
+	return
 }
 
-func (c rebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	if c.timeoutSeconds != nil && *c.timeoutSeconds != 0 {
+func CheckRebootDequeue(ctx context.Context, c *cke.Cluster, rqEntries []*cke.RebootQueueEntry) []*cke.RebootQueueEntry {
+	dequeued := []*cke.RebootQueueEntry{}
+
+	for _, entry := range rqEntries {
+		switch {
+		case !entry.ClusterMember(c):
+		case entry.Status == cke.RebootStatusCancelled:
+		case entry.Status == cke.RebootStatusRebooting && rebootCompleted(ctx, c, entry):
+		default:
+			continue
+		}
+
+		dequeued = append(dequeued, entry)
+	}
+
+	return dequeued
+}
+
+func rebootCompleted(ctx context.Context, c *cke.Cluster, entry *cke.RebootQueueEntry) bool {
+	if c.Reboot.CommandTimeoutSeconds != nil && *c.Reboot.CommandTimeoutSeconds != 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(*c.timeoutSeconds))
+		ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(*c.Reboot.CommandTimeoutSeconds))
 		defer cancel()
 	}
 
+	result := false
+
 	env := well.NewEnvironment(ctx)
-	for _, n := range c.nodes {
-		n := n
-
-		env.Go(func(ctx context.Context) error {
-			nodeJson, err := json.Marshal(n)
-			if err != nil {
-				return err
-			}
-
-			command := well.CommandContext(ctx, c.command[0], c.command[1:]...)
-			command.Stdin = bytes.NewReader(nodeJson)
-			err = command.Run()
-			if err != nil {
-				c.notifyFailedNode(n)
-				log.Warn("failed on rebooting node", map[string]interface{}{
-					log.FnError: err,
-					"node":      n.Nodename(),
-				})
-			}
-			return nil
-		})
-	}
+	env.Go(func(ctx context.Context) error {
+		args := append(c.Reboot.BootCheckCommand[1:], entry.Node)
+		command := well.CommandContext(ctx, c.Reboot.BootCheckCommand[0], args...)
+		err := command.Run()
+		if err == nil {
+			result = true
+		} else if errors.Is(err, &exec.ExitError{}) {
+			result = false
+		} else {
+			return err
+		}
+		return nil
+	})
 	env.Stop()
-	return env.Wait()
-}
-
-func (c rebootCommand) Command() cke.Command {
-	ipAddresses := make([]string, len(c.nodes))
-	for i, n := range c.nodes {
-		ipAddresses[i] = n.Address
+	err := env.Wait()
+	if err != nil {
+		log.Warn("failed to check boot", map[string]interface{}{
+			"name": entry.Node,
+		})
+		return false
 	}
-	return cke.Command{
-		Name:   "rebootCommand",
-		Target: strings.Join(ipAddresses, ","),
-	}
+	return result
 }

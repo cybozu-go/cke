@@ -6,7 +6,7 @@ import (
 	"github.com/cybozu-go/cke"
 )
 
-func TestValidateNodes(t *testing.T) {
+func TestValidateNode(t *testing.T) {
 	cluster := &cke.Cluster{
 		Nodes: []*cke.Node{
 			{
@@ -22,29 +22,24 @@ func TestValidateNodes(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		nodes   []string
+		node    string
 		succeed bool
 	}{
 		{
 			name:    "succeed",
-			nodes:   []string{"1.1.1.1"},
+			node:    "1.1.1.1",
 			succeed: true,
 		},
 		{
 			name:    "non-existing node",
-			nodes:   []string{"3.3.3.3"},
-			succeed: false,
-		},
-		{
-			name:    "multiple control-plane nodes",
-			nodes:   []string{"1.1.1.1", "2.2.2.2"},
+			node:    "3.3.3.3",
 			succeed: false,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ret := validateNodes(tc.nodes, cluster)
+			ret := validateNode(tc.node, cluster)
 			if tc.succeed {
 				if ret != nil {
 					t.Errorf("validateNodes() failed unexpectedly: %v", ret)
