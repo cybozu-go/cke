@@ -684,6 +684,7 @@ func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []
 			}
 		case cke.RebootStatusQueued:
 			fmt.Printf("it is just queued\n")
+			fmt.Printf("DrainBackOffExpire=%v Now=%v\n", entry.DrainBackOffExpire, now)
 			if entry.DrainBackOffExpire.After(now) {
 				fmt.Printf("it is backoff\n")
 				continue
