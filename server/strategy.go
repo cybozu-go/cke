@@ -684,7 +684,9 @@ func rebootUncordonOp(rqEntries []*cke.RebootQueueEntry, nf *NodeFilter) cke.Ope
 	}
 	nodes := make([]string, 0, len(attrNodes))
 	for _, n := range attrNodes {
+		fmt.Printf("node is cordoned: node=%v\n", n.Name)
 		if !rebootProcessing(rqEntries, n.Name) {
+			fmt.Printf("it finished rebooting\n")
 			nodes = append(nodes, n.Name)
 		}
 	}

@@ -346,6 +346,7 @@ type rebootUncordonOp struct {
 
 // RebootUncordonOp returns an Operator to uncordon nodes.
 func RebootUncordonOp(apiserver *cke.Node, nodeNames []string) cke.Operator {
+	fmt.Printf("RebootUncordonOp: nodeNames=%v\n", nodeNames)
 	return &rebootUncordonOp{
 		apiserver: apiserver,
 		nodeNames: nodeNames,
