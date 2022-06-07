@@ -756,7 +756,8 @@ func CheckDrainCompletion(ctx context.Context, inf cke.Infrastructure, apiserver
 			continue
 		}
 
-		if checkPodDeletion(ctx, cs, entry.Node, protected) != nil {
+		err = checkPodDeletion(ctx, cs, entry.Node, protected)
+		if err == nil {
 			completed = append(completed, entry)
 		} else if entry.LastTransitionTime.Before(t) {
 			timedout = append(timedout, entry)
