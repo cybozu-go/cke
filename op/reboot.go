@@ -673,24 +673,31 @@ func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []
 	canBeDrained := []*cke.RebootQueueEntry{}
 	var apiServerCanBeDrained *cke.RebootQueueEntry
 	for _, entry := range rqEntries {
+		fmt.Printf("checking node: node=%s, status=%v\n", entry.Node, entry.Status)
 		switch entry.Status {
 		case cke.RebootStatusDraining, cke.RebootStatusRebooting:
+			fmt.Printf("it is already drained\n")
 			alreadyDrained = append(alreadyDrained, entry)
 			if apiServers[entry.Node] {
+				fmt.Printf("also, it is a API Server\n")
 				apiServerAlreadyDrained = true
 			}
 		case cke.RebootStatusQueued:
+			fmt.Printf("it is just queued\n")
 			if entry.DrainBackOffExpire.After(now) {
+				fmt.Printf("it is backoff\n")
 				continue
 			}
+			fmt.Printf("it can be drained\n")
 			canBeDrained = append(canBeDrained, entry)
 			if apiServerCanBeDrained == nil && apiServers[entry.Node] {
 				apiServerCanBeDrained = entry
+				fmt.Printf("also, it is a API Server\n")
 			}
 		}
 	}
 
-	fmt.Printf("rqEntries is empty alreadyDrained=%v, apiServerAlreadyDrained=%v, apiServerCanBeDrained=%v, canBeDrained=%v\n",
+	fmt.Printf("checked entry: alreadyDrained=%v, apiServerAlreadyDrained=%v, apiServerCanBeDrained=%v, canBeDrained=%v\n",
 		alreadyDrained, apiServerAlreadyDrained, apiServerCanBeDrained, canBeDrained)
 	log.Info("checked entry", map[string]interface{}{
 		"alreadyDrained":          alreadyDrained,
