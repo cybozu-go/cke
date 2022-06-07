@@ -335,7 +335,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		if err != nil {
 			return err
 		}
-		if !disabled {
+		if disabled {
 			rqEntries = nil
 		}
 	}
