@@ -643,6 +643,7 @@ func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 
 func rebootOps(c *cke.Cluster, rqEntries []*cke.RebootQueueEntry, newlyDrained []*cke.RebootQueueEntry, drainCompleted []*cke.RebootQueueEntry, drainTimedout []*cke.RebootQueueEntry, rebootDequeued []*cke.RebootQueueEntry, nf *NodeFilter) (ops []cke.Operator) {
 	if len(rqEntries) == 0 {
+		log.Info("rqEntries is empty", nil)
 		return nil
 	}
 	if len(c.Reboot.RebootCommand) == 0 {

@@ -657,10 +657,14 @@ func drainBackOff(ctx context.Context, inf cke.Infrastructure, entry *cke.Reboot
 // chooseDrainedNodes chooses nodes to be newly drained.
 // For now, this function does not check "drainability".
 func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []*cke.RebootQueueEntry) []*cke.RebootQueueEntry {
+	log.Info("choosing drained nodes", nil)
 	maxConcurrentReboots := cke.DefaultMaxConcurrentReboots
 	if c.Reboot.MaxConcurrentReboots != nil {
 		maxConcurrentReboots = *c.Reboot.MaxConcurrentReboots
 	}
+	log.Info("maxConcurrentReboots is ", map[string]interface{}{
+		"maxConcurrentReboots": maxConcurrentReboots,
+	})
 	now := time.Now()
 
 	alreadyDrained := []*cke.RebootQueueEntry{}
@@ -684,6 +688,13 @@ func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []
 			}
 		}
 	}
+
+	log.Info("checked entry", map[string]interface{}{
+		"alreadyDrained":          alreadyDrained,
+		"apiServerAlreadyDrained": apiServerAlreadyDrained,
+		"apiServerCanBeDrained":   apiServerCanBeDrained,
+		"canBeDrained":            canBeDrained,
+	})
 
 	// rules:
 	//   - API Servers are rebooted one by one.
