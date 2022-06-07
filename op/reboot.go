@@ -132,7 +132,7 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 
 			_, err = nodesAPI.Patch(ctx, entry.Node, types.StrategicMergePatchType, []byte(`
 {
-	"metadata":{"labels":{"`+CKEAnnotationReboot+`": "true"}},
+	"metadata":{"annotations":{"`+CKEAnnotationReboot+`": "true"}},
 	"spec":{"unschedulable": true}
 }
 `), metav1.PatchOptions{})
@@ -388,7 +388,7 @@ func (c uncordonCommand) Run(ctx context.Context, inf cke.Infrastructure, _ stri
 	for _, name := range c.nodeNames {
 		_, err = nodesAPI.Patch(ctx, name, types.StrategicMergePatchType, []byte(`
 {
-	"metadata":{"labels":{"`+CKEAnnotationReboot+`": null}},
+	"metadata":{"annotations":{"`+CKEAnnotationReboot+`": null}},
 	"spec":{"unschedulable": null}
 }
 `), metav1.PatchOptions{})
