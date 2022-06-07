@@ -665,6 +665,7 @@ func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []
 	log.Info("maxConcurrentReboots is ", map[string]interface{}{
 		"maxConcurrentReboots": maxConcurrentReboots,
 	})
+	fmt.Printf("maxConcurrentReboots=%v\n", maxConcurrentReboots)
 	now := time.Now()
 
 	alreadyDrained := []*cke.RebootQueueEntry{}
@@ -689,6 +690,8 @@ func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []
 		}
 	}
 
+	fmt.Printf("rqEntries is empty alreadyDrained=%v, apiServerAlreadyDrained=%v, apiServerCanBeDrained=%v, canBeDrained=%v\n",
+		alreadyDrained, apiServerAlreadyDrained, apiServerCanBeDrained, canBeDrained)
 	log.Info("checked entry", map[string]interface{}{
 		"alreadyDrained":          alreadyDrained,
 		"apiServerAlreadyDrained": apiServerAlreadyDrained,
