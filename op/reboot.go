@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const drainBackOffBaseSeconds = 600
+const drainBackOffBaseSeconds = 60
 
 type rebootDrainStartOp struct {
 	finished bool
