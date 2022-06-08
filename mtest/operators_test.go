@@ -62,7 +62,7 @@ func rebootShouldNotProceed() {
 			return err
 		}
 		if num != 0 {
-			return fmt.Errorf("reboot entry is empty")
+			return fmt.Errorf("reboot entry is remaining")
 		}
 		return nil
 	}, time.Second*60).Should(HaveOccurred())
@@ -106,7 +106,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	waitRebootCompletion(cluster)
 	nodesShouldBeSchedulable(node1, node2, node4)
 
-	By("Reboot operation gives up waiting node startup if deadline is exceeded")
+	By("Reboot operation will stuck if node does not boot up")
 	originalBootCheckCommand := cluster.Reboot.BootCheckCommand
 	cluster.Reboot.BootCheckCommand = []string{"bash", "-c", "echo 'false'"}
 	_, err = ckecliClusterSet(cluster)
@@ -117,16 +117,12 @@ func testRebootOperations(cluster *cke.Cluster) {
 	rebootTargets = node1
 	_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
-	ts := time.Now()
-	waitRebootCompletion(cluster)
-	nodesShouldBeSchedulable(node1)
-
-	timeout := time.Second * time.Duration(*cluster.Reboot.CommandTimeoutSeconds)
-	Expect(time.Now()).To(BeTemporally(">", ts.Add(timeout)))
+	rebootShouldNotProceed()
 
 	cluster.Reboot.BootCheckCommand = originalBootCheckCommand
 	_, err = ckecliClusterSet(cluster)
 	Expect(err).ShouldNot(HaveOccurred())
+	waitRebootCompletion(cluster)
 
 	By("ckecli reboot-queue disable disables reboot queue processing")
 	ckecliSafe("reboot-queue", "disable")
@@ -145,7 +141,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	ckecliSafe("reboot-queue", "disable")
 	_, _, err = ckecliWithInput([]byte(node1), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
-	ckecliSafe("reboot-queue", "cancel", "4")
+	ckecliSafe("reboot-queue", "cancel", "5")
 	entries, err := getRebootEntries()
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(entries).Should(HaveLen(1))
