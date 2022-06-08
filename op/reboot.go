@@ -119,7 +119,7 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 		// Parallel draining is relatively prone to deadlock.
 		err := func() error {
 			entry.Status = cke.RebootStatusDraining
-			entry.LastTransitionTime = time.Now()
+			entry.LastTransitionTime = time.Now().Truncate(time.Second).UTC()
 			err = inf.Storage().UpdateRebootsEntry(ctx, entry)
 			if err != nil {
 				return err
@@ -239,7 +239,7 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 
 		env.Go(func(ctx context.Context) error {
 			entry.Status = cke.RebootStatusRebooting
-			entry.LastTransitionTime = time.Now()
+			entry.LastTransitionTime = time.Now().Truncate(time.Second).UTC()
 			err := inf.Storage().UpdateRebootsEntry(ctx, entry)
 			if err != nil {
 				return err
@@ -645,9 +645,9 @@ func drainBackOff(ctx context.Context, inf cke.Infrastructure, entry *cke.Reboot
 		log.FnError: err,
 	})
 	entry.Status = cke.RebootStatusQueued
-	entry.LastTransitionTime = time.Now()
+	entry.LastTransitionTime = time.Now().Truncate(time.Second).UTC()
 	entry.DrainBackOffCount++
-	entry.DrainBackOffExpire = time.Now().Add(time.Second * time.Duration(drainBackOffBaseSeconds+rand.Int63n(int64(drainBackOffBaseSeconds*entry.DrainBackOffCount))))
+	entry.DrainBackOffExpire = entry.LastTransitionTime.Add(time.Second * time.Duration(drainBackOffBaseSeconds+rand.Int63n(int64(drainBackOffBaseSeconds*entry.DrainBackOffCount))))
 	err = inf.Storage().UpdateRebootsEntry(ctx, entry)
 	if err != nil {
 		return err
