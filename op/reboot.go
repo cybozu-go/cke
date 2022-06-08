@@ -2,10 +2,8 @@ package op
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/rand"
-	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -798,13 +796,13 @@ func rebootCompleted(ctx context.Context, c *cke.Cluster, entry *cke.RebootQueue
 	env.Go(func(ctx context.Context) error {
 		args := append(c.Reboot.BootCheckCommand[1:], entry.Node)
 		command := well.CommandContext(ctx, c.Reboot.BootCheckCommand[0], args...)
-		err := command.Run()
-		if err == nil {
-			result = true
-		} else if errors.Is(err, &exec.ExitError{}) {
-			result = false
-		} else {
+		stdout, err := command.Output()
+		if err != nil {
 			return err
+		}
+
+		if strings.TrimSuffix(string(stdout), "\n") == "true" {
+			result = true
 		}
 		return nil
 	})

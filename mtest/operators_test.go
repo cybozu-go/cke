@@ -108,7 +108,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 
 	By("Reboot operation gives up waiting node startup if deadline is exceeded")
 	originalBootCheckCommand := cluster.Reboot.BootCheckCommand
-	cluster.Reboot.BootCheckCommand = []string{"false"}
+	cluster.Reboot.BootCheckCommand = []string{"bash", "-c", "echo 'false'"}
 	_, err = ckecliClusterSet(cluster)
 	Expect(err).ShouldNot(HaveOccurred())
 	// wait for the previous reconciliation to be done
