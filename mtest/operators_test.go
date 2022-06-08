@@ -107,8 +107,8 @@ func testRebootOperations(cluster *cke.Cluster) {
 	nodesShouldBeSchedulable(node1, node2, node4)
 
 	By("Reboot operation gives up waiting node startup if deadline is exceeded")
-	originalRebootCommand := cluster.Reboot.RebootCommand
-	cluster.Reboot.RebootCommand = []string{"sleep", "3600"}
+	originalBootCheckCommand := cluster.Reboot.BootCheckCommand
+	cluster.Reboot.BootCheckCommand = []string{"false"}
 	_, err = ckecliClusterSet(cluster)
 	Expect(err).ShouldNot(HaveOccurred())
 	// wait for the previous reconciliation to be done
@@ -124,7 +124,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	timeout := time.Second * time.Duration(*cluster.Reboot.CommandTimeoutSeconds)
 	Expect(time.Now()).To(BeTemporally(">", ts.Add(timeout)))
 
-	cluster.Reboot.RebootCommand = originalRebootCommand
+	cluster.Reboot.BootCheckCommand = originalBootCheckCommand
 	_, err = ckecliClusterSet(cluster)
 	Expect(err).ShouldNot(HaveOccurred())
 
