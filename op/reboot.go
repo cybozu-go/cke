@@ -602,7 +602,13 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 			ObjectMeta: metav1.ObjectMeta{Name: pod.Name, Namespace: pod.Namespace},
 		})
 		switch {
+		case err == nil:
+			log.Info("start evicting pod", map[string]interface{}{
+				"namespace": pod.Namespace,
+				"name":      pod.Name,
+			})
 		case apierrors.IsNotFound(err):
+			// already evicted or deleted.
 		case err != nil && !protected[pod.Namespace]:
 			log.Warn("failed to evict non-protected pod", map[string]interface{}{
 				"namespace": pod.Namespace,
