@@ -570,8 +570,8 @@ func enumeratePods(ctx context.Context, cs *kubernetes.Clientset, node string,
 					if err != nil {
 						return err
 					}
-					continue
 				}
+				continue
 			}
 		}
 		err = podHandler(pod)
