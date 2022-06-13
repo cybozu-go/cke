@@ -93,10 +93,6 @@ func nodesShouldBeSchedulable(nodes ...string) {
 
 func testRebootOperations(cluster *cke.Cluster) {
 	By("Rebooting nodes")
-	// this will run:
-	// - RebootOp
-	// - RebootDequeueOp
-	// - RebootUncordonOp
 	rebootTargets := node1
 	_, _, err := ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
