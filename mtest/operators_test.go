@@ -411,8 +411,8 @@ func testRebootOperations(cluster *cke.Cluster) {
 		return nil
 	}).Should(Succeed())
 
-	// a little longer than 60s, shorter than 60s+backoff
-	time.Sleep(time.Second * 70)
+	// a little longer than eviction_timeout_seconds, shorter than eviction_timeout_seconds + backoff
+	time.Sleep(time.Second * time.Duration(*cluster.Reboot.EvictionTimeoutSeconds+10))
 
 	// after that, it becomes back `queued` status
 	re, err := getRebootEntries()
