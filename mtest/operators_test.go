@@ -360,8 +360,6 @@ func testRebootOperations(cluster *cke.Cluster) {
 
 	_, stderr, err = kubectlWithInput(rebootJobCompletedYAML, "delete", "-f", "-")
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
-	_, stderr, err = kubectl("delete", "namespace", "reboot-test")
-	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
 	By("Entry will become `queued` status after drain timeout")
 	_, stderr, err = kubectlWithInput(rebootSlowEvictionDeploymentYAML, "apply", "-f", "-")
@@ -416,6 +414,13 @@ func testRebootOperations(cluster *cke.Cluster) {
 
 	// reboot will complete eventually
 	waitRebootCompletion(cluster)
+
+	_, stderr, err = kubectlWithInput(rebootSlowEvictionDeploymentYAML, "delete", "-f", "-")
+	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+	By("namespace cleanup")
+	_, stderr, err = kubectl("delete", "namespace", "reboot-test")
+	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 }
 
 func testOperators(isDegraded bool) {
