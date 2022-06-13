@@ -98,11 +98,11 @@ func testRebootOperations(cluster *cke.Cluster) {
 	rebootTargets := node1
 	_, _, err := ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
-	currentWriteIndex += len(rebootTargets)
+	currentWriteIndex += 1
 	rebootTargets = node2 + "\n" + node4
 	_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
-	currentWriteIndex += len(rebootTargets)
+	currentWriteIndex += 2
 	waitRebootCompletion(cluster)
 	nodesShouldBeSchedulable(node1, node2, node4)
 
@@ -117,7 +117,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	rebootTargets = node1
 	_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
-	currentWriteIndex += len(rebootTargets)
+	currentWriteIndex += 1
 	rebootShouldNotProceed()
 
 	cluster.Reboot.BootCheckCommand = originalBootCheckCommand
