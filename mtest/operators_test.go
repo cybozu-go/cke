@@ -401,11 +401,12 @@ func testRebootOperations(cluster *cke.Cluster) {
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(re).Should(HaveLen(1))
 	Expect(re[0].Status).Should(Equal(cke.RebootStatusDraining))
+	Expect(re[0].DrainBackOffExpire).Should(Equal(time.Time{}))
 
-	// reboot will stuck for 60s
+	// reboot will stuck for 60s at least
 	rebootShouldNotProceed()
 
-	// after 60s, it becomes `queued` status
+	// after 60s, it becomes back `queued` status
 	re, err = getRebootEntries()
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(re).Should(HaveLen(1))
@@ -418,7 +419,22 @@ func testRebootOperations(cluster *cke.Cluster) {
 	_, stderr, err = kubectlWithInput(rebootSlowEvictionDeploymentYAML, "delete", "-f", "-")
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
-	By("namespace cleanup")
+	Eventually(func() error {
+		out, _, err = kubectl("get", "-n=reboot-test", "pod", "-l=reboot-app=slow", "-o=json")
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(out, &deploymentPods)
+		if err != nil {
+			return err
+		}
+		if len(deploymentPods.Items) != 0 {
+			return fmt.Errorf("Pod does not terminate")
+		}
+		return nil
+	}).Should(Succeed())
+
+	By("Cleanup namespace for reboot test")
 	_, stderr, err = kubectl("delete", "namespace", "reboot-test")
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 }
