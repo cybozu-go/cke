@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: reboot-test
+  name: slow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      reboot-app: slow
+  template:
+    metadata:
+      labels:
+        reboot-app: slow
+    spec:
+      containers:
+        - name: ubuntu
+          image: quay.io/cybozu/ubuntu:20.04
+      terminationGracePeriodSeconds: 90

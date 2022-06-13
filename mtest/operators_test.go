@@ -92,13 +92,17 @@ func nodesShouldBeSchedulable(nodes ...string) {
 }
 
 func testRebootOperations(cluster *cke.Cluster) {
+	currentWriteIndex := 0
+
 	By("Rebooting nodes")
 	rebootTargets := node1
 	_, _, err := ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
+	currentWriteIndex += len(rebootTargets)
 	rebootTargets = node2 + "\n" + node4
 	_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
+	currentWriteIndex += len(rebootTargets)
 	waitRebootCompletion(cluster)
 	nodesShouldBeSchedulable(node1, node2, node4)
 
@@ -113,6 +117,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	rebootTargets = node1
 	_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
+	currentWriteIndex += len(rebootTargets)
 	rebootShouldNotProceed()
 
 	cluster.Reboot.BootCheckCommand = originalBootCheckCommand
@@ -126,6 +131,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	time.Sleep(time.Second * 3)
 	_, _, err = ckecliWithInput([]byte(node1), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
+	currentWriteIndex += 1
 	rebootShouldNotProceed()
 
 	By("ckecli reboot-queue enable enables reboot queue processing")
@@ -137,7 +143,8 @@ func testRebootOperations(cluster *cke.Cluster) {
 	ckecliSafe("reboot-queue", "disable")
 	_, _, err = ckecliWithInput([]byte(node1), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
-	ckecliSafe("reboot-queue", "cancel", "5")
+	currentWriteIndex += 1
+	ckecliSafe("reboot-queue", "cancel", fmt.Sprintf("%d", currentWriteIndex-1))
 	entries, err := getRebootEntries()
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(entries).Should(HaveLen(1))
@@ -150,8 +157,10 @@ func testRebootOperations(cluster *cke.Cluster) {
 	ckecliSafe("reboot-queue", "disable")
 	_, _, err = ckecliWithInput([]byte(node1), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
+	currentWriteIndex += 1
 	_, _, err = ckecliWithInput([]byte(node2), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
+	currentWriteIndex += 1
 	ckecliSafe("reboot-queue", "cancel-all")
 	entries, err = getRebootEntries()
 	Expect(err).ShouldNot(HaveOccurred())
@@ -198,6 +207,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	nodeName := deploymentPods.Items[0].Spec.NodeName
 	_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
+	currentWriteIndex += 1
 	rebootShouldNotProceed()
 
 	env := well.NewEnvironment(context.Background())
@@ -224,6 +234,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	nodeName = deploymentPods.Items[1].Spec.NodeName
 	_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
+	currentWriteIndex += 1
 	rebootShouldNotProceed()
 
 	env = well.NewEnvironment(context.Background())
@@ -250,6 +261,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	nodeName = deploymentPods.Items[2].Spec.NodeName
 	_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
+	currentWriteIndex += 1
 	waitRebootCompletion(cluster)
 	nodesShouldBeSchedulable(nodeName)
 
@@ -350,6 +362,60 @@ func testRebootOperations(cluster *cke.Cluster) {
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 	_, stderr, err = kubectl("delete", "namespace", "reboot-test")
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+	By("Entry will become `queued` status after drain timeout")
+	_, stderr, err = kubectlWithInput(rebootSlowEvictionDeploymentYAML, "apply", "-f", "-")
+	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+	Eventually(func() error {
+		out, _, err := kubectl("get", "-n=reboot-test", "deployments/slow", "-o=json")
+		if err != nil {
+			return err
+		}
+
+		var deploy appsv1.Deployment
+		err = json.Unmarshal(out, &deploy)
+		if err != nil {
+			return err
+		}
+		if deploy.Status.ReadyReplicas != 1 {
+			return fmt.Errorf("deployment is not ready")
+		}
+		return nil
+	}).Should(Succeed())
+
+	out, _, err = kubectl("get", "-n=reboot-test", "pod", "-l=reboot-app=slow", "-o=json")
+	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+	err = json.Unmarshal(out, &deploymentPods)
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(deploymentPods.Items).Should(HaveLen(1))
+
+	nodeName = deploymentPods.Items[0].Spec.NodeName
+	_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
+	currentWriteIndex += 1
+
+	// wait for the previous reconciliation to be done
+	time.Sleep(time.Second * 3)
+
+	// first, it becomes `draining` status
+	re, err := getRebootEntries()
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(re).Should(HaveLen(1))
+	Expect(re[0].Status).Should(Equal(cke.RebootStatusDraining))
+
+	// reboot will stuck for 60s
+	rebootShouldNotProceed()
+
+	// after 60s, it becomes `queued` status
+	re, err = getRebootEntries()
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(re).Should(HaveLen(1))
+	Expect(re[0].Status).Should(Equal(cke.RebootStatusQueued))
+	Expect(re[0].DrainBackOffExpire).ShouldNot(Equal(time.Time{}))
+
+	// reboot will complete eventually
+	waitRebootCompletion(cluster)
 }
 
 func testOperators(isDegraded bool) {

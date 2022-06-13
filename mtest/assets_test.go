@@ -8,6 +8,9 @@ var nginxYAML []byte
 //go:embed reboot-deployment.yaml
 var rebootDeploymentYAML []byte
 
+//go:embed reboot-slow-eviction-deployment.yaml
+var rebootSlowEvictionDeploymentYAML []byte
+
 //go:embed reboot-job-completed.yaml
 var rebootJobCompletedYAML []byte
 
