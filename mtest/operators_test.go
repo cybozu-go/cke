@@ -393,21 +393,29 @@ func testRebootOperations(cluster *cke.Cluster) {
 	Expect(err).ShouldNot(HaveOccurred())
 	currentWriteIndex += 1
 
-	// wait for the previous reconciliation to be done
-	time.Sleep(time.Second * 3)
-
 	// first, it becomes `draining` status
-	re, err := getRebootEntries()
-	Expect(err).ShouldNot(HaveOccurred())
-	Expect(re).Should(HaveLen(1))
-	Expect(re[0].Status).Should(Equal(cke.RebootStatusDraining))
-	Expect(re[0].DrainBackOffExpire).Should(Equal(time.Time{}))
+	Eventually(func() error {
+		re, err := getRebootEntries()
+		if err != nil {
+			return err
+		}
+		if len(re) != 1 {
+			return fmt.Errorf("reboot queue should contain 1 entry")
+		}
+		if re[0].Status != cke.RebootStatusDraining {
+			return fmt.Errorf("reboot entry should have draining status")
+		}
+		if !re[0].DrainBackOffExpire.Equal(time.Time{}) {
+			return fmt.Errorf("reboot entry should have DrainBackOffExpire set yet")
+		}
+		return nil
+	}).Should(Succeed())
 
 	// a little longer than 60s, shorter than 60s+backoff
 	time.Sleep(time.Second * 70)
 
 	// after that, it becomes back `queued` status
-	re, err = getRebootEntries()
+	re, err := getRebootEntries()
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(re).Should(HaveLen(1))
 	Expect(re[0].Status).Should(Equal(cke.RebootStatusQueued))
