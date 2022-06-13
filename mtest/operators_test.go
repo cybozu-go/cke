@@ -400,7 +400,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 			return err
 		}
 		if len(re) != 1 {
-			return fmt.Errorf("reboot queue should contain 1 entry")
+			return fmt.Errorf("reboot queue should contain exactly 1 entry")
 		}
 		if re[0].Status != cke.RebootStatusDraining {
 			return fmt.Errorf("reboot entry should have draining status")
