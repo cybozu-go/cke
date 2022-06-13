@@ -403,10 +403,10 @@ func testRebootOperations(cluster *cke.Cluster) {
 	Expect(re[0].Status).Should(Equal(cke.RebootStatusDraining))
 	Expect(re[0].DrainBackOffExpire).Should(Equal(time.Time{}))
 
-	// reboot will stuck for 60s at least
-	rebootShouldNotProceed()
+	// a little longer than 60s, shorter than 60s+backoff
+	time.Sleep(time.Second * 70)
 
-	// after 60s, it becomes back `queued` status
+	// after that, it becomes back `queued` status
 	re, err = getRebootEntries()
 	Expect(err).ShouldNot(HaveOccurred())
 	Expect(re).Should(HaveLen(1))
