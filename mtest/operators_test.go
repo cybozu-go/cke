@@ -406,7 +406,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 			return fmt.Errorf("reboot entry should have draining status")
 		}
 		if !re[0].DrainBackOffExpire.Equal(time.Time{}) {
-			return fmt.Errorf("reboot entry should have DrainBackOffExpire set yet")
+			return fmt.Errorf("reboot entry should not have DrainBackOffExpire set yet")
 		}
 		return nil
 	}).Should(Succeed())
