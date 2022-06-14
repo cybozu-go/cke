@@ -492,6 +492,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 		return nil
 	}).Should(Succeed())
 
+	// add worker nodes first
 	rebootTargets = strings.Join(workerNodeSlice, "\n") + "\n" + strings.Join(apiServerSlice, "\n")
 	_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 	Expect(err).ShouldNot(HaveOccurred())
