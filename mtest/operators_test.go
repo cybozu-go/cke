@@ -459,8 +459,15 @@ func testRebootOperations(cluster *cke.Cluster) {
 	cluster.Reboot.MaxConcurrentReboots = intPtr(2)
 	originalRebootCommand := cluster.Reboot.RebootCommand
 	cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
-		MatchLabels: map[string]string{"kubernetes.io/metadata.name": "kube-system"},
-	} // avoid eviction failure due to cluster-dns
+		// avoid eviction failure due to cluster-dns in kube-system NS
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{
+				Key:      "kubernetes.io/metadata.name",
+				Operator: metav1.LabelSelectorOpNotIn,
+				Values:   []string{"kube-system"},
+			},
+		},
+	}
 	apiServerRebootSeconds := 20
 	cluster.Reboot.RebootCommand = []string{"bash", "-c", "sleep " + fmt.Sprintf("%d", apiServerRebootSeconds)}
 	_, err = ckecliClusterSet(cluster)
