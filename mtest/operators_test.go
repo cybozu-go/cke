@@ -450,6 +450,9 @@ func testRebootOperations(cluster *cke.Cluster) {
 	// Note: this test is incomplete if rq entries are processed in random order
 	cluster.Reboot.MaxConcurrentReboots = intPtr(2)
 	originalRebootCommand := cluster.Reboot.RebootCommand
+	cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
+		MatchLabels: map[string]string{"kubernetes.io/metadata.name": "kube-system"},
+	} // avoid eviction failure due to cluster-dns
 	apiServerRebootSeconds := 20
 	cluster.Reboot.RebootCommand = []string{"bash", "-c", "sleep " + fmt.Sprintf("%d", apiServerRebootSeconds)}
 	_, err = ckecliClusterSet(cluster)
@@ -502,7 +505,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 
 	// first, API servers are processed one by one
 	// and then, two worker nodes are processed simultaneously
-	limit := time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*3+10))
+	limit := time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*3+30))
 	for {
 		t := time.Now()
 		Expect(t.After(limit)).ShouldNot(BeTrue(), "reboot queue processing timed out")
@@ -553,6 +556,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 
 	cluster.Reboot.MaxConcurrentReboots = nil
 	cluster.Reboot.RebootCommand = originalRebootCommand
+	cluster.Reboot.ProtectedNamespaces = nil
 	_, err = ckecliClusterSet(cluster)
 	Expect(err).ShouldNot(HaveOccurred())
 	// wait for the previous reconciliation to be done
