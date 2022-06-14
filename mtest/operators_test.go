@@ -96,6 +96,14 @@ func intPtr(val int) *int {
 }
 
 func testRebootOperations(cluster *cke.Cluster) {
+	// this will run:
+	// - RebootDrainStartOp
+	// - RebootRebootOp
+	// - RebootDrainTimeoutOp
+	// - RebootUncordonOp
+	// - RebootDequeueOp
+	// - RebootRecalcMetricsOp
+
 	currentWriteIndex := 0
 
 	By("Rebooting nodes")
