@@ -91,6 +91,10 @@ func nodesShouldBeSchedulable(nodes ...string) {
 	}).Should(Succeed())
 }
 
+func intPtr(val int) *int {
+	return &val
+}
+
 func testRebootOperations(cluster *cke.Cluster) {
 	currentWriteIndex := 0
 
@@ -441,6 +445,108 @@ func testRebootOperations(cluster *cke.Cluster) {
 		}
 		return nil
 	}).Should(Succeed())
+
+	By("API servers should processed with higher priority and one by one ")
+	// Note: this test is incomplete if rq entries are processed in random order
+	cluster.Reboot.MaxConcurrentReboots = intPtr(2)
+	originalRebootCommand := cluster.Reboot.RebootCommand
+	apiServerRebootSeconds := 20
+	cluster.Reboot.RebootCommand = []string{"bash", "-c", "sleep " + fmt.Sprintf("%d", apiServerRebootSeconds)}
+	_, err = ckecliClusterSet(cluster)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	stdout, stderr, err := kubectl("get", "node", "-o=json")
+	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+	var nodeList corev1.NodeList
+	err = json.Unmarshal(stdout, &nodeList)
+	Expect(err).ShouldNot(HaveOccurred())
+	apiServerSlice := []string{}
+	apiServerSet := map[string]bool{}
+	workerNodeSlice := []string{}
+	for _, node := range nodeList.Items {
+		if node.Labels["cke.cybozu.com/master"] == "true" {
+			apiServerSlice = append(apiServerSlice, node.Name)
+			apiServerSet[node.Name] = true
+		} else {
+			workerNodeSlice = append(workerNodeSlice, node.Name)
+		}
+	}
+
+	_, stderr, err = kubectlWithInput(rebootWorkerNodeDeploymentYAML, "apply", "-f", "-")
+	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+	Eventually(func() error {
+		out, _, err := kubectl("get", "-n=reboot-test", "deployments/worker", "-o=json")
+		if err != nil {
+			return err
+		}
+
+		var deploy appsv1.Deployment
+		err = json.Unmarshal(out, &deploy)
+		if err != nil {
+			return err
+		}
+		if deploy.Status.ReadyReplicas != 10 {
+			return fmt.Errorf("deployment is not ready")
+		}
+		return nil
+	}).Should(Succeed())
+
+	rebootTargets = strings.Join(workerNodeSlice, "\n") + "\n" + strings.Join(apiServerSlice, "\n")
+	_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
+	Expect(err).ShouldNot(HaveOccurred())
+	currentWriteIndex += len(workerNodeSlice) + len(apiServerSlice)
+
+	// first, API servers are processed one by one
+	// and then, two worker nodes are processed simultaneously
+	limit := time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*3+10))
+	workerNodeProcessed := false
+	for !workerNodeProcessed {
+		t := time.Now()
+		Expect(t.After(limit)).ShouldNot(BeTrue(), "reboot queue processing timed out")
+
+		re, err := getRebootEntries()
+		Expect(err).ShouldNot(HaveOccurred())
+		apiServerProcessed := false
+		for _, entry := range re {
+			switch entry.Status {
+			case cke.RebootStatusDraining, cke.RebootStatusRebooting:
+				if apiServerSet[entry.Node] {
+					Expect(apiServerProcessed).Should(BeFalse(), "multiple API servers are processed simultaneously")
+					apiServerProcessed = true
+				} else {
+					workerNodeProcessed = true
+				}
+			}
+		}
+		Expect(apiServerProcessed && workerNodeProcessed).Should(BeFalse(), "API server should be processed exclusively")
+	}
+
+	// reboot will complete eventually
+	waitRebootCompletion(cluster)
+
+	_, stderr, err = kubectlWithInput(rebootSlowEvictionDeploymentYAML, "delete", "-f", "-")
+	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+	Eventually(func() error {
+		out, _, err = kubectl("get", "-n=reboot-test", "pod", "-l=reboot-app=worker", "-o=json")
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(out, &deploymentPods)
+		if err != nil {
+			return err
+		}
+		if len(deploymentPods.Items) != 0 {
+			return fmt.Errorf("Pod does not terminate")
+		}
+		return nil
+	}).Should(Succeed())
+
+	cluster.Reboot.MaxConcurrentReboots = nil
+	cluster.Reboot.RebootCommand = originalRebootCommand
+	_, err = ckecliClusterSet(cluster)
+	Expect(err).ShouldNot(HaveOccurred())
 
 	By("Cleanup namespace for reboot test")
 	_, stderr, err = kubectl("delete", "namespace", "reboot-test")
