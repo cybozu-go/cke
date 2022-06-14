@@ -454,6 +454,8 @@ func testRebootOperations(cluster *cke.Cluster) {
 	cluster.Reboot.RebootCommand = []string{"bash", "-c", "sleep " + fmt.Sprintf("%d", apiServerRebootSeconds)}
 	_, err = ckecliClusterSet(cluster)
 	Expect(err).ShouldNot(HaveOccurred())
+	// wait for the previous reconciliation to be done
+	time.Sleep(time.Second * 3)
 
 	stdout, stderr, err := kubectl("get", "node", "-o=json")
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
@@ -501,26 +503,31 @@ func testRebootOperations(cluster *cke.Cluster) {
 	// first, API servers are processed one by one
 	// and then, two worker nodes are processed simultaneously
 	limit := time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*3+10))
-	workerNodeProcessed := false
-	for !workerNodeProcessed {
+	for {
 		t := time.Now()
 		Expect(t.After(limit)).ShouldNot(BeTrue(), "reboot queue processing timed out")
 
 		re, err := getRebootEntries()
 		Expect(err).ShouldNot(HaveOccurred())
-		apiServerProcessed := false
+		apiServerProcessed := 0
+		workerNodeProcessed := 0
 		for _, entry := range re {
 			switch entry.Status {
 			case cke.RebootStatusDraining, cke.RebootStatusRebooting:
 				if apiServerSet[entry.Node] {
-					Expect(apiServerProcessed).Should(BeFalse(), "multiple API servers are processed simultaneously")
-					apiServerProcessed = true
+					apiServerProcessed++
 				} else {
-					workerNodeProcessed = true
+					workerNodeProcessed++
 				}
 			}
 		}
-		Expect(apiServerProcessed && workerNodeProcessed).Should(BeFalse(), "API server should be processed exclusively")
+		Expect(apiServerProcessed <= 1).Should(BeTrue(), "multiple API servers are processed simultaneously")
+		Expect(apiServerProcessed > 0 && workerNodeProcessed > 0).Should(BeFalse(), "API server should be processed exclusively")
+		if workerNodeProcessed == 2 {
+			break
+		}
+
+		time.Sleep(time.Second)
 	}
 
 	// reboot will complete eventually
@@ -548,6 +555,8 @@ func testRebootOperations(cluster *cke.Cluster) {
 	cluster.Reboot.RebootCommand = originalRebootCommand
 	_, err = ckecliClusterSet(cluster)
 	Expect(err).ShouldNot(HaveOccurred())
+	// wait for the previous reconciliation to be done
+	time.Sleep(time.Second * 3)
 
 	By("Cleanup namespace for reboot test")
 	_, stderr, err = kubectl("delete", "namespace", "reboot-test")

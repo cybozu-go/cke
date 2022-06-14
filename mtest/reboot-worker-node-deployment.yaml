@@ -4,6 +4,7 @@ metadata:
   namespace: reboot-test
   name: worker
 spec:
+  # enough many replicas to fill worker nodes
   replicas: 10
   selector:
     matchLabels:
