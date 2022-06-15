@@ -585,13 +585,13 @@ func testRebootOperations(cluster *cke.Cluster) {
 }
 
 func initializeControlPlaneFromAfterEach() {
-	fmt.Println("enter initializeControlPlaneFromAfterEach")
+	fmt.Printf("enter initializeControlPlaneFromAfterEach %s\n", time.Now())
 	initializeControlPlane()
-	fmt.Println("leave initializeControlPlaneFromAfterEach")
+	fmt.Printf("leave initializeControlPlaneFromAfterEach %s\n", time.Now())
 }
 
 func testOperatorsBeforeEach() {
-	fmt.Println("enter testOperatorsBeforeEach")
+	fmt.Printf("enter testOperatorsBeforeEach %s\n", time.Now())
 }
 
 func testOperators(isDegraded bool) {
