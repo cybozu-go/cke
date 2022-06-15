@@ -522,7 +522,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	fmt.Printf("begin loop %s\n", time.Now())
 	// first, API servers are processed one by one
 	// and then, two worker nodes are processed simultaneously
-	limit := time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*3+30))
+	limit := time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*3+60))
 	for {
 		t := time.Now()
 		Expect(t.After(limit)).ShouldNot(BeTrue(), "reboot queue processing timed out")

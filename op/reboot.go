@@ -727,7 +727,9 @@ func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []
 	if apiServerAlreadyDrained {
 		return nil
 	}
-	if len(alreadyDrained)+len(canBeDrained) <= maxConcurrentReboots {
+	if len(alreadyDrained) >= maxConcurrentReboots {
+		return nil
+	} else if len(alreadyDrained)+len(canBeDrained) <= maxConcurrentReboots {
 		return canBeDrained
 	} else {
 		return canBeDrained[:maxConcurrentReboots-len(alreadyDrained)]
