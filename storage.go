@@ -103,7 +103,7 @@ func (s Storage) PutConfigVersion(ctx context.Context, leaderKey string) error {
 func (s Storage) PutCluster(ctx context.Context, c *Cluster) error {
 	func() {
 		now := time.Now()
-		f, err := os.Open(fmt.Sprintf("/tmp/putcluster-%d.txt", now.Unix()))
+		f, err := os.Create(fmt.Sprintf("/tmp/putcluster-%d.txt", now.Unix()))
 		if err != nil {
 			return
 		}
@@ -123,12 +123,12 @@ func (s Storage) PutCluster(ctx context.Context, c *Cluster) error {
 func (s Storage) PutClusterWithTemplateRevision(ctx context.Context, c *Cluster, rev int64, leaderKey string) error {
 	func() {
 		now := time.Now()
-		f, err := os.Open(fmt.Sprintf("/tmp/putcluster-%d.txt", now.Unix()))
+		f, err := os.Create(fmt.Sprintf("/tmp/putcluster-%d.txt", now.Unix()))
 		if err != nil {
 			return
 		}
 		defer f.Close()
-		fmt.Fprintf(f, "PutCluster: pid=%d ppid=%d %+v\n", os.Getpid(), os.Getppid(), pkgerrors.New(""))
+		fmt.Fprintf(f, "PutClusterWithTemplateRevision: pid=%d ppid=%d %+v\n", os.Getpid(), os.Getppid(), pkgerrors.New(""))
 	}()
 	data, err := json.Marshal(c)
 	if err != nil {
