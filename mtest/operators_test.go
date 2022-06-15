@@ -553,7 +553,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	// reboot will complete eventually
 	waitRebootCompletion(cluster)
 
-	_, stderr, err = kubectlWithInput(rebootSlowEvictionDeploymentYAML, "delete", "-f", "-")
+	_, stderr, err = kubectlWithInput(rebootWorkerNodeDeploymentYAML, "delete", "-f", "-")
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
 	Eventually(func() error {
