@@ -385,7 +385,7 @@ func getServerStatus() (*cke.ServerStatus, error) {
 
 func ckecliClusterSet(cluster *cke.Cluster) (time.Time, error) {
 	func() {
-		fmt.Printf("******** ckecliClusterSet is called ********\npid=%d ppid=%d %+v\n", os.Getpid(), os.Getppid(), pkgerrors.New(""))
+		fmt.Printf("******** ckecliClusterSet is called ********\ntime=%s\npid=%d ppid=%d %+v\n", time.Now(), os.Getpid(), os.Getppid(), pkgerrors.New(""))
 	}()
 
 	y, err := yaml.Marshal(cluster)
