@@ -519,9 +519,10 @@ func testRebootOperations(cluster *cke.Cluster) {
 	Expect(err).ShouldNot(HaveOccurred())
 	currentWriteIndex += len(workerNodeSlice) + len(apiServerSlice)
 
-	fmt.Printf("begin loop %s\n", time.Now())
-	// first, API servers are processed one by one
-	// and then, two worker nodes are processed simultaneously
+	// First, API servers are processed one by one
+	// And then, two worker nodes are processed simultaneously.
+
+	// enough longer than apiServerRebootSeconds * 3, shorter than apiServerRebootSeconds * 3 + terminationGracePeriodSeconds
 	limit := time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*3+60))
 	for {
 		t := time.Now()
