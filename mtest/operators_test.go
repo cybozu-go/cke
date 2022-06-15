@@ -582,8 +582,14 @@ func testRebootOperations(cluster *cke.Cluster) {
 	Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 }
 
+func initializeControlPlaneFromAfterEach() {
+	fmt.Println("enter initializeControlPlaneFromAfterEach")
+	initializeControlPlane()
+	fmt.Println("leave initializeControlPlaneFromAfterEach")
+}
+
 func testOperators(isDegraded bool) {
-	AfterEach(initializeControlPlane)
+	AfterEach(initializeControlPlaneFromAfterEach)
 
 	It("run all operators / commanders", func() {
 		By("Preparing the cluster")
