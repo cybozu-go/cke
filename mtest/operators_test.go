@@ -518,6 +518,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	Expect(err).ShouldNot(HaveOccurred())
 	currentWriteIndex += len(workerNodeSlice) + len(apiServerSlice)
 
+	fmt.Printf("begin loop %s\n", time.Now())
 	// first, API servers are processed one by one
 	// and then, two worker nodes are processed simultaneously
 	limit := time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*3+30))
@@ -547,6 +548,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 
 		time.Sleep(time.Second)
 	}
+	fmt.Printf("end loop %s\n", time.Now())
 
 	// reboot will complete eventually
 	waitRebootCompletion(cluster)
@@ -588,8 +590,13 @@ func initializeControlPlaneFromAfterEach() {
 	fmt.Println("leave initializeControlPlaneFromAfterEach")
 }
 
+func testOperatorsBeforeEach() {
+	fmt.Println("enter testOperatorsBeforeEach")
+}
+
 func testOperators(isDegraded bool) {
 	AfterEach(initializeControlPlaneFromAfterEach)
+	BeforeEach(testOperatorsBeforeEach)
 
 	It("run all operators / commanders", func() {
 		By("Preparing the cluster")
