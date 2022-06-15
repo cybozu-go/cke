@@ -21,6 +21,7 @@ import (
 	"github.com/cybozu-go/well"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	pkgerrors "github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"golang.org/x/crypto/ssh"
 	"sigs.k8s.io/yaml"
@@ -383,6 +384,10 @@ func getServerStatus() (*cke.ServerStatus, error) {
 }
 
 func ckecliClusterSet(cluster *cke.Cluster) (time.Time, error) {
+	func() {
+		fmt.Printf("******** ckecliClusterSet is called ********\npid=%d ppid=%d %+v\n", os.Getpid(), os.Getppid(), pkgerrors.New(""))
+	}()
+
 	y, err := yaml.Marshal(cluster)
 	if err != nil {
 		return time.Time{}, err
