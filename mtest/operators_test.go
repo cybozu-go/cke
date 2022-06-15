@@ -455,6 +455,7 @@ func testRebootOperations(cluster *cke.Cluster) {
 	}).Should(Succeed())
 
 	By("API servers should processed with higher priority and one by one ")
+	fmt.Printf("this by begins at %s\n", time.Now())
 	// Note: this test is incomplete if rq entries are processed in random order
 	cluster.Reboot.MaxConcurrentReboots = intPtr(2)
 	originalRebootCommand := cluster.Reboot.RebootCommand
