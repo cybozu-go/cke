@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	pkgerrors "github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -100,7 +101,15 @@ func (s Storage) PutConfigVersion(ctx context.Context, leaderKey string) error {
 
 // PutCluster stores *Cluster into etcd.
 func (s Storage) PutCluster(ctx context.Context, c *Cluster) error {
-	fmt.Printf("PutCluster: pid=%d ppid=%d %+v\n", os.Getpid(), os.Getppid(), pkgerrors.New(""))
+	func() {
+		now := time.Now()
+		f, err := os.Open(fmt.Sprintf("/tmp/putcluster-%d.txt", now.Unix()))
+		if err != nil {
+			return
+		}
+		defer f.Close()
+		fmt.Fprintf(f, "PutCluster: pid=%d ppid=%d %+v\n", os.Getpid(), os.Getppid(), pkgerrors.New(""))
+	}()
 	data, err := json.Marshal(c)
 	if err != nil {
 		return err
@@ -112,7 +121,15 @@ func (s Storage) PutCluster(ctx context.Context, c *Cluster) error {
 
 // PutClusterWithTemplateRevision stores *Cluster into etcd along with a revision number.
 func (s Storage) PutClusterWithTemplateRevision(ctx context.Context, c *Cluster, rev int64, leaderKey string) error {
-	fmt.Printf("PutClusterWithTemplateRevision:pid=%d ppid=%d  %+v\n", os.Getpid(), os.Getppid(), pkgerrors.New(""))
+	func() {
+		now := time.Now()
+		f, err := os.Open(fmt.Sprintf("/tmp/putcluster-%d.txt", now.Unix()))
+		if err != nil {
+			return
+		}
+		defer f.Close()
+		fmt.Fprintf(f, "PutCluster: pid=%d ppid=%d %+v\n", os.Getpid(), os.Getppid(), pkgerrors.New(""))
+	}()
 	data, err := json.Marshal(c)
 	if err != nil {
 		return err
