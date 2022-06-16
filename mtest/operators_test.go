@@ -475,6 +475,62 @@ func testRebootOperations() {
 		}).Should(Succeed())
 	})
 
+	It("checks parallel reboot behavior", func() {
+		// Note: this test is incomplete if rq entries are processed in random order
+		cluster.Reboot.MaxConcurrentReboots = intPtr(2)
+		originalRebootCommand := cluster.Reboot.RebootCommand
+		cluster.Reboot.RebootCommand = []string{"bash", "-c", "if [ $1 = 10.0.0.104 ]; then sleep 20; fi"}
+		cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
+			// avoid eviction failure due to cluster-dns in kube-system NS
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      "kubernetes.io/metadata.name",
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"kube-system"},
+				},
+			},
+		}
+		_, err := ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
+		// wait for the previous reconciliation to be done
+		time.Sleep(time.Second * 3)
+
+		// add deployed node first
+		rebootTargets := strings.Join([]string{node4, node5, node6}, "\n")
+		_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
+		Expect(err).ShouldNot(HaveOccurred())
+		currentWriteIndex += 3
+
+		limit := time.Now().Add(time.Second * time.Duration(30))
+		for {
+			time.Sleep(time.Second)
+
+			t := time.Now()
+			Expect(t.After(limit)).ShouldNot(BeTrue(), "reboot queue processing timed out")
+
+			re, err := getRebootEntries()
+			Expect(err).ShouldNot(HaveOccurred())
+			if len(re) > 1 {
+				continue
+			}
+			Expect(re).ShouldNot(HaveLen(0), "reboot completed too early")
+			Expect(re[0].Node).Should(Equal(node4), "unexpected node remains")
+
+			break
+		}
+
+		// reboot will complete eventually
+		waitRebootCompletion(cluster)
+
+		cluster.Reboot.MaxConcurrentReboots = nil
+		cluster.Reboot.RebootCommand = originalRebootCommand
+		cluster.Reboot.ProtectedNamespaces = nil
+		_, err = ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
+		// wait for the previous reconciliation to be done
+		time.Sleep(time.Second * 3)
+	})
+
 	It("checks API server reboot behavior", func() {
 		By("API servers should processed with higher priority and one by one ")
 		fmt.Printf("this by begins at %s\n", time.Now())
