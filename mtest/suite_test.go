@@ -149,6 +149,10 @@ var _ = Describe("Test CKE", func() {
 			testStopCP()
 			testOperators(true)
 		})
+	case "reboot":
+		Context("reboot", func() {
+			testRebootOperations()
+		})
 	case "upgrade":
 		Context("upgrade", func() {
 			testUpgrade()
