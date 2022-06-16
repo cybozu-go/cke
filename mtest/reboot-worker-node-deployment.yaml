@@ -21,7 +21,7 @@ spec:
           # this Pod will stay Terminating state after deletion
           # for the time specified by terminationGracePeriodSeconds.
           command: [ sleep, infinity ]
-      # shorter than eviction_timeout_seconds
+      # shorter than eviction_timeout_seconds (this test doesn't need eviction timeout)
       terminationGracePeriodSeconds: 15
       affinity:
         nodeAffinity:
