@@ -553,8 +553,12 @@ func testRebootOperations() {
 			re, err := getRebootEntries()
 			Expect(err).ShouldNot(HaveOccurred())
 			apiServerProcessed := 0
+			apiServerRemain := 0
 			workerNodeProcessed := 0
 			for _, entry := range re {
+				if apiServerSet[entry.Node] {
+					apiServerRemain++
+				}
 				switch entry.Status {
 				case cke.RebootStatusDraining, cke.RebootStatusRebooting:
 					if apiServerSet[entry.Node] {
@@ -566,6 +570,7 @@ func testRebootOperations() {
 			}
 			Expect(apiServerProcessed <= 1).Should(BeTrue(), "multiple API servers are processed simultaneously")
 			Expect(apiServerProcessed > 0 && workerNodeProcessed > 0).Should(BeFalse(), "API server should be processed exclusively")
+			Expect(apiServerRemain > 0 && workerNodeProcessed > 0).Should(BeFalse(), "API servers should be processed with higher priority")
 			if workerNodeProcessed == 2 {
 				break
 			}
