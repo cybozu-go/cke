@@ -491,7 +491,7 @@ func testRebootOperations() {
 				},
 			},
 		}
-		apiServerRebootSeconds := 20
+		apiServerRebootSeconds := 5
 		cluster.Reboot.RebootCommand = []string{"bash", "-c", "sleep " + fmt.Sprintf("%d", apiServerRebootSeconds)}
 		_, err := ckecliClusterSet(cluster)
 		Expect(err).ShouldNot(HaveOccurred())
