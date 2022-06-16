@@ -575,6 +575,11 @@ func testRebootOperations() {
 		}
 		fmt.Printf("end loop %s\n", time.Now())
 
+		// restore reboot_command to reboot worker nodes fast
+		cluster.Reboot.RebootCommand = originalRebootCommand
+		_, err = ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
+
 		// reboot will complete eventually
 		waitRebootCompletion(cluster)
 
@@ -598,7 +603,6 @@ func testRebootOperations() {
 		}).Should(Succeed())
 
 		cluster.Reboot.MaxConcurrentReboots = nil
-		cluster.Reboot.RebootCommand = originalRebootCommand
 		cluster.Reboot.ProtectedNamespaces = nil
 		_, err = ckecliClusterSet(cluster)
 		Expect(err).ShouldNot(HaveOccurred())
