@@ -111,7 +111,7 @@ func testRebootOperations() {
 
 	currentWriteIndex := 0
 
-	It("should check basic reboot behavior", func() {
+	It("checks basic reboot behavior", func() {
 		By("Rebooting nodes")
 		rebootTargets := node1
 		_, _, err := ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
@@ -190,7 +190,7 @@ func testRebootOperations() {
 		waitRebootCompletion(cluster)
 	})
 
-	It("should check Pod protection", func() {
+	It("checks Pod protection", func() {
 		By("Preparing a deployment to test protected_namespaces")
 		_, stderr, err := kubectl("create", "namespace", "reboot-test")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
@@ -382,7 +382,7 @@ func testRebootOperations() {
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 	})
 
-	It("should check drain timeout behavior", func() {
+	It("checks drain timeout behavior", func() {
 		By("Entry will become `queued` status after drain timeout")
 		_, stderr, err := kubectlWithInput(rebootSlowEvictionDeploymentYAML, "apply", "-f", "-")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
@@ -466,7 +466,7 @@ func testRebootOperations() {
 		}).Should(Succeed())
 	})
 
-	It("should check API server reboot behavior", func() {
+	It("checks API server reboot behavior", func() {
 		By("API servers should processed with higher priority and one by one ")
 		fmt.Printf("this by begins at %s\n", time.Now())
 		// Note: this test is incomplete if rq entries are processed in random order
