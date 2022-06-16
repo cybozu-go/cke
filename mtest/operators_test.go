@@ -111,6 +111,15 @@ func testRebootOperations() {
 
 	currentWriteIndex := 0
 
+	It("increases worker node", func() {
+		cluster.Nodes = append(cluster.Nodes, &cke.Node{
+			Address: node6,
+			User:    "cybozu",
+		})
+		Expect(cluster.Validate(false)).NotTo(HaveOccurred())
+		clusterSetAndWait(cluster)
+	})
+
 	It("checks basic reboot behavior", func() {
 		By("Rebooting nodes")
 		rebootTargets := node1
