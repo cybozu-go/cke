@@ -112,9 +112,12 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 		return err
 	}
 
+	// Draining should be done sequentially.
+	// Parallel draining is relatively prone to deadlock.
+
+	// first, cordon all nodes
+	evictNodes := []*cke.RebootQueueEntry{}
 	for _, entry := range c.entries {
-		// Draining should be done sequentially.
-		// Parallel draining is relatively prone to deadlock.
 		err := func() error {
 			entry.Status = cke.RebootStatusDraining
 			entry.LastTransitionTime = time.Now().Truncate(time.Second).UTC()
@@ -138,6 +141,22 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 				return fmt.Errorf("failed to cordon node %s: %v", entry.Node, err)
 			}
 
+			return nil
+		}()
+		if err != nil {
+			c.notifyFailedNode(entry.Node)
+			err = drainBackOff(ctx, inf, entry, err)
+			if err != nil {
+				return err
+			}
+		} else {
+			evictNodes = append(evictNodes, entry)
+		}
+	}
+
+	// next, evict pods on each node
+	for _, entry := range evictNodes {
+		err := func() error {
 			err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected)
 			if err != nil {
 				return err
