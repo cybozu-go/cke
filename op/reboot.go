@@ -156,14 +156,7 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 
 	// next, evict pods on each node
 	for _, entry := range evictNodes {
-		err := func() error {
-			err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		}()
+		err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected)
 		if err != nil {
 			c.notifyFailedNode(entry.Node)
 			err = drainBackOff(ctx, inf, entry, err)
