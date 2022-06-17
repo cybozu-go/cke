@@ -809,6 +809,13 @@ func testClusterValidateReboot(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "positive eviction_timeout_seconds",
+			reboot: Reboot{
+				EvictionTimeoutSeconds: intPtr(1),
+			},
+			wantErr: false,
+		},
+		{
 			name: "negative eviction_timeout_seconds",
 			reboot: Reboot{
 				EvictionTimeoutSeconds: intPtr(-1),
@@ -819,6 +826,13 @@ func testClusterValidateReboot(t *testing.T) {
 			name: "zero command_timeout_seconds",
 			reboot: Reboot{
 				CommandTimeoutSeconds: intPtr(0),
+			},
+			wantErr: false,
+		},
+		{
+			name: "positive command_timeout_seconds",
+			reboot: Reboot{
+				CommandTimeoutSeconds: intPtr(1),
 			},
 			wantErr: false,
 		},
@@ -835,6 +849,13 @@ func testClusterValidateReboot(t *testing.T) {
 				MaxConcurrentReboots: intPtr(0),
 			},
 			wantErr: true,
+		},
+		{
+			name: "positive max_concurrent_reboots",
+			reboot: Reboot{
+				MaxConcurrentReboots: intPtr(1),
+			},
+			wantErr: false,
 		},
 		{
 			name: "negative max_concurrent_reboots",
