@@ -392,7 +392,7 @@ func testRebootOperations() {
 	})
 
 	It("checks drain timeout behavior", func() {
-		By("Entry will become `queued` status after drain timeout")
+		By("Deploying a slow eviction pod")
 		_, stderr, err := kubectlWithInput(rebootSlowEvictionDeploymentYAML, "apply", "-f", "-")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
@@ -420,12 +420,13 @@ func testRebootOperations() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(deploymentPods.Items).Should(HaveLen(1))
 
+		By("starting to reboot the node running the pod")
 		nodeName := deploymentPods.Items[0].Spec.NodeName
 		_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
 		Expect(err).ShouldNot(HaveOccurred())
 		currentWriteIndex += 1
 
-		// first, it becomes `draining` status
+		By("Checking the reboot entry becomes `draining` status")
 		Eventually(func() error {
 			re, err := getRebootEntries()
 			if err != nil {
@@ -443,19 +444,21 @@ func testRebootOperations() {
 			return nil
 		}).Should(Succeed())
 
+		By("Sleeping until drain backoff")
 		// a little longer than eviction_timeout_seconds, shorter than eviction_timeout_seconds + backoff
 		time.Sleep(time.Second * time.Duration(*cluster.Reboot.EvictionTimeoutSeconds+10))
 
-		// after that, it becomes back `queued` status
+		By("Checking the reboot entry becomes back `queued` status")
 		re, err := getRebootEntries()
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(re).Should(HaveLen(1))
 		Expect(re[0].Status).Should(Equal(cke.RebootStatusQueued))
 		Expect(re[0].DrainBackOffExpire).ShouldNot(Equal(time.Time{}))
 
-		// reboot will complete eventually
+		By("Waiting for reboot completion")
 		waitRebootCompletion(cluster)
 
+		By("Cleaning up the deployment")
 		_, stderr, err = kubectlWithInput(rebootSlowEvictionDeploymentYAML, "delete", "-f", "-")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
@@ -477,6 +480,7 @@ func testRebootOperations() {
 
 	It("checks parallel reboot behavior", func() {
 		// Note: this test is incomplete if rq entries are processed in random order
+		By("Modifying cluster configuration for this test")
 		cluster.Reboot.MaxConcurrentReboots = intPtr(2)
 		originalBootCheckCommand := cluster.Reboot.BootCheckCommand
 		cluster.Reboot.BootCheckCommand = []string{"bash", "-c", "if [ $0 = 10.0.0.104 ]; then echo false; else echo true; fi"}
@@ -495,12 +499,13 @@ func testRebootOperations() {
 		// wait for the previous reconciliation to be done
 		time.Sleep(time.Second * 3)
 
-		// add deployed node first
+		By("starting to reboot worker nodes")
 		rebootTargets := strings.Join([]string{node4, node5, node6}, "\n")
 		_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 		Expect(err).ShouldNot(HaveOccurred())
 		currentWriteIndex += 3
 
+		By("waiting for reboot completion of the nodes whose reboot do not stuck")
 		limit := time.Now().Add(time.Second * time.Duration(30))
 		for {
 			time.Sleep(time.Second)
@@ -519,13 +524,15 @@ func testRebootOperations() {
 			break
 		}
 
+		By("Making reboot not stuck")
 		cluster.Reboot.BootCheckCommand = originalBootCheckCommand
 		_, err = ckecliClusterSet(cluster)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		// reboot will complete eventually
+		By("Waiting for reboot completion")
 		waitRebootCompletion(cluster)
 
+		By("Restoring cluster configuration")
 		cluster.Reboot.MaxConcurrentReboots = nil
 		cluster.Reboot.ProtectedNamespaces = nil
 		_, err = ckecliClusterSet(cluster)
@@ -535,9 +542,9 @@ func testRebootOperations() {
 	})
 
 	It("checks API server reboot behavior", func() {
-		By("API servers should processed with higher priority and one by one ")
 		fmt.Printf("this by begins at %s\n", time.Now())
 		// Note: this test is incomplete if rq entries are processed in random order
+		By("Modifying cluster configuration for this test")
 		cluster.Reboot.MaxConcurrentReboots = intPtr(2)
 		originalRebootCommand := cluster.Reboot.RebootCommand
 		cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
@@ -557,6 +564,7 @@ func testRebootOperations() {
 		// wait for the previous reconciliation to be done
 		time.Sleep(time.Second * 3)
 
+		By("Enumerating nodes")
 		stdout, stderr, err := kubectl("get", "node", "-o=json")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 		var nodeList corev1.NodeList
@@ -574,6 +582,7 @@ func testRebootOperations() {
 			}
 		}
 
+		By("Deploying pods on worker nodes")
 		_, stderr, err = kubectlWithInput(rebootWorkerNodeDeploymentYAML, "apply", "-f", "-")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
@@ -594,15 +603,17 @@ func testRebootOperations() {
 			return nil
 		}).Should(Succeed())
 
-		// add worker nodes first
+		By("starting to reboot nodes")
+		// worker nodes first, then API servers.
 		rebootTargets := strings.Join(workerNodeSlice, "\n") + "\n" + strings.Join(apiServerSlice, "\n")
 		_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 		Expect(err).ShouldNot(HaveOccurred())
 		currentWriteIndex += len(workerNodeSlice) + len(apiServerSlice)
 
-		// First, API servers are processed one by one
+		// First, API servers are processed one by one even though they are added to reboot queue later.
 		// And then, two worker nodes are processed simultaneously.
 
+		By("waiting for reboot completion of API servers")
 		// enough longer than apiServerRebootSeconds * 3
 		limit := time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*3+60))
 		for {
@@ -639,14 +650,16 @@ func testRebootOperations() {
 		}
 		fmt.Printf("end loop %s\n", time.Now())
 
-		// restore reboot_command to reboot worker nodes fast
+		By("Restoring cluster configuration partially (to finish this test fast)")
+		// restore reboot_command to reboot worker nodes fast (not necessarily required)
 		cluster.Reboot.RebootCommand = originalRebootCommand
 		_, err = ckecliClusterSet(cluster)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		// reboot will complete eventually
+		By("Waiting for reboot completion")
 		waitRebootCompletion(cluster)
 
+		By("Cleaning up the deployment")
 		_, stderr, err = kubectlWithInput(rebootWorkerNodeDeploymentYAML, "delete", "-f", "-")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
@@ -666,6 +679,7 @@ func testRebootOperations() {
 			return nil
 		}).Should(Succeed())
 
+		By("Restoring cluster configuration")
 		cluster.Reboot.MaxConcurrentReboots = nil
 		cluster.Reboot.ProtectedNamespaces = nil
 		_, err = ckecliClusterSet(cluster)
