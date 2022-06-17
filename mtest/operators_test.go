@@ -478,8 +478,8 @@ func testRebootOperations() {
 	It("checks parallel reboot behavior", func() {
 		// Note: this test is incomplete if rq entries are processed in random order
 		cluster.Reboot.MaxConcurrentReboots = intPtr(2)
-		originalRebootCommand := cluster.Reboot.RebootCommand
-		cluster.Reboot.RebootCommand = []string{"bash", "-c", "if [ $1 = 10.0.0.104 ]; then sleep 20; fi"}
+		originalBootCheckCommand := cluster.Reboot.BootCheckCommand
+		cluster.Reboot.BootCheckCommand = []string{"bash", "-c", "if [ $0 = 10.0.0.104 ]; then echo false; else echo true; fi"}
 		cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
 			// avoid eviction failure due to cluster-dns in kube-system NS
 			MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -519,11 +519,14 @@ func testRebootOperations() {
 			break
 		}
 
+		cluster.Reboot.BootCheckCommand = originalBootCheckCommand
+		_, err = ckecliClusterSet(cluster)
+		Expect(err).ShouldNot(HaveOccurred())
+
 		// reboot will complete eventually
 		waitRebootCompletion(cluster)
 
 		cluster.Reboot.MaxConcurrentReboots = nil
-		cluster.Reboot.RebootCommand = originalRebootCommand
 		cluster.Reboot.ProtectedNamespaces = nil
 		_, err = ckecliClusterSet(cluster)
 		Expect(err).ShouldNot(HaveOccurred())
