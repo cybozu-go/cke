@@ -420,7 +420,7 @@ func testRebootOperations() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(deploymentPods.Items).Should(HaveLen(1))
 
-		By("starting to reboot the node running the pod")
+		By("Starting to reboot the node running the pod")
 		nodeName := deploymentPods.Items[0].Spec.NodeName
 		_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
 		Expect(err).ShouldNot(HaveOccurred())
@@ -499,13 +499,13 @@ func testRebootOperations() {
 		// wait for the previous reconciliation to be done
 		time.Sleep(time.Second * 3)
 
-		By("starting to reboot worker nodes")
+		By("Starting to reboot worker nodes")
 		rebootTargets := strings.Join([]string{node4, node5, node6}, "\n")
 		_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
 		Expect(err).ShouldNot(HaveOccurred())
 		currentWriteIndex += 3
 
-		By("waiting for reboot completion of the nodes whose reboot do not stuck")
+		By("Waiting for reboot completion of the nodes whose reboot do not stuck")
 		limit := time.Now().Add(time.Second * time.Duration(30))
 		for {
 			time.Sleep(time.Second)
@@ -603,7 +603,7 @@ func testRebootOperations() {
 			return nil
 		}).Should(Succeed())
 
-		By("starting to reboot nodes")
+		By("Starting to reboot nodes")
 		// worker nodes first, then API servers.
 		rebootTargets := strings.Join(workerNodeSlice, "\n") + "\n" + strings.Join(apiServerSlice, "\n")
 		_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
@@ -613,7 +613,7 @@ func testRebootOperations() {
 		// First, API servers are processed one by one even though they are added to reboot queue later.
 		// And then, two worker nodes are processed simultaneously.
 
-		By("waiting for reboot completion of API servers")
+		By("Waiting for reboot completion of API servers")
 		// enough longer than apiServerRebootSeconds * 3
 		limit := time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*3+60))
 		for {
