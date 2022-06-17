@@ -513,7 +513,7 @@ func testRebootOperations() {
 			if len(re) > 1 {
 				continue
 			}
-			Expect(re).ShouldNot(HaveLen(0), "reboot completed too early")
+			Expect(re).ShouldNot(HaveLen(0), "reboot should not complete yet")
 			Expect(re[0].Node).Should(Equal(node4), "unexpected node remains")
 
 			break
