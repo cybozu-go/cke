@@ -814,7 +814,7 @@ func rebootCompleted(ctx context.Context, c *cke.Cluster, entry *cke.RebootQueue
 
 	env := well.NewEnvironment(ctx)
 	env.Go(func(ctx context.Context) error {
-		args := append(c.Reboot.BootCheckCommand[1:], entry.Node)
+		args := append(c.Reboot.BootCheckCommand[1:], entry.Node, fmt.Sprintf("%d", entry.LastTransitionTime.Unix()))
 		command := well.CommandContext(ctx, c.Reboot.BootCheckCommand[0], args...)
 		stdout, err := command.Output()
 		if err != nil {
