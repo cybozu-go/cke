@@ -61,17 +61,29 @@ func testClusterYAML(t *testing.T) {
 	if c.DNSService != "kube-system/dns" {
 		t.Error(`c.DNSService != "kube-system/dns"`)
 	}
-	if len(c.Reboot.Command) != 1 {
-		t.Fatal(`len(c.Reboot.Command) != 1`)
+	if len(c.Reboot.RebootCommand) != 1 {
+		t.Fatal(`len(c.Reboot.RebootCommand) != 1`)
 	}
-	if c.Reboot.Command[0] != "true" {
-		t.Error(`c.Reboot.Command[0] != "true"`)
+	if c.Reboot.RebootCommand[0] != "true" {
+		t.Error(`c.Reboot.RebootCommand[0] != "true"`)
+	}
+	if len(c.Reboot.BootCheckCommand) != 1 {
+		t.Fatal(`len(c.Reboot.BootCheckCommand) != 1`)
+	}
+	if c.Reboot.BootCheckCommand[0] != "false" {
+		t.Error(`c.Reboot.BootCheckCommand[0] != "false"`)
 	}
 	if c.Reboot.EvictionTimeoutSeconds == nil {
 		t.Fatal(`c.Reboot.EvictionTimeoutSeconds == nil`)
 	}
 	if *c.Reboot.EvictionTimeoutSeconds != 60 {
 		t.Error(`*c.Reboot.EvictionTimeoutSeconds != 60`)
+	}
+	if c.Reboot.MaxConcurrentReboots == nil {
+		t.Error(`c.Reboot.MaxConcurrentReboots == nil`)
+	}
+	if *c.Reboot.MaxConcurrentReboots != 5 {
+		t.Error(`*c.Reboot.MaxConcurrentReboots != 5`)
 	}
 	if c.Reboot.CommandTimeoutSeconds == nil {
 		t.Fatal(`c.Reboot.CommandTimeoutSeconds == nil`)
@@ -772,9 +784,101 @@ func testNodename(t *testing.T) {
 
 }
 
+func intPtr(v int) *int {
+	return &v
+}
+
+func testClusterValidateReboot(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		reboot  Reboot
+		wantErr bool
+	}{
+		{
+			name:    "valid case",
+			reboot:  Reboot{},
+			wantErr: false,
+		},
+		{
+			name: "zero eviction_timeout_seconds",
+			reboot: Reboot{
+				EvictionTimeoutSeconds: intPtr(0),
+			},
+			wantErr: true,
+		},
+		{
+			name: "positive eviction_timeout_seconds",
+			reboot: Reboot{
+				EvictionTimeoutSeconds: intPtr(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative eviction_timeout_seconds",
+			reboot: Reboot{
+				EvictionTimeoutSeconds: intPtr(-1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero command_timeout_seconds",
+			reboot: Reboot{
+				CommandTimeoutSeconds: intPtr(0),
+			},
+			wantErr: false,
+		},
+		{
+			name: "positive command_timeout_seconds",
+			reboot: Reboot{
+				CommandTimeoutSeconds: intPtr(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative command_timeout_seconds",
+			reboot: Reboot{
+				CommandTimeoutSeconds: intPtr(-1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero max_concurrent_reboots",
+			reboot: Reboot{
+				MaxConcurrentReboots: intPtr(0),
+			},
+			wantErr: true,
+		},
+		{
+			name: "positive max_concurrent_reboots",
+			reboot: Reboot{
+				MaxConcurrentReboots: intPtr(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative max_concurrent_reboots",
+			reboot: Reboot{
+				MaxConcurrentReboots: intPtr(-1),
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := validateReboot(tt.reboot); (err != nil) != tt.wantErr {
+				t.Errorf("validateReboot() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestCluster(t *testing.T) {
 	t.Run("YAML", testClusterYAML)
 	t.Run("Validate", testClusterValidate)
 	t.Run("ValidateNode", testClusterValidateNode)
 	t.Run("Nodename", testNodename)
+	t.Run("ValudateReboot", testClusterValidateReboot)
 }

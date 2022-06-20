@@ -10,6 +10,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/metrics"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -311,23 +312,37 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return err
 	}
 
-	re, err := inf.Storage().GetRebootsEntries(ctx)
+	rqEntries, err := inf.Storage().GetRebootsEntries(ctx)
 	if err != nil {
 		return err
 	}
-	metrics.UpdateReboot(len(re))
+	metrics.UpdateRebootQueueEntries(len(rqEntries))
+	rqEntries = cke.DedupRebootQueueEntries(rqEntries)
+	itemCounts := cke.CountRebootQueueEntries(rqEntries)
+	metrics.UpdateRebootQueueItems(itemCounts)
 
-	var reboot *cke.RebootQueueEntry
-	if len(re) > 0 {
+	if len(rqEntries) > 0 {
 		disabled, err := inf.Storage().IsRebootQueueDisabled(ctx)
 		if err != nil {
 			return err
 		}
-		if !disabled {
-			reboot = re[0]
+		if disabled {
+			rqEntries = nil
 		}
 	}
-	ops, phase := DecideOps(cluster, status, constraints, rcs, reboot)
+
+	nf := NewNodeFilter(cluster, status)
+	apiServers := map[string]bool{}
+	for _, node := range cluster.Nodes {
+		if nf.nodeStatus(node).APIServer.Running {
+			apiServers[node.Address] = true
+		}
+	}
+	newlyDrained := op.ChooseDrainedNodes(cluster, apiServers, rqEntries)
+	drainCompleted, drainTimedout, _ := op.CheckDrainCompletion(ctx, inf, nf.HealthyAPIServer(), cluster, rqEntries)
+	rebootDequeued := op.CheckRebootDequeue(ctx, cluster, rqEntries)
+
+	ops, phase := DecideOps(cluster, status, constraints, rcs, rqEntries, newlyDrained, drainCompleted, drainTimedout, rebootDequeued)
 
 	st := &cke.ServerStatus{
 		Phase:     phase,

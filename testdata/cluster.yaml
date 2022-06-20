@@ -10,9 +10,11 @@ service_subnet: 12.34.56.00/24
 dns_servers: ["1.1.1.1", "8.8.8.8"]
 dns_service: kube-system/dns
 reboot:
-  command: ["true"]
+  reboot_command: ["true"]
+  boot_check_command: ["false"]
   eviction_timeout_seconds: 60
   command_timeout_seconds: 120
+  max_concurrent_reboots: 5
   protected_namespaces:
     matchLabels:
       app: sample

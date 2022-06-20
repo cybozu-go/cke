@@ -657,11 +657,15 @@ func testStorageReboot(t *testing.T) {
 
 	leaderKey := e.Key()
 
+	// initial state = there are no entries && rq is enabled
+
+	// index 0 does not exist
 	_, err = storage.GetRebootsEntry(ctx, 0)
 	if err != ErrNotFound {
 		t.Error("unexpected error:", err)
 	}
 
+	// get all - no entries
 	ents, err := storage.GetRebootsEntries(ctx)
 	if err != nil {
 		t.Fatal("GetRebootsEntries failed:", err)
@@ -670,30 +674,29 @@ func testStorageReboot(t *testing.T) {
 		t.Error("Unknown entries:", ents)
 	}
 
+	// index 0 does not exist
 	err = storage.DeleteRebootsEntry(ctx, leaderKey, 0)
 	if err != nil {
 		t.Fatal("DeleteRebootsEntry failed:", err)
 	}
 
-	nodes := []string{
-		"1.2.3.4",
-		"5.6.7.8",
-	}
-	entry := NewRebootQueueEntry(nodes)
+	// first write - index is 0
+	node := "1.2.3.4"
+	entry := NewRebootQueueEntry(node)
 	err = storage.RegisterRebootsEntry(ctx, entry)
 	if err != nil {
 		t.Fatal("RegisterRebootsEntry failed:", err)
 	}
 
-	nodes2 := []string{
-		"12.34.56.78",
-	}
-	entry2 := NewRebootQueueEntry(nodes2)
+	// second write - index is 1
+	node2 := "12.34.56.78"
+	entry2 := NewRebootQueueEntry(node2)
 	err = storage.RegisterRebootsEntry(ctx, entry2)
 	if err != nil {
 		t.Fatal("RegisterRebootsEntry failed:", err)
 	}
 
+	// get index 1 - the second written entry is return
 	ent, err := storage.GetRebootsEntry(ctx, 1)
 	if err != nil {
 		t.Fatal("GetRebootsEntry failed:", err)
@@ -702,6 +705,7 @@ func testStorageReboot(t *testing.T) {
 		t.Error("GetRebootsEntry returned unexpected result:", cmp.Diff(ent, entry2))
 	}
 
+	// get all - entries are returned in written order
 	entries := []*RebootQueueEntry{entry, entry2}
 	ents, err = storage.GetRebootsEntries(ctx)
 	if err != nil {
@@ -711,6 +715,7 @@ func testStorageReboot(t *testing.T) {
 		t.Error("GetRebootsEntries returned unexpected result:", cmp.Diff(ents, entries))
 	}
 
+	// update index 0 and get index 0 - updated entry is returned
 	entry.Status = RebootStatusRebooting
 	err = storage.UpdateRebootsEntry(ctx, entry)
 	if err != nil {
@@ -724,6 +729,7 @@ func testStorageReboot(t *testing.T) {
 		t.Error("GetRebootsEntry returned unexpected result:", cmp.Diff(ent, entry))
 	}
 
+	// delete index 0 - the entry will not be got nor updated
 	err = storage.DeleteRebootsEntry(ctx, leaderKey, 0)
 	if err != nil {
 		t.Fatal("DeleteRebootsEntry failed:", err)
@@ -737,6 +743,7 @@ func testStorageReboot(t *testing.T) {
 		t.Error("UpdateRebootsEntry succeeded for deleted entry")
 	}
 
+	// rq is enabled by default
 	disabled, err := storage.IsRebootQueueDisabled(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -745,6 +752,7 @@ func testStorageReboot(t *testing.T) {
 		t.Error("reboot queue should not be disabled by default")
 	}
 
+	// disable rq and get its state
 	err = storage.EnableRebootQueue(ctx, false)
 	if err != nil {
 		t.Fatal(err)
@@ -757,6 +765,7 @@ func testStorageReboot(t *testing.T) {
 		t.Error("reboot queue could not be disabled")
 	}
 
+	// re-enable rq and get its state
 	err = storage.EnableRebootQueue(ctx, true)
 	if err != nil {
 		t.Fatal(err)

@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        suite: [functions, robustness, operators]
+        suite: [functions, robustness, operators, reboot]
     env:
       SUITE: ${{ matrix.suite }}
       CLUSTER: "cke-cluster.yml"

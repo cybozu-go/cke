@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 	"time"
 
@@ -40,10 +41,16 @@ type updateOperationPhaseTestCase struct {
 	expected operationPhaseExpected
 }
 
-type updateRebootTestCase struct {
+type updateRebootQueueEntriesTestCase struct {
 	name     string
 	input    int
 	expected float64
+}
+
+type updateRebootQueueItemsTestCase struct {
+	name     string
+	input    map[string]int
+	expected map[string]float64
 }
 
 type sabakanInput struct {
@@ -70,7 +77,8 @@ type updateSabakanIntegrationTestCase struct {
 func TestMetricsUpdater(t *testing.T) {
 	t.Run("UpdateLeader", testUpdateLeader)
 	t.Run("UpdateOperationPhase", testUpdateOperationPhase)
-	t.Run("UpdateReboot", testUpdateReboot)
+	t.Run("UpdateRebootQueueEntries", testUpdateRebootQueueEntries)
+	t.Run("UpdateRebootQueueItems", testUpdateRebootQueueItems)
 	t.Run("UpdateSabakanIntegration", testUpdateSabakanIntegration)
 }
 
@@ -239,8 +247,8 @@ func testUpdateOperationPhase(t *testing.T) {
 	}
 }
 
-func testUpdateReboot(t *testing.T) {
-	testCases := []updateRebootTestCase{
+func testUpdateRebootQueueEntries(t *testing.T) {
+	testCases := []updateRebootQueueEntriesTestCase{
 		{
 			name:     "zero",
 			input:    0,
@@ -265,7 +273,7 @@ func testUpdateReboot(t *testing.T) {
 			collector, _ := newTestCollector()
 			handler := GetHandler(collector)
 
-			UpdateReboot(tt.input)
+			UpdateRebootQueueEntries(tt.input)
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/metrics", nil)
@@ -290,6 +298,75 @@ func testUpdateReboot(t *testing.T) {
 			}
 			if !metricsFound {
 				t.Errorf("metrics reboot_queue_entries was not found")
+			}
+		})
+	}
+}
+
+func testUpdateRebootQueueItems(t *testing.T) {
+	// UpdateRebootQueueItems does not take care of nonexistent keys. Those must be cared by CountRebootQueueEntries.
+	testCases := []updateRebootQueueItemsTestCase{
+		{
+			name: "zero",
+			input: map[string]int{
+				"queued":    1,
+				"draining":  2,
+				"rebooting": 3,
+			},
+			expected: map[string]float64{
+				"queued":    1.0,
+				"draining":  2.0,
+				"rebooting": 3.0,
+			},
+		},
+		{
+			name: "one",
+			input: map[string]int{
+				"queued":    4,
+				"draining":  5,
+				"cancelled": 6,
+			},
+			expected: map[string]float64{
+				"queued":    4.0,
+				"draining":  5.0,
+				"rebooting": 3.0,
+				"cancelled": 6.0,
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			defer ctx.Done()
+
+			collector, _ := newTestCollector()
+			handler := GetHandler(collector)
+
+			UpdateRebootQueueItems(tt.input)
+
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/metrics", nil)
+			handler.ServeHTTP(w, req)
+
+			metricsFamily, err := parseMetrics(w.Result())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			metricsFound := map[string]float64{}
+			for _, mf := range metricsFamily {
+				if *mf.Name != "cke_reboot_queue_items" {
+					continue
+				}
+				for _, m := range mf.Metric {
+					if len(m.Label) != 1 {
+						t.Errorf("value for cke_reboot_queue_items should have exactly one label. actual: %d", len(m.Label))
+					}
+					metricsFound[*m.GetLabel()[0].Value] = *m.Gauge.Value
+				}
+			}
+			if !reflect.DeepEqual(metricsFound, tt.expected) {
+				t.Errorf("value for cke_reboot_queue_items is wrong.  expected: %v, actual: %v", tt.expected, metricsFound)
 			}
 		})
 	}

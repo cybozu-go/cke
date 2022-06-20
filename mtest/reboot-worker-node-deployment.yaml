@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: reboot-test
+  name: worker
+spec:
+  # enough many replicas to fill worker nodes
+  replicas: 10
+  selector:
+    matchLabels:
+      reboot-app: worker
+  template:
+    metadata:
+      labels:
+        reboot-app: worker
+    spec:
+      containers:
+        - name: ubuntu
+          image: quay.io/cybozu/ubuntu:20.04
+          # Because sleep command ignores SIGTERM,
+          # this Pod will stay Terminating state after deletion
+          # for the time specified by terminationGracePeriodSeconds.
+          command: [ sleep, infinity ]
+      # shorter than eviction_timeout_seconds (this test doesn't need eviction timeout)
+      terminationGracePeriodSeconds: 15
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: cke.cybozu.com/master
+                operator: NotIn
+                values: ["true"]
