@@ -356,7 +356,6 @@ type rebootUncordonOp struct {
 
 // RebootUncordonOp returns an Operator to uncordon nodes.
 func RebootUncordonOp(apiserver *cke.Node, nodeNames []string) cke.Operator {
-	fmt.Printf("RebootUncordonOp: nodeNames=%v\n", nodeNames)
 	return &rebootUncordonOp{
 		apiserver: apiserver,
 		nodeNames: nodeNames,
@@ -674,15 +673,10 @@ func drainBackOff(ctx context.Context, inf cke.Infrastructure, entry *cke.Reboot
 // chooseDrainedNodes chooses nodes to be newly drained.
 // For now, this function does not check "drainability".
 func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []*cke.RebootQueueEntry) []*cke.RebootQueueEntry {
-	log.Info("choosing drained nodes", nil)
 	maxConcurrentReboots := cke.DefaultMaxConcurrentReboots
 	if c.Reboot.MaxConcurrentReboots != nil {
 		maxConcurrentReboots = *c.Reboot.MaxConcurrentReboots
 	}
-	log.Info("maxConcurrentReboots is ", map[string]interface{}{
-		"maxConcurrentReboots": maxConcurrentReboots,
-	})
-	fmt.Printf("maxConcurrentReboots=%v\n", maxConcurrentReboots)
 	now := time.Now()
 
 	alreadyDrained := []*cke.RebootQueueEntry{}
@@ -690,39 +684,22 @@ func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []
 	canBeDrained := []*cke.RebootQueueEntry{}
 	var apiServerCanBeDrained *cke.RebootQueueEntry
 	for _, entry := range rqEntries {
-		fmt.Printf("checking node: node=%s, status=%v\n", entry.Node, entry.Status)
 		switch entry.Status {
 		case cke.RebootStatusDraining, cke.RebootStatusRebooting:
-			fmt.Printf("it is already drained\n")
 			alreadyDrained = append(alreadyDrained, entry)
 			if apiServers[entry.Node] {
-				fmt.Printf("also, it is a API Server\n")
 				apiServerAlreadyDrained = true
 			}
 		case cke.RebootStatusQueued:
-			fmt.Printf("it is just queued\n")
-			fmt.Printf("DrainBackOffExpire=%v Now=%v\n", entry.DrainBackOffExpire, now)
 			if entry.DrainBackOffExpire.After(now) {
-				fmt.Printf("it is backoff\n")
 				continue
 			}
-			fmt.Printf("it can be drained\n")
 			canBeDrained = append(canBeDrained, entry)
 			if apiServerCanBeDrained == nil && apiServers[entry.Node] {
 				apiServerCanBeDrained = entry
-				fmt.Printf("also, it is a API Server\n")
 			}
 		}
 	}
-
-	fmt.Printf("checked entry: alreadyDrained=%v, apiServerAlreadyDrained=%v, apiServerCanBeDrained=%v, canBeDrained=%v\n",
-		alreadyDrained, apiServerAlreadyDrained, apiServerCanBeDrained, canBeDrained)
-	log.Info("checked entry", map[string]interface{}{
-		"alreadyDrained":          alreadyDrained,
-		"apiServerAlreadyDrained": apiServerAlreadyDrained,
-		"apiServerCanBeDrained":   apiServerCanBeDrained,
-		"canBeDrained":            canBeDrained,
-	})
 
 	// rules:
 	//   - API Servers are rebooted one by one.

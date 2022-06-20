@@ -1,8 +1,6 @@
 package server
 
 import (
-	"fmt"
-
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/clusterdns"
@@ -645,8 +643,6 @@ func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 
 func rebootOps(c *cke.Cluster, rqEntries []*cke.RebootQueueEntry, newlyDrained []*cke.RebootQueueEntry, drainCompleted []*cke.RebootQueueEntry, drainTimedout []*cke.RebootQueueEntry, rebootDequeued []*cke.RebootQueueEntry, nf *NodeFilter) (ops []cke.Operator) {
 	if len(rqEntries) == 0 {
-		log.Info("rqEntries is empty", nil)
-		fmt.Printf("rqEntries is empty\n")
 		return nil
 	}
 	if len(c.Reboot.RebootCommand) == 0 {
@@ -684,9 +680,7 @@ func rebootUncordonOp(rqEntries []*cke.RebootQueueEntry, nf *NodeFilter) cke.Ope
 	}
 	nodes := make([]string, 0, len(attrNodes))
 	for _, n := range attrNodes {
-		fmt.Printf("node is cordoned: node=%v\n", n.Name)
 		if !rebootProcessing(rqEntries, n.Name) {
-			fmt.Printf("it finished rebooting\n")
 			nodes = append(nodes, n.Name)
 		}
 	}

@@ -313,20 +313,11 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	}
 
 	rqEntries, err := inf.Storage().GetRebootsEntries(ctx)
-	log.Info("GetRebootsEntries:", map[string]interface{}{
-		"rqEntries": rqEntries,
-		"err":       err,
-	})
-	fmt.Printf("GetRebootsEntries rqEntries=%v\n", rqEntries)
 	if err != nil {
 		return err
 	}
 	metrics.UpdateRebootQueueEntries(len(rqEntries))
 	rqEntries = cke.DedupRebootQueueEntries(rqEntries)
-	log.Info("DedupRebootQueueEntries:", map[string]interface{}{
-		"rqEntries": rqEntries,
-	})
-	fmt.Printf("DedupRebootQueueEntries rqEntries=%v\n", rqEntries)
 	itemCounts := cke.CountRebootQueueEntries(rqEntries)
 	metrics.UpdateRebootQueueItems(itemCounts)
 
