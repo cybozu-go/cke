@@ -542,7 +542,6 @@ func testRebootOperations() {
 	})
 
 	It("checks API server reboot behavior", func() {
-		fmt.Printf("this by begins at %s\n", time.Now())
 		// Note: this test is incomplete if rq entries are processed in random order
 		By("Modifying cluster configuration for this test")
 		cluster.Reboot.MaxConcurrentReboots = intPtr(2)
@@ -646,9 +645,7 @@ func testRebootOperations() {
 			}
 
 			time.Sleep(time.Second)
-			fmt.Print(".")
 		}
-		fmt.Printf("end loop %s\n", time.Now())
 
 		By("Restoring cluster configuration partially (to finish this test fast)")
 		// restore reboot_command to reboot worker nodes fast (not necessarily required)
@@ -689,22 +686,10 @@ func testRebootOperations() {
 	})
 }
 
-func initializeControlPlaneFromAfterEach() {
-	fmt.Printf("enter initializeControlPlaneFromAfterEach %s\n", time.Now())
-	initializeControlPlane()
-	fmt.Printf("leave initializeControlPlaneFromAfterEach %s\n", time.Now())
-}
-
-func testOperatorsBeforeEach() {
-	fmt.Printf("enter testOperatorsBeforeEach %s\n", time.Now())
-}
-
 func testOperators(isDegraded bool) {
-	AfterEach(initializeControlPlaneFromAfterEach)
-	BeforeEach(testOperatorsBeforeEach)
+	AfterEach(initializeControlPlane)
 
 	It("run all operators / commanders", func() {
-		fmt.Printf("this It begins at %s\n", time.Now())
 		By("Preparing the cluster")
 		// these operators ran already:
 		// - RiversBootOp
