@@ -8,13 +8,15 @@ An administrator can request CKE to gracefully reboot a set of nodes via `ckecli
 The requests are appended to the reboot queue.
 Each request entry corresponds to a list of nodes.
 
-CKE watches the reboot queue and handles the reboot request one by one.
-CKE first cordons the nodes to mark them as unschedulable.
-Second, CKE checks the existence of Job-managed Pods in the nodes. If there are the Pods on the nodes, CKE gives up on rebooting the nodes.
-Then CKE calls the Kubernetes eviction API to delete the Pods on the target nodes while respecting the PodDisruptionBudget.
-It proceeds without deleting DaemonSet-managed Pods.
-After waiting for the deletion of the Pods, CKE reboots and waits for the nodes by invoking an external command specified in the [cluster configuration](cluster.md#reboot).
-Finally, CKE uncordons the nodes and recovers them, e.g. resumes kubelet.
+CKE watches the reboot queue and handles the reboot requests.
+CKE processes reboot requests in the following manner:
+
+1. cordons the nodes to mark them as unschedulable.
+2. checks the existence of Job-managed Pods on the nodes. If such Pods exist on the nodes, uncordons the node immediately and process it again later.
+3. evicts (and/or deletes) non-DaemonSet-managed pods on the nodes.
+4. reboot the node by running hardware reboot command for the node.
+5. waits for boot by running boot check command for the node.
+6. uncordons the nodes and recovers them.
 
 The behavior of the reboot functionality is configurable through the [cluster configuration](cluster.md#reboot).
 
@@ -24,34 +26,45 @@ Data schema
 
 ### `RebootQueueEntry`
 
-| Name     | Type     | Description                                   |
-| -------- | -------- | --------------------------------------------- |
-| `index`  | string   | Index number of entry, formatted as a string. |
-| `nodes`  | []string | A list of IP addresses of nodes to reboot.    |
-| `status` | string   | One of `queued`, `rebooting`, `cancelled`.    |
-
+| Name                   | Type      | Description                                            |
+| ---------------------- | --------- | ------------------------------------------------------ |
+| `index`                | string    | Index number of entry, formatted as a string.          |
+| `node`                 | string    | An addresses of a node to reboot.                      |
+| `status`               | string    | One of `queued`, `draining`, `rebooting`, `cancelled`. |
+| `last_transition_time` | time.Time | The time last transition of `status`                   |
+| `drain_backoff_count`  | int       | The number of drain backoff                            |
+| `drain_backoff_expire` | time.Time | The time drain backoff expires                         |
 
 Detailed behavior
 -----------------
 
 An administrator issues a reboot request using `ckecli reboot-queue add`.
-The command writes a reboot queue entry and increments `reboots/write-index` atomically.
+The command writes reboot queue entry(s) and increments `reboots/write-index` atomically.
 
 The queue is processed by CKE as follows:
 
 1. If `reboots/disabled` is `true`, it doesn't process the queue.
 2. Check the number of unreachable nodes. If it exceeds `maximum-unreachable-nodes-for-reboot` in the constraints, it doesn't process the queue.
-3. Check the reboot queue to find an entry. If the entry's status is `cancelled`, remove it and check the queue again. If there is no entry, CKE stops the processing.
-4. For the first entry in the reboot queue, do the following steps.
-   1. Update the entry status to `rebooting`.
-   2. Cordon the nodes in the entry.
-   3. Check the existence of Job-managed Pods on the nodes. If even one pod exists, the operation is aborted.
-   4. Call the eviction API for Pods running on the target nodes. DaemonSet-managed Pods are ignored. If pods not in the `protected_namespaces` fail to be evicted, they are deleted instead.
-   5. Wait for the deletion of the Pods.  If this step exceeds a deadline specified in the cluster configuration, the operation is aborted and the queue entry is left as is.
-   6. Reboot the nodes using `.reboot.command` in the cluster configuration. In this step, all the nodes are rebooted simultaneously. If some of the nodes won't get back ready within the deadline specified in the cluster configuration, CKE gives up waiting for them (no error).
-   7. Record the status in the history record. It includes the list of nodes that failed to reboot.
-   8. Remove the entry.
-   9. Uncordon the nodes.
+3. Check the reboot queue to find an entry.
+   - If the number of nodes under processing is less than maximum concurrent reboots, pick several nodes from front of the queue and start draining them.
+     1. Cordon the node.
+     2. If there are Job-managed Pods, backoff the draining. i.e.:
+       - update the entry status back to `queued`.
+       - mark the entry not to be drained again immediately
+     3. evict non-DaemonSet-managed Pods. If the eviction is failed due to PDBs and the namespace of the Pod is not protected by `.reboot.protected_namespaces`, delete the Pods. If the deletion is also failed, backoff the draining.
+   - If draining is timed out, backoff the draining.
+   - If draining is completed, run hardware reboot command specified by `.reboot.reboot_command` for the node and update the entry status to `rebooting`.
+   - remove entries if:
+     - the node is confiemd booted by boot check command specified by `.reboot.boot_check_command` or
+     - the entry status is `cancelled`
+   - If a node is cordoned by reboot operation and its entry status is not `draining` or `rebooting`, uncordon it.
 
+There are several rules for API server nodes.
+
+- API servers are processed one by one.
+  - Multiple API servers are never processed simultaneously.
+- API servers are processed with higher priority.
+  - If API servers and non-API servers are in reboot queue, API servers are processed first.
+- API servers are not processed simultaneously with non-API servers.
 
 [LabelSelector]: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
