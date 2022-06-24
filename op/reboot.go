@@ -195,7 +195,7 @@ func (o *rebootRebootOp) notifyFailedNode(node string) {
 	o.mu.Unlock()
 }
 
-// RebootOp returns an Operator to reboot nodes.
+// RebootRebootOp returns an Operator to reboot nodes.
 func RebootRebootOp(apiserver *cke.Node, entries []*cke.RebootQueueEntry, config *cke.Reboot) cke.InfoOperator {
 	return &rebootRebootOp{
 		entries: entries,
@@ -423,7 +423,7 @@ type rebootDequeueOp struct {
 	entries []*cke.RebootQueueEntry
 }
 
-// RebootDequeueOp returns an Operator to dequeue a reboot entry.
+// RebootDequeueOp returns an Operator to dequeue reboot entries.
 func RebootDequeueOp(entries []*cke.RebootQueueEntry) cke.Operator {
 	return &rebootDequeueOp{
 		entries: entries,
@@ -484,7 +484,7 @@ type rebootRecalcMetricsOp struct {
 	finished bool
 }
 
-// RebootUncordonOp returns an Operator to uncordon nodes.
+// RebootRecalcMetricsOp returns an Operator to racalc metrics.
 func RebootRecalcMetricsOp() cke.Operator {
 	return &rebootRecalcMetricsOp{}
 }
