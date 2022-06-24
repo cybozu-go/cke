@@ -21,7 +21,7 @@ a YAML or JSON object with these fields:
 | --------------------- | -------- | --------- | ---------------------------------------------------------------- |
 | `name`                | true     | string    | The k8s cluster name.                                            |
 | `nodes`               | true     | array     | `Node` list.                                                     |
-| `taint_control_plane` | false    | bool      | If true, taint contorl plane nodes.                              |
+| `taint_control_plane` | false    | bool      | If true, taint control plane nodes.                              |
 | `service_subnet`      | true     | string    | CIDR subnet for k8s `Service`.                                   |
 | `dns_servers`         | false    | array     | List of upstream DNS server IP addresses.                        |
 | `dns_service`         | false    | string    | Upstream DNS service name with namespace as `namespace/service`. |
