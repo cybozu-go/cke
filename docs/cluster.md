@@ -77,7 +77,7 @@ Reboot
 `reboot_command` is the command to reboot a node. The node is passed as a command argument.
 The command should return zero if the reboot is successfully started.
 
-`boot_check_command` is the command to check a node booted. The node and the unix time when the reboot command is run is passed as a command argument.
+`boot_check_command` is the command to check a node booted. The node and the unix time when the reboot command is run are passed as command arguments.
 If the node is successfully booted, this command should output `true` to stdout and the exit status should be zero.
 If the node is not booted yet, this command should output `false` to stdout and the exit status should be zero.
 

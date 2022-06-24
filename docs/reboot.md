@@ -55,7 +55,7 @@ The queue is processed by CKE as follows:
    - If draining is timed out, backoff the draining.
    - If draining is completed, run hardware reboot command specified by `.reboot.reboot_command` for the node and update the entry status to `rebooting`.
    - remove entries if:
-     - the node is confiemd booted by boot check command specified by `.reboot.boot_check_command` or
+     - the node is confirmed booted by boot check command specified by `.reboot.boot_check_command` or
      - the entry status is `cancelled`
    - If a node is cordoned by reboot operation and its entry status is not `draining` or `rebooting`, uncordon it.
 
