@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/cybozu-go/cke"
@@ -47,7 +46,6 @@ func startWatcher(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{}
 			key := string(ev.Kv.Key)
 			switch {
 			case key == cke.KeyCluster || strings.HasPrefix(key, cke.KeyResourcePrefix):
-				fmt.Println("******** detected cluster update in etcd ********")
 				select {
 				case ch <- struct{}{}:
 				default:

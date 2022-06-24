@@ -2,7 +2,6 @@ package sabakan
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/cybozu-go/cke"
@@ -147,6 +146,5 @@ func (ig integrator) run(ctx context.Context, leaderKey string, onlyRegenerate b
 		return nil
 	}
 
-	fmt.Println("******** putting new cluster definition to etcd by sabakan integration ********")
 	return st.PutClusterWithTemplateRevision(ctx, newc, rev, leaderKey)
 }
