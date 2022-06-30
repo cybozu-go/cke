@@ -5,6 +5,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.22.6] - 2022-06-30
+
 ### Changed
 
 - Update Kubernetes to 1.22.11 (#542)
@@ -85,7 +87,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.22.5...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.22.6...HEAD
+[1.22.6]: https://github.com/cybozu-go/cke/compare/v1.22.5...v1.22.6
 [1.22.5]: https://github.com/cybozu-go/cke/compare/v1.22.4...v1.22.5
 [1.22.4]: https://github.com/cybozu-go/cke/compare/v1.22.3...v1.22.4
 [1.22.3]: https://github.com/cybozu-go/cke/compare/v1.22.2...v1.22.3
