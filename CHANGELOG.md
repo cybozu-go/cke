@@ -5,38 +5,42 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Update Kubernetes to 1.22.11 (#542)
+
 ## [1.22.5] - 2022-05-19
 
-#### Added
+### Added
 
 - add unbound_exporter to node-dns Pods (#536)
 
-#### Changed
+### Changed
 
 - use CoreDNS ready plugin (#537)
 
 ## [1.22.4] - 2022-04-25
 
-#### Changed
+### Changed
 
 - Update etcd to 3.5.4 (#534)
 
 ## [1.22.3] - 2022-04-14
 
-#### Changed
+### Changed
 
 - Update etcd to 3.5.3 (#531)
 
 ## [1.22.2] - 2022-04-07
 
-#### Changed
+### Changed
 
 - surge update node-dns (#527)
 - Add `--experimental-initial-corrupt-check` flag for etcd (#529)
 
 ## [1.22.1] - 2022-01-25
 
-#### Fixed
+### Fixed
 
 - add authn/authz kubeconfig options to controller-manager/scheduler (#524)
 
@@ -59,7 +63,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [1.22.0-rc.1] - 2022-01-04
 
-#### Changed
+### Changed
 
 - Update images (#518)
   - Kubernetes 1.22.5
