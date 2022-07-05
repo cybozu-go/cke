@@ -408,7 +408,7 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 				Destination: "/var/lib/kubelet",
 				ReadOnly:    false,
 				Propagation: cke.PropagationRShared,
-				Label:       cke.LabelShared,
+				Label:       "",
 			},
 			// TODO: /var/lib/docker is used by cAdvisor.
 			// cAdvisor will be removed from kubelet. Then remove this bind mount.
