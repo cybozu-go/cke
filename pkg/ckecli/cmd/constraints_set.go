@@ -22,6 +22,7 @@ NAME is one of:
     control-plane-count
     minimum-workers
     maximum-workers
+    maximum-unreachable-nodes-for-reboot
 
 VALUE is an integer.`,
 
@@ -47,6 +48,10 @@ VALUE is an integer.`,
 		case "maximum-workers":
 			cstrSet = func(cstr *cke.Constraints) {
 				cstr.MaximumWorkers = val
+			}
+		case "maximum-unreachable-nodes-for-reboot":
+			cstrSet = func(cstr *cke.Constraints) {
+				cstr.RebootMaximumUnreachable = val
 			}
 		default:
 			return errors.New("no such constraint: " + args[0])
