@@ -84,11 +84,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 10. Reboot nodes if reboot request has been arrived to the reboot queue, and the number of unreachable nodes is less than a threshold.
-	if ops := rebootOps(c, rqEntries, newlyDrained, drainCompleted, drainTimedout, rebootDequeued, nf); len(ops) > 0 {
-		if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, true)) > constraints.RebootMaximumUnreachable {
-			log.Warn("cannot reboot nodes because too many nodes are unreachable", nil)
-			return nil, cke.PhaseRebootNodes
-		}
+	if ops, phaseReboot := rebootOps(c, constraints, rqEntries, newlyDrained, drainCompleted, drainTimedout, rebootDequeued, nf); phaseReboot {
 		if !nf.EtcdIsGood() {
 			log.Warn("cannot reboot nodes because etcd cluster is not responding and in-sync", nil)
 			return nil, cke.PhaseRebootNodes
@@ -641,36 +637,51 @@ func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	return ops
 }
 
-func rebootOps(c *cke.Cluster, rqEntries []*cke.RebootQueueEntry, newlyDrained []*cke.RebootQueueEntry, drainCompleted []*cke.RebootQueueEntry, drainTimedout []*cke.RebootQueueEntry, rebootDequeued []*cke.RebootQueueEntry, nf *NodeFilter) (ops []cke.Operator) {
+func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rqEntries []*cke.RebootQueueEntry, newlyDrained []*cke.RebootQueueEntry, drainCompleted []*cke.RebootQueueEntry, drainTimedout []*cke.RebootQueueEntry, rebootDequeued []*cke.RebootQueueEntry, nf *NodeFilter) (ops []cke.Operator, phaseReboot bool) {
 	if len(rqEntries) == 0 {
-		return nil
+		return nil, false
 	}
 	if len(c.Reboot.RebootCommand) == 0 {
 		log.Warn("reboot command is not specified in the cluster configuration", nil)
-		return nil
+		return nil, false
 	}
 	if len(c.Reboot.BootCheckCommand) == 0 {
 		log.Warn("boot check command is not specified in the cluster configuration", nil)
-		return nil
+		return nil, false
 	}
 
 	if len(newlyDrained) > 0 {
-		ops = append(ops, op.RebootDrainStartOp(nf.HealthyAPIServer(), newlyDrained, &c.Reboot))
+		phaseReboot = true
+		sshCheckNodes := make([]*cke.Node, 0, len(nf.cluster.Nodes))
+		for _, node := range nf.cluster.Nodes {
+			if !rebootProcessing(rqEntries, node.Address) {
+				sshCheckNodes = append(sshCheckNodes, node)
+			}
+		}
+		if len(nf.SSHNotConnectedNodes(sshCheckNodes, true, true)) > constraints.RebootMaximumUnreachable {
+			log.Warn("cannot reboot nodes because too many nodes are unreachable", nil)
+		} else {
+			ops = append(ops, op.RebootDrainStartOp(nf.HealthyAPIServer(), newlyDrained, &c.Reboot))
+		}
 	}
 	if len(drainCompleted) > 0 {
+		phaseReboot = true
 		ops = append(ops, op.RebootRebootOp(nf.HealthyAPIServer(), drainCompleted, &c.Reboot))
 	}
 	if len(drainTimedout) > 0 {
+		phaseReboot = true
 		ops = append(ops, op.RebootDrainTimeoutOp(drainTimedout))
 	}
 	if len(rebootDequeued) > 0 {
+		phaseReboot = true
 		ops = append(ops, op.RebootDequeueOp(rebootDequeued))
 	}
 	if len(ops) > 0 {
+		phaseReboot = true
 		ops = append(ops, op.RebootRecalcMetricsOp())
 	}
 
-	return ops
+	return ops, phaseReboot
 }
 
 func rebootUncordonOp(rqEntries []*cke.RebootQueueEntry, nf *NodeFilter) cke.Operator {

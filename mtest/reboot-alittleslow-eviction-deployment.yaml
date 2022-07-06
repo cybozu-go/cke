@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: reboot-test
+  name: alittleslow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      reboot-app: alittleslow
+  template:
+    metadata:
+      labels:
+        reboot-app: alittleslow
+    spec:
+      containers:
+        - name: ubuntu
+          image: quay.io/cybozu/ubuntu:20.04
+          # Because sleep command ignores SIGTERM,
+          # this Pod will stay Terminating state after deletion
+          # for the time specified by terminationGracePeriodSeconds.
+          command: [ sleep, infinity ]
+      # shorter than eviction_timeout_seconds
+      terminationGracePeriodSeconds: 15

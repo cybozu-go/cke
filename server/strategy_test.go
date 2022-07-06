@@ -563,7 +563,7 @@ func (d testData) withNewlyDrained(entries []*cke.RebootQueueEntry) testData {
 	return d
 }
 
-/*func (d testData) withDrainCompleted(entries []*cke.RebootQueueEntry) testData {
+func (d testData) withDrainCompleted(entries []*cke.RebootQueueEntry) testData {
 	d.DrainCompleted = entries
 	return d
 }
@@ -571,7 +571,7 @@ func (d testData) withNewlyDrained(entries []*cke.RebootQueueEntry) testData {
 func (d testData) withDrainTimedout(entries []*cke.RebootQueueEntry) testData {
 	d.DrainTimedout = entries
 	return d
-}*/
+}
 
 func (d testData) withRebootDequeued(entries []*cke.RebootQueueEntry) testData {
 	d.RebootDequeued = entries
@@ -2123,8 +2123,14 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
-			Name: "SkipRebootTooManyUnreachableNodes",
+			Name: "SkipStartDrainTooManyUnreachableNodes",
 			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(2).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[4],
+					Status: cke.RebootStatusQueued,
+				},
+			}).withNewlyDrained([]*cke.RebootQueueEntry{
 				{
 					Index:  1,
 					Node:   nodeNames[4],
@@ -2133,6 +2139,69 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps:        nil,
 			ExpectedTargetNums: nil,
+		},
+		{
+			Name: "DontSkipStartRebootDrainedTooManyUnreachableNodes",
+			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(2).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[4],
+					Status: cke.RebootStatusDraining,
+				},
+			}).withDrainCompleted([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[4],
+					Status: cke.RebootStatusDraining,
+				},
+			}),
+			ExpectedOps: []string{"reboot-reboot", "reboot-recalc-metrics"},
+			ExpectedTargetNums: map[string]int{
+				"reboot-reboot":         1,
+				"reboot-recalc-metrics": 0,
+			},
+		},
+		{
+			Name: "DontSkipDrainBackoffTooManyUnreachableNodes",
+			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(2).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[4],
+					Status: cke.RebootStatusDraining,
+				},
+			}).withDrainTimedout([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[4],
+					Status: cke.RebootStatusDraining,
+				},
+			}),
+			ExpectedOps: []string{"reboot-drain-timeout", "reboot-recalc-metrics"},
+			ExpectedTargetNums: map[string]int{
+				"reboot-drain-timeout":  1,
+				"reboot-recalc-metrics": 0,
+			},
+		},
+		{
+			Name: "DontSkipRebootDequeueoffTooManyUnreachableNodes",
+			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(2).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[4],
+					Status: cke.RebootStatusRebooting,
+				},
+			}).withRebootDequeued([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[4],
+					Status: cke.RebootStatusRebooting,
+				},
+			}),
+			ExpectedOps: []string{"reboot-dequeue", "reboot-recalc-metrics"},
+			ExpectedTargetNums: map[string]int{
+				"reboot-dequeue":        1,
+				"reboot-recalc-metrics": 0,
+			},
 		},
 		{
 			Name: "SkipRebootEtcdOutOfSync",

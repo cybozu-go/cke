@@ -684,6 +684,110 @@ func testRebootOperations() {
 		// wait for the previous reconciliation to be done
 		time.Sleep(time.Second * 3)
 	})
+
+	It("checks relationship with unreachable nodes", func() {
+		// this test stops node4
+
+		By("Shutting down a worker node")
+		execSafeAt(node4, "sudo", "poweroff")
+		time.Sleep(time.Second * 30)
+
+		By("Setting constraints to deny starting process")
+		ckecliSafe("constraints", "set", "maximum-unreachable-nodes-for-reboot", "0")
+
+		By("Deploying a little slow eviction pod")
+		_, stderr, err := kubectlWithInput(rebootALittleSlowEvictionDeploymentYAML, "apply", "-f", "-")
+		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+		Eventually(func() error {
+			out, _, err := kubectl("get", "-n=reboot-test", "deployments/alittleslow", "-o=json")
+			if err != nil {
+				return err
+			}
+
+			var deploy appsv1.Deployment
+			err = json.Unmarshal(out, &deploy)
+			if err != nil {
+				return err
+			}
+			if deploy.Status.ReadyReplicas != 1 {
+				return fmt.Errorf("deployment is not ready")
+			}
+			return nil
+		}).Should(Succeed())
+
+		out, _, err := kubectl("get", "-n=reboot-test", "pod", "-l=reboot-app=alittleslow", "-o=json")
+		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+		var deploymentPods corev1.PodList
+		err = json.Unmarshal(out, &deploymentPods)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(deploymentPods.Items).Should(HaveLen(1))
+
+		By("Starting to reboot the node running the pod")
+		nodeName := deploymentPods.Items[0].Spec.NodeName
+		_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
+		Expect(err).ShouldNot(HaveOccurred())
+		currentWriteIndex += 1
+
+		By("Checking the reboot entry does not become `draining` status")
+		Consistently(func() error {
+			re, err := getRebootEntries()
+			if err != nil {
+				return err
+			}
+			if len(re) != 1 {
+				return fmt.Errorf("reboot queue should contain exactly 1 entry")
+			}
+			if re[0].Status != cke.RebootStatusQueued {
+				return fmt.Errorf("reboot entry should have queued status")
+			}
+			return nil
+		}, time.Second*30).Should(Succeed())
+
+		By("Setting constraints to allow starting process")
+		ckecliSafe("constraints", "set", "maximum-unreachable-nodes-for-reboot", "1")
+
+		By("Checking the reboot entry becomes `draining` status")
+		Eventually(func() error {
+			re, err := getRebootEntries()
+			if err != nil {
+				return err
+			}
+			if len(re) != 1 {
+				return fmt.Errorf("reboot queue should contain exactly 1 entry")
+			}
+			if re[0].Status != cke.RebootStatusDraining {
+				return fmt.Errorf("reboot entry should have draining status")
+			}
+			return nil
+		}).Should(Succeed())
+
+		By("Setting constraints to deny starting process again")
+		ckecliSafe("constraints", "set", "maximum-unreachable-nodes-for-reboot", "0")
+
+		By("Waiting for reboot completion")
+		waitRebootCompletion(cluster)
+
+		By("Cleaning up the deployment")
+		_, stderr, err = kubectlWithInput(rebootALittleSlowEvictionDeploymentYAML, "delete", "-f", "-")
+		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+		Eventually(func() error {
+			out, _, err := kubectl("get", "-n=reboot-test", "pod", "-l=reboot-app=worker", "-o=json")
+			if err != nil {
+				return err
+			}
+			var deploymentPods corev1.PodList
+			err = json.Unmarshal(out, &deploymentPods)
+			if err != nil {
+				return err
+			}
+			if len(deploymentPods.Items) != 0 {
+				return fmt.Errorf("Pod does not terminate")
+			}
+			return nil
+		}).Should(Succeed())
+	})
 }
 
 func testOperators(isDegraded bool) {
