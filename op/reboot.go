@@ -620,7 +620,7 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 			})
 		case apierrors.IsNotFound(err):
 			// already evicted or deleted.
-		case err != nil && !protected[pod.Namespace]:
+		case !protected[pod.Namespace]:
 			log.Warn("failed to evict non-protected pod", map[string]interface{}{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
@@ -634,7 +634,7 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
 			})
-		case err != nil:
+		default:
 			return fmt.Errorf("failed to evict pod %s/%s: %w", pod.Namespace, pod.Name, err)
 		}
 		return nil
