@@ -20,7 +20,7 @@ CKE processes API servers as:
 
 CKE does not handle them. There is no status indicates those failures -- it is not worth adding. Reboot queue entries are leaved `rebooting` state.
 
-If many nodes encounter reboot command failure or timeout, overall reboot operation will slow down and stuck eventually. Administrators should detect them by checking metrics.
+If many nodes encounter reboot command failure or timeout, overall reboot operation will slow down and get stuck eventually. Administrators should detect them by checking metrics.
 
 ## Considered but not adopted
 

@@ -133,7 +133,7 @@ func testRebootOperations() {
 		waitRebootCompletion(cluster)
 		nodesShouldBeSchedulable(node1, node2, node4)
 
-		By("Reboot operation will stuck if node does not boot up")
+		By("Reboot operation will get stuck if node does not boot up")
 		originalBootCheckCommand := cluster.Reboot.BootCheckCommand
 		cluster.Reboot.BootCheckCommand = []string{"bash", "-c", "echo 'false'"}
 		_, err = ckecliClusterSet(cluster)
@@ -505,7 +505,7 @@ func testRebootOperations() {
 		Expect(err).ShouldNot(HaveOccurred())
 		currentWriteIndex += 3
 
-		By("Waiting for reboot completion of the nodes whose reboot do not stuck")
+		By("Waiting for reboot completion of the nodes whose reboot is not stuck")
 		limit := time.Now().Add(time.Second * time.Duration(30))
 		for {
 			time.Sleep(time.Second)

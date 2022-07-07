@@ -880,5 +880,5 @@ func TestCluster(t *testing.T) {
 	t.Run("Validate", testClusterValidate)
 	t.Run("ValidateNode", testClusterValidateNode)
 	t.Run("Nodename", testNodename)
-	t.Run("ValudateReboot", testClusterValidateReboot)
+	t.Run("ValidateReboot", testClusterValidateReboot)
 }
