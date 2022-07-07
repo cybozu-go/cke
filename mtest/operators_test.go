@@ -644,7 +644,27 @@ func testRebootOperations() {
 
 		By("Shutting down a worker node")
 		execSafeAt(node4, "sudo", "poweroff")
-		time.Sleep(time.Second * 30)
+		Eventually(func() error {
+			stdout, stderr, err := kubectl("get", "nodes/"+node4, "-o", "json")
+			if err != nil {
+				return fmt.Errorf("stdout:%s, stderr:%s", stdout, stderr)
+			}
+			var node corev1.Node
+			err = json.Unmarshal(stdout, &node)
+			if err != nil {
+				return err
+			}
+			for _, cond := range node.Status.Conditions {
+				if cond.Type == "Ready" {
+					if cond.Status == "True" {
+						return fmt.Errorf("node is still Ready")
+					} else {
+						return nil
+					}
+				}
+			}
+			return fmt.Errorf("node ready status is unknown")
+		}).Should(Succeed())
 
 		By("Setting constraints to deny starting process")
 		ckecliSafe("constraints", "set", "maximum-unreachable-nodes-for-reboot", "0")
