@@ -649,7 +649,7 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 
 // checkPodDeletion checks whether the evicted or deleted Pods are eventually deleted.
 // If those pods still exist, this function returns an error.
-func checkPodDeletion(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool) error {
+func checkPodDeletion(ctx context.Context, cs *kubernetes.Clientset, node string) error {
 	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
 		return fmt.Errorf("pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
 	}, func(pod *corev1.Pod) error {
@@ -740,11 +740,6 @@ func CheckDrainCompletion(ctx context.Context, inf cke.Infrastructure, apiserver
 		return nil, nil, err
 	}
 
-	protected, err := listProtectedNamespaces(ctx, cs, c.Reboot.ProtectedNamespaces)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	t := time.Now().Add(time.Duration(-evictionTimeoutSeconds) * time.Second)
 
 	for _, entry := range rqEntries {
@@ -755,7 +750,7 @@ func CheckDrainCompletion(ctx context.Context, inf cke.Infrastructure, apiserver
 			continue
 		}
 
-		err = checkPodDeletion(ctx, cs, entry.Node, protected)
+		err = checkPodDeletion(ctx, cs, entry.Node)
 		if err == nil {
 			completed = append(completed, entry)
 		} else if entry.LastTransitionTime.Before(t) {
