@@ -59,11 +59,11 @@ func rebootShouldNotProceed() {
 		if err != nil {
 			return err
 		}
-		if num != 0 {
-			return fmt.Errorf("reboot entry is remaining")
+		if num == 0 {
+			return fmt.Errorf("reboot entry is empty")
 		}
 		return nil
-	}, time.Second*60).Should(HaveOccurred())
+	}, time.Second*60).Should(Succeed())
 }
 
 func nodesShouldBeSchedulable(nodes ...string) {
