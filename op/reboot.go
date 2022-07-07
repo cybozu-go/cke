@@ -376,7 +376,7 @@ func (o *rebootUncordonOp) NextCommand() cke.Commander {
 	}
 
 	o.finished = true
-	return uncordonCommand{
+	return rebootUncordonCommand{
 		apiserver: o.apiserver,
 		nodeNames: o.nodeNames,
 	}
@@ -386,12 +386,12 @@ func (o *rebootUncordonOp) Targets() []string {
 	return o.nodeNames
 }
 
-type uncordonCommand struct {
+type rebootUncordonCommand struct {
 	apiserver *cke.Node
 	nodeNames []string
 }
 
-func (c uncordonCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+func (c rebootUncordonCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	cs, err := inf.K8sClient(ctx, c.apiserver)
 	if err != nil {
 		return err
@@ -412,9 +412,9 @@ func (c uncordonCommand) Run(ctx context.Context, inf cke.Infrastructure, _ stri
 	return nil
 }
 
-func (c uncordonCommand) Command() cke.Command {
+func (c rebootUncordonCommand) Command() cke.Command {
 	return cke.Command{
-		Name:   "uncordonCommand",
+		Name:   "rebootUncordonCommand",
 		Target: strings.Join(c.nodeNames, ","),
 	}
 }
