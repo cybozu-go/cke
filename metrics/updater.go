@@ -44,7 +44,7 @@ func UpdateRebootQueueEntries(numEntries int) {
 	rebootQueueEntries.Set(float64(numEntries))
 }
 
-// UpdateRebootQueueEntries updates "reboot_queue_entries".
+// UpdateRebootQueueItems updates "reboot_queue_items".
 func UpdateRebootQueueItems(counts map[string]int) {
 	for status, count := range counts {
 		rebootQueueItems.With(map[string]string{
