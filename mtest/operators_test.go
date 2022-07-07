@@ -151,8 +151,6 @@ func testRebootOperations() {
 
 		By("ckecli reboot-queue disable disables reboot queue processing")
 		ckecliSafe("reboot-queue", "disable")
-		// wait for the previous reconciliation to be done
-		time.Sleep(time.Second * 3)
 		rebootQueueAdd([]string{node1})
 		rebootShouldNotProceed()
 
