@@ -110,6 +110,12 @@ func testRebootOperations() {
 	}
 
 	currentWriteIndex := 0
+	rebootQueueAdd := func(nodes []string) {
+		targets := strings.Join(nodes, "\n")
+		_, _, err := ckecliWithInput([]byte(targets), "reboot-queue", "add", "-")
+		ExpectWithOffset(1, err).ShouldNot(HaveOccurred())
+		currentWriteIndex += len(nodes)
+	}
 
 	It("increases worker node", func() {
 		cluster.Nodes = append(cluster.Nodes, &cke.Node{
@@ -122,29 +128,20 @@ func testRebootOperations() {
 
 	It("checks basic reboot behavior", func() {
 		By("Rebooting nodes")
-		rebootTargets := node1
-		_, _, err := ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 1
-		rebootTargets = node2 + "\n" + node4
-		_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 2
+		rebootQueueAdd([]string{node1})
+		rebootQueueAdd([]string{node2, node4})
 		waitRebootCompletion(cluster)
 		nodesShouldBeSchedulable(node1, node2, node4)
 
 		By("Reboot operation will get stuck if node does not boot up")
 		originalBootCheckCommand := cluster.Reboot.BootCheckCommand
 		cluster.Reboot.BootCheckCommand = []string{"bash", "-c", "echo 'false'"}
-		_, err = ckecliClusterSet(cluster)
+		_, err := ckecliClusterSet(cluster)
 		Expect(err).ShouldNot(HaveOccurred())
 		// wait for the previous reconciliation to be done
 		time.Sleep(time.Second * 3)
 
-		rebootTargets = node1
-		_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 1
+		rebootQueueAdd([]string{node1})
 		rebootShouldNotProceed()
 
 		cluster.Reboot.BootCheckCommand = originalBootCheckCommand
@@ -156,9 +153,7 @@ func testRebootOperations() {
 		ckecliSafe("reboot-queue", "disable")
 		// wait for the previous reconciliation to be done
 		time.Sleep(time.Second * 3)
-		_, _, err = ckecliWithInput([]byte(node1), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 1
+		rebootQueueAdd([]string{node1})
 		rebootShouldNotProceed()
 
 		By("ckecli reboot-queue enable enables reboot queue processing")
@@ -168,9 +163,7 @@ func testRebootOperations() {
 
 		By("ckecli reboot-queue cancel cancels the specified reboot queue entry")
 		ckecliSafe("reboot-queue", "disable")
-		_, _, err = ckecliWithInput([]byte(node1), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 1
+		rebootQueueAdd([]string{node1})
 		ckecliSafe("reboot-queue", "cancel", fmt.Sprintf("%d", currentWriteIndex-1))
 		entries, err := getRebootEntries()
 		Expect(err).ShouldNot(HaveOccurred())
@@ -182,12 +175,8 @@ func testRebootOperations() {
 
 		By("ckecli reboot-queue cancel-all cancels all the reboot queue entries")
 		ckecliSafe("reboot-queue", "disable")
-		_, _, err = ckecliWithInput([]byte(node1), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 1
-		_, _, err = ckecliWithInput([]byte(node2), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 1
+		rebootQueueAdd([]string{node1})
+		rebootQueueAdd([]string{node2})
 		ckecliSafe("reboot-queue", "cancel-all")
 		entries, err = getRebootEntries()
 		Expect(err).ShouldNot(HaveOccurred())
@@ -234,9 +223,7 @@ func testRebootOperations() {
 
 		By("Reboot operation will protect all pods if protected_namespaces is nil")
 		nodeName := deploymentPods.Items[0].Spec.NodeName
-		_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 1
+		rebootQueueAdd([]string{nodeName})
 		rebootShouldNotProceed()
 
 		env := well.NewEnvironment(context.Background())
@@ -261,9 +248,7 @@ func testRebootOperations() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		nodeName = deploymentPods.Items[1].Spec.NodeName
-		_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 1
+		rebootQueueAdd([]string{nodeName})
 		rebootShouldNotProceed()
 
 		env = well.NewEnvironment(context.Background())
@@ -288,9 +273,7 @@ func testRebootOperations() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		nodeName = deploymentPods.Items[2].Spec.NodeName
-		_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 1
+		rebootQueueAdd([]string{nodeName})
 		waitRebootCompletion(cluster)
 		nodesShouldBeSchedulable(nodeName)
 
@@ -327,8 +310,7 @@ func testRebootOperations() {
 			return nil
 		}).Should(Succeed())
 
-		_, _, err = ckecliWithInput([]byte(runningJobPod.Spec.NodeName), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
+		rebootQueueAdd([]string{runningJobPod.Spec.NodeName})
 		rebootShouldNotProceed()
 
 		env = well.NewEnvironment(context.Background())
@@ -374,8 +356,7 @@ func testRebootOperations() {
 			return nil
 		}).Should(Succeed())
 
-		_, _, err = ckecliWithInput([]byte(completedJobPod.Spec.NodeName), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
+		rebootQueueAdd([]string{completedJobPod.Spec.NodeName})
 		waitRebootCompletion(cluster)
 		nodesShouldBeSchedulable(completedJobPod.Spec.NodeName)
 
@@ -422,9 +403,7 @@ func testRebootOperations() {
 
 		By("Starting to reboot the node running the pod")
 		nodeName := deploymentPods.Items[0].Spec.NodeName
-		_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 1
+		rebootQueueAdd([]string{nodeName})
 
 		By("Checking the reboot entry becomes `draining` status")
 		Eventually(func() error {
@@ -500,10 +479,7 @@ func testRebootOperations() {
 		time.Sleep(time.Second * 3)
 
 		By("Starting to reboot worker nodes")
-		rebootTargets := strings.Join([]string{node4, node5, node6}, "\n")
-		_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 3
+		rebootQueueAdd([]string{node4, node5, node6})
 
 		By("Waiting for reboot completion of the nodes whose reboot is not stuck")
 		limit := time.Now().Add(time.Second * time.Duration(30))
@@ -604,10 +580,8 @@ func testRebootOperations() {
 
 		By("Starting to reboot nodes")
 		// worker nodes first, then API servers.
-		rebootTargets := strings.Join(workerNodeSlice, "\n") + "\n" + strings.Join(apiServerSlice, "\n")
-		_, _, err = ckecliWithInput([]byte(rebootTargets), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += len(workerNodeSlice) + len(apiServerSlice)
+		rebootQueueAdd(workerNodeSlice)
+		rebootQueueAdd(apiServerSlice)
 
 		// First, API servers are processed one by one even though they are added to reboot queue later.
 		// And then, two worker nodes are processed simultaneously.
@@ -725,9 +699,7 @@ func testRebootOperations() {
 
 		By("Starting to reboot the node running the pod")
 		nodeName := deploymentPods.Items[0].Spec.NodeName
-		_, _, err = ckecliWithInput([]byte(nodeName), "reboot-queue", "add", "-")
-		Expect(err).ShouldNot(HaveOccurred())
-		currentWriteIndex += 1
+		rebootQueueAdd([]string{nodeName})
 
 		By("Checking the reboot entry does not become `draining` status")
 		Consistently(func() error {
