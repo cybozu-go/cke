@@ -1,7 +1,6 @@
 package mtest
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
-	"github.com/cybozu-go/well"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -224,17 +222,13 @@ func testRebootOperations() {
 		rebootQueueAdd([]string{nodeName})
 		rebootShouldNotProceed()
 
-		env := well.NewEnvironment(context.Background())
-		env.Go(func(ctx context.Context) error {
-			for i := 0; i < 5; i++ {
-				// ignore error because the entry may have been deleted
-				ckecli("reboot-queue", "cancel-all")
-				time.Sleep(time.Second)
-			}
-			return nil
-		})
-		env.Stop()
-		env.Wait()
+		// Due to race condition between cke and `ckecli reboot-queue cancel/cancel-all`,
+		// we need do it several times for stable test
+		for i := 0; i < 5; i++ {
+			// ignore error because the entry may have been deleted
+			ckecli("reboot-queue", "cancel-all")
+			time.Sleep(time.Second)
+		}
 		waitRebootCompletion(cluster)
 		nodesShouldBeSchedulable(nodeName)
 
@@ -249,17 +243,11 @@ func testRebootOperations() {
 		rebootQueueAdd([]string{nodeName})
 		rebootShouldNotProceed()
 
-		env = well.NewEnvironment(context.Background())
-		env.Go(func(ctx context.Context) error {
-			for i := 0; i < 5; i++ {
-				// ignore error because the entry may have been deleted
-				ckecli("reboot-queue", "cancel-all")
-				time.Sleep(time.Second)
-			}
-			return nil
-		})
-		env.Stop()
-		env.Wait()
+		for i := 0; i < 5; i++ {
+			// ignore error because the entry may have been deleted
+			ckecli("reboot-queue", "cancel-all")
+			time.Sleep(time.Second)
+		}
 		waitRebootCompletion(cluster)
 		nodesShouldBeSchedulable(nodeName)
 
@@ -311,17 +299,11 @@ func testRebootOperations() {
 		rebootQueueAdd([]string{runningJobPod.Spec.NodeName})
 		rebootShouldNotProceed()
 
-		env = well.NewEnvironment(context.Background())
-		env.Go(func(ctx context.Context) error {
-			for i := 0; i < 5; i++ {
-				// ignore error because the entry may have been deleted
-				ckecli("reboot-queue", "cancel-all")
-				time.Sleep(time.Second)
-			}
-			return nil
-		})
-		env.Stop()
-		env.Wait()
+		for i := 0; i < 5; i++ {
+			// ignore error because the entry may have been deleted
+			ckecli("reboot-queue", "cancel-all")
+			time.Sleep(time.Second)
+		}
 		waitRebootCompletion(cluster)
 		nodesShouldBeSchedulable(nodeName)
 
