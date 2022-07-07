@@ -126,6 +126,10 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 				return err
 			}
 
+			// This "check and cordon" order may overlook Job pods just started.
+			// On the other hand, "cordon and check" may cause excessive cordon.
+			// The overlook is acceptable because it is rare case and detected by the following evictOrDeleteNodePod().
+
 			err = checkJobPodNotExist(ctx, cs, entry.Node)
 			if err != nil {
 				return err
@@ -649,7 +653,7 @@ func checkPodDeletion(ctx context.Context, cs *kubernetes.Clientset, node string
 	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
 		return fmt.Errorf("pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
 	}, func(pod *corev1.Pod) error {
-		// This should not happen.
+		// This should not happen... or rare case?
 		return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
 	})
 }
