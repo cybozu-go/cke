@@ -627,7 +627,7 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 				log.FnError: err,
 			})
 			err := cs.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
-			if err != nil {
+			if err != nil && !apierrors.IsNotFound(err) {
 				return err
 			}
 			log.Warn("deleted non-protected pod", map[string]interface{}{
