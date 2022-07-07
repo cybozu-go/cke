@@ -13,7 +13,7 @@ import (
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -613,7 +613,7 @@ func checkJobPodNotExist(ctx context.Context, cs *kubernetes.Clientset, node str
 // If a running Job Pod exists, this function returns an error.
 func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool) error {
 	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
-		err := cs.CoreV1().Pods(pod.Namespace).Evict(ctx, &policyv1beta1.Eviction{
+		err := cs.CoreV1().Pods(pod.Namespace).EvictV1(ctx, &policyv1.Eviction{
 			ObjectMeta: metav1.ObjectMeta{Name: pod.Name, Namespace: pod.Namespace},
 		})
 		switch {
