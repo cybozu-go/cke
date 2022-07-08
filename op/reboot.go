@@ -729,7 +729,7 @@ func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []
 	}
 }
 
-func CheckDrainCompletion(ctx context.Context, inf cke.Infrastructure, apiserver *cke.Node, c *cke.Cluster, rqEntries []*cke.RebootQueueEntry) (completed []*cke.RebootQueueEntry, timedout []*cke.RebootQueueEntry, err error) {
+func CheckDrainCompletion(ctx context.Context, inf cke.Infrastructure, apiserver *cke.Node, c *cke.Cluster, rqEntries []*cke.RebootQueueEntry) ([]*cke.RebootQueueEntry, []*cke.RebootQueueEntry, error) {
 	evictionTimeoutSeconds := cke.DefaultRebootEvictionTimeoutSeconds
 	if c.Reboot.EvictionTimeoutSeconds != nil {
 		evictionTimeoutSeconds = *c.Reboot.EvictionTimeoutSeconds
@@ -742,6 +742,8 @@ func CheckDrainCompletion(ctx context.Context, inf cke.Infrastructure, apiserver
 
 	t := time.Now().Add(time.Duration(-evictionTimeoutSeconds) * time.Second)
 
+	var completed []*cke.RebootQueueEntry
+	var timedout []*cke.RebootQueueEntry
 	for _, entry := range rqEntries {
 		if !entry.ClusterMember(c) {
 			continue
@@ -750,7 +752,7 @@ func CheckDrainCompletion(ctx context.Context, inf cke.Infrastructure, apiserver
 			continue
 		}
 
-		err = checkPodDeletion(ctx, cs, entry.Node)
+		err := checkPodDeletion(ctx, cs, entry.Node)
 		if err == nil {
 			completed = append(completed, entry)
 		} else if entry.LastTransitionTime.Before(t) {
@@ -758,7 +760,7 @@ func CheckDrainCompletion(ctx context.Context, inf cke.Infrastructure, apiserver
 		}
 	}
 
-	return
+	return completed, timedout, nil
 }
 
 func CheckRebootDequeue(ctx context.Context, c *cke.Cluster, rqEntries []*cke.RebootQueueEntry) []*cke.RebootQueueEntry {
