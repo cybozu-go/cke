@@ -688,6 +688,9 @@ func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []
 	canBeDrained := []*cke.RebootQueueEntry{}
 	var apiServerCanBeDrained *cke.RebootQueueEntry
 	for _, entry := range rqEntries {
+		if !entry.ClusterMember(c) {
+			continue
+		}
 		switch entry.Status {
 		case cke.RebootStatusDraining, cke.RebootStatusRebooting:
 			alreadyDrained = append(alreadyDrained, entry)
