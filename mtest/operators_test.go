@@ -643,7 +643,9 @@ func testRebootOperations() {
 		// this test stops node4
 
 		By("Shutting down a worker node")
-		execSafeAt(node4, "sudo", "poweroff")
+		// poweroff after five seconds using systemd-run
+		// `ssh node4 sudo poweroff` is unstable because it will returns error if shutdown process proceeds before ssh command completes.
+		execSafeAt(node4, "sudo", "systemd-run", "--on-active=5s", "--timer-property=AccuracySec=1s", "poweroff")
 		Eventually(func() error {
 			stdout, stderr, err := kubectl("get", "nodes/"+node4, "-o", "json")
 			if err != nil {
