@@ -342,7 +342,13 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	drainCompleted, drainTimedout, _ := op.CheckDrainCompletion(ctx, inf, nf.HealthyAPIServer(), cluster, rqEntries)
 	rebootDequeued := op.CheckRebootDequeue(ctx, cluster, rqEntries)
 
-	ops, phase := DecideOps(cluster, status, constraints, rcs, rqEntries, newlyDrained, drainCompleted, drainTimedout, rebootDequeued)
+	ops, phase := DecideOps(cluster, status, constraints, rcs, DecideOpsRebootArgs{
+		RQEntries:      rqEntries,
+		NewlyDrained:   newlyDrained,
+		DrainCompleted: drainCompleted,
+		DrainTimedout:  drainTimedout,
+		RebootDequeued: rebootDequeued,
+	})
 
 	st := &cke.ServerStatus{
 		Phase:     phase,

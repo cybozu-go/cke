@@ -58,15 +58,11 @@ var (
 )
 
 type testData struct {
-	Cluster        *cke.Cluster
-	Status         *cke.ClusterStatus
-	Constraints    *cke.Constraints
-	Resources      []cke.ResourceDefinition
-	RebootEntry    []*cke.RebootQueueEntry
-	NewlyDrained   []*cke.RebootQueueEntry
-	DrainCompleted []*cke.RebootQueueEntry
-	DrainTimedout  []*cke.RebootQueueEntry
-	RebootDequeued []*cke.RebootQueueEntry
+	Cluster     *cke.Cluster
+	Status      *cke.ClusterStatus
+	Constraints *cke.Constraints
+	Resources   []cke.ResourceDefinition
+	RebootArgs  DecideOpsRebootArgs
 }
 
 func (d testData) ControlPlane() (nodes []*cke.Node) {
@@ -554,27 +550,27 @@ func (d testData) withRebootConfig() testData {
 }
 
 func (d testData) withRebootEntries(entries []*cke.RebootQueueEntry) testData {
-	d.RebootEntry = entries
+	d.RebootArgs.RQEntries = entries
 	return d
 }
 
 func (d testData) withNewlyDrained(entries []*cke.RebootQueueEntry) testData {
-	d.NewlyDrained = entries
+	d.RebootArgs.NewlyDrained = entries
 	return d
 }
 
 func (d testData) withDrainCompleted(entries []*cke.RebootQueueEntry) testData {
-	d.DrainCompleted = entries
+	d.RebootArgs.DrainCompleted = entries
 	return d
 }
 
 func (d testData) withDrainTimedout(entries []*cke.RebootQueueEntry) testData {
-	d.DrainTimedout = entries
+	d.RebootArgs.DrainTimedout = entries
 	return d
 }
 
 func (d testData) withRebootDequeued(entries []*cke.RebootQueueEntry) testData {
-	d.RebootDequeued = entries
+	d.RebootArgs.RebootDequeued = entries
 	return d
 }
 
@@ -2248,7 +2244,7 @@ func TestDecideOps(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, c.Input.RebootEntry, c.Input.NewlyDrained, c.Input.DrainCompleted, c.Input.DrainTimedout, c.Input.RebootDequeued)
+			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, c.Input.RebootArgs)
 			if len(ops) == 0 && len(c.ExpectedOps) == 0 {
 				return
 			}

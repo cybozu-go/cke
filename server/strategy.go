@@ -14,9 +14,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type DecideOpsRebootArgs struct {
+	RQEntries      []*cke.RebootQueueEntry
+	NewlyDrained   []*cke.RebootQueueEntry
+	DrainCompleted []*cke.RebootQueueEntry
+	DrainTimedout  []*cke.RebootQueueEntry
+	RebootDequeued []*cke.RebootQueueEntry
+}
+
 // DecideOps returns the next operations to do and the operation phase.
 // This returns nil when no operations need to be done.
-func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, rqEntries []*cke.RebootQueueEntry, newlyDrained []*cke.RebootQueueEntry, drainCompleted []*cke.RebootQueueEntry, drainTimedout []*cke.RebootQueueEntry, rebootDequeued []*cke.RebootQueueEntry) ([]cke.Operator, cke.OperationPhase) {
+func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, rebootArgs DecideOpsRebootArgs) ([]cke.Operator, cke.OperationPhase) {
 	nf := NewNodeFilter(c, cs)
 
 	// 0. Execute upgrade operation if necessary
@@ -69,7 +77,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 7. Maintain k8s resources.
-	if ops := k8sMaintOps(c, cs, resources, rqEntries, newlyDrained, nf); len(ops) > 0 {
+	if ops := k8sMaintOps(c, cs, resources, rebootArgs.RQEntries, rebootArgs.NewlyDrained, nf); len(ops) > 0 {
 		return ops, cke.PhaseK8sMaintain
 	}
 
@@ -79,12 +87,12 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 9. Uncordon nodes if nodes are cordoned by CKE.
-	if o := rebootUncordonOp(rqEntries, nf); o != nil {
+	if o := rebootUncordonOp(rebootArgs.RQEntries, nf); o != nil {
 		return []cke.Operator{o}, cke.PhaseUncordonNodes
 	}
 
 	// 10. Reboot nodes if reboot request has been arrived to the reboot queue, and the number of unreachable nodes is less than a threshold.
-	if ops, phaseReboot := rebootOps(c, constraints, rqEntries, newlyDrained, drainCompleted, drainTimedout, rebootDequeued, nf); phaseReboot {
+	if ops, phaseReboot := rebootOps(c, constraints, rebootArgs, nf); phaseReboot {
 		if !nf.EtcdIsGood() {
 			log.Warn("cannot reboot nodes because etcd cluster is not responding and in-sync", nil)
 			return nil, cke.PhaseRebootNodes
@@ -637,8 +645,8 @@ func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	return ops
 }
 
-func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rqEntries []*cke.RebootQueueEntry, newlyDrained []*cke.RebootQueueEntry, drainCompleted []*cke.RebootQueueEntry, drainTimedout []*cke.RebootQueueEntry, rebootDequeued []*cke.RebootQueueEntry, nf *NodeFilter) (ops []cke.Operator, phaseReboot bool) {
-	if len(rqEntries) == 0 {
+func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOpsRebootArgs, nf *NodeFilter) (ops []cke.Operator, phaseReboot bool) {
+	if len(rebootArgs.RQEntries) == 0 {
 		return nil, false
 	}
 	if len(c.Reboot.RebootCommand) == 0 {
@@ -650,31 +658,31 @@ func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rqEntries []*cke.Re
 		return nil, false
 	}
 
-	if len(newlyDrained) > 0 {
+	if len(rebootArgs.NewlyDrained) > 0 {
 		phaseReboot = true
 		sshCheckNodes := make([]*cke.Node, 0, len(nf.cluster.Nodes))
 		for _, node := range nf.cluster.Nodes {
-			if !rebootProcessing(rqEntries, node.Address) {
+			if !rebootProcessing(rebootArgs.RQEntries, node.Address) {
 				sshCheckNodes = append(sshCheckNodes, node)
 			}
 		}
 		if len(nf.SSHNotConnectedNodes(sshCheckNodes, true, true)) > constraints.RebootMaximumUnreachable {
 			log.Warn("cannot reboot nodes because too many nodes are unreachable", nil)
 		} else {
-			ops = append(ops, op.RebootDrainStartOp(nf.HealthyAPIServer(), newlyDrained, &c.Reboot))
+			ops = append(ops, op.RebootDrainStartOp(nf.HealthyAPIServer(), rebootArgs.NewlyDrained, &c.Reboot))
 		}
 	}
-	if len(drainCompleted) > 0 {
+	if len(rebootArgs.DrainCompleted) > 0 {
 		phaseReboot = true
-		ops = append(ops, op.RebootRebootOp(nf.HealthyAPIServer(), drainCompleted, &c.Reboot))
+		ops = append(ops, op.RebootRebootOp(nf.HealthyAPIServer(), rebootArgs.DrainCompleted, &c.Reboot))
 	}
-	if len(drainTimedout) > 0 {
+	if len(rebootArgs.DrainTimedout) > 0 {
 		phaseReboot = true
-		ops = append(ops, op.RebootDrainTimeoutOp(drainTimedout))
+		ops = append(ops, op.RebootDrainTimeoutOp(rebootArgs.DrainTimedout))
 	}
-	if len(rebootDequeued) > 0 {
+	if len(rebootArgs.RebootDequeued) > 0 {
 		phaseReboot = true
-		ops = append(ops, op.RebootDequeueOp(rebootDequeued))
+		ops = append(ops, op.RebootDequeueOp(rebootArgs.RebootDequeued))
 	}
 	if len(ops) > 0 {
 		phaseReboot = true
