@@ -86,8 +86,11 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 			})
 		case apierrors.IsNotFound(err):
 			// already evicted or deleted.
+		case !apierrors.IsTooManyRequests(err):
+			// not a PDB related error
+			return fmt.Errorf("failed to evict pod %s/%s: %w", pod.Namespace, pod.Name, err)
 		case !protected[pod.Namespace]:
-			log.Warn("failed to evict non-protected pod", map[string]interface{}{
+			log.Warn("failed to evict non-protected pod due to PDB", map[string]interface{}{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
 				log.FnError: err,
@@ -101,7 +104,7 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 				"name":      pod.Name,
 			})
 		default:
-			return fmt.Errorf("failed to evict pod %s/%s: %w", pod.Namespace, pod.Name, err)
+			return fmt.Errorf("failed to evict pod %s/%s due to PDB: %w", pod.Namespace, pod.Name, err)
 		}
 		return nil
 	}, func(pod *corev1.Pod) error {
