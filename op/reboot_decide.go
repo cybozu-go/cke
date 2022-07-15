@@ -20,6 +20,7 @@ import (
 // enumeratePods enumerates Pods on a specified node.
 // It calls podHandler for each Pods not owned by Job nor DaemonSet and calls jobPodHandler for each running Pods owned by a Job.
 // If those handlers returns error, this function returns the error immediately.
+// Note: This function does not distinguish API errors and state evaluation returned from subfunction.
 func enumeratePods(ctx context.Context, cs *kubernetes.Clientset, node string,
 	podHandler func(pod *corev1.Pod) error, jobPodHandler func(pod *corev1.Pod) error) error {
 
