@@ -45,11 +45,7 @@ func (entry *RebootQueueEntry) ClusterMember(c *Cluster) bool {
 }
 
 func DedupRebootQueueEntries(entries []*RebootQueueEntry) []*RebootQueueEntry {
-	if entries == nil {
-		return nil
-	}
-
-	ret := []*RebootQueueEntry{}
+	var ret []*RebootQueueEntry
 	nodes := map[string]bool{}
 	for _, entry := range entries {
 		if !nodes[entry.Node] {
