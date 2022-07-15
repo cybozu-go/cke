@@ -317,9 +317,9 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return err
 	}
 	metrics.UpdateRebootQueueEntries(len(rqEntries))
-	rqEntries = cke.DedupRebootQueueEntries(rqEntries)
 	itemCounts := cke.CountRebootQueueEntries(rqEntries)
 	metrics.UpdateRebootQueueItems(itemCounts)
+	rqEntries = cke.DedupRebootQueueEntries(rqEntries)
 
 	if len(rqEntries) > 0 {
 		disabled, err := inf.Storage().IsRebootQueueDisabled(ctx)

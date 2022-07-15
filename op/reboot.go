@@ -515,7 +515,6 @@ func (c rebootRecalcMetricsCommand) Run(ctx context.Context, inf cke.Infrastruct
 		return err
 	}
 	metrics.UpdateRebootQueueEntries(len(rqEntries))
-	rqEntries = cke.DedupRebootQueueEntries(rqEntries)
 	itemCounts := cke.CountRebootQueueEntries(rqEntries)
 	metrics.UpdateRebootQueueItems(itemCounts)
 
