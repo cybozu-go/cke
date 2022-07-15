@@ -591,6 +591,33 @@ func testRebootOperations() {
 			Expect(apiServerProcessed <= 1).Should(BeTrue(), "multiple API servers are processed simultaneously")
 			Expect(apiServerProcessed > 0 && workerNodeProcessed > 0).Should(BeFalse(), "API server should be processed exclusively")
 			Expect(apiServerRemain > 0 && workerNodeProcessed > 0).Should(BeFalse(), "API servers should be processed with higher priority")
+
+			// Both default/kubernetes and kube-system/cke-etcd Endpoints should have no less than two endpoints during API server reboots.
+			// (Check for EndpointsSlices is omitted since their members are same as Endpoints)
+			epNames := []struct {
+				name      string
+				namespace string
+			}{
+				{
+					name:      "kubernetes",
+					namespace: metav1.NamespaceDefault,
+				},
+				{
+					name:      op.EtcdEndpointsName,
+					namespace: metav1.NamespaceSystem,
+				},
+			}
+			for _, epName := range epNames {
+				out, _, err := kubectl("get", "endpoints", "-n", epName.namespace, epName.name, "-o=json")
+				Expect(err).ShouldNot(HaveOccurred())
+
+				var ep corev1.Endpoints
+				err = json.Unmarshal(out, &ep)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(ep.Subsets).Should(HaveLen(1))
+				Expect(len(ep.Subsets[0].Addresses)).Should(BeNumerically(">=", 2))
+			}
+
 			if workerNodeProcessed == 2 {
 				break
 			}

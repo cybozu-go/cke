@@ -229,13 +229,13 @@ OUTER_MASTER:
 			switch entry.Status {
 			case cke.RebootStatusDraining, cke.RebootStatusRebooting:
 				masterNotReadyAddresses = append(masterNotReadyAddresses, n.Address)
-				break OUTER_MASTER
+				continue OUTER_MASTER
 			}
 		}
 		for _, entry := range newlyDrained {
 			if entry.Node == n.Address {
 				masterNotReadyAddresses = append(masterNotReadyAddresses, n.Address)
-				break OUTER_MASTER
+				continue OUTER_MASTER
 			}
 		}
 		masterReadyAddresses = append(masterReadyAddresses, n.Address)
@@ -273,13 +273,13 @@ OUTER_ETCD:
 			switch entry.Status {
 			case cke.RebootStatusDraining, cke.RebootStatusRebooting:
 				etcdNotReadyAddresses = append(etcdNotReadyAddresses, n.Address)
-				break OUTER_ETCD
+				continue OUTER_ETCD
 			}
 		}
 		for _, entry := range newlyDrained {
 			if entry.Node == n.Address {
 				etcdNotReadyAddresses = append(etcdNotReadyAddresses, n.Address)
-				break OUTER_ETCD
+				continue OUTER_ETCD
 			}
 		}
 		etcdReadyAddresses = append(etcdReadyAddresses, n.Address)
