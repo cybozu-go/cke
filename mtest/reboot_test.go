@@ -557,8 +557,10 @@ func testRebootOperations() {
 
 		By("Starting to reboot nodes")
 		// worker nodes first, then API servers.
+		ckecliSafe("reboot-queue", "disable")
 		rebootQueueAdd(workerNodeSlice)
 		rebootQueueAdd(apiServerSlice)
+		ckecliSafe("reboot-queue", "enable")
 
 		// First, API servers are processed one by one even though they are added to reboot queue later.
 		// And then, two worker nodes are processed simultaneously.
