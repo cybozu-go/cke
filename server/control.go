@@ -333,10 +333,8 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 
 	nf := NewNodeFilter(cluster, status)
 	apiServers := map[string]bool{}
-	for _, node := range cluster.Nodes {
-		if nf.nodeStatus(node).APIServer.Running {
-			apiServers[node.Address] = true
-		}
+	for _, node := range nf.ControlPlane() {
+		apiServers[node.Address] = true
 	}
 	newlyDrained := op.ChooseDrainedNodes(cluster, apiServers, rqEntries)
 	drainCompleted, drainTimedout, _ := op.CheckDrainCompletion(ctx, inf, nf.HealthyAPIServer(), cluster, rqEntries)
