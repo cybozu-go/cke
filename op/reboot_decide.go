@@ -133,27 +133,31 @@ func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []
 	}
 	now := time.Now()
 
-	alreadyDrained := []*cke.RebootQueueEntry{}
-	apiServerAlreadyDrained := false
-	canBeDrained := []*cke.RebootQueueEntry{}
-	var apiServerCanBeDrained *cke.RebootQueueEntry
+	apiServerInProgress := false
+	var apiServerDrainable *cke.RebootQueueEntry
+	workerInProgress := []*cke.RebootQueueEntry{}
+	workerDrainable := []*cke.RebootQueueEntry{}
 	for _, entry := range rqEntries {
 		if !entry.ClusterMember(c) {
 			continue
 		}
 		switch entry.Status {
 		case cke.RebootStatusDraining, cke.RebootStatusRebooting:
-			alreadyDrained = append(alreadyDrained, entry)
 			if apiServers[entry.Node] {
-				apiServerAlreadyDrained = true
+				apiServerInProgress = true
+			} else {
+				workerInProgress = append(workerInProgress, entry)
 			}
 		case cke.RebootStatusQueued:
 			if entry.DrainBackOffExpire.After(now) {
 				continue
 			}
-			canBeDrained = append(canBeDrained, entry)
-			if apiServerCanBeDrained == nil && apiServers[entry.Node] {
-				apiServerCanBeDrained = entry
+			if apiServers[entry.Node] {
+				if apiServerDrainable == nil {
+					apiServerDrainable = entry
+				}
+			} else {
+				workerDrainable = append(workerDrainable, entry)
 			}
 		}
 	}
@@ -161,24 +165,24 @@ func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []
 	// rules:
 	//   - API Servers are rebooted one by one.
 	//       - It is VERY important.
-	//   - API Servers are rebooted with higher priority than worker nodes.
+	//   - API Servers are rebooted with lower priority than worker nodes.
 	//   - API Servers are not rebooted simultaneously with worker nodes.
-	if apiServerCanBeDrained != nil {
-		if len(alreadyDrained) == 0 {
-			return []*cke.RebootQueueEntry{apiServerCanBeDrained}
+	if apiServerInProgress {
+		return nil
+	}
+	if len(workerInProgress) == 0 && len(workerDrainable) == 0 {
+		if apiServerDrainable != nil {
+			return []*cke.RebootQueueEntry{apiServerDrainable}
 		} else {
 			return nil
 		}
 	}
-	if apiServerAlreadyDrained {
+	if len(workerInProgress) >= maxConcurrentReboots {
 		return nil
-	}
-	if len(alreadyDrained) >= maxConcurrentReboots {
-		return nil
-	} else if len(alreadyDrained)+len(canBeDrained) <= maxConcurrentReboots {
-		return canBeDrained
+	} else if len(workerInProgress)+len(workerDrainable) <= maxConcurrentReboots {
+		return workerDrainable
 	} else {
-		return canBeDrained[:maxConcurrentReboots-len(alreadyDrained)]
+		return workerDrainable[:maxConcurrentReboots-len(workerInProgress)]
 	}
 }
 

@@ -534,65 +534,66 @@ func testRebootOperations() {
 			}
 		}
 
-		By("Deploying pods on worker nodes")
-		_, stderr, err = kubectlWithInput(rebootWorkerNodeDeploymentYAML, "apply", "-f", "-")
-		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
-
-		Eventually(func() error {
-			out, _, err := kubectl("get", "-n=reboot-test", "deployments/worker", "-o=json")
-			if err != nil {
-				return err
-			}
-
-			var deploy appsv1.Deployment
-			err = json.Unmarshal(out, &deploy)
-			if err != nil {
-				return err
-			}
-			if deploy.Status.ReadyReplicas != 10 {
-				return fmt.Errorf("deployment is not ready")
-			}
-			return nil
-		}).Should(Succeed())
-
 		By("Starting to reboot nodes")
-		// worker nodes first, then API servers.
+		// API servers first, then worker nodes.
 		ckecliSafe("reboot-queue", "disable")
-		rebootQueueAdd(workerNodeSlice)
 		rebootQueueAdd(apiServerSlice)
+		rebootQueueAdd(workerNodeSlice)
 		ckecliSafe("reboot-queue", "enable")
 
-		// First, API servers are processed one by one even though they are added to reboot queue later.
-		// And then, two worker nodes are processed simultaneously.
+		// First, worker nodes are processed even though they are added to reboot queue later.
+		// And then, API servers are processed one by one.
 
-		By("Waiting for reboot completion of API servers")
-		// enough longer than apiServerRebootSeconds * 3
-		limit := time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*3+60))
-		for {
-			t := time.Now()
-			Expect(t.After(limit)).ShouldNot(BeTrue(), "reboot queue processing timed out")
-
+		classifyEntries := func() (int, int, int) {
 			re, err := getRebootEntries()
 			Expect(err).ShouldNot(HaveOccurred())
-			apiServerProcessed := 0
 			apiServerRemain := 0
-			workerNodeProcessed := 0
+			workerNodeRemain := 0
+			apiServerInProgress := 0
 			for _, entry := range re {
 				if apiServerSet[entry.Node] {
 					apiServerRemain++
+				} else {
+					workerNodeRemain++
 				}
 				switch entry.Status {
 				case cke.RebootStatusDraining, cke.RebootStatusRebooting:
 					if apiServerSet[entry.Node] {
-						apiServerProcessed++
-					} else {
-						workerNodeProcessed++
+						apiServerInProgress++
 					}
 				}
 			}
-			Expect(apiServerProcessed <= 1).Should(BeTrue(), "multiple API servers are processed simultaneously")
-			Expect(apiServerProcessed > 0 && workerNodeProcessed > 0).Should(BeFalse(), "API server should be processed exclusively")
-			Expect(apiServerRemain > 0 && workerNodeProcessed > 0).Should(BeFalse(), "API servers should be processed with higher priority")
+			return apiServerRemain, workerNodeRemain, apiServerInProgress
+		}
+
+		By("Waiting for reboot completion of worker nodes")
+		// enough longer than apiServerRebootSeconds * roundup(number of worker nodes / MaxConcurrentReboots)
+		limit := time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*2+40))
+		for {
+			t := time.Now()
+			Expect(t.After(limit)).ShouldNot(BeTrue(), "reboot queue processing timed out")
+
+			_, workerNodeRemain, apiServerInProgress := classifyEntries()
+
+			Expect(apiServerInProgress > 0 && workerNodeRemain > 0).Should(BeFalse(), "API servers should be processed with lower priority")
+
+			if workerNodeRemain == 0 {
+				break
+			}
+
+			time.Sleep(time.Second)
+		}
+
+		By("Waiting for reboot completion of API servers")
+		// enough longer than apiServerRebootSeconds * 3
+		limit = time.Now().Add(time.Second * time.Duration(apiServerRebootSeconds*3+60))
+		for {
+			t := time.Now()
+			Expect(t.After(limit)).ShouldNot(BeTrue(), "reboot queue processing timed out")
+
+			apiServerRemain, _, apiServerInProgress := classifyEntries()
+
+			Expect(apiServerInProgress).Should(BeNumerically("<=", 1), "API servers should be processed one by one")
 
 			// Both default/kubernetes and kube-system/cke-etcd Endpoints should have no less than two endpoints during API server reboots.
 			// (Check for EndpointsSlices is omitted since their members are same as Endpoints)
@@ -620,43 +621,17 @@ func testRebootOperations() {
 				Expect(len(ep.Subsets[0].Addresses)).Should(BeNumerically(">=", 2))
 			}
 
-			if workerNodeProcessed == 2 {
+			if apiServerRemain == 0 {
 				break
 			}
 
 			time.Sleep(time.Second)
 		}
 
-		By("Restoring cluster configuration partially (to finish this test fast)")
-		// restore reboot_command to reboot worker nodes fast (not necessarily required)
-		cluster.Reboot.RebootCommand = originalRebootCommand
-		_, err = ckecliClusterSet(cluster)
-		Expect(err).ShouldNot(HaveOccurred())
-
-		By("Waiting for reboot completion")
-		waitRebootCompletion(cluster)
-
-		By("Cleaning up the deployment")
-		_, stderr, err = kubectlWithInput(rebootWorkerNodeDeploymentYAML, "delete", "-f", "-")
-		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
-
-		Eventually(func() error {
-			out, _, err := kubectl("get", "-n=reboot-test", "pod", "-l=reboot-app=worker", "-o=json")
-			if err != nil {
-				return err
-			}
-			var deploymentPods corev1.PodList
-			err = json.Unmarshal(out, &deploymentPods)
-			if err != nil {
-				return err
-			}
-			if len(deploymentPods.Items) != 0 {
-				return fmt.Errorf("Pod does not terminate")
-			}
-			return nil
-		}).Should(Succeed())
+		// reboot is completed
 
 		By("Restoring cluster configuration")
+		cluster.Reboot.RebootCommand = originalRebootCommand
 		cluster.Reboot.MaxConcurrentReboots = nil
 		cluster.Reboot.ProtectedNamespaces = nil
 		_, err = ckecliClusterSet(cluster)

@@ -11,9 +11,9 @@ CKE processes API servers as:
 
 - API servers are rebooted one by one.
   - In order to minimize API server degrade.
-- API Servers are rebooted with higher priority than worker nodes.
-  - No explicit reason.
-- API Servers are not rebooted simultaneously with worker nodes.
+- API servers are rebooted with lower priority than worker nodes.
+  - When an API server is rebooted, the API server is "migrated" to another node. If API servers are rebooted first, migrated API servers will be rebooted one by one and nodes will never be rebooted in parallel.
+- API servers are not rebooted simultaneously with worker nodes.
   - It might be better not to reboot worker nodes during API server degrade.
 
 ### Reboot command failure and timeout

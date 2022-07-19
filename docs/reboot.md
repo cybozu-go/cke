@@ -62,8 +62,8 @@ There are several rules for API server nodes.
 
 - API servers are processed one by one.
   - Multiple API servers are never processed simultaneously.
-- API servers are processed with higher priority.
-  - If API servers and non-API servers are in reboot queue, API servers are processed first.
+- API servers are processed with lower priority.
+  - If API servers and non-API servers are in reboot queue, non-API servers are processed first.
 - API servers are not processed simultaneously with non-API servers.
 
 [LabelSelector]: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
