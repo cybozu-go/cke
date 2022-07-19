@@ -64,7 +64,7 @@ metadata:
   namespace: kube-system
   annotations:
     cke.cybozu.com/image: "{{ .coredns }}"
-    cke.cybozu.com/revision: "2"
+    cke.cybozu.com/revision: "3"
 spec:
   replicas: 2
   strategy:
@@ -149,6 +149,13 @@ spec:
             items:
             - key: Corefile
               path: Corefile
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                cke.cybozu.com/appname: cluster-dns
+            topologyKey: "kubernetes.io/hostname"
 ---
 
 kind: Service
