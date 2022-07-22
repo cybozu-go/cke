@@ -65,21 +65,21 @@ Taint
 Reboot
 ------
 
-| Name                       | Required | Type                             | Description                                                            |
-| -------------------------- | -------- | -------------------------------- | ---------------------------------------------------------------------- |
-| `command`                  | true     | array                            | A command to reboot and wait for a node to get back.  List of strings. |
-| `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default is nil.               |
-| `command_timeout_seconds`  | false    | *int                             | Deadline for rebooting. Zero means infinity. Default is nil.           |
-| `protected_namespaces`     | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                                |
+| Name                       | Required | Type                             | Description                                                             |
+| -------------------------- | -------- | -------------------------------- | ----------------------------------------------------------------------- |
+| `reboot_command`           | true     | array                            | A command to reboot.  List of strings.                                  |
+| `boot_check_command`       | true     | array                            | A command to check nodes booted.  List of strings.                      |
+| `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default: 600 (10 minutes).     |
+| `command_timeout_seconds`  | false    | *int                             | Deadline for rebooting. Zero means infinity. Default: wait indefinitely |
+| `max_concurrent_reboots`   | false    | *int                             | Maximum number of nodes to be rebooted concurrently. Default: 1         |
+| `protected_namespaces`     | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                                 |
 
-`command` is the command (1) to reboot the node and (2) to wait for the boot-up of the node.
-CKE sends a [Node data object](cluster.md#node) serialized into JSON to its standard input.
-The command should return zero if reboot has completed.
-If reboot failed or timeout exceeded, the command should return non-zero.
+`reboot_command` is the command to reboot a node. The node is passed as a command argument.
+The command should return zero if the reboot is successfully started.
 
-If `eviction_timeout_seconds` is nil, 10 minutes is used as the default.
-
-If `command_timeout_seconds` is nil or zero, no deadline is set.
+`boot_check_command` is the command to check a node booted. The node and the unix time when the reboot command is run are passed as command arguments.
+If the node is successfully booted, this command should output `true` to stdout and the exit status should be zero.
+If the node is not booted yet, this command should output `false` to stdout and the exit status should be zero.
 
 CKE tries to delete Pods in the `protected_namespaces` gracefully with the Kubernetes eviction API.
 If any of the Pods cannot be deleted, it aborts the operation.

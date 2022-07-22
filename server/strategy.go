@@ -14,9 +14,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type DecideOpsRebootArgs struct {
+	RQEntries      []*cke.RebootQueueEntry
+	NewlyDrained   []*cke.RebootQueueEntry
+	DrainCompleted []*cke.RebootQueueEntry
+	DrainTimedout  []*cke.RebootQueueEntry
+	RebootDequeued []*cke.RebootQueueEntry
+}
+
 // DecideOps returns the next operations to do and the operation phase.
 // This returns nil when no operations need to be done.
-func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, reboot *cke.RebootQueueEntry) ([]cke.Operator, cke.OperationPhase) {
+func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, rebootArgs DecideOpsRebootArgs) ([]cke.Operator, cke.OperationPhase) {
 	nf := NewNodeFilter(c, cs)
 
 	// 0. Execute upgrade operation if necessary
@@ -69,7 +77,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 7. Maintain k8s resources.
-	if ops := k8sMaintOps(c, cs, resources, reboot, nf); len(ops) > 0 {
+	if ops := k8sMaintOps(c, cs, resources, rebootArgs.RQEntries, rebootArgs.NewlyDrained, nf); len(ops) > 0 {
 		return ops, cke.PhaseK8sMaintain
 	}
 
@@ -79,16 +87,12 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 9. Uncordon nodes if nodes are cordoned by CKE.
-	if o := rebootUncordonOp(nf); o != nil {
+	if o := rebootUncordonOp(rebootArgs.RQEntries, nf); o != nil {
 		return []cke.Operator{o}, cke.PhaseUncordonNodes
 	}
 
 	// 10. Reboot nodes if reboot request has been arrived to the reboot queue, and the number of unreachable nodes is less than a threshold.
-	if ops := rebootOps(c, reboot, nf); len(ops) > 0 {
-		if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, true)) > constraints.RebootMaximumUnreachable {
-			log.Warn("cannot reboot nodes because too many nodes are unreachable", nil)
-			return nil, cke.PhaseRebootNodes
-		}
+	if ops, phaseReboot := rebootOps(c, constraints, rebootArgs, nf); phaseReboot {
 		if !nf.EtcdIsGood() {
 			log.Warn("cannot reboot nodes because etcd cluster is not responding and in-sync", nil)
 			return nil, cke.PhaseRebootNodes
@@ -201,7 +205,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	return nil
 }
 
-func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition, reboot *cke.RebootQueueEntry, nf *NodeFilter) (ops []cke.Operator) {
+func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition, rqEntries []*cke.RebootQueueEntry, newlyDrained []*cke.RebootQueueEntry, nf *NodeFilter) (ops []cke.Operator) {
 	ks := cs.Kubernetes
 	apiServer := nf.HealthyAPIServer()
 
@@ -218,12 +222,20 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 	var masterReadyAddresses, masterNotReadyAddresses []string
 OUTER_MASTER:
 	for _, n := range nf.HealthyAPIServerNodes() {
-		if reboot != nil && reboot.Status != cke.RebootStatusCancelled {
-			for _, r := range reboot.Nodes {
-				if n.Address == r {
-					masterNotReadyAddresses = append(masterNotReadyAddresses, n.Address)
-					continue OUTER_MASTER
-				}
+		for _, entry := range rqEntries {
+			if entry.Node != n.Address {
+				continue
+			}
+			switch entry.Status {
+			case cke.RebootStatusDraining, cke.RebootStatusRebooting:
+				masterNotReadyAddresses = append(masterNotReadyAddresses, n.Address)
+				continue OUTER_MASTER
+			}
+		}
+		for _, entry := range newlyDrained {
+			if entry.Node == n.Address {
+				masterNotReadyAddresses = append(masterNotReadyAddresses, n.Address)
+				continue OUTER_MASTER
 			}
 		}
 		masterReadyAddresses = append(masterReadyAddresses, n.Address)
@@ -254,12 +266,20 @@ OUTER_MASTER:
 	var etcdReadyAddresses, etcdNotReadyAddresses []string
 OUTER_ETCD:
 	for _, n := range nf.ControlPlane() {
-		if reboot != nil && reboot.Status != cke.RebootStatusCancelled {
-			for _, r := range reboot.Nodes {
-				if n.Address == r {
-					etcdNotReadyAddresses = append(etcdNotReadyAddresses, n.Address)
-					continue OUTER_ETCD
-				}
+		for _, entry := range rqEntries {
+			if entry.Node != n.Address {
+				continue
+			}
+			switch entry.Status {
+			case cke.RebootStatusDraining, cke.RebootStatusRebooting:
+				etcdNotReadyAddresses = append(etcdNotReadyAddresses, n.Address)
+				continue OUTER_ETCD
+			}
+		}
+		for _, entry := range newlyDrained {
+			if entry.Node == n.Address {
+				etcdNotReadyAddresses = append(etcdNotReadyAddresses, n.Address)
+				continue OUTER_ETCD
 			}
 		}
 		etcdReadyAddresses = append(etcdReadyAddresses, n.Address)
@@ -625,48 +645,78 @@ func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	return ops
 }
 
-func rebootOps(c *cke.Cluster, entry *cke.RebootQueueEntry, nf *NodeFilter) []cke.Operator {
-	if entry == nil {
-		return nil
+func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOpsRebootArgs, nf *NodeFilter) (ops []cke.Operator, phaseReboot bool) {
+	if len(rebootArgs.RQEntries) == 0 {
+		return nil, false
 	}
-	if entry.Status == cke.RebootStatusCancelled {
-		return []cke.Operator{op.RebootDequeueOp(entry.Index)}
-	}
-	if len(c.Reboot.Command) == 0 {
+	if len(c.Reboot.RebootCommand) == 0 {
 		log.Warn("reboot command is not specified in the cluster configuration", nil)
-		return nil
+		return nil, false
+	}
+	if len(c.Reboot.BootCheckCommand) == 0 {
+		log.Warn("boot check command is not specified in the cluster configuration", nil)
+		return nil, false
 	}
 
-	var nodes []*cke.Node
-OUTER:
-	for _, rebootNode := range entry.Nodes {
-		for _, clusterNode := range c.Nodes {
-			if rebootNode == clusterNode.Address {
-				nodes = append(nodes, clusterNode)
-				continue OUTER
+	if len(rebootArgs.NewlyDrained) > 0 {
+		phaseReboot = true
+		sshCheckNodes := make([]*cke.Node, 0, len(nf.cluster.Nodes))
+		for _, node := range nf.cluster.Nodes {
+			if !rebootProcessing(rebootArgs.RQEntries, node.Address) {
+				sshCheckNodes = append(sshCheckNodes, node)
 			}
 		}
-		log.Warn("skipped rebooting a node because it is not found in the cluster", map[string]interface{}{
-			"node": rebootNode,
-		})
-	}
-	if len(nodes) > 0 {
-		return []cke.Operator{
-			op.RebootOp(nf.HealthyAPIServer(), nodes, entry.Index, &c.Reboot),
-			op.RebootDequeueOp(entry.Index),
+		if len(nf.SSHNotConnectedNodes(sshCheckNodes, true, true)) > constraints.RebootMaximumUnreachable {
+			log.Warn("cannot reboot nodes because too many nodes are unreachable", nil)
+		} else {
+			ops = append(ops, op.RebootDrainStartOp(nf.HealthyAPIServer(), rebootArgs.NewlyDrained, &c.Reboot))
 		}
 	}
-	return []cke.Operator{op.RebootDequeueOp(entry.Index)}
+	if len(rebootArgs.DrainCompleted) > 0 {
+		phaseReboot = true
+		ops = append(ops, op.RebootRebootOp(nf.HealthyAPIServer(), rebootArgs.DrainCompleted, &c.Reboot))
+	}
+	if len(rebootArgs.DrainTimedout) > 0 {
+		phaseReboot = true
+		ops = append(ops, op.RebootDrainTimeoutOp(rebootArgs.DrainTimedout))
+	}
+	if len(rebootArgs.RebootDequeued) > 0 {
+		phaseReboot = true
+		ops = append(ops, op.RebootDequeueOp(rebootArgs.RebootDequeued))
+	}
+	if len(ops) > 0 {
+		phaseReboot = true
+		ops = append(ops, op.RebootRecalcMetricsOp())
+	}
+
+	return ops, phaseReboot
 }
 
-func rebootUncordonOp(nf *NodeFilter) cke.Operator {
+func rebootUncordonOp(rqEntries []*cke.RebootQueueEntry, nf *NodeFilter) cke.Operator {
 	attrNodes := nf.CordonedNodes()
 	if len(attrNodes) == 0 {
 		return nil
 	}
-	nodes := make([]string, len(attrNodes))
-	for i, n := range attrNodes {
-		nodes[i] = n.Name
+	nodes := make([]string, 0, len(attrNodes))
+	for _, n := range attrNodes {
+		if !rebootProcessing(rqEntries, n.Name) {
+			nodes = append(nodes, n.Name)
+		}
+	}
+	if len(nodes) == 0 {
+		return nil
 	}
 	return op.RebootUncordonOp(nf.HealthyAPIServer(), nodes)
+}
+
+func rebootProcessing(rqEntries []*cke.RebootQueueEntry, node string) bool {
+	for _, entry := range rqEntries {
+		switch entry.Status {
+		case cke.RebootStatusDraining, cke.RebootStatusRebooting:
+			if node == entry.Node {
+				return true
+			}
+		}
+	}
+	return false
 }

@@ -14,5 +14,11 @@ var rebootJobCompletedYAML []byte
 //go:embed reboot-job-running.yaml
 var rebootJobRunningYAML []byte
 
+//go:embed reboot-slow-eviction-deployment.yaml
+var rebootSlowEvictionDeploymentYAML []byte
+
+//go:embed reboot-alittleslow-eviction-deployment.yaml
+var rebootALittleSlowEvictionDeploymentYAML []byte
+
 //go:embed webhook-resources.yaml
 var webhookYAML []byte

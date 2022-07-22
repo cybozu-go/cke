@@ -270,11 +270,16 @@ func (p KubeletParams) MergeConfig(base *kubeletv1beta1.KubeletConfiguration) (*
 
 // Reboot is a set of configurations for reboot.
 type Reboot struct {
-	Command                []string              `json:"command"`
+	RebootCommand          []string              `json:"reboot_command"`
+	BootCheckCommand       []string              `json:"boot_check_command"`
+	MaxConcurrentReboots   *int                  `json:"max_concurrent_reboots,omitempty"`
 	EvictionTimeoutSeconds *int                  `json:"eviction_timeout_seconds,omitempty"`
 	CommandTimeoutSeconds  *int                  `json:"command_timeout_seconds,omitempty"`
 	ProtectedNamespaces    *metav1.LabelSelector `json:"protected_namespaces,omitempty"`
 }
+
+const DefaultRebootEvictionTimeoutSeconds = 600
+const DefaultMaxConcurrentReboots = 1
 
 // Options is a set of optional parameters for k8s components.
 type Options struct {
@@ -463,6 +468,9 @@ func validateReboot(reboot Reboot) error {
 	}
 	if reboot.CommandTimeoutSeconds != nil && *reboot.CommandTimeoutSeconds < 0 {
 		return errors.New("command_timeout_seconds must not be negative")
+	}
+	if reboot.MaxConcurrentReboots != nil && *reboot.MaxConcurrentReboots <= 0 {
+		return errors.New("max_concurrent_reboots must be positive")
 	}
 	// nil is safe for LabelSelectorAsSelector
 	_, err := metav1.LabelSelectorAsSelector(reboot.ProtectedNamespaces)
