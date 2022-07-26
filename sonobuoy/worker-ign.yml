@@ -24,6 +24,12 @@ storage:
           iptables -w -A INPUT -p tcp -j ACCEPT
           iptables -w -A INPUT -p udp -j ACCEPT
       mode: 0755
+    - path: "/etc/resolv.conf"
+      filesystem: root
+      contents:
+        inline: |
+          nameserver 8.8.8.8
+      mode: 0644
 systemd:
   units:
   - name: systemd-resolved.service
