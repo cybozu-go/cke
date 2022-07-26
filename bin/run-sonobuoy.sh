@@ -31,12 +31,14 @@ rm -f gcp_rsa gcp_rsa.pub
 ssh-keygen -t rsa -f gcp_rsa -C cybozu -N ''
 sed -e "s#PUBLIC_KEY#$(cat gcp_rsa.pub)#g" ./worker.ign > /tmp/worker.ign
 
+#FLATCAR_IMAGE_SPEC='--image-project kinvolk-public --image-family flatcar-stable'
+#FLATCAR_IMAGE_SPEC='--image flatcar-stable-v3227-2-0'
+FLATCAR_IMAGE_SPEC='--image flatcar-stable-v3139-2-3'
 for i in $(seq 3); do
   $GCLOUD compute instances create ${INSTANCE_NAME}-${i} \
     --zone ${ZONE} \
     --machine-type ${MACHINE_TYPE_WORKER} \
-    --image-project kinvolk-public \
-    --image-family flatcar-stable \
+    ${FLATCAR_IMAGE_SPEC} \
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
     --metadata-from-file user-data=/tmp/worker.ign \
