@@ -43,3 +43,5 @@ systemd:
 
         [Install]
         WantedBy=multi-user.target
+  - name: locksmithd.service
+    mask: true
