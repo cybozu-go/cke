@@ -24,6 +24,14 @@ storage:
           iptables -w -A INPUT -p tcp -j ACCEPT
           iptables -w -A INPUT -p udp -j ACCEPT
       mode: 0755
+    - path: "/opt/bin/replace-resolv-conf"
+      # For some reason, if we let ignition replace resolv.conf directly, it results empty file.
+      filesystem: root
+      contents:
+        inline: |
+          #!/bin/sh
+          echo nameserver 8.8.8.8 > /etc/resolv.conf
+      mode: 0755
 systemd:
   units:
   - name: systemd-resolved.service
@@ -39,6 +47,23 @@ systemd:
         [Service]
         Type=oneshot
         ExecStart=/opt/bin/setup-iptables-rules
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=multi-user.target
+  - name: locksmithd.service
+    mask: true
+  - name: replace-resolv-conf.service
+    enabled: true
+    contents: |
+      [Unit]
+        Description=Replace resolv.conf
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/bin/replace-resolv-conf
         RemainAfterExit=yes
 
         [Install]
