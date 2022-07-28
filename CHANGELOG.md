@@ -5,7 +5,15 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.22.9] - 2022-07-27
+
+### Fixed
+
+- sonobuoy test: follow flatcar 3227.2.0 (#551)
+
 ## [1.22.8] - 2022-07-22
+
+*This version was not actually released.*
 
 **This version has a breaking change around reboot feature.** If you update from 1.22.7 or before,
 - reboot configuration SHOULD be updated.
@@ -104,7 +112,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.22.8...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.22.9...HEAD
+[1.22.9]: https://github.com/cybozu-go/cke/compare/v1.22.8...v1.22.9
 [1.22.8]: https://github.com/cybozu-go/cke/compare/v1.22.7...v1.22.8
 [1.22.7]: https://github.com/cybozu-go/cke/compare/v1.22.6...v1.22.7
 [1.22.6]: https://github.com/cybozu-go/cke/compare/v1.22.5...v1.22.6
