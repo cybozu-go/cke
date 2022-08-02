@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
@@ -34,7 +33,7 @@ func TestGenerateSchedulerConfiguration(t *testing.T) {
 	expected.PodMaxBackoffSeconds = pointer.Int64(100)
 
 	conf := GenerateSchedulerConfiguration(input)
-	if !reflect.DeepEqual(conf, expected) {
+	if !cmp.Equal(conf, expected) {
 		t.Errorf("GenerateSchedulerConfiguration() generated unexpected result:\n%s", cmp.Diff(conf, expected))
 	}
 }

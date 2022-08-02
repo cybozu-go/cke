@@ -1,8 +1,9 @@
 package cke
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestDedupRebootQueueEntries(t *testing.T) {
@@ -40,7 +41,7 @@ func TestCountRebootQueueEntries(t *testing.T) {
 	}
 	actual := CountRebootQueueEntries(input)
 
-	if !reflect.DeepEqual(actual, expected) {
+	if !cmp.Equal(actual, expected) {
 		t.Errorf("expected: %v, actual: %v", expected, actual)
 	}
 }
