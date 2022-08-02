@@ -45,7 +45,7 @@ options:
       apiVersion: kubescheduler.config.k8s.io/v1beta3
       kind: KubeSchedulerConfiguration
       parallelism: 999
-      PodMaxBackoffSeconds: 100
+      podMaxBackoffSeconds: 100
       leaderElection:
         leaderElect: true
       clientConnection:
