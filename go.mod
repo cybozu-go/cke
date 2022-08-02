@@ -2,6 +2,9 @@ module github.com/cybozu-go/cke
 
 go 1.17
 
+// ref: https://github.com/kubernetes/client-go/issues/1084
+replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20220310132336-3f90b8c54bbb
+
 require (
 	github.com/99designs/gqlgen v0.17.13
 	github.com/containernetworking/cni v1.1.1
@@ -56,7 +59,6 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.0.1 // indirect
-	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
