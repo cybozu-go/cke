@@ -22,7 +22,7 @@ NODE5 = 10.0.0.105
 NODE6 = 10.0.0.106
 RUNTIME_ENDPOINT = unix:///var/run/k8s-containerd.sock
 PLACEMAT = /usr/bin/placemat2
-GINKGO = $(GOPATH)/bin/ginkgo --failFast -v
+GINKGO = $(GOPATH)/bin/ginkgo --fail-fast -v
 CURL = curl -fsL
 PLACEMAT_DATADIR = /var/scratch/placemat
 CT = /usr/local/bin/ct
@@ -310,7 +310,7 @@ clean:
 	rm -rf $(OUTPUT)
 
 setup:
-	go install github.com/onsi/ginkgo/ginkgo github.com/etcd-io/gofail
+	go install github.com/onsi/ginkgo/v2/ginkgo github.com/etcd-io/gofail
 	$(SUDO) apt-get update
 	$(SUDO) apt-get -y install --no-install-recommends $(PACKAGES)
 
