@@ -9,8 +9,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
-	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
+	schedulerv1beta3 "k8s.io/kube-scheduler/config/v1beta3"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 )
 
@@ -122,24 +123,23 @@ rules:
 	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
 	}
-	kubeSchedulerHealthz := "0.0.0.0"
-	kubeSchedulerConfig, err := c.Options.Scheduler.MergeConfig(&schedulerv1beta1.KubeSchedulerConfiguration{
-		HealthzBindAddress: &kubeSchedulerHealthz,
+	kubeSchedulerConfig, err := c.Options.Scheduler.MergeConfig(&schedulerv1beta3.KubeSchedulerConfiguration{
+		Parallelism: pointer.Int32(999),
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if kubeSchedulerConfig.Parallelism == nil {
+		t.Fatal(`kubeSchedulerConfig.Parallelism == nil`)
+	}
+	if *kubeSchedulerConfig.Parallelism != 999 {
+		t.Fatal(`*kubeSchedulerConfig.Parallelism != 999`)
 	}
 	if kubeSchedulerConfig.PodMaxBackoffSeconds == nil {
 		t.Fatal(`kubeSchedulerConfig.PodMaxBackoffSeconds == nil`)
 	}
 	if *kubeSchedulerConfig.PodMaxBackoffSeconds != 100 {
 		t.Error(`*kubeSchedulerConfig.PodMaxBackoffSeconds != 100`)
-	}
-	if kubeSchedulerConfig.HealthzBindAddress == nil {
-		t.Fatal(`kubeSchedulerConfig.HealthzBindAddress == nil`)
-	}
-	if *kubeSchedulerConfig.HealthzBindAddress != "0.0.0.0" {
-		t.Error(`*kubeSchedulerConfig.HealthzBindAddress != "0.0.0.0"`)
 	}
 	if len(kubeSchedulerConfig.Profiles) != 1 {
 		t.Error(`kubeSchedulerConfig.Profiles != 1"`)

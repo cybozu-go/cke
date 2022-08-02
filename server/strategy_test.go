@@ -19,8 +19,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
-	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
+	schedulerv1beta3 "k8s.io/kube-scheduler/config/v1beta3"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -117,8 +118,8 @@ func newData() testData {
 		DNSServers:    testDefaultDNSServers,
 	}
 	schedulerConfig := &unstructured.Unstructured{}
-	schedulerConfig.SetGroupVersionKind(schedulerv1beta1.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
-	schedulerConfig.Object["healthzBindAddress"] = "0.0.0.0"
+	schedulerConfig.SetGroupVersionKind(schedulerv1beta3.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
+	schedulerConfig.Object["parallelism"] = 999
 	cluster.Options.Scheduler = cke.SchedulerParams{
 		Config: schedulerConfig,
 	}
@@ -277,12 +278,11 @@ func (d testData) withScheduler() testData {
 		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.SchedulerParams()
 
-		address := "0.0.0.0"
 		leaderElect := true
-		st.Config = &schedulerv1beta1.KubeSchedulerConfiguration{}
+		st.Config = &schedulerv1beta3.KubeSchedulerConfiguration{}
+		st.Config.Parallelism = pointer.Int32(999)
 		st.Config.ClientConnection.Kubeconfig = op.SchedulerKubeConfigPath
 		st.Config.LeaderElection.LeaderElect = &leaderElect
-		st.Config.HealthzBindAddress = &address
 	}
 	return d
 }
@@ -871,8 +871,8 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartScheduler4",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Config.HealthzBindAddress = nil
-				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Config.HealthzBindAddress = nil
+				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Config.Parallelism = nil
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Config.Parallelism = nil
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{
 				"kube-scheduler-restart",
