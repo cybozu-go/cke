@@ -74,7 +74,7 @@ func GenerateSchedulerConfiguration(params cke.SchedulerParams) *schedulerv1beta
 
 	// forced values
 	c.ClientConnection.Kubeconfig = op.SchedulerKubeConfigPath
-	c.LeaderElection.LeaderElect = pointer.BoolPtr(true)
+	c.LeaderElection.LeaderElect = pointer.Bool(true)
 
 	return c
 }
@@ -158,7 +158,7 @@ func GenerateKubeletConfiguration(params cke.KubeletParams, nodeAddress string, 
 	c.TLSPrivateKeyFile = tlsKeyPath
 	c.Authentication = kubeletv1beta1.KubeletAuthentication{
 		X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: caPath},
-		Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: pointer.BoolPtr(true)},
+		Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: pointer.Bool(true)},
 	}
 	c.Authorization = kubeletv1beta1.KubeletAuthorization{Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook}
 	c.ClusterDNS = []string{nodeAddress}

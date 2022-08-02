@@ -784,10 +784,6 @@ func testNodename(t *testing.T) {
 
 }
 
-func intPtr(v int) *int {
-	return &v
-}
-
 func testClusterValidateReboot(t *testing.T) {
 	t.Parallel()
 
@@ -804,63 +800,63 @@ func testClusterValidateReboot(t *testing.T) {
 		{
 			name: "zero eviction_timeout_seconds",
 			reboot: Reboot{
-				EvictionTimeoutSeconds: intPtr(0),
+				EvictionTimeoutSeconds: pointer.Int(0),
 			},
 			wantErr: true,
 		},
 		{
 			name: "positive eviction_timeout_seconds",
 			reboot: Reboot{
-				EvictionTimeoutSeconds: intPtr(1),
+				EvictionTimeoutSeconds: pointer.Int(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative eviction_timeout_seconds",
 			reboot: Reboot{
-				EvictionTimeoutSeconds: intPtr(-1),
+				EvictionTimeoutSeconds: pointer.Int(-1),
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero command_timeout_seconds",
 			reboot: Reboot{
-				CommandTimeoutSeconds: intPtr(0),
+				CommandTimeoutSeconds: pointer.Int(0),
 			},
 			wantErr: false,
 		},
 		{
 			name: "positive command_timeout_seconds",
 			reboot: Reboot{
-				CommandTimeoutSeconds: intPtr(1),
+				CommandTimeoutSeconds: pointer.Int(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative command_timeout_seconds",
 			reboot: Reboot{
-				CommandTimeoutSeconds: intPtr(-1),
+				CommandTimeoutSeconds: pointer.Int(-1),
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero max_concurrent_reboots",
 			reboot: Reboot{
-				MaxConcurrentReboots: intPtr(0),
+				MaxConcurrentReboots: pointer.Int(0),
 			},
 			wantErr: true,
 		},
 		{
 			name: "positive max_concurrent_reboots",
 			reboot: Reboot{
-				MaxConcurrentReboots: intPtr(1),
+				MaxConcurrentReboots: pointer.Int(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative max_concurrent_reboots",
 			reboot: Reboot{
-				MaxConcurrentReboots: intPtr(-1),
+				MaxConcurrentReboots: pointer.Int(-1),
 			},
 			wantErr: true,
 		},
