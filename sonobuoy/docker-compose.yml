@@ -35,7 +35,7 @@ services:
     command: /opt/setup/setup.sh
   vault:
     container_name: vault
-    image: quay.io/cybozu/vault:1.8
+    image: quay.io/cybozu/vault:1.11
     networks:
       app_net:
         ipv4_address: 172.30.0.13
@@ -56,7 +56,7 @@ services:
       - /entrypoint.sh
   etcd:
     container_name: etcd
-    image: quay.io/cybozu/etcd:3.4
+    image: quay.io/cybozu/etcd:3.5
     networks:
       app_net:
         ipv4_address: 172.30.0.14
