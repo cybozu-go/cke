@@ -436,11 +436,11 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 			log.Warn("kubelet's container runtime cannot be changed", nil)
 		case cke.KubernetesImage.Name() != st.Image:
 			fallthrough
-		case !equality.Semantic.DeepEqual(currentConfig, runningConfig):
-			fallthrough
-		case !kubeletEqualParams(st.BuiltInParams, currentBuiltIn):
+		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
 		case !currentExtra.Equal(st.ExtraParams):
+			fallthrough
+		case !equality.Semantic.DeepEqual(currentConfig, runningConfig):
 			log.Debug("kubelet outdated", map[string]interface{}{
 				"node":                 n.Nodename(),
 				"st_builtin_args":      st.BuiltInParams.ExtraArguments,
@@ -513,20 +513,6 @@ func kubeletRuntimeChanged(running, current cke.ServiceParams) bool {
 		}
 	}
 	return runningRuntimeEndpoint != currentRuntimeEndpoint
-}
-
-func kubeletEqualParams(running, current cke.ServiceParams) bool {
-	// NOTE ignore parameter "--register-with-taints".
-	// This option is used only when kubelet registers the node first time.
-	var rarg []string
-	for _, s := range running.ExtraArguments {
-		if !strings.HasPrefix(s, "--register-with-taints") {
-			rarg = append(rarg, s)
-		}
-	}
-
-	running.ExtraArguments = rarg
-	return running.Equal(current)
 }
 
 // ProxyStoppedNodes returns nodes that are not running kube-proxy.

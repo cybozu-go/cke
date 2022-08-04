@@ -6,6 +6,7 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/google/go-cmp/cmp"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	schedulerv1beta3 "k8s.io/kube-scheduler/config/v1beta3"
@@ -62,15 +63,27 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 	expected.FailSwapOn = pointer.Bool(false)
 	expected.ContainerLogMaxSize = "100Mi"
 	expected.CgroupDriver = "systemd"
+	expected.RegisterWithTaints = []corev1.Taint{
+		{Key: "taint-key", Value: "taint-value", Effect: corev1.TaintEffectNoExecute},
+	}
 
 	expected2 := expected.DeepCopy()
 	expected2.CgroupDriver = ""
+
+	expected3 := expected.DeepCopy()
+	expected3.RegisterWithTaints = []corev1.Taint{
+		{Key: "taint-key", Effect: corev1.TaintEffectNoSchedule},
+		{Key: "taint-key2", Value: "taint-value2", Effect: corev1.TaintEffectNoExecute},
+	}
 
 	cfg := &unstructured.Unstructured{}
 	cfg.SetGroupVersionKind(kubeletv1beta1.SchemeGroupVersion.WithKind("KubeletConfiguration"))
 	cfg.Object["failSwapOn"] = false
 	cfg.Object["containerLogMaxSize"] = "100Mi"
 	cfg.Object["cgroupDriver"] = "systemd"
+	cfg.Object["registerWithTaints"] = []corev1.Taint{
+		{Key: "taint-key", Value: "taint-value", Effect: corev1.TaintEffectNoExecute},
+	}
 
 	cases := []struct {
 		Name     string
@@ -97,6 +110,17 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 			},
 			Running:  &kubeletv1beta1.KubeletConfiguration{},
 			Expected: expected2,
+		},
+		{
+			Name: "with boot taints",
+			Input: cke.KubeletParams{
+				BootTaints: []corev1.Taint{
+					{Key: "taint-key", Effect: corev1.TaintEffectNoSchedule},
+					{Key: "taint-key2", Value: "taint-value2", Effect: corev1.TaintEffectNoExecute},
+				},
+				Config: cfg,
+			},
+			Expected: expected3,
 		},
 	}
 

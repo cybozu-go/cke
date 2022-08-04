@@ -163,6 +163,19 @@ func GenerateKubeletConfiguration(params cke.KubeletParams, nodeAddress string, 
 	c.Authorization = kubeletv1beta1.KubeletAuthorization{Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook}
 	c.ClusterDNS = []string{nodeAddress}
 
+	taintIndex := map[string]int{}
+	for i, t := range c.RegisterWithTaints {
+		taintIndex[t.Key] = i
+	}
+	for _, t := range params.BootTaints {
+		if index, ok := taintIndex[t.Key]; ok {
+			// Overwrite the user-defined RegisterWithTaints when the same taint exists as boot taints.
+			c.RegisterWithTaints[index] = t
+		} else {
+			c.RegisterWithTaints = append(c.RegisterWithTaints, t)
+		}
+	}
+
 	if running != nil {
 		// Keep the running configurations while the node is running.
 		// All these fields are described as:
