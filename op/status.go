@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
-	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
+	schedulerv1beta3 "k8s.io/kube-scheduler/config/v1beta3"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
@@ -123,11 +123,11 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			})
 			return nil, err
 		}
-		config := &schedulerv1beta1.KubeSchedulerConfiguration{}
+		config := &schedulerv1beta3.KubeSchedulerConfiguration{}
 		_, _, err = decUnstructured.Decode(cfgData, nil, config)
 		if err == nil {
-			// Nullify TypeMeta for later comparison using reflect.DeepEqual
-			if config.APIVersion == schedulerv1beta1.SchemeGroupVersion.String() {
+			// Nullify TypeMeta for later comparison using equality.Semantic.DeepEqual
+			if config.APIVersion == schedulerv1beta3.SchemeGroupVersion.String() {
 				config.TypeMeta = metav1.TypeMeta{}
 			}
 			status.Scheduler.Config = config
@@ -152,7 +152,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			var v proxyv1alpha1.KubeProxyConfiguration
 			_, _, err = decUnstructured.Decode(cfgData, nil, &v)
 			if err == nil {
-				// Nullify TypeMeta for later comparison using reflect.DeepEqual
+				// Nullify TypeMeta for later comparison using equality.Semantic.DeepEqual
 				if v.APIVersion == proxyv1alpha1.SchemeGroupVersion.String() {
 					v.TypeMeta = metav1.TypeMeta{}
 				}
@@ -179,7 +179,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			var v kubeletv1beta1.KubeletConfiguration
 			_, _, err = decUnstructured.Decode(cfgData, nil, &v)
 			if err == nil {
-				// Nullify TypeMeta for later comparison using reflect.DeepEqual
+				// Nullify TypeMeta for later comparison using equality.Semantic.DeepEqual
 				if v.APIVersion == kubeletv1beta1.SchemeGroupVersion.String() {
 					v.TypeMeta = metav1.TypeMeta{}
 				}

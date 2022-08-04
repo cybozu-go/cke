@@ -1,7 +1,6 @@
 package server
 
 import (
-	"reflect"
 	"strings"
 
 	"github.com/cybozu-go/cke"
@@ -12,6 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 )
 
 // NodeFilter filters nodes to
@@ -373,7 +373,7 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) (nodes 
 			fallthrough
 		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
 			fallthrough
-		case !reflect.DeepEqual(currentConfig, runningConfig):
+		case !equality.Semantic.DeepEqual(currentConfig, runningConfig):
 			log.Debug("kube-scheduler outdated", map[string]interface{}{
 				"node":                 n.Nodename(),
 				"st_builtin_args":      st.BuiltInParams.ExtraArguments,
@@ -436,7 +436,7 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 			log.Warn("kubelet's container runtime cannot be changed", nil)
 		case cke.KubernetesImage.Name() != st.Image:
 			fallthrough
-		case !reflect.DeepEqual(currentConfig, runningConfig):
+		case !equality.Semantic.DeepEqual(currentConfig, runningConfig):
 			fallthrough
 		case !kubeletEqualParams(st.BuiltInParams, currentBuiltIn):
 			fallthrough
@@ -578,7 +578,7 @@ func (nf *NodeFilter) ProxyOutdatedNodes(params cke.ProxyParams) (nodes []*cke.N
 			fallthrough
 		case !currentExtra.Equal(st.ExtraParams):
 			fallthrough
-		case !reflect.DeepEqual(currentConfig, runningConfig):
+		case !equality.Semantic.DeepEqual(currentConfig, runningConfig):
 			log.Debug("proxy outdated", map[string]interface{}{
 				"node":                 n.Nodename(),
 				"st_builtin_args":      st.BuiltInParams.ExtraArguments,

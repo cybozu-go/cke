@@ -5,7 +5,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
-	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
+	schedulerv1beta3 "k8s.io/kube-scheduler/config/v1beta3"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
@@ -131,7 +131,7 @@ type KubeComponentStatus struct {
 type SchedulerStatus struct {
 	ServiceStatus
 	IsHealthy bool
-	Config    *schedulerv1beta1.KubeSchedulerConfiguration
+	Config    *schedulerv1beta3.KubeSchedulerConfiguration
 }
 
 // KubeletStatus represents kubelet status and health

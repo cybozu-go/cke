@@ -42,8 +42,9 @@ options:
       env1: val1
   kube-scheduler:
     config:
-      apiVersion: kubescheduler.config.k8s.io/v1beta1
+      apiVersion: kubescheduler.config.k8s.io/v1beta3
       kind: KubeSchedulerConfiguration
+      parallelism: 999
       PodMaxBackoffSeconds: 100
       leaderElection:
         leaderElect: true

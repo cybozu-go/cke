@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	schedulerv1beta1 "k8s.io/kube-scheduler/config/v1beta1"
+	schedulerv1beta3 "k8s.io/kube-scheduler/config/v1beta3"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
 )
@@ -18,7 +18,7 @@ func TestGenerateSchedulerConfiguration(t *testing.T) {
 	t.Parallel()
 
 	cfg := &unstructured.Unstructured{}
-	cfg.SetGroupVersionKind(schedulerv1beta1.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
+	cfg.SetGroupVersionKind(schedulerv1beta3.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
 	cfg.Object["leaderElection"] = map[string]interface{}{
 		"leaderElect": false,
 	}
@@ -28,7 +28,7 @@ func TestGenerateSchedulerConfiguration(t *testing.T) {
 		Config: cfg,
 	}
 
-	expected := &schedulerv1beta1.KubeSchedulerConfiguration{}
+	expected := &schedulerv1beta3.KubeSchedulerConfiguration{}
 	expected.LeaderElection.LeaderElect = pointer.BoolPtr(true)
 	expected.ClientConnection.Kubeconfig = "/etc/kubernetes/scheduler/kubeconfig"
 	expected.PodMaxBackoffSeconds = pointer.Int64Ptr(100)

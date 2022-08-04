@@ -12,8 +12,8 @@ jobs:
     name: Build CKE
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.go-version }}
       - name: Check static resources
@@ -35,16 +35,14 @@ jobs:
       SUITE: ${{ matrix.suite }}
       CLUSTER: "cke-cluster.yml"
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.go-version }}
-      - name: Set up Cloud SDK for cke
-        uses: google-github-actions/setup-gcloud@v0.2.1
+      - uses: google-github-actions/auth@v0.8.0
         with:
-          project_id: ${{ secrets.NECO_TEST_PROJECT_ID }}
-          service_account_key: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
-          export_default_credentials: true
+          credentials_json: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v0.6.0
       - name: Set GCP instance name
         run: echo "INSTANCE_NAME=cke-${{ matrix.suite }}-${{ github.run_number }}-$(TZ=Asia/Tokyo date +%H%M%S)" >> $GITHUB_ENV
       - name: Watch cke logs
@@ -103,16 +101,14 @@ jobs:
     name: Compose test
     runs-on: ubuntu-20.04
     steps:
-      - name: Set up Cloud SDK for cke
-        uses: google-github-actions/setup-gcloud@v0.2.1
-        with:
-          project_id: ${{ secrets.NECO_TEST_PROJECT_ID }}
-          service_account_key: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
-          export_default_credentials: true
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.go-version }}
+      - uses: google-github-actions/auth@v0.8.0
+        with:
+          credentials_json: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v0.6.0
       - name: Check image consistency
         run: |
           REV=$(awk '/const Version/ {print $4}' ../version.go | sed -E 's/^"(1.[[:digit:]]+).*/\1/')
