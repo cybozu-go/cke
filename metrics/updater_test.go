@@ -4,11 +4,11 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -365,7 +365,7 @@ func testUpdateRebootQueueItems(t *testing.T) {
 					metricsFound[*m.GetLabel()[0].Value] = *m.Gauge.Value
 				}
 			}
-			if !reflect.DeepEqual(metricsFound, tt.expected) {
+			if !cmp.Equal(metricsFound, tt.expected) {
 				t.Errorf("value for cke_reboot_queue_items is wrong.  expected: %v, actual: %v", tt.expected, metricsFound)
 			}
 		})

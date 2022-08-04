@@ -3,7 +3,6 @@ package cke
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
 
@@ -87,7 +86,7 @@ func testStorageCluster(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(c, got) {
+	if !cmp.Equal(c, got) {
 		t.Fatalf("got invalid cluster: %v", got)
 	}
 }
@@ -119,7 +118,7 @@ func testStorageConstraints(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(c, got) {
+	if !cmp.Equal(c, got) {
 		t.Fatalf("got invalid constraints: %v", got)
 	}
 }
@@ -183,7 +182,7 @@ func testStorageRecord(t *testing.T) {
 		t.Fatal("record was not registered")
 	}
 
-	if !reflect.DeepEqual(r, got[0]) {
+	if !cmp.Equal(r, got[0]) {
 		t.Fatalf("got invalid record: %#v, %#v", r, got[0])
 	}
 
@@ -207,7 +206,7 @@ func testStorageRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(r, got[0]) {
+	if !cmp.Equal(r, got[0]) {
 		t.Fatalf("got invalid record: %v", got[0])
 	}
 

@@ -2,9 +2,9 @@ package cke
 
 import (
 	"os"
-	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -56,8 +56,8 @@ func testClusterYAML(t *testing.T) {
 	if c.ServiceSubnet != "12.34.56.00/24" {
 		t.Error(`c.ServiceSubnet != "12.34.56.00/24"`)
 	}
-	if !reflect.DeepEqual(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"}) {
-		t.Error(`!reflect.DeepEqual(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"})`)
+	if !cmp.Equal(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"}) {
+		t.Error(`!cmp.Equal(c.DNSServers, []string{"1.1.1.1", "8.8.8.8"})`)
 	}
 	if c.DNSService != "kube-system/dns" {
 		t.Error(`c.DNSService != "kube-system/dns"`)
@@ -104,11 +104,11 @@ func testClusterYAML(t *testing.T) {
 	if c.Options.Etcd.VolumeName != "myetcd" {
 		t.Error(`c.Options.Etcd.VolumeName != "myetcd"`)
 	}
-	if !reflect.DeepEqual(c.Options.Etcd.ExtraArguments, []string{"arg1", "arg2"}) {
-		t.Error(`!reflect.DeepEqual(c.Options.Etcd.ExtraArguments, []string{"arg1", "arg2"})`)
+	if !cmp.Equal(c.Options.Etcd.ExtraArguments, []string{"arg1", "arg2"}) {
+		t.Error(`!cmp.Equal(c.Options.Etcd.ExtraArguments, []string{"arg1", "arg2"})`)
 	}
-	if !reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true, PropagationShared, LabelShared}}) {
-		t.Error(`!reflect.DeepEqual(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true}})`)
+	if !cmp.Equal(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true, PropagationShared, LabelShared}}) {
+		t.Error(`!cmp.Equal(c.Options.APIServer.ExtraBinds, []Mount{{"src1", "target1", true}})`)
 	}
 	if c.Options.APIServer.AuditLogEnabled != true {
 		t.Error(`c.Options.APIServer.AuditLogEnabled != true`)
@@ -187,8 +187,8 @@ rules:
 	if taint.Effect != "NoExecute" {
 		t.Error(`taint.Effect != "NoExecute"`)
 	}
-	if !reflect.DeepEqual(c.Options.Kubelet.ExtraArguments, []string{"arg1"}) {
-		t.Error(`!reflect.DeepEqual(c.Options.Kubelet.ExtraArguments, []string{"arg1"})`)
+	if !cmp.Equal(c.Options.Kubelet.ExtraArguments, []string{"arg1"}) {
+		t.Error(`!cmp.Equal(c.Options.Kubelet.ExtraArguments, []string{"arg1"})`)
 	}
 	if len(c.Options.Kubelet.CNIConfFile.Name) == 0 {
 		t.Error(`len(c.Options.Kubelet.CNIConfFile.Name) == 0`)
@@ -784,10 +784,6 @@ func testNodename(t *testing.T) {
 
 }
 
-func intPtr(v int) *int {
-	return &v
-}
-
 func testClusterValidateReboot(t *testing.T) {
 	t.Parallel()
 
@@ -804,63 +800,63 @@ func testClusterValidateReboot(t *testing.T) {
 		{
 			name: "zero eviction_timeout_seconds",
 			reboot: Reboot{
-				EvictionTimeoutSeconds: intPtr(0),
+				EvictionTimeoutSeconds: pointer.Int(0),
 			},
 			wantErr: true,
 		},
 		{
 			name: "positive eviction_timeout_seconds",
 			reboot: Reboot{
-				EvictionTimeoutSeconds: intPtr(1),
+				EvictionTimeoutSeconds: pointer.Int(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative eviction_timeout_seconds",
 			reboot: Reboot{
-				EvictionTimeoutSeconds: intPtr(-1),
+				EvictionTimeoutSeconds: pointer.Int(-1),
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero command_timeout_seconds",
 			reboot: Reboot{
-				CommandTimeoutSeconds: intPtr(0),
+				CommandTimeoutSeconds: pointer.Int(0),
 			},
 			wantErr: false,
 		},
 		{
 			name: "positive command_timeout_seconds",
 			reboot: Reboot{
-				CommandTimeoutSeconds: intPtr(1),
+				CommandTimeoutSeconds: pointer.Int(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative command_timeout_seconds",
 			reboot: Reboot{
-				CommandTimeoutSeconds: intPtr(-1),
+				CommandTimeoutSeconds: pointer.Int(-1),
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero max_concurrent_reboots",
 			reboot: Reboot{
-				MaxConcurrentReboots: intPtr(0),
+				MaxConcurrentReboots: pointer.Int(0),
 			},
 			wantErr: true,
 		},
 		{
 			name: "positive max_concurrent_reboots",
 			reboot: Reboot{
-				MaxConcurrentReboots: intPtr(1),
+				MaxConcurrentReboots: pointer.Int(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative max_concurrent_reboots",
 			reboot: Reboot{
-				MaxConcurrentReboots: intPtr(-1),
+				MaxConcurrentReboots: pointer.Int(-1),
 			},
 			wantErr: true,
 		},
