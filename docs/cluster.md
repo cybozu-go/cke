@@ -211,7 +211,7 @@ Fields in the below table have default values:
 
 `TLSCertFile`, `TLSPrivateKeyFile`, `Authentication`, `Authorization`, and `ClusterDNS` are managed by CKE and are not configurable.
 `RegisterWithTaints` is managed by CKE when `boot_taints` exists in KubeletParams.
-When same taints are specified in both `boot_taints` (KubeletParams) and `RegisterWithTaints` (KubeletConfiguration), CKE respects `boot_taints`.
+When taints with the same key are specified in both `boot_taints` (KubeletParams) and `RegisterWithTaints` (KubeletConfiguration), CKE respects `boot_taints`.
 
 #### CNIConfFile
 
