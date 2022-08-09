@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.23.0-rc.2] - 2022-08-09
+
+### Changed
+
+- Stop using deprecated --register-with-taints option (#557)
+
 ## [1.23.0-rc.1] - 2022-08-04
 
 ### Changed
@@ -30,5 +36,6 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.23.0-rc.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.23.0-rc.2...HEAD
+[1.23.0-rc.2]: https://github.com/cybozu-go/cke/compare/v1.23.0-rc.1...v1.23.0-rc.2
 [1.23.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.22.9...v1.23.0-rc.1
