@@ -158,7 +158,7 @@ Options
 | `extra_binds` | false    | array                              | Extra bind mounts.  List of `Mount`.            |
 | `extra_env`   | false    | object                             | Extra environment variables.                    |
 
-`config` must be a partial [`v1alpha1.KubeProxyConfiguration`](https://pkg.go.dev/k8s.io/kube-proxy@v0.20.6/config/v1alpha1#KubeProxyConfiguration).
+`config` must be a partial [`v1alpha1.KubeProxyConfiguration`](https://pkg.go.dev/k8s.io/kube-proxy@v0.23.9/config/v1alpha1#KubeProxyConfiguration).
 Fields in the below table have default values:
 
 | Name                                                    | Value                                          |
@@ -192,11 +192,11 @@ Taints in `boot_taints` are added to a Node in the following cases:
 
 Those taints can be removed manually when they are no longer needed.
 Note that the second case happens when the physical node is rebooted without resource manipulation.
-If you want to add taints only at Node registration, use kubelet's `--register-with-taints` options in `extra_args`.
+If you want to add taints only at Node registration, use `RegisterWithTaints` field in KubeletConfiguration.
 
 #### KubeletConfiguration
 
-`config` must be a partial [`v1beta1.KubeletConfiguration`](https://pkg.go.dev/k8s.io/kubelet@v0.20.6/config/v1beta1#KubeletConfiguration).
+`config` must be a partial [`v1beta1.KubeletConfiguration`](https://pkg.go.dev/k8s.io/kubelet@v0.23.9/config/v1beta1#KubeletConfiguration).
 
 Fields that are described as _This field should not be updated without a full node reboot._ won't be updated on the running node for safety.  Such fields include `CgroupDriver` or `QOSReserved`.
 
@@ -210,6 +210,8 @@ Fields in the below table have default values:
 | `VolumePluginDir`       | `/opt/volume/bin` |
 
 `TLSCertFile`, `TLSPrivateKeyFile`, `Authentication`, `Authorization`, and `ClusterDNS` are managed by CKE and are not configurable.
+`RegisterWithTaints` is managed by CKE when `boot_taints` exists in KubeletParams.
+When taints with the same key are specified in both `boot_taints` (KubeletParams) and `RegisterWithTaints` (KubeletConfiguration), CKE respects `boot_taints`.
 
 #### CNIConfFile
 
@@ -229,12 +231,12 @@ It should end with either `.conf` or `.conflist`.
 
 | Name          | Required | Type                                  | Description                                     |
 | ------------- | -------- | ------------------------------------- | ----------------------------------------------- |
-| `config`      | false    | `*v1beta1.KubeSchedulerConfiguration` | See below.                                      |
+| `config`      | false    | `*v1beta3.KubeSchedulerConfiguration` | See below.                                      |
 | `extra_args`  | false    | array                                 | Extra command-line arguments.  List of strings. |
 | `extra_binds` | false    | array                                 | Extra bind mounts.  List of `Mount`.            |
 | `extra_env`   | false    | object                                | Extra environment variables.                    |
 
-`config` must be a partial [`v1beta1.KubeSchedulerConfiguration`](https://pkg.go.dev/k8s.io/kube-scheduler@v0.20.6/config/v1beta1#KubeSchedulerConfiguration).
+`config` must be a partial [`v1beta3.KubeSchedulerConfiguration`](https://pkg.go.dev/k8s.io/kube-scheduler@v0.23.9/config/v1beta3#KubeSchedulerConfiguration).
 
 Fields in `config` may have default values.  Some fields are overwritten by CKE.
 Please see the source code for more details.
