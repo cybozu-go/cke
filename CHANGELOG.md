@@ -5,6 +5,24 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.23.0] - 2022-08-12
+
+### Changelog since 1.22.9, the latest version of 1.22.x
+
+#### Changed
+
+- Support Kubernetes 1.23 (#554)
+    - Update Kubernetes to v1.23.9
+    - Update some depencencies
+    - Use KubeschedulerConfiguration v1beta3
+    - Stop using deprecated --port option of kube-scheduler
+- Minor changes to test (#555)
+- Stop using deprecated --register-with-taints option (#557)
+
+### Changelog since 1.23.0-rc.2, the latest rc version of 1.23.0
+
+(nothing)
+
 ## [1.23.0-rc.2] - 2022-08-09
 
 ### Changed
@@ -36,6 +54,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.23.0-rc.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.23.0...HEAD
+[1.23.0]: https://github.com/cybozu-go/cke/compare/v1.22.9...v1.23.0
 [1.23.0-rc.2]: https://github.com/cybozu-go/cke/compare/v1.23.0-rc.1...v1.23.0-rc.2
 [1.23.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.22.9...v1.23.0-rc.1
