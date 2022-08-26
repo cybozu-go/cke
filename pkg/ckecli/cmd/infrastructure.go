@@ -139,3 +139,6 @@ func (i *cliInfrastructure) Agent(addr string) cke.Agent {
 func (i *cliInfrastructure) Engine(addr string) cke.ContainerEngine {
 	panic("not implemented")
 }
+func (i *cliInfrastructure) ReleaseAgent(addr string) {
+	panic("not implemented")
+}
