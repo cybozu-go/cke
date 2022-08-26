@@ -126,7 +126,7 @@ func (a *sshAgent) RunWithInput(command, input string) error {
 
 func (a *sshAgent) RunWithTimeout(command, input string, timeout time.Duration) ([]byte, []byte, error) {
 	if timeout > 0 {
-		err := a.conn.SetDeadline(time.Now().Add(timeout))
+		err := a.conn.SetDeadline(time.Now().Add(defaultDialTimeout))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -142,6 +142,13 @@ func (a *sshAgent) RunWithTimeout(command, input string, timeout time.Duration) 
 		return nil, nil, err
 	}
 	defer session.Close()
+
+	if timeout > 0 {
+		err := a.conn.SetDeadline(time.Now().Add(timeout))
+		if err != nil {
+			return nil, nil, err
+		}
+	}
 
 	if len(input) > 0 {
 		session.Stdin = strings.NewReader(input)
