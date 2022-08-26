@@ -11,8 +11,10 @@ import (
 )
 
 const (
-	defaultDialTimeout = 30 * time.Second
-	defaultKeepAlive   = 5 * time.Second
+	// defaultDialTimeout is the default timeout value for net.Dialer.Dial() and ssh.Client.NewSession().
+	defaultDialTimeout = 5 * time.Second
+	// defaultKeepAlive is the default keepalive interval for agent connection.
+	defaultKeepAlive = 5 * time.Second
 
 	// DefaultRunTimeout is the timeout value for Agent.Run().
 	DefaultRunTimeout = 10 * time.Minute
