@@ -139,6 +139,8 @@ type Infrastructure interface {
 	K8sClient(ctx context.Context, n *Node) (*kubernetes.Clientset, error)
 	HTTPClient() *well.HTTPClient
 	HTTPSClient(ctx context.Context) (*well.HTTPClient, error)
+
+	ReleaseAgent(addrs string)
 }
 
 var kubeHTTP KubeHTTP
@@ -329,4 +331,14 @@ func (i *ckeInfrastructure) HTTPSClient(ctx context.Context) (*well.HTTPClient, 
 		return nil, err
 	}
 	return kubeHTTP.Client(), nil
+}
+
+func (i *ckeInfrastructure) ReleaseAgent(addr string) {
+	a := i.agents[addr]
+	if a != nil {
+		delete(i.agents, addr)
+		go func() {
+			a.Close()
+		}()
+	}
 }
