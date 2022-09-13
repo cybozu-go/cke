@@ -103,6 +103,10 @@ func (i *localInfra) HTTPSClient(ctx context.Context) (*well.HTTPClient, error) 
 	panic("not implemented") // TODO: Implement
 }
 
+func (i *localInfra) ReleaseAgent(addr string) {
+	panic("not implemented") // TODO: Implement
+}
+
 type localDocker struct{}
 
 var _ cke.ContainerEngine = localDocker{}

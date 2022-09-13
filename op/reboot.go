@@ -243,6 +243,8 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 		defer cancel()
 	}
 
+	var mu sync.Mutex
+
 	env := well.NewEnvironment(ctx)
 	for _, entry := range c.entries {
 		entry := entry // save loop variable for goroutine
@@ -254,6 +256,10 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 			if err != nil {
 				return err
 			}
+
+			mu.Lock()
+			inf.ReleaseAgent(entry.Node)
+			mu.Unlock()
 
 			args := append(c.command[1:], entry.Node)
 			command := well.CommandContext(ctx, c.command[0], args...)

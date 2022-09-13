@@ -11,8 +11,10 @@ import (
 )
 
 const (
-	defaultDialTimeout = 30 * time.Second
-	defaultKeepAlive   = 5 * time.Second
+	// defaultDialTimeout is the default timeout value for net.Dialer.Dial() and ssh.Client.NewSession().
+	defaultDialTimeout = 5 * time.Second
+	// defaultKeepAlive is the default keepalive interval for agent connection.
+	defaultKeepAlive = 5 * time.Second
 
 	// DefaultRunTimeout is the timeout value for Agent.Run().
 	DefaultRunTimeout = 10 * time.Minute
@@ -124,7 +126,7 @@ func (a *sshAgent) RunWithInput(command, input string) error {
 
 func (a *sshAgent) RunWithTimeout(command, input string, timeout time.Duration) ([]byte, []byte, error) {
 	if timeout > 0 {
-		err := a.conn.SetDeadline(time.Now().Add(timeout))
+		err := a.conn.SetDeadline(time.Now().Add(defaultDialTimeout))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -140,6 +142,13 @@ func (a *sshAgent) RunWithTimeout(command, input string, timeout time.Duration) 
 		return nil, nil, err
 	}
 	defer session.Close()
+
+	if timeout > 0 {
+		err := a.conn.SetDeadline(time.Now().Add(timeout))
+		if err != nil {
+			return nil, nil, err
+		}
+	}
 
 	if len(input) > 0 {
 		session.Stdin = strings.NewReader(input)
