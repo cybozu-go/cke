@@ -5,6 +5,17 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.23.1] - 2022-09-14
+
+### Fixed
+
+- Improve agent connection handling during rebooting (#565)
+
+### Others
+
+- Update CKE image for example (#561)
+- Update product logo URL for sonobuoy (#562)
+
 ## [1.23.0] - 2022-08-12
 
 ### Changelog since 1.22.9, the latest version of 1.22.x
@@ -54,7 +65,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.23.0...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.23.1...HEAD
+[1.23.1]: https://github.com/cybozu-go/cke/compare/v1.23.0...v1.23.1
 [1.23.0]: https://github.com/cybozu-go/cke/compare/v1.22.9...v1.23.0
 [1.23.0-rc.2]: https://github.com/cybozu-go/cke/compare/v1.23.0-rc.1...v1.23.0-rc.2
 [1.23.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.22.9...v1.23.0-rc.1
