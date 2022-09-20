@@ -16,6 +16,8 @@ interfaces:
 cpu: 1
 memory: 3G
 ignition: host1.ign
+smbios:
+  serial: d31b7c48a0acee92e0199216a4724ee03a33ef6e
 volumes:
   - kind: image
     name: root
@@ -32,6 +34,8 @@ interfaces:
 cpu: 1
 memory: 3G
 ignition: host2.ign
+smbios:
+  serial: 5353ea874b25a85f55f2e3abdda6bba8a8810e32
 volumes:
   - kind: image
     name: root
@@ -48,6 +52,8 @@ interfaces:
 cpu: 1
 memory: 3G
 ignition: node1.ign
+smbios:
+  serial: d9e9a8ca6efc77fd57e0e885fd28524613fd282b
 volumes:
   - kind: image
     name: root
@@ -64,6 +70,8 @@ interfaces:
 cpu: 1
 memory: 3G
 ignition: node2.ign
+smbios:
+  serial: 55dd507997530d8472792bbe9fdac4d149c4f24f
 volumes:
   - kind: image
     name: root
@@ -80,6 +88,8 @@ interfaces:
 cpu: 1
 memory: 3G
 ignition: node3.ign
+smbios:
+  serial: 70e478f6fb7a1971d09496d109002c5809006a86
 volumes:
   - kind: image
     name: root
@@ -96,6 +106,8 @@ interfaces:
 cpu: 1
 memory: 3G
 ignition: node4.ign
+smbios:
+  serial: 5367c434083cf09560c19a3338c1d6caa791f36b
 volumes:
   - kind: image
     name: root
@@ -112,6 +124,8 @@ interfaces:
 cpu: 1
 memory: 3G
 ignition: node5.ign
+smbios:
+  serial: a0ebc4e0d29425b0108eae2332c711bce1faa2a1
 volumes:
   - kind: image
     name: root
@@ -128,6 +142,8 @@ interfaces:
 cpu: 1
 memory: 3G
 ignition: node6.ign
+smbios:
+  serial: f57839eaa6cb45c5644499532aa1357a0cb88ba0
 volumes:
   - kind: image
     name: root
