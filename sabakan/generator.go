@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cybozu-go/cke"
@@ -102,6 +103,7 @@ type Generator struct {
 	waitSeconds float64
 
 	machineMap  map[string]*Machine
+	k8sNodeMap  map[string]*corev1.Node
 	cpTmpl      nodeTemplate
 	workerTmpls []nodeTemplate
 
@@ -114,13 +116,14 @@ type Generator struct {
 
 // NewGenerator creates a new Generator.
 // template must have been validated with ValidateTemplate().
-func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machine, currentTime time.Time) *Generator {
+func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machine, clusterStatus *cke.ClusterStatus, currentTime time.Time) *Generator {
 	g := &Generator{
 		template:    template,
 		constraints: cstr,
 		timestamp:   currentTime,
 		waitSeconds: DefaultWaitRetiredSeconds,
 		machineMap:  make(map[string]*Machine),
+		k8sNodeMap:  make(map[string]*corev1.Node),
 	}
 
 	g.clearIntermediateData()
@@ -134,6 +137,20 @@ func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machi
 		}
 		m := m
 		g.machineMap[m.Spec.IPv4[0]] = &m
+	}
+
+	if clusterStatus != nil {
+		for _, m := range machines {
+			for _, n := range clusterStatus.Kubernetes.Nodes {
+				// m.Spec.IPv4[0] is used for the corresponding cke.Node's Address.
+				// cke.Node.Hostname is set to empty, so cke.Node.Nodename() is equal to the corresponding Machine's Spec.IPv4[0].
+				// We invoke kubelet with "--hostname-override=cke.Node.Nodename()", so corev1.Node.Name is equal to the corresponding Machine's Spec.IPv4[0].
+				if n.Name == m.Spec.IPv4[0] {
+					n := n
+					g.k8sNodeMap[m.Spec.IPv4[0]] = &n
+				}
+			}
+		}
 	}
 
 	for _, n := range template.Nodes {
@@ -232,6 +249,7 @@ func (g *Generator) selectWorker(machines []*Machine) *Machine {
 // If there is no such machine, this returns nil.
 func (g *Generator) selectControlPlane(machines []*Machine) *Machine {
 	candidates := filterHealthyMachinesByRole(machines, g.cpTmpl.Role)
+	candidates = g.filterTaintedMachines(candidates)
 	if len(candidates) == 0 {
 		return nil
 	}
@@ -507,7 +525,8 @@ func (g *Generator) replaceControlPlane() (*updateOp, error) {
 	var demote *Machine
 	for _, m := range g.nextControlPlanes {
 		state := m.Status.State
-		if !(state == StateHealthy || state == StateUpdating || state == StateUninitialized) {
+		if !(state == StateHealthy || state == StateUpdating || state == StateUninitialized) ||
+			g.isTaintedInCluster(m) {
 			demote = m
 			break
 		}
@@ -631,6 +650,33 @@ func (g *Generator) getUnusedMachines(usedNodes []*cke.Node) []*Machine {
 	}
 
 	return unused
+}
+
+func (g *Generator) isTaintedInCluster(m *Machine) bool {
+	n, ok := g.k8sNodeMap[m.Spec.IPv4[0]]
+	if !ok {
+		// We can return false even if the Kubernetes Node's taints are unknown.
+		// This is because the conditions on the taints are not mandatory.
+		return false
+	}
+
+	for _, t := range n.Spec.Taints {
+		if !(strings.HasPrefix(t.Key, "node.kubernetes.io/") || t.Key == "cke.cybozu.com/state") {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (g *Generator) filterTaintedMachines(ms []*Machine) []*Machine {
+	var filtered []*Machine
+	for _, m := range ms {
+		if !g.isTaintedInCluster(m) {
+			filtered = append(filtered, m)
+		}
+	}
+	return filtered
 }
 
 func hasValidTaint(n *cke.Node, m *Machine) bool {

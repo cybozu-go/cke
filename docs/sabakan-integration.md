@@ -171,6 +171,7 @@ CKE generates cluster configuration with the following conditions.
 * Each change of the cluster configuration should be made as small as possible.
 * Control plane nodes should be distributed across different racks.
 * All control plane nodes should be healthy.
+* All control plane nodes should not have taints except for the [transitional taints added by the Kubernetes system][well-known taints] such as `node.kubernetes.io/not-ready`.
 
 To understand the status and lifecycle of a machine, see [sabakan lifecycle][lifecycle].
 
@@ -257,9 +258,10 @@ configuration manually.
 #### Increase control plane nodes
 
 When `control-plane-count` constraint is increased, control plane nodes are
-added.  If there are too few unused machines and the number of worker nodes
-are greater than `minimum-workers` constraint, existing healthy worker nodes
-are *changed* to control plane nodes.
+added.  If there are too few unused healthy-and-untainted machines and
+the number of worker nodes is greater than `minimum-workers` constraint,
+existing healthy-and-untainted worker nodes are *changed* to control plane
+nodes.
 
 #### Decrease control plane nodes
 
@@ -271,12 +273,12 @@ worker nodes are removed to satisfy the constraint.
 
 #### Replace control nodes
 
-If a control plane node is neither healthy, updating, or uninitialized,
-the node is demoted to a worker, and a new machine is added as a control
-plane node.
+If a control plane node (1) is neither healthy, updating, nor uninitialized,
+or (2) has a non-transitional taint, the node is demoted to a worker,
+and a new machine is added as a control plane node.
 
-When there is no unused healthy machine, a healthy worker node is selected
-to promote to a control plane node.
+When there is no unused healthy-and-untainted machine, a healthy-and-untainted
+worker node is selected to be promoted to a control plane node.
 
 #### Increase worker nodes
 
@@ -343,3 +345,4 @@ Following Machine fields are translated to Node annotations:
 [schema]: https://github.com/cybozu-go/sabakan/blob/master/gql/schema.graphql
 [taint]: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
 [lifecycle]: https://github.com/cybozu-go/sabakan/blob/master/docs/lifecycle.md#transition-diagram
+[well-known taints]: https://kubernetes.io/docs/reference/labels-annotations-taints/

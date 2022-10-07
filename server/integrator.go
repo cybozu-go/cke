@@ -23,7 +23,7 @@ type Integrator interface {
 
 	// Do does something for CKE.  leaderKey is an etcd object key that
 	// exists as long as the current process is the leader.
-	Do(ctx context.Context, leaderKey string) error
+	Do(ctx context.Context, leaderKey string, clusterStatus *cke.ClusterStatus) error
 }
 
 // RunIntegrator simply executes Integrator until ctx is canceled.
@@ -44,7 +44,7 @@ func RunIntegrator(ctx context.Context, it Integrator) error {
 			case <-time.After(5 * time.Second):
 			}
 
-			err := it.Do(ctx, cke.KeySabakanTemplate)
+			err := it.Do(ctx, cke.KeySabakanTemplate, nil)
 			if err != nil {
 				return err
 			}

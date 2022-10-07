@@ -184,11 +184,16 @@ func testNewGenerator(t *testing.T) {
 		newTestMachineWithIP(0, testFuture250, StateUnhealthy, "10.0.0.3", "ss"),
 		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4", "ss"),
 	}
+	k8sNode := corev1.Node{}
+	k8sNode.Name = "10.0.0.1"
+	k8sNode.Spec.Taints = []corev1.Taint{{Key: "key", Value: "value", Effect: corev1.TaintEffectNoExecute}}
+	clusterStatus := &cke.ClusterStatus{Kubernetes: cke.KubernetesClusterStatus{Nodes: []corev1.Node{k8sNode}}}
 	type args struct {
-		current  *cke.Cluster
-		template *cke.Cluster
-		cstr     *cke.Constraints
-		machines []Machine
+		current       *cke.Cluster
+		template      *cke.Cluster
+		cstr          *cke.Constraints
+		machines      []Machine
+		clusterStatus *cke.ClusterStatus
 	}
 	tests := []struct {
 		name string
@@ -197,7 +202,7 @@ func testNewGenerator(t *testing.T) {
 	}{
 		{
 			"NoCluster",
-			args{nil, tmpl, cke.DefaultConstraints(), machines},
+			args{nil, tmpl, cke.DefaultConstraints(), machines, nil},
 			&Generator{
 				machineMap: map[string]*Machine{
 					"10.0.0.1": &machines[0],
@@ -205,7 +210,8 @@ func testNewGenerator(t *testing.T) {
 					"10.0.0.3": &machines[2],
 					"10.0.0.4": &machines[3],
 				},
-				cpTmpl: nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				k8sNodeMap: map[string]*corev1.Node{},
+				cpTmpl:     nodeTemplate{tmpl.Nodes[0], "", 1.0},
 				workerTmpls: []nodeTemplate{
 					{tmpl.Nodes[1], "cs", 3.0},
 				},
@@ -213,7 +219,7 @@ func testNewGenerator(t *testing.T) {
 		},
 		{
 			"Cluster",
-			args{cluster, tmpl, cke.DefaultConstraints(), machines},
+			args{cluster, tmpl, cke.DefaultConstraints(), machines, clusterStatus},
 			&Generator{
 				machineMap: map[string]*Machine{
 					"10.0.0.1": &machines[0],
@@ -221,7 +227,8 @@ func testNewGenerator(t *testing.T) {
 					"10.0.0.3": &machines[2],
 					"10.0.0.4": &machines[3],
 				},
-				cpTmpl: nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				k8sNodeMap: map[string]*corev1.Node{"10.0.0.1": &k8sNode},
+				cpTmpl:     nodeTemplate{tmpl.Nodes[0], "", 1.0},
 				workerTmpls: []nodeTemplate{
 					{tmpl.Nodes[1], "cs", 3.0},
 				},
@@ -233,9 +240,12 @@ func testNewGenerator(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := NewGenerator(tt.args.template, tt.args.cstr, tt.args.machines, testBaseTS)
+			got := NewGenerator(tt.args.template, tt.args.cstr, tt.args.machines, tt.args.clusterStatus, testBaseTS)
 			if !cmp.Equal(got.machineMap, tt.want.machineMap, cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(got.machineMap, tt.want.machineMap), actual: %v, want %v", got.machineMap, tt.want.machineMap)
+			}
+			if !cmp.Equal(got.k8sNodeMap, tt.want.k8sNodeMap, cmpopts.EquateEmpty()) {
+				t.Errorf("!cmp.Equal(got.k8sNodeMap, tt.want.k8sNodeMap), actual: %v, want %v", got.k8sNodeMap, tt.want.k8sNodeMap)
 			}
 			// the order in the nextUnused is not stable.
 			var unusedGot, unusedExpected []string
@@ -327,7 +337,7 @@ func testGenerate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			g := NewGenerator(tt.template, tt.cstr, tt.machines, testBaseTS)
+			g := NewGenerator(tt.template, tt.cstr, tt.machines, nil, testBaseTS)
 			cluster, err := g.Generate()
 			if err != nil {
 				if !tt.expectErr {
@@ -372,6 +382,11 @@ func testRegenerate(t *testing.T) {
 		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4", "ss"),
 	}
 
+	k8sNode := corev1.Node{}
+	k8sNode.Name = "10.0.0.4"
+	k8sNode.Spec.Taints = []corev1.Taint{{Key: "regenerate_will_not_care_about_taints", Value: "even_for_control_plane_node", Effect: corev1.TaintEffectNoExecute}}
+	clusterStatus := &cke.ClusterStatus{Kubernetes: cke.KubernetesClusterStatus{Nodes: []corev1.Node{k8sNode}}}
+
 	cluster := &cke.Cluster{
 		Name: "old",
 		Nodes: []*cke.Node{
@@ -412,7 +427,7 @@ func testRegenerate(t *testing.T) {
 	generated := *tmpl
 	generated.Nodes = nil
 
-	g := NewGenerator(tmpl, cke.DefaultConstraints(), machines, testBaseTS)
+	g := NewGenerator(tmpl, cke.DefaultConstraints(), machines, clusterStatus, testBaseTS)
 	regenerated, err := g.Regenerate(cluster)
 	if err != nil {
 		t.Fatal(err)
@@ -504,6 +519,17 @@ func testUpdate(t *testing.T) {
 		{Address: "10.100.0.12"}, // [11] non-existent
 	}
 
+	var k8sUntaintedNodes, k8sSystemTaintedNodes, k8sUserTaintedNodes []corev1.Node
+	for _, m := range machines {
+		n := corev1.Node{}
+		n.Name = m.Spec.IPv4[0]
+		k8sUntaintedNodes = append(k8sUntaintedNodes, n)
+		n.Spec.Taints = []corev1.Taint{{Key: corev1.TaintNodeNotReady, Effect: corev1.TaintEffectNoSchedule}}
+		k8sSystemTaintedNodes = append(k8sSystemTaintedNodes, n)
+		n.Spec.Taints = []corev1.Taint{{Key: "foo", Value: "bar", Effect: corev1.TaintEffectNoSchedule}}
+		k8sUserTaintedNodes = append(k8sUserTaintedNodes, n)
+	}
+
 	tmpl := &cke.Cluster{
 		Name:          "tmpl",
 		ServiceSubnet: "10.0.0.0/14",
@@ -525,10 +551,11 @@ func testUpdate(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		current  *cke.Cluster
-		cstr     *cke.Constraints
-		machines []Machine
+		name          string
+		current       *cke.Cluster
+		cstr          *cke.Constraints
+		machines      []Machine
+		clusterStatus *cke.ClusterStatus
 
 		expectErr error
 		expected  *cke.Cluster
@@ -543,6 +570,7 @@ func testUpdate(t *testing.T) {
 				MinimumWorkers:    1,
 			},
 			machines,
+			nil,
 
 			nil,
 			&cke.Cluster{
@@ -559,6 +587,7 @@ func testUpdate(t *testing.T) {
 				MinimumWorkers:    1,
 			},
 			[]Machine{machines[3], machines[5]},
+			nil,
 
 			errTooManyNonExistent,
 			nil,
@@ -573,6 +602,7 @@ func testUpdate(t *testing.T) {
 				MinimumWorkers:    1,
 			},
 			[]Machine{machines[0], machines[3], machines[6]},
+			nil,
 
 			errNotAvailable,
 			nil,
@@ -587,10 +617,32 @@ func testUpdate(t *testing.T) {
 				MinimumWorkers:    1,
 			},
 			machines,
+			nil,
 
 			nil,
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[6]},
+			},
+		},
+		{
+			"IncreaseCPIgnoringLongLifeButUserTaintedNode",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], workers[8]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+				MinimumWorkers:    1,
+			},
+			machines,
+			&cke.ClusterStatus{
+				Kubernetes: cke.KubernetesClusterStatus{
+					Nodes: []corev1.Node{k8sUserTaintedNodes[6], k8sSystemTaintedNodes[7]},
+				},
+			},
+
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[8]},
 			},
 		},
 		{
@@ -603,6 +655,7 @@ func testUpdate(t *testing.T) {
 				MinimumWorkers:    1,
 			},
 			machines,
+			nil,
 
 			nil,
 			&cke.Cluster{
@@ -619,6 +672,7 @@ func testUpdate(t *testing.T) {
 				MinimumWorkers:    1,
 			},
 			machines,
+			nil,
 
 			nil,
 			&cke.Cluster{
@@ -636,6 +690,7 @@ func testUpdate(t *testing.T) {
 				MaximumWorkers:    1,
 			},
 			machines,
+			nil,
 
 			nil,
 			&cke.Cluster{
@@ -653,6 +708,7 @@ func testUpdate(t *testing.T) {
 				MaximumWorkers:    1,
 			},
 			machines,
+			nil,
 
 			nil,
 			&cke.Cluster{
@@ -669,6 +725,28 @@ func testUpdate(t *testing.T) {
 				MinimumWorkers:    1,
 			},
 			machines,
+			nil,
+
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[6], cps[7], workers[2], workers[5]},
+			},
+		},
+		{
+			"ReplaceCPDemoteTaintedAddUntainted",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[2]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+				MinimumWorkers:    1,
+			},
+			machines,
+			&cke.ClusterStatus{
+				Kubernetes: cke.KubernetesClusterStatus{
+					Nodes: []corev1.Node{k8sUserTaintedNodes[5], k8sUntaintedNodes[6]},
+				},
+			},
 
 			nil,
 			&cke.Cluster{
@@ -686,6 +764,7 @@ func testUpdate(t *testing.T) {
 				MaximumWorkers:    2,
 			},
 			machines,
+			nil,
 
 			nil,
 			&cke.Cluster{
@@ -703,6 +782,7 @@ func testUpdate(t *testing.T) {
 				MaximumWorkers:    1,
 			},
 			machines,
+			nil,
 
 			nil,
 			&cke.Cluster{
@@ -720,6 +800,7 @@ func testUpdate(t *testing.T) {
 				MaximumWorkers:    1,
 			},
 			[]Machine{machines[0], machines[1], machines[2], machines[7]},
+			nil,
 
 			errNotAvailable,
 			nil,
@@ -734,6 +815,7 @@ func testUpdate(t *testing.T) {
 				MinimumWorkers:    2,
 			},
 			machines,
+			nil,
 
 			nil,
 			&cke.Cluster{
@@ -751,6 +833,7 @@ func testUpdate(t *testing.T) {
 				MaximumWorkers:    2,
 			},
 			machines,
+			nil,
 
 			nil,
 			&cke.Cluster{
@@ -767,6 +850,7 @@ func testUpdate(t *testing.T) {
 				MinimumWorkers:    1,
 			},
 			machines,
+			nil,
 
 			nil,
 			&cke.Cluster{
@@ -784,6 +868,7 @@ func testUpdate(t *testing.T) {
 				MaximumWorkers:    3,
 			},
 			machines,
+			nil,
 
 			nil,
 			&cke.Cluster{
@@ -809,6 +894,7 @@ func testUpdate(t *testing.T) {
 				MaximumWorkers:    2,
 			},
 			[]Machine{machines[0], machines[2], machines[5], machines[7]},
+			nil,
 
 			nil,
 			&cke.Cluster{
@@ -833,6 +919,7 @@ func testUpdate(t *testing.T) {
 				MaximumWorkers:    3,
 			},
 			[]Machine{machines[0], machines[1], machines[5], machines[7], machines[9]},
+			nil,
 
 			nil,
 			nil,
@@ -844,7 +931,7 @@ func testUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			g := NewGenerator(tmpl, tt.cstr, tt.machines, testBaseTS)
+			g := NewGenerator(tmpl, tt.cstr, tt.machines, tt.clusterStatus, testBaseTS)
 			got, err := g.Update(tt.current)
 
 			if err != tt.expectErr {
@@ -938,7 +1025,7 @@ func testRegenerateAfterUpdate(t *testing.T) {
 		},
 	}
 
-	g := NewGenerator(tmpl, cke.DefaultConstraints(), machines, testBaseTS)
+	g := NewGenerator(tmpl, cke.DefaultConstraints(), machines, nil, testBaseTS)
 
 	got, err := g.Update(cluster)
 	if err != nil {
@@ -1134,7 +1221,7 @@ func testWeighted(t *testing.T) {
 				},
 			}
 
-			g := NewGenerator(tmpl, tt.cstr, machines, testBaseTS)
+			g := NewGenerator(tmpl, tt.cstr, machines, nil, testBaseTS)
 			cluster, err := g.Generate()
 			if err != nil {
 				t.Fatal(err)
@@ -1288,7 +1375,7 @@ func testRackDistribution(t *testing.T) {
 			machines = append(machines, createRack(i, "standard")...)
 		}
 
-		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(baseTemplate, baseConstraints, machines, nil, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
@@ -1312,7 +1399,7 @@ func testRackDistribution(t *testing.T) {
 			machines = append(machines, createRack(i, "standard")...)
 		}
 
-		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(baseTemplate, baseConstraints, machines, nil, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
@@ -1323,7 +1410,7 @@ func testRackDistribution(t *testing.T) {
 			MinimumWorkers:    36,
 			MaximumWorkers:    56,
 		}
-		g = NewGenerator(baseTemplate, constraints, machines, testBaseTS)
+		g = NewGenerator(baseTemplate, constraints, machines, nil, testBaseTS)
 		cluster, err = g.Update(cluster)
 		if err != nil {
 			t.Fatal(err)
@@ -1351,7 +1438,7 @@ func testRackDistribution(t *testing.T) {
 			machines = append(machines, createRack(i, "standard")...)
 		}
 
-		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(baseTemplate, baseConstraints, machines, nil, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
@@ -1402,7 +1489,7 @@ func testRackDistribution(t *testing.T) {
 			withoutCSTemplate.Nodes = append(withoutCSTemplate.Nodes, n)
 		}
 
-		g := NewGenerator(withoutCSTemplate, constraints, machines, testBaseTS)
+		g := NewGenerator(withoutCSTemplate, constraints, machines, nil, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
@@ -1426,7 +1513,7 @@ func testRackDistribution(t *testing.T) {
 			machines = append(machines, createRack(i, "standard")...)
 		}
 
-		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(baseTemplate, baseConstraints, machines, nil, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
@@ -1438,7 +1525,7 @@ func testRackDistribution(t *testing.T) {
 			MinimumWorkers:    36,
 			MaximumWorkers:    56,
 		}
-		g = NewGenerator(baseTemplate, constraints, machines, testBaseTS)
+		g = NewGenerator(baseTemplate, constraints, machines, nil, testBaseTS)
 		cluster, err = g.Update(cluster)
 		if err != nil {
 			t.Fatal(err)
@@ -1463,14 +1550,14 @@ func testRackDistribution(t *testing.T) {
 			machines = append(machines, createRack(i, "standard")...)
 		}
 
-		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(baseTemplate, baseConstraints, machines, nil, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		machines = machines[28:] // Disappear rack0
-		g = NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		g = NewGenerator(baseTemplate, baseConstraints, machines, nil, testBaseTS)
 		cluster, err = g.Update(cluster)
 		if err != nil {
 			t.Fatal(err)
@@ -1497,7 +1584,7 @@ func testRackDistribution(t *testing.T) {
 		for i := 0; i < 28; i++ {
 			machines[i].Status.State = StateUnhealthy
 		}
-		g := NewGenerator(baseTemplate, baseConstraints, machines, testBaseTS)
+		g := NewGenerator(baseTemplate, baseConstraints, machines, nil, testBaseTS)
 		cluster, err := g.Generate()
 		if err != nil {
 			t.Fatal(err)

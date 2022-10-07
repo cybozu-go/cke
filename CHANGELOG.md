@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Don't use tainted node as control plane node (#572)
+
 ## [1.23.3] - 2022-10-11
 
 ### Changed
