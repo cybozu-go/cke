@@ -23,9 +23,9 @@ var (
 
 // MachineToNode converts sabakan.Machine to cke.Node.
 // Add taints, labels, and annotations according to the rules:
-//  - https://github.com/cybozu-go/cke/blob/main/docs/sabakan-integration.md#taint-nodes
-//  - https://github.com/cybozu-go/cke/blob/main/docs/sabakan-integration.md#node-labels
-//  - https://github.com/cybozu-go/cke/blob/main/docs/sabakan-integration.md#node-annotations
+//   - https://github.com/cybozu-go/cke/blob/main/docs/sabakan-integration.md#taint-nodes
+//   - https://github.com/cybozu-go/cke/blob/main/docs/sabakan-integration.md#node-labels
+//   - https://github.com/cybozu-go/cke/blob/main/docs/sabakan-integration.md#node-annotations
 func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 	n := &cke.Node{
 		Address:      m.Spec.IPv4[0],
@@ -216,7 +216,7 @@ func (g *Generator) SetWaitSeconds(secs float64) {
 }
 
 // removeMachine removes the specified machine from machines slice.
-//  If m is nil or if m is not found in machines, this causes panic.
+// If m is nil or if m is not found in machines, this causes panic.
 func removeMachine(machines []*Machine, m *Machine) []*Machine {
 	for i, mm := range machines {
 		if m == mm {
@@ -245,7 +245,7 @@ func (g *Generator) selectWorker(machines []*Machine) *Machine {
 	return candidates[0]
 }
 
-// selectControlPlane selects a healthy controle plane from given machines slice.
+// selectControlPlane selects a healthy control plane from given machines slice.
 // If there is no such machine, this returns nil.
 func (g *Generator) selectControlPlane(machines []*Machine) *Machine {
 	candidates := filterHealthyMachinesByRole(machines, g.cpTmpl.Role)

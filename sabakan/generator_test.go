@@ -487,7 +487,7 @@ func testUpdate(t *testing.T) {
 		{Address: "10.0.0.8", ControlPlane: true},    // [7]
 		{Address: "10.0.0.9", ControlPlane: true},    // [8]
 		{Address: "10.100.0.10", ControlPlane: true}, // [9]
-		{Address: "10.100.0.11", ControlPlane: true}, // [10]  non-existent
+		{Address: "10.100.0.11", ControlPlane: true}, // [10] non-existent
 		{Address: "10.100.0.12", ControlPlane: true}, // [11] non-existent
 	}
 	workers := []*cke.Node{
@@ -515,7 +515,7 @@ func testUpdate(t *testing.T) {
 					Effect: corev1.TaintEffectNoExecute,
 				},
 			}},
-		{Address: "10.100.0.11"}, // [10]  non-existent
+		{Address: "10.100.0.11"}, // [10] non-existent
 		{Address: "10.100.0.12"}, // [11] non-existent
 	}
 

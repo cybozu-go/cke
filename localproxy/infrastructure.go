@@ -186,7 +186,7 @@ func (l localDocker) RunWithInput(img cke.Image, binds []cke.Mount, command, inp
 	return nil
 }
 
-/// RunWithOutput runs a container as a foreground process and get stdout and stderr.
+// RunWithOutput runs a container as a foreground process and get stdout and stderr.
 func (l localDocker) RunWithOutput(img cke.Image, binds []cke.Mount, command string, args ...string) ([]byte, []byte, error) {
 	runArgs := []string{
 		"run",
