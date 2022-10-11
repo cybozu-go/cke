@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.23.3] - 2022-10-11
+
+### Changed
+
+- Update unbound and coredns (#571)
+
 ## [1.23.2] - 2022-09-22
 
 ### Changed
@@ -72,7 +78,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.23.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.23.3...HEAD
+[1.23.3]: https://github.com/cybozu-go/cke/compare/v1.23.2...v1.23.3
 [1.23.2]: https://github.com/cybozu-go/cke/compare/v1.23.1...v1.23.2
 [1.23.1]: https://github.com/cybozu-go/cke/compare/v1.23.0...v1.23.1
 [1.23.0]: https://github.com/cybozu-go/cke/compare/v1.22.9...v1.23.0
