@@ -17,17 +17,19 @@ a YAML or JSON object with these fields:
   - [KubeletParams](#kubeletparams)
   - [SchedulerParams](#schedulerparams)
 
-| Name                  | Required | Type      | Description                                                      |
-| --------------------- | -------- | --------- | ---------------------------------------------------------------- |
-| `name`                | true     | string    | The k8s cluster name.                                            |
-| `nodes`               | true     | array     | `Node` list.                                                     |
-| `taint_control_plane` | false    | bool      | If true, taint control plane nodes.                              |
-| `service_subnet`      | true     | string    | CIDR subnet for k8s `Service`.                                   |
-| `dns_servers`         | false    | array     | List of upstream DNS server IP addresses.                        |
-| `dns_service`         | false    | string    | Upstream DNS service name with namespace as `namespace/service`. |
-| `reboot`              | false    | `Reboot`  | See [Reboot](#reboot).                                           |
-| `options`             | false    | `Options` | See [Options](#options).                                         |
+| Name                        | Required | Type      | Description                                                      |
+| --------------------------- | -------- | --------- | ---------------------------------------------------------------- |
+| `name`                      | true     | string    | The k8s cluster name.                                            |
+| `nodes`                     | true     | array     | `Node` list.                                                     |
+| `taint_control_plane`       | false    | bool      | If true, taint control plane nodes.                              |
+| `control_plane_tolerations` | false    | array     | List of tolerated taint keys for control plane.                  |
+| `service_subnet`            | true     | string    | CIDR subnet for k8s `Service`.                                   |
+| `dns_servers`               | false    | array     | List of upstream DNS server IP addresses.                        |
+| `dns_service`               | false    | string    | Upstream DNS service name with namespace as `namespace/service`. |
+| `reboot`                    | false    | `Reboot`  | See [Reboot](#reboot).                                           |
+| `options`                   | false    | `Options` | See [Options](#options).                                         |
 
+* `control_plane_tolerations` is used in [sabakan integration](sabakan-integration.md#strategy).
 * Upstream DNS servers can be specified one of the following ways:
     * List server IP addresses in `dns_servers`.
     * Specify Kubernetes `Service` name in `dns_service` (e.g. `"kube-system/dns"`).  

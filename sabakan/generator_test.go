@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
@@ -524,7 +525,12 @@ func testUpdate(t *testing.T) {
 		n := corev1.Node{}
 		n.Name = m.Spec.IPv4[0]
 		k8sUntaintedNodes = append(k8sUntaintedNodes, n)
-		n.Spec.Taints = []corev1.Taint{{Key: corev1.TaintNodeNotReady, Effect: corev1.TaintEffectNoSchedule}}
+		n.Spec.Taints = []corev1.Taint{
+			{Key: corev1.TaintNodeNotReady, Effect: corev1.TaintEffectNoSchedule},
+			{Key: "cke.cybozu.com/state", Value: "unhealthy", Effect: corev1.TaintEffectNoSchedule},
+			{Key: op.CKETaintMaster, Effect: corev1.TaintEffectNoSchedule},
+			{Key: "foo.cybozu.com/transient", Effect: corev1.TaintEffectNoSchedule},
+		}
 		k8sSystemTaintedNodes = append(k8sSystemTaintedNodes, n)
 		n.Spec.Taints = []corev1.Taint{{Key: "foo", Value: "bar", Effect: corev1.TaintEffectNoSchedule}}
 		k8sUserTaintedNodes = append(k8sUserTaintedNodes, n)
@@ -543,6 +549,7 @@ func testUpdate(t *testing.T) {
 				ControlPlane: false,
 			},
 		},
+		CPTolerations: []string{"foo.cybozu.com/transient"},
 		Options: cke.Options{
 			Kubelet: cke.KubeletParams{
 				CRIEndpoint: "/var/run/k8s-containerd.sock",

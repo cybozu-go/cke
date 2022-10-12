@@ -6,6 +6,7 @@ nodes:
     control_plane: true
     labels:
       label1: value1
+control_plane_tolerations: ["foo.cybozu.com/transient"]
 service_subnet: 12.34.56.00/24
 dns_servers: ["1.1.1.1", "8.8.8.8"]
 dns_service: kube-system/dns

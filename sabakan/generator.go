@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -660,10 +661,17 @@ func (g *Generator) isTaintedInCluster(m *Machine) bool {
 		return false
 	}
 
+OUTER:
 	for _, t := range n.Spec.Taints {
-		if !(strings.HasPrefix(t.Key, "node.kubernetes.io/") || t.Key == "cke.cybozu.com/state") {
-			return true
+		if strings.HasPrefix(t.Key, "node.kubernetes.io/") || t.Key == "cke.cybozu.com/state" || t.Key == op.CKETaintMaster {
+			continue
 		}
+		for _, toleration := range g.template.CPTolerations {
+			if t.Key == toleration {
+				continue OUTER
+			}
+		}
+		return true
 	}
 
 	return false

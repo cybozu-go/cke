@@ -53,6 +53,12 @@ func testClusterYAML(t *testing.T) {
 		t.Error(`node.Labels["label1"] != "value1"`)
 	}
 
+	if len(c.CPTolerations) != 1 {
+		t.Fatal(`len(c.CPTolerations) != 1`)
+	}
+	if c.CPTolerations[0] != "foo.cybozu.com/transient" {
+		t.Error(`c.CPTolerations[0] != "foo.cybozu.com/transient"`)
+	}
 	if c.ServiceSubnet != "12.34.56.00/24" {
 		t.Error(`c.ServiceSubnet != "12.34.56.00/24"`)
 	}
@@ -238,6 +244,34 @@ func testClusterValidate(t *testing.T) {
 			"No cluster name",
 			Cluster{
 				Name:          "",
+				ServiceSubnet: "10.0.0.0/14",
+				Options: Options{
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
+			},
+			true,
+		},
+		{
+			"invalid toleration key",
+			Cluster{
+				Name:          "testcluster",
+				CPTolerations: []string{"a_b/c"},
+				ServiceSubnet: "10.0.0.0/14",
+				Options: Options{
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
+			},
+			true,
+		},
+		{
+			"invalid toleration key 2",
+			Cluster{
+				Name:          "testcluster",
+				CPTolerations: []string{"a.b/c b"},
 				ServiceSubnet: "10.0.0.0/14",
 				Options: Options{
 					Kubelet: KubeletParams{

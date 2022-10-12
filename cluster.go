@@ -298,6 +298,7 @@ type Cluster struct {
 	Name          string   `json:"name"`
 	Nodes         []*Node  `json:"nodes"`
 	TaintCP       bool     `json:"taint_control_plane"`
+	CPTolerations []string `json:"control_plane_tolerations"`
 	ServiceSubnet string   `json:"service_subnet"`
 	DNSServers    []string `json:"dns_servers"`
 	DNSService    string   `json:"dns_service"`
@@ -329,6 +330,12 @@ func (c *Cluster) Validate(isTmpl bool) error {
 		if !isTmpl {
 			nodeAddressSet[n.Address] = struct{}{}
 		}
+	}
+
+	fldPath = field.NewPath("control_plane_tolerations")
+	err = validateTolerationKeys(c.CPTolerations, fldPath)
+	if err != nil {
+		return err
 	}
 
 	for _, a := range c.DNSServers {
@@ -431,6 +438,17 @@ func validateTaint(taint corev1.Taint, fldPath *field.Path) error {
 	case corev1.TaintEffectNoExecute:
 	default:
 		el = append(el, field.Invalid(fldPath.Child("effect"), string(taint.Effect), "invalid effect"))
+	}
+	if len(el) > 0 {
+		return el.ToAggregate()
+	}
+	return nil
+}
+
+func validateTolerationKeys(keys []string, fldPath *field.Path) error {
+	var el field.ErrorList
+	for i, key := range keys {
+		el = append(el, v1validation.ValidateLabelName(key, fldPath.Index(i))...)
 	}
 	if len(el) > 0 {
 		return el.ToAggregate()

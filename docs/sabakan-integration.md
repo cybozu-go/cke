@@ -171,7 +171,11 @@ CKE generates cluster configuration with the following conditions.
 * Each change of the cluster configuration should be made as small as possible.
 * Control plane nodes should be distributed across different racks.
 * All control plane nodes should be healthy.
-* All control plane nodes should not have taints except for the [transitional taints added by the Kubernetes system][well-known taints] such as `node.kubernetes.io/not-ready`.
+* All control plane nodes should not be tainted.  The following taints are tolerated:
+    * [Transitional taints added by the Kubernetes system][well-known taints] such as `node.kubernetes.io/not-ready`
+    * Transitional taints added by CKE, i.e. `cke.cybozu.com/state`
+    * Taints for control plane nodes added by CKE, i.e. `cke.cybozu.com/master`
+    * User-tolerated taints specified in the [cluster template](#cluster-template)
 
 To understand the status and lifecycle of a machine, see [sabakan lifecycle][lifecycle].
 
@@ -274,8 +278,8 @@ worker nodes are removed to satisfy the constraint.
 #### Replace control nodes
 
 If a control plane node (1) is neither healthy, updating, nor uninitialized,
-or (2) has a non-transitional taint, the node is demoted to a worker,
-and a new machine is added as a control plane node.
+or (2) has intolerable taints, the node is demoted to a worker, and a new
+machine is added as a control plane node.
 
 When there is no unused healthy-and-untainted machine, a healthy-and-untainted
 worker node is selected to be promoted to a control plane node.

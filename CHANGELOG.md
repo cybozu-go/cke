@@ -7,7 +7,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ### Changed
 
-- Don't use tainted node as control plane node (#572)
+- **\[Action Required\]** Don't use tainted node as control plane node (#572) \
+    Specify `control_plane_tolerations` in the [cluster template for sabakan integration](docs/sabakan-integration.md#cluster-template)
+    if you or your system add taints to nodes and if you want to run
+    control plane on tainted nodes.
 
 ## [1.23.3] - 2022-10-11
 
