@@ -237,7 +237,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	case cke.ErrNotFound:
 		wait = true
 		if c.addon != nil {
-			return c.addon.Do(ctx, leaderKey)
+			return c.addon.Do(ctx, leaderKey, nil)
 		}
 		return nil
 	case nil:
@@ -361,7 +361,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	if len(ops) == 0 {
 		wait = true
 		if c.addon != nil {
-			return c.addon.Do(ctx, leaderKey)
+			return c.addon.Do(ctx, leaderKey, status)
 		}
 		return nil
 	}
@@ -369,7 +369,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	// Reflect sabakan machine status when CKE does not need to do
 	// anything except for rebooting nodes.
 	if c.addon != nil && phase == cke.PhaseRebootNodes {
-		if err := c.addon.Do(ctx, leaderKey); err != nil {
+		if err := c.addon.Do(ctx, leaderKey, status); err != nil {
 			return err
 		}
 	}

@@ -50,15 +50,15 @@ func (ig integrator) StartWatch(ctx context.Context, ch chan<- struct{}) error {
 }
 
 func (ig integrator) Init(ctx context.Context, leaderKey string) error {
-	return ig.run(ctx, leaderKey, true)
+	return ig.run(ctx, leaderKey, nil, true)
 }
 
-func (ig integrator) Do(ctx context.Context, leaderKey string) error {
-	return ig.run(ctx, leaderKey, false)
+func (ig integrator) Do(ctx context.Context, leaderKey string, clusterStatus *cke.ClusterStatus) error {
+	return ig.run(ctx, leaderKey, clusterStatus, false)
 }
 
 // Do references WaitSecs in ctx to change the wait second value.
-func (ig integrator) run(ctx context.Context, leaderKey string, onlyRegenerate bool) error {
+func (ig integrator) run(ctx context.Context, leaderKey string, clusterStatus *cke.ClusterStatus, onlyRegenerate bool) error {
 	st := cke.Storage{Client: ig.etcd}
 
 	disabled, err := st.IsSabakanDisabled(ctx)
@@ -106,7 +106,7 @@ func (ig integrator) run(ctx context.Context, leaderKey string, onlyRegenerate b
 		return err
 	}
 
-	g := NewGenerator(tmpl, cstr, machines, time.Now())
+	g := NewGenerator(tmpl, cstr, machines, clusterStatus, time.Now())
 
 	val := ctx.Value(WaitSecs)
 	if val != nil {

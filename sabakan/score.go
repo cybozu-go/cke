@@ -7,7 +7,7 @@ import (
 const (
 	// maxCountPerRack should be more than max machine num per rack + 1
 	maxCountPerRack = 100
-	// healthyScore is addted when the machine status is healthy.
+	// healthyScore is added when the machine status is healthy.
 	healthyScore = 1000
 )
 
