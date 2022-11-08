@@ -21,7 +21,7 @@ jobs:
             cp ./static/resources.go /tmp/resources.go
             make static
             cmp /tmp/resources.go ./static/resources.go
-      - run: docker run -d --network host gcr.io/etcd-development/etcd:v3.5.4
+      - run: docker run -d --network host gcr.io/etcd-development/etcd:v3.5.5
       - run: make test
       - run: make install GOBIN=$(pwd)/docker
       - run: docker build -t quay.io/cybozu/cke:latest ./docker
