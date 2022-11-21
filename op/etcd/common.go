@@ -68,6 +68,8 @@ func BuiltInParams(node *cke.Node, initialCluster []string, state string) cke.Se
 		// https://groups.google.com/a/kubernetes.io/g/dev/c/B7gJs88XtQc/m/rSgNOzV2BwAJ
 		// This flag can detect an inconsistency.
 		"--experimental-initial-corrupt-check",
+		"--heartbeat-interval=500",
+		"--election-timeout=5000",
 	}
 	if len(initialCluster) > 0 {
 		args = append(args,
