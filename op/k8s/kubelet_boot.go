@@ -363,7 +363,6 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 		"--config=/etc/kubernetes/kubelet/config.yml",
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--hostname-override=" + n.Nodename(),
-		"--network-plugin=cni",
 	}
 	args = append(args, "--container-runtime=remote")
 	if len(params.CRIEndpoint) != 0 {
@@ -450,27 +449,6 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 				ReadOnly:    false,
 				Propagation: "",
 				Label:       "",
-			},
-			{
-				Source:      cniBinDir,
-				Destination: cniBinDir,
-				ReadOnly:    true,
-				Propagation: "",
-				Label:       cke.LabelShared,
-			},
-			{
-				Source:      cniConfDir,
-				Destination: cniConfDir,
-				ReadOnly:    true,
-				Propagation: "",
-				Label:       cke.LabelShared,
-			},
-			{
-				Source:      cniVarDir,
-				Destination: cniVarDir,
-				ReadOnly:    false,
-				Propagation: "",
-				Label:       cke.LabelShared,
 			},
 		},
 	}
