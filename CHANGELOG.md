@@ -10,7 +10,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Support Kubernetes 1.24 (#584)
     - Update Kubernetes to v1.24.8
     - Update some dependencies
-    - Remove part of kubelet bootstrap settings related to dockershim removal
+    - Remove kubelet flag (`--network-plugin`) related to dockershim removal
 
 ## Ancient changes
 
