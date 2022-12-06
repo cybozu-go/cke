@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 for i in {1..10}; do
-  if docker-compose ps setup | grep -q "Exit 0"; then
+  if $(docker inspect setup | jq 'any(.Name == "/setup" and .State.Status == "exited" and .State.ExitCode == 0)'); then
     exit 0
   fi
   sleep 1
