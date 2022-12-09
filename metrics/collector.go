@@ -55,7 +55,7 @@ func NewCollector(client *v3.Client) prometheus.Collector {
 				isAvailable: isOperationPhaseAvailable,
 			},
 			"reboot": {
-				collectors:  []prometheus.Collector{rebootQueueEntries, rebootQueueItems},
+				collectors:  []prometheus.Collector{rebootQueueEntries, rebootQueueItems, nodeRebootStatus},
 				isAvailable: isRebootAvailable,
 			},
 			"sabakan_integration": {

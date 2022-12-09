@@ -53,6 +53,22 @@ func UpdateRebootQueueItems(counts map[string]int) {
 	}
 }
 
+// UpdateNodeRebootStatus updates "node_reboot_status".
+func UpdateNodeRebootStatus(nodeStatus map[string]map[string]bool) {
+	for node, statuses := range nodeStatus {
+		for status, matches := range statuses {
+			value := float64(0)
+			if matches {
+				value = 1
+			}
+			nodeRebootStatus.With(map[string]string{
+				"node":   node,
+				"status": status,
+			}).Set(value)
+		}
+	}
+}
+
 func isRebootAvailable(_ context.Context, _ storage) (bool, error) {
 	return isLeader, nil
 }

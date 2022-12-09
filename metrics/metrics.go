@@ -50,6 +50,14 @@ var rebootQueueItems = prometheus.NewGaugeVec(
 	[]string{"status"},
 )
 
+var nodeRebootStatus = prometheus.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "node_reboot_status",
+		Help:      "The reboot status of a node.",
+	}, []string{"node", "status"},
+)
+
 var sabakanIntegrationSuccessful = prometheus.NewGauge(
 	prometheus.GaugeOpts{
 		Namespace: namespace,
