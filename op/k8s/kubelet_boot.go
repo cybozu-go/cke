@@ -450,6 +450,27 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 				Propagation: "",
 				Label:       "",
 			},
+			{
+				Source:      cniBinDir,
+				Destination: cniBinDir,
+				ReadOnly:    true,
+				Propagation: "",
+				Label:       cke.LabelShared,
+			},
+			{
+				Source:      cniConfDir,
+				Destination: cniConfDir,
+				ReadOnly:    true,
+				Propagation: "",
+				Label:       cke.LabelShared,
+			},
+			{
+				Source:      cniVarDir,
+				Destination: cniVarDir,
+				ReadOnly:    false,
+				Propagation: "",
+				Label:       cke.LabelShared,
+			},
 		},
 	}
 }
