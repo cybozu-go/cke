@@ -9,6 +9,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 - Update Kubernetes to v1.24.9 [#591](https://github.com/cybozu-go/cke/pull/591)
 - Mount directories related to CNI on kubelet [#592](https://github.com/cybozu-go/cke/pull/592)
+- Update coredns to 1.10.0 [#594](https://github.com/cybozu-go/cke/pull/594)
 
 ## [1.24.0-rc.1]
 
