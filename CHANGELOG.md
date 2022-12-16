@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.23.7] - 2022-12-16
+
+- Remove memory limits from cluster-dns manifests ([#595](https://github.com/cybozu-go/cke/pull/595))
+
 ## [1.23.6] - 2022-12-02
 
 ### Changed
