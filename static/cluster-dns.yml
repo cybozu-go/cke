@@ -64,7 +64,7 @@ metadata:
   namespace: kube-system
   annotations:
     cke.cybozu.com/image: "{{ .coredns }}"
-    cke.cybozu.com/revision: "3"
+    cke.cybozu.com/revision: "4"
 spec:
   replicas: 2
   strategy:
@@ -97,8 +97,6 @@ spec:
         image: {{ .coredns }}
         imagePullPolicy: IfNotPresent
         resources:
-          limits:
-            memory: 170Mi
           requests:
             cpu: 100m
             memory: 70Mi
