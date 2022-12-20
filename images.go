@@ -14,7 +14,7 @@ const (
 	KubernetesImage      = Image("quay.io/cybozu/kubernetes:1.24.8.1")
 	ToolsImage           = Image("quay.io/cybozu/cke-tools:1.24.0")
 	PauseImage           = Image("quay.io/cybozu/pause:3.6.0.1")
-	CoreDNSImage         = Image("quay.io/cybozu/coredns:1.9.3.2")
+	CoreDNSImage         = Image("quay.io/cybozu/coredns:1.10.0.1")
 	UnboundImage         = Image("quay.io/cybozu/unbound:1.17.0.1")
 	UnboundExporterImage = Image("quay.io/cybozu/unbound_exporter:0.4.1.4")
 )
