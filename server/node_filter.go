@@ -142,7 +142,12 @@ func (nf *NodeFilter) EtcdIsGood() bool {
 	if !st.IsHealthy {
 		return false
 	}
-	return len(st.Members) == len(st.InSyncMembers)
+	for k := range st.Members {
+		if !st.InSyncMembers[k] {
+			return false
+		}
+	}
+	return true
 }
 
 // EtcdStoppedMembers returns control plane nodes that are not running etcd.
