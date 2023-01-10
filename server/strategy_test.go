@@ -145,7 +145,7 @@ func newData() testData {
 	var nodeList []corev1.Node
 	for _, nodeName := range nodeNames {
 		nodeStatuses[nodeName] = &cke.NodeStatus{
-			Etcd:         cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false},
+			Etcd:         cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false, IsAddedMember: false},
 			SSHConnected: true,
 		}
 		nodeList = append(nodeList, corev1.Node{
@@ -209,15 +209,29 @@ func (d testData) withEtcdRivers() testData {
 	return d
 }
 
-func (d testData) withStoppedEtcd() testData {
+func (d testData) withInitFailedEtcd() testData {
 	for _, n := range d.ControlPlane() {
 		d.NodeStatus(n).Etcd.HasData = true
 	}
 	return d
 }
 
+func (d testData) withStoppedEtcd() testData {
+	for _, n := range d.ControlPlane() {
+		d.NodeStatus(n).Etcd.HasData = true
+		d.NodeStatus(n).Etcd.IsAddedMember = true
+	}
+	return d
+}
+
 func (d testData) withNotHasDataStoppedEtcd() testData {
 	d.NodeStatus(d.ControlPlane()[0]).Etcd.HasData = false
+	d.NodeStatus(d.ControlPlane()[0]).Etcd.IsAddedMember = false
+	return d
+}
+
+func (d testData) withNotMarkedStoppedEtcd() testData {
+	d.NodeStatus(d.ControlPlane()[0]).Etcd.IsAddedMember = false
 	return d
 }
 
@@ -683,6 +697,14 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: nil,
 		},
 		{
+			Name:        "SkipEtcdBootstrap2",
+			Input:       newData().withRivers().withEtcdRivers().withInitFailedEtcd(),
+			ExpectedOps: []string{"etcd-wait-cluster"},
+			// This wait will never succeed.
+			// The recovery from this failure case may need deletion of the data volumes, so it should be handled manually.
+			// The failure case is very rare.  It will not occur once after the etcd cluster started to work.
+		},
+		{
 			Name:        "EtcdStart",
 			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd(),
 			ExpectedOps: []string{"etcd-start"},
@@ -703,6 +725,14 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name:        "EtcdStart3",
 			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd().withNotHasDataStoppedEtcd(),
+			ExpectedOps: []string{"etcd-start"},
+			ExpectedTargetNums: map[string]int{
+				"etcd-start": 2,
+			},
+		},
+		{
+			Name:        "EtcdStart4",
+			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd().withNotMarkedStoppedEtcd(),
 			ExpectedOps: []string{"etcd-start"},
 			ExpectedTargetNums: map[string]int{
 				"etcd-start": 2,
@@ -1935,7 +1965,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "EtcdMark",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.Status.NodeStatuses["10.0.0.13"].Etcd.HasData = false
+				d.Status.NodeStatuses["10.0.0.13"].Etcd.IsAddedMember = false
 			}),
 			ExpectedOps: []string{"etcd-mark-member"},
 		},
@@ -1998,6 +2028,7 @@ func TestDecideOps(t *testing.T) {
 					st := d.Status.NodeStatuses[node]
 					st.Etcd.Running = true
 					st.Etcd.HasData = true
+					st.Etcd.IsAddedMember = true
 					st.APIServer.Running = true
 					st.ControllerManager.Running = true
 					st.Scheduler.Running = true

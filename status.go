@@ -118,7 +118,8 @@ type ServiceStatus struct {
 // EtcdStatus is the status of kubelet.
 type EtcdStatus struct {
 	ServiceStatus
-	HasData bool
+	HasData       bool
+	IsAddedMember bool
 }
 
 // KubeComponentStatus represents service status and endpoint's health

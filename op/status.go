@@ -68,7 +68,8 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 
 	status.Etcd = cke.EtcdStatus{
 		ServiceStatus: ss[EtcdContainerName],
-		HasData:       etcdVolumeExists && isAddedmember,
+		HasData:       etcdVolumeExists,
+		IsAddedMember: etcdVolumeExists && isAddedmember,
 	}
 	status.Rivers = ss[RiversContainerName]
 	status.EtcdRivers = ss[EtcdRiversContainerName]

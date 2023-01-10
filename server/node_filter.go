@@ -160,7 +160,7 @@ func (nf *NodeFilter) EtcdStoppedMembers() (nodes []*cke.Node) {
 		if st.Running {
 			continue
 		}
-		if !st.HasData {
+		if !st.IsAddedMember {
 			continue
 		}
 		nodes = append(nodes, n)
@@ -239,7 +239,7 @@ func (nf *NodeFilter) EtcdUnmarkedMembers() (nodes []*cke.Node) {
 		if !n.ControlPlane {
 			continue
 		}
-		if nf.nodeStatus(n).Etcd.HasData {
+		if nf.nodeStatus(n).Etcd.IsAddedMember {
 			continue
 		}
 		nodes = append(nodes, n)

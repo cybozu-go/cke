@@ -48,7 +48,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 	var etcdRunning bool
 	for _, n := range cke.ControlPlanes(cluster.Nodes) {
 		ns := statuses[n.Address]
-		if ns.Etcd.HasData {
+		if ns.Etcd.IsAddedMember {
 			etcdRunning = true
 			break
 		}
