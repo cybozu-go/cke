@@ -8,6 +8,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 ### Fixed
 
 - Fix node filter to check etcd in-sync status properly [#599](https://github.com/cybozu-go/cke/pull/599)
+- Fix added-but-not-marked etcd members [#600](https://github.com/cybozu-go/cke/pull/600)
 
 ## [1.24.1]
 

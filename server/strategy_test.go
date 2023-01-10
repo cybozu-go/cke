@@ -1933,6 +1933,13 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []string{"etcd-add-member"},
 		},
 		{
+			Name: "EtcdMark",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Status.NodeStatuses["10.0.0.13"].Etcd.HasData = false
+			}),
+			ExpectedOps: []string{"etcd-mark-member"},
+		},
+		{
 			Name: "EtcdIsNotGood",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				// a node is to be added
