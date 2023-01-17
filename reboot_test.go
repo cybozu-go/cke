@@ -45,3 +45,33 @@ func TestCountRebootQueueEntries(t *testing.T) {
 		t.Errorf("expected: %v, actual: %v", expected, actual)
 	}
 }
+
+func TestBuildNodeRebootStatus(t *testing.T) {
+	inputNodes := []*Node{
+		{Hostname: "node1", Address: "1.1.1.1"},
+		{Hostname: "node2", Address: "2.2.2.2"},
+	}
+	inputEntries := []*RebootQueueEntry{
+		{Node: "1.1.1.1", Status: RebootStatusRebooting},
+		{Node: "3.3.3.3", Status: RebootStatusCancelled},
+	}
+	expected := map[string]map[string]bool{
+		"node1": {
+			"queued":    false,
+			"draining":  false,
+			"rebooting": true,
+			"cancelled": false,
+		},
+		"node2": {
+			"queued":    false,
+			"draining":  false,
+			"rebooting": false,
+			"cancelled": false,
+		},
+	}
+	actual := BuildNodeRebootStatus(inputNodes, inputEntries)
+
+	if !cmp.Equal(actual, expected) {
+		t.Errorf("expected: %v, actual: %v", expected, actual)
+	}
+}

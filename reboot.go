@@ -15,6 +15,8 @@ const (
 	RebootStatusCancelled = RebootStatus("cancelled")
 )
 
+var rebootStatuses = []RebootStatus{RebootStatusQueued, RebootStatusDraining, RebootStatusRebooting, RebootStatusCancelled}
+
 // RebootQueueEntry represents a queue entry of reboot operation
 type RebootQueueEntry struct {
 	Index              int64        `json:"index,string"`
@@ -58,13 +60,39 @@ func DedupRebootQueueEntries(entries []*RebootQueueEntry) []*RebootQueueEntry {
 
 func CountRebootQueueEntries(entries []*RebootQueueEntry) map[string]int {
 	ret := map[string]int{}
-	ret[string(RebootStatusQueued)] = 0
-	ret[string(RebootStatusDraining)] = 0
-	ret[string(RebootStatusRebooting)] = 0
-	ret[string(RebootStatusCancelled)] = 0
+	for _, status := range rebootStatuses {
+		// initialize explicitly to provide list of possible statuses
+		ret[string(status)] = 0
+	}
 
 	for _, entry := range entries {
 		ret[string(entry.Status)]++
+	}
+
+	return ret
+}
+
+func BuildNodeRebootStatus(nodes []*Node, entries []*RebootQueueEntry) map[string]map[string]bool {
+	ret := make(map[string]map[string]bool)
+	addr2name := make(map[string]string)
+
+	for _, node := range nodes {
+		name := node.Nodename()
+		ret[name] = make(map[string]bool)
+		for _, status := range rebootStatuses {
+			// initialize explicitly to provide list of possible statuses
+			ret[name][string(status)] = false
+		}
+		addr2name[node.Address] = name
+	}
+
+	for _, entry := range entries {
+		name, ok := addr2name[entry.Node]
+		if !ok {
+			// removed from K8s cluster after queued
+			continue
+		}
+		ret[name][string(entry.Status)] = true
 	}
 
 	return ret

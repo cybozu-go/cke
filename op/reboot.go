@@ -520,9 +520,16 @@ func (c rebootRecalcMetricsCommand) Run(ctx context.Context, inf cke.Infrastruct
 	if err != nil {
 		return err
 	}
+	cluster, err := inf.Storage().GetCluster(ctx)
+	if err != nil {
+		return err
+	}
+
 	metrics.UpdateRebootQueueEntries(len(rqEntries))
 	itemCounts := cke.CountRebootQueueEntries(rqEntries)
 	metrics.UpdateRebootQueueItems(itemCounts)
+	nodeStatus := cke.BuildNodeRebootStatus(cluster.Nodes, rqEntries)
+	metrics.UpdateNodeRebootStatus(nodeStatus)
 
 	return nil
 }

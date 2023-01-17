@@ -79,6 +79,7 @@ func TestMetricsUpdater(t *testing.T) {
 	t.Run("UpdateOperationPhase", testUpdateOperationPhase)
 	t.Run("UpdateRebootQueueEntries", testUpdateRebootQueueEntries)
 	t.Run("UpdateRebootQueueItems", testUpdateRebootQueueItems)
+	t.Run("UpdateNodeRebootStatus", testUpdateNodeRebootStatus)
 	t.Run("UpdateSabakanIntegration", testUpdateSabakanIntegration)
 }
 
@@ -369,6 +370,61 @@ func testUpdateRebootQueueItems(t *testing.T) {
 				t.Errorf("value for cke_reboot_queue_items is wrong.  expected: %v, actual: %v", tt.expected, metricsFound)
 			}
 		})
+	}
+}
+
+func testUpdateNodeRebootStatus(t *testing.T) {
+	input := map[string]map[string]bool{
+		"node1": {
+			"queued":    false,
+			"draining":  false,
+			"rebooting": true,
+			"cancelled": false,
+		},
+		"node2": {
+			"queued":    false,
+			"draining":  false,
+			"rebooting": false,
+			"cancelled": false,
+		},
+	}
+	expected := input
+
+	ctx := context.Background()
+	defer ctx.Done()
+
+	collector, _ := newTestCollector()
+	handler := GetHandler(collector)
+
+	UpdateNodeRebootStatus(input)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	handler.ServeHTTP(w, req)
+
+	metricsFamily, err := parseMetrics(w.Result())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actual := make(map[string]map[string]bool)
+	for _, mf := range metricsFamily {
+		if *mf.Name != "cke_node_reboot_status" {
+			continue
+		}
+		for _, m := range mf.Metric {
+			labels := labelToMap(m.Label)
+			node := labels["node"]
+			status := labels["status"]
+			if _, ok := actual[node]; !ok {
+				actual[node] = make(map[string]bool)
+			}
+			actual[node][status] = *m.Gauge.Value != 0
+		}
+	}
+
+	if !cmp.Equal(actual, expected) {
+		t.Errorf("unexpected map was build from cke_node_reboot_status.  expected: %v, actual: %v", expected, actual)
 	}
 }
 
