@@ -1893,6 +1893,7 @@ func TestDecideOps(t *testing.T) {
 			Name: "EtcdRemoveNonClusterMember",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Etcd.Members["10.0.0.100"] = &etcdserverpb.Member{Name: "10.0.0.100", ID: 3}
+				d.Status.Etcd.InSyncMembers["10.0.0.100"] = false
 			}),
 			ExpectedOps: []string{"etcd-remove-member"},
 		},
@@ -1900,6 +1901,7 @@ func TestDecideOps(t *testing.T) {
 			Name: "SkipEtcdRemoveNonClusterMember",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Etcd.Members["10.0.0.100"] = &etcdserverpb.Member{Name: "10.0.0.100", ID: 3}
+				d.Status.Etcd.InSyncMembers["10.0.0.100"] = false
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []string{"wait-kubernetes"},
 		},
@@ -1907,6 +1909,7 @@ func TestDecideOps(t *testing.T) {
 			Name: "EtcdDestroyNonCPMember",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 3}
+				d.Status.Etcd.InSyncMembers["10.0.0.14"] = false
 			}),
 			ExpectedOps:        []string{"etcd-destroy-member"},
 			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 1},
@@ -1915,6 +1918,7 @@ func TestDecideOps(t *testing.T) {
 			Name: "EtcdDestroyNonCPMemberSSHNotConnected",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 3}
+				d.Status.Etcd.InSyncMembers["10.0.0.14"] = false
 			}).withSSHNotConnectedNonCPWorker(3),
 			ExpectedOps:        []string{"etcd-destroy-member"},
 			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 0},
@@ -1924,6 +1928,7 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Etcd.Members["10.0.0.13"].Name = ""
 				d.Status.Etcd.Members["10.0.0.13"].ID = 0
+				d.Status.Etcd.InSyncMembers["10.0.0.13"] = false
 			}),
 			ExpectedOps: []string{"etcd-add-member"},
 		},
@@ -1934,7 +1939,7 @@ func TestDecideOps(t *testing.T) {
 				delete(d.Status.Etcd.Members, "10.0.0.13")
 				delete(d.Status.Etcd.InSyncMembers, "10.0.0.13")
 				// but the cluster is not good enough
-				delete(d.Status.Etcd.InSyncMembers, "10.0.0.12")
+				d.Status.Etcd.InSyncMembers["10.0.0.12"] = false
 			}),
 			ExpectedOps: nil,
 		},
@@ -2214,7 +2219,7 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusQueued,
 				},
 			}).with(func(d testData) {
-				delete(d.Status.Etcd.InSyncMembers, "10.0.0.11")
+				d.Status.Etcd.InSyncMembers["10.0.0.11"] = false
 			}),
 			ExpectedOps:        nil,
 			ExpectedTargetNums: nil,
