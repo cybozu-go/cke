@@ -5,6 +5,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Use Kubernetes 1.24.9 [#601](https://github.com/cybozu-go/cke/pull/601)
+  - Fixed update omission in [#591](https://github.com/cybozu-go/cke/pull/591)
+
 ### Added
 
 - Add `cke_node_reboot_status` metrics [#590](https://github.com/cybozu-go/cke/pull/590)
