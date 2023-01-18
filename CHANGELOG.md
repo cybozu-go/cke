@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix node filter to check etcd in-sync status properly [#599](https://github.com/cybozu-go/cke/pull/599)
+
 ## [1.24.1]
 
 ### Changed
@@ -15,10 +19,6 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 ### Added
 
 - Add `cke_node_reboot_status` metrics [#590](https://github.com/cybozu-go/cke/pull/590)
-
-### Fixed
-
-- Fix node filter to check etcd in-sync status properly [#599](https://github.com/cybozu-go/cke/pull/599)
 
 ## [1.24.0]
 
