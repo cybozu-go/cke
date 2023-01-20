@@ -160,7 +160,7 @@ func (nf *NodeFilter) EtcdStoppedMembers() (nodes []*cke.Node) {
 		if st.Running {
 			continue
 		}
-		if !st.HasData {
+		if !st.IsAddedMember {
 			continue
 		}
 		nodes = append(nodes, n)
@@ -217,6 +217,29 @@ func (nf *NodeFilter) EtcdUnstartedMembers() (nodes []*cke.Node) {
 			continue
 		}
 		if len(v.Name) > 0 {
+			continue
+		}
+		nodes = append(nodes, n)
+	}
+	return nodes
+}
+
+// EtcdUnmarkedMembers returns nodes that are working as in-sync members
+// of the etcd cluster but not marked as added members.
+func (nf *NodeFilter) EtcdUnmarkedMembers() (nodes []*cke.Node) {
+	st := nf.status.Etcd
+	for k, v := range st.InSyncMembers {
+		if !v {
+			continue
+		}
+		n, ok := nf.nodeMap[k]
+		if !ok {
+			continue
+		}
+		if !n.ControlPlane {
+			continue
+		}
+		if nf.nodeStatus(n).Etcd.IsAddedMember {
 			continue
 		}
 		nodes = append(nodes, n)

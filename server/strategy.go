@@ -179,6 +179,9 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	if nodes := nf.EtcdUnstartedMembers(); len(nodes) > 0 {
 		return etcd.AddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
 	}
+	if nodes := nf.EtcdUnmarkedMembers(); len(nodes) > 0 {
+		return etcd.MarkMemberOp(nodes)
+	}
 
 	if !nf.EtcdIsGood() {
 		log.Warn("etcd is not good for maintenance", nil)
