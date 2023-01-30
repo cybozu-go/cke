@@ -5,6 +5,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.24.2]
+
 ### Fixed
 
 - Fix node filter to check etcd in-sync status properly [#599](https://github.com/cybozu-go/cke/pull/599)
@@ -73,7 +75,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.24.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.24.2...HEAD
+[1.24.1]: https://github.com/cybozu-go/cke/compare/v1.24.1...v1.24.2
 [1.24.1]: https://github.com/cybozu-go/cke/compare/v1.24.0...v1.24.1
 [1.24.0]: https://github.com/cybozu-go/cke/compare/v1.23.5...v1.24.0
 [1.24.0-rc.2]: https://github.com/cybozu-go/cke/compare/1.24.0-rc.1...1.24.0-rc.2
