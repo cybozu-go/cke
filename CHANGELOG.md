@@ -10,6 +10,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Fix node filter to check etcd in-sync status properly [#599](https://github.com/cybozu-go/cke/pull/599)
 - Fix added-but-not-marked etcd members [#600](https://github.com/cybozu-go/cke/pull/600)
 - Don't select bootstrap of etcd if data volume exists [#600](https://github.com/cybozu-go/cke/pull/600)
+- Update kubernetes image version to 1.24.9.3 [#606](https://github.com/cybozu-go/cke/pull/606)
 
 ## [1.24.1]
 
