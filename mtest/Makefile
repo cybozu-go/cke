@@ -1,11 +1,11 @@
 # Makefile for multi-host testing using ginkgo
 
 # tool versions
-MANAGEMENT_ETCD_VERSION = 3.5.6
+MANAGEMENT_ETCD_VERSION = 3.5.7
 VAULT_VERSION = 1.11.1
-K8S_VERSION = 1.24.9
-CONTAINERD_VERSION = 1.6.10
-CRITOOLS_VERSION = 1.25.0
+K8S_VERSION = 1.25.6
+CONTAINERD_VERSION = 1.6.18
+CRITOOLS_VERSION = 1.26.0
 CT_VERSION = 0.9.0
 
 # configuration variables
@@ -27,7 +27,7 @@ CURL = curl -fsL
 PLACEMAT_DATADIR = /var/scratch/placemat
 CT = /usr/local/bin/ct
 SUDO = sudo
-PACKAGES = libseccomp-dev automake autoconf libtool
+PACKAGES = libseccomp-dev automake autoconf libtool 
 SUITE = functions
 CLUSTER := cke-cluster.yml
 

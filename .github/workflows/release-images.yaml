@@ -16,10 +16,10 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.go-version }}
-      - uses: google-github-actions/auth@v0.8.0
+      - uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
-      - uses: google-github-actions/setup-gcloud@v0.6.0
+      - uses: google-github-actions/setup-gcloud@v1
       - name: Set GCP instance name
         run: echo "INSTANCE_NAME=cke-${{ matrix.suite }}-${{ github.run_number }}-$(TZ=Asia/Tokyo date +%H%M%S)" >> $GITHUB_ENV
       - name: Run sonobuoy
@@ -66,7 +66,7 @@ jobs:
     name: Release on GitHub
     runs-on: ubuntu-20.04
     container:
-      image: quay.io/cybozu/golang:1.17-focal
+      image: quay.io/cybozu/golang:1.19-focal
     needs: release-cke-image
     steps:
       - uses: actions/checkout@v3
@@ -81,7 +81,7 @@ jobs:
           tar xzf ./sonobuoy.tar.gz -C /tmp/upload --strip-components=4 plugins/e2e/results/global/e2e.log plugins/e2e/results/global/junit_01.xml
           sed "s/vX\.Y\.Z/v${{ env.tag }}/" sonobuoy/README.md > /tmp/upload/README.md
           sed "s/vX\.Y\.Z/v${{ env.tag }}/" sonobuoy/PRODUCT.yaml > /tmp/upload/PRODUCT.yaml
-          GOBIN=/tmp/upload go install ./pkg/cke ./pkg/ckecli
+          GOBIN=/tmp/upload CGO_ENABLED=0 go install ./pkg/cke ./pkg/ckecli
       - name: Create release
         run: |
           OWNER=$(echo ${{ github.repository }} | cut -d '/' -f 1)

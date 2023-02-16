@@ -5,63 +5,15 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
-## [1.24.2]
-
-### Fixed
-
-- Fix node filter to check etcd in-sync status properly [#599](https://github.com/cybozu-go/cke/pull/599)
-- Fix added-but-not-marked etcd members [#600](https://github.com/cybozu-go/cke/pull/600)
-- Don't select bootstrap of etcd if data volume exists [#600](https://github.com/cybozu-go/cke/pull/600)
-- Update kubernetes image version to 1.24.9.3 [#606](https://github.com/cybozu-go/cke/pull/606)
-
-## [1.24.1]
-
 ### Changed
 
-- Use Kubernetes 1.24.9 [#601](https://github.com/cybozu-go/cke/pull/601)
-  - Fixed update omission in [#591](https://github.com/cybozu-go/cke/pull/591)
-
-### Added
-
-- Add `cke_node_reboot_status` metrics [#590](https://github.com/cybozu-go/cke/pull/590)
-
-## [1.24.0]
-
-### Changed
-
-- Support Kubernetes 1.24 [#584](https://github.com/cybozu-go/cke/pull/584)
-    - Update Kubernetes to v1.24.8
-    - Update some dependencies
-    - Remove kubelet flag (`--network-plugin`) related to dockershim removal
-- Fixed sonobuoy test failing. [#589](https://github.com/cybozu-go/cke/pull/589)
-    - Fix docker-compose download URL
-    - Fix confirmation of container exit status
-- Update Kubernetes to v1.24.9 [#591](https://github.com/cybozu-go/cke/pull/591)
-- Mount directories related to CNI on kubelet [#592](https://github.com/cybozu-go/cke/pull/592)
-- Update coredns to 1.10.0 [#594](https://github.com/cybozu-go/cke/pull/594)
-
-## [1.24.0-rc.2]
-
-### Changed
-
-- Update Kubernetes to v1.24.9 [#591](https://github.com/cybozu-go/cke/pull/591)
-- Mount directories related to CNI on kubelet [#592](https://github.com/cybozu-go/cke/pull/592)
-- Update coredns to 1.10.0 [#594](https://github.com/cybozu-go/cke/pull/594)
-
-## [1.24.0-rc.1]
-
-### Changed
-
-- Support Kubernetes 1.24 [#584](https://github.com/cybozu-go/cke/pull/584)
-    - Update Kubernetes to v1.24.8
-    - Update some dependencies
-    - Remove kubelet flag (`--network-plugin`) related to dockershim removal
-- Fixed sonobuoy test failing. [#589](https://github.com/cybozu-go/cke/pull/589)
-    - Fix docker-compose download URL
-    - Fix confirmation of container exit status
+- Support Kubernetes 1.25 (#609)
+  - Update Kubernetes to v1.25.6
+  - Update some dependencies
 
 ## Ancient changes
 
+- See [release-1.24/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.24/CHANGELOG.md) for changes in CKE 1.24.
 - See [release-1.23/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.23/CHANGELOG.md) for changes in CKE 1.23.
 - See [release-1.22/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.22/CHANGELOG.md) for changes in CKE 1.22.
 - See [release-1.21/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.21/CHANGELOG.md) for changes in CKE 1.21.
@@ -76,8 +28,3 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
 [Unreleased]: https://github.com/cybozu-go/cke/compare/v1.24.2...HEAD
-[1.24.1]: https://github.com/cybozu-go/cke/compare/v1.24.1...v1.24.2
-[1.24.1]: https://github.com/cybozu-go/cke/compare/v1.24.0...v1.24.1
-[1.24.0]: https://github.com/cybozu-go/cke/compare/v1.23.5...v1.24.0
-[1.24.0-rc.2]: https://github.com/cybozu-go/cke/compare/1.24.0-rc.1...1.24.0-rc.2
-[1.24.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.23.5...1.24.0-rc.1
