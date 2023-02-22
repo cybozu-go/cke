@@ -1,4 +1,4 @@
-CNI_PLUGIN_VERSION = 1.1.1
+CNI_PLUGIN_VERSION = 1.2.0
 TAG = quay.io/cybozu/cke-tools:dev
 GOBUILD = CGO_ENABLED=0 go build -ldflags="-w -s"
 
