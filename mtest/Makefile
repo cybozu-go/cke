@@ -27,7 +27,7 @@ CURL = curl -fsL
 PLACEMAT_DATADIR = /var/scratch/placemat
 CT = /usr/local/bin/ct
 SUDO = sudo
-PACKAGES = libseccomp-dev automake autoconf libtool 
+PACKAGES = libseccomp-dev automake autoconf libtool
 SUITE = functions
 CLUSTER := cke-cluster.yml
 
