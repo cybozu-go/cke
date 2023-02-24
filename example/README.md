@@ -123,7 +123,7 @@ You can deploy Calico on Kubernetes cluster with the following command.
 $ kubectl apply -k .
 ```
 
-See [Calico Documentation](https://docs.projectcalico.org/getting-started/kubernetes/self-managed-onprem/onpremises) for details.
+See [Calico Documentation](https://docs.tigera.io/calico/latest/getting-started/kubernetes/self-managed-onprem/onpremises) for details.
 
 After a few minutes, Kubernetes cluster will become ready.
 

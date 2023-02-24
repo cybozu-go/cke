@@ -1,8 +1,8 @@
 ### Configurable variables
-SONOBUOY_VERSION = 0.56.12
-KUBECTL_VERSION = 1.24.9
-DOCKER_COMPOSE_VERSION = 2.13.0
-CT_VERSION = 0.9.0
+SONOBUOY_VERSION = 0.56.15
+KUBECTL_VERSION = 1.25.6
+DOCKER_COMPOSE_VERSION = 2.16.0
+CT_VERSION = 0.9.3
 
 ### Unconfigurable
 CURL = curl -fsL
@@ -76,7 +76,7 @@ setup:
 
 $(CT):
 	mkdir -p bin
-	$(CURL) -o ct https://github.com/coreos/container-linux-config-transpiler/releases/download/v$(CT_VERSION)/ct-v$(CT_VERSION)-x86_64-unknown-linux-gnu
+	$(CURL) -o ct https://github.com/flatcar/container-linux-config-transpiler/releases/download/v$(CT_VERSION)/ct-v$(CT_VERSION)-x86_64-unknown-linux-gnu
 	chmod +x ct
 	$(SUDO) mv ct $@
 
