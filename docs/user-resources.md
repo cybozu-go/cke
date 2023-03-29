@@ -15,17 +15,37 @@ Custom resources (not `CustomResourceDefinition`s) are not supported.
 The resources are applied in the following order according to their kind.
 
 - Namespace
+  - rank: 10
 - ServiceAccount
+  - rank: 20
 - CustomResourceDefinition
+  - rank: 30
 - ClusterRole
+  - rank: 40
 - ClusterRoleBinding
+  - rank: 50
 - (Other cluster-scope resources)
+  - rank: 1000
 - Role
+  - rank: 2000
 - RoleBinding
+  - rank: 2010
 - NetworkPolicy
+  - rank: 2020
 - Secret
+  - rank: 2030
 - ConfigMap
+  - rank: 2040
 - (Other namespace-scoped resources)
+  - rank: 3000
+
+### Custom order
+
+Users can control the order of applying resources by annotating `cke.cybozu.com/rank`.
+In the case of cluster-scope resources, a rank value must be 0 ~ 1999.
+For namespace-scope resources, a rank value must be 2000 ~.
+
+If `cke.cybozu.com/rank` is not set, the rank is assigned a value based on the abovementioned list.
 
 ## Annotations
 

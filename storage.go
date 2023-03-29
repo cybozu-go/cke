@@ -563,12 +563,18 @@ func (s Storage) GetAllResources(ctx context.Context) ([]ResourceDefinition, err
 			return nil, errors.New("invalid resource key: " + key)
 		}
 
+		rank, err := DecideRank(kind, namespace, 0)
+		if err != nil {
+			return nil, err
+		}
+
 		rcs = append(rcs, ResourceDefinition{
 			Key:        key,
 			Kind:       kind,
 			Namespace:  namespace,
 			Name:       name,
 			Revision:   kv.ModRevision,
+			Rank:       rank,
 			Definition: kv.Value,
 		})
 	}

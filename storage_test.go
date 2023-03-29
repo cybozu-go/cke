@@ -467,12 +467,22 @@ func testStorageResource(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	err = storage.SetResource(ctx, "Deployment/foo/deploy1", "\nkind: Deployment\napiVersion: apps/v1\nmetadata:\n  name: cluster-dns\n  namespace: kube-system\n  annotations:\n    cke.cybozu.com/image: \"quay.io/cybozu/coredns:1.10.0.1\"\n    cke.cybozu.com/revision: \"4\"\n    cke.cybozu.com/rank: \"2100\"\nspec:\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = storage.SetResource(ctx, "DaemonSet/foo/ds1", "kind: DaemonSet\napiVersion: apps/v1\nmetadata:\n  name: node-dns\n  namespace: kube-system\n  annotations:\n    cke.cybozu.com/image: \"quay.io/cybozu/unbound:1.17.1.1,quay.io/cybozu/unbound_exporter:0.4.1.4\"\n    cke.cybozu.com/revision: \"4\"\n    cke.cybozu.com/rank: \"2200\"\nspec:\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	resources, err := storage.GetAllResources(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expected := []string{"Namespace/foo", "ServiceAccount/foo/sa1", "ConfigMap/foo/conf1", "Pod/foo/pod1"}
+	expected := []string{"Namespace/foo", "ServiceAccount/foo/sa1", "ConfigMap/foo/conf1", "DaemonSet/foo/ds1", "Deployment/foo/deploy1", "Pod/foo/pod1"}
 	actual := make([]string, len(resources))
 	for i, r := range resources {
 		actual[i] = r.Key
