@@ -5,6 +5,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+- Update CKE image for example in [#618](https://github.com/cybozu-go/cke/pull/618)
+
 ## [1.25.1]
 
 ### Changed
