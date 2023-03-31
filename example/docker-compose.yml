@@ -2,7 +2,7 @@ version: '2'
 services:
   cke:
     container_name: cke
-    image: quay.io/cybozu/cke:1.24.2
+    image: quay.io/cybozu/cke:1.25.0
     networks:
       app_net:
         ipv4_address: 172.30.0.11
@@ -19,7 +19,7 @@ services:
       - /entrypoint.sh
   setup:
     container_name: setup
-    image: quay.io/cybozu/ubuntu-debug:20.04
+    image: quay.io/cybozu/ubuntu-debug:22.04
     networks:
       app_net:
         ipv4_address: 172.30.0.12
