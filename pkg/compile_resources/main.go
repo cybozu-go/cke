@@ -94,7 +94,7 @@ func loadResources(fname string, images map[string]string) ([]cke.ResourceDefini
 				Annotations struct {
 					Revision int64  `json:"cke.cybozu.com/revision,string"`
 					Image    string `json:"cke.cybozu.com/image"`
-					Rank     uint32 `json:"cke.cybozu.com/rank,omitempty"`
+					Rank     uint32 `json:"cke.cybozu.com/rank,omitempty,string"`
 				} `json:"annotations"`
 			} `json:"metadata"`
 		}{}

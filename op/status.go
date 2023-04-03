@@ -436,7 +436,29 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		if err != nil {
 			return cke.KubernetesClusterStatus{}, err
 		}
-		s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0)
+		if obj.GroupVersionKind().Kind == "DaemonSet" {
+			desired, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "status", "desiredNumberScheduled")
+			if err != nil {
+				return cke.KubernetesClusterStatus{}, err
+			}
+			available, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "status", "numberAvailable")
+			if err != nil {
+				return cke.KubernetesClusterStatus{}, err
+			}
+			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, int(desired), int(available))
+		} else if obj.GroupVersionKind().Kind == "Deployment" {
+			desired, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "status", "readyReplicas")
+			if err != nil {
+				return cke.KubernetesClusterStatus{}, err
+			}
+			available, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "status", "replicas")
+			if err != nil {
+				return cke.KubernetesClusterStatus{}, err
+			}
+			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, int(desired), int(available))
+		} else {
+			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, -1, -1) // -1 が気持ち悪いので const でわかる名前で定義しておく
+		}
 	}
 
 	return s, nil

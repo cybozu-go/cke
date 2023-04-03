@@ -582,14 +582,17 @@ func decideEtcdServiceOps(apiServer *cke.Node, svc *corev1.Service) cke.Operator
 }
 
 func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, resources []cke.ResourceDefinition, isReady bool) (ops []cke.Operator) {
+
 	for _, res := range static.Resources {
 		// To avoid thundering herd problem. Deployments need to be created only after enough nodes become ready.
 		if res.Kind == cke.KindDeployment && !isReady {
 			continue
 		}
+		// We don't have to wait to complete resource creation or update,
 		status, ok := ks.ResourceStatuses[res.Key]
 		if !ok || res.NeedUpdate(&status) {
 			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
+			return ops
 		}
 	}
 	for _, res := range resources {
@@ -597,8 +600,26 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 			continue
 		}
 		status, ok := ks.ResourceStatuses[res.Key]
-		if !ok || res.NeedUpdate(&status) {
+		if !ok {
 			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
+			return ops
+		} else {
+			if res.NeedUpdate(&status) {
+				ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
+				return ops
+			} else {
+				if status.NeedWait() {
+					log.Info("need to wait", map[string]interface{}{
+						"resource_name":      res.Name,
+						"resource_namespace": res.Namespace,
+						"kind":               res.Kind,
+						"desired":            status.Desired,
+						"available":          status.Available,
+					})
+					ops = append(ops, op.NopOp())
+					return ops
+				}
+			}
 		}
 	}
 	return ops

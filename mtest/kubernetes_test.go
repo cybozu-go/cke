@@ -435,10 +435,113 @@ roleRef:
   kind: Role
   name: pod-reader
   apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: foo
+  name: test-deployment
+  annotations:
+    cke.cybozu.com/rank: "2200"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      cke.cybozu.com/appname: test-deployment
+  template:
+    metadata:
+      labels:
+        cke.cybozu.com/appname: test-deployment
+    spec:
+      containers:
+      - name: ubuntu
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - pause
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: test-daemonset
+  namespace: foo
+  annotations:
+    cke.cybozu.com/rank: "2100"
+spec:
+  selector:
+    matchLabels:
+      cke.cybozu.com/appname: test-daemonset
+  template:
+    metadata:
+      labels:
+        cke.cybozu.com/appname: test-daemonset
+    spec:
+      initContainers:
+      - name: wait-1min
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - sleep
+        - "60"
+      containers:
+      - name: ubuntu
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - pause
 `
-		ckecliWithInput([]byte(resources), "resource", "set", "-")
+
+		By("checking the order of applying")
+		_, _, err := ckecliWithInput([]byte(resources), "resource", "set", "-")
+		Expect(err).NotTo(HaveOccurred())
+
 		defer ckecliWithInput([]byte(resources), "resource", "delete", "-")
 		ts := time.Now()
+
+		By("waiting to complete creation")
+		Eventually(func() error {
+			stdout, _, err := kubectl("-n", "foo", "get", "daemonset", "test-daemonset", "-o", "json")
+			if err != nil {
+				return err
+			}
+			var ds appsv1.DaemonSet
+			if err := json.Unmarshal(stdout, &ds); err != nil {
+				return err
+			}
+			desired := ds.Status.DesiredNumberScheduled
+			if desired == 0 {
+				return fmt.Errorf("desired must be not 0")
+			}
+			available := ds.Status.NumberAvailable
+			stdout, _, err = kubectl("-n", "foo", "get", "pods", "-l", "cke.cybozu.com/appname=test-deployment", "-o", "json")
+			if err != nil {
+				return err
+			}
+			podList := &corev1.PodList{}
+			if err := json.Unmarshal(stdout, podList); err != nil {
+				return err
+			}
+
+			if desired > available {
+				// We expect that the array of pod.Items is empty
+				if len(podList.Items) == 0 {
+					return fmt.Errorf("should wait")
+				}
+				// If the array is not empty, test must fail and return
+				Fail("Deployment(foo/test-deployment) resource is expected not to create before completing to create DaemonSet(test-daemonset)")
+			}
+			return nil
+		}).WithTimeout(2 * time.Minute).Should(Succeed())
+
+		By("getting deployment")
+		Eventually(func() error {
+			dp := &appsv1.Deployment{}
+			stdout, _, err := kubectl("-n", "foo", "get", "deployment", "test-deployment", "-o", "json")
+			if err != nil {
+				return err
+			}
+			if err := json.Unmarshal(stdout, dp); err != nil {
+				return err
+			}
+			return nil
+		}).Should(Succeed())
 
 		cluster := getCluster()
 		for i := 0; i < 3; i++ {
@@ -455,20 +558,147 @@ metadata:
   name: foo
   labels:
     test: value
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: foo
+  name: test-deployment
+  annotations:
+    cke.cybozu.com/rank: "2200"
+  labels:
+    updated: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      cke.cybozu.com/appname: test-deployment
+  template:
+    metadata:
+      labels:
+        cke.cybozu.com/appname: test-deployment
+        updated: "true"
+    spec:
+      containers:
+      - name: ubuntu
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - pause
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: test-daemonset
+  namespace: foo
+  annotations:
+    cke.cybozu.com/rank: "2100"
+  labels:
+    updated: "true"
+spec:
+  selector:
+    matchLabels:
+      cke.cybozu.com/appname: test-daemonset
+  template:
+    metadata:
+      labels:
+        cke.cybozu.com/appname: test-daemonset
+        updated: "true"
+    spec:
+      initContainers:
+      - name: wait-1min
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - sleep
+        - "60"
+      containers:
+      - name: ubuntu
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - pause
 `
 		ckecliWithInput([]byte(newResources), "resource", "set", "-")
 		defer ckecliWithInput([]byte(newResources), "resource", "delete", "-")
 		ts = time.Now()
+
+		Eventually(func() error {
+			stdout, _, err := kubectl("get", "namespaces/foo", "-o", "json")
+			if err != nil {
+				return err
+			}
+			var ns corev1.Namespace
+			if err := json.Unmarshal(stdout, &ns); err != nil {
+				return err
+			}
+			val, ok := ns.Labels["test"]
+			if !ok || val != "value" {
+				return fmt.Errorf("ns must have the label that key is test and value is value")
+			}
+			return nil
+		}).Should(Succeed())
+
+		By("waiting to complete the update of DaemonSet")
+		Eventually(func() error {
+			By("trying to get daemonset")
+			stdout, _, err := kubectl("-n", "foo", "get", "daemonset", "-l", "updated=true", "-o", "json")
+			if err != nil {
+				return err
+			}
+			var dsList appsv1.DaemonSetList
+			if err := json.Unmarshal(stdout, &dsList); err != nil {
+				return err
+			}
+			if len(dsList.Items) == 0 {
+				return fmt.Errorf("should wait to update")
+			}
+			// if the label is not exist, retry
+			desired := dsList.Items[0].Status.DesiredNumberScheduled
+			if desired == 0 {
+				return fmt.Errorf("desired must be not 0")
+			}
+			available := dsList.Items[0].Status.NumberAvailable
+
+			stdout, _, err = kubectl("-n", "foo", "get", "deployment", "-l", "updated=true", "-o", "json")
+			if err != nil {
+				return err
+			}
+			dpList := appsv1.DeploymentList{}
+			if err := json.Unmarshal(stdout, &dpList); err != nil {
+				return err
+			}
+
+			if desired > available {
+				// We expect that the array of pod.Items is empty
+				if len(dpList.Items) == 0 {
+					return fmt.Errorf("should wait")
+				}
+				// If the array is not empty, test must fail and return
+				Fail("Deployment(foo/test-deployment) resource is expected not to create before completing to create DaemonSet(test-daemonset)")
+			}
+			return nil
+		}).Should(Succeed())
+
+		By("getting deployment")
+		dp := &appsv1.Deployment{}
+		Eventually(func() error {
+			stdout, _, err := kubectl("-n", "foo", "get", "deployment", "test-deployment", "-o", "json")
+			if err != nil {
+				return err
+			}
+			if err := json.Unmarshal(stdout, dp); err != nil {
+				return err
+			}
+			l, ok := dp.Labels["update"]
+			if !ok || l != "true" {
+				return fmt.Errorf("test-deployment must has the label named update")
+			}
+			return nil
+		}).Should(Succeed())
+		Expect(dp.Labels).Should(HaveKeyWithValue("updated", "true"))
+
 		Eventually(func() error {
 			return checkCluster(cluster, ts)
 		}).Should(Succeed())
 
-		stdout, _, err := kubectl("get", "namespaces/foo", "-o", "json")
-		Expect(err).ShouldNot(HaveOccurred())
-		var ns corev1.Namespace
-		err = json.Unmarshal(stdout, &ns)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(ns.Labels).Should(HaveKeyWithValue("test", "value"))
 	})
 
 	It("embed certificates for webhooks", func() {
