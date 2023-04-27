@@ -15,6 +15,7 @@ reboot:
   boot_check_command: ["false"]
   eviction_timeout_seconds: 60
   command_timeout_seconds: 120
+  command_retries: 3
   max_concurrent_reboots: 5
   protected_namespaces:
     matchLabels:

@@ -73,15 +73,19 @@ Reboot
 | `boot_check_command`       | true     | array                            | A command to check nodes booted.  List of strings.                      |
 | `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default: 600 (10 minutes).     |
 | `command_timeout_seconds`  | false    | *int                             | Deadline for rebooting. Zero means infinity. Default: wait indefinitely |
+| `command_retries`          | false    | *int                             | Number of reboot retries, not including initial attempt. Default: 0     |
 | `max_concurrent_reboots`   | false    | *int                             | Maximum number of nodes to be rebooted concurrently. Default: 1         |
 | `protected_namespaces`     | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                                 |
 
 `reboot_command` is the command to reboot a node. The node is passed as a command argument.
 The command should return zero if the reboot is successfully started.
+If `command_timeout_seconds` is specified, the reboot command should return within `command_timeout_seconds` seconds, or it is considered failed.
+If the reboot command has failed, CKE retries it for `command_retries` times.
 
 `boot_check_command` is the command to check a node booted. The node and the unix time when the reboot command is run are passed as command arguments.
 If the node is successfully booted, this command should output `true` to stdout and the exit status should be zero.
 If the node is not booted yet, this command should output `false` to stdout and the exit status should be zero.
+If `command_timeout_seconds` is specified, the check command should return within `command_timeout_seconds` seconds, or it is considered failed.
 
 CKE tries to delete Pods in the `protected_namespaces` gracefully with the Kubernetes eviction API.
 If any of the Pods cannot be deleted, it aborts the operation.

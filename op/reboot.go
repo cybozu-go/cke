@@ -185,6 +185,7 @@ type rebootRebootCommand struct {
 	entries        []*cke.RebootQueueEntry
 	command        []string
 	timeoutSeconds *int
+	retries        *int
 
 	notifyFailedNode func(string)
 }
@@ -217,6 +218,7 @@ func (o *rebootRebootOp) NextCommand() cke.Commander {
 		entries:          o.entries,
 		command:          o.config.RebootCommand,
 		timeoutSeconds:   o.config.CommandTimeoutSeconds,
+		retries:          o.config.CommandRetries,
 		notifyFailedNode: o.notifyFailedNode,
 	}
 }
@@ -261,16 +263,27 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 			inf.ReleaseAgent(entry.Node)
 			mu.Unlock()
 
-			args := append(c.command[1:], entry.Node)
-			command := well.CommandContext(ctx, c.command[0], args...)
-			err = command.Run()
-			if err != nil {
-				c.notifyFailedNode(entry.Node)
+			var attempts int = 1
+			if c.retries != nil {
+				attempts = *c.retries + 1
+			}
+			for i := 0; i < attempts; i++ {
+				args := append(c.command[1:], entry.Node)
+				command := well.CommandContext(ctx, c.command[0], args...)
+				err := command.Run()
+				if err == nil {
+					return nil
+				}
 				log.Warn("failed on rebooting node", map[string]interface{}{
 					log.FnError: err,
 					"node":      entry.Node,
+					"attempts":  i,
 				})
 			}
+			c.notifyFailedNode(entry.Node)
+			log.Warn("given up rebooting node", map[string]interface{}{
+				"node": entry.Node,
+			})
 			return nil
 		})
 	}
