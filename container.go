@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/opencontainers/selinux/go-selinux"
 )
 
 const (
@@ -185,7 +187,10 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 		if len(m.Propagation) > 0 {
 			opts = append(opts, m.Propagation.String())
 		}
-		if len(m.Label) > 0 {
+
+		// Only if SELinux Label is specified and the mode of SELinux is enforcing,
+		// CKE set the SELinux Label to a Docker volume.
+		if len(m.Label) > 0 && selinux.EnforceMode() == selinux.Enforcing {
 			opts = append(opts, m.Label.String())
 		}
 		args = append(args, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, strings.Join(opts, ",")))

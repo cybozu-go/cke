@@ -5,6 +5,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+- Change behavior to not do SELinux labeling unless SELinux enforcing mode [#620](https://github.com/cybozu-go/cke/pull/620)
+
 ## [1.25.0]
 
 ### Changed

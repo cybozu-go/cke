@@ -14,6 +14,7 @@ require (
 	github.com/hashicorp/vault/api v1.9.0
 	github.com/onsi/ginkgo/v2 v2.8.3
 	github.com/onsi/gomega v1.27.0
+	github.com/opencontainers/selinux v1.11.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
 	github.com/prometheus/common v0.39.0
