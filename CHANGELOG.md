@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.25.1]
+
+### Changed
+
 - Change behavior to not do SELinux labeling unless SELinux enforcing mode [#620](https://github.com/cybozu-go/cke/pull/620)
 - Retry reboot command if failed in processing reboot queue in [#621](https://github.com/cybozu-go/cke/pull/621)
 
@@ -40,6 +44,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.25.0...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.25.1...HEAD
+[1.25.1]: https://github.com/cybozu-go/cke/compare/v1.25.0...1.25.1
 [1.25.0]: https://github.com/cybozu-go/cke/compare/v1.24.2...1.25.0
 [1.25.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.24.2...1.25.0-rc.1
