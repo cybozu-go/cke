@@ -98,6 +98,12 @@ func testClusterYAML(t *testing.T) {
 	if *c.Reboot.CommandTimeoutSeconds != 120 {
 		t.Error(`*c.Reboot.CommandTimeoutSeconds != 120`)
 	}
+	if c.Reboot.CommandRetries == nil {
+		t.Fatal(`c.Reboot.CommandRetries == nil`)
+	}
+	if *c.Reboot.CommandRetries != 3 {
+		t.Error(`*c.Reboot.CommandRetries != 3`)
+	}
 	if c.Reboot.ProtectedNamespaces == nil {
 		t.Fatal(`c.Reboot.ProtectedNamespaces == nil`)
 	}
