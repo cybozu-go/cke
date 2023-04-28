@@ -6,6 +6,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 ## [Unreleased]
 
 - Change behavior to not do SELinux labeling unless SELinux enforcing mode [#620](https://github.com/cybozu-go/cke/pull/620)
+- Retry reboot command if failed in processing reboot queue in [#621](https://github.com/cybozu-go/cke/pull/621)
 
 ## [1.25.0]
 
