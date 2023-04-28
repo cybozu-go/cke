@@ -126,7 +126,7 @@ Options
 
 `selinux-label`:
 
-- If SELinux is not in enforce mode, it will not set the SELinux label.
+- If SELinux is not in enforcing mode, it will not set the SELinux label.
 - "z":  The mount content is shared among multiple containers.
 - "Z":  The mount content is private and unshared.
 - This label should not be specified to system directories.
