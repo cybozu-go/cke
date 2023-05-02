@@ -5,6 +5,9 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+- Update for Kubernetes 1.25.9 [#624](https://github.com/cybozu-go/cke/pull/624)
+  - Update Kubernetes to v1.25.9
+  - Update some dependencies
 - Update CKE image for example in [#618](https://github.com/cybozu-go/cke/pull/618)
   - Update CKE image for example
   - Add email address in PRODUCT.yaml
