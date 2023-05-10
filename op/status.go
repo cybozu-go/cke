@@ -441,13 +441,21 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
+			updated, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "status", "updatedNumberScheduled")
+			if err != nil {
+				return cke.KubernetesClusterStatus{}, err
+			}
 			available, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "status", "numberAvailable")
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, int(desired), int(available))
+			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, objStatus(desired, updated, available))
 		} else if obj.GroupVersionKind().Kind == "Deployment" {
 			desired, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "status", "readyReplicas")
+			if err != nil {
+				return cke.KubernetesClusterStatus{}, err
+			}
+			updated, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "status", "updatedReplicas")
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
@@ -455,13 +463,20 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, int(desired), int(available))
+			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, objStatus(desired, updated, available))
 		} else {
-			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, -1, -1) // -1 が気持ち悪いので const でわかる名前で定義しておく
+			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, true)
 		}
 	}
 
 	return s, nil
+}
+
+func objStatus(desired, updated, available int64) bool {
+	if desired == 0 {
+		return false
+	}
+	return (desired == available) && (desired == updated)
 }
 
 func getClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.ClusterDNSStatus, error) {

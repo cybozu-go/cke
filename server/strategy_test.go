@@ -169,8 +169,7 @@ func newData() testData {
 			ResourceStatuses: map[string]cke.ResourceStatus{
 				"Namespace/foo": {
 					Annotations: map[string]string{cke.AnnotationResourceRevision: "1"},
-					Desired:     -1,
-					Available:   -1,
+					Completed:   true,
 				},
 			},
 			Nodes: nodeList,
@@ -413,15 +412,9 @@ func (d testData) withK8sResourceReady() testData {
 	d.withK8sReady()
 	ks := &d.Status.Kubernetes
 	for _, res := range static.Resources {
-		desired, available := -1, -1
-		if res.Kind == "DaemonSet" || res.Kind == "Deployment" {
-			desired = 1
-			available = 1
-		}
 		ks.ResourceStatuses[res.Key] = cke.ResourceStatus{
 			Annotations: map[string]string{cke.AnnotationResourceRevision: "1"},
-			Desired:     desired,
-			Available:   available,
+			Completed:   true,
 		}
 	}
 	ks.ResourceStatuses["ClusterRole/system:cluster-dns"].Annotations[cke.AnnotationResourceRevision] = "2"
@@ -1369,16 +1362,14 @@ func TestDecideOps(t *testing.T) {
 				}...)).withResourceStatus(
 				map[string]cke.ResourceStatus{
 					"ConfigMap/foo/bar": {
-						Desired:   -1,
-						Available: -1,
+						Completed: true,
 					},
 					"DaemonSet/foo/test-daemonset": {
 						Annotations: map[string]string{
 							cke.AnnotationResourceRevision: "1",
 							cke.AnnotationResourceImage:    "test",
 						},
-						Desired:   1,
-						Available: 0,
+						Completed: false,
 					},
 				},
 			),
@@ -1436,24 +1427,21 @@ func TestDecideOps(t *testing.T) {
 					},
 				}).withResourceStatus(map[string]cke.ResourceStatus{
 				"Namespace/foo": {
-					Desired:   -1,
-					Available: -1,
+					Completed: true,
 				},
 				"DaemonSet/foo/test-daemonset": {
 					Annotations: map[string]string{
 						cke.AnnotationResourceRevision: "2",
 						cke.AnnotationResourceImage:    "test",
 					},
-					Desired:   1,
-					Available: 0,
+					Completed: false,
 				},
 				"Deployment/foo/test-deployment": {
 					Annotations: map[string]string{
 						cke.AnnotationResourceRevision: "1",
 						cke.AnnotationResourceImage:    "test",
 					},
-					Desired:   2,
-					Available: 1,
+					Completed: false,
 				},
 			}),
 			ExpectedOps: []string{
@@ -1487,16 +1475,14 @@ func TestDecideOps(t *testing.T) {
 						cke.AnnotationResourceRevision: "2",
 						cke.AnnotationResourceImage:    "test",
 					},
-					Desired:   2,
-					Available: 0,
+					Completed: false,
 				},
 				"Deployment/foo/test-deployment": {
 					Annotations: map[string]string{
 						cke.AnnotationResourceRevision: "1",
 						cke.AnnotationResourceImage:    "test",
 					},
-					Desired:   1,
-					Available: 0,
+					Completed: false,
 				},
 			}),
 			ExpectedOps: []string{

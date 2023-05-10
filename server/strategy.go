@@ -608,13 +608,12 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 				ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
 				return ops
 			} else {
-				if status.NeedWait() {
+				if !status.Completed {
 					log.Info("need to wait", map[string]interface{}{
 						"resource_name":      res.Name,
 						"resource_namespace": res.Namespace,
 						"kind":               res.Kind,
-						"desired":            status.Desired,
-						"available":          status.Available,
+						"completed":          status.Completed,
 					})
 					ops = append(ops, op.NopOp())
 					return ops

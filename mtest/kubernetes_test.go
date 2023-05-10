@@ -399,7 +399,7 @@ rules:
 		clusterSetAndWait(cluster)
 	})
 
-	It("updates user-defined resources", func() {
+	It("creates and updates user-defined resources", func() {
 		By("set user-defined resource")
 		resources := `apiVersion: v1
 kind: Namespace
@@ -480,7 +480,7 @@ spec:
         image: quay.io/cybozu/ubuntu:20.04
         args:
         - sleep
-        - "60"
+        - "10"
       containers:
       - name: ubuntu
         image: quay.io/cybozu/ubuntu:20.04
@@ -510,6 +510,7 @@ spec:
 				return fmt.Errorf("desired must be not 0")
 			}
 			available := ds.Status.NumberAvailable
+			updated := ds.Status.UpdatedNumberScheduled
 			stdout, _, err = kubectl("-n", "foo", "get", "pods", "-l", "cke.cybozu.com/appname=test-deployment", "-o", "json")
 			if err != nil {
 				return err
@@ -519,7 +520,7 @@ spec:
 				return err
 			}
 
-			if desired > available {
+			if (desired != available) || (desired != updated) {
 				// We expect that the array of pod.Items is empty
 				if len(podList.Items) == 0 {
 					return fmt.Errorf("should wait")
@@ -609,7 +610,7 @@ spec:
         image: quay.io/cybozu/ubuntu:20.04
         args:
         - sleep
-        - "60"
+        - "10"
       containers:
       - name: ubuntu
         image: quay.io/cybozu/ubuntu:20.04
@@ -638,7 +639,6 @@ spec:
 
 		By("waiting to complete the update of DaemonSet")
 		Eventually(func() error {
-			By("trying to get daemonset")
 			stdout, _, err := kubectl("-n", "foo", "get", "daemonset", "-l", "updated=true", "-o", "json")
 			if err != nil {
 				return err
@@ -656,6 +656,7 @@ spec:
 				return fmt.Errorf("desired must be not 0")
 			}
 			available := dsList.Items[0].Status.NumberAvailable
+			updated := dsList.Items[0].Status.UpdatedNumberScheduled
 
 			stdout, _, err = kubectl("-n", "foo", "get", "deployment", "-l", "updated=true", "-o", "json")
 			if err != nil {
@@ -666,7 +667,7 @@ spec:
 				return err
 			}
 
-			if desired > available {
+			if (desired != available) || (desired != updated) {
 				// We expect that the array of pod.Items is empty
 				if len(dpList.Items) == 0 {
 					return fmt.Errorf("should wait")
@@ -678,8 +679,8 @@ spec:
 		}).Should(Succeed())
 
 		By("getting deployment")
-		dp := &appsv1.Deployment{}
 		Eventually(func() error {
+			dp := &appsv1.Deployment{}
 			stdout, _, err := kubectl("-n", "foo", "get", "deployment", "test-deployment", "-o", "json")
 			if err != nil {
 				return err
@@ -687,13 +688,12 @@ spec:
 			if err := json.Unmarshal(stdout, dp); err != nil {
 				return err
 			}
-			l, ok := dp.Labels["update"]
+			l, ok := dp.Labels["updated"]
 			if !ok || l != "true" {
 				return fmt.Errorf("test-deployment must has the label named update")
 			}
 			return nil
 		}).Should(Succeed())
-		Expect(dp.Labels).Should(HaveKeyWithValue("updated", "true"))
 
 		Eventually(func() error {
 			return checkCluster(cluster, ts)
