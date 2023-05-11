@@ -7,6 +7,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [1.25.2]
 
+### Fixed
+
+- Fix Calico manifest to latest version [#627](https://github.com/cybozu-go/cke/pull/627)
+ 
 ### Changed
 
 - Update for Kubernetes 1.25.9 [#624](https://github.com/cybozu-go/cke/pull/624)
