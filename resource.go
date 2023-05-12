@@ -41,18 +41,18 @@ const (
 
 // rank
 const (
-	RankNamespace                     = 10
-	RankServiceAccount                = 20
-	RankCustomResourceDefinition      = 30
-	RankClusterRole                   = 40
-	RankClusterRoleBinding            = 50
-	RankClusterScopeResourceDefault   = 1000
-	RankRole                          = 2000
-	RankRoleBinding                   = 2010
-	RankNetworkPolicy                 = 2020
-	RankSecret                        = 2030
-	RankConfigMap                     = 2040
-	RankNamespaceScopeResourceDefault = 3000
+	RankNamespace                      = 10
+	RankServiceAccount                 = 20
+	RankCustomResourceDefinition       = 30
+	RankClusterRole                    = 40
+	RankClusterRoleBinding             = 50
+	RankClusterScopedResourceDefault   = 1000
+	RankRole                           = 2000
+	RankRoleBinding                    = 2010
+	RankNetworkPolicy                  = 2020
+	RankSecret                         = 2030
+	RankConfigMap                      = 2040
+	RankNamespaceScopedResourceDefault = 3000
 )
 
 var decUnstructured = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
@@ -279,9 +279,9 @@ func DecideRank(kind, namespace string, rank uint32) (uint32, error) {
 	}
 
 	if namespace == "" {
-		return RankClusterScopeResourceDefault, nil
+		return RankClusterScopedResourceDefault, nil
 	}
-	return RankNamespaceScopeResourceDefault, nil
+	return RankNamespaceScopedResourceDefault, nil
 }
 
 // ResourceDefinition represents a CKE-managed kubernetes resource.

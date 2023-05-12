@@ -602,10 +602,12 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 		status, ok := ks.ResourceStatuses[res.Key]
 		if !ok {
 			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
+			// To wait for the completion to create or update, we avoid applying subsequent resources.
 			return ops
 		} else {
 			if res.NeedUpdate(&status) {
 				ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
+				// To avoid applying subsequent resources not to wait the completion the update or creation
 				return ops
 			} else {
 				if !status.Completed {
@@ -616,6 +618,7 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 						"completed":          status.Completed,
 					})
 					ops = append(ops, op.NopOp())
+					// To avoid applying subsequent resources not to wait the completion the update or creation
 					return ops
 				}
 			}

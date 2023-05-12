@@ -41,11 +41,11 @@ The resources are applied in the following order according to their kind.
 
 ### Custom order
 
-Users can control the order of applying resources by annotating `cke.cybozu.com/rank`.
-In the case of cluster-scope resources, a rank value must be 0 ~ 1999.
-For namespace-scope resources, a rank value must be 2000 ~.
+Users can customize the order of applying resources by annotating `cke.cybozu.com/rank`.
+In the case of cluster-scoped resources, a rank value must be 0-1999.
+For namespace-scoped resources, a rank value must be 2000-.
 
-If `cke.cybozu.com/rank` is not set, the rank is assigned a value based on the abovementioned list.
+If `cke.cybozu.com/rank` is not set, the rank is defaulted to a value based on the aforementioned list.
 
 ## Annotations
 

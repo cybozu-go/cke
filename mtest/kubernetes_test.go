@@ -399,7 +399,7 @@ rules:
 		clusterSetAndWait(cluster)
 	})
 
-	It("creates and updates user-defined resources", func() {
+	It("should create user-defined resources", func() {
 		By("set user-defined resource")
 		resources := `apiVersion: v1
 kind: Namespace
@@ -476,7 +476,7 @@ spec:
         cke.cybozu.com/appname: test-daemonset
     spec:
       initContainers:
-      - name: wait-1min
+      - name: wait-10sec
         image: quay.io/cybozu/ubuntu:20.04
         args:
         - sleep
@@ -552,8 +552,10 @@ spec:
 			return checkCluster(cluster, ts)
 		}).Should(Succeed())
 
-		By("updating user-defined resources")
-		newResources := `apiVersion: v1
+	})
+
+	It("should update user-defined resources", func() {
+		resources := `apiVersion: v1
 kind: Namespace
 metadata:
   name: foo
@@ -606,7 +608,7 @@ spec:
         updated: "true"
     spec:
       initContainers:
-      - name: wait-1min
+      - name: wait-10sec
         image: quay.io/cybozu/ubuntu:20.04
         args:
         - sleep
@@ -617,9 +619,9 @@ spec:
         args:
         - pause
 `
-		ckecliWithInput([]byte(newResources), "resource", "set", "-")
-		defer ckecliWithInput([]byte(newResources), "resource", "delete", "-")
-		ts = time.Now()
+		ckecliWithInput([]byte(resources), "resource", "set", "-")
+		defer ckecliWithInput([]byte(resources), "resource", "delete", "-")
+		ts := time.Now()
 
 		Eventually(func() error {
 			stdout, _, err := kubectl("get", "namespaces/foo", "-o", "json")
@@ -668,7 +670,7 @@ spec:
 			}
 
 			if (desired != available) || (desired != updated) {
-				// We expect that the array of pod.Items is empty
+				// We expect that the array of DeploymentList.Items is empty
 				if len(dpList.Items) == 0 {
 					return fmt.Errorf("should wait")
 				}
@@ -695,6 +697,338 @@ spec:
 			return nil
 		}).Should(Succeed())
 
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		Eventually(func() error {
+			return checkCluster(cluster, ts)
+		}).Should(Succeed())
+
+	})
+
+	It("should change the order of user-defined resources", func() {
+
+		resources := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: foo
+  name: test-deployment
+  annotations:
+    cke.cybozu.com/rank: "2050"
+  labels:
+    updated: "true"
+    changed: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      cke.cybozu.com/appname: test-deployment
+  template:
+    metadata:
+      labels:
+        cke.cybozu.com/appname: test-deployment
+        updated: "true"
+        changed: "true"
+    spec:
+      initContainers:
+      - name: wait-30sec
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - sleep
+        - "30"
+      containers:
+      - name: ubuntu
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - pause
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: test-daemonset
+  namespace: foo
+  annotations:
+    cke.cybozu.com/rank: "2100"
+  labels:
+    updated: "true"
+    changed: "true"
+spec:
+  selector:
+    matchLabels:
+      cke.cybozu.com/appname: test-daemonset
+  template:
+    metadata:
+      labels:
+        cke.cybozu.com/appname: test-daemonset
+        updated: "true"
+        changed: "true"
+    spec:
+      containers:
+      - name: ubuntu
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - pause
+`
+
+		ckecliWithInput([]byte(resources), "resource", "set", "-")
+		defer ckecliWithInput([]byte(resources), "resource", "delete", "-")
+		ts := time.Now()
+
+		By("waiting to complete the update of Deployment")
+		Eventually(func() error {
+			stdout, _, err := kubectl("-n", "foo", "get", "deployment", "-l", "changed=true", "-o", "json")
+			if err != nil {
+				return err
+			}
+			var dpList appsv1.DeploymentList
+			if err := json.Unmarshal(stdout, &dpList); err != nil {
+				return err
+			}
+			if len(dpList.Items) == 0 {
+				return fmt.Errorf("should wait to update")
+			}
+			// if the label is not exist, retry
+			desired := dpList.Items[0].Status.Replicas
+			if desired == 0 {
+				return fmt.Errorf("desired must be not 0")
+			}
+			available := dpList.Items[0].Status.AvailableReplicas
+			updated := dpList.Items[0].Status.UpdatedReplicas
+
+			stdout, _, err = kubectl("-n", "foo", "get", "daemonset", "-l", "changed=true", "-o", "json")
+			if err != nil {
+				return err
+			}
+			var dsList appsv1.DaemonSetList
+			if err := json.Unmarshal(stdout, &dsList); err != nil {
+				return err
+			}
+
+			if (desired != available) || (desired != updated) {
+				// We expect that the array of DaemonsSetList.Items is empty
+				if len(dsList.Items) == 0 {
+					return fmt.Errorf("should wait")
+				}
+				// If the array is not empty, test must fail and return
+				Fail("DaemonSet(foo/test-daemonset) resource is expected not to create before completing to create Deployment(test-deployment)")
+			}
+			return nil
+		}).Should(Succeed())
+
+		By("getting daemonset")
+		Eventually(func() error {
+			ds := &appsv1.DaemonSet{}
+			stdout, _, err := kubectl("-n", "foo", "get", "daemonset", "test-daemonset", "-o", "json")
+			if err != nil {
+				return err
+			}
+			if err := json.Unmarshal(stdout, ds); err != nil {
+				return err
+			}
+			l, ok := ds.Labels["changed"]
+			if !ok || l != "true" {
+				return fmt.Errorf("test-daemonset must has the label named update")
+			}
+			return nil
+		}).Should(Succeed())
+
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		Eventually(func() error {
+			return checkCluster(cluster, ts)
+		}).Should(Succeed())
+	})
+
+	It("should create the resource with default rank and update it with the custom rank", func() {
+		resources := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: foo
+  name: test-deployment2
+  labels:
+    cke.cybozu.com/appname: test-deployment2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      cke.cybozu.com/appname: test-deployment2
+  template:
+    metadata:
+      labels:
+        cke.cybozu.com/appname: test-deployment2
+    spec:
+      containers:
+      - name: ubuntu
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - pause
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: foo
+  name: test-deployment3
+  labels:
+    cke.cybozu.com/appname: test-deployment3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      cke.cybozu.com/appname: test-deployment3
+  template:
+    metadata:
+      labels:
+        cke.cybozu.com/appname: test-deployment3
+    spec:
+      containers:
+      - name: ubuntu
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - pause
+`
+
+		By("creating new resources with default rank")
+		ckecliWithInput([]byte(resources), "resource", "set", "-")
+		defer ckecliWithInput([]byte(resources), "resource", "delete", "-")
+		ts := time.Now()
+
+		cluster := getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
+		Eventually(func() error {
+			return checkCluster(cluster, ts)
+		}).Should(Succeed())
+
+		newResources := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: foo
+  name: test-deployment2
+  annotations:
+    cke.cybozu.com/rank: "2400"
+  labels:
+    cke.cybozu.com/appname: test-deployment2
+    updated: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      cke.cybozu.com/appname: test-deployment2
+  template:
+    metadata:
+      labels:
+        cke.cybozu.com/appname: test-deployment2
+    spec:
+      containers:
+      - name: ubuntu
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - pause
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: foo
+  name: test-deployment3
+  annotations:
+    cke.cybozu.com/rank: "2300"
+  labels:
+    cke.cybozu.com/appname: test-deployment3
+    updated: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      cke.cybozu.com/appname: test-deployment3
+  template:
+    metadata:
+      labels:
+        cke.cybozu.com/appname: test-deployment3
+    spec:
+      initContainers:
+      - name: wait-30sec
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - sleep
+        - "30"
+      containers:
+      - name: ubuntu
+        image: quay.io/cybozu/ubuntu:20.04
+        args:
+        - pause
+`
+
+		By("updating resources with custom ranks")
+		ckecliWithInput([]byte(newResources), "resource", "set", "-")
+		defer ckecliWithInput([]byte(newResources), "resource", "delete", "-")
+		ts = time.Now()
+
+		By("waiting to complete the update of test-deployment3")
+		Eventually(func() error {
+			stdout, _, err := kubectl("-n", "foo", "get", "deployment", "-l", "updated=true,cke.cybozu.com/appname=test-deployment3", "-o", "json")
+			if err != nil {
+				return err
+			}
+			var dpList appsv1.DeploymentList
+			if err := json.Unmarshal(stdout, &dpList); err != nil {
+				return err
+			}
+			if len(dpList.Items) == 0 {
+				return fmt.Errorf("should wait to update")
+			}
+			// if the label is not exist, retry
+			desired := dpList.Items[0].Status.Replicas
+			if desired == 0 {
+				return fmt.Errorf("desired must be not 0")
+			}
+			available := dpList.Items[0].Status.AvailableReplicas
+			updated := dpList.Items[0].Status.UpdatedReplicas
+
+			stdout, _, err = kubectl("-n", "foo", "get", "deployment", "-l", "updated=true,cke.cybozu.com/appname=test-deployment2", "-o", "json")
+			if err != nil {
+				return err
+			}
+			var dpList2 appsv1.DaemonSetList
+			if err := json.Unmarshal(stdout, &dpList2); err != nil {
+				return err
+			}
+
+			if (desired != available) || (desired != updated) {
+				// We expect that the array of DaemonsSetList.Items is empty
+				if len(dpList2.Items) == 0 {
+					return fmt.Errorf("should wait")
+				}
+				// If the array is not empty, test must fail and return
+				Fail("foo/test-daemonset2 resource is expected not to create before completing to create foo/test-deployment3")
+			}
+			return nil
+		}).Should(Succeed())
+
+		By("getting test-deployment2")
+		Eventually(func() error {
+			dp := &appsv1.Deployment{}
+			stdout, _, err := kubectl("-n", "foo", "get", "deployment", "test-deployment2", "-o", "json")
+			if err != nil {
+				return err
+			}
+			if err := json.Unmarshal(stdout, dp); err != nil {
+				return err
+			}
+			l, ok := dp.Labels["updated"]
+			if !ok || l != "true" {
+				return fmt.Errorf("test-deployment2 must has the label named update")
+			}
+			return nil
+		}).Should(Succeed())
+
+		cluster = getCluster()
+		for i := 0; i < 3; i++ {
+			cluster.Nodes[i].ControlPlane = true
+		}
 		Eventually(func() error {
 			return checkCluster(cluster, ts)
 		}).Should(Succeed())

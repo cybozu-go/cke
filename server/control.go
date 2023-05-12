@@ -389,6 +389,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 }
 
 func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.Storage, inf cke.Infrastructure) error {
+	// Not to register the nopOp log in the history
 	if op.Name() == "nop" {
 		log.Info("execute nop op", map[string]interface{}{})
 		return nil

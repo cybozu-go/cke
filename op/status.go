@@ -473,6 +473,8 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 }
 
 func objStatus(desired, updated, available int64) bool {
+	// If we get the status immediately after applying the resource, the value of desired may be 0.
+	// In this case, we need to return false.
 	if desired == 0 {
 		return false
 	}
