@@ -143,6 +143,7 @@ var Resources = []cke.ResourceDefinition{
 		Name: {{ printf "%q" .Name }},
 		Revision: {{ .Revision }},
 		Image: {{ printf "%q" .Image }},
+		Rank: {{ .Rank }},
 		Definition: []byte({{ printf "%q" .Definition }}),
 	},
 	{{ end -}}

@@ -42,7 +42,7 @@ const (
 // rank
 const (
 	RankNamespace                      = 10
-	RankServiceAccount                 = 20
+	RankServiceAccount                 = 20 // ServiceAccount is namespace scoped
 	RankCustomResourceDefinition       = 30
 	RankClusterRole                    = 40
 	RankClusterRoleBinding             = 50

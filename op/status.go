@@ -437,6 +437,15 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			return cke.KubernetesClusterStatus{}, err
 		}
 		if obj.GroupVersionKind().Kind == "DaemonSet" {
+			generation, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "metadata", "generation")
+			if err != nil {
+				return cke.KubernetesClusterStatus{}, err
+			}
+			observedGeneration, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "status", "observedGeneration")
+			if err != nil {
+				return cke.KubernetesClusterStatus{}, err
+			}
+
 			desired, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "status", "desiredNumberScheduled")
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
@@ -449,8 +458,16 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, objStatus(desired, updated, available))
+			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, objStatus(generation, observedGeneration, desired, updated, available))
 		} else if obj.GroupVersionKind().Kind == "Deployment" {
+			generation, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "metadata", "generation")
+			if err != nil {
+				return cke.KubernetesClusterStatus{}, err
+			}
+			observedGeneration, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "status", "observedGeneration")
+			if err != nil {
+				return cke.KubernetesClusterStatus{}, err
+			}
 			desired, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "status", "readyReplicas")
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
@@ -463,7 +480,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, objStatus(desired, updated, available))
+			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, objStatus(generation, observedGeneration, desired, updated, available))
 		} else {
 			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, true)
 		}
@@ -472,7 +489,10 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	return s, nil
 }
 
-func objStatus(desired, updated, available int64) bool {
+func objStatus(generation, observedGeneration, desired, updated, available int64) bool {
+	if generation > observedGeneration {
+		return false
+	}
 	// If we get the status immediately after applying the resource, the value of desired may be 0.
 	// In this case, we need to return false.
 	if desired == 0 {
