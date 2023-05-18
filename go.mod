@@ -25,14 +25,14 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.etcd.io/etcd/etcdutl/v3 v3.5.7
 	golang.org/x/crypto v0.6.0
-	golang.org/x/term v0.5.0
-	k8s.io/api v0.25.9
-	k8s.io/apimachinery v0.25.9
-	k8s.io/apiserver v0.25.9
-	k8s.io/client-go v0.25.9
-	k8s.io/kube-proxy v0.25.9
-	k8s.io/kube-scheduler v0.25.9
-	k8s.io/kubelet v0.25.9
+	golang.org/x/term v0.6.0
+	k8s.io/api v0.25.10
+	k8s.io/apimachinery v0.25.10
+	k8s.io/apiserver v0.25.10
+	k8s.io/client-go v0.25.10
+	k8s.io/kube-proxy v0.25.10
+	k8s.io/kube-scheduler v0.25.10
+	k8s.io/kubelet v0.25.10
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -109,10 +109,10 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.22.0 // indirect
-	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/oauth2 v0.3.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/time v0.1.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
@@ -124,7 +124,7 @@ require (
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/component-base v0.25.9 // indirect
+	k8s.io/component-base v0.25.10 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect

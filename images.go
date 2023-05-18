@@ -11,7 +11,7 @@ func (i Image) Name() string {
 // Container image definitions
 const (
 	EtcdImage            = Image("quay.io/cybozu/etcd:3.5.7.2")
-	KubernetesImage      = Image("quay.io/cybozu/kubernetes:1.25.9.1")
+	KubernetesImage      = Image("quay.io/cybozu/kubernetes:1.25.10.1")
 	ToolsImage           = Image("quay.io/cybozu/cke-tools:1.25.0")
 	PauseImage           = Image("quay.io/cybozu/pause:3.8.0.2")
 	CoreDNSImage         = Image("quay.io/cybozu/coredns:1.10.0.2")
