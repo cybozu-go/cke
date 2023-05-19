@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Update Kubernetes to 1.25.10 in [#628](https://github.com/cybozu-go/cke/pull/628)
+
 ## [1.25.2]
 
 ### Fixed
