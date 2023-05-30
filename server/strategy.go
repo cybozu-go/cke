@@ -144,15 +144,33 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrent
 
 	// For all nodes
 	apiServer := nf.HealthyAPIServer()
-	if nodes := nf.SSHConnectedNodes(nf.KubeletUnrecognizedNodes(maxConcurrentKubeletRestarts), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet, cs.NodeStatuses))
+	if nodes := nf.SSHConnectedNodes(nf.KubeletUnrecognizedNodes(), true, true); len(nodes) > 0 {
+		for i := 0; i < len(nodes); i += maxConcurrentKubeletRestarts {
+			end := i + maxConcurrentKubeletRestarts
+			if end > len(nodes) {
+				end = len(nodes)
+			}
+			ops = append(ops, k8s.KubeletRestartOp(nodes[i:end], c.Name, c.Options.Kubelet, cs.NodeStatuses))
+		}
 	}
-	if nodes := nf.SSHConnectedNodes(nf.KubeletStoppedNodes(maxConcurrentKubeletRestarts), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletBootOp(nodes, nf.KubeletStoppedRegisteredNodes(maxConcurrentKubeletRestarts),
-			apiServer, c.Name, c.Options.Kubelet, cs.NodeStatuses))
+	if nodes := nf.SSHConnectedNodes(nf.KubeletStoppedNodes(), true, true); len(nodes) > 0 {
+		for i := 0; i < len(nodes); i += maxConcurrentKubeletRestarts {
+			end := i + maxConcurrentKubeletRestarts
+			if end > len(nodes) {
+				end = len(nodes)
+			}
+			ops = append(ops, k8s.KubeletBootOp(nodes[i:end], nf.KubeletStoppedRegisteredNodes(),
+				apiServer, c.Name, c.Options.Kubelet, cs.NodeStatuses))
+		}
 	}
-	if nodes := nf.SSHConnectedNodes(nf.KubeletOutdatedNodes(maxConcurrentKubeletRestarts), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet, cs.NodeStatuses))
+	if nodes := nf.SSHConnectedNodes(nf.KubeletOutdatedNodes(), true, true); len(nodes) > 0 {
+		for i := 0; i < len(nodes); i += maxConcurrentKubeletRestarts {
+			end := i + maxConcurrentKubeletRestarts
+			if end > len(nodes) {
+				end = len(nodes)
+			}
+			ops = append(ops, k8s.KubeletRestartOp(nodes[i:end], c.Name, c.Options.Kubelet, cs.NodeStatuses))
+		}
 	}
 	if nodes := nf.SSHConnectedNodes(nf.ProxyStoppedNodes(), true, true); len(nodes) > 0 {
 		ops = append(ops, k8s.KubeProxyBootOp(nodes, c.Name, "", c.Options.Proxy))

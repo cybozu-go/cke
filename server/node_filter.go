@@ -1,7 +1,6 @@
 package server
 
 import (
-	"math"
 	"strings"
 
 	"github.com/cybozu-go/cke"
@@ -423,38 +422,32 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) (nodes 
 }
 
 // KubeletStoppedNodes returns nodes that are not running kubelet.
-func (nf *NodeFilter) KubeletStoppedNodes(maxConcurrentKubeletRestarts int) (nodes []*cke.Node) {
+func (nf *NodeFilter) KubeletStoppedNodes() (nodes []*cke.Node) {
 	for _, n := range nf.cluster.Nodes {
 		if !nf.nodeStatus(n).Kubelet.Running {
 			nodes = append(nodes, n)
-		}
-		if len(nodes) >= maxConcurrentKubeletRestarts {
-			break
 		}
 	}
 	return nodes
 }
 
 // KubeletStoppedRegisteredNodes returns nodes that are not running kubelet and are registered on Kubernetes.
-func (nf *NodeFilter) KubeletStoppedRegisteredNodes(maxConcurrentKubeletRestarts int) (nodes []*cke.Node) {
+func (nf *NodeFilter) KubeletStoppedRegisteredNodes() (nodes []*cke.Node) {
 	registered := make(map[string]bool)
 	for _, kn := range nf.status.Kubernetes.Nodes {
 		registered[kn.Name] = true
 	}
 
-	for _, n := range nf.KubeletStoppedNodes(math.MaxInt) {
+	for _, n := range nf.KubeletStoppedNodes() {
 		if registered[n.Nodename()] {
 			nodes = append(nodes, n)
-		}
-		if len(nodes) >= maxConcurrentKubeletRestarts {
-			break
 		}
 	}
 	return nodes
 }
 
 // KubeletOutdatedNodes returns nodes that are running kubelet with outdated image or params.
-func (nf *NodeFilter) KubeletOutdatedNodes(maxConcurrentKubeletRestarts int) (nodes []*cke.Node) {
+func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 	currentOpts := nf.cluster.Options.Kubelet
 	currentExtra := nf.cluster.Options.Kubelet.ServiceParams
 
@@ -491,21 +484,15 @@ func (nf *NodeFilter) KubeletOutdatedNodes(maxConcurrentKubeletRestarts int) (no
 			})
 			nodes = append(nodes, n)
 		}
-		if len(nodes) >= maxConcurrentKubeletRestarts {
-			break
-		}
 	}
 	return nodes
 }
 
 // KubeletUnrecognizedNodes returns nodes of which kubelet is still running but not recognized by k8s.
-func (nf *NodeFilter) KubeletUnrecognizedNodes(maxConcurrentKubeletRestarts int) (nodes []*cke.Node) {
+func (nf *NodeFilter) KubeletUnrecognizedNodes() (nodes []*cke.Node) {
 	for _, n := range nf.cluster.Nodes {
 		if nf.nodeStatus(n).Kubelet.Running && !nf.existsNodeResource(n.Nodename()) {
 			nodes = append(nodes, n)
-			if len(nodes) >= maxConcurrentKubeletRestarts {
-				break
-			}
 		}
 	}
 	return nodes

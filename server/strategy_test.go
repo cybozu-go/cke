@@ -778,7 +778,8 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-controller-manager-bootstrap", 3},
 				{"kube-scheduler-bootstrap", 3},
-				{"kubelet-bootstrap", 6},
+				{"kubelet-bootstrap", 5},
+				{"kubelet-bootstrap", 1},
 				{"kube-proxy-bootstrap", 6},
 			},
 		},
@@ -1058,7 +1059,8 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []opData{
 				{"kube-apiserver-restart", 3},
-				{"kubelet-restart", 6},
+				{"kubelet-restart", 5},
+				{"kubelet-restart", 1},
 			},
 		},
 		{
@@ -2345,7 +2347,7 @@ func TestDecideOps(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, c.Input.RebootArgs, 10)
+			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, c.Input.RebootArgs, 5)
 			if len(ops) == 0 && len(c.ExpectedOps) == 0 {
 				return
 			}
