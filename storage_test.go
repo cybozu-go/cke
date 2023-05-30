@@ -430,7 +430,7 @@ func testStorageResource(t *testing.T) {
 		t.Error(`err != ErrNotFound,`, err)
 	}
 
-	err = storage.SetResource(ctx, "Namespace/foo", "bar")
+	err = storage.SetResource(ctx, "Namespace/foo", "kind: Namespace\napiVersion: v1\nmetadata:\n  name: foo\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -439,11 +439,11 @@ func testStorageResource(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(fooVal) != "bar" {
-		t.Error(`string(fooVal) != "bar",`, string(fooVal))
+	if string(fooVal) != "kind: Namespace\napiVersion: v1\nmetadata:\n  name: foo\n" {
+		t.Error(`string(fooVal) != "kind: Namespace\napiVersion: v1\nmetadata:\n  name: foo\n",`, string(fooVal))
 	}
 
-	err = storage.SetResource(ctx, "Pod/foo/pod1", "test")
+	err = storage.SetResource(ctx, "Pod/foo/pod1", "kind: Pod\napiVersion: v1\nmetadata:\n  name: pod1\n  namespace: foo\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -457,12 +457,22 @@ func testStorageResource(t *testing.T) {
 		t.Error("unexpected list result:", cmp.Diff(expectedKeys, keys))
 	}
 
-	err = storage.SetResource(ctx, "ConfigMap/foo/conf1", "test")
+	err = storage.SetResource(ctx, "ConfigMap/foo/conf1", "kind: ConfigMap\napiVersion: v1\nmetadata:\n  name: conf1\n  namespace: foo\n")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = storage.SetResource(ctx, "ServiceAccount/foo/sa1", "test")
+	err = storage.SetResource(ctx, "ServiceAccount/foo/sa1", "kind: ConfigMap\napiVersion: v1\nmetadata:\n  name: sa1\n  namespace: foo\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = storage.SetResource(ctx, "Deployment/foo/deploy1", "\nkind: Deployment\napiVersion: apps/v1\nmetadata:\n  name: cluster-dns\n  namespace: kube-system\n  annotations:\n    cke.cybozu.com/image: \"quay.io/cybozu/coredns:1.10.0.1\"\n    cke.cybozu.com/revision: \"4\"\n    cke.cybozu.com/rank: \"2200\"\nspec:\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = storage.SetResource(ctx, "DaemonSet/foo/ds1", "kind: DaemonSet\napiVersion: apps/v1\nmetadata:\n  name: node-dns\n  namespace: kube-system\n  annotations:\n    cke.cybozu.com/image: \"quay.io/cybozu/unbound:1.17.1.1,quay.io/cybozu/unbound_exporter:0.4.1.4\"\n    cke.cybozu.com/revision: \"4\"\n    cke.cybozu.com/rank: \"2100\"\nspec:\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -472,7 +482,7 @@ func testStorageResource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expected := []string{"Namespace/foo", "ServiceAccount/foo/sa1", "ConfigMap/foo/conf1", "Pod/foo/pod1"}
+	expected := []string{"Namespace/foo", "ServiceAccount/foo/sa1", "ConfigMap/foo/conf1", "DaemonSet/foo/ds1", "Deployment/foo/deploy1", "Pod/foo/pod1"}
 	actual := make([]string, len(resources))
 	for i, r := range resources {
 		actual[i] = r.Key

@@ -12,6 +12,7 @@ import (
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/clientv3util"
+	"sigs.k8s.io/yaml"
 )
 
 // Storage provides operations to store/retrieve CKE data in etcd.
@@ -563,12 +564,31 @@ func (s Storage) GetAllResources(ctx context.Context) ([]ResourceDefinition, err
 			return nil, errors.New("invalid resource key: " + key)
 		}
 
+		obj := struct {
+			Metadata struct {
+				Annotations struct {
+					Revision int64  `json:"cke.cybozu.com/revision,string"`
+					Image    string `json:"cke.cybozu.com/image"`
+					Rank     uint32 `json:"cke.cybozu.com/rank,string"`
+				} `json:"annotations"`
+			} `json:"metadata"`
+		}{}
+		if err := yaml.Unmarshal(kv.Value, &obj); err != nil {
+			return nil, err
+		}
+
+		rank, err := DecideRank(kind, namespace, obj.Metadata.Annotations.Rank)
+		if err != nil {
+			return nil, err
+		}
+
 		rcs = append(rcs, ResourceDefinition{
 			Key:        key,
 			Kind:       kind,
 			Namespace:  namespace,
 			Name:       name,
 			Revision:   kv.ModRevision,
+			Rank:       rank,
 			Definition: kv.Value,
 		})
 	}

@@ -2,6 +2,7 @@ package server
 
 import (
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -166,7 +167,10 @@ func newData() testData {
 		NodeStatuses:  nodeStatuses,
 		Kubernetes: cke.KubernetesClusterStatus{
 			ResourceStatuses: map[string]cke.ResourceStatus{
-				"Namespace/foo": {Annotations: map[string]string{cke.AnnotationResourceRevision: "1"}},
+				"Namespace/foo": {
+					Annotations: map[string]string{cke.AnnotationResourceRevision: "1"},
+					Completed:   true,
+				},
 			},
 			Nodes: nodeList,
 		},
@@ -187,6 +191,30 @@ func (d testData) with(f func(data testData)) testData {
 
 func (d testData) withResources(res []cke.ResourceDefinition) testData {
 	d.Resources = res
+	return d
+}
+
+func (d testData) withResourcesReady(res []cke.ResourceDefinition) testData {
+	ks := &d.Status.Kubernetes
+
+	d.Resources = append(d.Resources, res...)
+
+	for _, r := range res {
+		status := cke.ResourceStatus{
+			Annotations: map[string]string{cke.AnnotationResourceRevision: strconv.Itoa(int(r.Revision))},
+		}
+		if r.Image != "" {
+			status.Annotations[cke.AnnotationResourceImage] = r.Image
+		}
+		ks.ResourceStatuses[r.Key] = status
+	}
+	return d
+}
+
+func (d testData) withResourceStatus(statuses map[string]cke.ResourceStatus) testData {
+	for k, v := range statuses {
+		d.Status.Kubernetes.ResourceStatuses[k] = v
+	}
 	return d
 }
 
@@ -386,6 +414,7 @@ func (d testData) withK8sResourceReady() testData {
 	for _, res := range static.Resources {
 		ks.ResourceStatuses[res.Key] = cke.ResourceStatus{
 			Annotations: map[string]string{cke.AnnotationResourceRevision: "1"},
+			Completed:   true,
 		}
 	}
 	ks.ResourceStatuses["ClusterRole/system:cluster-dns"].Annotations[cke.AnnotationResourceRevision] = "2"
@@ -1091,14 +1120,6 @@ func TestDecideOps(t *testing.T) {
 				"create-endpointslice",
 				"create-etcd-service",
 				"resource-apply",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
-				"resource-apply",
 			},
 		},
 		{
@@ -1311,27 +1332,162 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "UserResourceAdd",
 			Input: newData().withK8sResourceReady().withResources(
-				append(testResources, cke.ResourceDefinition{
-					Key:        "ConfigMap/foo/bar",
-					Kind:       "ConfigMap",
-					Namespace:  "foo",
-					Name:       "bar",
-					Revision:   1,
-					Definition: []byte(`{"apiversion":"v1","kind":"ConfigMap","metadata":{"namespace":"foo","name":"bar"},"data":{"a":"b"}}`),
-				})),
-			ExpectedOps: []string{"resource-apply"},
+				append(testResources, []cke.ResourceDefinition{
+					{
+						Key:        "ConfigMap/foo/bar",
+						Kind:       "ConfigMap",
+						Namespace:  "foo",
+						Name:       "bar",
+						Revision:   1,
+						Definition: []byte(`{"apiversion":"v1","kind":"ConfigMap","metadata":{"namespace":"foo","name":"bar"},"data":{"a":"b"}}`),
+					},
+					{
+						Key:        "DaemonSet/foo/test-daemonset",
+						Kind:       "DaemonSet",
+						Namespace:  "foo",
+						Name:       "test-daemonset",
+						Image:      "test",
+						Revision:   1,
+						Definition: []byte(`{"apiVersion":"v1","kind":"DaemonSet","metadata":{"name":"test-daemonset", "namespace": "test"}}`),
+					},
+					{
+						Key:        "Deployment/foo/test-deployment",
+						Kind:       "Deployment",
+						Namespace:  "foo",
+						Name:       "test-deployment",
+						Image:      "test",
+						Revision:   1,
+						Definition: []byte(`{"apiVersion":"v1","kind":"Deployment","metadata":{"name":"test-deployment", "namespace": "test"}}`),
+					},
+				}...)).withResourceStatus(
+				map[string]cke.ResourceStatus{
+					"ConfigMap/foo/bar": {
+						Completed: true,
+					},
+					"DaemonSet/foo/test-daemonset": {
+						Annotations: map[string]string{
+							cke.AnnotationResourceRevision: "1",
+							cke.AnnotationResourceImage:    "test",
+						},
+						Completed: false,
+					},
+				},
+			),
+			ExpectedOps: []string{
+				"resource-apply",
+			},
 		},
 		{
 			Name: "UserResourceUpdate",
-			Input: newData().withK8sResourceReady().withResources(
-				[]cke.ResourceDefinition{{
-					Key:        "Namespace/foo",
-					Kind:       "Namespace",
-					Name:       "foo",
+			Input: newData().withK8sResourceReady().withResourcesReady([]cke.ResourceDefinition{
+				{
+					Key:        "DaemonSet/foo/test-daemonset",
+					Kind:       "DaemonSet",
+					Namespace:  "foo",
+					Name:       "test-daemonset",
+					Image:      "test",
 					Revision:   2,
-					Definition: []byte(`{"apiversion":"v1","kind":"Namespace","metadata":{"name":"foo"}}`),
-				}}),
-			ExpectedOps: []string{"resource-apply"},
+					Definition: []byte(`{"apiVersion":"v1","kind":"DaemonSet","metadata":{"name":"test-daemonset", "namespace": "test"}}`),
+				},
+				{
+					Key:        "Deployment/foo/test-deployment",
+					Kind:       "Deployment",
+					Namespace:  "foo",
+					Name:       "test-deployment",
+					Image:      "test",
+					Revision:   1,
+					Definition: []byte(`{"apiVersion":"v1","kind":"Deployment","metadata":{"name":"test-deployment", "namespace": "test"}}`),
+				},
+			}).withResources(
+				[]cke.ResourceDefinition{
+					{
+						Key:        "Namespace/foo",
+						Kind:       "Namespace",
+						Name:       "foo",
+						Revision:   2,
+						Definition: []byte(`{"apiversion":"v1","kind":"Namespace","metadata":{"name":"foo"}}`),
+					},
+					{
+						Key:        "DaemonSet/foo/test-daemonset",
+						Kind:       "DaemonSet",
+						Namespace:  "foo",
+						Name:       "test-daemonset",
+						Image:      "test",
+						Revision:   2,
+						Definition: []byte(`{"apiVersion":"v1","kind":"DaemonSet","metadata":{"name":"test-daemonset", "namespace": "test"}}`),
+					},
+					{
+						Key:        "Deployment/foo/test-deployment",
+						Kind:       "Deployment",
+						Namespace:  "foo",
+						Name:       "test-deployment",
+						Image:      "test",
+						Revision:   2,
+						Definition: []byte(`{"apiVersion":"v1","kind":"Deployment","metadata":{"name":"test-deployment", "namespace": "test"}}`),
+					},
+				}).withResourceStatus(map[string]cke.ResourceStatus{
+				"Namespace/foo": {
+					Completed: true,
+				},
+				"DaemonSet/foo/test-daemonset": {
+					Annotations: map[string]string{
+						cke.AnnotationResourceRevision: "2",
+						cke.AnnotationResourceImage:    "test",
+					},
+					Completed: false,
+				},
+				"Deployment/foo/test-deployment": {
+					Annotations: map[string]string{
+						cke.AnnotationResourceRevision: "1",
+						cke.AnnotationResourceImage:    "test",
+					},
+					Completed: false,
+				},
+			}),
+			ExpectedOps: []string{
+				"resource-apply",
+			},
+		},
+		{
+			Name: "UserResourceNop",
+			Input: newData().withK8sResourceReady().withResourcesReady([]cke.ResourceDefinition{
+				{
+					Key:        "DaemonSet/foo/test-daemonset",
+					Kind:       "DaemonSet",
+					Namespace:  "foo",
+					Name:       "test-daemonset",
+					Image:      "test",
+					Revision:   2,
+					Definition: []byte(`{"apiVersion":"v1","kind":"DaemonSet","metadata":{"name":"test-daemonset", "namespace": "test"}}`),
+				},
+				{
+					Key:        "Deployment/foo/test-deployment",
+					Kind:       "Deployment",
+					Namespace:  "foo",
+					Name:       "test-deployment",
+					Image:      "test",
+					Revision:   1,
+					Definition: []byte(`{"apiVersion":"v1","kind":"Deployment","metadata":{"name":"test-deployment", "namespace": "test"}}`),
+				},
+			}).withResourceStatus(map[string]cke.ResourceStatus{
+				"DaemonSet/foo/test-daemonset": {
+					Annotations: map[string]string{
+						cke.AnnotationResourceRevision: "2",
+						cke.AnnotationResourceImage:    "test",
+					},
+					Completed: false,
+				},
+				"Deployment/foo/test-deployment": {
+					Annotations: map[string]string{
+						cke.AnnotationResourceRevision: "1",
+						cke.AnnotationResourceImage:    "test",
+					},
+					Completed: false,
+				},
+			}),
+			ExpectedOps: []string{
+				"nop",
+			},
 		},
 		{
 			Name: "NodeLabel1",

@@ -28,6 +28,7 @@ const (
 	AnnotationResourceRevision  = "cke.cybozu.com/revision"
 	AnnotationResourceInjectCA  = "cke.cybozu.com/inject-cacert"
 	AnnotationResourceIssueCert = "cke.cybozu.com/issue-cert"
+	AnnotationResourceRank      = "cke.cybozu.com/rank"
 )
 
 // kinds
@@ -36,6 +37,22 @@ const (
 	KindMutatingWebhookConfiguration   = "MutatingWebhookConfiguration"
 	KindSecret                         = "Secret"
 	KindValidatingWebhookConfiguration = "ValidatingWebhookConfiguration"
+)
+
+// rank
+const (
+	RankNamespace                      = 10
+	RankServiceAccount                 = 20 // ServiceAccount is namespace scoped
+	RankCustomResourceDefinition       = 30
+	RankClusterRole                    = 40
+	RankClusterRoleBinding             = 50
+	RankClusterScopedResourceDefault   = 1000
+	RankRole                           = 2000
+	RankRoleBinding                    = 2010
+	RankNetworkPolicy                  = 2020
+	RankSecret                         = 2030
+	RankConfigMap                      = 2040
+	RankNamespaceScopedResourceDefault = 3000
 )
 
 var decUnstructured = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
@@ -225,6 +242,48 @@ func ParseResource(data []byte) (string, error) {
 	return obj.GetKind() + "/" + obj.GetNamespace() + "/" + name, nil
 }
 
+func DecideRank(kind, namespace string, rank uint32) (uint32, error) {
+	if rank > 0 {
+		if namespace == "" && rank < 2000 {
+			return rank, nil
+		}
+		if namespace != "" && rank > 1999 {
+			return rank, nil
+		}
+		return 0, errors.New("invalid rank value")
+	}
+	// return default rank
+	switch kind {
+	case "Namespace":
+		return RankNamespace, nil
+	case "ServiceAccount":
+		return RankServiceAccount, nil
+	case "CustomResourceDefinition":
+		return RankCustomResourceDefinition, nil
+	case "ClusterRole":
+		return RankClusterRole, nil
+	case "ClusterRoleBinding":
+		return RankClusterRoleBinding, nil
+		// other cluster-scoped resources: 1000
+	case "Role":
+		return RankRole, nil
+	case "RoleBinding":
+		return RankRoleBinding, nil
+	case "NetworkPolicy":
+		return RankNetworkPolicy, nil
+	case "Secret":
+		return RankSecret, nil
+	case "ConfigMap":
+		return RankConfigMap, nil
+		// other namespace scoped resources: 3000
+	}
+
+	if namespace == "" {
+		return RankClusterScopedResourceDefault, nil
+	}
+	return RankNamespaceScopedResourceDefault, nil
+}
+
 // ResourceDefinition represents a CKE-managed kubernetes resource.
 type ResourceDefinition struct {
 	Key        string
@@ -233,6 +292,7 @@ type ResourceDefinition struct {
 	Name       string
 	Revision   int64
 	Image      string // may contains multiple images; we should not use this whole string as an image name.
+	Rank       uint32
 	Definition []byte
 }
 
@@ -266,45 +326,13 @@ func (d ResourceDefinition) NeedUpdate(rs *ResourceStatus) bool {
 	return curImage != d.Image
 }
 
-func (d ResourceDefinition) rank() int {
-	switch d.Kind {
-	case "Namespace":
-		return 10
-	case "ServiceAccount":
-		return 20
-	case "CustomResourceDefinition":
-		return 30
-	case "ClusterRole":
-		return 40
-	case "ClusterRoleBinding":
-		return 50
-		// other cluster-scoped resources: 1000
-	case "Role":
-		return 2000
-	case "RoleBinding":
-		return 2010
-	case "NetworkPolicy":
-		return 2020
-	case "Secret":
-		return 2030
-	case "ConfigMap":
-		return 2040
-		// other namespace scoped resources: 3000
-	}
-
-	if d.Namespace == "" {
-		return 1000
-	}
-	return 3000
-}
-
 // SortResources sort resources as defined order of creation.
 func SortResources(res []ResourceDefinition) {
 	less := func(i, j int) bool {
 		a := res[i]
 		b := res[j]
-		aRank := a.rank()
-		bRank := b.rank()
+		aRank := a.Rank
+		bRank := b.Rank
 
 		if aRank == bRank {
 			return a.Key < b.Key
