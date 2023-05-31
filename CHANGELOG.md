@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.25.4]
+
+### Added 
+
+- Update user-defined resource applying logic [#617](https://github.com/cybozu-go/cke/pull/617)
+
 ## [1.25.3]
 
 ### Changed
