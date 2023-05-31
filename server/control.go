@@ -23,17 +23,17 @@ var (
 
 // Controller manage operations
 type Controller struct {
-	session                      *concurrency.Session
-	interval                     time.Duration
-	certsGCInterval              time.Duration
-	timeout                      time.Duration
-	addon                        Integrator
-	maxConcurrentKubeletRestarts int
+	session              *concurrency.Session
+	interval             time.Duration
+	certsGCInterval      time.Duration
+	timeout              time.Duration
+	addon                Integrator
+	maxConcurrentUpdates int
 }
 
 // NewController construct controller instance
-func NewController(s *concurrency.Session, interval, gcInterval, timeout time.Duration, addon Integrator, maxConcurrentKubeletRestarts int) Controller {
-	return Controller{s, interval, gcInterval, timeout, addon, maxConcurrentKubeletRestarts}
+func NewController(s *concurrency.Session, interval, gcInterval, timeout time.Duration, addon Integrator, maxConcurrentUpdates int) Controller {
+	return Controller{s, interval, gcInterval, timeout, addon, maxConcurrentUpdates}
 }
 
 // Run execute procedures with leader elections
@@ -346,7 +346,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		DrainCompleted: drainCompleted,
 		DrainTimedout:  drainTimedout,
 		RebootDequeued: rebootDequeued,
-	}, c.maxConcurrentKubeletRestarts)
+	}, c.maxConcurrentUpdates)
 
 	st := &cke.ServerStatus{
 		Phase:     phase,

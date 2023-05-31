@@ -638,7 +638,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name:        "BootRivers",
 			Input:       newData(),
-			ExpectedOps: []opData{{"rivers-bootstrap", 6}, {"etcd-rivers-bootstrap", 3}},
+			ExpectedOps: []opData{{"rivers-bootstrap", 5}, {"rivers-bootstrap", 1}, {"etcd-rivers-bootstrap", 3}},
 		},
 		{
 			Name:        "BootRivers2",
@@ -780,7 +780,8 @@ func TestDecideOps(t *testing.T) {
 				{"kube-scheduler-bootstrap", 3},
 				{"kubelet-bootstrap", 5},
 				{"kubelet-bootstrap", 1},
-				{"kube-proxy-bootstrap", 6},
+				{"kube-proxy-bootstrap", 5},
+				{"kube-proxy-bootstrap", 1},
 			},
 		},
 		{
@@ -1011,7 +1012,8 @@ func TestDecideOps(t *testing.T) {
 			Name:  "StopProxy",
 			Input: newData().withAllServices().withDisableProxy(),
 			ExpectedOps: []opData{
-				{"stop-kube-proxy", 6},
+				{"stop-kube-proxy", 5},
+				{"stop-kube-proxy", 1},
 			},
 		},
 		{
