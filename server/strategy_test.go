@@ -1,7 +1,6 @@
 package server
 
 import (
-	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -1026,14 +1025,6 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sReady(),
 			ExpectedOps: []opData{
 				{"resource-apply", 1},
-				{"resource-apply", 1},
-				{"resource-apply", 1},
-				{"resource-apply", 1},
-				{"resource-apply", 1},
-				{"resource-apply", 1},
-				{"resource-apply", 1},
-				{"resource-apply", 1},
-				{"resource-apply", 1},
 				{"create-cluster-dns-configmap", 1},
 				{"create-endpoints", 1},
 				{"create-endpointslice", 1},
@@ -1300,8 +1291,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			),
-			ExpectedOps: []string{
-				"resource-apply",
+			ExpectedOps: []opData{
+				{"resource-apply", 1},
 			},
 		},
 		{
@@ -1371,8 +1362,8 @@ func TestDecideOps(t *testing.T) {
 					Completed: false,
 				},
 			}),
-			ExpectedOps: []string{
-				"resource-apply",
+			ExpectedOps: []opData{
+				{"resource-apply", 1},
 			},
 		},
 		{
@@ -1412,8 +1403,8 @@ func TestDecideOps(t *testing.T) {
 					Completed: false,
 				},
 			}),
-			ExpectedOps: []string{
-				"nop",
+			ExpectedOps: []opData{
+				{"nop", 0},
 			},
 		},
 		{
