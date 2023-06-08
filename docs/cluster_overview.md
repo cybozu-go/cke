@@ -53,6 +53,10 @@ components connect to kube-apiservers via it
 
 ![Worker Nodes](http://www.plantuml.com/plantuml/png/bP5FYuCm4CNl-HI3fzs31yVx8ko7sEEIwb2ACP4nwHzAltjD6a75XdfxlFVcyOEf1YlPkau9mLHRgO-A8Firsh9Hq2kfAGCvGFro_eDJxEZYZcufX3RDsFipt1A7mYN80ku2OBRKkWCfig4ITR5iz6okjv07vTElR-3JcNWOtQYyFTr3xlhyPnQ4mxNzU0k97q1Y4XAt8RqztIzeS89SsHuoyiPWzRz4YAcmZ26cPZ4rYzkpeYBTk4uz0G00)
 
+CKE deploys each worker-node component concurrently on multiple nodes.
+You can control the deployment concurrency by specifying the `max-concurrent-updates`
+command-line option.
+
 Control Plane Nodes
 -------------------
 

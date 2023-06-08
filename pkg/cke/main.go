@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"time"
@@ -19,12 +20,13 @@ import (
 )
 
 var (
-	flgHTTP            = pflag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
-	flgConfigPath      = pflag.String("config", "/etc/cke/config.yml", "configuration file path")
-	flgInterval        = pflag.String("interval", "1m", "check interval")
-	flgCertsGCInterval = pflag.String("certs-gc-interval", "1h", "tidy interval for expired certificates")
-	flgSessionTTL      = pflag.String("session-ttl", "60s", "leader session's TTL")
-	flgDebugSabakan    = pflag.Bool("debug-sabakan", false, "debug sabakan integration")
+	flgHTTP                 = pflag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
+	flgConfigPath           = pflag.String("config", "/etc/cke/config.yml", "configuration file path")
+	flgInterval             = pflag.String("interval", "1m", "check interval")
+	flgCertsGCInterval      = pflag.String("certs-gc-interval", "1h", "tidy interval for expired certificates")
+	flgSessionTTL           = pflag.String("session-ttl", "60s", "leader session's TTL")
+	flgDebugSabakan         = pflag.Bool("debug-sabakan", false, "debug sabakan integration")
+	flgMaxConcurrentUpdates = pflag.Int("max-concurrent-updates", 10, "the maximum number of components that can be updated simultaneously")
 )
 
 func loadConfig(p string) (*etcdutil.Config, error) {
@@ -108,8 +110,13 @@ func main() {
 		log.ErrorExit(err)
 	}
 
+	maxConcurrentUpdates := *flgMaxConcurrentUpdates
+	if maxConcurrentUpdates <= 0 {
+		log.ErrorExit(errors.New("max-concurrent-updates must be greater than 0"))
+	}
+
 	// Controller
-	controller := server.NewController(session, interval, gcInterval, timeout, addon)
+	controller := server.NewController(session, interval, gcInterval, timeout, addon, maxConcurrentUpdates)
 	well.Go(controller.Run)
 
 	// API server

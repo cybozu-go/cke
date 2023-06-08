@@ -11,15 +11,16 @@ Usage
 
 ```console
 Usage of ./cke:
-      --certs-gc-interval string   tidy interval for expired certificates (default "1h")
-      --config string              configuration file path (default "/etc/cke/config.yml")
-      --debug-sabakan              debug sabakan integration
-      --http string                <Listen IP>:<Port number> (default "0.0.0.0:10180")
-      --interval string            check interval (default "1m")
-      --logfile string             Log filename
-      --logformat string           Log format [plain,logfmt,json]
-      --loglevel string            Log level [critical,error,warning,info,debug]
-      --session-ttl string         leader session's TTL (default "60s")
+      --certs-gc-interval string     tidy interval for expired certificates (default "1h")  
+      --config string                configuration file path (default "/etc/cke/config.yml")
+      --debug-sabakan                debug sabakan integration                              
+      --http string                  <Listen IP>:<Port number> (default "0.0.0.0:10180")    
+      --interval string              check interval (default "1m")
+      --logfile string               Log filename
+      --logformat string             Log format [plain,logfmt,json]
+      --loglevel string              Log level [critical,error,warning,info,debug]
+      --max-concurrent-updates int   the maximum number of components that can be updated simultaneously (default 10)
+      --session-ttl string           leader session's TTL (default "60s")
 ```
 
 Configuration file

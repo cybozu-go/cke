@@ -24,7 +24,7 @@ type DecideOpsRebootArgs struct {
 
 // DecideOps returns the next operations to do and the operation phase.
 // This returns nil when no operations need to be done.
-func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, rebootArgs DecideOpsRebootArgs) ([]cke.Operator, cke.OperationPhase) {
+func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, rebootArgs DecideOpsRebootArgs, maxConcurrentUpdates int) ([]cke.Operator, cke.OperationPhase) {
 	nf := NewNodeFilter(c, cs)
 
 	// 0. Execute upgrade operation if necessary
@@ -40,7 +40,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	// 1. Run or restart rivers.  This guarantees:
 	// - CKE tools image is pulled on all nodes.
 	// - Rivers runs on all nodes and will proxy requests only to control plane nodes.
-	if ops := riversOps(c, nf); len(ops) > 0 {
+	if ops := riversOps(c, nf, maxConcurrentUpdates); len(ops) > 0 {
 		return ops, cke.PhaseRivers
 	}
 
@@ -65,7 +65,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 5. Run or restart kubernetes components.
-	if ops := k8sOps(c, nf, cs); len(ops) > 0 {
+	if ops := k8sOps(c, nf, cs, maxConcurrentUpdates); len(ops) > 0 {
 		return ops, cke.PhaseK8sStart
 	}
 
@@ -103,23 +103,42 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	return nil, cke.PhaseCompleted
 }
 
-func riversOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
+func riversOps(c *cke.Cluster, nf *NodeFilter, maxConcurrentUpdates int) (ops []cke.Operator) {
 	if nodes := nf.SSHConnectedNodes(nf.RiversStoppedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, op.RiversBootOp(nodes, nf.ControlPlane(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
+		ops = append(ops, splitOperators(nodes, func(ns []*cke.Node) cke.Operator {
+			return op.RiversBootOp(ns, nf.ControlPlane(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort)
+		}, maxConcurrentUpdates)...)
 	}
 	if nodes := nf.SSHConnectedNodes(nf.RiversOutdatedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, op.RiversRestartOp(nodes, nf.ControlPlane(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
+		ops = append(ops, splitOperators(nodes, func(ns []*cke.Node) cke.Operator {
+			return op.RiversRestartOp(ns, nf.ControlPlane(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort)
+		}, maxConcurrentUpdates)...)
 	}
 	if nodes := nf.SSHConnectedNodes(nf.EtcdRiversStoppedNodes(), true, false); len(nodes) > 0 {
-		ops = append(ops, op.RiversBootOp(nodes, nf.ControlPlane(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
+		ops = append(ops, splitOperators(nodes, func(ns []*cke.Node) cke.Operator {
+			return op.RiversBootOp(ns, nf.ControlPlane(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)
+		}, maxConcurrentUpdates)...)
 	}
 	if nodes := nf.SSHConnectedNodes(nf.EtcdRiversOutdatedNodes(), true, false); len(nodes) > 0 {
-		ops = append(ops, op.RiversRestartOp(nodes, nf.ControlPlane(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
+		ops = append(ops, splitOperators(nodes, func(ns []*cke.Node) cke.Operator {
+			return op.RiversRestartOp(ns, nf.ControlPlane(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)
+		}, maxConcurrentUpdates)...)
 	}
 	return ops
 }
 
-func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []cke.Operator) {
+func splitOperators(nodes []*cke.Node, createOps func(ns []*cke.Node) cke.Operator, maxConcurrentUpdates int) (ops []cke.Operator) {
+	for i := 0; i < len(nodes); i += maxConcurrentUpdates {
+		end := i + maxConcurrentUpdates
+		if end > len(nodes) {
+			end = len(nodes)
+		}
+		ops = append(ops, createOps(nodes[i:end]))
+	}
+	return ops
+}
+
+func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrentUpdates int) (ops []cke.Operator) {
 	// For cp nodes
 	if nodes := nf.SSHConnectedNodes(nf.APIServerStoppedNodes(), true, false); len(nodes) > 0 {
 		kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
@@ -145,23 +164,34 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []cke.Op
 	// For all nodes
 	apiServer := nf.HealthyAPIServer()
 	if nodes := nf.SSHConnectedNodes(nf.KubeletUnrecognizedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet, cs.NodeStatuses))
+		ops = append(ops, splitOperators(nodes, func(ns []*cke.Node) cke.Operator {
+			return k8s.KubeletRestartOp(ns, c.Name, c.Options.Kubelet, cs.NodeStatuses)
+		}, maxConcurrentUpdates)...)
 	}
 	if nodes := nf.SSHConnectedNodes(nf.KubeletStoppedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletBootOp(nodes, nf.KubeletStoppedRegisteredNodes(),
-			apiServer, c.Name, c.Options.Kubelet, cs.NodeStatuses))
+		ops = append(ops, splitOperators(nodes, func(ns []*cke.Node) cke.Operator {
+			return k8s.KubeletBootOp(ns, nf.KubeletStoppedRegisteredNodes(), apiServer, c.Name, c.Options.Kubelet, cs.NodeStatuses)
+		}, maxConcurrentUpdates)...)
 	}
 	if nodes := nf.SSHConnectedNodes(nf.KubeletOutdatedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeletRestartOp(nodes, c.Name, c.Options.Kubelet, cs.NodeStatuses))
+		ops = append(ops, splitOperators(nodes, func(ns []*cke.Node) cke.Operator {
+			return k8s.KubeletRestartOp(ns, c.Name, c.Options.Kubelet, cs.NodeStatuses)
+		}, maxConcurrentUpdates)...)
 	}
 	if nodes := nf.SSHConnectedNodes(nf.ProxyStoppedNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeProxyBootOp(nodes, c.Name, "", c.Options.Proxy))
+		ops = append(ops, splitOperators(nodes, func(ns []*cke.Node) cke.Operator {
+			return k8s.KubeProxyBootOp(ns, c.Name, "", c.Options.Proxy)
+		}, maxConcurrentUpdates)...)
 	}
 	if nodes := nf.SSHConnectedNodes(nf.ProxyOutdatedNodes(c.Options.Proxy), true, true); len(nodes) > 0 {
-		ops = append(ops, k8s.KubeProxyRestartOp(nodes, c.Name, "", c.Options.Proxy))
+		ops = append(ops, splitOperators(nodes, func(ns []*cke.Node) cke.Operator {
+			return k8s.KubeProxyRestartOp(ns, c.Name, "", c.Options.Proxy)
+		}, maxConcurrentUpdates)...)
 	}
 	if nodes := nf.SSHConnectedNodes(nf.ProxyRunningUnexpectedlyNodes(), true, true); len(nodes) > 0 {
-		ops = append(ops, op.ProxyStopOp(nodes))
+		ops = append(ops, splitOperators(nodes, func(ns []*cke.Node) cke.Operator {
+			return op.ProxyStopOp(ns)
+		}, maxConcurrentUpdates)...)
 	}
 	return ops
 }

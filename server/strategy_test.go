@@ -1,7 +1,6 @@
 package server
 
 import (
-	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -622,26 +621,28 @@ func (d testData) withDisableProxy() testData {
 	return d
 }
 
+type opData struct {
+	Name      string
+	TargetNum int
+}
+
 func TestDecideOps(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		Name               string
-		Input              testData
-		ExpectedOps        []string
-		ExpectedTargetNums map[string]int
+		Name        string
+		Input       testData
+		ExpectedOps []opData
 	}{
 		{
-			Name:               "BootRivers",
-			Input:              newData(),
-			ExpectedOps:        []string{"etcd-rivers-bootstrap", "rivers-bootstrap"},
-			ExpectedTargetNums: map[string]int{"etcd-rivers-bootstrap": 3, "rivers-bootstrap": 6},
+			Name:        "BootRivers",
+			Input:       newData(),
+			ExpectedOps: []opData{{"rivers-bootstrap", 5}, {"rivers-bootstrap", 1}, {"etcd-rivers-bootstrap", 3}},
 		},
 		{
-			Name:               "BootRivers2",
-			Input:              newData().withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps:        []string{"etcd-rivers-bootstrap", "rivers-bootstrap"},
-			ExpectedTargetNums: map[string]int{"etcd-rivers-bootstrap": 2, "rivers-bootstrap": 4},
+			Name:        "BootRivers2",
+			Input:       newData().withHealthyEtcd().withSSHNotConnectedNodes(),
+			ExpectedOps: []opData{{"rivers-bootstrap", 4}, {"etcd-rivers-bootstrap", 2}},
 		},
 		{
 			Name: "RestartRivers",
@@ -649,8 +650,7 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.Image = ""
 			}).withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps:        []string{"rivers-restart"},
-			ExpectedTargetNums: map[string]int{"rivers-restart": 1},
+			ExpectedOps: []opData{{"rivers-restart", 1}},
 		},
 		{
 			Name: "RestartRivers2",
@@ -658,8 +658,7 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.BuiltInParams.ExtraArguments = nil
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.BuiltInParams.ExtraArguments = nil
 			}).withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps:        []string{"rivers-restart"},
-			ExpectedTargetNums: map[string]int{"rivers-restart": 1},
+			ExpectedOps: []opData{{"rivers-restart", 1}},
 		},
 		{
 			Name: "RestartRivers3",
@@ -667,8 +666,7 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.ExtraParams.ExtraArguments = []string{"foo"}
 			}).withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps:        []string{"rivers-restart"},
-			ExpectedTargetNums: map[string]int{"rivers-restart": 1},
+			ExpectedOps: []opData{{"rivers-restart", 1}},
 		},
 		{
 			Name: "StartRestartRivers",
@@ -676,8 +674,7 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.Running = false
 			}).withEtcdRivers(),
-			ExpectedOps:        []string{"rivers-bootstrap", "rivers-restart"},
-			ExpectedTargetNums: map[string]int{"rivers-bootstrap": 1, "rivers-restart": 1},
+			ExpectedOps: []opData{{"rivers-bootstrap", 1}, {"rivers-restart", 1}},
 		},
 		{
 			Name: "RestartEtcdRivers",
@@ -685,8 +682,7 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.Image = ""
 			}).withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps:        []string{"etcd-rivers-restart"},
-			ExpectedTargetNums: map[string]int{"etcd-rivers-restart": 1},
+			ExpectedOps: []opData{{"etcd-rivers-restart", 1}},
 		},
 		{
 			Name: "RestartEtcdRivers2",
@@ -694,8 +690,7 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.BuiltInParams.ExtraArguments = nil
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.BuiltInParams.ExtraArguments = nil
 			}).withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps:        []string{"etcd-rivers-restart"},
-			ExpectedTargetNums: map[string]int{"etcd-rivers-restart": 1},
+			ExpectedOps: []opData{{"etcd-rivers-restart", 1}},
 		},
 		{
 			Name: "RestartEtcdRivers3",
@@ -703,8 +698,7 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.ExtraParams.ExtraArguments = []string{"foo"}
 			}).withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps:        []string{"etcd-rivers-restart"},
-			ExpectedTargetNums: map[string]int{"etcd-rivers-restart": 1},
+			ExpectedOps: []opData{{"etcd-rivers-restart", 1}},
 		},
 		{
 			Name: "StartRestartEtcdRivers",
@@ -712,13 +706,12 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.Running = false
 			}),
-			ExpectedOps:        []string{"etcd-rivers-bootstrap", "etcd-rivers-restart"},
-			ExpectedTargetNums: map[string]int{"etcd-rivers-bootstrap": 1, "etcd-rivers-restart": 1},
+			ExpectedOps: []opData{{"etcd-rivers-bootstrap", 1}, {"etcd-rivers-restart", 1}},
 		},
 		{
 			Name:        "EtcdBootstrap",
 			Input:       newData().withRivers().withEtcdRivers(),
-			ExpectedOps: []string{"etcd-bootstrap"},
+			ExpectedOps: []opData{{"etcd-bootstrap", 3}},
 		},
 		{
 			Name:        "SkipEtcdBootstrap",
@@ -728,7 +721,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name:        "SkipEtcdBootstrap2",
 			Input:       newData().withRivers().withEtcdRivers().withInitFailedEtcd(),
-			ExpectedOps: []string{"etcd-wait-cluster"},
+			ExpectedOps: []opData{{"etcd-wait-cluster", 3}},
 			// This wait will never succeed.
 			// The recovery from this failure case may need deletion of the data volumes, so it should be handled manually.
 			// The failure case is very rare.  It will not occur once after the etcd cluster started to work.
@@ -736,7 +729,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name:        "EtcdStart",
 			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd(),
-			ExpectedOps: []string{"etcd-start"},
+			ExpectedOps: []opData{{"etcd-start", 3}},
 		},
 		{
 			Name: "EtcdStart2",
@@ -744,86 +737,67 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Etcd.Running = false
 				d.NodeStatus(d.ControlPlane()[1]).Etcd.Running = false
 			}),
-			ExpectedOps: []string{
-				"etcd-start",
-			},
-			ExpectedTargetNums: map[string]int{
-				"etcd-start": 1,
+			ExpectedOps: []opData{
+				{"etcd-start", 1},
 			},
 		},
 		{
-			Name:        "EtcdStart3",
-			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd().withNotHasDataStoppedEtcd(),
-			ExpectedOps: []string{"etcd-start"},
-			ExpectedTargetNums: map[string]int{
-				"etcd-start": 2,
+			Name:  "EtcdStart3",
+			Input: newData().withRivers().withEtcdRivers().withStoppedEtcd().withNotHasDataStoppedEtcd(),
+			ExpectedOps: []opData{
+				{"etcd-start", 2},
 			},
 		},
 		{
-			Name:        "EtcdStart4",
-			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd().withNotMarkedStoppedEtcd(),
-			ExpectedOps: []string{"etcd-start"},
-			ExpectedTargetNums: map[string]int{
-				"etcd-start": 2,
+			Name:  "EtcdStart4",
+			Input: newData().withRivers().withEtcdRivers().withStoppedEtcd().withNotMarkedStoppedEtcd(),
+			ExpectedOps: []opData{
+				{"etcd-start", 2},
 			},
 		},
 		{
 			Name:        "WaitEtcd",
 			Input:       newData().withRivers().withEtcdRivers().withUnhealthyEtcd(),
-			ExpectedOps: []string{"etcd-wait-cluster"},
+			ExpectedOps: []opData{{"etcd-wait-cluster", 3}},
 		},
 		{
 			Name:  "BootK8s",
 			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-apiserver-restart",
-				"kube-controller-manager-bootstrap",
-				"kube-proxy-bootstrap",
-				"kube-scheduler-bootstrap",
-				"kubelet-bootstrap",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-apiserver-restart":            2,
-				"kube-controller-manager-bootstrap": 2,
-				"kube-proxy-bootstrap":              4,
-				"kube-scheduler-bootstrap":          2,
-				"kubelet-bootstrap":                 4,
+			ExpectedOps: []opData{
+				{"kube-apiserver-restart", 2},
+				{"kube-controller-manager-bootstrap", 2},
+				{"kube-scheduler-bootstrap", 2},
+				{"kubelet-bootstrap", 4},
+				{"kube-proxy-bootstrap", 4},
 			},
 		},
 		{
 			Name:  "BootK8sFromPartiallyRunning",
 			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withAPIServer(testServiceSubnet, testDefaultDNSDomain),
-			ExpectedOps: []string{
-				"kube-controller-manager-bootstrap",
-				"kube-proxy-bootstrap",
-				"kube-scheduler-bootstrap",
-				"kubelet-bootstrap",
+			ExpectedOps: []opData{
+				{"kube-controller-manager-bootstrap", 3},
+				{"kube-scheduler-bootstrap", 3},
+				{"kubelet-bootstrap", 5},
+				{"kubelet-bootstrap", 1},
+				{"kube-proxy-bootstrap", 5},
+				{"kube-proxy-bootstrap", 1},
 			},
 		},
 		{
 			Name:  "BootK8sWithoutProxy",
 			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withSSHNotConnectedNodes().withDisableProxy(),
-			ExpectedOps: []string{
-				"kube-apiserver-restart",
-				"kube-controller-manager-bootstrap",
-				"kube-scheduler-bootstrap",
-				"kubelet-bootstrap",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-apiserver-restart":            2,
-				"kube-controller-manager-bootstrap": 2,
-				"kube-scheduler-bootstrap":          2,
-				"kubelet-bootstrap":                 4,
+			ExpectedOps: []opData{
+				{"kube-apiserver-restart", 2},
+				{"kube-controller-manager-bootstrap", 2},
+				{"kube-scheduler-bootstrap", 2},
+				{"kubelet-bootstrap", 4},
 			},
 		},
 		{
 			Name:  "RestartAPIServer",
 			Input: newData().withAllServices().withAPIServer("11.22.33.0/24", testDefaultDNSDomain).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-apiserver-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-apiserver-restart": 2,
+			ExpectedOps: []opData{
+				{"kube-apiserver-restart", 2},
 			},
 		},
 		{
@@ -832,11 +806,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).APIServer.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).APIServer.Image = ""
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-apiserver-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-apiserver-restart": 1,
+			ExpectedOps: []opData{
+				{"kube-apiserver-restart", 1},
 			},
 		},
 		{
@@ -845,21 +816,15 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).APIServer.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.ControlPlane()[1]).APIServer.ExtraParams.ExtraArguments = []string{"foo"}
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-apiserver-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-apiserver-restart": 1,
+			ExpectedOps: []opData{
+				{"kube-apiserver-restart", 1},
 			},
 		},
 		{
 			Name:  "RestartControllerManager",
 			Input: newData().withAllServices().withControllerManager("another", testServiceSubnet).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-controller-manager-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-controller-manager-restart": 2,
+			ExpectedOps: []opData{
+				{"kube-controller-manager-restart", 2},
 			},
 		},
 		{
@@ -868,11 +833,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).ControllerManager.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).ControllerManager.Image = ""
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-controller-manager-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-controller-manager-restart": 1,
+			ExpectedOps: []opData{
+				{"kube-controller-manager-restart", 1},
 			},
 		},
 		{
@@ -881,11 +843,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).ControllerManager.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.ControlPlane()[1]).ControllerManager.ExtraParams.ExtraArguments = []string{"foo"}
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-controller-manager-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-controller-manager-restart": 1,
+			ExpectedOps: []opData{
+				{"kube-controller-manager-restart", 1},
 			},
 		},
 		{
@@ -894,11 +853,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.BuiltInParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.ControlPlane()[1]).Scheduler.BuiltInParams.ExtraArguments = []string{"foo"}
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-scheduler-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-scheduler-restart": 1,
+			ExpectedOps: []opData{
+				{"kube-scheduler-restart", 1},
 			},
 		},
 		{
@@ -907,11 +863,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Image = ""
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-scheduler-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-scheduler-restart": 1,
+			ExpectedOps: []opData{
+				{"kube-scheduler-restart", 1},
 			},
 		},
 		{
@@ -920,11 +873,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.ControlPlane()[1]).Scheduler.ExtraParams.ExtraArguments = []string{"foo"}
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-scheduler-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-scheduler-restart": 1,
+			ExpectedOps: []opData{
+				{"kube-scheduler-restart", 1},
 			},
 		},
 		{
@@ -933,31 +883,22 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Config.Parallelism = nil
 				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Config.Parallelism = nil
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-scheduler-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-scheduler-restart": 1,
+			ExpectedOps: []opData{
+				{"kube-scheduler-restart", 1},
 			},
 		},
 		{
 			Name:  "RestartKubelet",
 			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kubelet-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kubelet-restart": 4,
+			ExpectedOps: []opData{
+				{"kubelet-restart", 4},
 			},
 		},
 		{
 			Name:  "RestartKubelet2",
 			Input: newData().withAllServices().withKubelet("", "10.0.0.53", true).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kubelet-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kubelet-restart": 4,
+			ExpectedOps: []opData{
+				{"kubelet-restart", 4},
 			},
 		},
 		{
@@ -966,11 +907,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.Cluster.Nodes[3]).Kubelet.Image = ""
 				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.Image = ""
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kubelet-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kubelet-restart": 1,
+			ExpectedOps: []opData{
+				{"kubelet-restart", 1},
 			},
 		},
 		{
@@ -979,11 +917,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.Cluster.Nodes[3]).Kubelet.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.ExtraParams.ExtraArguments = []string{"foo"}
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kubelet-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kubelet-restart": 1,
+			ExpectedOps: []opData{
+				{"kubelet-restart", 1},
 			},
 		},
 		{
@@ -992,11 +927,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.Cluster.Nodes[3]).Kubelet.Config.ClusterDomain = "neco.local"
 				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.Config.ClusterDomain = "neco.local"
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kubelet-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kubelet-restart": 1,
+			ExpectedOps: []opData{
+				{"kubelet-restart", 1},
 			},
 		},
 		{
@@ -1004,11 +936,8 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Cluster.Options.Kubelet.Config.Object["containerLogMaxFiles"] = 20
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kubelet-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kubelet-restart": 4,
+			ExpectedOps: []opData{
+				{"kubelet-restart", 4},
 			},
 		},
 		{
@@ -1016,11 +945,8 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Cluster.Options.Kubelet.Config.Object["containerLogMaxSize"] = "1Gi"
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kubelet-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kubelet-restart": 4,
+			ExpectedOps: []opData{
+				{"kubelet-restart", 4},
 			},
 		},
 		{
@@ -1028,8 +954,8 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Cluster.Options.Kubelet.CRIEndpoint = "/var/run/dockershim.sock"
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"wait-kubernetes",
+			ExpectedOps: []opData{
+				{"wait-kubernetes", 1},
 			},
 		},
 		{
@@ -1037,11 +963,8 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[:3]
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kubelet-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kubelet-restart": 2,
+			ExpectedOps: []opData{
+				{"kubelet-restart", 2},
 			},
 		},
 		{
@@ -1050,11 +973,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-proxy-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-proxy-restart": 1,
+			ExpectedOps: []opData{
+				{"kube-proxy-restart", 1},
 			},
 		},
 		{
@@ -1063,11 +983,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.Image = ""
 				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.Image = ""
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-proxy-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-proxy-restart": 1,
+			ExpectedOps: []opData{
+				{"kube-proxy-restart", 1},
 			},
 		},
 		{
@@ -1076,11 +993,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.ExtraParams.ExtraArguments = []string{"foo"}
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-proxy-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-proxy-restart": 1,
+			ExpectedOps: []opData{
+				{"kube-proxy-restart", 1},
 			},
 		},
 		{
@@ -1089,37 +1003,34 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.Config.Mode = cke.ProxyModeIPVS
 				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.Config.Mode = cke.ProxyModeIPVS
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{
-				"kube-proxy-restart",
-			},
-			ExpectedTargetNums: map[string]int{
-				"kube-proxy-restart": 1,
+			ExpectedOps: []opData{
+				{"kube-proxy-restart", 1},
 			},
 		},
 		{
-			Name:        "StopProxy",
-			Input:       newData().withAllServices().withDisableProxy(),
-			ExpectedOps: []string{"stop-kube-proxy"},
-			ExpectedTargetNums: map[string]int{
-				"stop-kube-proxy": 6,
+			Name:  "StopProxy",
+			Input: newData().withAllServices().withDisableProxy(),
+			ExpectedOps: []opData{
+				{"stop-kube-proxy", 5},
+				{"stop-kube-proxy", 1},
 			},
 		},
 		{
 			Name:        "WaitKube",
 			Input:       newData().withAllServices(),
-			ExpectedOps: []string{"wait-kubernetes"},
+			ExpectedOps: []opData{{"wait-kubernetes", 1}},
 		},
 		{
 			Name:  "K8sResources",
 			Input: newData().withK8sReady(),
-			ExpectedOps: []string{
-				"create-cluster-dns-configmap",
-				"create-endpoints",
-				"create-endpoints",
-				"create-endpointslice",
-				"create-endpointslice",
-				"create-etcd-service",
-				"resource-apply",
+			ExpectedOps: []opData{
+				{"resource-apply", 1},
+				{"create-cluster-dns-configmap", 1},
+				{"create-endpoints", 1},
+				{"create-endpointslice", 1},
+				{"create-etcd-service", 1},
+				{"create-endpoints", 1},
+				{"create-endpointslice", 1},
 			},
 		},
 		{
@@ -1129,9 +1040,9 @@ func TestDecideOps(t *testing.T) {
 				svc.Spec.ClusterIP = "1.1.1.1"
 				d.Status.Kubernetes.DNSService = svc
 			}),
-			ExpectedOps: []string{
-				"update-cluster-dns-configmap",
-				"update-node-dns-configmap",
+			ExpectedOps: []opData{
+				{"update-cluster-dns-configmap", 1},
+				{"update-node-dns-configmap", 1},
 			},
 		},
 		{
@@ -1139,9 +1050,10 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Cluster.Options.Kubelet.Config.Object["clusterDomain"] = "neco.local"
 			}),
-			ExpectedOps: []string{
-				"kube-apiserver-restart",
-				"kubelet-restart",
+			ExpectedOps: []opData{
+				{"kube-apiserver-restart", 3},
+				{"kubelet-restart", 5},
+				{"kubelet-restart", 1},
 			},
 		},
 		{
@@ -1152,9 +1064,9 @@ func TestDecideOps(t *testing.T) {
 					st.Kubelet.Config.ClusterDomain = "neco.local"
 				}
 			}).withAPIServer(testServiceSubnet, "neco.local"),
-			ExpectedOps: []string{
-				"update-cluster-dns-configmap",
-				"update-node-dns-configmap",
+			ExpectedOps: []opData{
+				{"update-cluster-dns-configmap", 1},
+				{"update-node-dns-configmap", 1},
 			},
 		},
 		{
@@ -1162,9 +1074,9 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Cluster.DNSServers = []string{"1.1.1.1"}
 			}),
-			ExpectedOps: []string{
-				"update-cluster-dns-configmap",
-				"update-node-dns-configmap",
+			ExpectedOps: []opData{
+				{"update-cluster-dns-configmap", 1},
+				{"update-node-dns-configmap", 1},
 			},
 		},
 		{
@@ -1172,8 +1084,8 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.ClusterDNS.ClusterIP = "10.0.0.54"
 			}),
-			ExpectedOps: []string{
-				"update-node-dns-configmap",
+			ExpectedOps: []opData{
+				{"update-node-dns-configmap", 1},
 			},
 		},
 		{
@@ -1181,77 +1093,77 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets = []corev1.EndpointSubset{}
 			}),
-			ExpectedOps: []string{"update-endpoints"},
+			ExpectedOps: []opData{{"update-endpoints", 1}},
 		},
 		{
 			Name: "MasterEndpointsUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Ports = []corev1.EndpointPort{}
 			}),
-			ExpectedOps: []string{"update-endpoints"},
+			ExpectedOps: []opData{{"update-endpoints", 1}},
 		},
 		{
 			Name: "MasterEndpointsUpdate3",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
-			ExpectedOps: []string{"update-endpoints"},
+			ExpectedOps: []opData{{"update-endpoints", 1}},
 		},
 		{
 			Name: "MasterEndpointSliceUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpointSlice.Endpoints[0].Addresses = []string{}
 			}),
-			ExpectedOps: []string{"update-endpointslice"},
+			ExpectedOps: []opData{{"update-endpointslice", 1}},
 		},
 		{
 			Name: "MasterEndpointSliceUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpointSlice.Ports[0] = discoveryv1.EndpointPort{}
 			}),
-			ExpectedOps: []string{"update-endpointslice"},
+			ExpectedOps: []opData{{"update-endpointslice", 1}},
 		},
 		{
 			Name: "EtcdServiceUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdService.Spec.Ports = []corev1.ServicePort{}
 			}),
-			ExpectedOps: []string{"update-etcd-service"},
+			ExpectedOps: []opData{{"update-etcd-service", 1}},
 		},
 		{
 			Name: "EtcdEndpointsUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets = []corev1.EndpointSubset{}
 			}),
-			ExpectedOps: []string{"update-endpoints"},
+			ExpectedOps: []opData{{"update-endpoints", 1}},
 		},
 		{
 			Name: "EtcdEndpointsUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Ports = []corev1.EndpointPort{}
 			}),
-			ExpectedOps: []string{"update-endpoints"},
+			ExpectedOps: []opData{{"update-endpoints", 1}},
 		},
 		{
 			Name: "EtcdEndpointsUpdate3",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
-			ExpectedOps: []string{"update-endpoints"},
+			ExpectedOps: []opData{{"update-endpoints", 1}},
 		},
 		{
 			Name: "EtcdEndpointSliceUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[0].Addresses = []string{}
 			}),
-			ExpectedOps: []string{"update-endpointslice"},
+			ExpectedOps: []opData{{"update-endpointslice", 1}},
 		},
 		{
 			Name: "EtcdEndpointSliceUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpointSlice.Ports[0] = discoveryv1.EndpointPort{}
 			}),
-			ExpectedOps: []string{"update-endpointslice"},
+			ExpectedOps: []opData{{"update-endpointslice", 1}},
 		},
 		{
 			Name: "EndpointsUpdateWithRebootEntry",
@@ -1262,8 +1174,12 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusDraining,
 				},
 			}),
-			ExpectedOps:        []string{"update-endpoints", "update-endpoints", "update-endpointslice", "update-endpointslice"},
-			ExpectedTargetNums: nil,
+			ExpectedOps: []opData{
+				{"update-endpoints", 1},
+				{"update-endpointslice", 1},
+				{"update-endpoints", 1},
+				{"update-endpointslice", 1},
+			},
 		},
 		{
 			Name: "EndpointsUpdateWithRebootEntry2",
@@ -1280,8 +1196,12 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusQueued,
 				},
 			}),
-			ExpectedOps:        []string{"update-endpoints", "update-endpoints", "update-endpointslice", "update-endpointslice"},
-			ExpectedTargetNums: nil,
+			ExpectedOps: []opData{
+				{"update-endpoints", 1},
+				{"update-endpointslice", 1},
+				{"update-endpoints", 1},
+				{"update-endpointslice", 1},
+			},
 		},
 		{
 			Name: "EndpointsWithRebootEntry",
@@ -1308,8 +1228,7 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.MasterEndpointSlice.Endpoints[2].Conditions.Ready = &endpointReady
 				d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[2].Conditions.Ready = &endpointReady
 			}),
-			ExpectedOps:        []string{"reboot-drain-start", "reboot-recalc-metrics"},
-			ExpectedTargetNums: nil,
+			ExpectedOps: []opData{{"reboot-drain-start", 1}, {"reboot-recalc-metrics", 0}},
 		},
 		{
 			Name: "EndpointsWithCancelledRebootEntry",
@@ -1326,8 +1245,7 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusCancelled,
 				},
 			}),
-			ExpectedOps:        []string{"reboot-dequeue", "reboot-recalc-metrics"},
-			ExpectedTargetNums: nil,
+			ExpectedOps: []opData{{"reboot-dequeue", 1}, {"reboot-recalc-metrics", 0}},
 		},
 		{
 			Name: "UserResourceAdd",
@@ -1373,8 +1291,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			),
-			ExpectedOps: []string{
-				"resource-apply",
+			ExpectedOps: []opData{
+				{"resource-apply", 1},
 			},
 		},
 		{
@@ -1444,8 +1362,8 @@ func TestDecideOps(t *testing.T) {
 					Completed: false,
 				},
 			}),
-			ExpectedOps: []string{
-				"resource-apply",
+			ExpectedOps: []opData{
+				{"resource-apply", 1},
 			},
 		},
 		{
@@ -1485,8 +1403,8 @@ func TestDecideOps(t *testing.T) {
 					Completed: false,
 				},
 			}),
-			ExpectedOps: []string{
-				"nop",
+			ExpectedOps: []opData{
+				{"nop", 0},
 			},
 		},
 		{
@@ -1510,7 +1428,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeLabel2",
@@ -1534,7 +1452,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeLabel3",
@@ -1561,7 +1479,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeLabel4",
@@ -1588,7 +1506,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeLabel5",
@@ -1615,7 +1533,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeLabelCP1",
@@ -1625,7 +1543,7 @@ func TestDecideOps(t *testing.T) {
 					Labels: map[string]string{},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeLabelCP2",
@@ -1635,7 +1553,7 @@ func TestDecideOps(t *testing.T) {
 					Labels: map[string]string{op.CKELabelMaster: "true"},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeLabelCP3",
@@ -1645,7 +1563,7 @@ func TestDecideOps(t *testing.T) {
 					Labels: map[string]string{op.CKELabelMaster: "hoge"},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeAnnotation1",
@@ -1668,7 +1586,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeAnnotation2",
@@ -1692,7 +1610,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeAnnotation3",
@@ -1719,7 +1637,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeTaint1",
@@ -1744,7 +1662,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeTaint2",
@@ -1768,7 +1686,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeTaint3",
@@ -1792,7 +1710,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeTaint4",
@@ -1820,14 +1738,14 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeTaintCP1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Cluster.TaintCP = true
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 3}},
 		},
 		{
 			Name: "NodeTaintCP2",
@@ -1876,7 +1794,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{},
+			ExpectedOps: []opData{},
 		},
 		{
 			Name: "NodeTaintCP3",
@@ -1925,7 +1843,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeTaintCP4",
@@ -1944,7 +1862,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeTaintCP5",
@@ -2006,7 +1924,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []string{"update-node"},
+			ExpectedOps: []opData{{"update-node", 1}},
 		},
 		{
 			Name: "NodeExtraAttrs",
@@ -2049,7 +1967,7 @@ func TestDecideOps(t *testing.T) {
 					Name: "10.0.0.20",
 				},
 			}),
-			ExpectedOps: []string{"remove-node"},
+			ExpectedOps: []opData{{"remove-node", 1}},
 		},
 		{
 			Name: "AllGreen",
@@ -2081,7 +1999,7 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.100"] = &etcdserverpb.Member{Name: "10.0.0.100", ID: 3}
 				d.Status.Etcd.InSyncMembers["10.0.0.100"] = false
 			}),
-			ExpectedOps: []string{"etcd-remove-member"},
+			ExpectedOps: []opData{{"etcd-remove-member", 1}},
 		},
 		{
 			Name: "SkipEtcdRemoveNonClusterMember",
@@ -2089,7 +2007,7 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.100"] = &etcdserverpb.Member{Name: "10.0.0.100", ID: 3}
 				d.Status.Etcd.InSyncMembers["10.0.0.100"] = false
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []string{"wait-kubernetes"},
+			ExpectedOps: []opData{{"wait-kubernetes", 1}},
 		},
 		{
 			Name: "EtcdDestroyNonCPMember",
@@ -2097,8 +2015,7 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 3}
 				d.Status.Etcd.InSyncMembers["10.0.0.14"] = false
 			}),
-			ExpectedOps:        []string{"etcd-destroy-member"},
-			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 1},
+			ExpectedOps: []opData{{"etcd-destroy-member", 1}},
 		},
 		{
 			Name: "EtcdDestroyNonCPMemberSSHNotConnected",
@@ -2106,8 +2023,7 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 3}
 				d.Status.Etcd.InSyncMembers["10.0.0.14"] = false
 			}).withSSHNotConnectedNonCPWorker(3),
-			ExpectedOps:        []string{"etcd-destroy-member"},
-			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 0},
+			ExpectedOps: []opData{{"etcd-destroy-member", 0}},
 		},
 		{
 			Name: "EtcdReAdd",
@@ -2116,14 +2032,14 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.13"].ID = 0
 				d.Status.Etcd.InSyncMembers["10.0.0.13"] = false
 			}),
-			ExpectedOps: []string{"etcd-add-member"},
+			ExpectedOps: []opData{{"etcd-add-member", 1}},
 		},
 		{
 			Name: "EtcdMark",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.NodeStatuses["10.0.0.13"].Etcd.IsAddedMember = false
 			}),
-			ExpectedOps: []string{"etcd-mark-member"},
+			ExpectedOps: []opData{{"etcd-mark-member", 1}},
 		},
 		{
 			Name: "EtcdIsNotGood",
@@ -2142,7 +2058,7 @@ func TestDecideOps(t *testing.T) {
 				delete(d.Status.Etcd.Members, "10.0.0.13")
 				delete(d.Status.Etcd.InSyncMembers, "10.0.0.13")
 			}),
-			ExpectedOps: []string{"etcd-add-member"},
+			ExpectedOps: []opData{{"etcd-add-member", 1}},
 		},
 		{
 			Name: "EtcdRemoveHealthyNonClusterMember",
@@ -2150,7 +2066,7 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.100"] = &etcdserverpb.Member{Name: "10.0.0.100", ID: 3}
 				d.Status.Etcd.InSyncMembers["10.0.0.100"] = true
 			}),
-			ExpectedOps: []string{"etcd-remove-member"},
+			ExpectedOps: []opData{{"etcd-remove-member", 1}},
 		},
 		{
 			Name: "EtcdDestroyHealthyNonCPMember",
@@ -2158,8 +2074,7 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 14}
 				d.Status.Etcd.InSyncMembers["10.0.0.14"] = true
 			}),
-			ExpectedOps:        []string{"etcd-destroy-member"},
-			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 1},
+			ExpectedOps: []opData{{"etcd-destroy-member", 1}},
 		},
 		{
 			Name: "EtcdDestroyHealthyNonCPMemberSSHNotConnected",
@@ -2167,15 +2082,14 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 14}
 				d.Status.Etcd.InSyncMembers["10.0.0.14"] = true
 			}).withSSHNotConnectedNonCPWorker(3),
-			ExpectedOps:        []string{"etcd-destroy-member"},
-			ExpectedTargetNums: map[string]int{"etcd-destroy-member": 0},
+			ExpectedOps: []opData{{"etcd-destroy-member", 0}},
 		},
 		{
 			Name: "EtcdRestart",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Etcd.Image = ""
 			}),
-			ExpectedOps: []string{"etcd-restart"},
+			ExpectedOps: []opData{{"etcd-restart", 1}},
 		},
 		{
 			Name: "Clean",
@@ -2191,19 +2105,12 @@ func TestDecideOps(t *testing.T) {
 					st.EtcdRivers.Running = true
 				}
 			}).withSSHNotConnectedNonCPWorker(1),
-			ExpectedOps: []string{
-				"stop-etcd",
-				"stop-etcd-rivers",
-				"stop-kube-apiserver",
-				"stop-kube-controller-manager",
-				"stop-kube-scheduler",
-			},
-			ExpectedTargetNums: map[string]int{
-				"stop-etcd":                    1,
-				"stop-etcd-rivers":             1,
-				"stop-kube-apiserver":          1,
-				"stop-kube-controller-manager": 1,
-				"stop-kube-scheduler":          1,
+			ExpectedOps: []opData{
+				{"stop-kube-apiserver", 1},
+				{"stop-kube-controller-manager", 1},
+				{"stop-kube-scheduler", 1},
+				{"stop-etcd", 1},
+				{"stop-etcd-rivers", 1},
 			},
 		},
 		{
@@ -2230,7 +2137,7 @@ func TestDecideOps(t *testing.T) {
 			}).with(func(data testData) {
 				data.Status.ConfigVersion = "1"
 			}),
-			ExpectedOps: []string{"upgrade"},
+			ExpectedOps: []opData{{"upgrade", 3}},
 		},
 		{
 			Name: "UpgradeAbort",
@@ -2266,9 +2173,8 @@ func TestDecideOps(t *testing.T) {
 					op.CKEAnnotationReboot: "true",
 				}
 			}),
-			ExpectedOps: []string{"reboot-uncordon"},
-			ExpectedTargetNums: map[string]int{
-				"reboot-uncordon": 1,
+			ExpectedOps: []opData{
+				{"reboot-uncordon", 1},
 			},
 		},
 		{
@@ -2276,8 +2182,7 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().withRebootConfig().with(func(d testData) {
 				d.Status.Kubernetes.Nodes[0].Spec.Unschedulable = true
 			}),
-			ExpectedOps:        nil,
-			ExpectedTargetNums: nil,
+			ExpectedOps: nil,
 		},
 		{
 			Name: "RebootWithoutConfig",
@@ -2288,8 +2193,7 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusQueued,
 				},
 			}),
-			ExpectedOps:        nil,
-			ExpectedTargetNums: nil,
+			ExpectedOps: nil,
 		},
 		{
 			Name: "Reboot",
@@ -2311,10 +2215,9 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusQueued,
 				},
 			}),
-			ExpectedOps: []string{"reboot-drain-start", "reboot-recalc-metrics"},
-			ExpectedTargetNums: map[string]int{
-				"reboot-drain-start":    1,
-				"reboot-recalc-metrics": 0,
+			ExpectedOps: []opData{
+				{"reboot-drain-start", 1},
+				{"reboot-recalc-metrics", 0},
 			},
 		},
 		{
@@ -2332,8 +2235,7 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusQueued,
 				},
 			}),
-			ExpectedOps:        nil,
-			ExpectedTargetNums: nil,
+			ExpectedOps: nil,
 		},
 		{
 			Name: "DontSkipStartRebootDrainedTooManyUnreachableNodes",
@@ -2350,10 +2252,9 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusDraining,
 				},
 			}),
-			ExpectedOps: []string{"reboot-reboot", "reboot-recalc-metrics"},
-			ExpectedTargetNums: map[string]int{
-				"reboot-reboot":         1,
-				"reboot-recalc-metrics": 0,
+			ExpectedOps: []opData{
+				{"reboot-reboot", 1},
+				{"reboot-recalc-metrics", 0},
 			},
 		},
 		{
@@ -2371,10 +2272,9 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusDraining,
 				},
 			}),
-			ExpectedOps: []string{"reboot-drain-timeout", "reboot-recalc-metrics"},
-			ExpectedTargetNums: map[string]int{
-				"reboot-drain-timeout":  1,
-				"reboot-recalc-metrics": 0,
+			ExpectedOps: []opData{
+				{"reboot-drain-timeout", 1},
+				{"reboot-recalc-metrics", 0},
 			},
 		},
 		{
@@ -2392,10 +2292,9 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusRebooting,
 				},
 			}),
-			ExpectedOps: []string{"reboot-dequeue", "reboot-recalc-metrics"},
-			ExpectedTargetNums: map[string]int{
-				"reboot-dequeue":        1,
-				"reboot-recalc-metrics": 0,
+			ExpectedOps: []opData{
+				{"reboot-dequeue", 1},
+				{"reboot-recalc-metrics", 0},
 			},
 		},
 		{
@@ -2415,8 +2314,7 @@ func TestDecideOps(t *testing.T) {
 			}).with(func(d testData) {
 				d.Status.Etcd.InSyncMembers["10.0.0.11"] = false
 			}),
-			ExpectedOps:        nil,
-			ExpectedTargetNums: nil,
+			ExpectedOps: nil,
 		},
 		{
 			Name: "CancelReboot",
@@ -2433,32 +2331,26 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusCancelled,
 				},
 			}),
-			ExpectedOps: []string{"reboot-dequeue", "reboot-recalc-metrics"},
-			ExpectedTargetNums: map[string]int{
-				"reboot-dequeue":        1,
-				"reboot-recalc-metrics": 0,
+			ExpectedOps: []opData{
+				{"reboot-dequeue", 1},
+				{"reboot-recalc-metrics", 0},
 			},
 		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, c.Input.RebootArgs)
+			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, c.Input.RebootArgs, 5)
 			if len(ops) == 0 && len(c.ExpectedOps) == 0 {
 				return
 			}
-			opNames := make([]string, len(ops))
-			opTargetNums := make(map[string]int)
+			actual := make([]opData, len(ops))
 			for i, o := range ops {
-				opNames[i] = o.Name()
-				opTargetNums[o.Name()] = len(o.Targets())
+				actual[i].Name = o.Name()
+				actual[i].TargetNum = len(o.Targets())
 			}
-			sort.Strings(opNames)
-			if !cmp.Equal(c.ExpectedOps, opNames) {
-				t.Error("unexpected ops:", cmp.Diff(c.ExpectedOps, opNames))
-			}
-			if c.ExpectedTargetNums != nil && !cmp.Equal(c.ExpectedTargetNums, opTargetNums) {
-				t.Error("unmatched targets:", cmp.Diff(c.ExpectedTargetNums, opTargetNums))
+			if !cmp.Equal(c.ExpectedOps, actual) {
+				t.Error("unexpected opData:", cmp.Diff(c.ExpectedOps, actual))
 			}
 		OUT:
 			for _, o := range ops {
