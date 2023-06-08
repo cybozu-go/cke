@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
 type DecideOpsRebootArgs struct {
@@ -24,7 +25,7 @@ type DecideOpsRebootArgs struct {
 
 // DecideOps returns the next operations to do and the operation phase.
 // This returns nil when no operations need to be done.
-func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, rebootArgs DecideOpsRebootArgs, maxConcurrentUpdates int) ([]cke.Operator, cke.OperationPhase) {
+func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, rebootArgs DecideOpsRebootArgs, config *Config) ([]cke.Operator, cke.OperationPhase) {
 	nf := NewNodeFilter(c, cs)
 
 	// 0. Execute upgrade operation if necessary
@@ -40,7 +41,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	// 1. Run or restart rivers.  This guarantees:
 	// - CKE tools image is pulled on all nodes.
 	// - Rivers runs on all nodes and will proxy requests only to control plane nodes.
-	if ops := riversOps(c, nf, maxConcurrentUpdates); len(ops) > 0 {
+	if ops := riversOps(c, nf, config.MaxConcurrentUpdates); len(ops) > 0 {
 		return ops, cke.PhaseRivers
 	}
 
@@ -65,7 +66,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 5. Run or restart kubernetes components.
-	if ops := k8sOps(c, nf, cs, maxConcurrentUpdates); len(ops) > 0 {
+	if ops := k8sOps(c, nf, cs, config.MaxConcurrentUpdates); len(ops) > 0 {
 		return ops, cke.PhaseK8sStart
 	}
 
@@ -92,7 +93,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 10. Reboot nodes if reboot request has been arrived to the reboot queue, and the number of unreachable nodes is less than a threshold.
-	if ops, phaseReboot := rebootOps(c, constraints, rebootArgs, nf); phaseReboot {
+	if ops, phaseReboot := rebootOps(c, constraints, rebootArgs, nf, config.DrainRetryTimes, config.DrainRetryInterval); phaseReboot {
 		if !nf.EtcdIsGood() {
 			log.Warn("cannot reboot nodes because etcd cluster is not responding and in-sync", nil)
 			return nil, cke.PhaseRebootNodes
@@ -719,7 +720,7 @@ func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	return ops
 }
 
-func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOpsRebootArgs, nf *NodeFilter) (ops []cke.Operator, phaseReboot bool) {
+func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOpsRebootArgs, nf *NodeFilter, drainRetryTimes int, drainRetryInterval time.Duration) (ops []cke.Operator, phaseReboot bool) {
 	if len(rebootArgs.RQEntries) == 0 {
 		return nil, false
 	}
@@ -743,7 +744,7 @@ func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOp
 		if len(nf.SSHNotConnectedNodes(sshCheckNodes, true, true)) > constraints.RebootMaximumUnreachable {
 			log.Warn("cannot reboot nodes because too many nodes are unreachable", nil)
 		} else {
-			ops = append(ops, op.RebootDrainStartOp(nf.HealthyAPIServer(), rebootArgs.NewlyDrained, &c.Reboot))
+			ops = append(ops, op.RebootDrainStartOp(nf.HealthyAPIServer(), rebootArgs.NewlyDrained, &c.Reboot, drainRetryTimes, drainRetryInterval))
 		}
 	}
 	if len(rebootArgs.DrainCompleted) > 0 {

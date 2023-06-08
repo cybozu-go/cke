@@ -27,6 +27,8 @@ var (
 	flgSessionTTL           = pflag.String("session-ttl", "60s", "leader session's TTL")
 	flgDebugSabakan         = pflag.Bool("debug-sabakan", false, "debug sabakan integration")
 	flgMaxConcurrentUpdates = pflag.Int("max-concurrent-updates", 10, "the maximum number of components that can be updated simultaneously")
+	flgDrainRetryTimes      = pflag.Int("drain-retry-times", 30, "number of drain retries")
+	flgDrainRetryInterval   = pflag.String("drain-retry-interval", "10s", "interval between drain retries")
 )
 
 func loadConfig(p string) (*etcdutil.Config, error) {
@@ -114,9 +116,23 @@ func main() {
 	if maxConcurrentUpdates <= 0 {
 		log.ErrorExit(errors.New("max-concurrent-updates must be greater than 0"))
 	}
+	retryTimes := *flgDrainRetryTimes
+	if retryTimes <= 0 {
+		log.ErrorExit(errors.New("drain-retry-times must be greater than 0"))
+	}
+	retryInterval, err := time.ParseDuration(*flgDrainRetryInterval)
+	if err != nil {
+		log.ErrorExit(err)
+	}
 
 	// Controller
-	controller := server.NewController(session, interval, gcInterval, timeout, addon, maxConcurrentUpdates)
+	controller := server.NewController(session, addon, &server.Config{
+		Interval:             interval,
+		CertsGCInterval:      gcInterval,
+		MaxConcurrentUpdates: maxConcurrentUpdates,
+		DrainRetryTimes:      retryTimes,
+		DrainRetryInterval:   retryInterval,
+	})
 	well.Go(controller.Run)
 
 	// API server

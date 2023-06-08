@@ -22,19 +22,23 @@ const drainBackOffBaseSeconds = 60
 type rebootDrainStartOp struct {
 	finished bool
 
-	entries   []*cke.RebootQueueEntry
-	config    *cke.Reboot
-	apiserver *cke.Node
+	entries       []*cke.RebootQueueEntry
+	config        *cke.Reboot
+	apiserver     *cke.Node
+	retryTimes    int
+	retryInterval time.Duration
 
 	mu          sync.Mutex
 	failedNodes []string
 }
 
-func RebootDrainStartOp(apiserver *cke.Node, entries []*cke.RebootQueueEntry, config *cke.Reboot) cke.InfoOperator {
+func RebootDrainStartOp(apiserver *cke.Node, entries []*cke.RebootQueueEntry, config *cke.Reboot, retryTimes int, retryInterval time.Duration) cke.InfoOperator {
 	return &rebootDrainStartOp{
-		entries:   entries,
-		config:    config,
-		apiserver: apiserver,
+		entries:       entries,
+		config:        config,
+		apiserver:     apiserver,
+		retryTimes:    retryTimes,
+		retryInterval: retryInterval,
 	}
 }
 
@@ -42,6 +46,8 @@ type rebootDrainStartCommand struct {
 	entries             []*cke.RebootQueueEntry
 	protectedNamespaces *metav1.LabelSelector
 	apiserver           *cke.Node
+	retryTimes          int
+	retryInterval       time.Duration
 
 	notifyFailedNode func(string)
 }
@@ -82,6 +88,8 @@ func (o *rebootDrainStartOp) NextCommand() cke.Commander {
 		protectedNamespaces: o.config.ProtectedNamespaces,
 		apiserver:           o.apiserver,
 		notifyFailedNode:    o.notifyFailedNode,
+		retryTimes:          o.retryTimes,
+		retryInterval:       o.retryInterval,
 	}
 }
 
@@ -156,7 +164,7 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 
 	// next, evict pods on each node
 	for _, entry := range evictNodes {
-		err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected)
+		err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected, c.retryTimes, c.retryInterval)
 		if err != nil {
 			c.notifyFailedNode(entry.Node)
 			err = drainBackOff(ctx, inf, entry, err)

@@ -23,17 +23,14 @@ var (
 
 // Controller manage operations
 type Controller struct {
-	session              *concurrency.Session
-	interval             time.Duration
-	certsGCInterval      time.Duration
-	timeout              time.Duration
-	addon                Integrator
-	maxConcurrentUpdates int
+	session *concurrency.Session
+	addon   Integrator
+	config  *Config
 }
 
 // NewController construct controller instance
-func NewController(s *concurrency.Session, interval, gcInterval, timeout time.Duration, addon Integrator, maxConcurrentUpdates int) Controller {
-	return Controller{s, interval, gcInterval, timeout, addon, maxConcurrentUpdates}
+func NewController(s *concurrency.Session, addon Integrator, config *Config) Controller {
+	return Controller{s, addon, config}
 }
 
 // Run execute procedures with leader elections
@@ -149,7 +146,7 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		}
-		ticker := time.NewTicker(c.interval)
+		ticker := time.NewTicker(c.config.Interval)
 		defer ticker.Stop()
 		for {
 			select {
@@ -170,7 +167,7 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 			return ctx.Err()
 		default:
 		}
-		ticker := time.NewTicker(c.certsGCInterval)
+		ticker := time.NewTicker(c.config.CertsGCInterval)
 		defer ticker.Stop()
 		for {
 			select {
@@ -346,7 +343,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		DrainCompleted: drainCompleted,
 		DrainTimedout:  drainTimedout,
 		RebootDequeued: rebootDequeued,
-	}, c.maxConcurrentUpdates)
+	}, c.config)
 
 	st := &cke.ServerStatus{
 		Phase:     phase,
