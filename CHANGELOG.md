@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.25.5]
+
+### Added 
+
+- Limit the number of components (kubelet, kube-proxy and rivers) that can be updated simultaneously [#630](https://github.com/cybozu-go/cke/pull/630)
+
 ## [1.25.4]
 
 ### Added 
@@ -71,7 +77,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.25.4...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.25.5...HEAD
+[1.25.5]: https://github.com/cybozu-go/cke/compare/v1.25.4...1.25.5
 [1.25.4]: https://github.com/cybozu-go/cke/compare/v1.25.3...1.25.4
 [1.25.3]: https://github.com/cybozu-go/cke/compare/v1.25.2...1.25.3
 [1.25.2]: https://github.com/cybozu-go/cke/compare/v1.25.1...1.25.2
