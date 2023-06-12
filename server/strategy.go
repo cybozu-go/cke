@@ -1,6 +1,8 @@
 package server
 
 import (
+	"sort"
+
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/clusterdns"
@@ -625,36 +627,77 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 			return ops
 		}
 	}
-	for _, res := range resources {
-		if res.Kind == cke.KindDeployment && !isReady {
-			continue
-		}
-		status, ok := ks.ResourceStatuses[res.Key]
-		if !ok {
-			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
-			// To wait for the completion to create or update, we avoid applying subsequent resources.
-			return ops
-		} else {
-			if res.NeedUpdate(&status) {
+	groupedResources := groupByRank(resources)
+	for _, group := range groupedResources {
+		needReturn := false
+		for _, res := range group {
+			if res.Kind == cke.KindDeployment && !isReady {
+				continue
+			}
+			status, ok := ks.ResourceStatuses[res.Key]
+			if !ok {
 				ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
-				// To avoid applying subsequent resources not to wait the completion the update or creation
-				return ops
+				// To wait for the completion to create or update, we avoid applying subsequent resources.
+				needReturn = true
+				continue
 			} else {
-				if !status.Completed {
-					log.Info("need to wait", map[string]interface{}{
+				if res.NeedUpdate(&status) {
+					log.Info("need to update", map[string]interface{}{
 						"resource_name":      res.Name,
 						"resource_namespace": res.Namespace,
 						"kind":               res.Kind,
 						"completed":          status.Completed,
 					})
-					ops = append(ops, op.NopOp())
+					ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
 					// To avoid applying subsequent resources not to wait the completion the update or creation
-					return ops
+					needReturn = true
+					continue
+				} else {
+					if !status.Completed {
+						log.Info("need to wait", map[string]interface{}{
+							"resource_name":      res.Name,
+							"resource_namespace": res.Namespace,
+							"kind":               res.Kind,
+							"completed":          status.Completed,
+						})
+						ops = append(ops, op.NopOp())
+						// To avoid applying subsequent resources not to wait the completion the update or creation
+						needReturn = true
+						continue
+					}
 				}
 			}
 		}
+		if needReturn {
+			return ops
+		}
 	}
 	return ops
+}
+
+func groupByRank(resources []cke.ResourceDefinition) [][]cke.ResourceDefinition {
+	resourceMap := make(map[int][]cke.ResourceDefinition)
+	for _, res := range resources {
+		r, ok := resourceMap[int(res.Rank)]
+		if !ok {
+			resourceMap[int(res.Rank)] = []cke.ResourceDefinition{res}
+		} else {
+			resourceMap[int(res.Rank)] = append(r, res)
+		}
+	}
+	ranks := make([]int, 0, len(resourceMap))
+	groupedResources := make([][]cke.ResourceDefinition, 0, len(resourceMap))
+
+	for rank := range resourceMap {
+		ranks = append(ranks, int(rank))
+	}
+	sort.Ints(ranks)
+
+	for _, rank := range ranks {
+		groupedResources = append(groupedResources, resourceMap[rank])
+	}
+
+	return groupedResources
 }
 
 func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {

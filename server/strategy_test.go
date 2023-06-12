@@ -1252,13 +1252,176 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().withResources(
 				append(testResources, []cke.ResourceDefinition{
 					{
-						Key:        "ConfigMap/foo/bar",
-						Kind:       "ConfigMap",
+						Key:        "DaemonSet/foo/test-daemonset",
+						Kind:       "DaemonSet",
 						Namespace:  "foo",
-						Name:       "bar",
+						Name:       "test-daemonset",
+						Image:      "test",
 						Revision:   1,
-						Definition: []byte(`{"apiversion":"v1","kind":"ConfigMap","metadata":{"namespace":"foo","name":"bar"},"data":{"a":"b"}}`),
+						Definition: []byte(`{"apiVersion":"v1","kind":"DaemonSet","metadata":{"name":"test-daemonset", "namespace": "test"}}`),
+						Rank:       2100,
 					},
+					{
+						Key:        "Deployment/foo/test-deployment",
+						Kind:       "Deployment",
+						Namespace:  "foo",
+						Name:       "test-deployment",
+						Image:      "test",
+						Revision:   1,
+						Definition: []byte(`{"apiVersion":"v1","kind":"Deployment","metadata":{"name":"test-deployment", "namespace": "test"}}`),
+						Rank:       2200,
+					},
+				}...)).withResourceStatus(
+				map[string]cke.ResourceStatus{
+					"ConfigMap/foo/bar": {
+						Completed: true,
+					},
+				},
+			),
+			ExpectedOps: []opData{
+				{"resource-apply", 1}, // create DaemonSet/foo/test-daemonset
+			},
+		},
+		{
+			Name: "UserResourceUpdate",
+			Input: newData().withK8sResourceReady().withResources(
+				[]cke.ResourceDefinition{
+					{
+						Key:        "Namespace/foo",
+						Kind:       "Namespace",
+						Name:       "foo",
+						Revision:   1,
+						Definition: []byte(`{"apiversion":"v1","kind":"Namespace","metadata":{"name":"foo"}}`),
+					},
+					{
+						Key:        "DaemonSet/foo/test-daemonset",
+						Kind:       "DaemonSet",
+						Namespace:  "foo",
+						Name:       "test-daemonset",
+						Image:      "test",
+						Revision:   2,
+						Definition: []byte(`{"apiVersion":"v1","kind":"DaemonSet","metadata":{"name":"test-daemonset", "namespace": "test"}}`),
+						Rank:       2100,
+					},
+					{
+						Key:        "Deployment/foo/test-deployment",
+						Kind:       "Deployment",
+						Namespace:  "foo",
+						Name:       "test-deployment",
+						Image:      "test",
+						Revision:   2,
+						Definition: []byte(`{"apiVersion":"v1","kind":"Deployment","metadata":{"name":"test-deployment", "namespace": "test"}}`),
+						Rank:       2200,
+					},
+				}).withResourceStatus(map[string]cke.ResourceStatus{
+				"Namespace/foo": {
+					Annotations: map[string]string{
+						cke.AnnotationResourceRevision: "1",
+					},
+					Completed: true,
+				},
+				"DaemonSet/foo/test-daemonset": {
+					Annotations: map[string]string{
+						cke.AnnotationResourceRevision: "1",
+						cke.AnnotationResourceImage:    "test",
+					},
+					Completed: true,
+				},
+				"Deployment/foo/test-deployment": {
+					Annotations: map[string]string{
+						cke.AnnotationResourceRevision: "1",
+						cke.AnnotationResourceImage:    "test",
+					},
+					Completed: true,
+				},
+			}),
+			ExpectedOps: []opData{
+				{"resource-apply", 1}, // update DaemonSet/foo/test-daemonset
+			},
+		},
+		{
+			Name: "UserResourceNop",
+			Input: newData().withK8sResourceReady().withResourcesReady([]cke.ResourceDefinition{
+				{
+					Key:        "DaemonSet/foo/test-daemonset",
+					Kind:       "DaemonSet",
+					Namespace:  "foo",
+					Name:       "test-daemonset",
+					Image:      "test",
+					Revision:   2,
+					Definition: []byte(`{"apiVersion":"v1","kind":"DaemonSet","metadata":{"name":"test-daemonset", "namespace": "test"}}`),
+					Rank:       2100,
+				},
+				{
+					Key:        "Deployment/foo/test-deployment",
+					Kind:       "Deployment",
+					Namespace:  "foo",
+					Name:       "test-deployment",
+					Image:      "test",
+					Revision:   1,
+					Definition: []byte(`{"apiVersion":"v1","kind":"Deployment","metadata":{"name":"test-deployment", "namespace": "test"}}`),
+					Rank:       2200,
+				},
+			}).withResourceStatus(map[string]cke.ResourceStatus{
+				"DaemonSet/foo/test-daemonset": {
+					Annotations: map[string]string{
+						cke.AnnotationResourceRevision: "2",
+						cke.AnnotationResourceImage:    "test",
+					},
+					Completed: false,
+				},
+				"Deployment/foo/test-deployment": {
+					Annotations: map[string]string{
+						cke.AnnotationResourceRevision: "1",
+						cke.AnnotationResourceImage:    "test",
+					},
+					Completed: false,
+				},
+			}),
+			ExpectedOps: []opData{
+				{"nop", 0}, // wait for DaemonSet/foo/test-daemonset
+			},
+		},
+		{
+			Name: "UserResourceWithSameRankAdd",
+			Input: newData().withK8sResourceReady().withResources(
+				append(testResources, []cke.ResourceDefinition{
+					{
+						Key:        "DaemonSet/foo/test-daemonset",
+						Kind:       "DaemonSet",
+						Namespace:  "foo",
+						Name:       "test-daemonset",
+						Image:      "test",
+						Revision:   1,
+						Definition: []byte(`{"apiVersion":"v1","kind":"DaemonSet","metadata":{"name":"test-daemonset", "namespace": "test"}}`),
+						Rank:       3000,
+					},
+					{
+						Key:        "Deployment/foo/test-deployment",
+						Kind:       "Deployment",
+						Namespace:  "foo",
+						Name:       "test-deployment",
+						Image:      "test",
+						Revision:   1,
+						Definition: []byte(`{"apiVersion":"v1","kind":"Deployment","metadata":{"name":"test-deployment", "namespace": "test"}}`),
+						Rank:       3000,
+					},
+				}...)).withResourceStatus(
+				map[string]cke.ResourceStatus{
+					"ConfigMap/foo/bar": {
+						Completed: true,
+					},
+				},
+			),
+			ExpectedOps: []opData{
+				{"resource-apply", 1}, // create DaemonSet/foo/test-daemonset
+				{"resource-apply", 1}, // create Deployment/foo/test-deployment
+			},
+		},
+		{
+			Name: "UserResourceWithSameRankAddAndWait",
+			Input: newData().withK8sResourceReady().withResources(
+				append(testResources, []cke.ResourceDefinition{
 					{
 						Key:        "DaemonSet/foo/test-daemonset",
 						Kind:       "DaemonSet",
@@ -1292,31 +1455,13 @@ func TestDecideOps(t *testing.T) {
 				},
 			),
 			ExpectedOps: []opData{
-				{"resource-apply", 1},
+				{"nop", 0},            // wait for DaemonSet/foo/test-daemonset
+				{"resource-apply", 1}, // create Deployment/foo/test-deployment
 			},
 		},
 		{
-			Name: "UserResourceUpdate",
-			Input: newData().withK8sResourceReady().withResourcesReady([]cke.ResourceDefinition{
-				{
-					Key:        "DaemonSet/foo/test-daemonset",
-					Kind:       "DaemonSet",
-					Namespace:  "foo",
-					Name:       "test-daemonset",
-					Image:      "test",
-					Revision:   2,
-					Definition: []byte(`{"apiVersion":"v1","kind":"DaemonSet","metadata":{"name":"test-daemonset", "namespace": "test"}}`),
-				},
-				{
-					Key:        "Deployment/foo/test-deployment",
-					Kind:       "Deployment",
-					Namespace:  "foo",
-					Name:       "test-deployment",
-					Image:      "test",
-					Revision:   1,
-					Definition: []byte(`{"apiVersion":"v1","kind":"Deployment","metadata":{"name":"test-deployment", "namespace": "test"}}`),
-				},
-			}).withResources(
+			Name: "UserResourceWithSameRankUpdate",
+			Input: newData().withK8sResourceReady().withResources(
 				[]cke.ResourceDefinition{
 					{
 						Key:        "Namespace/foo",
@@ -1345,6 +1490,9 @@ func TestDecideOps(t *testing.T) {
 					},
 				}).withResourceStatus(map[string]cke.ResourceStatus{
 				"Namespace/foo": {
+					Annotations: map[string]string{
+						cke.AnnotationResourceRevision: "2",
+					},
 					Completed: true,
 				},
 				"DaemonSet/foo/test-daemonset": {
@@ -1363,11 +1511,12 @@ func TestDecideOps(t *testing.T) {
 				},
 			}),
 			ExpectedOps: []opData{
-				{"resource-apply", 1},
+				{"nop", 0},            // wait for DaemonSet/foo/test-daemonset
+				{"resource-apply", 1}, // update Deployment/foo/test-deployment
 			},
 		},
 		{
-			Name: "UserResourceNop",
+			Name: "UserResourceWithSameRankNop",
 			Input: newData().withK8sResourceReady().withResourcesReady([]cke.ResourceDefinition{
 				{
 					Key:        "DaemonSet/foo/test-daemonset",
@@ -1404,7 +1553,8 @@ func TestDecideOps(t *testing.T) {
 				},
 			}),
 			ExpectedOps: []opData{
-				{"nop", 0},
+				{"nop", 0}, // wait for DaemonSet/foo/test-daemonset
+				{"nop", 0}, // wait for Deployment/foo/test-deployment
 			},
 		},
 		{
@@ -2361,6 +2511,109 @@ func TestDecideOps(t *testing.T) {
 					}
 				}
 				t.Fatalf("[%s] Operator.NextCommand() never finished: %s", c.Name, o.Name())
+			}
+		})
+	}
+}
+
+func TestGroupByRank(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name      string
+		resources []cke.ResourceDefinition
+		grouped   [][]cke.ResourceDefinition
+	}{
+		{
+			name: "case1",
+			resources: []cke.ResourceDefinition{
+				{
+					Name: "resource1",
+					Rank: 100,
+				},
+				{
+					Name: "resource2",
+					Rank: 200,
+				},
+			},
+			grouped: [][]cke.ResourceDefinition{
+				{
+					{
+						Name: "resource1",
+						Rank: 100,
+					},
+				},
+				{
+					{
+						Name: "resource2",
+						Rank: 200,
+					},
+				},
+			},
+		},
+		{
+			name: "case2",
+			resources: []cke.ResourceDefinition{
+				{
+					Name: "resource1",
+					Rank: 100,
+				},
+				{
+					Name: "resource2",
+					Rank: 200,
+				},
+				{
+					Name: "resource3",
+					Rank: 200,
+				},
+				{
+					Name: "resource4",
+					Rank: 210,
+				},
+			},
+			grouped: [][]cke.ResourceDefinition{
+				{
+					{
+						Name: "resource1",
+						Rank: 100,
+					},
+				},
+				{
+					{
+						Name: "resource2",
+						Rank: 200,
+					},
+					{
+						Name: "resource3",
+						Rank: 200,
+					},
+				},
+				{
+					{
+						Name: "resource4",
+						Rank: 210,
+					},
+				},
+			},
+		},
+	} {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			result := groupByRank(tt.resources)
+			if len(tt.grouped) != len(result) {
+				t.Fatalf("the expected length of result is %d, but actual is %d", len(tt.grouped), len(result))
+			}
+			for i := 0; i < len(tt.grouped); i++ {
+				if len(tt.grouped[i]) != len(result[i]) {
+					t.Fatalf("the expected length of result[%d] is %d, but actual is %d", i, len(tt.grouped[i]), len(result[i]))
+				}
+				for j := 0; j < len(tt.grouped[i]); j++ {
+					if tt.grouped[i][j].Rank != result[i][j].Rank {
+						t.Fatalf("the expected rank is %d, but actual is %d", tt.grouped[i][j].Rank, result[i][j].Rank)
+					}
+					if tt.grouped[i][j].Name != result[i][j].Name {
+						t.Fatalf("the expected name is %s, but actual is %s", tt.grouped[i][j].Name, result[i][j].Name)
+					}
+				}
 			}
 		})
 	}
