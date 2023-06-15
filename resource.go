@@ -34,6 +34,7 @@ const (
 // kinds
 const (
 	KindDeployment                     = "Deployment"
+	KindDaemonSet                      = "DaemonSet"
 	KindMutatingWebhookConfiguration   = "MutatingWebhookConfiguration"
 	KindSecret                         = "Secret"
 	KindValidatingWebhookConfiguration = "ValidatingWebhookConfiguration"
