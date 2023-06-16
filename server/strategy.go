@@ -626,60 +626,52 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 		}
 	}
 
-	for i := 0; i < len(resources); i++ {
-		rank := resources[i].Rank
-		ret := false
-		for j := i; j < len(resources); j++ {
-			if resources[j].Rank != rank {
-				i = j - 1
-				break
-			}
-			if resources[j].Kind == cke.KindDeployment && !isReady {
-				continue
-			}
-			status, ok := ks.ResourceStatuses[resources[j].Key]
-			if !ok {
-				ops = append(ops, op.ResourceApplyOp(apiServer, resources[j], !status.HasBeenSSA))
-				ret = ret || needReturn(resources[j])
+	// decide to apply user defined resources
+	if len(resources) == 0 {
+		return ops
+	}
+	rank := resources[0].Rank
+
+	for _, res := range resources {
+		if res.Rank != uint32(rank) && len(ops) > 0 {
+			return ops
+		}
+		if res.Kind == cke.KindDeployment && !isReady {
+			continue
+		}
+		status, ok := ks.ResourceStatuses[res.Key]
+		if !ok {
+			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
+			log.Info("need to create", map[string]interface{}{
+				"resource_name":      res.Name,
+				"resource_namespace": res.Namespace,
+				"kind":               res.Kind,
+				"completed":          status.Completed,
+			})
+		} else {
+			if res.NeedUpdate(&status) {
+				log.Info("need to update", map[string]interface{}{
+					"resource_name":      res.Name,
+					"resource_namespace": res.Namespace,
+					"kind":               res.Kind,
+					"completed":          status.Completed,
+				})
+				ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
 			} else {
-				if resources[j].NeedUpdate(&status) {
-					log.Info("need to update", map[string]interface{}{
-						"resource_name":      resources[j].Name,
-						"resource_namespace": resources[j].Namespace,
-						"kind":               resources[j].Kind,
+				if !status.Completed {
+					log.Info("need to wait", map[string]interface{}{
+						"resource_name":      res.Name,
+						"resource_namespace": res.Namespace,
+						"kind":               res.Kind,
 						"completed":          status.Completed,
 					})
-					ops = append(ops, op.ResourceApplyOp(apiServer, resources[j], !status.HasBeenSSA))
-					// To avoid applying subsequent resources not to wait the completion the update or creation
-					ret = ret || needReturn(resources[j])
-				} else {
-					if !status.Completed {
-						log.Info("need to wait", map[string]interface{}{
-							"resource_name":      resources[j].Name,
-							"resource_namespace": resources[j].Namespace,
-							"kind":               resources[j].Kind,
-							"completed":          status.Completed,
-						})
-						ops = append(ops, op.NopOp())
-						// To avoid applying subsequent resources not to wait the completion the update or creation
-						ret = true
-					}
+					ops = append(ops, op.NopOp())
 				}
 			}
 		}
-		if ret {
-			return ops
-		}
+		rank = res.Rank
 	}
-
 	return ops
-}
-
-func needReturn(resource cke.ResourceDefinition) bool {
-	if resource.Kind == cke.KindDeployment || resource.Kind == cke.KindDaemonSet {
-		return true
-	}
-	return false
 }
 
 func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
