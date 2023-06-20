@@ -632,8 +632,9 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 	}
 	rank := resources[0].Rank
 
+	// resources are sorted by rank in advance
 	for _, res := range resources {
-		if res.Rank != uint32(rank) && len(ops) > 0 {
+		if res.Rank != rank && len(ops) > 0 {
 			return ops
 		}
 		if res.Kind == cke.KindDeployment && !isReady {
