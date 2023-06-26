@@ -167,8 +167,8 @@ func newData() testData {
 		Kubernetes: cke.KubernetesClusterStatus{
 			ResourceStatuses: map[string]cke.ResourceStatus{
 				"Namespace/foo": {
-					Annotations: map[string]string{cke.AnnotationResourceRevision: "1"},
-					Completed:   true,
+					Annotations:  map[string]string{cke.AnnotationResourceRevision: "1"},
+					ObjectStatus: cke.ObjectStatusAvailable,
 				},
 			},
 			Nodes: nodeList,
@@ -412,8 +412,8 @@ func (d testData) withK8sResourceReady() testData {
 	ks := &d.Status.Kubernetes
 	for _, res := range static.Resources {
 		ks.ResourceStatuses[res.Key] = cke.ResourceStatus{
-			Annotations: map[string]string{cke.AnnotationResourceRevision: "1"},
-			Completed:   true,
+			Annotations:  map[string]string{cke.AnnotationResourceRevision: "1"},
+			ObjectStatus: cke.ObjectStatusAvailable,
 		}
 	}
 	ks.ResourceStatuses["ClusterRole/system:cluster-dns"].Annotations[cke.AnnotationResourceRevision] = "2"
@@ -1274,7 +1274,7 @@ func TestDecideOps(t *testing.T) {
 				}...)).withResourceStatus(
 				map[string]cke.ResourceStatus{
 					"ConfigMap/foo/bar": {
-						Completed: true,
+						ObjectStatus: cke.ObjectStatusAvailable,
 					},
 				},
 			),
@@ -1318,21 +1318,21 @@ func TestDecideOps(t *testing.T) {
 					Annotations: map[string]string{
 						cke.AnnotationResourceRevision: "1",
 					},
-					Completed: true,
+					ObjectStatus: cke.ObjectStatusAvailable,
 				},
 				"DaemonSet/foo/test-daemonset": {
 					Annotations: map[string]string{
 						cke.AnnotationResourceRevision: "1",
 						cke.AnnotationResourceImage:    "test",
 					},
-					Completed: true,
+					ObjectStatus: cke.ObjectStatusAvailable,
 				},
 				"Deployment/foo/test-deployment": {
 					Annotations: map[string]string{
 						cke.AnnotationResourceRevision: "1",
 						cke.AnnotationResourceImage:    "test",
 					},
-					Completed: true,
+					ObjectStatus: cke.ObjectStatusAvailable,
 				},
 			}),
 			ExpectedOps: []opData{
@@ -1368,14 +1368,14 @@ func TestDecideOps(t *testing.T) {
 						cke.AnnotationResourceRevision: "2",
 						cke.AnnotationResourceImage:    "test",
 					},
-					Completed: false,
+					ObjectStatus: cke.ObjectStatusUnavailable,
 				},
 				"Deployment/foo/test-deployment": {
 					Annotations: map[string]string{
 						cke.AnnotationResourceRevision: "1",
 						cke.AnnotationResourceImage:    "test",
 					},
-					Completed: false,
+					ObjectStatus: cke.ObjectStatusUnavailable,
 				},
 			}),
 			ExpectedOps: []opData{
@@ -1409,7 +1409,7 @@ func TestDecideOps(t *testing.T) {
 				}...)).withResourceStatus(
 				map[string]cke.ResourceStatus{
 					"ConfigMap/foo/bar": {
-						Completed: true,
+						ObjectStatus: cke.ObjectStatusAvailable,
 					},
 				},
 			),
@@ -1445,14 +1445,14 @@ func TestDecideOps(t *testing.T) {
 				}...)).withResourceStatus(
 				map[string]cke.ResourceStatus{
 					"ConfigMap/foo/bar": {
-						Completed: true,
+						ObjectStatus: cke.ObjectStatusAvailable,
 					},
 					"DaemonSet/foo/test-daemonset": {
 						Annotations: map[string]string{
 							cke.AnnotationResourceRevision: "1",
 							cke.AnnotationResourceImage:    "test",
 						},
-						Completed: false,
+						ObjectStatus: cke.ObjectStatusUnavailable,
 					},
 				},
 			),
@@ -1497,21 +1497,21 @@ func TestDecideOps(t *testing.T) {
 					Annotations: map[string]string{
 						cke.AnnotationResourceRevision: "2",
 					},
-					Completed: true,
+					ObjectStatus: cke.ObjectStatusAvailable,
 				},
 				"DaemonSet/foo/test-daemonset": {
 					Annotations: map[string]string{
 						cke.AnnotationResourceRevision: "2",
 						cke.AnnotationResourceImage:    "test",
 					},
-					Completed: false,
+					ObjectStatus: cke.ObjectStatusUnavailable,
 				},
 				"Deployment/foo/test-deployment": {
 					Annotations: map[string]string{
 						cke.AnnotationResourceRevision: "1",
 						cke.AnnotationResourceImage:    "test",
 					},
-					Completed: false,
+					ObjectStatus: cke.ObjectStatusUnavailable,
 				},
 			}),
 			ExpectedOps: []opData{
@@ -1548,14 +1548,14 @@ func TestDecideOps(t *testing.T) {
 						cke.AnnotationResourceRevision: "2",
 						cke.AnnotationResourceImage:    "test",
 					},
-					Completed: false,
+					ObjectStatus: cke.ObjectStatusUnavailable,
 				},
 				"Deployment/foo/test-deployment": {
 					Annotations: map[string]string{
 						cke.AnnotationResourceRevision: "1",
 						cke.AnnotationResourceImage:    "test",
 					},
-					Completed: false,
+					ObjectStatus: cke.ObjectStatusUnavailable,
 				},
 			}),
 			ExpectedOps: []opData{

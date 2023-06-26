@@ -47,8 +47,8 @@ type ResourceStatus struct {
 	// Annotations is the copy of metadata.annotations
 	Annotations map[string]string
 	// HasBeenSSA indicates that this resource has been already updated by server-side apply
-	HasBeenSSA bool
-	Completed  bool
+	HasBeenSSA   bool
+	ObjectStatus ObjectStatus
 }
 
 // IsReady returns the cluster condition whether or not Pod can be scheduled
@@ -76,8 +76,8 @@ func (s KubernetesClusterStatus) IsReady(cluster *Cluster) bool {
 }
 
 // SetResourceStatus sets status of the resource.
-func (s KubernetesClusterStatus) SetResourceStatus(rkey string, ann map[string]string, isManaged, completed bool) {
-	s.ResourceStatuses[rkey] = ResourceStatus{Annotations: ann, HasBeenSSA: isManaged, Completed: completed}
+func (s KubernetesClusterStatus) SetResourceStatus(rkey string, ann map[string]string, isManaged bool, objStatus ObjectStatus) {
+	s.ResourceStatuses[rkey] = ResourceStatus{Annotations: ann, HasBeenSSA: isManaged, ObjectStatus: objStatus}
 }
 
 // ClusterStatus represents the working cluster status.
@@ -149,3 +149,11 @@ type ProxyStatus struct {
 	IsHealthy bool
 	Config    *proxyv1alpha1.KubeProxyConfiguration
 }
+
+type ObjectStatus string
+
+const (
+	ObjectStatusAvailable      ObjectStatus = "Available"
+	ObjectStatusUnavailable    ObjectStatus = "Unavailable"
+	ObjectStatusByNodeNotReady ObjectStatus = "UnavailableByNodeNotReady"
+)

@@ -458,7 +458,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, objStatus(generation, observedGeneration, desired, updated, available))
+			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, daemonSetStatus(generation, observedGeneration, desired, updated, available, true))
 		} else if obj.GroupVersionKind().Kind == "Deployment" {
 			generation, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "metadata", "generation")
 			if err != nil {
@@ -482,23 +482,33 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			}
 			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, objStatus(generation, observedGeneration, desired, updated, available))
 		} else {
-			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, true)
+			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, cke.ObjectStatusAvailable)
 		}
 	}
 
 	return s, nil
 }
 
-func objStatus(generation, observedGeneration, desired, updated, available int64) bool {
+func objStatus(generation, observedGeneration, desired, updated, available int64) cke.ObjectStatus {
 	if generation > observedGeneration {
-		return false
+		return cke.ObjectStatusUnavailable
 	}
 	// If we get the status immediately after applying the resource, the value of desired may be 0.
 	// In this case, we need to return false.
 	if desired == 0 {
-		return false
+		return cke.ObjectStatusUnavailable
 	}
-	return (desired == available) && (desired == updated)
+	if (desired == available) && (desired == updated) {
+		return cke.ObjectStatusAvailable
+	}
+	return cke.ObjectStatusUnavailable
+}
+
+func daemonSetStatus(generation, observedGeneration, desired, updated, available int64, nodeNotReady bool) cke.ObjectStatus {
+	if nodeNotReady {
+		return cke.ObjectStatusByNodeNotReady
+	}
+	return objStatus(generation, observedGeneration, desired, updated, available)
 }
 
 func getClusterDNSStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (cke.ClusterDNSStatus, error) {

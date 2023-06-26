@@ -647,7 +647,7 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 				"resource_name":      res.Name,
 				"resource_namespace": res.Namespace,
 				"kind":               res.Kind,
-				"completed":          status.Completed,
+				"object_status":      status.ObjectStatus,
 			})
 		} else {
 			if res.NeedUpdate(&status) {
@@ -655,18 +655,26 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 					"resource_name":      res.Name,
 					"resource_namespace": res.Namespace,
 					"kind":               res.Kind,
-					"completed":          status.Completed,
+					"object_status":      status.ObjectStatus,
 				})
 				ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
 			} else {
-				if !status.Completed {
+				if status.ObjectStatus == cke.ObjectStatusUnavailable {
 					log.Info("need to wait", map[string]interface{}{
 						"resource_name":      res.Name,
 						"resource_namespace": res.Namespace,
 						"kind":               res.Kind,
-						"completed":          status.Completed,
+						"object_status":      status.ObjectStatus,
 					})
 					ops = append(ops, op.NopOp())
+				} else if status.ObjectStatus == cke.ObjectStatusByNodeNotReady {
+					log.Info("need to call addon", map[string]interface{}{
+						"resource_name":      res.Name,
+						"resource_namespace": res.Namespace,
+						"kind":               res.Kind,
+						"object_status":      status.ObjectStatus,
+					})
+					ops = append(ops, op.CallAddOnOp())
 				}
 			}
 		}
