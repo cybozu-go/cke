@@ -16,6 +16,7 @@ import (
 	"github.com/cybozu-go/log"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	corev1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -458,7 +459,18 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			if err != nil {
 				return cke.KubernetesClusterStatus{}, err
 			}
-			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, daemonSetStatus(generation, observedGeneration, desired, updated, available, true))
+			nodeNotReady := false
+			if desired != available {
+				for _, node := range s.Nodes {
+					if len(node.Status.Conditions) == 0 {
+						continue
+					}
+					if node.Status.Conditions[len(node.Status.Conditions)-1].Type != corev1.NodeReady {
+						nodeNotReady = true
+					}
+				}
+			}
+			s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0, daemonSetStatus(generation, observedGeneration, desired, updated, available, nodeNotReady))
 		} else if obj.GroupVersionKind().Kind == "Deployment" {
 			generation, _, err := unstructured.NestedInt64(obj.UnstructuredContent(), "metadata", "generation")
 			if err != nil {
