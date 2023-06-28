@@ -367,8 +367,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	}
 
 	// Reflect sabakan machine status when CKE does not need to do
-	// anything except for rebooting nodes.
-	// And CKE need to reflect sabakan machine status to maintain kubernetes resource status related with nodes such as DaemonSet.
+	// anything except for rebooting nodes or maintaining kubernetes resources.
 	if c.addon != nil && (phase == cke.PhaseRebootNodes || phase == cke.PhaseK8sMaintain) {
 		if err := c.addon.Do(ctx, leaderKey, status); err != nil {
 			return err
