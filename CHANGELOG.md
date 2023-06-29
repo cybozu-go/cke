@@ -10,7 +10,6 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 ### Fixed
 
 - Fix to call addon on k8sMaintain phase [#638](https://github.com/cybozu-go/cke/pull/638)
-- Add a comment for the added condition whether calling the addon [#640](https://github.com/cybozu-go/cke/pull/640)
 
 ## [1.25.6]
 
