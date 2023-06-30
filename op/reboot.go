@@ -239,12 +239,6 @@ func (o *rebootRebootOp) Info() string {
 }
 
 func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	if c.timeoutSeconds != nil && *c.timeoutSeconds != 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(*c.timeoutSeconds))
-		defer cancel()
-	}
-
 	var mu sync.Mutex
 
 	env := well.NewEnvironment(ctx)
@@ -268,9 +262,18 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 				attempts = *c.retries + 1
 			}
 			for i := 0; i < attempts; i++ {
-				args := append(c.command[1:], entry.Node)
-				command := well.CommandContext(ctx, c.command[0], args...)
-				err := command.Run()
+				err := func() error {
+					ctx := ctx
+					if c.timeoutSeconds != nil && *c.timeoutSeconds != 0 {
+						var cancel context.CancelFunc
+						ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(*c.timeoutSeconds))
+						defer cancel()
+					}
+
+					args := append(c.command[1:], entry.Node)
+					command := well.CommandContext(ctx, c.command[0], args...)
+					return command.Run()
+				}()
 				if err == nil {
 					return nil
 				}
