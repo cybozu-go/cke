@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.25.8]
+
+### Fixed
+
+- Fix retry of reboot to set timeout in each retry in [#641](https://github.com/cybozu-go/cke/pull/641)
+
 ## [1.25.7]
 
 ### Fixed
@@ -89,13 +95,14 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.25.7...HEAD
-[1.25.7]: https://github.com/cybozu-go/cke/compare/v1.25.6...1.25.7
-[1.25.6]: https://github.com/cybozu-go/cke/compare/v1.25.5...1.25.6
-[1.25.5]: https://github.com/cybozu-go/cke/compare/v1.25.4...1.25.5
-[1.25.4]: https://github.com/cybozu-go/cke/compare/v1.25.3...1.25.4
-[1.25.3]: https://github.com/cybozu-go/cke/compare/v1.25.2...1.25.3
-[1.25.2]: https://github.com/cybozu-go/cke/compare/v1.25.1...1.25.2
-[1.25.1]: https://github.com/cybozu-go/cke/compare/v1.25.0...1.25.1
-[1.25.0]: https://github.com/cybozu-go/cke/compare/v1.24.2...1.25.0
-[1.25.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.24.2...1.25.0-rc.1
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.25.8...HEAD
+[1.25.8]: https://github.com/cybozu-go/cke/compare/v1.25.7...v1.25.8
+[1.25.7]: https://github.com/cybozu-go/cke/compare/v1.25.6...v1.25.7
+[1.25.6]: https://github.com/cybozu-go/cke/compare/v1.25.5...v1.25.6
+[1.25.5]: https://github.com/cybozu-go/cke/compare/v1.25.4...v1.25.5
+[1.25.4]: https://github.com/cybozu-go/cke/compare/v1.25.3...v1.25.4
+[1.25.3]: https://github.com/cybozu-go/cke/compare/v1.25.2...v1.25.3
+[1.25.2]: https://github.com/cybozu-go/cke/compare/v1.25.1...v1.25.2
+[1.25.1]: https://github.com/cybozu-go/cke/compare/v1.25.0...v1.25.1
+[1.25.0]: https://github.com/cybozu-go/cke/compare/v1.24.2...v1.25.0
+[1.25.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.24.2...v1.25.0-rc.1
