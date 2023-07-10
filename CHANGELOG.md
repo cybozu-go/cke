@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Added
+
+- Add setting of reboot retry interval in [#645](https://github.com/cybozu-go/cke/pull/645)
+
 ## Ancient changes
 
 - See [release-1.25/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.25/CHANGELOG.md) for changes in CKE 1.25.
