@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Added
+
+- Backport [#645](https://github.com/cybozu-go/cke/pull/645) to add setting of reboot retry interval in [#648](https://github.com/cybozu-go/cke/pull/648)
+
 ## [1.25.8]
 
 ### Fixed
