@@ -4,7 +4,6 @@ on:
     tags:
       - 'v*'
 env:
-  go-version: 1.19
   tag: ${GITHUB_REF#refs/tags/v}
   prerelease: ${{ contains(github.ref, '-') }}
 jobs:
@@ -13,9 +12,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.go-version }}
+          go-version-file: go.mod
       - uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
@@ -44,9 +43,9 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.go-version }}
+          go-version-file: go.mod
       - run: make install GOBIN=$(pwd)/docker
       - run: docker build -t quay.io/cybozu/cke:latest ./docker
       - name: Push docker image to Quay.io

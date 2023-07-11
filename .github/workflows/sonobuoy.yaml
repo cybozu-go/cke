@@ -1,17 +1,15 @@
 name: sonobuoy
 on:
   workflow_dispatch:
-env:
-  go-version: 1.19
 jobs:
   sonobuoy:
     name: Run sonobuoy
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.go-version }}
+          go-version-file: go.mod
       - uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
