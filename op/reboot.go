@@ -186,6 +186,7 @@ type rebootRebootCommand struct {
 	command        []string
 	timeoutSeconds *int
 	retries        *int
+	interval       *int
 
 	notifyFailedNode func(string)
 }
@@ -219,6 +220,7 @@ func (o *rebootRebootOp) NextCommand() cke.Commander {
 		command:          o.config.RebootCommand,
 		timeoutSeconds:   o.config.CommandTimeoutSeconds,
 		retries:          o.config.CommandRetries,
+		interval:         o.config.CommandInterval,
 		notifyFailedNode: o.notifyFailedNode,
 	}
 }
@@ -261,6 +263,7 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 			if c.retries != nil {
 				attempts = *c.retries + 1
 			}
+		RETRY:
 			for i := 0; i < attempts; i++ {
 				err := func() error {
 					ctx := ctx
@@ -277,11 +280,19 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 				if err == nil {
 					return nil
 				}
+
 				log.Warn("failed on rebooting node", map[string]interface{}{
 					log.FnError: err,
 					"node":      entry.Node,
 					"attempts":  i,
 				})
+				if c.interval != nil && *c.interval != 0 {
+					select {
+					case <-time.After(time.Second * time.Duration(*c.interval)):
+					case <-ctx.Done():
+						break RETRY
+					}
+				}
 			}
 			c.notifyFailedNode(entry.Node)
 			log.Warn("given up rebooting node", map[string]interface{}{

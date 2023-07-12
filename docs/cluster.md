@@ -74,13 +74,14 @@ Reboot
 | `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default: 600 (10 minutes).     |
 | `command_timeout_seconds`  | false    | *int                             | Deadline for rebooting. Zero means infinity. Default: wait indefinitely |
 | `command_retries`          | false    | *int                             | Number of reboot retries, not including initial attempt. Default: 0     |
+| `command_interval`         | false    | *int                             | Interval of time between reboot retries in seconds. Default: 0          |
 | `max_concurrent_reboots`   | false    | *int                             | Maximum number of nodes to be rebooted concurrently. Default: 1         |
 | `protected_namespaces`     | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                                 |
 
 `reboot_command` is the command to reboot a node. The node is passed as a command argument.
 The command should return zero if the reboot is successfully started.
 If `command_timeout_seconds` is specified, the reboot command should return within `command_timeout_seconds` seconds, or it is considered failed.
-If the reboot command has failed, CKE retries it for `command_retries` times.
+If the reboot command has failed, CKE retries it for `command_retries` times with `command_interval`-second interval.
 
 `boot_check_command` is the command to check a node booted. The node and the unix time when the reboot command is run are passed as command arguments.
 If the node is successfully booted, this command should output `true` to stdout and the exit status should be zero.
