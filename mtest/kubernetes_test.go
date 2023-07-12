@@ -123,7 +123,7 @@ func testKubernetes() {
 }`, node)
 		overrideFile := remoteTempFile(overrides)
 		_, stderr, err = kubectl("run",
-			"-n="+namespace, "--image=quay.io/cybozu/ubuntu:20.04", "--overrides=\"$(cat "+overrideFile+")\"", "--restart=Never",
+			"-n="+namespace, "--image=quay.io/cybozu/ubuntu:22.04", "--overrides=\"$(cat "+overrideFile+")\"", "--restart=Never",
 			"client", "--", "pause")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s, err: %v", stderr, err)
 
@@ -237,7 +237,7 @@ func testKubernetes() {
 		}).Should(Succeed())
 
 		By("querying www.google.com using node DNS from ubuntu pod")
-		_, stderr, err = kubectl("run", "-n="+namespace, "--image=quay.io/cybozu/ubuntu:20.04", "--restart=Never",
+		_, stderr, err = kubectl("run", "-n="+namespace, "--image=quay.io/cybozu/ubuntu:22.04", "--restart=Never",
 			"client", "--", "pause")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		Eventually(func() error {
@@ -455,7 +455,7 @@ spec:
     spec:
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 ---
@@ -477,13 +477,13 @@ spec:
     spec:
       initContainers:
       - name: wait-10sec
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - sleep
         - "10"
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 `
@@ -584,7 +584,7 @@ spec:
     spec:
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 ---
@@ -609,13 +609,13 @@ spec:
     spec:
       initContainers:
       - name: wait-10sec
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - sleep
         - "10"
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 `
@@ -733,13 +733,13 @@ spec:
     spec:
       initContainers:
       - name: wait-30sec
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - sleep
         - "30"
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 ---
@@ -766,7 +766,7 @@ spec:
     spec:
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 `
@@ -862,7 +862,7 @@ spec:
     spec:
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 ---
@@ -885,7 +885,7 @@ spec:
     spec:
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 `
@@ -925,7 +925,7 @@ spec:
     spec:
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 ---
@@ -951,13 +951,13 @@ spec:
     spec:
       initContainers:
       - name: wait-30sec
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - sleep
         - "30"
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 `
@@ -1057,7 +1057,7 @@ spec:
     spec:
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 ---
@@ -1079,13 +1079,13 @@ spec:
     spec:
       initContainers:
       - name: wait-10sec
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - sleep
         - "10"
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 `
@@ -1147,7 +1147,7 @@ spec:
     spec:
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 ---
@@ -1171,13 +1171,13 @@ spec:
     spec:
       initContainers:
       - name: wait-10sec
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - sleep
         - "10"
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:20.04
+        image: quay.io/cybozu/ubuntu:22.04
         args:
         - pause
 `
