@@ -65,7 +65,7 @@ jobs:
     name: Release on GitHub
     runs-on: ubuntu-22.04
     container:
-      image: quay.io/cybozu/golang:1.19-focal
+      image: quay.io/cybozu/golang:1.20-jammy
     needs: release-cke-image
     steps:
       - uses: actions/checkout@v3
