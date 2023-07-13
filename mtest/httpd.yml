@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: nginx
+  name: httpd
   labels:
-    app.kubernetes.io/name: nginx
+    app.kubernetes.io/name: httpd
 spec:
   containers:
-    - name: nginx
+    - name: httpd
       image: quay.io/cybozu/testhttpd:0
   hostNetwork: true
