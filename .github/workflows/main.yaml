@@ -9,7 +9,7 @@ env:
 jobs:
   build:
     name: Build CKE
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -26,7 +26,7 @@ jobs:
       - run: docker build -t quay.io/cybozu/cke:latest ./docker
   mtest:
     name: Mtest
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         suite: [functions, robustness, operators, reboot]
@@ -98,7 +98,7 @@ jobs:
           $GCLOUD compute instances delete ${INSTANCE_NAME} --zone ${ZONE}
   compose:
     name: Compose test
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4

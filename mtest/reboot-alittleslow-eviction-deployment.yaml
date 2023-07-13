@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: ubuntu
-          image: quay.io/cybozu/ubuntu:20.04
+          image: quay.io/cybozu/ubuntu:22.04
           # Because sleep command ignores SIGTERM,
           # this Pod will stay Terminating state after deletion
           # for the time specified by terminationGracePeriodSeconds.
