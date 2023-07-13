@@ -310,7 +310,7 @@ clean:
 	rm -rf $(OUTPUT)
 
 setup:
-	go install github.com/onsi/ginkgo/v2/ginkgo github.com/etcd-io/gofail
+	go install github.com/onsi/ginkgo/v2/ginkgo go.etcd.io/gofail
 	$(SUDO) apt-get update
 	$(SUDO) apt-get -y install --no-install-recommends $(PACKAGES)
 
