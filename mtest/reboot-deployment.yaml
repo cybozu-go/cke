@@ -14,7 +14,7 @@ spec:
         reboot-app: sample
     spec:
       containers:
-        - name: ubuntu
+        - name: httpd
           image: quay.io/cybozu/testhttpd:0
 ---
 apiVersion: policy/v1

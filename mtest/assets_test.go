@@ -2,8 +2,8 @@ package mtest
 
 import _ "embed"
 
-//go:embed nginx.yml
-var nginxYAML []byte
+//go:embed httpd.yml
+var httpdYAML []byte
 
 //go:embed reboot-deployment.yaml
 var rebootDeploymentYAML []byte

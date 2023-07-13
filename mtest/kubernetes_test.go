@@ -33,13 +33,13 @@ func testKubernetes() {
 			return nil
 		}).Should(Succeed())
 
-		By("running nginx")
-		_, stderr, err = kubectlWithInput(nginxYAML, "apply", "-f", "-", "-n="+namespace)
+		By("running httpd")
+		_, stderr, err = kubectlWithInput(httpdYAML, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		By("checking nginx pod status")
+		By("checking httpd pod status")
 		Eventually(func() error {
-			stdout, stderr, err := kubectl("get", "pods/nginx", "-n="+namespace, "-o", "json")
+			stdout, stderr, err := kubectl("get", "pods/httpd", "-n="+namespace, "-o", "json")
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
@@ -111,10 +111,10 @@ func testKubernetes() {
 		}).Should(Succeed())
 
 		By("deploying Service resource")
-		_, stderr, err = kubectlWithInput(nginxYAML, "apply", "-f", "-", "-n="+namespace)
+		_, stderr, err = kubectlWithInput(httpdYAML, "apply", "-f", "-", "-n="+namespace)
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
-		_, stderr, err = kubectl("expose", "-n="+namespace, "pod", "nginx", "--port=8000")
+		_, stderr, err = kubectl("expose", "-n="+namespace, "pod", "httpd", "--port=8000")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 
 		overrides := fmt.Sprintf(`{
@@ -138,12 +138,12 @@ func testKubernetes() {
 
 		By("resolving domain names")
 		Eventually(func() error {
-			_, stderr, err := kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "nginx")
+			_, stderr, err := kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "httpd")
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
 
-			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "nginx."+namespace+".svc.cluster.local")
+			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "httpd."+namespace+".svc.cluster.local")
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
