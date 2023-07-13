@@ -63,7 +63,7 @@ cat >run.sh <<EOF
 # Install essential tools
 curl -fsSL -o docker.gpg https://download.docker.com/linux/ubuntu/gpg
 apt-key add docker.gpg
-add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
 
 apt-get update
 apt-get install -y --no-install-recommends \
