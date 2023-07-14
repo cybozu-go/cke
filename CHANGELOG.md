@@ -5,6 +5,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.25.9]
+
 ### Added
 
 - Backport [#645](https://github.com/cybozu-go/cke/pull/645) to add setting of reboot retry interval in [#648](https://github.com/cybozu-go/cke/pull/648)
@@ -99,7 +101,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.25.8...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.25.9...HEAD
+[1.25.9]: https://github.com/cybozu-go/cke/compare/v1.25.8...v1.25.9
 [1.25.8]: https://github.com/cybozu-go/cke/compare/v1.25.7...v1.25.8
 [1.25.7]: https://github.com/cybozu-go/cke/compare/v1.25.6...v1.25.7
 [1.25.6]: https://github.com/cybozu-go/cke/compare/v1.25.5...v1.25.6
