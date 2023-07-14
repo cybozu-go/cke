@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
-	schedulerv1beta3 "k8s.io/kube-scheduler/config/v1beta3"
+	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
 )
@@ -118,7 +118,7 @@ func newData() testData {
 		DNSServers:    testDefaultDNSServers,
 	}
 	schedulerConfig := &unstructured.Unstructured{}
-	schedulerConfig.SetGroupVersionKind(schedulerv1beta3.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
+	schedulerConfig.SetGroupVersionKind(schedulerv1.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
 	schedulerConfig.Object["parallelism"] = 999
 	cluster.Options.Scheduler = cke.SchedulerParams{
 		Config: schedulerConfig,
@@ -320,7 +320,7 @@ func (d testData) withScheduler() testData {
 		st.BuiltInParams = k8s.SchedulerParams()
 
 		leaderElect := true
-		st.Config = &schedulerv1beta3.KubeSchedulerConfiguration{}
+		st.Config = &schedulerv1.KubeSchedulerConfiguration{}
 		st.Config.Parallelism = pointer.Int32(999)
 		st.Config.ClientConnection.Kubeconfig = op.SchedulerKubeConfigPath
 		st.Config.LeaderElection.LeaderElect = &leaderElect

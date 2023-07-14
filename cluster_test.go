@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
-	schedulerv1beta3 "k8s.io/kube-scheduler/config/v1beta3"
+	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
@@ -141,7 +141,7 @@ rules:
 	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
 	}
-	kubeSchedulerConfig, err := c.Options.Scheduler.MergeConfig(&schedulerv1beta3.KubeSchedulerConfiguration{
+	kubeSchedulerConfig, err := c.Options.Scheduler.MergeConfig(&schedulerv1.KubeSchedulerConfiguration{
 		Parallelism: pointer.Int32(999),
 	})
 	if err != nil {

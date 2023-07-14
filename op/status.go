@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
-	schedulerv1beta3 "k8s.io/kube-scheduler/config/v1beta3"
+	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
@@ -124,11 +124,11 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 			})
 			return nil, err
 		}
-		config := &schedulerv1beta3.KubeSchedulerConfiguration{}
+		config := &schedulerv1.KubeSchedulerConfiguration{}
 		_, _, err = decUnstructured.Decode(cfgData, nil, config)
 		if err == nil {
 			// Nullify TypeMeta for later comparison using equality.Semantic.DeepEqual
-			if config.APIVersion == schedulerv1beta3.SchemeGroupVersion.String() {
+			if config.APIVersion == schedulerv1.SchemeGroupVersion.String() {
 				config.TypeMeta = metav1.TypeMeta{}
 			}
 			status.Scheduler.Config = config
