@@ -6,7 +6,7 @@ VAULT_VERSION = 1.14.0
 K8S_VERSION = 1.26.6
 CONTAINERD_VERSION = 1.7.2
 CRITOOLS_VERSION = 1.27.1
-CT_VERSION = 0.9.0
+CT_VERSION = 0.9.3
 
 # configuration variables
 BRIDGE_ADDRESS = 10.0.0.1
@@ -183,7 +183,7 @@ $(OUTPUT)/host2.ign: host.ign
 		-e 's/__NODE_ADDRESS__/$(HOST2)/' $< > $@
 
 $(CT):
-	$(CURL) -o ct https://github.com/coreos/container-linux-config-transpiler/releases/download/v$(CT_VERSION)/ct-v$(CT_VERSION)-x86_64-unknown-linux-gnu
+	$(CURL) -o ct https://github.com/flatcar/container-linux-config-transpiler/releases/download/v$(CT_VERSION)/ct-v$(CT_VERSION)-x86_64-unknown-linux-gnu
 	chmod +x ct
 	$(SUDO) mv ct $@
 
