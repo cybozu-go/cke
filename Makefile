@@ -9,6 +9,16 @@ all: test
 setup:
 	curl -fsL https://github.com/etcd-io/etcd/releases/download/v$(ETCD_VERSION)/etcd-v$(ETCD_VERSION)-linux-amd64.tar.gz | sudo tar -xzf - --strip-components=1 -C /usr/local/bin etcd-v$(ETCD_VERSION)-linux-amd64/etcd etcd-v$(ETCD_VERSION)-linux-amd64/etcdctl
 
+.PHONY: check-generate
+check-generate:
+	# gqlgen needs additional dependencies that will be cleared out with `go mod tidy`.
+	go get github.com/99designs/gqlgen@"$$(go list -m github.com/99designs/gqlgen | cut -d' ' -f2)"
+	cd sabakan/mock; go run github.com/99designs/gqlgen generate
+	go mod tidy
+
+	$(MAKE) static
+	git diff --exit-code --name-only
+
 .PHONY: test
 test: test-tools
 	test -z "$$(gofmt -s -l . | tee /dev/stderr)"
@@ -27,7 +37,6 @@ install:
 .PHONY: static
 static: goimports
 	go generate ./static
-	git add ./static/resources.go
 
 .PHONY: test-tools
 test-tools: staticcheck nilerr goimports custom-checker
