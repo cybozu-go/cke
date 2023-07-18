@@ -40,7 +40,7 @@ KUBECTL_URL := https://storage.googleapis.com/kubernetes-release/release/v$(K8S_
 SSH_PRIVKEY = $(realpath ./mtest_key)
 OUTPUT := ./output
 DATA_DIR := $(abspath $(OUTPUT))/data
-COREOS_IMAGE := flatcar_production_qemu_image.img
+FLATCAR_IMAGE := flatcar_production_qemu_image.img
 CKE_IMAGE := $(abspath $(OUTPUT))/cke.img
 CKE_IMAGE_URL := quay.io/cybozu/cke:dev
 CKECLUSTER := $(DATA_DIR)/cluster.yml
@@ -62,7 +62,7 @@ TEST_DEPS = \
 
 PLACEMAT_DEPS = \
 	$(CONTAINERD_FILES) \
-	$(COREOS_IMAGE) \
+	$(FLATCAR_IMAGE) \
 	$(OUTPUT)/cluster.yml \
 	$(OUTPUT)/host1.ign \
 	$(OUTPUT)/host2.ign \
@@ -93,12 +93,12 @@ all:
 	@echo "'make test' accepts SUITE."
 
 $(MANAGEMENT_ETCD_ARCHIVE):
-	$(CURL) -o $@ https://github.com/coreos/etcd/releases/download/v$(MANAGEMENT_ETCD_VERSION)/etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
+	$(CURL) -o $@ https://github.com/etcd-io/etcd/releases/download/v$(MANAGEMENT_ETCD_VERSION)/etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
 
 $(VAULT_ARCHIVE):
 	$(CURL) -o $@ https://releases.hashicorp.com/vault/$(VAULT_VERSION)/$(VAULT_ARCHIVE)
 
-$(COREOS_IMAGE):
+$(FLATCAR_IMAGE):
 	$(CURL) -o $@.bz2 https://stable.release.flatcar-linux.net/amd64-usr/current/$@.bz2
 	bunzip2 -q $@.bz2
 
@@ -154,7 +154,7 @@ $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's#__DATA_DIR__#$(DATA_DIR)#' \
-		-e 's/__COREOS_IMAGE__/$(COREOS_IMAGE)/' $< > $@
+		-e 's/__FLATCAR_IMAGE__/$(FLATCAR_IMAGE)/' $< > $@
 
 $(OUTPUT)/host1.ign: host.ign
 	mkdir -p $(OUTPUT)
