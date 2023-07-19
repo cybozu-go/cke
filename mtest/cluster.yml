@@ -6,8 +6,8 @@ use-nat: true
 address: __BRIDGE_ADDRESS__/24
 ---
 kind: Image
-name: coreos
-file: ../__COREOS_IMAGE__
+name: flatcar
+file: ../__FLATCAR_IMAGE__
 ---
 kind: Node
 name: host1
@@ -21,7 +21,7 @@ smbios:
 volumes:
   - kind: image
     name: root
-    image: coreos
+    image: flatcar
     copy-on-write: true
   - kind: hostPath
     name: data
@@ -39,7 +39,7 @@ smbios:
 volumes:
   - kind: image
     name: root
-    image: coreos
+    image: flatcar
     copy-on-write: true
   - kind: hostPath
     name: data
@@ -57,7 +57,7 @@ smbios:
 volumes:
   - kind: image
     name: root
-    image: coreos
+    image: flatcar
     copy-on-write: true
   - kind: hostPath
     name: data
@@ -75,7 +75,7 @@ smbios:
 volumes:
   - kind: image
     name: root
-    image: coreos
+    image: flatcar
     copy-on-write: true
   - kind: hostPath
     name: data
@@ -93,7 +93,7 @@ smbios:
 volumes:
   - kind: image
     name: root
-    image: coreos
+    image: flatcar
     copy-on-write: true
   - kind: hostPath
     name: data
@@ -111,7 +111,7 @@ smbios:
 volumes:
   - kind: image
     name: root
-    image: coreos
+    image: flatcar
     copy-on-write: true
   - kind: hostPath
     name: data
@@ -129,7 +129,7 @@ smbios:
 volumes:
   - kind: image
     name: root
-    image: coreos
+    image: flatcar
     copy-on-write: true
   - kind: hostPath
     name: data
@@ -147,7 +147,7 @@ smbios:
 volumes:
   - kind: image
     name: root
-    image: coreos
+    image: flatcar
     copy-on-write: true
   - kind: hostPath
     name: data

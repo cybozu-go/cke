@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
-	schedulerv1beta3 "k8s.io/kube-scheduler/config/v1beta3"
+	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"sigs.k8s.io/yaml"
 )
@@ -129,7 +129,7 @@ type SchedulerParams struct {
 }
 
 // MergeConfig merges the input struct `base`.
-func (p SchedulerParams) MergeConfig(base *schedulerv1beta3.KubeSchedulerConfiguration) (*schedulerv1beta3.KubeSchedulerConfiguration, error) {
+func (p SchedulerParams) MergeConfig(base *schedulerv1.KubeSchedulerConfiguration) (*schedulerv1.KubeSchedulerConfiguration, error) {
 	// FOR IMPLEMENTORS.
 	// DO NOT SUPPORT MORE THAN ONE ComponentConfig VERSIONS.
 	// When we need to upgrade the component config version, users will
@@ -140,7 +140,7 @@ func (p SchedulerParams) MergeConfig(base *schedulerv1beta3.KubeSchedulerConfigu
 		return &cfg, nil
 	}
 
-	if p.Config.GetAPIVersion() != schedulerv1beta3.SchemeGroupVersion.String() {
+	if p.Config.GetAPIVersion() != schedulerv1.SchemeGroupVersion.String() {
 		return nil, fmt.Errorf("unexpected kube-scheduler API version: %s", p.Config.GetAPIVersion())
 	}
 	if p.Config.GetKind() != "KubeSchedulerConfiguration" {
@@ -606,7 +606,7 @@ func validateOptions(opts Options) error {
 		}
 	}
 
-	if _, err := opts.Scheduler.MergeConfig(&schedulerv1beta3.KubeSchedulerConfiguration{}); err != nil {
+	if _, err := opts.Scheduler.MergeConfig(&schedulerv1.KubeSchedulerConfiguration{}); err != nil {
 		return err
 	}
 

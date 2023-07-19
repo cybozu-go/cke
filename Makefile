@@ -1,6 +1,6 @@
 # Makefile for cke
 
-ETCD_VERSION = 3.5.7
+ETCD_VERSION = 3.5.9
 
 .PHONY: all
 all: test
@@ -8,6 +8,14 @@ all: test
 .PHONY: setup
 setup:
 	curl -fsL https://github.com/etcd-io/etcd/releases/download/v$(ETCD_VERSION)/etcd-v$(ETCD_VERSION)-linux-amd64.tar.gz | sudo tar -xzf - --strip-components=1 -C /usr/local/bin etcd-v$(ETCD_VERSION)-linux-amd64/etcd etcd-v$(ETCD_VERSION)-linux-amd64/etcdctl
+
+.PHONY: check-generate
+check-generate:
+	# gqlgen needs additional dependencies that does not exist in go.mod.
+	cd sabakan/mock; go run github.com/99designs/gqlgen@"$$(go list -f '{{.Version}}' -m github.com/99designs/gqlgen)" generate
+	go mod tidy
+	$(MAKE) static
+	git diff --exit-code --name-only
 
 .PHONY: test
 test: test-tools
@@ -27,7 +35,6 @@ install:
 .PHONY: static
 static: goimports
 	go generate ./static
-	git add ./static/resources.go
 
 .PHONY: test-tools
 test-tools: staticcheck nilerr goimports custom-checker

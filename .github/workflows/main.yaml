@@ -15,12 +15,9 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
-      - name: Check static resources
-        run: |
-            cp ./static/resources.go /tmp/resources.go
-            make static
-            cmp /tmp/resources.go ./static/resources.go
-      - run: docker run -d --network host gcr.io/etcd-development/etcd:v3.5.7
+      - name: Check auto-generated files
+        run: make check-generate
+      - run: docker run -d --network host gcr.io/etcd-development/etcd:v3.5.9
       - run: make test
       - run: make install GOBIN=$(pwd)/docker
       - run: docker build -t quay.io/cybozu/cke:latest ./docker

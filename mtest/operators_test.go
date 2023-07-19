@@ -145,7 +145,7 @@ func testOperators(isDegraded bool) {
 		// inject failure into AddMemberOp to cause leader change
 		firstLeader := strings.TrimSpace(string(ckecliSafe("leader")))
 		Expect(firstLeader).To(Or(Equal("host1"), Equal("host2")))
-		injectFailure("op/etcd/etcdAfterMemberAdd")
+		injectFailure("etcdAfterMemberAdd")
 
 		ckecliSafe("constraints", "set", "control-plane-count", "3")
 		cluster = getCluster()
@@ -291,7 +291,7 @@ func testOperators(isDegraded bool) {
 			return nil
 		}).Should(Succeed())
 		// inject failure into RemoveMemberOp
-		injectFailure("op/etcd/etcdAfterMemberRemove")
+		injectFailure("etcdAfterMemberRemove")
 
 		ckecliSafe("constraints", "set", "control-plane-count", "2")
 		cluster = getCluster()

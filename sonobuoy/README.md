@@ -7,7 +7,7 @@ This document describes steps to run the conformance test for certified Kubernet
 
 1. Prepare a Linux environment that runs on an x86_64 machine.
    * Prepare `make`, `curl`, and `ssh-keygen` commands.
-   * The restriction of the architecture comes from the URL of CoreOS Container Linux Config Transpiler in `sonobuoy/Makefile` .  You would be able to use another type of machine with a better Makefile.
+   * The restriction of the architecture comes from the URL of Container Linux Config Transpiler in `sonobuoy/Makefile` .  You would be able to use another type of machine with a better Makefile.
 2. Prepare a [Google Cloud Platform][] (GCP) account that can run 4 virtual machines.
    * Prepare `gcloud` command.
 

@@ -13,7 +13,7 @@ import (
 	apiserverv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/client-go/tools/clientcmd/api"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
-	schedulerv1beta3 "k8s.io/kube-scheduler/config/v1beta3"
+	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
 )
@@ -30,7 +30,7 @@ func init() {
 	if err := kubeletv1beta1.AddToScheme(scm); err != nil {
 		panic(err)
 	}
-	if err := schedulerv1beta3.AddToScheme(scm); err != nil {
+	if err := schedulerv1.AddToScheme(scm); err != nil {
 		panic(err)
 	}
 	if err := proxyv1alpha1.AddToScheme(scm); err != nil {
@@ -63,9 +63,9 @@ func schedulerKubeconfig(cluster string, ca, clientCrt, clientKey string) *api.C
 
 // GenerateSchedulerConfiguration generates scheduler configuration.
 // `params` must be validated beforehand.
-func GenerateSchedulerConfiguration(params cke.SchedulerParams) *schedulerv1beta3.KubeSchedulerConfiguration {
+func GenerateSchedulerConfiguration(params cke.SchedulerParams) *schedulerv1.KubeSchedulerConfiguration {
 	// default values
-	base := schedulerv1beta3.KubeSchedulerConfiguration{}
+	base := schedulerv1.KubeSchedulerConfiguration{}
 
 	c, err := params.MergeConfig(&base)
 	if err != nil {

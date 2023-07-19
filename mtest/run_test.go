@@ -448,7 +448,7 @@ func setFailurePoint(failurePoint, code string) {
 		leaderAddress = host2
 	}
 
-	u := fmt.Sprintf("http://%s:1234/github.com/cybozu-go/cke/%s", leaderAddress, failurePoint)
+	u := fmt.Sprintf("http://%s:1234/%s", leaderAddress, failurePoint)
 	req, _ := http.NewRequest(http.MethodPut, u, strings.NewReader(code))
 	resp, err := httpClient.Do(req)
 	Expect(err).NotTo(HaveOccurred())

@@ -34,17 +34,17 @@ type Machine struct {
 
 // MachineParams is a set of input parameters to search machines.
 type MachineParams struct {
-	Labels              []*LabelInput  `json:"labels"`
-	Racks               []int          `json:"racks"`
-	Roles               []string       `json:"roles"`
-	States              []MachineState `json:"states"`
-	MinDaysBeforeRetire *int           `json:"minDaysBeforeRetire"`
+	Labels              []*LabelInput  `json:"labels,omitempty"`
+	Racks               []int          `json:"racks,omitempty"`
+	Roles               []string       `json:"roles,omitempty"`
+	States              []MachineState `json:"states,omitempty"`
+	MinDaysBeforeRetire *int           `json:"minDaysBeforeRetire,omitempty"`
 }
 
 // MachineSpec represents specifications of a machine.
 type MachineSpec struct {
 	Serial       string   `json:"serial"`
-	Labels       []*Label `json:"labels"`
+	Labels       []*Label `json:"labels,omitempty"`
 	Rack         int      `json:"rack"`
 	IndexInRack  int      `json:"indexInRack"`
 	Role         string   `json:"role"`

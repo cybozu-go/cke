@@ -237,14 +237,14 @@ It should end with either `.conf` or `.conflist`.
 
 ### SchedulerParams
 
-| Name          | Required | Type                                  | Description                                     |
-| ------------- | -------- | ------------------------------------- | ----------------------------------------------- |
-| `config`      | false    | `*v1beta3.KubeSchedulerConfiguration` | See below.                                      |
-| `extra_args`  | false    | array                                 | Extra command-line arguments.  List of strings. |
-| `extra_binds` | false    | array                                 | Extra bind mounts.  List of `Mount`.            |
-| `extra_env`   | false    | object                                | Extra environment variables.                    |
+| Name          | Required | Type                             | Description                                     |
+| ------------- | -------- | -------------------------------- | ----------------------------------------------- |
+| `config`      | false    | `*v1.KubeSchedulerConfiguration` | See below.                                      |
+| `extra_args`  | false    | array                            | Extra command-line arguments.  List of strings. |
+| `extra_binds` | false    | array                            | Extra bind mounts.  List of `Mount`.            |
+| `extra_env`   | false    | object                           | Extra environment variables.                    |
 
-`config` must be a partial [`v1beta3.KubeSchedulerConfiguration`](https://pkg.go.dev/k8s.io/kube-scheduler@v0.23.9/config/v1beta3#KubeSchedulerConfiguration).
+`config` must be a partial [`v1.KubeSchedulerConfiguration`](https://pkg.go.dev/k8s.io/kube-scheduler@v0.26.6/config/v1#KubeSchedulerConfiguration).
 
 Fields in `config` may have default values.  Some fields are overwritten by CKE.
 Please see the source code for more details.

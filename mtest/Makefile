@@ -1,12 +1,12 @@
 # Makefile for multi-host testing using ginkgo
 
 # tool versions
-MANAGEMENT_ETCD_VERSION = 3.5.7
-VAULT_VERSION = 1.13.0
-K8S_VERSION = 1.25.10
-CONTAINERD_VERSION = 1.6.18
-CRITOOLS_VERSION = 1.26.0
-CT_VERSION = 0.9.0
+MANAGEMENT_ETCD_VERSION = 3.5.9
+VAULT_VERSION = 1.14.0
+K8S_VERSION = 1.26.6
+CONTAINERD_VERSION = 1.7.2
+CRITOOLS_VERSION = 1.27.1
+CT_VERSION = 0.9.3
 
 # configuration variables
 BRIDGE_ADDRESS = 10.0.0.1
@@ -40,7 +40,7 @@ KUBECTL_URL := https://storage.googleapis.com/kubernetes-release/release/v$(K8S_
 SSH_PRIVKEY = $(realpath ./mtest_key)
 OUTPUT := ./output
 DATA_DIR := $(abspath $(OUTPUT))/data
-COREOS_IMAGE := flatcar_production_qemu_image.img
+FLATCAR_IMAGE := flatcar_production_qemu_image.img
 CKE_IMAGE := $(abspath $(OUTPUT))/cke.img
 CKE_IMAGE_URL := quay.io/cybozu/cke:dev
 CKECLUSTER := $(DATA_DIR)/cluster.yml
@@ -62,7 +62,7 @@ TEST_DEPS = \
 
 PLACEMAT_DEPS = \
 	$(CONTAINERD_FILES) \
-	$(COREOS_IMAGE) \
+	$(FLATCAR_IMAGE) \
 	$(OUTPUT)/cluster.yml \
 	$(OUTPUT)/host1.ign \
 	$(OUTPUT)/host2.ign \
@@ -93,12 +93,12 @@ all:
 	@echo "'make test' accepts SUITE."
 
 $(MANAGEMENT_ETCD_ARCHIVE):
-	$(CURL) -o $@ https://github.com/coreos/etcd/releases/download/v$(MANAGEMENT_ETCD_VERSION)/etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
+	$(CURL) -o $@ https://github.com/etcd-io/etcd/releases/download/v$(MANAGEMENT_ETCD_VERSION)/etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
 
 $(VAULT_ARCHIVE):
 	$(CURL) -o $@ https://releases.hashicorp.com/vault/$(VAULT_VERSION)/$(VAULT_ARCHIVE)
 
-$(COREOS_IMAGE):
+$(FLATCAR_IMAGE):
 	$(CURL) -o $@.bz2 https://stable.release.flatcar-linux.net/amd64-usr/current/$@.bz2
 	bunzip2 -q $@.bz2
 
@@ -154,7 +154,7 @@ $(OUTPUT)/cluster.yml: cluster.yml
 	mkdir -p $(OUTPUT)
 	sed -e 's/__BRIDGE_ADDRESS__/$(BRIDGE_ADDRESS)/' \
 		-e 's#__DATA_DIR__#$(DATA_DIR)#' \
-		-e 's/__COREOS_IMAGE__/$(COREOS_IMAGE)/' $< > $@
+		-e 's/__FLATCAR_IMAGE__/$(FLATCAR_IMAGE)/' $< > $@
 
 $(OUTPUT)/host1.ign: host.ign
 	mkdir -p $(OUTPUT)
@@ -183,7 +183,7 @@ $(OUTPUT)/host2.ign: host.ign
 		-e 's/__NODE_ADDRESS__/$(HOST2)/' $< > $@
 
 $(CT):
-	$(CURL) -o ct https://github.com/coreos/container-linux-config-transpiler/releases/download/v$(CT_VERSION)/ct-v$(CT_VERSION)-x86_64-unknown-linux-gnu
+	$(CURL) -o ct https://github.com/flatcar/container-linux-config-transpiler/releases/download/v$(CT_VERSION)/ct-v$(CT_VERSION)-x86_64-unknown-linux-gnu
 	chmod +x ct
 	$(SUDO) mv ct $@
 
@@ -310,7 +310,7 @@ clean:
 	rm -rf $(OUTPUT)
 
 setup:
-	go install github.com/onsi/ginkgo/v2/ginkgo github.com/etcd-io/gofail
+	go install github.com/onsi/ginkgo/v2/ginkgo go.etcd.io/gofail
 	$(SUDO) apt-get update
 	$(SUDO) apt-get -y install --no-install-recommends $(PACKAGES)
 
