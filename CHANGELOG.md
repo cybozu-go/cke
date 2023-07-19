@@ -5,9 +5,15 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.26.0-rc.1]
+
 ### Added
 
 - Add setting of reboot retry interval in [#645](https://github.com/cybozu-go/cke/pull/645)
+
+### Changed
+
+- Update for Kubernetes 1.26.6 [#646](https://github.com/cybozu-go/cke/pull/646)
 
 ## Ancient changes
 
@@ -27,3 +33,4 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
 [Unreleased]: https://github.com/cybozu-go/cke/compare/v1.25.8...HEAD
+[1.26.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.25.8...v1.26.0-rc.1
