@@ -11,11 +11,9 @@ setup:
 
 .PHONY: check-generate
 check-generate:
-	# gqlgen needs additional dependencies that will be cleared out with `go mod tidy`.
-	go get github.com/99designs/gqlgen@"$$(go list -m github.com/99designs/gqlgen | cut -d' ' -f2)"
-	cd sabakan/mock; go run github.com/99designs/gqlgen generate
+	# gqlgen needs additional dependencies that does not exist in go.mod.
+	cd sabakan/mock; go run github.com/99designs/gqlgen@"$$(go list -f '{{.Version}}' -m github.com/99designs/gqlgen)" generate
 	go mod tidy
-
 	$(MAKE) static
 	git diff --exit-code --name-only
 
