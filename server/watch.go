@@ -38,6 +38,10 @@ func startWatcher(ctx context.Context, etcd *clientv3.Client, ch chan<- struct{}
 
 	wch := etcd.Watch(ctx, "", clientv3.WithPrefix(), clientv3.WithRev(rev+1))
 	for resp := range wch {
+		if err := resp.Err(); err != nil {
+			return err
+		}
+
 		for _, ev := range resp.Events {
 			if ev.Type != clientv3.EventTypePut {
 				continue

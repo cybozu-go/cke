@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix to check error of etcd watch response in [#654](https://github.com/cybozu-go/cke/pull/654)
+
 ## [1.26.0]
 
 ### Added
