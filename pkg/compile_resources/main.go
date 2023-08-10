@@ -94,7 +94,6 @@ func loadResources(fname string, images map[string]string) ([]cke.ResourceDefini
 				Annotations struct {
 					Revision int64  `json:"cke.cybozu.com/revision,string"`
 					Image    string `json:"cke.cybozu.com/image"`
-					Rank     uint32 `json:"cke.cybozu.com/rank,omitempty,string"`
 				} `json:"annotations"`
 			} `json:"metadata"`
 		}{}
@@ -106,11 +105,6 @@ func loadResources(fname string, images map[string]string) ([]cke.ResourceDefini
 			return nil, errors.New("static resources must declare cke.cybozu.com/revision in annotations")
 		}
 
-		rank, err := cke.DecideRank(kind, namespace, obj.Metadata.Annotations.Rank)
-		if err != nil {
-			return nil, err
-		}
-
 		res = append(res, cke.ResourceDefinition{
 			Key:        key,
 			Kind:       kind,
@@ -118,7 +112,6 @@ func loadResources(fname string, images map[string]string) ([]cke.ResourceDefini
 			Name:       name,
 			Revision:   rev,
 			Image:      obj.Metadata.Annotations.Image,
-			Rank:       rank,
 			Definition: data,
 		})
 	}
@@ -143,7 +136,6 @@ var Resources = []cke.ResourceDefinition{
 		Name: {{ printf "%q" .Name }},
 		Revision: {{ .Revision }},
 		Image: {{ printf "%q" .Image }},
-		Rank: {{ .Rank }},
 		Definition: []byte({{ printf "%q" .Definition }}),
 	},
 	{{ end -}}

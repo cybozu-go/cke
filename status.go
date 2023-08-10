@@ -48,7 +48,6 @@ type ResourceStatus struct {
 	Annotations map[string]string
 	// HasBeenSSA indicates that this resource has been already updated by server-side apply
 	HasBeenSSA bool
-	Completed  bool
 }
 
 // IsReady returns the cluster condition whether or not Pod can be scheduled
@@ -76,8 +75,8 @@ func (s KubernetesClusterStatus) IsReady(cluster *Cluster) bool {
 }
 
 // SetResourceStatus sets status of the resource.
-func (s KubernetesClusterStatus) SetResourceStatus(rkey string, ann map[string]string, isManaged, completed bool) {
-	s.ResourceStatuses[rkey] = ResourceStatus{Annotations: ann, HasBeenSSA: isManaged, Completed: completed}
+func (s KubernetesClusterStatus) SetResourceStatus(rkey string, ann map[string]string, isManaged bool) {
+	s.ResourceStatuses[rkey] = ResourceStatus{Annotations: ann, HasBeenSSA: isManaged}
 }
 
 // ClusterStatus represents the working cluster status.
