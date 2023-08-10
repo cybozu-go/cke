@@ -74,9 +74,9 @@ func checkJobPodNotExist(ctx context.Context, cs *kubernetes.Clientset, node str
 // evictOrDeleteNodePod evicts or delete Pods on the specified Node.
 // It first tries eviction. If the eviction failed and the Pod's namespace is not protected, it deletes the Pod.
 // If a running Job Pod exists, this function returns an error.
-func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool, retryTimes int, retryInterval time.Duration) error {
+func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool, attempts int, interval time.Duration) error {
 	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
-		retryCount := 0
+		evictCount := 0
 	EVICT:
 		log.Info("start evicting pod", map[string]interface{}{
 			"namespace": pod.Namespace,
@@ -85,7 +85,7 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 		err := cs.CoreV1().Pods(pod.Namespace).EvictV1(ctx, &policyv1.Eviction{
 			ObjectMeta: metav1.ObjectMeta{Name: pod.Name, Namespace: pod.Namespace},
 		})
-		retryCount++
+		evictCount++
 		switch {
 		case err == nil:
 			log.Info("evicted pod", map[string]interface{}{
@@ -112,11 +112,11 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 				"name":      pod.Name,
 			})
 		default:
-			if retryCount < retryTimes {
+			if evictCount < attempts {
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
-				case <-time.After(retryInterval):
+				case <-time.After(interval):
 				}
 				log.Info("retry eviction of pod", map[string]interface{}{
 					"namespace": pod.Namespace,

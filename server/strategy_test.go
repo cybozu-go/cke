@@ -2500,8 +2500,6 @@ func TestDecideOps(t *testing.T) {
 				Interval:             0,
 				CertsGCInterval:      0,
 				MaxConcurrentUpdates: 5,
-				DrainRetryTimes:      3,
-				DrainRetryInterval:   10 * time.Second,
 			})
 			if len(ops) == 0 && len(c.ExpectedOps) == 0 {
 				return

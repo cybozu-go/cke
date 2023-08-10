@@ -22,23 +22,19 @@ const drainBackOffBaseSeconds = 60
 type rebootDrainStartOp struct {
 	finished bool
 
-	entries       []*cke.RebootQueueEntry
-	config        *cke.Reboot
-	apiserver     *cke.Node
-	retryTimes    int
-	retryInterval time.Duration
+	entries   []*cke.RebootQueueEntry
+	config    *cke.Reboot
+	apiserver *cke.Node
 
 	mu          sync.Mutex
 	failedNodes []string
 }
 
-func RebootDrainStartOp(apiserver *cke.Node, entries []*cke.RebootQueueEntry, config *cke.Reboot, retryTimes int, retryInterval time.Duration) cke.InfoOperator {
+func RebootDrainStartOp(apiserver *cke.Node, entries []*cke.RebootQueueEntry, config *cke.Reboot) cke.InfoOperator {
 	return &rebootDrainStartOp{
-		entries:       entries,
-		config:        config,
-		apiserver:     apiserver,
-		retryTimes:    retryTimes,
-		retryInterval: retryInterval,
+		entries:   entries,
+		config:    config,
+		apiserver: apiserver,
 	}
 }
 
@@ -46,8 +42,8 @@ type rebootDrainStartCommand struct {
 	entries             []*cke.RebootQueueEntry
 	protectedNamespaces *metav1.LabelSelector
 	apiserver           *cke.Node
-	retryTimes          int
-	retryInterval       time.Duration
+	evictAttempts       int
+	evictInterval       time.Duration
 
 	notifyFailedNode func(string)
 }
@@ -83,13 +79,22 @@ func (o *rebootDrainStartOp) NextCommand() cke.Commander {
 	}
 	o.finished = true
 
+	attempts := 1
+	if o.config.EvictRetries != nil {
+		attempts = *o.config.EvictRetries + 1
+	}
+	interval := 0 * time.Second
+	if o.config.EvictInterval != nil {
+		interval = time.Second * time.Duration(*o.config.EvictInterval)
+	}
+
 	return rebootDrainStartCommand{
 		entries:             o.entries,
 		protectedNamespaces: o.config.ProtectedNamespaces,
 		apiserver:           o.apiserver,
 		notifyFailedNode:    o.notifyFailedNode,
-		retryTimes:          o.retryTimes,
-		retryInterval:       o.retryInterval,
+		evictAttempts:       attempts,
+		evictInterval:       interval,
 	}
 }
 
@@ -164,7 +169,7 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 
 	// next, evict pods on each node
 	for _, entry := range evictNodes {
-		err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected, c.retryTimes, c.retryInterval)
+		err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected, c.evictAttempts, c.evictInterval)
 		if err != nil {
 			c.notifyFailedNode(entry.Node)
 			err = drainBackOff(ctx, inf, entry, err)
