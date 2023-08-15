@@ -60,5 +60,5 @@ goimports:
 .PHONY: custom-checker
 custom-checker:
 	if ! which custom-checker >/dev/null; then \
-		env GOFLAGS= go install github.com/cybozu/neco-containers/golang/analyzer/cmd/custom-checker@latest; \
+		env GOFLAGS= go install github.com/cybozu-go/golang-custom-analyzer/cmd/custom-checker@latest; \
 	fi
