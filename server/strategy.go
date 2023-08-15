@@ -612,65 +612,24 @@ func decideEtcdServiceOps(apiServer *cke.Node, svc *corev1.Service) cke.Operator
 }
 
 func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, resources []cke.ResourceDefinition, isReady bool) (ops []cke.Operator) {
-
 	for _, res := range static.Resources {
 		// To avoid thundering herd problem. Deployments need to be created only after enough nodes become ready.
 		if res.Kind == cke.KindDeployment && !isReady {
 			continue
 		}
-		// We don't have to wait to complete resource creation or update,
 		status, ok := ks.ResourceStatuses[res.Key]
 		if !ok || res.NeedUpdate(&status) {
 			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
-			return ops
 		}
 	}
-
-	// decide to apply user defined resources
-	if len(resources) == 0 {
-		return ops
-	}
-	rank := resources[0].Rank
-
-	// resources are sorted by rank in advance
 	for _, res := range resources {
-		if res.Rank != rank && len(ops) > 0 {
-			return ops
-		}
 		if res.Kind == cke.KindDeployment && !isReady {
 			continue
 		}
 		status, ok := ks.ResourceStatuses[res.Key]
-		if !ok {
+		if !ok || res.NeedUpdate(&status) {
 			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
-			log.Info("need to create", map[string]interface{}{
-				"resource_name":      res.Name,
-				"resource_namespace": res.Namespace,
-				"kind":               res.Kind,
-				"completed":          status.Completed,
-			})
-		} else {
-			if res.NeedUpdate(&status) {
-				log.Info("need to update", map[string]interface{}{
-					"resource_name":      res.Name,
-					"resource_namespace": res.Namespace,
-					"kind":               res.Kind,
-					"completed":          status.Completed,
-				})
-				ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
-			} else {
-				if !status.Completed {
-					log.Info("need to wait", map[string]interface{}{
-						"resource_name":      res.Name,
-						"resource_namespace": res.Namespace,
-						"kind":               res.Kind,
-						"completed":          status.Completed,
-					})
-					ops = append(ops, op.NopOp())
-				}
-			}
 		}
-		rank = res.Rank
 	}
 	return ops
 }
