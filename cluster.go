@@ -498,10 +498,10 @@ func validateReboot(reboot Reboot) error {
 		return errors.New("command_interval must not be negative")
 	}
 	if reboot.EvictRetries != nil && *reboot.EvictRetries < 0 {
-		return errors.New("drain_retries must not be negative")
+		return errors.New("evict_retries must not be negative")
 	}
 	if reboot.EvictInterval != nil && *reboot.EvictInterval < 0 {
-		return errors.New("drain_interval must not be negative")
+		return errors.New("evict_interval must not be negative")
 	}
 	if reboot.MaxConcurrentReboots != nil && *reboot.MaxConcurrentReboots <= 0 {
 		return errors.New("max_concurrent_reboots must be positive")
