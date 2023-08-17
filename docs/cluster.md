@@ -68,13 +68,15 @@ Reboot
 ------
 
 | Name                       | Required | Type                             | Description                                                             |
-| -------------------------- | -------- | -------------------------------- | ----------------------------------------------------------------------- |
+|----------------------------| -------- | -------------------------------- |-------------------------------------------------------------------------|
 | `reboot_command`           | true     | array                            | A command to reboot.  List of strings.                                  |
 | `boot_check_command`       | true     | array                            | A command to check nodes booted.  List of strings.                      |
 | `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default: 600 (10 minutes).     |
 | `command_timeout_seconds`  | false    | *int                             | Deadline for rebooting. Zero means infinity. Default: wait indefinitely |
 | `command_retries`          | false    | *int                             | Number of reboot retries, not including initial attempt. Default: 0     |
 | `command_interval`         | false    | *int                             | Interval of time between reboot retries in seconds. Default: 0          |
+| `evict_retries`            | false    | *int                             | Number of eviction retries, not including initial attempt. Default: 0   |
+| `evict_interval`           | false    | *int                             | Interval of time between eviction retries in seconds. Default: 0        |
 | `max_concurrent_reboots`   | false    | *int                             | Maximum number of nodes to be rebooted concurrently. Default: 1         |
 | `protected_namespaces`     | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                                 |
 
@@ -89,6 +91,7 @@ If the node is not booted yet, this command should output `false` to stdout and 
 If `command_timeout_seconds` is specified, the check command should return within `command_timeout_seconds` seconds, or it is considered failed.
 
 CKE tries to delete Pods in the `protected_namespaces` gracefully with the Kubernetes eviction API.
+If the eviction API has failed, CKE retries it for `evict_retries` times with `evict_interval`-second interval.
 If any of the Pods cannot be deleted, it aborts the operation.
 
 The Pods in the non-protected namespaces are also tried to be deleted gracefully with the Kubernetes eviction API, but they would be simply deleted if eviction is denied.

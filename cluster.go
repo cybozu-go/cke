@@ -277,6 +277,8 @@ type Reboot struct {
 	CommandTimeoutSeconds  *int                  `json:"command_timeout_seconds,omitempty"`
 	CommandRetries         *int                  `json:"command_retries"`
 	CommandInterval        *int                  `json:"command_interval"`
+	EvictRetries           *int                  `json:"evict_retries"`
+	EvictInterval          *int                  `json:"evict_interval"`
 	ProtectedNamespaces    *metav1.LabelSelector `json:"protected_namespaces,omitempty"`
 }
 
@@ -494,6 +496,12 @@ func validateReboot(reboot Reboot) error {
 	}
 	if reboot.CommandInterval != nil && *reboot.CommandInterval < 0 {
 		return errors.New("command_interval must not be negative")
+	}
+	if reboot.EvictRetries != nil && *reboot.EvictRetries < 0 {
+		return errors.New("evict_retries must not be negative")
+	}
+	if reboot.EvictInterval != nil && *reboot.EvictInterval < 0 {
+		return errors.New("evict_interval must not be negative")
 	}
 	if reboot.MaxConcurrentReboots != nil && *reboot.MaxConcurrentReboots <= 0 {
 		return errors.New("max_concurrent_reboots must be positive")

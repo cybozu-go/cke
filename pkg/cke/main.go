@@ -116,7 +116,11 @@ func main() {
 	}
 
 	// Controller
-	controller := server.NewController(session, interval, gcInterval, timeout, addon, maxConcurrentUpdates)
+	controller := server.NewController(session, addon, &server.Config{
+		Interval:             interval,
+		CertsGCInterval:      gcInterval,
+		MaxConcurrentUpdates: maxConcurrentUpdates,
+	})
 	well.Go(controller.Run)
 
 	// API server

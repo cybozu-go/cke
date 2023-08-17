@@ -110,6 +110,18 @@ func testClusterYAML(t *testing.T) {
 	if *c.Reboot.CommandInterval != 30 {
 		t.Error(`*c.Reboot.CommandInterval != 30`)
 	}
+	if c.Reboot.EvictRetries == nil {
+		t.Fatal(`c.Reboot.EvictRetries == nil`)
+	}
+	if *c.Reboot.EvictRetries != 10 {
+		t.Error(`*c.Reboot.EvictRetries != 10`)
+	}
+	if c.Reboot.EvictInterval == nil {
+		t.Fatal(`c.Reboot.EvictInterval == nil`)
+	}
+	if *c.Reboot.EvictInterval != 3 {
+		t.Error(`*c.Reboot.EvictInterval != 3`)
+	}
 	if c.Reboot.ProtectedNamespaces == nil {
 		t.Fatal(`c.Reboot.ProtectedNamespaces == nil`)
 	}

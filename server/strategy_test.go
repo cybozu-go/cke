@@ -2188,7 +2188,11 @@ func TestDecideOps(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, c.Input.RebootArgs, 5)
+			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, c.Input.RebootArgs, &Config{
+				Interval:             0,
+				CertsGCInterval:      0,
+				MaxConcurrentUpdates: 5,
+			})
 			if len(ops) == 0 && len(c.ExpectedOps) == 0 {
 				return
 			}

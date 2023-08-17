@@ -17,6 +17,8 @@ reboot:
   command_timeout_seconds: 120
   command_retries: 3
   command_interval: 30
+  evict_retries: 10
+  evict_interval: 3
   max_concurrent_reboots: 5
   protected_namespaces:
     matchLabels:

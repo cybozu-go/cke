@@ -42,6 +42,8 @@ type rebootDrainStartCommand struct {
 	entries             []*cke.RebootQueueEntry
 	protectedNamespaces *metav1.LabelSelector
 	apiserver           *cke.Node
+	evictAttempts       int
+	evictInterval       time.Duration
 
 	notifyFailedNode func(string)
 }
@@ -77,11 +79,22 @@ func (o *rebootDrainStartOp) NextCommand() cke.Commander {
 	}
 	o.finished = true
 
+	attempts := 1
+	if o.config.EvictRetries != nil {
+		attempts = *o.config.EvictRetries + 1
+	}
+	interval := 0 * time.Second
+	if o.config.EvictInterval != nil {
+		interval = time.Second * time.Duration(*o.config.EvictInterval)
+	}
+
 	return rebootDrainStartCommand{
 		entries:             o.entries,
 		protectedNamespaces: o.config.ProtectedNamespaces,
 		apiserver:           o.apiserver,
 		notifyFailedNode:    o.notifyFailedNode,
+		evictAttempts:       attempts,
+		evictInterval:       interval,
 	}
 }
 
@@ -156,7 +169,7 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 
 	// next, evict pods on each node
 	for _, entry := range evictNodes {
-		err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected)
+		err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected, c.evictAttempts, c.evictInterval)
 		if err != nil {
 			c.notifyFailedNode(entry.Node)
 			err = drainBackOff(ctx, inf, entry, err)

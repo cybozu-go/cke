@@ -24,7 +24,7 @@ type DecideOpsRebootArgs struct {
 
 // DecideOps returns the next operations to do and the operation phase.
 // This returns nil when no operations need to be done.
-func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, rebootArgs DecideOpsRebootArgs, maxConcurrentUpdates int) ([]cke.Operator, cke.OperationPhase) {
+func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, rebootArgs DecideOpsRebootArgs, config *Config) ([]cke.Operator, cke.OperationPhase) {
 	nf := NewNodeFilter(c, cs)
 
 	// 0. Execute upgrade operation if necessary
@@ -40,7 +40,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	// 1. Run or restart rivers.  This guarantees:
 	// - CKE tools image is pulled on all nodes.
 	// - Rivers runs on all nodes and will proxy requests only to control plane nodes.
-	if ops := riversOps(c, nf, maxConcurrentUpdates); len(ops) > 0 {
+	if ops := riversOps(c, nf, config.MaxConcurrentUpdates); len(ops) > 0 {
 		return ops, cke.PhaseRivers
 	}
 
@@ -65,7 +65,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 5. Run or restart kubernetes components.
-	if ops := k8sOps(c, nf, cs, maxConcurrentUpdates); len(ops) > 0 {
+	if ops := k8sOps(c, nf, cs, config.MaxConcurrentUpdates); len(ops) > 0 {
 		return ops, cke.PhaseK8sStart
 	}
 
