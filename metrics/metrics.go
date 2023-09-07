@@ -33,29 +33,25 @@ var operationPhaseTimestampSeconds = prometheus.NewGauge(
 	},
 )
 
-var rebootQueueEntries = prometheus.NewGauge(
-	prometheus.GaugeOpts{
-		Namespace: namespace,
-		Name:      "reboot_queue_entries",
-		Help:      "The number of reboot queue entries remaining.",
-	},
+var rebootQueueEntries = prometheus.NewDesc(
+	namespace+"_reboot_queue_entries",
+	"The number of reboot queue entries remaining.",
+	nil,
+	nil,
 )
 
-var rebootQueueItems = prometheus.NewGaugeVec(
-	prometheus.GaugeOpts{
-		Namespace: namespace,
-		Name:      "reboot_queue_items",
-		Help:      "The number of reboot queue entries remaining per status.",
-	},
+var rebootQueueItems = prometheus.NewDesc(
+	namespace+"_reboot_queue_items",
+	"The number of reboot queue entries remaining per status.",
 	[]string{"status"},
+	nil,
 )
 
-var nodeRebootStatus = prometheus.NewGaugeVec(
-	prometheus.GaugeOpts{
-		Namespace: namespace,
-		Name:      "node_reboot_status",
-		Help:      "The reboot status of a node.",
-	}, []string{"node", "status"},
+var nodeRebootStatus = prometheus.NewDesc(
+	namespace+"_node_reboot_status",
+	"The reboot status of a node.",
+	[]string{"node", "status"},
+	nil,
 )
 
 var sabakanIntegrationSuccessful = prometheus.NewGauge(

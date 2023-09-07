@@ -11,7 +11,6 @@ import (
 	"github.com/cybozu-go/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	v3 "go.etcd.io/etcd/client/v3"
 )
 
 type logger struct{}
@@ -40,10 +39,13 @@ type metricGroup struct {
 // This abstraction is for mock test.
 type storage interface {
 	IsSabakanDisabled(context.Context) (bool, error)
+	GetRebootsEntries(ctx context.Context) ([]*cke.RebootQueueEntry, error)
+	GetCluster(ctx context.Context) (*cke.Cluster, error)
 }
 
 // NewCollector returns a new prometheus.Collector.
-func NewCollector(client *v3.Client) prometheus.Collector {
+func NewCollector(storage storage) prometheus.Collector {
+
 	return &collector{
 		metrics: map[string]metricGroup{
 			"leader": {
@@ -55,7 +57,7 @@ func NewCollector(client *v3.Client) prometheus.Collector {
 				isAvailable: isOperationPhaseAvailable,
 			},
 			"reboot": {
-				collectors:  []prometheus.Collector{rebootQueueEntries, rebootQueueItems, nodeRebootStatus},
+				collectors:  []prometheus.Collector{nodeMetricsCollector{storage}},
 				isAvailable: isRebootAvailable,
 			},
 			"sabakan_integration": {
@@ -63,7 +65,7 @@ func NewCollector(client *v3.Client) prometheus.Collector {
 				isAvailable: isSabakanIntegrationAvailable,
 			},
 		},
-		storage: &cke.Storage{Client: client},
+		storage: storage,
 	}
 }
 
@@ -119,4 +121,62 @@ func (c collector) Collect(ch chan<- prometheus.Metric) {
 		}(key, metric)
 	}
 	wg.Wait()
+}
+
+type nodeMetricsCollector struct {
+	storage storage
+}
+
+var _ prometheus.Collector = &nodeMetricsCollector{}
+
+func (c nodeMetricsCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- rebootQueueEntries
+	ch <- rebootQueueItems
+	ch <- nodeRebootStatus
+}
+
+func (c nodeMetricsCollector) Collect(ch chan<- prometheus.Metric) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rqEntries, err := c.storage.GetRebootsEntries(ctx)
+	if err != nil {
+		return
+	}
+
+	cluster, err := c.storage.GetCluster(ctx)
+	if err != nil {
+		return
+	}
+	itemCounts := cke.CountRebootQueueEntries(rqEntries)
+	nodeStatus := cke.BuildNodeRebootStatus(cluster.Nodes, rqEntries)
+
+	ch <- prometheus.MustNewConstMetric(
+		rebootQueueEntries,
+		prometheus.GaugeValue,
+		float64(len(rqEntries)),
+	)
+	for status, count := range itemCounts {
+		ch <- prometheus.MustNewConstMetric(
+			rebootQueueItems,
+			prometheus.GaugeValue,
+			float64(count),
+			status,
+		)
+	}
+	for node, statuses := range nodeStatus {
+		for status, matches := range statuses {
+			value := float64(0)
+			if matches {
+				value = 1
+			}
+			ch <- prometheus.MustNewConstMetric(
+				nodeRebootStatus,
+				prometheus.GaugeValue,
+				value,
+				node,
+				status,
+			)
+		}
+	}
 }

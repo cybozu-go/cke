@@ -1207,7 +1207,7 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.MasterEndpointSlice.Endpoints[2].Conditions.Ready = &endpointReady
 				d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[2].Conditions.Ready = &endpointReady
 			}),
-			ExpectedOps: []opData{{"reboot-drain-start", 1}, {"reboot-recalc-metrics", 0}},
+			ExpectedOps: []opData{{"reboot-drain-start", 1}},
 		},
 		{
 			Name: "EndpointsWithCancelledRebootEntry",
@@ -1224,7 +1224,7 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusCancelled,
 				},
 			}),
-			ExpectedOps: []opData{{"reboot-dequeue", 1}, {"reboot-recalc-metrics", 0}},
+			ExpectedOps: []opData{{"reboot-dequeue", 1}},
 		},
 		{
 			Name: "UserResourceAdd",
@@ -2065,7 +2065,6 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []opData{
 				{"reboot-drain-start", 1},
-				{"reboot-recalc-metrics", 0},
 			},
 		},
 		{
@@ -2102,7 +2101,6 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []opData{
 				{"reboot-reboot", 1},
-				{"reboot-recalc-metrics", 0},
 			},
 		},
 		{
@@ -2122,7 +2120,6 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []opData{
 				{"reboot-drain-timeout", 1},
-				{"reboot-recalc-metrics", 0},
 			},
 		},
 		{
@@ -2142,7 +2139,6 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []opData{
 				{"reboot-dequeue", 1},
-				{"reboot-recalc-metrics", 0},
 			},
 		},
 		{
@@ -2181,7 +2177,6 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []opData{
 				{"reboot-dequeue", 1},
-				{"reboot-recalc-metrics", 0},
 			},
 		},
 	}

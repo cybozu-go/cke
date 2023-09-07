@@ -43,13 +43,13 @@ type updateOperationPhaseTestCase struct {
 
 type updateRebootQueueEntriesTestCase struct {
 	name     string
-	input    int
+	input    []*cke.RebootQueueEntry
 	expected float64
 }
 
 type updateRebootQueueItemsTestCase struct {
 	name     string
-	input    map[string]int
+	input    []*cke.RebootQueueEntry
 	expected map[string]float64
 }
 
@@ -252,17 +252,28 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 	testCases := []updateRebootQueueEntriesTestCase{
 		{
 			name:     "zero",
-			input:    0,
+			input:    nil,
 			expected: 0,
 		},
 		{
-			name:     "one",
-			input:    1,
+			name: "one",
+			input: []*cke.RebootQueueEntry{
+				{
+					Status: cke.RebootStatusQueued,
+				},
+			},
 			expected: 1,
 		},
 		{
-			name:     "two",
-			input:    2,
+			name: "two",
+			input: []*cke.RebootQueueEntry{
+				{
+					Status: cke.RebootStatusQueued,
+				},
+				{
+					Status: cke.RebootStatusRebooting,
+				},
+			},
 			expected: 2,
 		},
 	}
@@ -271,10 +282,9 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 			ctx := context.Background()
 			defer ctx.Done()
 
-			collector, _ := newTestCollector()
+			collector, storage := newTestCollector()
+			storage.setRebootsEntries(tt.input)
 			handler := GetHandler(collector)
-
-			UpdateRebootQueueEntries(tt.input)
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/metrics", nil)
@@ -309,28 +319,86 @@ func testUpdateRebootQueueItems(t *testing.T) {
 	testCases := []updateRebootQueueItemsTestCase{
 		{
 			name: "zero",
-			input: map[string]int{
-				"queued":    1,
-				"draining":  2,
-				"rebooting": 3,
+			input: []*cke.RebootQueueEntry{
+				{
+					Status: cke.RebootStatusQueued,
+				},
+				{
+					Status: cke.RebootStatusDraining,
+				},
+				{
+					Status: cke.RebootStatusDraining,
+				},
+				{
+					Status: cke.RebootStatusRebooting,
+				},
+				{
+					Status: cke.RebootStatusRebooting,
+				},
+				{
+					Status: cke.RebootStatusRebooting,
+				},
 			},
 			expected: map[string]float64{
 				"queued":    1.0,
 				"draining":  2.0,
 				"rebooting": 3.0,
+				"cancelled": 0.0,
 			},
 		},
 		{
 			name: "one",
-			input: map[string]int{
-				"queued":    4,
-				"draining":  5,
-				"cancelled": 6,
+			input: []*cke.RebootQueueEntry{
+				{
+					Status: cke.RebootStatusQueued,
+				},
+				{
+					Status: cke.RebootStatusQueued,
+				},
+				{
+					Status: cke.RebootStatusQueued,
+				},
+				{
+					Status: cke.RebootStatusQueued,
+				},
+				{
+					Status: cke.RebootStatusDraining,
+				},
+				{
+					Status: cke.RebootStatusDraining,
+				},
+				{
+					Status: cke.RebootStatusDraining,
+				},
+				{
+					Status: cke.RebootStatusDraining,
+				},
+				{
+					Status: cke.RebootStatusDraining,
+				},
+				{
+					Status: cke.RebootStatusCancelled,
+				},
+				{
+					Status: cke.RebootStatusCancelled,
+				},
+				{
+					Status: cke.RebootStatusCancelled,
+				},
+				{
+					Status: cke.RebootStatusCancelled,
+				},
+				{
+					Status: cke.RebootStatusCancelled,
+				},
+				{
+					Status: cke.RebootStatusCancelled,
+				},
 			},
 			expected: map[string]float64{
 				"queued":    4.0,
 				"draining":  5.0,
-				"rebooting": 3.0,
+				"rebooting": 0.0,
 				"cancelled": 6.0,
 			},
 		},
@@ -340,10 +408,9 @@ func testUpdateRebootQueueItems(t *testing.T) {
 			ctx := context.Background()
 			defer ctx.Done()
 
-			collector, _ := newTestCollector()
+			collector, storage := newTestCollector()
+			storage.setRebootsEntries(tt.input)
 			handler := GetHandler(collector)
-
-			UpdateRebootQueueItems(tt.input)
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("GET", "/metrics", nil)
@@ -374,7 +441,25 @@ func testUpdateRebootQueueItems(t *testing.T) {
 }
 
 func testUpdateNodeRebootStatus(t *testing.T) {
-	input := map[string]map[string]bool{
+	inputCluster := &cke.Cluster{
+		Nodes: []*cke.Node{
+			{
+				Address:  "192.168.1.11",
+				Hostname: "node1",
+			},
+			{
+				Address:  "192.168.1.12",
+				Hostname: "node2",
+			},
+		},
+	}
+	inputEntries := []*cke.RebootQueueEntry{
+		{
+			Node:   "192.168.1.11",
+			Status: cke.RebootStatusRebooting,
+		},
+	}
+	expected := map[string]map[string]bool{
 		"node1": {
 			"queued":    false,
 			"draining":  false,
@@ -388,15 +473,14 @@ func testUpdateNodeRebootStatus(t *testing.T) {
 			"cancelled": false,
 		},
 	}
-	expected := input
 
 	ctx := context.Background()
 	defer ctx.Done()
 
-	collector, _ := newTestCollector()
+	collector, storage := newTestCollector()
+	storage.setCluster(inputCluster)
+	storage.setRebootsEntries(inputEntries)
 	handler := GetHandler(collector)
-
-	UpdateNodeRebootStatus(input)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/metrics", nil)
@@ -579,14 +663,17 @@ func testUpdateSabakanIntegration(t *testing.T) {
 }
 
 func newTestCollector() (prometheus.Collector, *testStorage) {
-	c := NewCollector(nil)
-	s := &testStorage{}
-	c.(*collector).storage = s
+	s := &testStorage{
+		cluster: new(cke.Cluster),
+	}
+	c := NewCollector(s)
 	return c, s
 }
 
 type testStorage struct {
 	sabakanEnabled bool
+	rebootEntries  []*cke.RebootQueueEntry
+	cluster        *cke.Cluster
 }
 
 func (s *testStorage) enableSabakan(flag bool) {
@@ -595,6 +682,22 @@ func (s *testStorage) enableSabakan(flag bool) {
 
 func (s *testStorage) IsSabakanDisabled(_ context.Context) (bool, error) {
 	return !s.sabakanEnabled, nil
+}
+
+func (s *testStorage) setRebootsEntries(entries []*cke.RebootQueueEntry) {
+	s.rebootEntries = entries
+}
+
+func (s *testStorage) GetRebootsEntries(ctx context.Context) ([]*cke.RebootQueueEntry, error) {
+	return s.rebootEntries, nil
+}
+
+func (s *testStorage) setCluster(cluster *cke.Cluster) {
+	s.cluster = cluster
+}
+
+func (s *testStorage) GetCluster(ctx context.Context) (*cke.Cluster, error) {
+	return s.cluster, nil
 }
 
 func labelToMap(labelPair []*dto.LabelPair) map[string]string {
