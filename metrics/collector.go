@@ -123,6 +123,7 @@ func (c collector) Collect(ch chan<- prometheus.Metric) {
 	wg.Wait()
 }
 
+// nodeMetricsCollector implements prometheus.Collector interface.
 type nodeMetricsCollector struct {
 	storage storage
 }
@@ -141,11 +142,17 @@ func (c nodeMetricsCollector) Collect(ch chan<- prometheus.Metric) {
 
 	rqEntries, err := c.storage.GetRebootsEntries(ctx)
 	if err != nil {
+		log.Error("failed to get reboots entries", map[string]interface{}{
+			log.FnError: err,
+		})
 		return
 	}
 
 	cluster, err := c.storage.GetCluster(ctx)
 	if err != nil {
+		log.Error("failed to get reboots entries", map[string]interface{}{
+			log.FnError: err,
+		})
 		return
 	}
 	itemCounts := cke.CountRebootQueueEntries(rqEntries)

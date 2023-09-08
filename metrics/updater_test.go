@@ -258,21 +258,15 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 		{
 			name: "one",
 			input: []*cke.RebootQueueEntry{
-				{
-					Status: cke.RebootStatusQueued,
-				},
+				{Status: cke.RebootStatusQueued},
 			},
 			expected: 1,
 		},
 		{
 			name: "two",
 			input: []*cke.RebootQueueEntry{
-				{
-					Status: cke.RebootStatusQueued,
-				},
-				{
-					Status: cke.RebootStatusRebooting,
-				},
+				{Status: cke.RebootStatusQueued},
+				{Status: cke.RebootStatusRebooting},
 			},
 			expected: 2,
 		},
@@ -320,24 +314,12 @@ func testUpdateRebootQueueItems(t *testing.T) {
 		{
 			name: "zero",
 			input: []*cke.RebootQueueEntry{
-				{
-					Status: cke.RebootStatusQueued,
-				},
-				{
-					Status: cke.RebootStatusDraining,
-				},
-				{
-					Status: cke.RebootStatusDraining,
-				},
-				{
-					Status: cke.RebootStatusRebooting,
-				},
-				{
-					Status: cke.RebootStatusRebooting,
-				},
-				{
-					Status: cke.RebootStatusRebooting,
-				},
+				{Status: cke.RebootStatusQueued},
+				{Status: cke.RebootStatusDraining},
+				{Status: cke.RebootStatusDraining},
+				{Status: cke.RebootStatusRebooting},
+				{Status: cke.RebootStatusRebooting},
+				{Status: cke.RebootStatusRebooting},
 			},
 			expected: map[string]float64{
 				"queued":    1.0,
@@ -349,51 +331,21 @@ func testUpdateRebootQueueItems(t *testing.T) {
 		{
 			name: "one",
 			input: []*cke.RebootQueueEntry{
-				{
-					Status: cke.RebootStatusQueued,
-				},
-				{
-					Status: cke.RebootStatusQueued,
-				},
-				{
-					Status: cke.RebootStatusQueued,
-				},
-				{
-					Status: cke.RebootStatusQueued,
-				},
-				{
-					Status: cke.RebootStatusDraining,
-				},
-				{
-					Status: cke.RebootStatusDraining,
-				},
-				{
-					Status: cke.RebootStatusDraining,
-				},
-				{
-					Status: cke.RebootStatusDraining,
-				},
-				{
-					Status: cke.RebootStatusDraining,
-				},
-				{
-					Status: cke.RebootStatusCancelled,
-				},
-				{
-					Status: cke.RebootStatusCancelled,
-				},
-				{
-					Status: cke.RebootStatusCancelled,
-				},
-				{
-					Status: cke.RebootStatusCancelled,
-				},
-				{
-					Status: cke.RebootStatusCancelled,
-				},
-				{
-					Status: cke.RebootStatusCancelled,
-				},
+				{Status: cke.RebootStatusQueued},
+				{Status: cke.RebootStatusQueued},
+				{Status: cke.RebootStatusQueued},
+				{Status: cke.RebootStatusQueued},
+				{Status: cke.RebootStatusDraining},
+				{Status: cke.RebootStatusDraining},
+				{Status: cke.RebootStatusDraining},
+				{Status: cke.RebootStatusDraining},
+				{Status: cke.RebootStatusDraining},
+				{Status: cke.RebootStatusCancelled},
+				{Status: cke.RebootStatusCancelled},
+				{Status: cke.RebootStatusCancelled},
+				{Status: cke.RebootStatusCancelled},
+				{Status: cke.RebootStatusCancelled},
+				{Status: cke.RebootStatusCancelled},
 			},
 			expected: map[string]float64{
 				"queued":    4.0,

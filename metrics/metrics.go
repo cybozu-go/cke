@@ -34,21 +34,21 @@ var operationPhaseTimestampSeconds = prometheus.NewGauge(
 )
 
 var rebootQueueEntries = prometheus.NewDesc(
-	namespace+"_reboot_queue_entries",
+	prometheus.BuildFQName(namespace, "", "reboot_queue_entries"),
 	"The number of reboot queue entries remaining.",
 	nil,
 	nil,
 )
 
 var rebootQueueItems = prometheus.NewDesc(
-	namespace+"_reboot_queue_items",
+	prometheus.BuildFQName(namespace, "", "reboot_queue_items"),
 	"The number of reboot queue entries remaining per status.",
 	[]string{"status"},
 	nil,
 )
 
 var nodeRebootStatus = prometheus.NewDesc(
-	namespace+"_node_reboot_status",
+	prometheus.BuildFQName(namespace, "", "node_reboot_status"),
 	"The reboot status of a node.",
 	[]string{"node", "status"},
 	nil,
