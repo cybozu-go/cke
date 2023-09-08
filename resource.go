@@ -261,7 +261,7 @@ func (d ResourceDefinition) NeedUpdate(rs *ResourceStatus) bool {
 
 	curImage, ok := rs.Annotations[AnnotationResourceImage]
 	if !ok {
-		return true
+		return false
 	}
 	return curImage != d.Image
 }
