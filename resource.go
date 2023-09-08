@@ -102,6 +102,41 @@ func ApplyResource(ctx context.Context, dynclient dynamic.Interface, mapper meta
 	return err
 }
 
+func DeleteResource(ctx context.Context, dynclient dynamic.Interface, mapper meta.RESTMapper, inf Infrastructure, key string, data []byte) error {
+	obj := &unstructured.Unstructured{}
+	_, gvk, err := decUnstructured.Decode(data, nil, obj)
+	if err != nil {
+		return fmt.Errorf("failed to decode data into *Unstructured: %w", err)
+	}
+
+	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return fmt.Errorf("failed to find REST mapping for %s: %w", gvk.String(), err)
+	}
+
+	var dr dynamic.ResourceInterface
+	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+		dr = dynclient.Resource(mapping.Resource).Namespace(obj.GetNamespace())
+	} else {
+		dr = dynclient.Resource(mapping.Resource)
+	}
+	if log.Enabled(log.LvDebug) {
+		log.Debug("resource-deletion", map[string]interface{}{
+			"gvk":       gvk.String(),
+			"gvr":       mapping.Resource.String(),
+			"namespace": obj.GetNamespace(),
+			"name":      obj.GetName(),
+		})
+	}
+
+	err = dr.Delete(ctx, obj.GetName(), metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+	err = inf.Storage().DeleteDeletionResource(ctx, key)
+	return err
+}
+
 func injectCA(ctx context.Context, st Storage, obj *unstructured.Unstructured, gvk *schema.GroupVersionKind) error {
 	cacert, err := st.GetCACertificate(ctx, CAWebhook)
 	if err != nil {

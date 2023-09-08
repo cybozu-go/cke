@@ -309,6 +309,10 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	if err != nil {
 		return err
 	}
+	dels, err := inf.Storage().GetAllDeletionResources(ctx)
+	if err != nil {
+		return err
+	}
 
 	rqEntries, err := inf.Storage().GetRebootsEntries(ctx)
 	if err != nil {
@@ -338,7 +342,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	drainCompleted, drainTimedout, _ := op.CheckDrainCompletion(ctx, inf, nf.HealthyAPIServer(), cluster, rqEntries)
 	rebootDequeued := op.CheckRebootDequeue(ctx, cluster, rqEntries)
 
-	ops, phase := DecideOps(cluster, status, constraints, rcs, DecideOpsRebootArgs{
+	ops, phase := DecideOps(cluster, status, constraints, rcs, dels, DecideOpsRebootArgs{
 		RQEntries:      rqEntries,
 		NewlyDrained:   newlyDrained,
 		DrainCompleted: drainCompleted,

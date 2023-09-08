@@ -58,11 +58,12 @@ var (
 )
 
 type testData struct {
-	Cluster     *cke.Cluster
-	Status      *cke.ClusterStatus
-	Constraints *cke.Constraints
-	Resources   []cke.ResourceDefinition
-	RebootArgs  DecideOpsRebootArgs
+	Cluster           *cke.Cluster
+	Status            *cke.ClusterStatus
+	Constraints       *cke.Constraints
+	Resources         []cke.ResourceDefinition
+	DeletionResources map[string][]byte
+	RebootArgs        DecideOpsRebootArgs
 }
 
 func (d testData) ControlPlane() (nodes []*cke.Node) {
@@ -2188,7 +2189,7 @@ func TestDecideOps(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, c.Input.RebootArgs, &Config{
+			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, c.Input.DeletionResources, c.Input.RebootArgs, &Config{
 				Interval:             0,
 				CertsGCInterval:      0,
 				MaxConcurrentUpdates: 5,

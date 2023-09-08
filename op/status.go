@@ -439,6 +439,43 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		s.SetResourceStatus(res.Key, obj.GetAnnotations(), len(obj.GetManagedFields()) != 0)
 	}
 
+	deletionResources, err := inf.Storage().GetAllDeletionResources(ctx)
+	if err != nil {
+		return cke.KubernetesClusterStatus{}, err
+	}
+
+	s.ResourcesExistence = make(map[string]bool)
+	for key, val := range deletionResources {
+
+		obj := &unstructured.Unstructured{}
+		_, gvk, err := decUnstructured.Decode(val, nil, obj)
+		if err != nil {
+			return cke.KubernetesClusterStatus{}, err
+		}
+
+		mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+		if err != nil {
+			return cke.KubernetesClusterStatus{}, fmt.Errorf("failed to find rest mapping for %s: %w", gvk.String(), err)
+		}
+
+		var dr dynamic.ResourceInterface
+		if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+			ns := obj.GetNamespace()
+			if ns == "" {
+				return cke.KubernetesClusterStatus{}, fmt.Errorf("no namespace for %s: name=%s", gvk.String(), obj.GetName())
+			}
+			dr = dyn.Resource(mapping.Resource).Namespace(ns)
+		} else {
+			dr = dyn.Resource(mapping.Resource)
+		}
+
+		_, err = dr.Get(ctx, obj.GetName(), metav1.GetOptions{})
+		if err != nil && !k8serr.IsNotFound(err) {
+			return cke.KubernetesClusterStatus{}, err
+		}
+		s.ResourcesExistence[key] = !k8serr.IsNotFound(err)
+	}
+
 	return s, nil
 }
 

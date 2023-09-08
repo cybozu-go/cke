@@ -69,3 +69,63 @@ func (o *resourceApplyOp) Command() cke.Command {
 		Target: o.resource.String(),
 	}
 }
+
+type resourceDeleteOp struct {
+	apiserver    *cke.Node
+	resourceKey  string
+	resourceData []byte
+
+	finished bool
+}
+
+// ResourceDeleteOp creates or updates a Kubernetes object.
+func ResourceDeleteOp(apiServer *cke.Node, resourceKey string, resourceData []byte) cke.Operator {
+	return &resourceDeleteOp{
+		apiserver:    apiServer,
+		resourceKey:  resourceKey,
+		resourceData: resourceData,
+	}
+}
+
+func (o *resourceDeleteOp) Name() string {
+	return "resource-deletion"
+}
+
+func (o *resourceDeleteOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
+	return o
+}
+
+func (o *resourceDeleteOp) Targets() []string {
+	return []string{
+		o.apiserver.Address,
+	}
+}
+
+func (o *resourceDeleteOp) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+	cfg, err := inf.K8sConfig(ctx, o.apiserver)
+	if err != nil {
+		return err
+	}
+	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		return err
+	}
+	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
+
+	dyn, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return err
+	}
+	return cke.DeleteResource(ctx, dyn, mapper, inf, o.resourceKey, o.resourceData)
+}
+
+func (o *resourceDeleteOp) Command() cke.Command {
+	return cke.Command{
+		Name:   "delete-resource",
+		Target: o.resourceKey,
+	}
+}

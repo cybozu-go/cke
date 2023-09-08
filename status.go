@@ -40,6 +40,7 @@ type KubernetesClusterStatus struct {
 	EtcdEndpoints       *corev1.Endpoints
 	EtcdEndpointSlice   *discoveryv1.EndpointSlice
 	ResourceStatuses    map[string]ResourceStatus
+	ResourcesExistence  map[string]bool
 }
 
 // ResourceStatus represents the status of registered K8s resources

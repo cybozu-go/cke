@@ -24,7 +24,7 @@ type DecideOpsRebootArgs struct {
 
 // DecideOps returns the next operations to do and the operation phase.
 // This returns nil when no operations need to be done.
-func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, rebootArgs DecideOpsRebootArgs, config *Config) ([]cke.Operator, cke.OperationPhase) {
+func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, deletionResources map[string][]byte, rebootArgs DecideOpsRebootArgs, config *Config) ([]cke.Operator, cke.OperationPhase) {
 	nf := NewNodeFilter(c, cs)
 
 	// 0. Execute upgrade operation if necessary
@@ -77,7 +77,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 7. Maintain k8s resources.
-	if ops := k8sMaintOps(c, cs, resources, rebootArgs.RQEntries, rebootArgs.NewlyDrained, nf); len(ops) > 0 {
+	if ops := k8sMaintOps(c, cs, resources, deletionResources, rebootArgs.RQEntries, rebootArgs.NewlyDrained, nf); len(ops) > 0 {
 		return ops, cke.PhaseK8sMaintain
 	}
 
@@ -238,7 +238,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	return nil
 }
 
-func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition, rqEntries []*cke.RebootQueueEntry, newlyDrained []*cke.RebootQueueEntry, nf *NodeFilter) (ops []cke.Operator) {
+func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition, deletionResources map[string][]byte, rqEntries []*cke.RebootQueueEntry, newlyDrained []*cke.RebootQueueEntry, nf *NodeFilter) (ops []cke.Operator) {
 	ks := cs.Kubernetes
 	apiServer := nf.HealthyAPIServer()
 
@@ -246,7 +246,7 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 		return []cke.Operator{op.KubeWaitOp(apiServer)}
 	}
 
-	ops = append(ops, decideResourceOps(apiServer, ks, resources, ks.IsReady(c))...)
+	ops = append(ops, decideResourceOps(apiServer, ks, resources, deletionResources, ks.IsReady(c))...)
 
 	ops = append(ops, decideClusterDNSOps(apiServer, c, ks)...)
 
@@ -611,7 +611,7 @@ func decideEtcdServiceOps(apiServer *cke.Node, svc *corev1.Service) cke.Operator
 	return nil
 }
 
-func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, resources []cke.ResourceDefinition, isReady bool) (ops []cke.Operator) {
+func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, resources []cke.ResourceDefinition, deletionResources map[string][]byte, isReady bool) (ops []cke.Operator) {
 	for _, res := range static.Resources {
 		// To avoid thundering herd problem. Deployments need to be created only after enough nodes become ready.
 		if res.Kind == cke.KindDeployment && !isReady {
@@ -631,6 +631,12 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
 		}
 	}
+	for key, value := range deletionResources {
+		if ks.ResourcesExistence[key] {
+			ops = append(ops, op.ResourceDeleteOp(apiServer, key, value))
+		}
+	}
+
 	return ops
 }
 

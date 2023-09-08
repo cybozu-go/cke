@@ -24,26 +24,27 @@ type RecordChan <-chan *Record
 
 // etcd keys and prefixes
 const (
-	KeyCA                    = "ca/"
-	KeyConfigVersion         = "config-version"
-	KeyCluster               = "cluster"
-	KeyClusterRevision       = "cluster-revision"
-	KeyConstraints           = "constraints"
-	KeyLeader                = "leader/"
-	KeyRebootsDisabled       = "reboots/disabled"
-	KeyRebootsPrefix         = "reboots/data/"
-	KeyRebootsWriteIndex     = "reboots/write-index"
-	KeyRecords               = "records/"
-	KeyRecordID              = "records"
-	KeyResourcePrefix        = "resource/"
-	KeySabakanDisabled       = "sabakan/disabled"
-	KeySabakanQueryVariables = "sabakan/query-variables"
-	KeySabakanTemplate       = "sabakan/template"
-	KeySabakanURL            = "sabakan/url"
-	KeyServiceAccountCert    = "service-account/certificate"
-	KeyServiceAccountKey     = "service-account/key"
-	KeyStatus                = "status"
-	KeyVault                 = "vault"
+	KeyCA                     = "ca/"
+	KeyConfigVersion          = "config-version"
+	KeyCluster                = "cluster"
+	KeyClusterRevision        = "cluster-revision"
+	KeyConstraints            = "constraints"
+	KeyDeletionResourcePrefix = "deletion/"
+	KeyLeader                 = "leader/"
+	KeyRebootsDisabled        = "reboots/disabled"
+	KeyRebootsPrefix          = "reboots/data/"
+	KeyRebootsWriteIndex      = "reboots/write-index"
+	KeyRecords                = "records/"
+	KeyRecordID               = "records"
+	KeyResourcePrefix         = "resource/"
+	KeySabakanDisabled        = "sabakan/disabled"
+	KeySabakanQueryVariables  = "sabakan/query-variables"
+	KeySabakanTemplate        = "sabakan/template"
+	KeySabakanURL             = "sabakan/url"
+	KeyServiceAccountCert     = "service-account/certificate"
+	KeyServiceAccountKey      = "service-account/key"
+	KeyStatus                 = "status"
+	KeyVault                  = "vault"
 )
 
 const maxRecords = 1000
@@ -583,9 +584,42 @@ func (s Storage) SetResource(ctx context.Context, key, value string) error {
 	return err
 }
 
-// DeleteResource removes a user resource from etcd.
+// DeleteResource moves a user resource from the resource list to the deletion list.
 func (s Storage) DeleteResource(ctx context.Context, key string) error {
-	_, err := s.Delete(ctx, KeyResourcePrefix+key)
+	val, rev, err := s.GetResource(ctx, key)
+	if err != nil {
+		return err
+	}
+	_, err = s.Txn(ctx).
+		If(clientv3.Compare(clientv3.ModRevision(KeyResourcePrefix+key), "=", rev)).
+		Then(
+			clientv3.OpDelete(KeyResourcePrefix+key),
+			clientv3.OpPut(KeyDeletionResourcePrefix+key, string(val)),
+		).Commit()
+	return err
+}
+
+// GetAllDeletionResources gets all user-defined resources in the deletion list.
+func (s Storage) GetAllDeletionResources(ctx context.Context) (map[string][]byte, error) {
+	resp, err := s.Get(ctx, KeyDeletionResourcePrefix, clientv3.WithPrefix())
+	if err != nil {
+		return nil, err
+	}
+	if len(resp.Kvs) == 0 {
+		return nil, nil
+	}
+
+	rcs := make(map[string][]byte, len(resp.Kvs))
+	for _, kv := range resp.Kvs {
+		key := string(kv.Key[len(KeyResourcePrefix):])
+		rcs[key] = kv.Value
+
+	}
+	return rcs, nil
+}
+
+func (s Storage) DeleteDeletionResource(ctx context.Context, key string) error {
+	_, err := s.Delete(ctx, KeyDeletionResourcePrefix+key)
 	return err
 }
 
@@ -609,17 +643,14 @@ RETRY:
 		if value == string(cur.Definition) {
 			continue
 		}
-
 		ifOps = append(ifOps, clientv3.Compare(clientv3.ModRevision(KeyResourcePrefix+key), "=", cur.Revision))
 		thenOps = append(thenOps, clientv3.OpPut(KeyResourcePrefix+key, value))
-
-		if _, ok := currentResources[key]; ok {
-			delete(currentResources, key)
-		}
+		delete(currentResources, key)
 	}
-	for key := range currentResources {
+	for key, val := range currentResources {
 		ifOps = append(ifOps, clientv3util.KeyMissing(KeyResourcePrefix+key))
 		thenOps = append(thenOps, clientv3.OpDelete(KeyResourcePrefix+key))
+		thenOps = append(thenOps, clientv3.OpPut(KeyDeletionResourcePrefix+key, string(val.Definition)))
 	}
 
 	txnResp, err := s.Txn(ctx).
