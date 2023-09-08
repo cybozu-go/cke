@@ -491,6 +491,23 @@ func testStorageResource(t *testing.T) {
 		t.Error(`err != ErrNotFound,`, err)
 	}
 
+	input := map[string]string{
+		"ServiceAccount/foo/sa1": "test",      // will not be changed
+		"ConfigMap/foo/conf1":    "overwrite", // will be overwritten
+		"Pod/foo/pod2":           "new",       // pod2 will be added, pod1 will be deleted
+	}
+	err = storage.ReplaceResources(ctx, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resources, err = storage.GetAllResources(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cmp.Equal(input, resources) {
+		t.Error("unexpected resources", cmp.Diff(input, resources))
+	}
 }
 
 func testStorageSabakan(t *testing.T) {

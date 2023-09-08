@@ -589,6 +589,53 @@ func (s Storage) DeleteResource(ctx context.Context, key string) error {
 	return err
 }
 
+// ReplaceResources replaces all user resources with new ones.
+func (s Storage) ReplaceResources(ctx context.Context, newResources map[string]string) error {
+RETRY:
+	current, err := s.GetAllResources(ctx)
+	if err != nil {
+		return err
+	}
+	currentResources := make(map[string]ResourceDefinition)
+	for _, r := range current {
+		currentResources[r.Key] = r
+	}
+
+	var ifOps []clientv3.Cmp
+	var thenOps []clientv3.Op
+
+	for key, value := range newResources {
+		cur := currentResources[key]
+		if value == string(cur.Definition) {
+			continue
+		}
+
+		ifOps = append(ifOps, clientv3.Compare(clientv3.ModRevision(KeyResourcePrefix+key), "=", cur.Revision))
+		thenOps = append(thenOps, clientv3.OpPut(KeyResourcePrefix+key, value))
+
+		if _, ok := currentResources[key]; ok {
+			delete(currentResources, key)
+		}
+	}
+	for key := range currentResources {
+		ifOps = append(ifOps, clientv3util.KeyMissing(KeyResourcePrefix+key))
+		thenOps = append(thenOps, clientv3.OpDelete(KeyResourcePrefix+key))
+	}
+
+	txnResp, err := s.Txn(ctx).
+		If(ifOps...).
+		Then(thenOps...).
+		Commit()
+
+	if err != nil {
+		return err
+	}
+	if !txnResp.Succeeded {
+		goto RETRY
+	}
+	return nil
+}
+
 // IsSabakanDisabled returns true if sabakan integration is disabled.
 func (s Storage) IsSabakanDisabled(ctx context.Context) (bool, error) {
 	resp, err := s.Get(ctx, KeySabakanDisabled)

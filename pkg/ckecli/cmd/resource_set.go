@@ -13,22 +13,16 @@ import (
 	k8sYaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
-func updateResource(ctx context.Context, data []byte) error {
-	key, err := cke.ParseResource(data)
-	if err != nil {
-		return err
-	}
-
-	return storage.SetResource(ctx, key, string(data))
-}
-
 var resourceSetCmd = &cobra.Command{
 	Use:   "set FILE",
 	Short: "register user-defined resources.",
 	Long: `Register user-defined resources.
 
 FILE should contain multiple Kubernetes resources in YAML or JSON format.
-If FILE is "-", then data is read from stdin.`,
+If FILE is "-", then data is read from stdin.
+
+If a resource with the same key as a registered resource is specified, the resource will be overwritten.
+If a resource exists in a registered resource but not in the specified resource, the resource will be deleted.`,
 
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -43,21 +37,23 @@ If FILE is "-", then data is read from stdin.`,
 		}
 
 		well.Go(func(ctx context.Context) error {
+			newResources := make(map[string]string)
 			y := k8sYaml.NewYAMLReader(bufio.NewReader(r))
 			for {
 				data, err := y.Read()
 				if err == io.EOF {
-					return nil
+					break
 				}
 				if err != nil {
 					return err
 				}
-
-				err = updateResource(ctx, data)
+				key, err := cke.ParseResource(data)
 				if err != nil {
 					return err
 				}
+				newResources[key] = string(data)
 			}
+			return storage.ReplaceResources(ctx, newResources)
 		})
 		well.Stop()
 		return well.Wait()
