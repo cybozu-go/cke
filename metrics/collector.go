@@ -150,7 +150,7 @@ func (c nodeMetricsCollector) Collect(ch chan<- prometheus.Metric) {
 
 	cluster, err := c.storage.GetCluster(ctx)
 	if err != nil {
-		log.Error("failed to get reboots entries", map[string]interface{}{
+		log.Error("failed to get cluster", map[string]interface{}{
 			log.FnError: err,
 		})
 		return
