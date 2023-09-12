@@ -126,7 +126,8 @@ func main() {
 	// API server
 	mux := http.NewServeMux()
 	// Metrics
-	collector := metrics.NewCollector(etcd)
+	storage := &cke.Storage{Client: etcd}
+	collector := metrics.NewCollector(storage)
 	metricsHandler := metrics.GetHandler(collector)
 	mux.Handle("/metrics", metricsHandler)
 	// REST API

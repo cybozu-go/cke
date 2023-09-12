@@ -314,9 +314,6 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	if err != nil {
 		return err
 	}
-	metrics.UpdateRebootQueueEntries(len(rqEntries))
-	itemCounts := cke.CountRebootQueueEntries(rqEntries)
-	metrics.UpdateRebootQueueItems(itemCounts)
 	rqEntries = cke.DedupRebootQueueEntries(rqEntries)
 
 	if len(rqEntries) > 0 {

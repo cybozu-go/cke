@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/metrics"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -523,64 +522,6 @@ func (c rebootDequeueCommand) Command() cke.Command {
 		Target: strings.Join(ipAddresses, ","),
 	}
 }
-
-//
-
-type rebootRecalcMetricsOp struct {
-	finished bool
-}
-
-// RebootRecalcMetricsOp returns an Operator to racalc metrics.
-func RebootRecalcMetricsOp() cke.Operator {
-	return &rebootRecalcMetricsOp{}
-}
-
-func (o *rebootRecalcMetricsOp) Name() string {
-	return "reboot-recalc-metrics"
-}
-
-func (o *rebootRecalcMetricsOp) NextCommand() cke.Commander {
-	if o.finished {
-		return nil
-	}
-
-	o.finished = true
-	return rebootRecalcMetricsCommand{}
-}
-
-func (o *rebootRecalcMetricsOp) Targets() []string {
-	return []string{}
-}
-
-type rebootRecalcMetricsCommand struct {
-}
-
-func (c rebootRecalcMetricsCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	rqEntries, err := inf.Storage().GetRebootsEntries(ctx)
-	if err != nil {
-		return err
-	}
-	cluster, err := inf.Storage().GetCluster(ctx)
-	if err != nil {
-		return err
-	}
-
-	metrics.UpdateRebootQueueEntries(len(rqEntries))
-	itemCounts := cke.CountRebootQueueEntries(rqEntries)
-	metrics.UpdateRebootQueueItems(itemCounts)
-	nodeStatus := cke.BuildNodeRebootStatus(cluster.Nodes, rqEntries)
-	metrics.UpdateNodeRebootStatus(nodeStatus)
-
-	return nil
-}
-
-func (c rebootRecalcMetricsCommand) Command() cke.Command {
-	return cke.Command{
-		Name: "rebootRecalcMetricsCommand",
-	}
-}
-
-//
 
 func listProtectedNamespaces(ctx context.Context, cs *kubernetes.Clientset, ls *metav1.LabelSelector) (map[string]bool, error) {
 	selector, err := metav1.LabelSelectorAsSelector(ls)

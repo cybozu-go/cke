@@ -719,7 +719,6 @@ func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOp
 	}
 	if len(ops) > 0 {
 		phaseReboot = true
-		ops = append(ops, op.RebootRecalcMetricsOp())
 	}
 
 	return ops, phaseReboot
