@@ -76,6 +76,12 @@ func testMachineToNode(t *testing.T) {
 	if res1.Labels["node-role.kubernetes.io/control-plane"] != "true" {
 		t.Error(`res1.Lables["node-role.kubernetes.io/control-plane"] != "true", actual:`, res1.Labels)
 	}
+	if res1.Labels[domain+"/register-month"] != testPast250.Format("2006-01") {
+		t.Error(`res1.Labels["cke.cybozu.com/register-month"] != machine.Spec.RegisterDate.Format("2006-01"), actual:`, res1.Labels)
+	}
+	if res1.Labels[domain+"/retire-month"] != testBaseTS.Format("2006-01") {
+		t.Error(`res1.Labels["cke.cybozu.com/register-month"] != machine.Spec.RetireDate.Format("2006-01"), actual:`, res1.Labels)
+	}
 	if !containsTaint(res1.Taints, corev1.Taint{Key: "foo", Effect: corev1.TaintEffectNoSchedule}) {
 		t.Error(`res1.Taints do not have corev1.Taint{Key"foo", Effect: corev1.TaintEffectNoSchedule}, actual:`, res1.Taints)
 	}

@@ -52,6 +52,8 @@ func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 	n.Labels["cke.cybozu.com/rack"] = strconv.Itoa(m.Spec.Rack)
 	n.Labels["cke.cybozu.com/index-in-rack"] = strconv.Itoa(m.Spec.IndexInRack)
 	n.Labels["cke.cybozu.com/role"] = m.Spec.Role
+	n.Labels["cke.cybozu.com/retire-month"] = m.Spec.RetireDate.Format("2006-01")
+	n.Labels["cke.cybozu.com/register-month"] = m.Spec.RegisterDate.Format("2006-01")
 	n.Labels["node-role.kubernetes.io/"+m.Spec.Role] = "true"
 	if n.ControlPlane {
 		n.Labels["node-role.kubernetes.io/master"] = "true"

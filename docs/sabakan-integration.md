@@ -322,14 +322,16 @@ Other Machine fields are also translated to labels as follows.
 `topology.kubernetes.io/zone` and `failure-domain.beta.kubernetes.io/zone`(deprecated) are well-known labels.
 `node-role.kubernetes.io/<role>` are used by `kubectl` to display the node's role.
 
-| Field              | Label key                                | Value                                               |
-| ------------------ | ---------------------------------------- | --------------------------------------------------- |
-| `spec.rack`        | `cke.cybozu.com/rack`                    | `spec.rack` converted to string.                    |
-| `spec.rack`        | `topology.kubernetes.io/zone`            | `spec.rack` converted to string with prefix `rack`. |
-| `spec.rack`        | `failure-domain.beta.kubernetes.io/zone` | `spec.rack` converted to string with prefix `rack`. |
-| `spec.indexInRack` | `cke.cybozu.com/index-in-rack`           | `spec.indexInRack` converted to string.             |
-| `spec.role`        | `cke.cybozu.com/role`                    | The same as `spec.role`.                            |
-| `spec.role`        | `node-role.kubernetes.io/<role>`         | `"true"`                                            |
+| Field               | Label key                                | Value                                               |
+|---------------------|------------------------------------------|-----------------------------------------------------|
+| `spec.rack`         | `cke.cybozu.com/rack`                    | `spec.rack` converted to string.                    |
+| `spec.rack`         | `topology.kubernetes.io/zone`            | `spec.rack` converted to string with prefix `rack`. |
+| `spec.rack`         | `failure-domain.beta.kubernetes.io/zone` | `spec.rack` converted to string with prefix `rack`. |
+| `spec.indexInRack`  | `cke.cybozu.com/index-in-rack`           | `spec.indexInRack` converted to string.             |
+| `spec.role`         | `cke.cybozu.com/role`                    | The same as `spec.role`.                            |
+| `spec.role`         | `node-role.kubernetes.io/<role>`         | `"true"`                                            |
+| `spec.registerDate` | `cke.cybozu.com/register-month`          | `spec.registerDate` in `yyyy-MM` format.            |
+| `spec.retireDate`   | `cke.cybozu.com/retire-month`            | `spec.retireDate` in `yyyy-MM` format.              |
 
 In addition `node-role.kubernetes.io/master` is set to `"true"` in the control plane node.
 
