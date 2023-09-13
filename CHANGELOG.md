@@ -5,6 +5,17 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.26.2]
+
+### Added
+
+- Add `register-date` and `retire-date` labels [#663](https://github.com/cybozu-go/cke/pull/663)
+
+### Fixed
+
+- Fix `cke_node_reboot_status` metrics [#660](https://github.com/cybozu-go/cke/pull/660)
+- Fix blocking by kubelet-restart op [#661](https://github.com/cybozu-go/cke/pull/661)
+
 ## [1.26.1]
 
 ### Added
@@ -56,7 +67,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.26.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.26.2...HEAD
+[1.26.2]: https://github.com/cybozu-go/cke/compare/v1.26.1...v1.26.2
 [1.26.1]: https://github.com/cybozu-go/cke/compare/v1.26.0...v1.26.1
 [1.26.0]: https://github.com/cybozu-go/cke/compare/v1.25.8...v1.26.0
 [1.26.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.25.8...v1.26.0-rc.1
