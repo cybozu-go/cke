@@ -406,6 +406,15 @@ func testRebootOperations() {
 		Expect(re).Should(HaveLen(1))
 		Expect(re[0].Status).Should(Equal(cke.RebootStatusQueued))
 		Expect(re[0].DrainBackOffExpire).ShouldNot(Equal(time.Time{}))
+		Expect(re[0].DrainBackOffCount).Should(Not(BeZero()))
+
+		By("Checking reset-backoff command resets drain backoff")
+		ckecliSafe("reboot-queue", "reset-backoff")
+		re, err = getRebootEntries()
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(re).Should(HaveLen(1))
+		Expect(re[0].DrainBackOffExpire).Should(Equal(time.Time{}))
+		Expect(re[0].DrainBackOffCount).Should(BeZero())
 
 		By("Waiting for reboot completion")
 		waitRebootCompletion(cluster)

@@ -47,6 +47,7 @@ $ ckecli [--config FILE] <subcommand> args...
   - [`ckecli reboot-queue list`](#ckecli-reboot-queue-list)
   - [`ckecli reboot-queue cancel INDEX`](#ckecli-reboot-queue-cancel-index)
   - [`ckecli reboot-queue cancel-all`](#ckecli-reboot-queue-cancel-all)
+  - [`ckecli reboot-queue reset-backoff`](#ckecli-reboot-queue-reset-backoff)
 - [`ckecli sabakan`](#ckecli-sabakan)
   - [`ckecli sabakan enable|disable`](#ckecli-sabakan-enabledisable)
   - [`ckecli sabakan is-enabled`](#ckecli-sabakan-is-enabled)
@@ -298,6 +299,11 @@ Cancel the specified reboot queue entry.
 ### `ckecli reboot-queue cancel-all`
 
 Cancel all the reboot queue entries.
+
+### `ckecli reboot-queue reset-backoff`
+
+Reset `drain_backoff_count` and `drain_backoff_expire` of the entries in reboot queue.
+Resetting these values makes CKE try to reboot nodes again immediately.
 
 ## `ckecli sabakan`
 
