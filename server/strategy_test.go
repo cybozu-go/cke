@@ -20,7 +20,7 @@ import (
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -293,7 +293,7 @@ func (d testData) withScheduler() testData {
 
 		leaderElect := true
 		st.Config = &schedulerv1.KubeSchedulerConfiguration{}
-		st.Config.Parallelism = pointer.Int32(999)
+		st.Config.Parallelism = ptr.To(int32(999))
 		st.Config.ClientConnection.Kubeconfig = op.SchedulerKubeConfigPath
 		st.Config.LeaderElection.LeaderElect = &leaderElect
 	}
