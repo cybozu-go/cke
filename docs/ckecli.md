@@ -49,6 +49,15 @@ $ ckecli [--config FILE] <subcommand> args...
   - [`ckecli reboot-queue cancel INDEX`](#ckecli-reboot-queue-cancel-index)
   - [`ckecli reboot-queue cancel-all`](#ckecli-reboot-queue-cancel-all)
   - [`ckecli reboot-queue reset-backoff`](#ckecli-reboot-queue-reset-backoff)
+- [`ckecli repair-queue`](#ckecli-repair-queue)
+  - [`ckecli repair-queue enable|disable`](#ckecli-repair-queue-enabledisable)
+  - [`ckecli repair-queue is-enabled`](#ckecli-repair-queue-is-enabled)
+  - [`ckecli repair-queue add OPERATION MACHINE_TYPE ADDRESS`](#ckecli-repair-queue-add-operation-machine_type-address)
+  - [`ckecli repair-queue list`](#ckecli-repair-queue-list)
+  - [`ckecli repair-queue delete INDEX`](#ckecli-repair-queue-delete-index)
+  - [`ckecli repair-queue delete-finished`](#ckecli-repair-queue-delete-finished)
+  - [`ckecli repair-queue delete-unfinished`](#ckecli-repair-queue-delete-unfinished)
+  - [`ckecli repair-queue reset-backoff`](#ckecli-repair-queue-reset-backoff)
 - [`ckecli sabakan`](#ckecli-sabakan)
   - [`ckecli sabakan enable|disable`](#ckecli-sabakan-enabledisable)
   - [`ckecli sabakan is-enabled`](#ckecli-sabakan-is-enabled)
@@ -310,6 +319,53 @@ Cancel all the reboot queue entries.
 
 Reset `drain_backoff_count` and `drain_backoff_expire` of the entries in reboot queue.
 Resetting these values makes CKE try to reboot nodes again immediately.
+
+## `ckecli repair-queue`
+
+Control a queue of repair requests.
+
+### `ckecli repair-queue enable|disable`
+
+Enable/Disable processing repair queue entries.
+
+### `ckecli repair-queue is-enabled`
+
+Show repair queue is enabled or disabled.
+This displays `true` or `false`.
+
+### `ckecli repair-queue add OPERATION MACHINE_TYPE ADDRESS`
+
+Append a repair request to the repair queue.
+The repair target is a machine with an IP address `ADDRESS` and a machine type `MACHINE_TYPE`.
+The machine should be processed with an operation `OPERATION`.
+
+### `ckecli repair-queue list`
+
+List the entries in the repair queue.
+
+### `ckecli repair-queue delete INDEX`
+
+Delete the specified repair queue entry.
+This has two meanings: this clears up an old entry if the specified entry has finished and cancels an ongoing entry otherwise.
+
+Unlike the reboot queue, repair queue entries remain in the queue even after they finish.
+
+### `ckecli repair-queue delete-finished`
+
+Delete all finished repair queue entries.
+Entries in `succeeded` or `failed` status are deleted.
+This displays the index numbers of deleted entries, one per line.
+
+### `ckecli repair-queue delete-unfinished`
+
+Delete all unfinished repair queue entries.
+Entries not in `succeeded` or `failed` status are deleted.
+This displays the index numbers of deleted entries, one per line.
+
+### `ckecli repair-queue reset-backoff`
+
+Reset `drain_backoff_count` and `drain_backoff_expire` of the entries in repair queue.
+Resetting these values makes CKE try to drain machines again immediately.
 
 ## `ckecli sabakan`
 

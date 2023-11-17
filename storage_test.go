@@ -813,6 +813,148 @@ func testStorageReboot(t *testing.T) {
 	}
 }
 
+func testStorageRepair(t *testing.T) {
+	t.Parallel()
+
+	client := newEtcdClient(t)
+	defer client.Close()
+	storage := Storage{client}
+	ctx := context.Background()
+
+	s, err := concurrency.NewSession(client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	e := concurrency.NewElection(s, KeyLeader)
+	err = e.Campaign(ctx, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	leaderKey := e.Key()
+
+	// initial state = there are no entries && repair-queue is enabled
+
+	// index 0 does not exist
+	_, err = storage.GetRepairsEntry(ctx, 0)
+	if err != ErrNotFound {
+		t.Error("unexpected error:", err)
+	}
+
+	// get all - no entries
+	ents, err := storage.GetRepairsEntries(ctx)
+	if err != nil {
+		t.Fatal("GetRepairsEntries failed:", err)
+	}
+	if len(ents) != 0 {
+		t.Error("Unknown entries:", ents)
+	}
+
+	// index 0 does not exist
+	err = storage.DeleteRepairsEntry(ctx, leaderKey, 0)
+	if err != nil {
+		t.Fatal("DeleteRepairsEntry failed:", err)
+	}
+
+	// first write - index is 0
+	entry := NewRepairQueueEntry("operation1", "machine1", "1.2.3.4")
+	err = storage.RegisterRepairsEntry(ctx, entry)
+	if err != nil {
+		t.Fatal("RegisterRepairsEntry failed:", err)
+	}
+
+	// second write - index is 1
+	entry2 := NewRepairQueueEntry("operation2", "machine2", "12.34.56.78")
+	err = storage.RegisterRepairsEntry(ctx, entry2)
+	if err != nil {
+		t.Fatal("RegisterRepairsEntry failed:", err)
+	}
+
+	// get index 1 - the second written entry is return
+	ent, err := storage.GetRepairsEntry(ctx, 1)
+	if err != nil {
+		t.Fatal("GetRepairsEntry failed:", err)
+	}
+	if !cmp.Equal(ent, entry2) {
+		t.Error("GetRepairsEntry returned unexpected result:", cmp.Diff(ent, entry2))
+	}
+
+	// get all - entries are returned in written order
+	entries := []*RepairQueueEntry{entry, entry2}
+	ents, err = storage.GetRepairsEntries(ctx)
+	if err != nil {
+		t.Fatal("GetRepairsEntries failed:", err)
+	}
+	if !cmp.Equal(ents, entries) {
+		t.Error("GetRepairsEntries returned unexpected result:", cmp.Diff(ents, entries))
+	}
+
+	// update index 0 and get index 0 - updated entry is returned
+	entry.Status = RepairStatusProcessing
+	err = storage.UpdateRepairsEntry(ctx, entry)
+	if err != nil {
+		t.Fatal("UpdateRepairsEntry failed:", err)
+	}
+	ent, err = storage.GetRepairsEntry(ctx, 0)
+	if err != nil {
+		t.Fatal("GetRepairsEntry failed:", err)
+	}
+	if !cmp.Equal(ent, entry) {
+		t.Error("GetRepairsEntry returned unexpected result:", cmp.Diff(ent, entry))
+	}
+
+	// delete index 0 - the entry will not be got nor updated
+	err = storage.DeleteRepairsEntry(ctx, leaderKey, 0)
+	if err != nil {
+		t.Fatal("DeleteRepairsEntry failed:", err)
+	}
+	_, err = storage.GetRepairsEntry(ctx, 0)
+	if err != ErrNotFound {
+		t.Error("unexpected error:", err)
+	}
+	err = storage.UpdateRepairsEntry(ctx, entry)
+	if err == nil {
+		t.Error("UpdateRepairsEntry succeeded for deleted entry")
+	}
+
+	// repair-queue is enabled by default
+	disabled, err := storage.IsRepairQueueDisabled(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disabled {
+		t.Error("repair queue should not be disabled by default")
+	}
+
+	// disable repair-queue and get its state
+	err = storage.EnableRepairQueue(ctx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disabled, err = storage.IsRepairQueueDisabled(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !disabled {
+		t.Error("repair queue could not be disabled")
+	}
+
+	// re-enable repair-queue and get its state
+	err = storage.EnableRepairQueue(ctx, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disabled, err = storage.IsRepairQueueDisabled(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disabled {
+		t.Error("repair queue could not be re-enabled")
+	}
+
+}
+
 func testStatus(t *testing.T) {
 	t.Parallel()
 
@@ -864,5 +1006,6 @@ func TestStorage(t *testing.T) {
 	t.Run("Resource", testStorageResource)
 	t.Run("Sabakan", testStorageSabakan)
 	t.Run("Reboot", testStorageReboot)
+	t.Run("Repair", testStorageRepair)
 	t.Run("Status", testStatus)
 }
