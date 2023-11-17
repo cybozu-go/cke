@@ -11,7 +11,7 @@ jobs:
     name: Run sonobuoy
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
@@ -42,7 +42,7 @@ jobs:
     needs: sonobuoy
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
@@ -68,7 +68,7 @@ jobs:
       image: quay.io/cybozu/golang:1.20-jammy
     needs: release-cke-image
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download sonobuoy test
         uses: actions/download-artifact@v3
         with:
