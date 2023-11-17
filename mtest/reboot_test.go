@@ -13,7 +13,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func getRebootEntries() ([]*cke.RebootQueueEntry, error) {
@@ -442,7 +442,7 @@ func testRebootOperations() {
 	It("checks parallel reboot behavior", func() {
 		// Note: this test is incomplete if rq entries are processed in random order
 		By("Modifying cluster configuration for this test")
-		cluster.Reboot.MaxConcurrentReboots = pointer.Int(2)
+		cluster.Reboot.MaxConcurrentReboots = ptr.To(2)
 		originalBootCheckCommand := cluster.Reboot.BootCheckCommand
 		cluster.Reboot.BootCheckCommand = []string{"bash", "-c", "if [ $0 = 10.0.0.104 ]; then echo false; else echo true; fi"}
 		cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
@@ -502,7 +502,7 @@ func testRebootOperations() {
 	It("checks API server reboot behavior", func() {
 		// Note: this test is incomplete if rq entries are processed in random order
 		By("Modifying cluster configuration for this test")
-		cluster.Reboot.MaxConcurrentReboots = pointer.Int(2)
+		cluster.Reboot.MaxConcurrentReboots = ptr.To(2)
 		originalRebootCommand := cluster.Reboot.RebootCommand
 		cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
 			// avoid eviction failure due to cluster-dns in kube-system NS

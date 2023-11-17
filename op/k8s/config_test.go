@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestGenerateSchedulerConfiguration(t *testing.T) {
@@ -29,9 +29,9 @@ func TestGenerateSchedulerConfiguration(t *testing.T) {
 	}
 
 	expected := &schedulerv1.KubeSchedulerConfiguration{}
-	expected.LeaderElection.LeaderElect = pointer.Bool(true)
+	expected.LeaderElection.LeaderElect = ptr.To(true)
 	expected.ClientConnection.Kubeconfig = "/etc/kubernetes/scheduler/kubeconfig"
-	expected.PodMaxBackoffSeconds = pointer.Int64(100)
+	expected.PodMaxBackoffSeconds = ptr.To(int64(100))
 
 	conf := GenerateSchedulerConfiguration(input)
 	if !cmp.Equal(conf, expected) {
@@ -51,7 +51,7 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 		TLSPrivateKeyFile:     "/etc/kubernetes/pki/kubelet.key",
 		Authentication: kubeletv1beta1.KubeletAuthentication{
 			X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: "/etc/kubernetes/pki/ca.crt"},
-			Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: pointer.Bool(true)},
+			Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: ptr.To(true)},
 		},
 		Authorization: kubeletv1beta1.KubeletAuthorization{
 			Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook,
@@ -60,7 +60,7 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 	}
 
 	expected := baseExpected.DeepCopy()
-	expected.FailSwapOn = pointer.Bool(false)
+	expected.FailSwapOn = ptr.To(false)
 	expected.ContainerLogMaxSize = "100Mi"
 	expected.CgroupDriver = "systemd"
 	expected.RegisterWithTaints = []corev1.Taint{

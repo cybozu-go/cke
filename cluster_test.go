@@ -11,7 +11,7 @@ import (
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 )
 
@@ -154,7 +154,7 @@ rules:
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
 	}
 	kubeSchedulerConfig, err := c.Options.Scheduler.MergeConfig(&schedulerv1.KubeSchedulerConfiguration{
-		Parallelism: pointer.Int32(999),
+		Parallelism: ptr.To(int32(999)),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -858,63 +858,63 @@ func testClusterValidateReboot(t *testing.T) {
 		{
 			name: "zero eviction_timeout_seconds",
 			reboot: Reboot{
-				EvictionTimeoutSeconds: pointer.Int(0),
+				EvictionTimeoutSeconds: ptr.To(0),
 			},
 			wantErr: true,
 		},
 		{
 			name: "positive eviction_timeout_seconds",
 			reboot: Reboot{
-				EvictionTimeoutSeconds: pointer.Int(1),
+				EvictionTimeoutSeconds: ptr.To(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative eviction_timeout_seconds",
 			reboot: Reboot{
-				EvictionTimeoutSeconds: pointer.Int(-1),
+				EvictionTimeoutSeconds: ptr.To(-1),
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero command_timeout_seconds",
 			reboot: Reboot{
-				CommandTimeoutSeconds: pointer.Int(0),
+				CommandTimeoutSeconds: ptr.To(0),
 			},
 			wantErr: false,
 		},
 		{
 			name: "positive command_timeout_seconds",
 			reboot: Reboot{
-				CommandTimeoutSeconds: pointer.Int(1),
+				CommandTimeoutSeconds: ptr.To(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative command_timeout_seconds",
 			reboot: Reboot{
-				CommandTimeoutSeconds: pointer.Int(-1),
+				CommandTimeoutSeconds: ptr.To(-1),
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero max_concurrent_reboots",
 			reboot: Reboot{
-				MaxConcurrentReboots: pointer.Int(0),
+				MaxConcurrentReboots: ptr.To(0),
 			},
 			wantErr: true,
 		},
 		{
 			name: "positive max_concurrent_reboots",
 			reboot: Reboot{
-				MaxConcurrentReboots: pointer.Int(1),
+				MaxConcurrentReboots: ptr.To(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative max_concurrent_reboots",
 			reboot: Reboot{
-				MaxConcurrentReboots: pointer.Int(-1),
+				MaxConcurrentReboots: ptr.To(-1),
 			},
 			wantErr: true,
 		},

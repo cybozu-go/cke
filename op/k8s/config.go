@@ -15,7 +15,7 @@ import (
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 var (
@@ -74,7 +74,7 @@ func GenerateSchedulerConfiguration(params cke.SchedulerParams) *schedulerv1.Kub
 
 	// forced values
 	c.ClientConnection.Kubeconfig = op.SchedulerKubeConfigPath
-	c.LeaderElection.LeaderElect = pointer.Bool(true)
+	c.LeaderElection.LeaderElect = ptr.To(true)
 
 	return c
 }
@@ -158,7 +158,7 @@ func GenerateKubeletConfiguration(params cke.KubeletParams, nodeAddress string, 
 	c.TLSPrivateKeyFile = tlsKeyPath
 	c.Authentication = kubeletv1beta1.KubeletAuthentication{
 		X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: caPath},
-		Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: pointer.Bool(true)},
+		Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: ptr.To(true)},
 	}
 	c.Authorization = kubeletv1beta1.KubeletAuthorization{Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook}
 	c.ClusterDNS = []string{nodeAddress}
