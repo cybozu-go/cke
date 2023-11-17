@@ -2,6 +2,10 @@
 
 cke-tools related changes.
 
+## 1.27.0 - 2023-11-17
+
+- Update dependencies [#671](https://github.com/cybozu-go/cke/pull/671)
+
 ## 1.26.0 - 2023-07-10
 
 - Update CNI plugins to 1.3.0[#644](https://github.com/cybozu-go/cke/pull/644)
