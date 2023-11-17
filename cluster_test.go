@@ -2,6 +2,7 @@ package cke
 
 import (
 	"os"
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -130,6 +131,90 @@ func testClusterYAML(t *testing.T) {
 	}
 	if c.Reboot.ProtectedNamespaces.MatchLabels["app"] != "sample" {
 		t.Error(`c.Reboot.ProtectedNamespaces.MatchLabels["app"] != "sample"`)
+	}
+	if len(c.Repair.RepairProcedures) != 1 {
+		t.Fatal(`len(c.Repair.RepairProcedures) != 1`)
+	}
+	if !slices.Equal(c.Repair.RepairProcedures[0].MachineTypes, []string{"Cray-1", "Cray-2"}) {
+		t.Error(`c.Repair.RepairProcedures[0].MachineTypes != {"Cray-1", "Cray-2"}`)
+	}
+	if len(c.Repair.RepairProcedures[0].RepairOperations) != 1 {
+		t.Fatal(`len(c.Repair.RepairProcedures[0].RepairOperations) != 1`)
+	}
+	if c.Repair.RepairProcedures[0].RepairOperations[0].Operation != "unreachable" {
+		t.Error(`c.Repair.RepairProcedures[0].RepairOperations[0].OperationName != "unreachable"`)
+	}
+	if len(c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps) != 2 {
+		t.Fatal(`len(c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps) != 2`)
+	}
+	if !slices.Equal(c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].RepairCommand, []string{"reset", "remotely"}) {
+		t.Error(`c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].RepairCommand != {"reset", "remotely"}`)
+	}
+	if c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandTimeoutSeconds == nil {
+		t.Fatal(`c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandTimeoutSeconds == nil`)
+	}
+	if *c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandTimeoutSeconds != 10 {
+		t.Error(`*c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandTimeoutSeconds != 10`)
+	}
+	if c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandRetries == nil {
+		t.Fatal(`c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandRetries == nil`)
+	}
+	if *c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandRetries != 1 {
+		t.Error(`*c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandRetries != 1`)
+	}
+	if c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandInterval == nil {
+		t.Fatal(`c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandInterval == nil`)
+	}
+	if *c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandInterval != 5 {
+		t.Error(`*c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandInterval != 5`)
+	}
+	if !c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain {
+		t.Fatal(`!c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain`)
+	}
+	if c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds == nil {
+		t.Fatal(`c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds == nil`)
+	}
+	if *c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds != 60 {
+		t.Error(`*c.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds != 60`)
+	}
+	if !slices.Equal(c.Repair.RepairProcedures[0].RepairOperations[0].HealthCheckCommand, []string{"knock"}) {
+		t.Error(`c.Repair.RepairProcedures[0].RepairOperations[0].HealthCheckCommand != {"knock"}`)
+	}
+	if c.Repair.RepairProcedures[0].RepairOperations[0].CommandTimeoutSeconds == nil {
+		t.Fatal(`c.Repair.RepairProcedures[0].RepairOperations[0].CommandTimeoutSeconds == nil`)
+	}
+	if *c.Repair.RepairProcedures[0].RepairOperations[0].CommandTimeoutSeconds != 30 {
+		t.Error(`*c.Repair.RepairProcedures[0].RepairOperations[0].CommandTimeoutSeconds != 30`)
+	}
+	if c.Repair.MaxConcurrentRepairs == nil {
+		t.Fatal(`c.Repair.MaxConcurrentRepairs == nil`)
+	}
+	if *c.Repair.MaxConcurrentRepairs != 2 {
+		t.Error(`*c.Repair.MaxConcurrentRepairs != 2`)
+	}
+	if c.Repair.ProtectedNamespaces == nil {
+		t.Fatal(`c.Repair.ProtectedNamespaces == nil`)
+	}
+	if c.Repair.ProtectedNamespaces.MatchLabels["app"] != "protected" {
+		t.Error(`c.Repair.ProtectedNamespaces.MatchLabels["app"] != "protected"`)
+	}
+	if c.Repair.EvictRetries == nil {
+		t.Fatal(`c.Repair.EvictRetries == nil`)
+	}
+	if *c.Repair.EvictRetries != 3 {
+		t.Error(`*c.Repair.EvictRetries != 3`)
+	}
+	if c.Repair.EvictInterval == nil {
+		t.Fatal(`c.Repair.EvictInterval == nil`)
+	}
+	if *c.Repair.EvictInterval != 5 {
+		t.Error(`*c.Repair.EvictInterval != 5`)
+	}
+	if c.Repair.EvictionTimeoutSeconds == nil {
+		t.Fatal(`c.Repair.EvictionTimeoutSeconds == nil`)
+	}
+	if *c.Repair.EvictionTimeoutSeconds != 120 {
+		t.Error(`*c.Repair.EvictionTimeoutSeconds != 120`)
 	}
 	if c.Options.Etcd.VolumeName != "myetcd" {
 		t.Error(`c.Options.Etcd.VolumeName != "myetcd"`)

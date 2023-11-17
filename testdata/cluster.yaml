@@ -23,6 +23,29 @@ reboot:
   protected_namespaces:
     matchLabels:
       app: sample
+repair:
+  repair_procedures:
+    - machine_types: ["Cray-1", "Cray-2"]
+      repair_operations:
+        - operation: "unreachable"
+          repair_steps:
+            - repair_command: ["reset", "remotely"]
+              command_timeout_seconds: 10
+              command_retries: 1
+              command_interval: 5
+              need_drain: true
+              watch_seconds: 60
+            - repair_command: ["apply", "hammer"]
+              watch_seconds: 10
+          health_check_command: ["knock"]
+          command_timeout_seconds: 30
+  max_concurrent_repairs: 2
+  protected_namespaces:
+    matchLabels:
+      app: protected
+  evict_retries: 3
+  evict_interval: 5
+  eviction_timeout_seconds: 120
 options:
   etcd:
     volume_name: myetcd

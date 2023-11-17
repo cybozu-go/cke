@@ -285,6 +285,41 @@ type Reboot struct {
 const DefaultRebootEvictionTimeoutSeconds = 600
 const DefaultMaxConcurrentReboots = 1
 
+type Repair struct {
+	RepairProcedures       []RepairProcedure     `json:"repair_procedures"`
+	MaxConcurrentRepairs   *int                  `json:"max_concurrent_repairs,omitempty"`
+	ProtectedNamespaces    *metav1.LabelSelector `json:"protected_namespaces,omitempty"`
+	EvictRetries           *int                  `json:"evict_retries,omitempty"`
+	EvictInterval          *int                  `json:"evict_interval,omitempty"`
+	EvictionTimeoutSeconds *int                  `json:"eviction_timeout_seconds,omitempty"`
+}
+
+type RepairProcedure struct {
+	MachineTypes     []string          `json:"machine_types"`
+	RepairOperations []RepairOperation `json:"repair_operations"`
+}
+
+type RepairOperation struct {
+	Operation             string       `json:"operation"`
+	RepairSteps           []RepairStep `json:"repair_steps"`
+	HealthCheckCommand    []string     `json:"health_check_command"`
+	CommandTimeoutSeconds *int         `json:"command_timeout_seconds,omitempty"`
+}
+
+type RepairStep struct {
+	RepairCommand         []string `json:"repair_command"`
+	CommandTimeoutSeconds *int     `json:"command_timeout_seconds,omitempty"`
+	CommandRetries        *int     `json:"command_retries,omitempty"`
+	CommandInterval       *int     `json:"command_interval,omitempty"`
+	NeedDrain             bool     `json:"need_drain,omitempty"`
+	WatchSeconds          *int     `json:"watch_seconds,omitempty"`
+}
+
+const DefaultMaxConcurrentRepairs = 1
+const DefaultRepairEvictionTimeoutSeconds = 600
+const DefaultRepairHealthCheckCommandTimeoutSeconds = 30
+const DefaultRepairCommandTimeoutSeconds = 30
+
 // Options is a set of optional parameters for k8s components.
 type Options struct {
 	Etcd              EtcdParams      `json:"etcd"`
@@ -307,6 +342,7 @@ type Cluster struct {
 	DNSServers    []string `json:"dns_servers"`
 	DNSService    string   `json:"dns_service"`
 	Reboot        Reboot   `json:"reboot"`
+	Repair        Repair   `json:"repair"`
 	Options       Options  `json:"options"`
 }
 
