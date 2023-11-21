@@ -15,7 +15,7 @@ const (
 	ToolsImage           = Image("quay.io/cybozu/cke-tools:1.26.0")
 	PauseImage           = Image("quay.io/cybozu/pause:3.9.0.1")
 	CoreDNSImage         = Image("quay.io/cybozu/coredns:1.10.1.1")
-	UnboundImage         = Image("quay.io/cybozu/unbound:1.17.1.4")
+	UnboundImage         = Image("ghcr.io/cybozu/unbound:1.18.0.2")
 	UnboundExporterImage = Image("quay.io/cybozu/unbound_exporter:0.4.1.5")
 )
 

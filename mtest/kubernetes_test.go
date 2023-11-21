@@ -149,6 +149,20 @@ func testKubernetes() {
 			}
 			return nil
 		}).Should(Succeed())
+
+		Eventually(func() error {
+			stdout, stderr, err := kubectl("get", "service", "-n="+namespace, "httpd", "-o", "jsonpath='{.spec.clusterIP}'")
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+			ip := string(stdout)
+
+			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "getent", "hosts", ip)
+			if err != nil {
+				return fmt.Errorf("%v: stderr=%s", err, stderr)
+			}
+			return nil
+		}).Should(Succeed())
 	})
 
 	It("updates unbound config", func() {
@@ -244,6 +258,12 @@ func testKubernetes() {
 			_, _, err := kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "www.cybozu.com")
 			return err
 		}).Should(Succeed())
+
+		By("querying www.dnssec-failed.org using node DNS from ubuntu pod")
+		Consistently(func() error {
+			_, _, err := kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "www.dnssec-failed.org")
+			return err
+		}).WithTimeout(time.Second * 5).WithPolling(time.Second * 1).ShouldNot(Succeed())
 
 		By("getting metrics from unbound_exporter")
 		Eventually(func() error {
