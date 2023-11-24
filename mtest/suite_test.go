@@ -153,6 +153,10 @@ var _ = Describe("Test CKE", func() {
 		Context("reboot", func() {
 			testRebootOperations()
 		})
+	case "repair":
+		Context("repair", func() {
+			testRepairOperations()
+		})
 	case "upgrade":
 		Context("upgrade", Ordered, func() {
 			testUpgrade()
