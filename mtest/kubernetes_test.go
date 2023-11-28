@@ -250,7 +250,7 @@ func testKubernetes() {
 			return nil
 		}).Should(Succeed())
 
-		By("querying www.google.com using node DNS from ubuntu pod")
+		By("querying www.cybozu.com using node DNS from ubuntu pod")
 		_, stderr, err = kubectl("run", "-n="+namespace, "--image=quay.io/cybozu/ubuntu:22.04", "--restart=Never",
 			"client", "--", "pause")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
