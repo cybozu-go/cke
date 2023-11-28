@@ -55,6 +55,7 @@ CoreDNS.
 
 For other domain names such as `www.google.com`, node-local DNS cache servers can be
 configured to send queries to upstream DNS servers defined in [cluster.yml](./cluster.md).
+CKE validates the integrity of the replies using DNSSEC validation.
 
 ## Certificates for admission webhooks
 

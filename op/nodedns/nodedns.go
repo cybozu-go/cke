@@ -69,6 +69,26 @@ server:
   local-zone: "29.172.in-addr.arpa." transparent
   local-zone: "30.172.in-addr.arpa." transparent
   local-zone: "31.172.in-addr.arpa." transparent
+  trust-anchor-file: "/usr/local/unbound/etc/unbound/root.key"
+  domain-insecure: "{{ .Domain }}"
+  domain-insecure: "10.in-addr.arpa."
+  domain-insecure: "168.192.in-addr.arpa."
+  domain-insecure: "16.172.in-addr.arpa."
+  domain-insecure: "17.172.in-addr.arpa."
+  domain-insecure: "18.172.in-addr.arpa."
+  domain-insecure: "19.172.in-addr.arpa."
+  domain-insecure: "20.172.in-addr.arpa."
+  domain-insecure: "21.172.in-addr.arpa."
+  domain-insecure: "22.172.in-addr.arpa."
+  domain-insecure: "23.172.in-addr.arpa."
+  domain-insecure: "24.172.in-addr.arpa."
+  domain-insecure: "25.172.in-addr.arpa."
+  domain-insecure: "26.172.in-addr.arpa."
+  domain-insecure: "27.172.in-addr.arpa."
+  domain-insecure: "28.172.in-addr.arpa."
+  domain-insecure: "29.172.in-addr.arpa."
+  domain-insecure: "30.172.in-addr.arpa."
+  domain-insecure: "31.172.in-addr.arpa."
 remote-control:
   control-enable: yes
   control-interface: {{ if .LocalControl }} /var/run/unbound/unbound.sock {{ else }} 127.0.0.1 {{ end }}
