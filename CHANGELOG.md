@@ -5,63 +5,15 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
-## [1.26.3]
-
-### Added
-
-- Add reboot queue backoff reset command [#667](https://github.com/cybozu-go/cke/pull/667)
-
-### Fixed
-
-- Expose CoreDNS metrics on host [#668](https://github.com/cybozu-go/cke/pull/668)
-
-## [1.26.2]
-
-### Added
-
-- Add `register-date` and `retire-date` labels [#663](https://github.com/cybozu-go/cke/pull/663)
-
-### Fixed
-
-- Fix `cke_node_reboot_status` metrics [#660](https://github.com/cybozu-go/cke/pull/660)
-- Fix blocking by kubelet-restart op [#661](https://github.com/cybozu-go/cke/pull/661)
-
-## [1.26.1]
-
-### Added
-
-- Retry eviction [#633](https://github.com/cybozu-go/cke/pull/633)
+## [1.27.0-rc.1]
 
 ### Changed
 
-- Revert the custom rank feature for user defined resources(#640, #638, #634, #617) [#655](https://github.com/cybozu-go/cke/pull/655)
-
-### Fixed
-
-- Fix to check error of etcd watch response in [#654](https://github.com/cybozu-go/cke/pull/654)
-
-## [1.26.0]
-
-### Added
-
-- Add setting of reboot retry interval in [#645](https://github.com/cybozu-go/cke/pull/645)
-
-### Changed
-
-- Update for Kubernetes 1.26.6 [#646](https://github.com/cybozu-go/cke/pull/646)
-
-## [1.26.0-rc.1]
-
-### Added
-
-- Add setting of reboot retry interval in [#645](https://github.com/cybozu-go/cke/pull/645)
-
-### Changed
-
-- Update for Kubernetes 1.26.6 [#646](https://github.com/cybozu-go/cke/pull/646)
+- Update for Kubernetes 1.27.8 [#672](https://github.com/cybozu-go/cke/pull/672)
 
 ## Ancient changes
 
+- See [release-1.26/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.26/CHANGELOG.md) for changes in CKE 1.26.
 - See [release-1.25/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.25/CHANGELOG.md) for changes in CKE 1.25.
 - See [release-1.24/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.24/CHANGELOG.md) for changes in CKE 1.24.
 - See [release-1.23/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.23/CHANGELOG.md) for changes in CKE 1.23.
@@ -77,9 +29,5 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.26.3...HEAD
-[1.26.3]: https://github.com/cybozu-go/cke/compare/v1.26.2...v1.26.3
-[1.26.2]: https://github.com/cybozu-go/cke/compare/v1.26.1...v1.26.2
-[1.26.1]: https://github.com/cybozu-go/cke/compare/v1.26.0...v1.26.1
-[1.26.0]: https://github.com/cybozu-go/cke/compare/v1.25.8...v1.26.0
-[1.26.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.25.8...v1.26.0-rc.1
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.0-rc.1...HEAD
+[1.27.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.26.4...v1.27.0-rc.1
