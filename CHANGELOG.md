@@ -5,7 +5,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
-## [1.26.0-rc.1]
+## [1.27.0-rc.1]
 
 ### Changed
 
