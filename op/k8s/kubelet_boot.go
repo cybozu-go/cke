@@ -364,7 +364,6 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 		"--kubeconfig=/etc/kubernetes/kubelet/kubeconfig",
 		"--hostname-override=" + n.Nodename(),
 	}
-	args = append(args, "--container-runtime=remote")
 	if len(params.CRIEndpoint) != 0 {
 		args = append(args, "--container-runtime-endpoint="+params.CRIEndpoint)
 	}

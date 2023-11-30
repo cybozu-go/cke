@@ -22,7 +22,6 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - endpoints
       - services
       - pods
       - namespaces
