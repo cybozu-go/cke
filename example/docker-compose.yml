@@ -35,7 +35,7 @@ services:
     command: /opt/setup/setup.sh
   vault:
     container_name: vault
-    image: quay.io/cybozu/vault:1.14
+    image: ghcr.io/cybozu/vault:1.15
     networks:
       app_net:
         ipv4_address: 172.30.0.13
