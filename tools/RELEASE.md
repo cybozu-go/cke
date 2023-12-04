@@ -9,12 +9,47 @@ Given a version number MAJOR.MINOR.PATCH.
 The MAJOR and MINOR version matches that of Kubernetes.
 The patch version is increased with `cke-tools` update.
 
-## Publish Docker image to quay.io
+## Bump version
 
-1. Edit `CHANGELOG.md` in this directory.
-2. Merge the `CHANGELOG.md` change to the `main` branch.
-3. Tag the head commit as `tools-X.Y.Z` where `X.Y.Z` is the new semantic version of `cke-tools`.
-4. Push the tag to GitHub.
+1. Determine a new version number. Then set `VERSION` variable.
+
+    ```console
+    # Set VERSION and confirm it. It should not have "v" prefix.
+    $ VERSION=x.y.z
+    $ echo $VERSION
+    ```
+
+2. Make a branch to release
+
+    ```console
+    $ git neco dev "bump-tools-$VERSION"
+    ```
+
+3. Edit `CHANGELOG.md` in this directory.
+4. Commit the change and create a pull request.
+
+    ```console
+    $ git commit -a -m "Bump cke-tools version to $VERSION"
+    $ git neco review
+    ```
+
+5. Merge the pull request.
+6. Add a git tag to the main HEAD, then push it.
+
+    ```console
+    # Set VERSION again.
+    $ VERSION=x.y.z
+    $ echo $VERSION
+
+    $ git checkout main
+    $ git pull
+    $ git tag -a -m "Release tools-$VERSION" "tools-$VERSION"
+
+    # Make sure the release tag exists.
+    $ git tag -ln | grep "tools-$VERSION"
+
+    $ git push origin "tools-$VERSION"
+    ```
 
 GitHub Actions will build and push the new image as `quay.io/cybozu/cke-tools:X.Y.Z`.
 
