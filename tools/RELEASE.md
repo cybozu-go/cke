@@ -51,6 +51,6 @@ The patch version is increased with `cke-tools` update.
     $ git push origin "tools-$VERSION"
     ```
 
-GitHub Actions will build and push the new image as `quay.io/cybozu/cke-tools:X.Y.Z`.
+GitHub Actions will build and push the new image as `ghcr.io/cybozu-go/cke-tools:X.Y.Z`.
 
 [semver]: https://semver.org/spec/v2.0.0.html
