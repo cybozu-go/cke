@@ -16,9 +16,20 @@ jobs:
         run: |
           cd tools
           make all
-      - name: Push cke-tools image to Quay.io
-        run: |
-          echo ${{ secrets.QUAY_PASSWORD }} | docker login -u ${{ secrets.QUAY_USER }} --password-stdin quay.io
-          TAG=quay.io/cybozu/cke-tools:${GITHUB_REF#refs/tags/tools-}
-          docker build --no-cache -t $TAG tools
-          docker push $TAG
+      - name: Extract tag
+        id: extract-tag
+        run: echo "tag=${GITHUB_REF#refs/tags/tools-}" >> $GITHUB_OUTPUT
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and Push cke-tools
+        uses: docker/build-push-action@v5
+        with:
+          context: ./tools
+          push: true
+          platforms: linux/amd64
+          tags: ghcr.io/${{ github.repository_owner }}/cke-tools:${{ steps.extract-tag.outputs.tag }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}

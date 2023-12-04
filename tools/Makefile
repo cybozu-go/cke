@@ -1,5 +1,5 @@
 CNI_PLUGIN_VERSION = 1.3.0
-TAG = quay.io/cybozu/cke-tools:dev
+TAG = ghcr.io/cybozu-go/cke-tools:dev
 GOBUILD = CGO_ENABLED=0 go build -ldflags="-w -s"
 
 .PHONY: all
