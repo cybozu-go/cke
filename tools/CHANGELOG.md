@@ -2,6 +2,11 @@
 
 cke-tools related changes.
 
+## 1.27.1 - 2023-12-04
+
+- Migrate to ghcr.io [#682](https://github.com/cybozu-go/cke/pull/682)
+- Refine release procedure [#681](https://github.com/cybozu-go/cke/pull/681)
+
 ## 1.27.0 - 2023-11-17
 
 - Update dependencies [#671](https://github.com/cybozu-go/cke/pull/671)
