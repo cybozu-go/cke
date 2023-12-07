@@ -42,9 +42,12 @@ type updateOperationPhaseTestCase struct {
 }
 
 type updateRebootQueueEntriesTestCase struct {
-	name     string
-	input    []*cke.RebootQueueEntry
-	expected float64
+	name            string
+	enabled         bool
+	input           []*cke.RebootQueueEntry
+	expectedEnabled float64
+	expectedRunning float64
+	expectedEntries float64
 }
 
 type updateRebootQueueItemsTestCase struct {
@@ -251,24 +254,44 @@ func testUpdateOperationPhase(t *testing.T) {
 func testUpdateRebootQueueEntries(t *testing.T) {
 	testCases := []updateRebootQueueEntriesTestCase{
 		{
-			name:     "zero",
-			input:    nil,
-			expected: 0,
+			name:            "zero",
+			enabled:         true,
+			input:           nil,
+			expectedEnabled: 1,
+			expectedRunning: 0,
+			expectedEntries: 0,
 		},
 		{
-			name: "one",
+			name:    "one",
+			enabled: true,
 			input: []*cke.RebootQueueEntry{
 				{Status: cke.RebootStatusQueued},
 			},
-			expected: 1,
+			expectedEnabled: 1,
+			expectedRunning: 1,
+			expectedEntries: 1,
 		},
 		{
-			name: "two",
+			name:    "two",
+			enabled: true,
 			input: []*cke.RebootQueueEntry{
 				{Status: cke.RebootStatusQueued},
 				{Status: cke.RebootStatusRebooting},
 			},
-			expected: 2,
+			expectedEnabled: 1,
+			expectedRunning: 1,
+			expectedEntries: 2,
+		},
+		{
+			name:    "two-disabled",
+			enabled: false,
+			input: []*cke.RebootQueueEntry{
+				{Status: cke.RebootStatusQueued},
+				{Status: cke.RebootStatusRebooting},
+			},
+			expectedEnabled: 0,
+			expectedRunning: 0,
+			expectedEntries: 2,
 		},
 	}
 	for _, tt := range testCases {
@@ -277,6 +300,7 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 			defer ctx.Done()
 
 			collector, storage := newTestCollector()
+			storage.enableRebootQueue(tt.enabled)
 			storage.setRebootsEntries(tt.input)
 			handler := GetHandler(collector)
 
@@ -289,19 +313,41 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			metricsFound := false
+			metricsEnabledFound := false
+			metricsRunningFound := false
+			metricsEntriesFound := false
 			for _, mf := range metricsFamily {
-				if *mf.Name != "cke_reboot_queue_entries" {
-					continue
-				}
-				for _, m := range mf.Metric {
-					metricsFound = true
-					if *m.Gauge.Value != tt.expected {
-						t.Errorf("value for cke_reboot_queue_entries is wrong.  expected: %f, actual: %f", tt.expected, *m.Gauge.Value)
+				switch *mf.Name {
+				case "cke_reboot_queue_enabled":
+					for _, m := range mf.Metric {
+						metricsEnabledFound = true
+						if *m.Gauge.Value != tt.expectedEnabled {
+							t.Errorf("value for cke_reboot_queue_enabled is wrong.  expected: %f, actual: %f", tt.expectedEnabled, *m.Gauge.Value)
+						}
+					}
+				case "cke_reboot_queue_running":
+					for _, m := range mf.Metric {
+						metricsRunningFound = true
+						if *m.Gauge.Value != tt.expectedRunning {
+							t.Errorf("value for cke_reboot_queue_running is wrong.  expected: %f, actual: %f", tt.expectedRunning, *m.Gauge.Value)
+						}
+					}
+				case "cke_reboot_queue_entries":
+					for _, m := range mf.Metric {
+						metricsEntriesFound = true
+						if *m.Gauge.Value != tt.expectedEntries {
+							t.Errorf("value for cke_reboot_queue_entries is wrong.  expected: %f, actual: %f", tt.expectedEntries, *m.Gauge.Value)
+						}
 					}
 				}
 			}
-			if !metricsFound {
+			if !metricsEnabledFound {
+				t.Errorf("metrics reboot_queue_enabled was not found")
+			}
+			if !metricsRunningFound {
+				t.Errorf("metrics reboot_queue_running was not found")
+			}
+			if !metricsEntriesFound {
 				t.Errorf("metrics reboot_queue_entries was not found")
 			}
 		})
@@ -623,9 +669,10 @@ func newTestCollector() (prometheus.Collector, *testStorage) {
 }
 
 type testStorage struct {
-	sabakanEnabled bool
-	rebootEntries  []*cke.RebootQueueEntry
-	cluster        *cke.Cluster
+	sabakanEnabled     bool
+	rebootQueueEnabled bool
+	rebootEntries      []*cke.RebootQueueEntry
+	cluster            *cke.Cluster
 }
 
 func (s *testStorage) enableSabakan(flag bool) {
@@ -634,6 +681,14 @@ func (s *testStorage) enableSabakan(flag bool) {
 
 func (s *testStorage) IsSabakanDisabled(_ context.Context) (bool, error) {
 	return !s.sabakanEnabled, nil
+}
+
+func (s *testStorage) IsRebootQueueDisabled(_ context.Context) (bool, error) {
+	return !s.rebootQueueEnabled, nil
+}
+
+func (s *testStorage) enableRebootQueue(flag bool) {
+	s.rebootQueueEnabled = flag
 }
 
 func (s *testStorage) setRebootsEntries(entries []*cke.RebootQueueEntry) {
