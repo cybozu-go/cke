@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
       - name: ubuntu
-        image: quay.io/cybozu/ubuntu:22.04
+        image: ghcr.io/cybozu/ubuntu:22.04
         command: ["sleep", "3600"]
       restartPolicy: Never
   backoffLimit: 1

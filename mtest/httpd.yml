@@ -7,5 +7,5 @@ metadata:
 spec:
   containers:
     - name: httpd
-      image: quay.io/cybozu/testhttpd:0
+      image: ghcr.io/cybozu/testhttpd:0
   hostNetwork: true
