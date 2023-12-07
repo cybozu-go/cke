@@ -80,7 +80,7 @@ Implementation policies
 
 * Assets are compiled into Docker images.
 
-    * Third-party docker images should be mirrored on `quay.io/cybozu`.
+    * Third-party docker images should be mirrored on `ghcr.io/cybozu`.
 
 * CKE does not install any tools onto node OS other than containers.
 
