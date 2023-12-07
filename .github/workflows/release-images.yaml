@@ -4,7 +4,6 @@ on:
     tags:
       - 'v*'
 env:
-  tag: ${GITHUB_REF#refs/tags/v}
   prerelease: ${{ contains(github.ref, '-') }}
 jobs:
   sonobuoy:
@@ -67,8 +66,6 @@ jobs:
   release-github:
     name: Release on GitHub
     runs-on: ubuntu-22.04
-    container:
-      image: quay.io/cybozu/golang:1.20-jammy
     needs: release-cke-image
     steps:
       - uses: actions/checkout@v4
@@ -76,19 +73,22 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: sonobuoy-test
+      - name: Extract tag
+        id: extract-tag
+        run: echo "tag=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
       - name: Prepare files
         run: |
           mkdir /tmp/upload
           cp ./sonobuoy.tar.gz /tmp/upload
           tar xzf ./sonobuoy.tar.gz -C /tmp/upload --strip-components=4 plugins/e2e/results/global/e2e.log plugins/e2e/results/global/junit_01.xml
-          sed "s/vX\.Y\.Z/v${{ env.tag }}/" sonobuoy/README.md > /tmp/upload/README.md
-          sed "s/vX\.Y\.Z/v${{ env.tag }}/" sonobuoy/PRODUCT.yaml > /tmp/upload/PRODUCT.yaml
+          sed "s/vX\.Y\.Z/v${{ steps.extract-tag.outputs.tag }}/" sonobuoy/README.md > /tmp/upload/README.md
+          sed "s/vX\.Y\.Z/v${{ steps.extract-tag.outputs.tag }}/" sonobuoy/PRODUCT.yaml > /tmp/upload/PRODUCT.yaml
           GOBIN=/tmp/upload CGO_ENABLED=0 go install -buildvcs=false ./pkg/cke ./pkg/ckecli
       - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          OWNER=$(echo ${{ github.repository }} | cut -d '/' -f 1)
-          REPOSITORY=$(echo ${{ github.repository }} | cut -d '/' -f 2)
           if ${{ env.prerelease }}; then
-            PRERELEASE="-prerelease"
+            PRERELEASE="--prerelease"
           fi
-          ghr -t ${{ secrets.GITHUB_TOKEN }} -u ${OWNER} -r ${REPOSITORY} -n v${{ env.tag }} ${PRERELEASE} -b "See [CHANGELOG.md](./CHANGELOG.md) for details." v${{ env.tag }} /tmp/upload/
+          gh release create v${{ steps.extract-tag.outputs.tag }} ${PRERELEASE} -t v${{ steps.extract-tag.outputs.tag }}  -n "See [CHANGELOG.md](./CHANGELOG.md) for details." /tmp/upload/*
