@@ -74,7 +74,7 @@ It should look like:
     $ git push origin "v$VERSION"
     ```
 
-Then GitHub Actions automatically builds and pushes the tagged container image to [quay.io](https://quay.io/cybozu/cke).
+Then GitHub Actions automatically builds and pushes the tagged container image to [ghcr.io](https://github.com/cybozu-go/cke/pkgs/container/cke).
 
 GitHub Actions also creates a GitHub release automatically after running [sonobuoy](./sonobuoy) tests.
 So, **DO NOT MANUALLY CREATE GITHUB RELEASES**.  The test results will be attached to the GitHub

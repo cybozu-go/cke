@@ -133,7 +133,7 @@ Usage
 ```console
 $ docker run -d --read-only \
     --network host --name cke \
-    quay.io/cybozu/cke:1.18 [options...]
+    ghcr.io/cybozu-go/cke:1.27 [options...]
 ```
 
 ### Install `ckecli` and `cke-localproxy` to a host directory
@@ -142,13 +142,13 @@ $ docker run -d --read-only \
 $ docker run --rm -u root:root \
     --entrypoint /usr/local/cke/install-tools \
     --mount type=bind,src=DIR,target=/host \
-    quay.io/cybozu/cke:1.18
+    ghcr.io/cybozu-go/cke:1.27
 ```
 
 Docker images
 -------------
 
-Docker images are available on [Quay.io](https://quay.io/repository/cybozu/cke)
+Docker images are available on [ghcr.io](https://github.com/cybozu-go/cke/pkgs/container/cke)
 
 Feedback
 --------
