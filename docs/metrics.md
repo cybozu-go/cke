@@ -9,7 +9,7 @@ CKE exposes the following metrics with the Prometheus format at `/metrics` REST 
 | node_reboot_status                    | The reboot status of a node.                                               | Gauge | `node`, `status` |
 | operation_phase                       | 1 if CKE is operating in the phase specified by the `phase` label.         | Gauge | `phase`          |
 | operation_phase_timestamp_seconds     | The Unix timestamp when `operation_phase` was last updated.                | Gauge |                  |
-| reboot_queue_enabled                  | True (=1) if reboot queue is enabled.                                      | Gauge |                  |
+| reboot_queue_enabled                  | True (=1) if reboot queue is enabled or stopping.                          | Gauge |                  |
 | reboot_queue_entries                  | The number of reboot queue entries remaining.                              | Gauge |                  |
 | reboot_queue_items                    | The number reboot queue entries remaining per status.                      | Gauge | `status`         |
 | reboot_queue_running                  | True (=1) if reboot queue is enabled and the queue is not empty.           | Gauge |                  |

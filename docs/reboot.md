@@ -43,7 +43,7 @@ The command writes reboot queue entry(s) and increments `reboots/write-index` at
 
 The queue is processed by CKE as follows:
 
-1. If `reboots/disabled` is `true`, it doesn't process the queue.
+1. If `reboots/state` is not `enabled`, it will not process the queue.
 2. Check the reboot queue to find an entry.
    - If the number of nodes under processing is less than maximum concurrent reboots and the number of unreachable nodes that are not under this reboot process is not more than `maximum-unreachable-nodes-for-reboot` in the constraints, pick several nodes from front of the queue and start draining them.
      1. Cordon the node.

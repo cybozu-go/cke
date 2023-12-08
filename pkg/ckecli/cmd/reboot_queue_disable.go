@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 
+	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
@@ -14,7 +15,7 @@ var rebootQueueDisableCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		well.Go(func(ctx context.Context) error {
-			return storage.EnableRebootQueue(ctx, false)
+			return storage.SetRebootQueueState(ctx, cke.RebootQueueStateStopping)
 		})
 		well.Stop()
 		return well.Wait()

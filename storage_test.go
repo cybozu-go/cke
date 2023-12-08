@@ -743,37 +743,37 @@ func testStorageReboot(t *testing.T) {
 	}
 
 	// rq is enabled by default
-	disabled, err := storage.IsRebootQueueDisabled(ctx)
+	state, err := storage.GetRebootQueueState(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if disabled {
-		t.Error("reboot queue should not be disabled by default")
+	if state != RebootQueueStateEnabled {
+		t.Error("reboot queue should be enabled by default")
 	}
 
 	// disable rq and get its state
-	err = storage.EnableRebootQueue(ctx, false)
+	err = storage.SetRebootQueueState(ctx, RebootQueueStateStopping)
 	if err != nil {
 		t.Fatal(err)
 	}
-	disabled, err = storage.IsRebootQueueDisabled(ctx)
+	state, err = storage.GetRebootQueueState(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !disabled {
-		t.Error("reboot queue could not be disabled")
+	if state != RebootQueueStateStopping {
+		t.Error("reboot queue state is not updated correctly")
 	}
 
 	// re-enable rq and get its state
-	err = storage.EnableRebootQueue(ctx, true)
+	err = storage.SetRebootQueueState(ctx, RebootQueueStateEnabled)
 	if err != nil {
 		t.Fatal(err)
 	}
-	disabled, err = storage.IsRebootQueueDisabled(ctx)
+	state, err = storage.GetRebootQueueState(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if disabled {
+	if state != RebootQueueStateEnabled {
 		t.Error("reboot queue could not be re-enabled")
 	}
 }

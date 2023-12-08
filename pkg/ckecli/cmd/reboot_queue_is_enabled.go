@@ -15,11 +15,11 @@ var rebootQueueIsEnabledCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		well.Go(func(ctx context.Context) error {
-			disabled, err := storage.IsRebootQueueDisabled(ctx)
+			state, err := storage.GetRebootQueueState(ctx)
 			if err != nil {
 				return err
 			}
-			fmt.Println(!disabled)
+			fmt.Println(string(state))
 			return nil
 		})
 		well.Stop()

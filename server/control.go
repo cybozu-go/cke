@@ -317,11 +317,17 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	rqEntries = cke.DedupRebootQueueEntries(rqEntries)
 
 	if len(rqEntries) > 0 {
-		disabled, err := inf.Storage().IsRebootQueueDisabled(ctx)
-		if err != nil {
+		rqState, err := inf.Storage().GetRebootQueueState(ctx)
+		switch {
+		case err != nil:
 			return err
-		}
-		if disabled {
+		case rqState == cke.RebootQueueStateStopping:
+			err := inf.Storage().SetRebootQueueState(ctx, cke.RebootQueueStateDisabled)
+			if err != nil {
+				return err
+			}
+			rqEntries = nil
+		case rqState == cke.RebootQueueStateDisabled:
 			rqEntries = nil
 		}
 	}

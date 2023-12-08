@@ -4,6 +4,19 @@ import (
 	"time"
 )
 
+// RebootQueueState is state of reboot queue
+type RebootQueueState string
+
+// RebootQueue states
+const (
+	// Reboot queue is enabled (should be set by ckecli)
+	RebootQueueStateEnabled = RebootQueueState("enabled")
+	// Reboot queue is requested to stop (should be set by ckecli)
+	RebootQueueStateStopping = RebootQueueState("stopping")
+	// Reboot queue is disabled (should be set by CKE)
+	RebootQueueStateDisabled = RebootQueueState("disabled")
+)
+
 // RebootStatus is status of reboot operation
 type RebootStatus string
 

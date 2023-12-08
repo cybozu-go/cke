@@ -30,7 +30,8 @@ const (
 	KeyClusterRevision       = "cluster-revision"
 	KeyConstraints           = "constraints"
 	KeyLeader                = "leader/"
-	KeyRebootsDisabled       = "reboots/disabled"
+	KeyRebootsDisabled       = "reboots/disabled" // TODO: remove this key
+	KeyRebootsState          = "reboots/state"
 	KeyRebootsPrefix         = "reboots/data/"
 	KeyRebootsWriteIndex     = "reboots/write-index"
 	KeyRecords               = "records/"
@@ -679,29 +680,35 @@ func (s Storage) GetSabakanURL(ctx context.Context) (string, error) {
 	return s.getStringValue(ctx, KeySabakanURL)
 }
 
-// IsRebootQueueDisabled returns true if reboot queue is disabled.
-func (s Storage) IsRebootQueueDisabled(ctx context.Context) (bool, error) {
-	resp, err := s.Get(ctx, KeyRebootsDisabled)
+// GetRebootQueueState returns reboot queue state.
+func (s Storage) GetRebootQueueState(ctx context.Context) (RebootQueueState, error) {
+	resp, err := s.Get(ctx, KeyRebootsState)
 	if err != nil {
-		return false, err
+		// defaulted to on
+		return RebootQueueStateEnabled, err
 	}
 	if resp.Count == 0 {
-		return false, nil
+		return RebootQueueStateEnabled, nil
 	}
 
-	return bytes.Equal([]byte("true"), resp.Kvs[0].Value), nil
+	return RebootQueueState(resp.Kvs[0].Value), nil
 }
 
-// EnableRebootQueue enables reboot queue processing when flag is true.
-// When flag is false, reboot queue is not processed.
-func (s Storage) EnableRebootQueue(ctx context.Context, flag bool) error {
-	var val string
-	if flag {
-		val = "false"
-	} else {
-		val = "true"
+// SetRebootQueueState sets reboot queue state.
+func (s Storage) SetRebootQueueState(ctx context.Context, state RebootQueueState) error {
+	// TODO: remove this temporary code
+	resp, err := s.Get(ctx, KeyRebootsDisabled)
+	if err != nil {
+		return err
 	}
-	_, err := s.Put(ctx, KeyRebootsDisabled, val)
+	if resp.Count > 0 {
+		_, err := s.Delete(ctx, KeyRebootsDisabled)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = s.Put(ctx, KeyRebootsState, string(state))
 	return err
 }
 

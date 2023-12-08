@@ -39,7 +39,7 @@ type metricGroup struct {
 // This abstraction is for mock test.
 type storage interface {
 	IsSabakanDisabled(context.Context) (bool, error)
-	IsRebootQueueDisabled(ctx context.Context) (bool, error)
+	GetRebootQueueState(ctx context.Context) (cke.RebootQueueState, error)
 	GetRebootsEntries(ctx context.Context) ([]*cke.RebootQueueEntry, error)
 	GetCluster(ctx context.Context) (*cke.Cluster, error)
 }
@@ -143,7 +143,7 @@ func (c nodeMetricsCollector) Collect(ch chan<- prometheus.Metric) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	rqDisabled, err := c.storage.IsRebootQueueDisabled(ctx)
+	rqState, err := c.storage.GetRebootQueueState(ctx)
 	if err != nil {
 		log.Error("failed to get if reboot queue is enabled", map[string]interface{}{
 			log.FnError: err,
@@ -160,11 +160,11 @@ func (c nodeMetricsCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	var rqEnabled, rqRunning float64
-	if !rqDisabled {
+	if rqState == cke.RebootQueueStateEnabled || rqState == cke.RebootQueueStateStopping {
 		rqEnabled = 1
-	}
-	if !rqDisabled && len(rqEntries) > 0 {
-		rqRunning = 1
+		if len(rqEntries) > 0 {
+			rqRunning = 1
+		}
 	}
 
 	cluster, err := c.storage.GetCluster(ctx)
