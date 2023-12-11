@@ -5,6 +5,17 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.27.0-rc.2]
+
+### Added
+
+- Implement reboot-queue status metrics [#678](https://github.com/cybozu-go/cke/pull/678)
+
+### Changed
+
+- Update Vault to 1.15.3 [#680](https://github.com/cybozu-go/cke/pull/680)
+- Migrate to ghcr.io [#683](https://github.com/cybozu-go/cke/pull/683)
+
 ## [1.27.0-rc.1]
 
 ### Changed
@@ -29,5 +40,6 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.0-rc.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.0-rc.2...HEAD
+[1.27.0-rc.2]: https://github.com/cybozu-go/cke/compare/v1.27.0-rc.1...v1.27.0-rc.2
 [1.27.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.26.4...v1.27.0-rc.1
