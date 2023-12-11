@@ -39,7 +39,7 @@ func isOperationPhaseAvailable(_ context.Context, _ storage) (bool, error) {
 	return isLeader, nil
 }
 
-func isRebootAvailable(_ context.Context, _ storage) (bool, error) {
+func isNodeAvailable(_ context.Context, _ storage) (bool, error) {
 	return isLeader, nil
 }
 

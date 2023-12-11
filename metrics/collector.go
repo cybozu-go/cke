@@ -42,6 +42,8 @@ type storage interface {
 	IsRebootQueueDisabled(ctx context.Context) (bool, error)
 	IsRebootQueueRunning(ctx context.Context) (bool, error)
 	GetRebootsEntries(ctx context.Context) ([]*cke.RebootQueueEntry, error)
+	IsRepairQueueDisabled(ctx context.Context) (bool, error)
+	GetRepairsEntries(ctx context.Context) ([]*cke.RepairQueueEntry, error)
 	GetCluster(ctx context.Context) (*cke.Cluster, error)
 }
 
@@ -58,9 +60,9 @@ func NewCollector(storage storage) prometheus.Collector {
 				collectors:  []prometheus.Collector{operationPhase, operationPhaseTimestampSeconds},
 				isAvailable: isOperationPhaseAvailable,
 			},
-			"reboot": {
+			"node": {
 				collectors:  []prometheus.Collector{nodeMetricsCollector{storage}},
-				isAvailable: isRebootAvailable,
+				isAvailable: isNodeAvailable,
 			},
 			"sabakan_integration": {
 				collectors:  []prometheus.Collector{sabakanIntegrationSuccessful, sabakanIntegrationTimestampSeconds, sabakanWorkers, sabakanUnusedMachines},
@@ -138,9 +140,18 @@ func (c nodeMetricsCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- rebootQueueItems
 	ch <- rebootQueueRunning
 	ch <- nodeRebootStatus
+
+	ch <- repairQueueEnabled
+	ch <- repairQueueItems
+	ch <- machineRepairStatus
 }
 
 func (c nodeMetricsCollector) Collect(ch chan<- prometheus.Metric) {
+	c.collectReboot(ch)
+	c.collectRepair(ch)
+}
+
+func (c nodeMetricsCollector) collectReboot(ch chan<- prometheus.Metric) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -220,6 +231,70 @@ func (c nodeMetricsCollector) Collect(ch chan<- prometheus.Metric) {
 				prometheus.GaugeValue,
 				value,
 				node,
+				status,
+			)
+		}
+	}
+}
+
+func (c nodeMetricsCollector) collectRepair(ch chan<- prometheus.Metric) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	disabled, err := c.storage.IsRepairQueueDisabled(ctx)
+	if err != nil {
+		log.Error("failed to get if repair queue is enabled", map[string]interface{}{
+			log.FnError: err,
+		})
+		return
+	}
+	var enabled float64
+	if !disabled {
+		enabled = 1
+	}
+
+	entries, err := c.storage.GetRepairsEntries(ctx)
+	if err != nil {
+		log.Error("failed to get repairs entries", map[string]interface{}{
+			log.FnError: err,
+		})
+		return
+	}
+
+	cluster, err := c.storage.GetCluster(ctx)
+	if err != nil {
+		log.Error("failed to get cluster", map[string]interface{}{
+			log.FnError: err,
+		})
+		return
+	}
+	itemCounts := cke.CountRepairQueueEntries(entries)
+	machineStatus := cke.BuildMachineRepairStatus(cluster.Nodes, entries)
+
+	ch <- prometheus.MustNewConstMetric(
+		repairQueueEnabled,
+		prometheus.GaugeValue,
+		enabled,
+	)
+	for status, count := range itemCounts {
+		ch <- prometheus.MustNewConstMetric(
+			repairQueueItems,
+			prometheus.GaugeValue,
+			float64(count),
+			status,
+		)
+	}
+	for address, statuses := range machineStatus {
+		for status, matches := range statuses {
+			value := float64(0)
+			if matches {
+				value = 1
+			}
+			ch <- prometheus.MustNewConstMetric(
+				machineRepairStatus,
+				prometheus.GaugeValue,
+				value,
+				address,
 				status,
 			)
 		}

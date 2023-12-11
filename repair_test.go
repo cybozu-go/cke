@@ -3,6 +3,8 @@ package cke
 import (
 	"slices"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestRepairQueueEntry(t *testing.T) {
@@ -150,5 +152,63 @@ func TestRepairQueueEntry(t *testing.T) {
 	_, err = entry.GetCurrentRepairStep(cluster)
 	if err != ErrRepairOperationNotFound {
 		t.Error("GetCurrentRepairStep() returned wrong error:", err)
+	}
+}
+
+func TestCountRepairQueueEntries(t *testing.T) {
+	input := []*RepairQueueEntry{
+		{Status: RepairStatusQueued},
+		{Status: RepairStatusProcessing},
+		{Status: RepairStatusSucceeded},
+		{Status: RepairStatusProcessing},
+		{Status: RepairStatusSucceeded},
+		{Status: RepairStatusSucceeded},
+	}
+	expected := map[string]int{
+		"queued":     1,
+		"processing": 2,
+		"succeeded":  3,
+		"failed":     0,
+	}
+	actual := CountRepairQueueEntries(input)
+
+	if !cmp.Equal(actual, expected) {
+		t.Errorf("expected: %v, actual: %v", expected, actual)
+	}
+}
+
+func TestBuildMachineRepairStatus(t *testing.T) {
+	inputNodes := []*Node{
+		{Address: "1.1.1.1"},
+		{Address: "2.2.2.2"},
+	}
+	inputEntries := []*RepairQueueEntry{
+		{Address: "1.1.1.1", Status: RepairStatusQueued},
+		{Address: "10.10.10.10", Status: RepairStatusFailed},
+	}
+	expected := map[string]map[string]bool{
+		"1.1.1.1": {
+			"queued":     true,
+			"processing": false,
+			"succeeded":  false,
+			"failed":     false,
+		},
+		"2.2.2.2": {
+			"queued":     false,
+			"processing": false,
+			"succeeded":  false,
+			"failed":     false,
+		},
+		"10.10.10.10": {
+			"queued":     false,
+			"processing": false,
+			"succeeded":  false,
+			"failed":     true,
+		},
+	}
+	actual := BuildMachineRepairStatus(inputNodes, inputEntries)
+
+	if !cmp.Equal(actual, expected) {
+		t.Errorf("expected: %v, actual: %v", expected, actual)
 	}
 }

@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Added
+
+- Implement repair queue in [#692](https://github.com/cybozu-go/cke/pull/692)
+
 ## [1.27.3]
 
 ### Changed

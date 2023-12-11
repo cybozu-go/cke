@@ -16,6 +16,8 @@ const (
 	RepairStatusFailed     = RepairStatus("failed")
 )
 
+var repairStatuses = []RepairStatus{RepairStatusQueued, RepairStatusProcessing, RepairStatusSucceeded, RepairStatusFailed}
+
 // RepairStepStatus is the status of the current step in a repair operation
 type RepairStepStatus string
 
@@ -106,4 +108,47 @@ func (entry *RepairQueueEntry) GetCurrentRepairStep(cluster *Cluster) (*RepairSt
 		return nil, ErrRepairStepOutOfRange
 	}
 	return &op.RepairSteps[entry.Step], nil
+}
+
+func CountRepairQueueEntries(entries []*RepairQueueEntry) map[string]int {
+	ret := make(map[string]int)
+	for _, status := range repairStatuses {
+		// initialize explicitly to provide list of possible statuses
+		ret[string(status)] = 0
+	}
+
+	for _, entry := range entries {
+		ret[string(entry.Status)]++
+	}
+
+	return ret
+}
+
+func BuildMachineRepairStatus(nodes []*Node, entries []*RepairQueueEntry) map[string]map[string]bool {
+	ret := make(map[string]map[string]bool)
+
+	// (keys of ret) == union of (addresses of nodes) and (addresses of entries)
+	for _, node := range nodes {
+		ret[node.Address] = make(map[string]bool)
+	}
+	for _, entry := range entries {
+		if _, ok := ret[entry.Address]; ok {
+			continue
+		}
+		ret[entry.Address] = make(map[string]bool)
+	}
+
+	for address := range ret {
+		for _, status := range repairStatuses {
+			// initialize explicitly to provide list of possible statuses
+			ret[address][string(status)] = false
+		}
+	}
+
+	for _, entry := range entries {
+		ret[entry.Address][string(entry.Status)] = true
+	}
+
+	return ret
+
 }
