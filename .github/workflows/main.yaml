@@ -20,7 +20,7 @@ jobs:
       - run: docker run -d --network host gcr.io/etcd-development/etcd:v3.5.10
       - run: make test
       - run: make install GOBIN=$(pwd)/docker
-      - run: docker build -t quay.io/cybozu/cke:latest ./docker
+      - run: docker build -t ghcr.io/cybozu-go/cke:latest ./docker
   mtest:
     name: Mtest
     runs-on: ubuntu-22.04
@@ -108,7 +108,7 @@ jobs:
       - name: Check image consistency
         run: |
           REV=$(awk '/const Version/ {print $4}' ../version.go | sed -E 's/^"(1.[[:digit:]]+).*/\1/')
-          COMPOSE_REV=$(sed -nE 's,.*quay.io/cybozu/cke:(.*)$,\1,p' docker-compose.yml)
+          COMPOSE_REV=$(sed -nE 's,.*ghcr.io/cybozu-go/cke:(.*)$,\1,p' docker-compose.yml)
           if [ "$REV" != "$COMPOSE_REV" ]; then
               echo Update CKE branch tag in example/docker-compose.yml
           fi

@@ -30,7 +30,7 @@ func TestMtest(t *testing.T) {
 var _ = BeforeSuite(func() {
 	img := ckeImageURL
 	if testSuite == "upgrade" {
-		img = "quay.io/cybozu/cke:" + cke.Version
+		img = "ghcr.io/cybozu-go/cke:" + cke.Version
 	}
 
 	fmt.Println("Preparing...")

@@ -19,7 +19,7 @@ services:
       - /entrypoint.sh
   setup:
     container_name: setup
-    image: quay.io/cybozu/ubuntu-debug:22.04
+    image: ghcr.io/cybozu/ubuntu-debug:22.04
     networks:
       app_net:
         ipv4_address: 172.30.0.12
@@ -56,7 +56,7 @@ services:
       - /entrypoint.sh
   etcd:
     container_name: etcd
-    image: quay.io/cybozu/etcd:3.5
+    image: ghcr.io/cybozu/etcd:3.5
     networks:
       app_net:
         ipv4_address: 172.30.0.14
