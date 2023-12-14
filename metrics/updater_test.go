@@ -43,7 +43,8 @@ type updateOperationPhaseTestCase struct {
 
 type updateRebootQueueEntriesTestCase struct {
 	name            string
-	state           cke.RebootQueueState
+	enabled         bool
+	running         bool
 	input           []*cke.RebootQueueEntry
 	expectedEnabled float64
 	expectedRunning float64
@@ -255,15 +256,17 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 	testCases := []updateRebootQueueEntriesTestCase{
 		{
 			name:            "zero",
-			state:           cke.RebootQueueStateEnabled,
+			enabled:         true,
+			running:         false,
 			input:           nil,
 			expectedEnabled: 1,
 			expectedRunning: 0,
 			expectedEntries: 0,
 		},
 		{
-			name:  "one",
-			state: cke.RebootQueueStateEnabled,
+			name:    "one",
+			enabled: true,
+			running: true,
 			input: []*cke.RebootQueueEntry{
 				{Status: cke.RebootStatusQueued},
 			},
@@ -272,8 +275,9 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 			expectedEntries: 1,
 		},
 		{
-			name:  "two",
-			state: cke.RebootQueueStateEnabled,
+			name:    "two",
+			enabled: true,
+			running: true,
 			input: []*cke.RebootQueueEntry{
 				{Status: cke.RebootStatusQueued},
 				{Status: cke.RebootStatusRebooting},
@@ -283,19 +287,21 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 			expectedEntries: 2,
 		},
 		{
-			name:  "two-stopping",
-			state: cke.RebootQueueStateStopping,
+			name:    "two-stopping",
+			enabled: false,
+			running: true,
 			input: []*cke.RebootQueueEntry{
 				{Status: cke.RebootStatusQueued},
 				{Status: cke.RebootStatusRebooting},
 			},
-			expectedEnabled: 1,
+			expectedEnabled: 0,
 			expectedRunning: 1,
 			expectedEntries: 2,
 		},
 		{
-			name:  "two-disabled",
-			state: cke.RebootQueueStateDisabled,
+			name:    "two-disabled",
+			enabled: false,
+			running: false,
 			input: []*cke.RebootQueueEntry{
 				{Status: cke.RebootStatusQueued},
 				{Status: cke.RebootStatusRebooting},
@@ -311,7 +317,8 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 			defer ctx.Done()
 
 			collector, storage := newTestCollector()
-			storage.setRebootQueueState(tt.state)
+			storage.enableRebootQueue(tt.enabled)
+			storage.setRebootQueueRunning(tt.running)
 			storage.setRebootsEntries(tt.input)
 			handler := GetHandler(collector)
 
@@ -680,10 +687,11 @@ func newTestCollector() (prometheus.Collector, *testStorage) {
 }
 
 type testStorage struct {
-	sabakanEnabled   bool
-	rebootQueueState cke.RebootQueueState
-	rebootEntries    []*cke.RebootQueueEntry
-	cluster          *cke.Cluster
+	sabakanEnabled     bool
+	rebootQueueEnabled bool
+	rebootQueueRunning bool
+	rebootEntries      []*cke.RebootQueueEntry
+	cluster            *cke.Cluster
 }
 
 func (s *testStorage) enableSabakan(flag bool) {
@@ -694,12 +702,20 @@ func (s *testStorage) IsSabakanDisabled(_ context.Context) (bool, error) {
 	return !s.sabakanEnabled, nil
 }
 
-func (s *testStorage) GetRebootQueueState(_ context.Context) (cke.RebootQueueState, error) {
-	return s.rebootQueueState, nil
+func (s *testStorage) IsRebootQueueDisabled(_ context.Context) (bool, error) {
+	return !s.rebootQueueEnabled, nil
 }
 
-func (s *testStorage) setRebootQueueState(state cke.RebootQueueState) {
-	s.rebootQueueState = state
+func (s *testStorage) enableRebootQueue(flag bool) {
+	s.rebootQueueEnabled = flag
+}
+
+func (s *testStorage) IsRebootQueueRunning(_ context.Context) (bool, error) {
+	return s.rebootQueueRunning, nil
+}
+
+func (s *testStorage) setRebootQueueRunning(flag bool) {
+	s.rebootQueueRunning = flag
 }
 
 func (s *testStorage) setRebootsEntries(entries []*cke.RebootQueueEntry) {

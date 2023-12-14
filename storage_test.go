@@ -743,38 +743,73 @@ func testStorageReboot(t *testing.T) {
 	}
 
 	// rq is enabled by default
-	state, err := storage.GetRebootQueueState(ctx)
+	disabled, err := storage.IsRebootQueueDisabled(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state != RebootQueueStateEnabled {
+	if disabled {
 		t.Error("reboot queue should be enabled by default")
 	}
 
 	// disable rq and get its state
-	err = storage.SetRebootQueueState(ctx, RebootQueueStateStopping)
+	err = storage.EnableRebootQueue(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	state, err = storage.GetRebootQueueState(ctx)
+	disabled, err = storage.IsRebootQueueDisabled(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state != RebootQueueStateStopping {
-		t.Error("reboot queue state is not updated correctly")
+	if !disabled {
+		t.Error("reboot queue could not be disabled")
 	}
 
 	// re-enable rq and get its state
-	err = storage.SetRebootQueueState(ctx, RebootQueueStateEnabled)
+	err = storage.EnableRebootQueue(ctx, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	state, err = storage.GetRebootQueueState(ctx)
+	disabled, err = storage.IsRebootQueueDisabled(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state != RebootQueueStateEnabled {
+	if disabled {
 		t.Error("reboot queue could not be re-enabled")
+	}
+
+	// rq is not running by default
+	running, err := storage.IsRebootQueueRunning(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if running {
+		t.Error("reboot queue should not be running by default")
+	}
+
+	// report running rq and get its state
+	err = storage.SetRebootQueueRunning(ctx, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	running, err = storage.IsRebootQueueRunning(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !running {
+		t.Error("reboot queue could not be reported running")
+	}
+
+	// report not running rq and get its state
+	err = storage.SetRebootQueueRunning(ctx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	running, err = storage.IsRebootQueueRunning(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if running {
+		t.Error("reboot queue could not be reported not running")
 	}
 }
 

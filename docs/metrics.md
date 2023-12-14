@@ -9,10 +9,10 @@ CKE exposes the following metrics with the Prometheus format at `/metrics` REST 
 | node_reboot_status                    | The reboot status of a node.                                               | Gauge | `node`, `status` |
 | operation_phase                       | 1 if CKE is operating in the phase specified by the `phase` label.         | Gauge | `phase`          |
 | operation_phase_timestamp_seconds     | The Unix timestamp when `operation_phase` was last updated.                | Gauge |                  |
-| reboot_queue_enabled                  | True (=1) if reboot queue is enabled or stopping.                          | Gauge |                  |
+| reboot_queue_enabled                  | True (=1) if reboot queue is enabled.                                      | Gauge |                  |
 | reboot_queue_entries                  | The number of reboot queue entries remaining.                              | Gauge |                  |
 | reboot_queue_items                    | The number reboot queue entries remaining per status.                      | Gauge | `status`         |
-| reboot_queue_running                  | True (=1) if reboot queue is enabled and the queue is not empty.           | Gauge |                  |
+| reboot_queue_running                  | True (=1) if reboot queue is running.                                      | Gauge |                  |
 | sabakan_integration_successful        | True (=1) if sabakan-integration satisfies constraints.                    | Gauge |                  |
 | sabakan_integration_timestamp_seconds | The Unix timestamp when `sabakan_integration_successful` was last updated. | Gauge |                  |
 | sabakan_workers                       | The number of worker nodes for each role.                                  | Gauge | `role`           |

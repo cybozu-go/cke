@@ -30,8 +30,8 @@ const (
 	KeyClusterRevision       = "cluster-revision"
 	KeyConstraints           = "constraints"
 	KeyLeader                = "leader/"
-	KeyRebootsDisabled       = "reboots/disabled" // TODO: remove this key
-	KeyRebootsState          = "reboots/state"
+	KeyRebootsDisabled       = "reboots/disabled"
+	KeyRebootsRunning        = "reboots/running"
 	KeyRebootsPrefix         = "reboots/data/"
 	KeyRebootsWriteIndex     = "reboots/write-index"
 	KeyRecords               = "records/"
@@ -680,35 +680,54 @@ func (s Storage) GetSabakanURL(ctx context.Context) (string, error) {
 	return s.getStringValue(ctx, KeySabakanURL)
 }
 
-// GetRebootQueueState returns reboot queue state.
-func (s Storage) GetRebootQueueState(ctx context.Context) (RebootQueueState, error) {
-	resp, err := s.Get(ctx, KeyRebootsState)
-	if err != nil {
-		// defaulted to on
-		return RebootQueueStateEnabled, err
-	}
-	if resp.Count == 0 {
-		return RebootQueueStateEnabled, nil
-	}
-
-	return RebootQueueState(resp.Kvs[0].Value), nil
-}
-
-// SetRebootQueueState sets reboot queue state.
-func (s Storage) SetRebootQueueState(ctx context.Context, state RebootQueueState) error {
-	// TODO: remove this temporary code
+// IsRebootQueueDisabled returns true if reboot queue is disabled.
+func (s Storage) IsRebootQueueDisabled(ctx context.Context) (bool, error) {
 	resp, err := s.Get(ctx, KeyRebootsDisabled)
 	if err != nil {
-		return err
+		return false, err
 	}
-	if resp.Count > 0 {
-		_, err := s.Delete(ctx, KeyRebootsDisabled)
-		if err != nil {
-			return err
-		}
+	if resp.Count == 0 {
+		return false, nil
 	}
 
-	_, err = s.Put(ctx, KeyRebootsState, string(state))
+	return bytes.Equal([]byte("true"), resp.Kvs[0].Value), nil
+}
+
+// EnableRebootQueue enables reboot queue processing when flag is true.
+// When flag is false, reboot queue is not processed.
+func (s Storage) EnableRebootQueue(ctx context.Context, flag bool) error {
+	var val string
+	if flag {
+		val = "false"
+	} else {
+		val = "true"
+	}
+	_, err := s.Put(ctx, KeyRebootsDisabled, val)
+	return err
+}
+
+// IsRebootQueueRunning returns true if CKE is processing reboot queue.
+func (s Storage) IsRebootQueueRunning(ctx context.Context) (bool, error) {
+	resp, err := s.Get(ctx, KeyRebootsRunning)
+	if err != nil {
+		return false, err
+	}
+	if resp.Count == 0 {
+		return false, nil
+	}
+
+	return bytes.Equal([]byte("true"), resp.Kvs[0].Value), nil
+}
+
+// SetRebootQueueRunning is used to report if CKE is processing reboot queue.
+func (s Storage) SetRebootQueueRunning(ctx context.Context, flag bool) error {
+	var val string
+	if flag {
+		val = "true"
+	} else {
+		val = "false"
+	}
+	_, err := s.Put(ctx, KeyRebootsRunning, val)
 	return err
 }
 
