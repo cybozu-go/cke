@@ -421,11 +421,12 @@ rules:
 
 	It("updates user-defined resources", func() {
 		By("set user-defined resource")
-		resources := `apiVersion: v1
+		nsResource := `apiVersion: v1
 kind: Namespace
 metadata:
   name: foo
----
+`
+		resources := nsResource + `---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -467,6 +468,10 @@ roleRef:
 		Eventually(func() error {
 			return checkCluster(cluster, ts)
 		}).Should(Succeed())
+
+		By("getting user-defined resources")
+		data := ckecliSafe("resource", "get", "Namespace/foo")
+		Expect(string(data)).To(Equal(nsResource))
 
 		By("updating user-defined resources")
 		newResources := `apiVersion: v1
