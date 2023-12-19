@@ -37,6 +37,7 @@ $ ckecli [--config FILE] <subcommand> args...
 - [`ckecli resource`](#ckecli-resource)
   - [`ckecli resource list`](#ckecli-resource-list)
   - [`ckecli resource set FILE`](#ckecli-resource-set-file)
+  - [`ckecli resource get KEY`](#ckecli-resource-get-key)
   - [`ckecli resource delete FILE`](#ckecli-resource-delete-file)
 - [`ckecli ssh [user@]NODE [COMMAND...]`](#ckecli-ssh-usernode-command)
 - [`ckecli scp [-r] [[user@]NODE1:]FILE1 ... [[user@]NODE2:]FILE2`](#ckecli-scp--r-usernode1file1--usernode2file2)
@@ -240,6 +241,11 @@ Register user-defined resources listed in `FILE`.
 If `FILE` is "-", then resources are read from stdin.
 
 The registered resources will be synchronized with Kubernetes by CKE.
+
+### `ckecli resource get KEY`
+
+Get a user-defined resource by `KEY`.
+The list of the resources is available using `ckecli resource list`.
 
 ### `ckecli resource delete FILE`
 
