@@ -3329,8 +3329,6 @@ func (ec *executionContext) unmarshalInputLabelInput(ctx context.Context, obj in
 		}
 		switch k {
 		case "name":
-			var err error
-
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
 			data, err := ec.unmarshalNString2string(ctx, v)
 			if err != nil {
@@ -3338,8 +3336,6 @@ func (ec *executionContext) unmarshalInputLabelInput(ctx context.Context, obj in
 			}
 			it.Name = data
 		case "value":
-			var err error
-
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("value"))
 			data, err := ec.unmarshalNString2string(ctx, v)
 			if err != nil {
@@ -3367,8 +3363,6 @@ func (ec *executionContext) unmarshalInputMachineParams(ctx context.Context, obj
 		}
 		switch k {
 		case "labels":
-			var err error
-
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("labels"))
 			data, err := ec.unmarshalOLabelInput2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐLabelInputᚄ(ctx, v)
 			if err != nil {
@@ -3376,8 +3370,6 @@ func (ec *executionContext) unmarshalInputMachineParams(ctx context.Context, obj
 			}
 			it.Labels = data
 		case "racks":
-			var err error
-
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("racks"))
 			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
 			if err != nil {
@@ -3385,8 +3377,6 @@ func (ec *executionContext) unmarshalInputMachineParams(ctx context.Context, obj
 			}
 			it.Racks = data
 		case "roles":
-			var err error
-
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("roles"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
 			if err != nil {
@@ -3394,8 +3384,6 @@ func (ec *executionContext) unmarshalInputMachineParams(ctx context.Context, obj
 			}
 			it.Roles = data
 		case "states":
-			var err error
-
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("states"))
 			data, err := ec.unmarshalOMachineState2ᚕgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineStateᚄ(ctx, v)
 			if err != nil {
@@ -3403,8 +3391,6 @@ func (ec *executionContext) unmarshalInputMachineParams(ctx context.Context, obj
 			}
 			it.States = data
 		case "minDaysBeforeRetire":
-			var err error
-
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("minDaysBeforeRetire"))
 			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
 			if err != nil {
