@@ -326,6 +326,18 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		}
 	}
 
+	running, err := inf.Storage().IsRebootQueueRunning(ctx)
+	if err != nil {
+		return err
+	}
+	runningNext := len(rqEntries) > 0
+	if running != runningNext {
+		err := inf.Storage().SetRebootQueueRunning(ctx, runningNext)
+		if err != nil {
+			return err
+		}
+	}
+
 	nf := NewNodeFilter(cluster, status)
 	apiServers := map[string]bool{}
 	for _, node := range nf.ControlPlane() {

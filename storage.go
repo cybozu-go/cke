@@ -31,6 +31,7 @@ const (
 	KeyConstraints           = "constraints"
 	KeyLeader                = "leader/"
 	KeyRebootsDisabled       = "reboots/disabled"
+	KeyRebootsRunning        = "reboots/running"
 	KeyRebootsPrefix         = "reboots/data/"
 	KeyRebootsWriteIndex     = "reboots/write-index"
 	KeyRecords               = "records/"
@@ -702,6 +703,31 @@ func (s Storage) EnableRebootQueue(ctx context.Context, flag bool) error {
 		val = "true"
 	}
 	_, err := s.Put(ctx, KeyRebootsDisabled, val)
+	return err
+}
+
+// IsRebootQueueRunning returns true if CKE is processing reboot queue.
+func (s Storage) IsRebootQueueRunning(ctx context.Context) (bool, error) {
+	resp, err := s.Get(ctx, KeyRebootsRunning)
+	if err != nil {
+		return false, err
+	}
+	if resp.Count == 0 {
+		return false, nil
+	}
+
+	return bytes.Equal([]byte("true"), resp.Kvs[0].Value), nil
+}
+
+// SetRebootQueueRunning is used to report if CKE is processing reboot queue.
+func (s Storage) SetRebootQueueRunning(ctx context.Context, flag bool) error {
+	var val string
+	if flag {
+		val = "true"
+	} else {
+		val = "false"
+	}
+	_, err := s.Put(ctx, KeyRebootsRunning, val)
 	return err
 }
 

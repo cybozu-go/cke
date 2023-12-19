@@ -44,6 +44,7 @@ type updateOperationPhaseTestCase struct {
 type updateRebootQueueEntriesTestCase struct {
 	name            string
 	enabled         bool
+	running         bool
 	input           []*cke.RebootQueueEntry
 	expectedEnabled float64
 	expectedRunning float64
@@ -256,6 +257,7 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 		{
 			name:            "zero",
 			enabled:         true,
+			running:         false,
 			input:           nil,
 			expectedEnabled: 1,
 			expectedRunning: 0,
@@ -264,6 +266,7 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 		{
 			name:    "one",
 			enabled: true,
+			running: true,
 			input: []*cke.RebootQueueEntry{
 				{Status: cke.RebootStatusQueued},
 			},
@@ -274,6 +277,7 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 		{
 			name:    "two",
 			enabled: true,
+			running: true,
 			input: []*cke.RebootQueueEntry{
 				{Status: cke.RebootStatusQueued},
 				{Status: cke.RebootStatusRebooting},
@@ -283,8 +287,21 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 			expectedEntries: 2,
 		},
 		{
+			name:    "two-stopping",
+			enabled: false,
+			running: true,
+			input: []*cke.RebootQueueEntry{
+				{Status: cke.RebootStatusQueued},
+				{Status: cke.RebootStatusRebooting},
+			},
+			expectedEnabled: 0,
+			expectedRunning: 1,
+			expectedEntries: 2,
+		},
+		{
 			name:    "two-disabled",
 			enabled: false,
+			running: false,
 			input: []*cke.RebootQueueEntry{
 				{Status: cke.RebootStatusQueued},
 				{Status: cke.RebootStatusRebooting},
@@ -301,6 +318,7 @@ func testUpdateRebootQueueEntries(t *testing.T) {
 
 			collector, storage := newTestCollector()
 			storage.enableRebootQueue(tt.enabled)
+			storage.setRebootQueueRunning(tt.running)
 			storage.setRebootsEntries(tt.input)
 			handler := GetHandler(collector)
 
@@ -671,6 +689,7 @@ func newTestCollector() (prometheus.Collector, *testStorage) {
 type testStorage struct {
 	sabakanEnabled     bool
 	rebootQueueEnabled bool
+	rebootQueueRunning bool
 	rebootEntries      []*cke.RebootQueueEntry
 	cluster            *cke.Cluster
 }
@@ -689,6 +708,14 @@ func (s *testStorage) IsRebootQueueDisabled(_ context.Context) (bool, error) {
 
 func (s *testStorage) enableRebootQueue(flag bool) {
 	s.rebootQueueEnabled = flag
+}
+
+func (s *testStorage) IsRebootQueueRunning(_ context.Context) (bool, error) {
+	return s.rebootQueueRunning, nil
+}
+
+func (s *testStorage) setRebootQueueRunning(flag bool) {
+	s.rebootQueueRunning = flag
 }
 
 func (s *testStorage) setRebootsEntries(entries []*cke.RebootQueueEntry) {
