@@ -60,7 +60,7 @@ spec:
               mountPath: /var/run/unbound
           resources:
             requests:
-              cpu: 28m
+              cpu: 50m
               memory: 250Mi
         - name: reload
           image: {{ .unbound }}
