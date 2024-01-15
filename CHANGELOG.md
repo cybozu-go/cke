@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Adjustment network component resources in [#695](https://github.com/cybozu-go/cke/pull/695)
+
 ## [1.27.2]
 
 ### Changed

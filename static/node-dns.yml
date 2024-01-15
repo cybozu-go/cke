@@ -58,6 +58,10 @@ spec:
               mountPath: /etc/unbound
             - name: var-run-unbound
               mountPath: /var/run/unbound
+          resources:
+            requests:
+              cpu: 50m
+              memory: 250Mi
         - name: reload
           image: {{ .unbound }}
           command:

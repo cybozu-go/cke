@@ -97,8 +97,8 @@ spec:
         imagePullPolicy: IfNotPresent
         resources:
           requests:
-            cpu: 100m
-            memory: 70Mi
+            cpu: 50m
+            memory: 250Mi
         args: [ "-conf", "/etc/coredns/Corefile" ]
         lifecycle:
           preStop:
