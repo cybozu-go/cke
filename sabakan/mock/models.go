@@ -61,6 +61,9 @@ type MachineStatus struct {
 	Duration  float64      `json:"duration"`
 }
 
+type Query struct {
+}
+
 // MachineState enumerates machine states.
 type MachineState string
 
