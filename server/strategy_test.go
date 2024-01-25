@@ -1,6 +1,7 @@
 package server
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -169,6 +170,7 @@ func newData() testData {
 			},
 			Nodes: nodeList,
 		},
+		RepairQueue: cke.RepairQueueStatus{Enabled: true},
 	}
 
 	return testData{
@@ -506,6 +508,22 @@ func (d testData) withK8sResourceReady() testData {
 	return d
 }
 
+func (d testData) withNotReadyEndpoint(i int) testData {
+	masterAddresses := d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses
+	etcdAddresses := d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses
+	if i < 0 || i >= len(masterAddresses) {
+		return d
+	}
+	d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = masterAddresses[0:i]
+	d.Status.Kubernetes.MasterEndpoints.Subsets[0].NotReadyAddresses = masterAddresses[i:3]
+	d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = etcdAddresses[0:i]
+	d.Status.Kubernetes.EtcdEndpoints.Subsets[0].NotReadyAddresses = etcdAddresses[i:3]
+	endpointReady := false
+	d.Status.Kubernetes.MasterEndpointSlice.Endpoints[i].Conditions.Ready = &endpointReady
+	d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[i].Conditions.Ready = &endpointReady
+	return d
+}
+
 func (d testData) withNodes(nodes ...corev1.Node) testData {
 	d.withK8sResourceReady()
 OUTER:
@@ -553,6 +571,59 @@ func (d testData) withSSHNotConnectedNonCPWorker(num int) testData {
 func (d testData) withSSHNotConnectedNodes() testData {
 	d.withSSHNotConnectedCP()
 	d.withSSHNotConnectedNonCPWorker(1)
+	return d
+}
+
+func (d testData) withRebootCordon(i int) testData {
+	if i < 0 || i >= len(d.Status.Kubernetes.Nodes) {
+		return d
+	}
+	d.Status.Kubernetes.Nodes[i].Spec.Unschedulable = true
+	d.Status.Kubernetes.Nodes[i].Annotations = map[string]string{
+		op.CKEAnnotationReboot: "true",
+	}
+	return d
+}
+
+func (d testData) withRepairConfig() testData {
+	d.Cluster.Repair = cke.Repair{
+		RepairProcedures: []cke.RepairProcedure{
+			{
+				MachineTypes: []string{"type1"},
+				RepairOperations: []cke.RepairOperation{
+					{
+						Operation: "op1",
+						RepairSteps: []cke.RepairStep{
+							{RepairCommand: []string{"repair0"}},
+							{RepairCommand: []string{"repair1"}},
+						},
+					},
+				},
+			},
+		},
+	}
+	return d
+}
+
+func (d testData) withRepairEntries(entries []*cke.RepairQueueEntry) testData {
+	for i, entry := range entries {
+		entry.Index = int64(i)
+		if slices.Contains(nodeNames, entry.Address) {
+			entry.Nodename = entry.Address
+		}
+		if entry.Status == "" {
+			entry.Status = cke.RepairStatusQueued
+		}
+		if entry.StepStatus == "" {
+			entry.StepStatus = cke.RepairStepStatusWaiting
+		}
+	}
+	d.Status.RepairQueue.Entries = entries
+	return d
+}
+
+func (d testData) withRepairDisabled() testData {
+	d.Status.RepairQueue.Enabled = false
 	return d
 }
 
@@ -1192,17 +1263,7 @@ func TestDecideOps(t *testing.T) {
 					Node:   nodeNames[2],
 					Status: cke.RebootStatusQueued,
 				},
-			}).with(func(d testData) {
-				masterAddresses := d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses
-				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = masterAddresses[0:2]
-				d.Status.Kubernetes.MasterEndpoints.Subsets[0].NotReadyAddresses = masterAddresses[2:3]
-				etcdAddresses := d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses
-				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = etcdAddresses[0:2]
-				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].NotReadyAddresses = etcdAddresses[2:3]
-				endpointReady := false
-				d.Status.Kubernetes.MasterEndpointSlice.Endpoints[2].Conditions.Ready = &endpointReady
-				d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[2].Conditions.Ready = &endpointReady
-			}),
+			}).withNotReadyEndpoint(2),
 			ExpectedOps: []opData{{"reboot-drain-start", 1}},
 		},
 		{
@@ -2010,13 +2071,8 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: nil,
 		},
 		{
-			Name: "UncordonNodes",
-			Input: newData().withK8sResourceReady().withRebootConfig().with(func(d testData) {
-				d.Status.Kubernetes.Nodes[0].Spec.Unschedulable = true
-				d.Status.Kubernetes.Nodes[0].Annotations = map[string]string{
-					op.CKEAnnotationReboot: "true",
-				}
-			}),
+			Name:  "UncordonNodes",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootCordon(0),
 			ExpectedOps: []opData{
 				{"reboot-uncordon", 1},
 			},
@@ -2027,6 +2083,486 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.Nodes[0].Spec.Unschedulable = true
 			}),
 			ExpectedOps: nil,
+		},
+		{
+			Name: "Repair",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1"},
+			}),
+			ExpectedOps: []opData{
+				{"repair-execute", 1},
+			},
+		},
+		{
+			Name: "RepairWithoutConfig",
+			Input: newData().withK8sResourceReady().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1"},
+			}),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairBadMachineType",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type2", Operation: "op1"},
+			}),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairBadOperation",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "noop"},
+				{Address: nodeNames[5], MachineType: "type1", Operation: "op1"},
+			}),
+			ExpectedOps: nil, // implementation dependent; bad entry consumes concurrency slot
+		},
+		{
+			Name: "RepairOutOfCluster",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: "10.0.99.99", MachineType: "type1", Operation: "op1"},
+			}),
+			ExpectedOps: []opData{
+				{"repair-execute", 1},
+			},
+		},
+		{
+			Name: "RepairApiServerHighPriority",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "noop"},
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+			}),
+			ExpectedOps: []opData{
+				{"repair-execute", 1}, // implementation dependent; cf. RepairBadOperation
+			},
+		},
+		{
+			Name: "RepairMaxConcurrent",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1"},
+				{Address: nodeNames[5], MachineType: "type1", Operation: "op1"},
+			}).with(func(d testData) {
+				max := 2
+				d.Cluster.Repair.MaxConcurrentRepairs = &max
+			}),
+			ExpectedOps: []opData{
+				{"repair-execute", 1},
+				{"repair-execute", 1},
+			},
+		},
+		{
+			Name: "RepairMaxConcurrentSameMachine",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+			}).with(func(d testData) {
+				max := 2
+				d.Cluster.Repair.MaxConcurrentRepairs = &max
+			}),
+			ExpectedOps: []opData{
+				{"repair-execute", 1},
+			},
+		},
+		{
+			Name: "RepairMaxConcurrentApiServer",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+				{Address: nodeNames[1], MachineType: "type1", Operation: "op1"},
+			}).with(func(d testData) {
+				max := 2
+				d.Cluster.Repair.MaxConcurrentRepairs = &max
+			}),
+			ExpectedOps: []opData{
+				{"repair-execute", 1},
+			},
+		},
+		{
+			Name: "RepairApiServerAnotherRebooting",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+			}).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusRebooting},
+			}).withRebootCordon(2).withNotReadyEndpoint(2),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairRebootingApiServer",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[2], MachineType: "type1", Operation: "op1"},
+			}).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusRebooting},
+			}).withRebootCordon(2).withNotReadyEndpoint(2),
+			ExpectedOps: []opData{
+				{"repair-execute", 1},
+			},
+		},
+		{
+			Name: "RepairDrain",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1"},
+			}).with(func(d testData) {
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}),
+			ExpectedOps: []opData{
+				{"repair-drain-start", 1},
+			},
+		},
+		{
+			Name: "RepairDrainWaitCompletion",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+			}).with(func(d testData) {
+				timeout := 60
+				d.Cluster.Repair.EvictionTimeoutSeconds = &timeout
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}).withRebootCordon(4),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairDrainWaitCompletionExpire",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second * 2)},
+			}).with(func(d testData) {
+				timeout := 60
+				d.Cluster.Repair.EvictionTimeoutSeconds = &timeout
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"repair-drain-timeout", 1},
+			},
+		},
+		{
+			Name: "RepairDrainWaitCompletionDefaultTimeout",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
+					LastTransitionTime: time.Now().Add(-time.Duration(cke.DefaultRepairEvictionTimeoutSeconds) * time.Second / 2)},
+			}).with(func(d testData) {
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}).withRebootCordon(4),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairDrainWaitCompletionExpireDefaultTimeout",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
+					LastTransitionTime: time.Now().Add(-time.Duration(cke.DefaultRepairEvictionTimeoutSeconds) * time.Second * 2)},
+			}).with(func(d testData) {
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"repair-drain-timeout", 1},
+			},
+		},
+		{
+			Name: "RepairDrainWaitRetryUncordon",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWaiting,
+					DrainBackOffExpire: time.Now().Add(time.Duration(60) * time.Second)},
+			}).with(func(d testData) {
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"reboot-uncordon", 1},
+			},
+		},
+		{
+			Name: "RepairDrainWaitRetry",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWaiting,
+					DrainBackOffExpire: time.Now().Add(time.Duration(60) * time.Second)},
+			}).with(func(d testData) {
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairDrainWaitRetryExpire",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWaiting,
+					DrainBackOffExpire: time.Now().Add(-time.Duration(60) * time.Second)},
+			}).with(func(d testData) {
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}),
+			ExpectedOps: []opData{
+				{"repair-drain-start", 1},
+			},
+		},
+		{
+			Name: "RepairDrainCompleted",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining},
+			}).with(func(d testData) {
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+				d.Status.RepairQueue.DrainCompleted = map[string]bool{nodeNames[4]: true}
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"repair-execute", 1},
+			},
+		},
+		{
+			Name: "RepairWatch",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+			}).with(func(d testData) {
+				watch := 60
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds = &watch
+			}).withRebootCordon(4),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairWatchExpire",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second * 2)},
+			}).with(func(d testData) {
+				watch := 60
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds = &watch
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"repair-execute", 1}, // next step
+			},
+		},
+		{
+			Name: "RepairWatchExpireDefaultTimeout",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"repair-execute", 1}, // next step
+			},
+		},
+		{
+			Name: "RepairWatchExpireLastStep",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching, Step: 1,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"repair-finish", 1}, // failed
+			},
+		},
+		{
+			Name: "RepairCompleted",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+			}).with(func(d testData) {
+				d.Status.RepairQueue.RepairCompleted = map[string]bool{nodeNames[4]: true}
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"repair-finish", 1}, // succeeded
+			},
+		},
+		{
+			Name: "RepairSucceededUncordon",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusSucceeded},
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"reboot-uncordon", 1},
+			},
+		},
+		{
+			Name: "RepairSucceeded",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusSucceeded},
+			}),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairFailedUncordon",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusFailed},
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"reboot-uncordon", 1},
+			},
+		},
+		{
+			Name: "RepairFailed",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusFailed},
+			}),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairDeletedUncordon",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Deleted: true},
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"reboot-uncordon", 1},
+			},
+		},
+		{
+			Name: "RepairDeleted",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Deleted: true},
+			}),
+			ExpectedOps: []opData{
+				{"repair-dequeue", 1},
+			},
+		},
+		{
+			Name: "RepairDisabled",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1"},
+			}),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairDisabledDrain",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1"},
+			}).with(func(d testData) {
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairDisabledDrainWaitCompletion",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+			}).with(func(d testData) {
+				timeout := 60
+				d.Cluster.Repair.EvictionTimeoutSeconds = &timeout
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"repair-drain-timeout", 1},
+			},
+		},
+		{
+			Name: "RepairDisabledDrainWaitCompletionExpire",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second * 2)},
+			}).with(func(d testData) {
+				timeout := 60
+				d.Cluster.Repair.EvictionTimeoutSeconds = &timeout
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"repair-drain-timeout", 1},
+			},
+		},
+		{
+			Name: "RepairDisabledDrainWaitRetry",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWaiting,
+					DrainBackOffExpire: time.Now().Add(time.Duration(60) * time.Second)},
+			}).with(func(d testData) {
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairDisabledDrainWaitRetryExpire",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWaiting,
+					DrainBackOffExpire: time.Now().Add(-time.Duration(60) * time.Second)},
+			}).with(func(d testData) {
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+			}),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairDisabledDrainCompleted",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining},
+			}).with(func(d testData) {
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
+				d.Status.RepairQueue.DrainCompleted = map[string]bool{nodeNames[4]: true}
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"repair-drain-timeout", 1},
+			},
+		},
+		{
+			Name: "RepairDisabledWatch",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+			}).with(func(d testData) {
+				watch := 60
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds = &watch
+			}).withRebootCordon(4),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairDisabledWatchExpire",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second * 2)},
+			}).with(func(d testData) {
+				watch := 60
+				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds = &watch
+			}).withRebootCordon(4),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "RepairDisabledWatchExpireLastStep",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching, Step: 1,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"repair-finish", 1}, // failed
+			},
+		},
+		{
+			Name: "RepairDisabledCompleted",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+			}).with(func(d testData) {
+				d.Status.RepairQueue.RepairCompleted = map[string]bool{nodeNames[4]: true}
+			}).withRebootCordon(4),
+			ExpectedOps: []opData{
+				{"repair-finish", 1}, // succeeded
+			},
+		},
+		{
+			Name: "RepairDisabledDeleted",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Deleted: true},
+			}),
+			ExpectedOps: []opData{
+				{"repair-dequeue", 1},
+			},
 		},
 		{
 			Name: "RebootWithoutConfig",

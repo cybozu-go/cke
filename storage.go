@@ -36,6 +36,9 @@ const (
 	KeyRebootsWriteIndex     = "reboots/write-index"
 	KeyRecords               = "records/"
 	KeyRecordID              = "records"
+	KeyRepairsDisabled       = "repairs/disabled"
+	KeyRepairsPrefix         = "repairs/data/"
+	KeyRepairsWriteIndex     = "repairs/write-index"
 	KeyResourcePrefix        = "resource/"
 	KeySabakanDisabled       = "sabakan/disabled"
 	KeySabakanQueryVariables = "sabakan/query-variables"
@@ -871,6 +874,183 @@ func (s Storage) DeleteRebootsEntry(ctx context.Context, leaderKey string, index
 	resp, err := s.Txn(ctx).
 		If(clientv3util.KeyExists(leaderKey)).
 		Then(clientv3.OpDelete(rebootsEntryKey(index))).
+		Commit()
+	if err != nil {
+		return err
+	}
+	if !resp.Succeeded {
+		return ErrNoLeader
+	}
+
+	return nil
+}
+
+// IsRepairQueueDisabled returns true if repair queue is disabled.
+func (s Storage) IsRepairQueueDisabled(ctx context.Context) (bool, error) {
+	resp, err := s.Get(ctx, KeyRepairsDisabled)
+	if err != nil {
+		return false, err
+	}
+	if resp.Count == 0 {
+		return false, nil
+	}
+
+	return bytes.Equal([]byte("true"), resp.Kvs[0].Value), nil
+}
+
+// EnableRepairQueue enables repair queue processing when flag is true.
+// When flag is false, repair queue is not processed.
+func (s Storage) EnableRepairQueue(ctx context.Context, enable bool) error {
+	var disabled string
+	if enable {
+		disabled = "false"
+	} else {
+		disabled = "true"
+	}
+	_, err := s.Put(ctx, KeyRepairsDisabled, disabled)
+	return err
+}
+
+func repairsEntryKey(index int64) string {
+	return fmt.Sprintf("%s%016x", KeyRepairsPrefix, index)
+}
+
+// RegisterRepairssEntry enqueues a repair queue entry to the repair queue.
+// "Index" of the entry is retrieved and updated in this method. The given value is ignored.
+func (s Storage) RegisterRepairsEntry(ctx context.Context, r *RepairQueueEntry) error {
+RETRY:
+	var writeIndex, writeIndexRev int64
+	resp, err := s.Get(ctx, KeyRepairsWriteIndex)
+	if err != nil {
+		return err
+	}
+	if resp.Count != 0 {
+		value, err := strconv.ParseInt(string(resp.Kvs[0].Value), 10, 64)
+		if err != nil {
+			return err
+		}
+		writeIndex = value
+		writeIndexRev = resp.Kvs[0].ModRevision
+	}
+
+	r.Index = writeIndex
+	data, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+
+	newWriteIndex := strconv.FormatInt(writeIndex+1, 10)
+	txnResp, err := s.Txn(ctx).
+		If(
+			clientv3.Compare(clientv3.ModRevision(KeyRepairsWriteIndex), "=", writeIndexRev),
+		).
+		Then(
+			clientv3.OpPut(repairsEntryKey(writeIndex), string(data)),
+			clientv3.OpPut(KeyRepairsWriteIndex, newWriteIndex),
+		).
+		Commit()
+	if err != nil {
+		return err
+	}
+	if !txnResp.Succeeded {
+		goto RETRY
+	}
+
+	return nil
+}
+
+// UpdateRepairsEntry updates existing repair queue entry.
+// It always overwrites the contents with a CAS loop.
+// If the entry is not found in the repair queue, this returns ErrNotFound.
+func (s Storage) UpdateRepairsEntry(ctx context.Context, r *RepairQueueEntry) error {
+	key := repairsEntryKey(r.Index)
+	data, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+
+RETRY:
+	resp, err := s.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+	if resp.Count == 0 {
+		return ErrNotFound
+	}
+
+	rev := resp.Kvs[0].ModRevision
+	txnResp, err := s.Txn(ctx).
+		If(
+			clientv3.Compare(clientv3.ModRevision(key), "=", rev),
+		).
+		Then(
+			clientv3.OpPut(key, string(data)),
+		).
+		Commit()
+	if err != nil {
+		return err
+	}
+	if !txnResp.Succeeded {
+		goto RETRY
+	}
+
+	return nil
+}
+
+// GetRepairsEntry loads the entry specified by the index from the repair queue.
+// If the pointed entry is not found, this returns ErrNotFound.
+func (s Storage) GetRepairsEntry(ctx context.Context, index int64) (*RepairQueueEntry, error) {
+	resp, err := s.Get(ctx, repairsEntryKey(index))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Kvs) == 0 {
+		return nil, ErrNotFound
+	}
+
+	r := new(RepairQueueEntry)
+	err = json.Unmarshal(resp.Kvs[0].Value, r)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+// GetRepairsEntries loads the entries from the repair queue.
+func (s Storage) GetRepairsEntries(ctx context.Context) ([]*RepairQueueEntry, error) {
+	opts := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+		clientv3.WithSort(clientv3.SortByKey, clientv3.SortAscend),
+	}
+	resp, err := s.Get(ctx, KeyRepairsPrefix, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Kvs) == 0 {
+		return nil, nil
+	}
+
+	repairs := make([]*RepairQueueEntry, len(resp.Kvs))
+	for i, kv := range resp.Kvs {
+		r := new(RepairQueueEntry)
+		err = json.Unmarshal(kv.Value, r)
+		if err != nil {
+			return nil, err
+		}
+		repairs[i] = r
+	}
+
+	return repairs, nil
+}
+
+// DeleteRepairsEntry deletes the entry specified by the index from the repair queue.
+func (s Storage) DeleteRepairsEntry(ctx context.Context, leaderKey string, index int64) error {
+	resp, err := s.Txn(ctx).
+		If(clientv3util.KeyExists(leaderKey)).
+		Then(clientv3.OpDelete(repairsEntryKey(index))).
 		Commit()
 	if err != nil {
 		return err

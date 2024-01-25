@@ -18,6 +18,16 @@ reboot:
   boot_check_command: ["bash", "-c", "echo 'true'"]
   eviction_timeout_seconds: 30
   command_timeout_seconds: 30
+repair:
+  repair_procedures:
+  - machine_types: ["type1"]
+    repair_operations:
+    - operation: "op1"
+      repair_steps:
+      - repair_command: ["sh", "-c", "touch /tmp/mtest-repair-$1", "repair"]
+        need_drain: true
+        watch_seconds: 30
+      health_check_command: ["sh", "-c", "test -f /tmp/mtest-repair-$1 && echo true", "health_check"]
 options:
   kube-api:
     extra_binds:

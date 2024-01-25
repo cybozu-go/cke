@@ -1,6 +1,8 @@
 package server
 
 import (
+	"time"
+
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/clusterdns"
@@ -87,11 +89,20 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 9. Uncordon nodes if nodes are cordoned by CKE.
-	if o := rebootUncordonOp(rebootArgs.RQEntries, nf); o != nil {
+	if o := rebootUncordonOp(cs, rebootArgs.RQEntries, nf); o != nil {
 		return []cke.Operator{o}, cke.PhaseUncordonNodes
 	}
 
-	// 10. Reboot nodes if reboot request has been arrived to the reboot queue, and the number of unreachable nodes is less than a threshold.
+	// 10. Repair machines if repair requests have been arrived to the repair queue, and the number of unreachable nodes is less than a threshold.
+	if ops, phaseRepair := repairOps(c, cs, constraints, rebootArgs, nf); phaseRepair {
+		if !nf.EtcdIsGood() {
+			log.Warn("cannot repair machines because etcd cluster is not responding and in-sync", nil)
+			return nil, cke.PhaseRepairMachines
+		}
+		return ops, cke.PhaseRepairMachines
+	}
+
+	// 11. Reboot nodes if reboot request has been arrived to the reboot queue, and the number of unreachable nodes is less than a threshold.
 	if ops, phaseReboot := rebootOps(c, constraints, rebootArgs, nf); phaseReboot {
 		if !nf.EtcdIsGood() {
 			log.Warn("cannot reboot nodes because etcd cluster is not responding and in-sync", nil)
@@ -687,6 +698,178 @@ func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	return ops
 }
 
+func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, rebootArgs DecideOpsRebootArgs, nf *NodeFilter) (ops []cke.Operator, phaseRepair bool) {
+	rqs := &cs.RepairQueue
+
+	// Sort/filter entries to limit the number of concurrent repairs.
+	// - Entries being deleted are dequeued unconditionally.
+	// - Entries just repaired are moved to succeeded status unconditionally.
+	// - Succeeded/failed entries are left unchanged.
+	// - Entries already being processed have higher priority than newly queued entries.
+	//     - Entries waiting for unexpired drain-retry-timeout are filtered out.
+	//     - Other types of timeout-wait are considered as "being processed" and
+	//         taken into account for the concurrency limits.
+	// - Entries for the API servers have higher priority.
+	apiServers := make(map[string]bool)
+	for _, cp := range nf.ControlPlane() {
+		apiServers[cp.Address] = true
+	}
+
+	now := time.Now()
+
+	processingApiEntries := []*cke.RepairQueueEntry{}
+	processingOtherEntries := []*cke.RepairQueueEntry{}
+	queuedApiEntries := []*cke.RepairQueueEntry{}
+	queuedOtherEntries := []*cke.RepairQueueEntry{}
+	for _, entry := range rqs.Entries {
+		if entry.Deleted {
+			ops = append(ops, op.RepairDequeueOp(entry))
+			continue
+		}
+		if rqs.RepairCompleted[entry.Address] {
+			ops = append(ops, op.RepairFinishOp(entry, true))
+			continue
+		}
+		switch entry.Status {
+		case cke.RepairStatusQueued:
+			if apiServers[entry.Address] {
+				queuedApiEntries = append(queuedApiEntries, entry)
+			} else {
+				queuedOtherEntries = append(queuedOtherEntries, entry)
+			}
+		case cke.RepairStatusProcessing:
+			if entry.StepStatus == cke.RepairStepStatusWaiting && entry.DrainBackOffExpire.After(now) {
+				continue
+			}
+			if apiServers[entry.Address] {
+				processingApiEntries = append(processingApiEntries, entry)
+			} else {
+				processingOtherEntries = append(processingOtherEntries, entry)
+			}
+		}
+	}
+
+	sortedEntries := []*cke.RepairQueueEntry{}
+	sortedEntries = append(sortedEntries, processingApiEntries...)
+	sortedEntries = append(sortedEntries, processingOtherEntries...)
+	sortedEntries = append(sortedEntries, queuedApiEntries...)
+	sortedEntries = append(sortedEntries, queuedOtherEntries...)
+
+	// Rules:
+	// - One machine must not be repaired by two or more entries at a time.
+	// - API servers must be repaired one by one.
+	// - API server must not be repaired while another API server is being rebooted.
+	//     - This rule can be satisfied by this repair decision function alone,
+	//         because reboot is blocked when this function execute repair operation.
+	// - API server should be repaired with higher priority than worker/non-cluster nodes.
+	//     - This rule is not so important because a seriously unreachable API server
+	//         will be replaced before being repaired.
+	// - API server may be repaired simultaneously with worker/non-cluster nodes.
+	processed := make(map[string]bool)
+
+	const maxConcurrentApiServerRepairs = 1
+	maxConcurrentRepairs := cke.DefaultMaxConcurrentRepairs
+	if c.Repair.MaxConcurrentRepairs != nil {
+		maxConcurrentRepairs = *c.Repair.MaxConcurrentRepairs
+	}
+	concurrentApiServerRepairs := 0
+	concurrentRepairs := 0
+
+	rebootingApiServers := make(map[string]bool)
+	for _, cp := range nf.ControlPlane() {
+		if rebootProcessing(rebootArgs.RQEntries, cp.Nodename()) {
+			rebootingApiServers[cp.Address] = true
+		}
+	}
+
+	evictionTimeoutSeconds := cke.DefaultRepairEvictionTimeoutSeconds
+	if c.Repair.EvictionTimeoutSeconds != nil {
+		evictionTimeoutSeconds = *c.Repair.EvictionTimeoutSeconds
+	}
+	evictionStartLimit := now.Add(time.Duration(-evictionTimeoutSeconds) * time.Second)
+
+	for _, entry := range sortedEntries {
+		if concurrentRepairs >= maxConcurrentRepairs {
+			break
+		}
+		if processed[entry.Address] {
+			continue
+		}
+		if apiServers[entry.Address] {
+			if concurrentApiServerRepairs >= maxConcurrentApiServerRepairs ||
+				len(rebootingApiServers) >= 2 ||
+				(len(rebootingApiServers) == 1 && !rebootingApiServers[entry.Address]) {
+				continue
+			}
+			concurrentApiServerRepairs++
+		}
+		concurrentRepairs++
+
+	RUN_STEP:
+		step, err := entry.GetCurrentRepairStep(c)
+		if err != nil {
+			if err != cke.ErrRepairStepOutOfRange {
+				log.Warn("failed to get executing repair step", map[string]interface{}{
+					log.FnError:    err,
+					"index":        entry.Index,
+					"address":      entry.Address,
+					"operation":    entry.Operation,
+					"machine_type": entry.MachineType,
+					"step":         entry.Step,
+				})
+				continue
+			}
+			// Though ErrRepairStepOutOfRange may be caused by real misconfiguration,
+			// e.g., by decreasing "repair_steps" in cluster.yaml, we treat the error
+			// as the end of the steps for simplicity.
+			ops = append(ops, op.RepairFinishOp(entry, false))
+			continue
+		}
+
+		phaseRepair = true // true even when op is not appended
+
+		switch entry.StepStatus {
+		case cke.RepairStepStatusWaiting:
+			if !rqs.Enabled {
+				continue
+			}
+			if !(step.NeedDrain && entry.IsInCluster()) {
+				ops = append(ops, op.RepairExecuteOp(entry, step))
+				continue
+			}
+			// DrainBackOffExpire has been confirmed, so start drain now.
+			ops = append(ops, op.RepairDrainStartOp(nf.HealthyAPIServer(), entry, &c.Repair))
+		case cke.RepairStepStatusDraining:
+			if !rqs.Enabled {
+				ops = append(ops, op.RepairDrainTimeoutOp(entry))
+				continue
+			}
+			if rqs.DrainCompleted[entry.Address] {
+				ops = append(ops, op.RepairExecuteOp(entry, step))
+				continue
+			}
+			if entry.LastTransitionTime.Before(evictionStartLimit) {
+				ops = append(ops, op.RepairDrainTimeoutOp(entry))
+			}
+			// Wait for drain completion until timeout.
+		case cke.RepairStepStatusWatching:
+			// Repair incompletion has been confirmed.
+			if step.WatchSeconds == nil ||
+				entry.LastTransitionTime.Add(time.Duration(*step.WatchSeconds)*time.Second).Before(now) {
+				entry.Step++
+				entry.StepStatus = cke.RepairStepStatusWaiting
+				goto RUN_STEP
+			}
+			// Wait for repair completion until timeout.
+		}
+	}
+
+	if len(ops) > 0 {
+		phaseRepair = true
+	}
+	return ops, phaseRepair
+}
+
 func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOpsRebootArgs, nf *NodeFilter) (ops []cke.Operator, phaseReboot bool) {
 	if len(rebootArgs.RQEntries) == 0 {
 		return nil, false
@@ -733,14 +916,14 @@ func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOp
 	return ops, phaseReboot
 }
 
-func rebootUncordonOp(rqEntries []*cke.RebootQueueEntry, nf *NodeFilter) cke.Operator {
+func rebootUncordonOp(cs *cke.ClusterStatus, rqEntries []*cke.RebootQueueEntry, nf *NodeFilter) cke.Operator {
 	attrNodes := nf.CordonedNodes()
 	if len(attrNodes) == 0 {
 		return nil
 	}
 	nodes := make([]string, 0, len(attrNodes))
 	for _, n := range attrNodes {
-		if !rebootProcessing(rqEntries, n.Name) {
+		if !(rebootProcessing(rqEntries, n.Name) || repairProcessing(cs.RepairQueue.Entries, n.Name)) {
 			nodes = append(nodes, n.Name)
 		}
 	}
@@ -757,6 +940,17 @@ func rebootProcessing(rqEntries []*cke.RebootQueueEntry, node string) bool {
 			if node == entry.Node {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+func repairProcessing(entries []*cke.RepairQueueEntry, nodename string) bool {
+	for _, entry := range entries {
+		if entry.IsInCluster() && entry.Nodename == nodename &&
+			entry.Status == cke.RepairStatusProcessing &&
+			(entry.StepStatus == cke.RepairStepStatusDraining || entry.StepStatus == cke.RepairStepStatusWatching) {
+			return true
 		}
 	}
 	return false

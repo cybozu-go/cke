@@ -57,6 +57,23 @@ type updateRebootQueueItemsTestCase struct {
 	expected map[string]float64
 }
 
+type repairInput struct {
+	enabled bool
+	entries []*cke.RepairQueueEntry
+}
+
+type repairExpected struct {
+	enabled       float64
+	items         map[string]float64
+	machineStatus map[string]map[string]float64
+}
+
+type repairTestCase struct {
+	name     string
+	input    repairInput
+	expected repairExpected
+}
+
 type sabakanInput struct {
 	isLeader       bool
 	enabled        bool
@@ -84,6 +101,7 @@ func TestMetricsUpdater(t *testing.T) {
 	t.Run("UpdateRebootQueueEntries", testUpdateRebootQueueEntries)
 	t.Run("UpdateRebootQueueItems", testUpdateRebootQueueItems)
 	t.Run("UpdateNodeRebootStatus", testUpdateNodeRebootStatus)
+	t.Run("UpdateRepair", testRepair)
 	t.Run("UpdateSabakanIntegration", testUpdateSabakanIntegration)
 }
 
@@ -528,6 +546,177 @@ func testUpdateNodeRebootStatus(t *testing.T) {
 	}
 }
 
+func testRepair(t *testing.T) {
+	cluster := &cke.Cluster{
+		Nodes: []*cke.Node{
+			{
+				Address:  "1.1.1.1",
+				Hostname: "node1",
+			},
+			{
+				Address:  "2.2.2.2",
+				Hostname: "node2",
+			},
+		},
+	}
+
+	testCases := []repairTestCase{
+		{
+			name: "disabled",
+			input: repairInput{
+				enabled: false,
+				entries: nil,
+			},
+			expected: repairExpected{
+				enabled: 0,
+				items: map[string]float64{
+					"queued":     0,
+					"processing": 0,
+					"succeeded":  0,
+					"failed":     0,
+				},
+				machineStatus: map[string]map[string]float64{
+					"1.1.1.1": {
+						"queued":     0,
+						"processing": 0,
+						"succeeded":  0,
+						"failed":     0,
+					},
+					"2.2.2.2": {
+						"queued":     0,
+						"processing": 0,
+						"succeeded":  0,
+						"failed":     0,
+					},
+				},
+			},
+		},
+		{
+			name: "enabled",
+			input: repairInput{
+				enabled: true,
+				entries: []*cke.RepairQueueEntry{
+					{
+						Address: "1.1.1.1",
+						Status:  cke.RepairStatusSucceeded,
+					},
+					{
+						Address: "10.10.10.10",
+						Status:  cke.RepairStatusSucceeded,
+					},
+					{
+						Address: "10.10.10.11",
+						Status:  cke.RepairStatusProcessing,
+					},
+				},
+			},
+			expected: repairExpected{
+				enabled: 1,
+				items: map[string]float64{
+					"queued":     0,
+					"processing": 1,
+					"succeeded":  2,
+					"failed":     0,
+				},
+				machineStatus: map[string]map[string]float64{
+					"1.1.1.1": {
+						"queued":     0,
+						"processing": 0,
+						"succeeded":  1,
+						"failed":     0,
+					},
+					"2.2.2.2": {
+						"queued":     0,
+						"processing": 0,
+						"succeeded":  0,
+						"failed":     0,
+					},
+					"10.10.10.10": {
+						"queued":     0,
+						"processing": 0,
+						"succeeded":  1,
+						"failed":     0,
+					},
+					"10.10.10.11": {
+						"queued":     0,
+						"processing": 1,
+						"succeeded":  0,
+						"failed":     0,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			defer ctx.Done()
+
+			collector, storage := newTestCollector()
+			storage.setCluster(cluster)
+			storage.enableRepairQueue(tt.input.enabled)
+			storage.setRepairsEntries(tt.input.entries)
+			handler := GetHandler(collector)
+
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/metrics", nil)
+			handler.ServeHTTP(w, req)
+
+			metricsFamily, err := parseMetrics(w.Result())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			metricsEnabledFound := false
+			metricsItems := make(map[string]float64)
+			metricsStatus := make(map[string]map[string]float64)
+			for _, mf := range metricsFamily {
+				switch *mf.Name {
+				case "cke_repair_queue_enabled":
+					for _, m := range mf.Metric {
+						metricsEnabledFound = true
+						if *m.Gauge.Value != tt.expected.enabled {
+							t.Errorf("value for cke_repair_queue_enabled is wrong.  expected: %f, actual %f", tt.expected.enabled, *m.Gauge.Value)
+						}
+					}
+				case "cke_repair_queue_items":
+					for _, m := range mf.Metric {
+						labels := labelToMap(m.Label)
+						if len(labels) != 1 {
+							t.Error("cke_repair_queue_items should have exactly one label", labels)
+						}
+						status := labels["status"]
+						metricsItems[status] = *m.Gauge.Value
+					}
+				case "cke_machine_repair_status":
+					for _, m := range mf.Metric {
+						labels := labelToMap(m.Label)
+						if len(labels) != 2 {
+							t.Error("cke_machine_repair_status should have exactly two labels", labels)
+						}
+						address := labels["address"]
+						status := labels["status"]
+						if _, ok := metricsStatus[address]; !ok {
+							metricsStatus[address] = make(map[string]float64)
+						}
+						metricsStatus[address][status] = *m.Gauge.Value
+					}
+				}
+			}
+			if !metricsEnabledFound {
+				t.Error("metrics cke_repair_queue_enabled was not found")
+			}
+			if !cmp.Equal(metricsItems, tt.expected.items) {
+				t.Errorf("metrics cke_repair_queue_items is wrong. expected: %v, actual: %v", tt.expected.items, metricsItems)
+			}
+			if !cmp.Equal(metricsStatus, tt.expected.machineStatus) {
+				t.Errorf("metrics cke_machine_repair_status is wrong. expected: %v, actual: %v", tt.expected.machineStatus, metricsStatus)
+			}
+		})
+	}
+}
+
 func testUpdateSabakanIntegration(t *testing.T) {
 	testCases := []updateSabakanIntegrationTestCase{
 		{
@@ -691,6 +880,8 @@ type testStorage struct {
 	rebootQueueEnabled bool
 	rebootQueueRunning bool
 	rebootEntries      []*cke.RebootQueueEntry
+	repairQueueEnabled bool
+	repairEntries      []*cke.RepairQueueEntry
 	cluster            *cke.Cluster
 }
 
@@ -724,6 +915,22 @@ func (s *testStorage) setRebootsEntries(entries []*cke.RebootQueueEntry) {
 
 func (s *testStorage) GetRebootsEntries(ctx context.Context) ([]*cke.RebootQueueEntry, error) {
 	return s.rebootEntries, nil
+}
+
+func (s *testStorage) enableRepairQueue(flag bool) {
+	s.repairQueueEnabled = flag
+}
+
+func (s *testStorage) IsRepairQueueDisabled(_ context.Context) (bool, error) {
+	return !s.repairQueueEnabled, nil
+}
+
+func (s *testStorage) setRepairsEntries(entries []*cke.RepairQueueEntry) {
+	s.repairEntries = entries
+}
+
+func (s *testStorage) GetRepairsEntries(_ context.Context) ([]*cke.RepairQueueEntry, error) {
+	return s.repairEntries, nil
 }
 
 func (s *testStorage) setCluster(cluster *cke.Cluster) {

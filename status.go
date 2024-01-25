@@ -86,8 +86,9 @@ type ClusterStatus struct {
 	Name          string
 	NodeStatuses  map[string]*NodeStatus // keys are IP address strings.
 
-	Etcd       EtcdClusterStatus
-	Kubernetes KubernetesClusterStatus
+	Etcd        EtcdClusterStatus
+	Kubernetes  KubernetesClusterStatus
+	RepairQueue RepairQueueStatus
 }
 
 // NodeStatus status of a node.
@@ -147,4 +148,12 @@ type ProxyStatus struct {
 	ServiceStatus
 	IsHealthy bool
 	Config    *proxyv1alpha1.KubeProxyConfiguration
+}
+
+// RepairQueueStatus represents repair queue status
+type RepairQueueStatus struct {
+	Enabled         bool
+	Entries         []*RepairQueueEntry
+	RepairCompleted map[string]bool
+	DrainCompleted  map[string]bool
 }

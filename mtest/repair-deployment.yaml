@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: repair-test
+  name: sample
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sample
+  template:
+    metadata:
+      labels:
+        app: sample
+    spec:
+      containers:
+        - name: httpd
+          image: ghcr.io/cybozu/testhttpd:0
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  namespace: repair-test
+  name: sample
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: sample

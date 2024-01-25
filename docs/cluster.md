@@ -8,6 +8,8 @@ a YAML or JSON object with these fields:
 - [Node](#node)
 - [Taint](#taint)
 - [Reboot](#reboot)
+- [Repair](#repair)
+  - [RepairProcedure](#repairprocedure)
 - [Options](#options)
   - [ServiceParams](#serviceparams)
   - [Mount](#mount)
@@ -27,6 +29,7 @@ a YAML or JSON object with these fields:
 | `dns_servers`               | false    | array     | List of upstream DNS server IP addresses.                        |
 | `dns_service`               | false    | string    | Upstream DNS service name with namespace as `namespace/service`. |
 | `reboot`                    | false    | `Reboot`  | See [Reboot](#reboot).                                           |
+| `repair`                    | false    | `Repair`  | See [Repair](#repair).                                           |
 | `options`                   | false    | `Options` | See [Options](#options).                                         |
 
 * `control_plane_tolerations` is used in [sabakan integration](sabakan-integration.md#strategy).
@@ -68,7 +71,7 @@ Reboot
 ------
 
 | Name                       | Required | Type                             | Description                                                             |
-|----------------------------| -------- | -------------------------------- |-------------------------------------------------------------------------|
+| -------------------------- | -------- | -------------------------------- | ----------------------------------------------------------------------- |
 | `reboot_command`           | true     | array                            | A command to reboot.  List of strings.                                  |
 | `boot_check_command`       | true     | array                            | A command to check nodes booted.  List of strings.                      |
 | `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default: 600 (10 minutes).     |
@@ -97,6 +100,47 @@ If any of the Pods cannot be deleted, it aborts the operation.
 The Pods in the non-protected namespaces are also tried to be deleted gracefully with the Kubernetes eviction API, but they would be simply deleted if eviction is denied.
 
 If `protected_namespaces` is not given, all namespaces are protected.
+
+Repair
+------
+
+| Name                       | Required | Type                             | Description                                                           |
+| -------------------------- | -------- | -------------------------------- | --------------------------------------------------------------------- |
+| `repair_procedures`        | true     | `[]RepairProcedure`              | List of [repair procedures](#repairprocedure).                        |
+| `max_concurrent_repairs`   | false    | \*int                            | Maximum number of machines to be repaired concurrently. Default: 1    |
+| `protected_namespaces`     | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                               |
+| `evict_retries`            | false    | \*int                            | Number of eviction retries, not including initial attempt. Default: 0 |
+| `evict_interval`           | false    | \*int                            | Number of time between eviction retries in seconds. Default: 0        |
+| `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default: 600 (10 minutes)    |
+
+The repair configurations control the [repair functionality](repair.md).
+
+### RepairProcedure
+
+| Name                | Required | Type                | Description                                                                          |
+| ------------------- | -------- | ------------------- | ------------------------------------------------------------------------------------ |
+| `machine_types`     | true     | array               | Type names of the target machines to be repaired by this procedure. List of strings. |
+| `repair_operations` | true     | `[]RepairOperation` | List of [repair operations](#repairoperation).                                       |
+
+#### RepairOperation
+
+| Name                      | Required | Type           | Description                                                     |
+| ------------------------- | -------- | -------------- | --------------------------------------------------------------- |
+| `operation`               | true     | string         | Name of repair operation.                                       |
+| `repair_steps`            | true     | `[]RepairStep` | Sequences of [repair steps](#repairstep).                       |
+| `health_check_command`    | true     | array          | A command to check repaired machine's health. List of strings.  |
+| `command_timeout_seconds` | false    | \*int          | Deadline for health retrieval. Zero means infinity. Default: 30 |
+
+##### RepairStep
+
+| Name                      | Required | Type  | Description                                                                                                                      |
+| ------------------------- | -------- | ----- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `repair_command`          | true     | array | A command and its arguments to repair the target machine. List of strings.                                                       |
+| `command_timeout_seconds` | false    | \*int | Deadline for repairing. Zero means infinity. Default: 30                                                                         |
+| `command_retries`         | false    | \*int | Number of repair retries, not including initial attempt. Default: 0                                                              |
+| `command_interval`        | false    | \*int | Interval of time between repair retries in seconds. Default: 0                                                                   |
+| `need_drain`              | false    | bool  | If true, perform drain of Pods on the target machine prior to the execution of the repair command. Default: false                |
+| `watch_seconds`           | false    | \*int | Follow-up duration in seconds to watch whether the machine becomes healthy after the execution of the repair command. Default: 0 |
 
 Options
 -------

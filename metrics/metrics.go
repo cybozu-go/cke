@@ -68,6 +68,27 @@ var nodeRebootStatus = prometheus.NewDesc(
 	nil,
 )
 
+var repairQueueEnabled = prometheus.NewDesc(
+	prometheus.BuildFQName(namespace, "", "repair_queue_enabled"),
+	"1 if repair queue is enabled.",
+	nil,
+	nil,
+)
+
+var repairQueueItems = prometheus.NewDesc(
+	prometheus.BuildFQName(namespace, "", "repair_queue_items"),
+	"The number of repair queue entries remaining per status.",
+	[]string{"status"},
+	nil,
+)
+
+var machineRepairStatus = prometheus.NewDesc(
+	prometheus.BuildFQName(namespace, "", "machine_repair_status"),
+	"The repair status of a machine.",
+	[]string{"address", "status"},
+	nil,
+)
+
 var sabakanIntegrationSuccessful = prometheus.NewGauge(
 	prometheus.GaugeOpts{
 		Namespace: namespace,

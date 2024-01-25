@@ -88,5 +88,11 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 	}
 	cs.Kubernetes = kcs
 
+	repairQueueStatus, err := op.GetRepairQueueStatus(ctx, inf, livingMaster, cluster)
+	if err != nil {
+		return nil, err
+	}
+	cs.RepairQueue = repairQueueStatus
+
 	return cs, nil
 }

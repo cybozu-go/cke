@@ -831,7 +831,7 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node, taintCP bool) bool {
 	return false
 }
 
-// CordonedNodes returns nodes that are cordoned and annotated as reboot operation targets.
+// CordonedNodes returns nodes that are cordoned and annotated as reboot/repair operation targets.
 func (nf *NodeFilter) CordonedNodes() (nodes []*corev1.Node) {
 	for i := range nf.status.Kubernetes.Nodes {
 		n := &nf.status.Kubernetes.Nodes[i]
