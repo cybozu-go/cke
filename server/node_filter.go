@@ -431,14 +431,14 @@ func (nf *NodeFilter) KubeletStoppedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-// KubeletStoppedRegisteredNodes returns nodes that are not running kubelet and are registered on Kubernetes.
-func (nf *NodeFilter) KubeletStoppedRegisteredNodes() (nodes []*cke.Node) {
+// RegisteredNodes returns nodes that are registered on Kubernetes out of targets.
+func (nf *NodeFilter) RegisteredNodes(target []*cke.Node) (nodes []*cke.Node) {
 	registered := make(map[string]bool)
 	for _, kn := range nf.status.Kubernetes.Nodes {
 		registered[kn.Name] = true
 	}
 
-	for _, n := range nf.KubeletStoppedNodes() {
+	for _, n := range target {
 		if registered[n.Nodename()] {
 			nodes = append(nodes, n)
 		}
