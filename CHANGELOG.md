@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.27.6]
+
+### Fixed
+
+- fix GO_VERSION in bin/env-sonobuoy in [#701](https://github.com/cybozu-go/cke/pull/701)
+
 ## [1.27.5]
 
 ### Changed
@@ -88,7 +94,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.5...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.6...HEAD
+[1.27.6]: https://github.com/cybozu-go/cke/compare/v1.27.5...v1.27.6
 [1.27.5]: https://github.com/cybozu-go/cke/compare/v1.27.4...v1.27.5
 [1.27.4]: https://github.com/cybozu-go/cke/compare/v1.27.3...v1.27.4
 [1.27.3]: https://github.com/cybozu-go/cke/compare/v1.27.2...v1.27.3
