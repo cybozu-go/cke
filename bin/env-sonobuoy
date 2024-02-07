@@ -6,4 +6,4 @@ MACHINE_TYPE_WORKER=c2-standard-8
 DISK_TYPE=pd-ssd
 BOOT_DISK_SIZE=20GB
 GCLOUD="gcloud --quiet --account ${SERVICE_ACCOUNT} --project ${PROJECT}"
-GO_VERSION=1.20.6
+GO_VERSION=1.21.6
