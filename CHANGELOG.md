@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.27.5]
+
+### Changed
+
+- Fix condition of re-taint operation in [#699](https://github.com/cybozu-go/cke/pull/699)
+
 ## [1.27.4]
 
 ### Added
@@ -82,7 +88,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.4...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.5...HEAD
+[1.27.5]: https://github.com/cybozu-go/cke/compare/v1.27.4...v1.27.5
 [1.27.4]: https://github.com/cybozu-go/cke/compare/v1.27.3...v1.27.4
 [1.27.3]: https://github.com/cybozu-go/cke/compare/v1.27.2...v1.27.3
 [1.27.2]: https://github.com/cybozu-go/cke/compare/v1.27.1...v1.27.2
