@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.27.7]
+
+### Fixed
+
+- add setup-go in release-cke-image CI in [#703](https://github.com/cybozu-go/cke/pull/703)
+
 ## [1.27.6]
 
 ### Fixed
