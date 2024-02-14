@@ -80,7 +80,7 @@ func run() error {
 		}
 	}
 
-	var dialer = &net.Dialer{DualStack: true}
+	var dialer = &net.Dialer{}
 	var err error
 	dialer.Timeout, err = time.ParseDuration(*flgDialTimeout)
 	if err != nil {

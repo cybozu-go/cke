@@ -79,7 +79,6 @@ func VaultClient(cfg *VaultConfig) (*vault.Client, *vault.Secret, error) {
 		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second,
 			KeepAlive: 30 * time.Second,
-			DualStack: true,
 		}).DialContext,
 		MaxIdleConnsPerHost:   -1,
 		TLSHandshakeTimeout:   10 * time.Second,
