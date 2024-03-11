@@ -145,6 +145,14 @@ func testRebootOperations() {
 		rebootQueueAdd([]string{node1})
 		rebootShouldNotProceed()
 
+		By("ckecli reboot-queue list the entries in the reboot queue")
+		data := ckecliSafe("reboot-queue", "list")
+		var entries []*cke.RebootQueueEntry
+		err = json.Unmarshal(data, &entries)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(entries).Should(HaveLen(1))
+		Expect(entries[0].Node).To(Equal(node1))
+
 		By("ckecli reboot-queue enable enables reboot queue processing")
 		ckecliSafe("reboot-queue", "enable")
 		waitRebootCompletion(cluster)
@@ -154,7 +162,7 @@ func testRebootOperations() {
 		ckecliSafe("reboot-queue", "disable")
 		rebootQueueAdd([]string{node1})
 		ckecliSafe("reboot-queue", "cancel", fmt.Sprintf("%d", currentWriteIndex-1))
-		entries, err := getRebootEntries()
+		entries, err = getRebootEntries()
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(entries).Should(HaveLen(1))
 		Expect(entries[0].Status).To(Equal(cke.RebootStatusCancelled))
