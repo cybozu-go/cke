@@ -63,18 +63,6 @@ func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 
 	n.Taints = append(n.Taints, tmpl.Taints...)
 	switch m.Status.State {
-	case StateUnhealthy:
-		n.Taints = append(n.Taints, corev1.Taint{
-			Key:    "cke.cybozu.com/state",
-			Value:  "unhealthy",
-			Effect: corev1.TaintEffectNoSchedule,
-		})
-	case StateUnreachable:
-		n.Taints = append(n.Taints, corev1.Taint{
-			Key:    "cke.cybozu.com/state",
-			Value:  "unreachable",
-			Effect: corev1.TaintEffectNoSchedule,
-		})
 	case StateRetiring:
 		n.Taints = append(n.Taints, corev1.Taint{
 			Key:    "cke.cybozu.com/state",
@@ -699,14 +687,6 @@ func hasValidTaint(n *cke.Node, m *Machine) bool {
 	}
 
 	switch m.Status.State {
-	case StateUnhealthy:
-		if ckeTaint.Value != "unhealthy" || ckeTaint.Effect != corev1.TaintEffectNoSchedule {
-			return false
-		}
-	case StateUnreachable:
-		if ckeTaint.Value != "unreachable" || ckeTaint.Effect != corev1.TaintEffectNoSchedule {
-			return false
-		}
 	case StateRetiring:
 		if ckeTaint.Value != "retiring" || ckeTaint.Effect != corev1.TaintEffectNoExecute {
 			return false
