@@ -85,9 +85,6 @@ func testMachineToNode(t *testing.T) {
 	if !containsTaint(res1.Taints, corev1.Taint{Key: "foo", Effect: corev1.TaintEffectNoSchedule}) {
 		t.Error(`res1.Taints do not have corev1.Taint{Key"foo", Effect: corev1.TaintEffectNoSchedule}, actual:`, res1.Taints)
 	}
-	if !containsTaint(res1.Taints, corev1.Taint{Key: domain + "/state", Value: "unhealthy", Effect: corev1.TaintEffectNoSchedule}) {
-		t.Error(`res1.Taints do not have corev1.Taint{Key: "cke.cybozu.com/state", Value: "unhealthy", Effect: "NoSchedule"}, actual:`, res1.Taints)
-	}
 
 	machine.Status.State = StateRetiring
 	res2 := MachineToNode(machine, node)
@@ -533,7 +530,6 @@ func testUpdate(t *testing.T) {
 		k8sUntaintedNodes = append(k8sUntaintedNodes, n)
 		n.Spec.Taints = []corev1.Taint{
 			{Key: corev1.TaintNodeNotReady, Effect: corev1.TaintEffectNoSchedule},
-			{Key: "cke.cybozu.com/state", Value: "unhealthy", Effect: corev1.TaintEffectNoSchedule},
 			{Key: op.CKETaintMaster, Effect: corev1.TaintEffectNoSchedule},
 			{Key: "foo.cybozu.com/transient", Effect: corev1.TaintEffectNoSchedule},
 		}
