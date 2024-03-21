@@ -5,6 +5,18 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.27.8]
+
+### Added
+
+- Add -output option to `ckecli reboot-queue list` [#708](https://github.com/cybozu-go/cke/pull/708)
+
+### Changed
+
+- Remove deprecated DualStack flag [#705](https://github.com/cybozu-go/cke/pull/705)
+- Update Vault to 1.15.6 [#709](https://github.com/cybozu-go/cke/pull/709)
+- Remove Unhealthy/Unreachable taint [#710](https://github.com/cybozu-go/cke/pull/710)
+
 ## [1.27.7]
 
 ### Fixed
@@ -100,7 +112,9 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.6...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.8...HEAD
+[1.27.8]: https://github.com/cybozu-go/cke/compare/v1.27.7...v1.27.8
+[1.27.7]: https://github.com/cybozu-go/cke/compare/v1.27.6...v1.27.7
 [1.27.6]: https://github.com/cybozu-go/cke/compare/v1.27.5...v1.27.6
 [1.27.5]: https://github.com/cybozu-go/cke/compare/v1.27.4...v1.27.5
 [1.27.4]: https://github.com/cybozu-go/cke/compare/v1.27.3...v1.27.4
