@@ -128,6 +128,34 @@ func testRepairOperations() {
 		ckecliSafe("repair-queue", "delete-finished")
 		waitRepairEmpty(cluster)
 
+		By("setting non-returning repair command")
+		cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].RepairCommand = []string{"sh", "-c", "exec sleep infinity", "sleep-infinity"}
+		_, err = ckecliClusterSet(cluster)
+		Expect(err).NotTo(HaveOccurred())
+		time.Sleep(time.Second * 3)
+
+		repairQueueAdd(node1)
+		waitRepairFailure(cluster)
+
+		ckecliSafe("repair-queue", "delete-finished")
+		waitRepairEmpty(cluster)
+
+		By("setting non-returning repair command and long command timeout")
+		originalCommandTimeoutSeconds := cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandTimeoutSeconds
+
+		longCommandTimeout := 90 // > (timeout of repairShouldNotProceed())
+		cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandTimeoutSeconds = &longCommandTimeout
+		_, err = ckecliClusterSet(cluster)
+		Expect(err).NotTo(HaveOccurred())
+		time.Sleep(time.Second * 3)
+
+		repairQueueAdd(node1)
+		repairShouldNotProceed()
+
+		time.Sleep(time.Second * time.Duration(longCommandTimeout)) // wait for CKE to update the queue entry
+		ckecliSafe("repair-queue", "delete-finished")
+		waitRepairEmpty(cluster)
+
 		By("setting noop repair command")
 		cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].RepairCommand = []string{"true"}
 		_, err = ckecliClusterSet(cluster)
@@ -155,8 +183,9 @@ func testRepairOperations() {
 		ckecliSafe("repair-queue", "delete", strconv.Itoa(currentWriteIndex-1))
 		waitRepairEmpty(cluster)
 
-		By("restoring repair command and watch duration")
+		By("restoring repair command, command timeout, and watch duration")
 		cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].RepairCommand = originalRepairCommand
+		cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].CommandTimeoutSeconds = originalCommandTimeoutSeconds
 		cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds = originalWatchSeconds
 		_, err = ckecliClusterSet(cluster)
 		Expect(err).NotTo(HaveOccurred())

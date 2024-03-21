@@ -25,6 +25,7 @@ repair:
     - operation: "op1"
       repair_steps:
       - repair_command: ["sh", "-c", "touch /tmp/mtest-repair-$1", "repair"]
+        command_timeout_seconds: 30
         need_drain: true
         watch_seconds: 30
       health_check_command: ["sh", "-c", "test -f /tmp/mtest-repair-$1 && echo true", "health_check"]
