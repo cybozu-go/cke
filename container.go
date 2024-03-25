@@ -183,6 +183,8 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 		var opts []string
 		if m.ReadOnly {
 			opts = append(opts, "ro")
+		} else {
+			opts = append(opts, "rw")
 		}
 		if len(m.Propagation) > 0 {
 			opts = append(opts, m.Propagation.String())

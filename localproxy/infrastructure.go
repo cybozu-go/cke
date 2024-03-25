@@ -233,6 +233,8 @@ func (l localDocker) RunSystem(name string, img cke.Image, opts []string, params
 		var opts []string
 		if m.ReadOnly {
 			opts = append(opts, "ro")
+		} else {
+			opts = append(opts, "rw")
 		}
 		if len(m.Propagation) > 0 {
 			opts = append(opts, m.Propagation.String())
