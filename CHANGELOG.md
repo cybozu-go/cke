@@ -5,7 +5,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
-## [1.27.8]
+## [1.27.9]
 
 ### Added
 
@@ -16,6 +16,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Remove deprecated DualStack flag [#705](https://github.com/cybozu-go/cke/pull/705)
 - Update Vault to 1.15.6 [#709](https://github.com/cybozu-go/cke/pull/709)
 - Remove Unhealthy/Unreachable taint [#710](https://github.com/cybozu-go/cke/pull/710)
+- Add rw option to extra volumes [#712](https://github.com/cybozu-go/cke/pull/712)
+
+## [1.27.8]
+
+This release was canceled because the release workflow was failed.
 
 ## [1.27.7]
 
@@ -112,7 +117,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.8...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.9...HEAD
+[1.27.9]: https://github.com/cybozu-go/cke/compare/v1.27.7...v1.27.9
 [1.27.8]: https://github.com/cybozu-go/cke/compare/v1.27.7...v1.27.8
 [1.27.7]: https://github.com/cybozu-go/cke/compare/v1.27.6...v1.27.7
 [1.27.6]: https://github.com/cybozu-go/cke/compare/v1.27.5...v1.27.6
