@@ -198,10 +198,10 @@ func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []
 	}
 	if len(workerInProgress) >= maxConcurrentReboots {
 		return nil
-	} else if len(workerInProgress)+len(workerDrainable) <= maxConcurrentReboots {
-		return workerDrainable
+	} else if len(workerDrainable) > 0 {
+		return workerDrainable[:1]
 	} else {
-		return workerDrainable[:maxConcurrentReboots-len(workerInProgress)]
+		return nil
 	}
 }
 
