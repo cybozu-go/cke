@@ -658,6 +658,11 @@ func (d testData) withRebootDequeued(entries []*cke.RebootQueueEntry) testData {
 	return d
 }
 
+func (d testData) withRebootCancelled(entries []*cke.RebootQueueEntry) testData {
+	d.RebootArgs.RebootCancelled = entries
+	return d
+}
+
 func (d testData) withDisableProxy() testData {
 	d.Cluster.Options.Proxy.Disable = true
 	return d
@@ -1274,7 +1279,7 @@ func TestDecideOps(t *testing.T) {
 					Node:   nodeNames[2],
 					Status: cke.RebootStatusCancelled,
 				},
-			}).withRebootDequeued([]*cke.RebootQueueEntry{
+			}).withRebootCancelled([]*cke.RebootQueueEntry{
 				{
 					Index:  1,
 					Node:   nodeNames[2],
@@ -2700,7 +2705,7 @@ func TestDecideOps(t *testing.T) {
 					Node:   nodeNames[4],
 					Status: cke.RebootStatusCancelled,
 				},
-			}).withRebootDequeued([]*cke.RebootQueueEntry{
+			}).withRebootCancelled([]*cke.RebootQueueEntry{
 				{
 					Index:  1,
 					Node:   nodeNames[4],

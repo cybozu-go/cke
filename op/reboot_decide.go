@@ -245,7 +245,6 @@ func CheckRebootDequeue(ctx context.Context, c *cke.Cluster, rqEntries []*cke.Re
 	for _, entry := range rqEntries {
 		switch {
 		case !entry.ClusterMember(c):
-		case entry.Status == cke.RebootStatusCancelled:
 		case entry.Status == cke.RebootStatusRebooting && rebootCompleted(ctx, c, entry):
 		default:
 			continue
@@ -255,6 +254,18 @@ func CheckRebootDequeue(ctx context.Context, c *cke.Cluster, rqEntries []*cke.Re
 	}
 
 	return dequeued
+}
+
+func CheckRebootCancelled(ctx context.Context, c *cke.Cluster, rqEntries []*cke.RebootQueueEntry) []*cke.RebootQueueEntry {
+	cancelled := []*cke.RebootQueueEntry{}
+
+	for _, entry := range rqEntries {
+		if entry.Status == cke.RebootStatusCancelled {
+			cancelled = append(cancelled, entry)
+		}
+	}
+
+	return cancelled
 }
 
 func rebootCompleted(ctx context.Context, c *cke.Cluster, entry *cke.RebootQueueEntry) bool {
