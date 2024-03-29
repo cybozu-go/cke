@@ -69,6 +69,7 @@ server:
   local-zone: "29.172.in-addr.arpa." transparent
   local-zone: "30.172.in-addr.arpa." transparent
   local-zone: "31.172.in-addr.arpa." transparent
+  root-hints: "/usr/local/unbound/etc/unbound/root.hints"
   trust-anchor-file: "/usr/local/unbound/etc/unbound/root.key"
   domain-insecure: "{{ .Domain }}"
   domain-insecure: "10.in-addr.arpa."
