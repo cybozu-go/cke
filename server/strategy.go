@@ -886,7 +886,7 @@ func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOp
 
 	if len(rebootArgs.RebootCancelled) > 0 {
 		phaseReboot = true
-		ops = append(ops, op.RebootDequeueOp(rebootArgs.RebootCancelled))
+		ops = append(ops, op.RebootCancelOp(rebootArgs.RebootCancelled))
 		return ops, phaseReboot
 	}
 	if len(rebootArgs.NewlyDrained) > 0 {

@@ -1286,7 +1286,7 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusCancelled,
 				},
 			}),
-			ExpectedOps: []opData{{"reboot-dequeue", 1}},
+			ExpectedOps: []opData{{"reboot-cancel", 1}},
 		},
 		{
 			Name: "UserResourceAdd",
@@ -2713,7 +2713,7 @@ func TestDecideOps(t *testing.T) {
 				},
 			}),
 			ExpectedOps: []opData{
-				{"reboot-dequeue", 1},
+				{"reboot-cancel", 1},
 			},
 		},
 	}
