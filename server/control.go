@@ -346,7 +346,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	newlyDrained := op.ChooseDrainedNodes(cluster, apiServers, rqEntries)
 	drainCompleted, drainTimedout, _ := op.CheckDrainCompletion(ctx, inf, nf.HealthyAPIServer(), cluster, rqEntries)
 	rebootDequeued := op.CheckRebootDequeue(ctx, cluster, rqEntries)
-	RebootCancelled := op.CheckRebootCancelled(ctx, cluster, rqEntries)
+	rebootCancelled := op.CheckRebootCancelled(ctx, cluster, rqEntries)
 
 	ops, phase := DecideOps(cluster, status, constraints, rcs, DecideOpsRebootArgs{
 		RQEntries:       rqEntries,
@@ -354,7 +354,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		DrainCompleted:  drainCompleted,
 		DrainTimedout:   drainTimedout,
 		RebootDequeued:  rebootDequeued,
-		RebootCancelled: RebootCancelled,
+		RebootCancelled: rebootCancelled,
 	}, c.config)
 
 	st := &cke.ServerStatus{
