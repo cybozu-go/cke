@@ -17,11 +17,12 @@ import (
 )
 
 type DecideOpsRebootArgs struct {
-	RQEntries      []*cke.RebootQueueEntry
-	NewlyDrained   []*cke.RebootQueueEntry
-	DrainCompleted []*cke.RebootQueueEntry
-	DrainTimedout  []*cke.RebootQueueEntry
-	RebootDequeued []*cke.RebootQueueEntry
+	RQEntries       []*cke.RebootQueueEntry
+	NewlyDrained    []*cke.RebootQueueEntry
+	DrainCompleted  []*cke.RebootQueueEntry
+	DrainTimedout   []*cke.RebootQueueEntry
+	RebootDequeued  []*cke.RebootQueueEntry
+	RebootCancelled []*cke.RebootQueueEntry
 }
 
 // DecideOps returns the next operations to do and the operation phase.
@@ -883,6 +884,11 @@ func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOp
 		return nil, false
 	}
 
+	if len(rebootArgs.RebootCancelled) > 0 {
+		phaseReboot = true
+		ops = append(ops, op.RebootCancelOp(rebootArgs.RebootCancelled))
+		return ops, phaseReboot
+	}
 	if len(rebootArgs.NewlyDrained) > 0 {
 		phaseReboot = true
 		sshCheckNodes := make([]*cke.Node, 0, len(nf.cluster.Nodes))

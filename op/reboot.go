@@ -523,6 +523,25 @@ func (c rebootDequeueCommand) Command() cke.Command {
 	}
 }
 
+//
+
+type rebootCancelOp struct {
+	rebootDequeueOp
+}
+
+// RebootCancelOp returns an Operator to dequeue cancelled reboot entries.
+func RebootCancelOp(entries []*cke.RebootQueueEntry) cke.Operator {
+	return &rebootCancelOp{
+		rebootDequeueOp{
+			entries: entries,
+		},
+	}
+}
+
+func (o *rebootCancelOp) Name() string {
+	return "reboot-cancel"
+}
+
 func listProtectedNamespaces(ctx context.Context, cs *kubernetes.Clientset, ls *metav1.LabelSelector) (map[string]bool, error) {
 	selector, err := metav1.LabelSelectorAsSelector(ls)
 	if err != nil {
