@@ -5,6 +5,14 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.27.10]
+
+### Changed
+
+- change priorty of reboot queue cancel [#715](https://github.com/cybozu-go/cke/pull/715)
+- Embed root.hints file in unbound container [#716](https://github.com/cybozu-go/cke/pull/716)
+- Add test for too long repair execution [#713](https://github.com/cybozu-go/cke/pull/713)
+
 ## [1.27.9]
 
 ### Added
@@ -117,7 +125,8 @@ This release was canceled because the release workflow was failed.
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.9...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.10...HEAD
+[1.27.10]: https://github.com/cybozu-go/cke/compare/v1.27.9...v1.27.10
 [1.27.9]: https://github.com/cybozu-go/cke/compare/v1.27.7...v1.27.9
 [1.27.8]: https://github.com/cybozu-go/cke/compare/v1.27.7...v1.27.8
 [1.27.7]: https://github.com/cybozu-go/cke/compare/v1.27.6...v1.27.7
