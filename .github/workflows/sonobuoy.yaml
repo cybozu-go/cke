@@ -10,10 +10,10 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version-file: go.mod
-      - uses: google-github-actions/auth@v1
+      - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
-      - uses: google-github-actions/setup-gcloud@v1
+      - uses: google-github-actions/setup-gcloud@v2
       - name: Set GCP instance name
         run: echo "INSTANCE_NAME=cke-${{ matrix.suite }}-${{ github.run_number }}-$(TZ=Asia/Tokyo date +%H%M%S)" >> $GITHUB_ENV
       - name: Run sonobuoy
