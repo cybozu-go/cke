@@ -2,6 +2,12 @@
 
 cke-tools related changes.
 
+## 1.28.0 - 2024-04-04
+
+- Remove deprecated DualStack flag [#705](https://github.com/cybozu-go/cke/pull/705)
+- Update CNI plugins to 1.4.1 [#717](https://github.com/cybozu-go/cke/pull/717)
+- Update dependencies [#719](https://github.com/cybozu-go/cke/pull/719)
+
 ## 1.27.1 - 2023-12-04
 
 - Migrate to ghcr.io [#682](https://github.com/cybozu-go/cke/pull/682)
