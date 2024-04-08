@@ -5,10 +5,13 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.28.0-rc.1]
+
 ### Changed
 
 - Update for Kubernetes 1.28 [#721](https://github.com/cybozu-go/cke/pull/721)
 - Update dependencies [#719](https://github.com/cybozu-go/cke/pull/719)
+- Update actions/setup-go to v5 [#722](https://github.com/cybozu-go/cke/pull/722)
 
 ## Ancient changes
 
@@ -29,4 +32,5 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.10...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.28.0-rc.1...HEAD
+[v1.28.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.27.10...v1.28.0-rc.1
