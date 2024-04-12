@@ -635,6 +635,66 @@ func testStorageSabakan(t *testing.T) {
 	}
 }
 
+func testStorageAutoRepair(t *testing.T) {
+	t.Parallel()
+
+	client := newEtcdClient(t)
+	defer client.Close()
+	s := Storage{client}
+	ctx := context.Background()
+
+	_, err := s.GetAutoRepairQueryVariables(ctx)
+	if err != ErrNotFound {
+		t.Error(`err != ErrNotFound,`, err)
+	}
+
+	const vars = `{"having": {"racks": [0, 1, 2]}}`
+	err = s.SetAutoRepairQueryVariables(ctx, vars)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vars2, err := s.GetAutoRepairQueryVariables(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(vars2) != vars {
+		t.Error("unexpected query variables:", string(vars2))
+	}
+
+	disabled, err := s.IsAutoRepairDisabled(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disabled {
+		t.Error("sabakan-triggered automatic repair should not be disabled by default")
+	}
+
+	err = s.EnableAutoRepair(ctx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disabled, err = s.IsAutoRepairDisabled(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !disabled {
+		t.Error("sabakan-triggered automatic repair could not be disabled")
+	}
+
+	err = s.EnableAutoRepair(ctx, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disabled, err = s.IsAutoRepairDisabled(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disabled {
+		t.Error("sabakan-triggered automatic repair could not be re-enabled")
+	}
+}
+
 func testStorageReboot(t *testing.T) {
 	t.Parallel()
 
@@ -1005,6 +1065,7 @@ func TestStorage(t *testing.T) {
 	t.Run("Maint", testStorageMaint)
 	t.Run("Resource", testStorageResource)
 	t.Run("Sabakan", testStorageSabakan)
+	t.Run("AutoRepair", testStorageAutoRepair)
 	t.Run("Reboot", testStorageReboot)
 	t.Run("Repair", testStorageRepair)
 	t.Run("Status", testStatus)

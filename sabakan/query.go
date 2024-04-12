@@ -38,6 +38,9 @@ query ckeSearch($having: MachineParams = null,
       ipv4
       registerDate
       retireDate
+      bmc {
+        bmcType
+      }
     }
     status {
       state
@@ -122,30 +125,42 @@ func (v QueryVariables) IsValid() error {
 	return nil
 }
 
-// Machine represents a machine registered with sabakan.
-type Machine struct {
-	Spec struct {
-		Serial string `json:"serial"`
-		Labels []struct {
-			Name  string `json:"name"`
-			Value string `json:"value"`
-		} `json:"labels"`
-		Rack         int       `json:"rack"`
-		IndexInRack  int       `json:"indexInRack"`
-		Role         string    `json:"role"`
-		IPv4         []string  `json:"ipv4"`
-		RegisterDate time.Time `json:"registerDate"`
-		RetireDate   time.Time `json:"retireDate"`
-	} `json:"spec"`
-	Status struct {
-		State    State   `json:"state"`
-		Duration float64 `json:"duration"`
-	} `json:"status"`
+// BMC represents the BMC of a machine registered with sabakan.
+type BMC struct {
+	Type string `json:"bmcType"`
 }
 
-// Query send a GraphQL query to sabakan.
+// MachineSpec represents the spec of a machine registered with sabakan.
+type MachineSpec struct {
+	Serial string `json:"serial"`
+	Labels []struct {
+		Name  string `json:"name"`
+		Value string `json:"value"`
+	} `json:"labels"`
+	Rack         int       `json:"rack"`
+	IndexInRack  int       `json:"indexInRack"`
+	Role         string    `json:"role"`
+	IPv4         []string  `json:"ipv4"`
+	RegisterDate time.Time `json:"registerDate"`
+	RetireDate   time.Time `json:"retireDate"`
+	BMC          BMC       `json:"bmc"`
+}
+
+// MachineStatus represents the status of a machine registered with sabakan.
+type MachineStatus struct {
+	State    State   `json:"state"`
+	Duration float64 `json:"duration"`
+}
+
+// Machine represents a machine registered with sabakan.
+type Machine struct {
+	Spec   MachineSpec   `json:"spec"`
+	Status MachineStatus `json:"status"`
+}
+
+// QueryAvailable sends a GraphQL query to sabakan to retrieve available machines information.
 // If sabakan URL is not set, this returns (nil, cke.ErrNotFound).
-func Query(ctx context.Context, storage cke.Storage) ([]Machine, error) {
+func QueryAvailable(ctx context.Context, storage cke.Storage) ([]Machine, error) {
 	url, err := storage.GetSabakanURL(ctx)
 	if err != nil {
 		return nil, err
@@ -155,6 +170,39 @@ func Query(ctx context.Context, storage cke.Storage) ([]Machine, error) {
 	varsData, err := storage.GetSabakanQueryVariables(ctx)
 	switch err {
 	case cke.ErrNotFound:
+	case nil:
+		variables = new(QueryVariables)
+		err = json.Unmarshal(varsData, variables)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, err
+	}
+
+	return doQuery(ctx, url, variables, httpClient)
+}
+
+// QueryNonHealthy sends a GraphQL query to sabakan to retrieve non-healthy machines information.
+// If sabakan URL is not set, this returns (nil, cke.ErrNotFound).
+func QueryNonHealthy(ctx context.Context, storage cke.Storage) ([]Machine, error) {
+	url, err := storage.GetSabakanURL(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var variables *QueryVariables
+	varsData, err := storage.GetAutoRepairQueryVariables(ctx)
+	switch err {
+	case cke.ErrNotFound:
+		variables = &QueryVariables{
+			Having: &MachineParams{
+				States: []State{StateUnhealthy, StateUnreachable},
+			},
+			NotHaving: &MachineParams{
+				Roles: []string{"boot"},
+			},
+		}
 	case nil:
 		variables = new(QueryVariables)
 		err = json.Unmarshal(varsData, variables)

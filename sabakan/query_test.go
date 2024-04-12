@@ -52,6 +52,10 @@ func testMachine(t *testing.T, m Machine) {
 		t.Error("wrong retire date:", m.Spec.RetireDate.Format(time.RFC3339Nano))
 	}
 
+	if m.Spec.BMC.Type != "iDRAC" {
+		t.Error("wrong BMC type:", m.Spec.BMC.Type)
+	}
+
 	if m.Status.State != StateHealthy {
 		t.Error("wrong machine state:", m.Status.State)
 	}
