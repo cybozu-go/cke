@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Added
+
+- Add sabakan-triggered automatic repair functionality in [#727](https://github.com/cybozu-go/cke/pull/727)
+
 ### Fixed
 
 - Fix not to send unassigned query parameters in Sabakan integration in [#727](https://github.com/cybozu-go/cke/pull/727)
