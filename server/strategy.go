@@ -889,6 +889,10 @@ func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOp
 		ops = append(ops, op.RebootCancelOp(rebootArgs.RebootCancelled))
 		return ops, phaseReboot
 	}
+	if len(rebootArgs.DrainCompleted) > 0 {
+		phaseReboot = true
+		ops = append(ops, op.RebootRebootOp(nf.HealthyAPIServer(), rebootArgs.DrainCompleted, &c.Reboot))
+	}
 	if len(rebootArgs.NewlyDrained) > 0 {
 		phaseReboot = true
 		sshCheckNodes := make([]*cke.Node, 0, len(nf.cluster.Nodes))
@@ -902,10 +906,6 @@ func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOp
 		} else {
 			ops = append(ops, op.RebootDrainStartOp(nf.HealthyAPIServer(), rebootArgs.NewlyDrained, &c.Reboot))
 		}
-	}
-	if len(rebootArgs.DrainCompleted) > 0 {
-		phaseReboot = true
-		ops = append(ops, op.RebootRebootOp(nf.HealthyAPIServer(), rebootArgs.DrainCompleted, &c.Reboot))
 	}
 	if len(rebootArgs.DrainTimedout) > 0 {
 		phaseReboot = true
