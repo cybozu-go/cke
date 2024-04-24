@@ -87,7 +87,7 @@ type MachineParams struct {
 	Racks               []int    `json:"racks"`
 	Roles               []string `json:"roles"`
 	States              []State  `json:"states"`
-	MinDaysBeforeRetire int      `json:"minDaysBeforeRetire"`
+	MinDaysBeforeRetire *int     `json:"minDaysBeforeRetire,omitempty"`
 }
 
 // IsValid returns non-nil error if mp is not valid.

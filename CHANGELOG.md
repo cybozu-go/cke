@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix not to send unassigned query parameters in Sabakan integration in [#725](https://github.com/cybozu-go/cke/pull/725)
+
 ## [1.28.0]
 
 ### Changed
