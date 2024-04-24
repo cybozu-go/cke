@@ -16,7 +16,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const drainBackOffBaseSeconds = 60
+const drainBackOffBaseSeconds = 300
+const drainBackOffMaxSeconds = 1200
 
 type rebootDrainStartOp struct {
 	finished bool
@@ -571,7 +572,12 @@ func drainBackOff(ctx context.Context, inf cke.Infrastructure, entry *cke.Reboot
 	entry.Status = cke.RebootStatusQueued
 	entry.LastTransitionTime = time.Now().Truncate(time.Second).UTC()
 	entry.DrainBackOffCount++
-	entry.DrainBackOffExpire = entry.LastTransitionTime.Add(time.Second * time.Duration(drainBackOffBaseSeconds+rand.Int63n(int64(drainBackOffBaseSeconds*entry.DrainBackOffCount))))
+	backoffDuration := time.Second * time.Duration((1<<(entry.DrainBackOffCount-1))*drainBackOffBaseSeconds+rand.Int63n(drainBackOffBaseSeconds))
+	if backoffDuration > time.Second*drainBackOffMaxSeconds {
+		backoffDuration = time.Second * time.Duration(drainBackOffMaxSeconds+rand.Int63n(drainBackOffBaseSeconds))
+	}
+	entry.DrainBackOffExpire = entry.LastTransitionTime.Add(backoffDuration)
+
 	err = inf.Storage().UpdateRebootsEntry(ctx, entry)
 	if err != nil {
 		return err
