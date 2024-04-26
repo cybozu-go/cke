@@ -572,11 +572,11 @@ func drainBackOff(ctx context.Context, inf cke.Infrastructure, entry *cke.Reboot
 	entry.Status = cke.RebootStatusQueued
 	entry.LastTransitionTime = time.Now().Truncate(time.Second).UTC()
 	entry.DrainBackOffCount++
-	backoffDuration := time.Second * time.Duration((1<<(entry.DrainBackOffCount-1))*drainBackOffBaseSeconds+rand.Int63n(drainBackOffBaseSeconds))
-	if backoffDuration > time.Second*drainBackOffMaxSeconds {
-		backoffDuration = time.Second * time.Duration(drainBackOffMaxSeconds+rand.Int63n(drainBackOffBaseSeconds))
+	var backoffSeconds int64 = (1 << (entry.DrainBackOffCount - 1)) * drainBackOffBaseSeconds
+	if backoffSeconds > drainBackOffMaxSeconds {
+		backoffSeconds = drainBackOffMaxSeconds
 	}
-	entry.DrainBackOffExpire = entry.LastTransitionTime.Add(backoffDuration)
+	entry.DrainBackOffExpire = entry.LastTransitionTime.Add(time.Second * time.Duration(backoffSeconds+rand.Int63n(drainBackOffBaseSeconds)))
 
 	err = inf.Storage().UpdateRebootsEntry(ctx, entry)
 	if err != nil {
