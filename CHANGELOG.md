@@ -5,6 +5,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.27.11]
+
 ### Added
 
 - Add sabakan-triggered automatic repair functionality in [#727](https://github.com/cybozu-go/cke/pull/727)
@@ -133,7 +135,8 @@ This release was canceled because the release workflow was failed.
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.10...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.27.11...HEAD
+[1.27.11]: https://github.com/cybozu-go/cke/compare/v1.27.10...v1.27.11
 [1.27.10]: https://github.com/cybozu-go/cke/compare/v1.27.9...v1.27.10
 [1.27.9]: https://github.com/cybozu-go/cke/compare/v1.27.7...v1.27.9
 [1.27.8]: https://github.com/cybozu-go/cke/compare/v1.27.7...v1.27.8
