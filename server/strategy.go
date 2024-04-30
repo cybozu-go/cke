@@ -727,6 +727,9 @@ func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 			ops = append(ops, op.RepairDequeueOp(entry))
 			continue
 		}
+		if entry.HasFinished() {
+			continue
+		}
 		if rqs.RepairCompleted[entry.Address] {
 			ops = append(ops, op.RepairFinishOp(entry, true))
 			continue
