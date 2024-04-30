@@ -67,6 +67,11 @@ $ ckecli [--config FILE] <subcommand> args...
   - [`ckecli sabakan get-template`](#ckecli-sabakan-get-template)
   - [`ckecli sabakan set-variables FILE`](#ckecli-sabakan-set-variables-file)
   - [`ckecli sabakan get-variables`](#ckecli-sabakan-get-variables)
+- [`ckecli auto-repair`](#ckecli-auto-repair)
+  - [`ckecli auto-repair enable|disable`](#ckecli-auto-repair-enabledisable)
+  - [`ckecli auto-repair is-enabled`](#ckecli-auto-repair-is-enabled)
+  - [`ckecli auto-repair set-variables FILE`](#ckecli-auto-repair-set-variables-file)
+  - [`ckecli auto-repair get-variables`](#ckecli-auto-repair-get-variables)
 - [`ckecli status`](#ckecli-status)
 
 ## `ckecli cluster`
@@ -91,6 +96,7 @@ Set a constraint on the cluster configuration.
 - `minimum-workers`
 - `maximum-workers`
 - `maximum-unreachable-nodes-for-reboot`
+- `maximum-repair-queue-entries`
 
 ### `ckecli constraints show`
 
@@ -408,12 +414,32 @@ Get the cluster configuration template.
 
 ### `ckecli sabakan set-variables FILE`
 
-Set the query variables to search machines in sabakan.
+Set the query variables to search available machines in sabakan.
 `FILE` should contain JSON as described in [sabakan integration](sabakan-integration.md#variables).
 
 ### `ckecli sabakan get-variables`
 
-Get the query variables to search machines in sabakan.
+Get the query variables to search available machines in sabakan.
+
+## `ckecli auto-repair`
+
+### `ckecli auto-repair enable|disable`
+
+Enable/Disable [sabakan-triggered automatic repair](sabakan-triggered-repair.md).
+
+### `ckecli auto-repair is-enabled`
+
+Show sabakan-triggered automatic repair is enabled or disabled.
+It displays `true` or `false`.
+
+### `ckecli auto-repair set-variables FILE`
+
+Set the query variables to search non-healthy machines in sabakan.
+`FILE` should contain JSON as described in [sabakan-triggered automatic repair](sabakan-triggered-repair.md#query).
+
+### `ckecli auto-repair get-variables`
+
+Get the query variables to search non-healthy machines in sabakan.
 
 ## `ckecli status`
 

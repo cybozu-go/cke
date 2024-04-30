@@ -24,30 +24,32 @@ type RecordChan <-chan *Record
 
 // etcd keys and prefixes
 const (
-	KeyCA                    = "ca/"
-	KeyConfigVersion         = "config-version"
-	KeyCluster               = "cluster"
-	KeyClusterRevision       = "cluster-revision"
-	KeyConstraints           = "constraints"
-	KeyLeader                = "leader/"
-	KeyRebootsDisabled       = "reboots/disabled"
-	KeyRebootsRunning        = "reboots/running"
-	KeyRebootsPrefix         = "reboots/data/"
-	KeyRebootsWriteIndex     = "reboots/write-index"
-	KeyRecords               = "records/"
-	KeyRecordID              = "records"
-	KeyRepairsDisabled       = "repairs/disabled"
-	KeyRepairsPrefix         = "repairs/data/"
-	KeyRepairsWriteIndex     = "repairs/write-index"
-	KeyResourcePrefix        = "resource/"
-	KeySabakanDisabled       = "sabakan/disabled"
-	KeySabakanQueryVariables = "sabakan/query-variables"
-	KeySabakanTemplate       = "sabakan/template"
-	KeySabakanURL            = "sabakan/url"
-	KeyServiceAccountCert    = "service-account/certificate"
-	KeyServiceAccountKey     = "service-account/key"
-	KeyStatus                = "status"
-	KeyVault                 = "vault"
+	KeyAutoRepairDisabled       = "auto-repair/disabled"
+	KeyAutoRepairQueryVariables = "auto-repair/query-variables"
+	KeyCA                       = "ca/"
+	KeyConfigVersion            = "config-version"
+	KeyCluster                  = "cluster"
+	KeyClusterRevision          = "cluster-revision"
+	KeyConstraints              = "constraints"
+	KeyLeader                   = "leader/"
+	KeyRebootsDisabled          = "reboots/disabled"
+	KeyRebootsRunning           = "reboots/running"
+	KeyRebootsPrefix            = "reboots/data/"
+	KeyRebootsWriteIndex        = "reboots/write-index"
+	KeyRecords                  = "records/"
+	KeyRecordID                 = "records"
+	KeyRepairsDisabled          = "repairs/disabled"
+	KeyRepairsPrefix            = "repairs/data/"
+	KeyRepairsWriteIndex        = "repairs/write-index"
+	KeyResourcePrefix           = "resource/"
+	KeySabakanDisabled          = "sabakan/disabled"
+	KeySabakanQueryVariables    = "sabakan/query-variables"
+	KeySabakanTemplate          = "sabakan/template"
+	KeySabakanURL               = "sabakan/url"
+	KeyServiceAccountCert       = "service-account/certificate"
+	KeyServiceAccountKey        = "service-account/key"
+	KeyStatus                   = "status"
+	KeyVault                    = "vault"
 )
 
 const maxRecords = 1000
@@ -683,6 +685,51 @@ func (s Storage) GetSabakanURL(ctx context.Context) (string, error) {
 	return s.getStringValue(ctx, KeySabakanURL)
 }
 
+// IsAutoRepairDisabled returns true if sabakan-triggered automatic repair is disabled.
+func (s Storage) IsAutoRepairDisabled(ctx context.Context) (bool, error) {
+	resp, err := s.Get(ctx, KeyAutoRepairDisabled)
+	if err != nil {
+		return false, err
+	}
+	if resp.Count == 0 {
+		return false, nil
+	}
+
+	if bytes.Equal([]byte("true"), resp.Kvs[0].Value) {
+		return true, nil
+	}
+	return false, nil
+}
+
+// EnableAutoRepair enables sabakan-triggered automatic repair when "enable" flag is true.
+// When "enable" flag is false, sabakan-triggered repair is disabled.
+func (s Storage) EnableAutoRepair(ctx context.Context, enable bool) error {
+	val := fmt.Sprint(!enable)
+	_, err := s.Put(ctx, KeyAutoRepairDisabled, val)
+	return err
+}
+
+// SetAutoRepairQueryVariables sets values of query variables for sabakan-triggered automatic repair.
+// Caller must validate the contents.
+func (s Storage) SetAutoRepairQueryVariables(ctx context.Context, vars string) error {
+	_, err := s.Put(ctx, KeyAutoRepairQueryVariables, vars)
+	return err
+}
+
+// GetAutoRepairQueryVariables gets values of query variables for sabakan-triggered automatic repair
+func (s Storage) GetAutoRepairQueryVariables(ctx context.Context) ([]byte, error) {
+	resp, err := s.Get(ctx, KeyAutoRepairQueryVariables)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resp.Kvs) == 0 {
+		return nil, ErrNotFound
+	}
+
+	return resp.Kvs[0].Value, nil
+}
+
 // IsRebootQueueDisabled returns true if reboot queue is disabled.
 func (s Storage) IsRebootQueueDisabled(ctx context.Context) (bool, error) {
 	resp, err := s.Get(ctx, KeyRebootsDisabled)
@@ -915,7 +962,7 @@ func repairsEntryKey(index int64) string {
 	return fmt.Sprintf("%s%016x", KeyRepairsPrefix, index)
 }
 
-// RegisterRepairssEntry enqueues a repair queue entry to the repair queue.
+// RegisterRepairsEntry enqueues a repair queue entry to the repair queue.
 // "Index" of the entry is retrieved and updated in this method. The given value is ignored.
 func (s Storage) RegisterRepairsEntry(ctx context.Context, r *RepairQueueEntry) error {
 RETRY:

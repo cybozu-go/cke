@@ -2,6 +2,7 @@ package sabakan
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/cybozu-go/cke"
@@ -50,15 +51,18 @@ func (ig integrator) StartWatch(ctx context.Context, ch chan<- struct{}) error {
 }
 
 func (ig integrator) Init(ctx context.Context, leaderKey string) error {
-	return ig.run(ctx, leaderKey, nil, true)
+	return ig.runGenerator(ctx, leaderKey, nil, true)
 }
 
 func (ig integrator) Do(ctx context.Context, leaderKey string, clusterStatus *cke.ClusterStatus) error {
-	return ig.run(ctx, leaderKey, clusterStatus, false)
+	if err := ig.runGenerator(ctx, leaderKey, clusterStatus, false); err != nil {
+		return err
+	}
+	return ig.runRepairer(ctx, clusterStatus)
 }
 
-// Do references WaitSecs in ctx to change the wait second value.
-func (ig integrator) run(ctx context.Context, leaderKey string, clusterStatus *cke.ClusterStatus, onlyRegenerate bool) error {
+// runGenerator references WaitSecs in ctx to change the wait second value.
+func (ig integrator) runGenerator(ctx context.Context, leaderKey string, clusterStatus *cke.ClusterStatus, onlyRegenerate bool) error {
 	st := cke.Storage{Client: ig.etcd}
 
 	disabled, err := st.IsSabakanDisabled(ctx)
@@ -78,7 +82,7 @@ func (ig integrator) run(ctx context.Context, leaderKey string, clusterStatus *c
 		return err
 	}
 
-	machines, err := Query(ctx, st)
+	machines, err := QueryAvailable(ctx, st)
 	if err != nil {
 		// the error is either harmless (cke.ErrNotFound) or already
 		// logged by well.HTTPClient.
@@ -147,4 +151,42 @@ func (ig integrator) run(ctx context.Context, leaderKey string, clusterStatus *c
 	}
 
 	return st.PutClusterWithTemplateRevision(ctx, newc, rev, leaderKey)
+}
+
+func (ig integrator) runRepairer(ctx context.Context, clusterStatus *cke.ClusterStatus) error {
+	st := cke.Storage{Client: ig.etcd}
+
+	disabled, err := st.IsAutoRepairDisabled(ctx)
+	if err != nil {
+		return err
+	}
+	if disabled {
+		return nil
+	}
+
+	machines, err := QueryNonHealthy(ctx, st)
+	if err != nil {
+		if !errors.Is(err, cke.ErrNotFound) {
+			log.Warn("query failed", map[string]interface{}{
+				log.FnError: err,
+			})
+		}
+		return nil
+	}
+
+	constraints, err := st.GetConstraints(ctx)
+	if err != nil {
+		return err
+	}
+
+	entries := Repairer(machines, clusterStatus.RepairQueue.Entries, constraints)
+
+	for _, entry := range entries {
+		err := st.RegisterRepairsEntry(ctx, entry)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

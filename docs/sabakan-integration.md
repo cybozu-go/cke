@@ -345,7 +345,7 @@ Following Machine fields are translated to Node annotations:
 
 
 [sabakan]: https://github.com/cybozu-go/sabakan
-[schema]: https://github.com/cybozu-go/sabakan/blob/master/gql/schema.graphql
+[schema]: https://github.com/cybozu-go/sabakan/blob/main/gql/graph/schema.graphqls
 [taint]: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-[lifecycle]: https://github.com/cybozu-go/sabakan/blob/master/docs/lifecycle.md#transition-diagram
+[lifecycle]: https://github.com/cybozu-go/sabakan/blob/main/docs/lifecycle.md#transition-diagram
 [well-known taints]: https://kubernetes.io/docs/reference/labels-annotations-taints/
