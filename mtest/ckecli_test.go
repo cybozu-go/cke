@@ -137,4 +137,13 @@ func testCKECLI() {
 		ckecliSafe("sabakan", "enable")
 		ckecliSafe("sabakan", "get-url")
 	})
+
+	It("should invoke auto-repair subcommand successfully", func() {
+		ckecliSafe("auto-repair", "is-enabled")
+		ckecliSafe("auto-repair", "disable")
+		ckecliSafe("auto-repair", "enable")
+		f := remoteTempFile(`{"having":{"states":["UNHEALTHY","UNREACHABLE"]},"notHaving":{"roles":["boot"]}}`)
+		ckecliSafe("auto-repair", "set-variables", f)
+		ckecliSafe("auto-repair", "get-variables")
+	})
 }

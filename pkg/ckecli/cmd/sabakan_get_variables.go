@@ -11,8 +11,8 @@ import (
 // sabakanGetVariablesCmd represents the "sabakan get-variables" command
 var sabakanGetVariablesCmd = &cobra.Command{
 	Use:   "get-variables",
-	Short: "get the query variables to search machines in sabakan",
-	Long:  `Get the query variables to search machines in sabakan.`,
+	Short: "get the query variables to search available machines in sabakan",
+	Long:  `Get the query variables to search available machines in sabakan.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		well.Go(func(ctx context.Context) error {

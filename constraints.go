@@ -8,6 +8,7 @@ type Constraints struct {
 	MinimumWorkers           int `json:"minimum-workers"`
 	MaximumWorkers           int `json:"maximum-workers"`
 	RebootMaximumUnreachable int `json:"maximum-unreachable-nodes-for-reboot"`
+	MaximumRepairs           int `json:"maximum-repair-queue-entries"`
 }
 
 // Check checks the cluster satisfies the constraints
@@ -41,5 +42,6 @@ func DefaultConstraints() *Constraints {
 		MinimumWorkers:           1,
 		MaximumWorkers:           0,
 		RebootMaximumUnreachable: 0,
+		MaximumRepairs:           0,
 	}
 }

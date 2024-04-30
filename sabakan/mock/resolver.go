@@ -59,6 +59,7 @@ var machines = map[string]*Machine{
 			},
 			RegisterDate: time.Date(2018, 12, 2, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
 			RetireDate:   time.Date(2019, 1, 2, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+			Bmc:          &Bmc{"iDRAC", ""},
 		},
 		Status: &MachineStatus{
 			State:     MachineStateUninitialized,

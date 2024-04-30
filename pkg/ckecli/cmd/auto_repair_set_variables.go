@@ -10,11 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// sabakanSetVariablesCmd represents the "sabakan set-variables" command
-var sabakanSetVariablesCmd = &cobra.Command{
+// autoRepairSetVariablesCmd represents the "auto-repair set-variables" command
+var autoRepairSetVariablesCmd = &cobra.Command{
 	Use:   "set-variables FILE",
-	Short: "set the query variables to search available machines in sabakan",
-	Long: `Set the query variables to search available machines in sabakan.
+	Short: "set the query variables to search non-healthy machines in sabakan",
+	Long: `Set the query variables to search non-healthy machines in sabakan.
 
 FILE should contain a JSON object like this:
 
@@ -23,7 +23,7 @@ FILE should contain a JSON object like this:
             "labels": [{"name": "foo", "value": "bar"}],
             "racks": [0, 1, 2],
             "roles": ["worker"],
-            "states": ["HEALTHY"],
+            "states": ["UNREACHABLE"],
             "minDaysBeforeRetire": 90
         },
         "notHaving": {
@@ -49,7 +49,7 @@ FILE should contain a JSON object like this:
 		}
 
 		well.Go(func(ctx context.Context) error {
-			return storage.SetSabakanQueryVariables(ctx, string(data))
+			return storage.SetAutoRepairQueryVariables(ctx, string(data))
 		})
 		well.Stop()
 		return well.Wait()
@@ -57,5 +57,5 @@ FILE should contain a JSON object like this:
 }
 
 func init() {
-	sabakanCmd.AddCommand(sabakanSetVariablesCmd)
+	autoRepairCmd.AddCommand(autoRepairSetVariablesCmd)
 }
