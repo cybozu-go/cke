@@ -569,6 +569,13 @@ func drainBackOff(ctx context.Context, inf cke.Infrastructure, entry *cke.Reboot
 		"name":      entry.Node,
 		log.FnError: err,
 	})
+	etcdEntry, err := inf.Storage().GetRebootsEntry(ctx, entry.Index)
+	if err != nil {
+		return err
+	}
+	if etcdEntry.Status == cke.RebootStatusCancelled {
+		return nil
+	}
 	entry.Status = cke.RebootStatusQueued
 	entry.LastTransitionTime = time.Now().Truncate(time.Second).UTC()
 	entry.DrainBackOffCount++
