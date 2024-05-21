@@ -5,6 +5,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+- Delay repair of a rebooting unreachable machine in [#733](https://github.com/cybozu-go/cke/pull/733)
+
 ## [1.27.11]
 
 ### Added

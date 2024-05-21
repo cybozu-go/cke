@@ -13,3 +13,4 @@ Cluster should satisfy these constraints.
 | `maximum-workers`                      | int  | 0       | The maximum number of worker nodes. 0 means unlimited.                |
 | `maximum-unreachable-nodes-for-reboot` | int  | 0       | The maximum number of unreachable nodes allowed for operating reboot. |
 | `maximum-repair-queue-entries`         | int  | 0       | The maximum number of repair queue entries                            |
+| `wait-seconds-to-repair-rebooting`     | int  | 0       | The wait time in seconds to repair a rebooting machine                |

@@ -2,16 +2,25 @@ package sabakan
 
 import (
 	"strings"
+	"time"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 )
 
-func Repairer(machines []Machine, entries []*cke.RepairQueueEntry, constraints *cke.Constraints) []*cke.RepairQueueEntry {
+func Repairer(machines []Machine, repairEntries []*cke.RepairQueueEntry, rebootEntries []*cke.RebootQueueEntry, constraints *cke.Constraints, now time.Time) []*cke.RepairQueueEntry {
 	recent := make(map[string]bool)
-	for _, entry := range entries {
+	for _, entry := range repairEntries {
 		// entry.Operation is ignored when checking duplication
 		recent[entry.Address] = true
+	}
+
+	rebootLimit := now.Add(time.Duration(-constraints.RepairRebootingSeconds) * time.Second)
+	rebootingSince := make(map[string]time.Time)
+	for _, entry := range rebootEntries {
+		if entry.Status == cke.RebootStatusRebooting {
+			rebootingSince[entry.Node] = entry.LastTransitionTime // entry.Node denotes IP address
+		}
 	}
 
 	newMachines := make([]Machine, 0, len(machines))
@@ -31,10 +40,19 @@ func Repairer(machines []Machine, entries []*cke.RepairQueueEntry, constraints *
 			continue
 		}
 
+		since, ok := rebootingSince[machine.Spec.IPv4[0]]
+		if ok && since.After(rebootLimit) && machine.Status.State == StateUnreachable {
+			log.Info("ignore rebooting unreachable machine", map[string]interface{}{
+				"serial":  machine.Spec.Serial,
+				"address": machine.Spec.IPv4[0],
+			})
+			continue
+		}
+
 		newMachines = append(newMachines, machine)
 	}
 
-	if len(entries)+len(newMachines) > constraints.MaximumRepairs {
+	if len(repairEntries)+len(newMachines) > constraints.MaximumRepairs {
 		log.Warn("ignore too many repair requests", nil)
 		return nil
 	}

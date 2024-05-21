@@ -174,12 +174,18 @@ func (ig integrator) runRepairer(ctx context.Context, clusterStatus *cke.Cluster
 		return nil
 	}
 
+	rebootEntries, err := st.GetRebootsEntries(ctx)
+	if err != nil {
+		return err
+	}
+	rebootEntries = cke.DedupRebootQueueEntries(rebootEntries)
+
 	constraints, err := st.GetConstraints(ctx)
 	if err != nil {
 		return err
 	}
 
-	entries := Repairer(machines, clusterStatus.RepairQueue.Entries, constraints)
+	entries := Repairer(machines, clusterStatus.RepairQueue.Entries, rebootEntries, constraints, time.Now().UTC())
 
 	for _, entry := range entries {
 		err := st.RegisterRepairsEntry(ctx, entry)
