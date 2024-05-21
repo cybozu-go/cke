@@ -81,6 +81,12 @@ The maximum number of recent repair queue entries and new failure reports is [co
 
 As stated above, CKE considers all persisting queue entries as "recent" for simplicity.
 
+### Limiter for planned reboot
+
+A machine may become "UNREACHABLE" very quickly even if it is [being rebooted in a planned manner](reboot.md).
+CKE should wait for a while before starting repair operations for a rebooting machine.
+
+A user can [configure the wait time](ckecli.md#ckecli-constraints-set-name-value) as a [constraint `wait-seconds-to-repair-rebooting`](constraints.md)
 
 [sabakan]: https://github.com/cybozu-go/sabakan
 [schema]: https://github.com/cybozu-go/sabakan/blob/main/gql/graph/schema.graphqls

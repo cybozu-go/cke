@@ -24,6 +24,7 @@ NAME is one of:
     maximum-workers
     maximum-unreachable-nodes-for-reboot
     maximum-repair-queue-entries
+    wait-seconds-to-repair-rebooting
 
 VALUE is an integer.`,
 
@@ -57,6 +58,10 @@ VALUE is an integer.`,
 		case "maximum-repair-queue-entries":
 			cstrSet = func(cstr *cke.Constraints) {
 				cstr.MaximumRepairs = val
+			}
+		case "wait-seconds-to-repair-rebooting":
+			cstrSet = func(cstr *cke.Constraints) {
+				cstr.RepairRebootingSeconds = val
 			}
 		default:
 			return errors.New("no such constraint: " + args[0])
