@@ -13,6 +13,17 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 - Fix not to send unassigned query parameters in Sabakan integration in [#725](https://github.com/cybozu-go/cke/pull/725)
 
+## [1.28.1]
+
+### Added
+
+- Take in updates of CKE 1.27.11. See [CKE 1.27.11](https://github.com/cybozu-go/cke/blob/v1.27.11/CHANGELOG.md#12711).
+
+### Changed
+
+- change CKE to proceed rebooting immediately after draining of node is completed [#707](https://github.com/cybozu-go/cke/pull/707)
+- change backoff algorithm to exponential backoff [#726](https://github.com/cybozu-go/cke/pull/726)
+
 ## [1.28.0]
 
 ### Changed
@@ -48,6 +59,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.28.0...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.28.1...HEAD
+[1.28.1]: https://github.com/cybozu-go/cke/compare/v1.28.0...v1.28.1
 [1.28.0]: https://github.com/cybozu-go/cke/compare/v1.27.10...v1.28.0
 [1.28.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.27.10...v1.28.0-rc.1
