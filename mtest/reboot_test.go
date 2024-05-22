@@ -87,6 +87,47 @@ func nodesShouldBeSchedulable(nodes ...string) {
 	}).Should(Succeed())
 }
 
+func rebootQueueCancelAllAndWait(cluster *cke.Cluster) {
+	// Due to race condition between cke and `ckecli reboot-queue cancel/cancel-all`,
+	// we need do it several times for stable test
+	for i := 0; i < 5; i++ {
+		// ignore error because the entry may have been deleted
+		ckecli("reboot-queue", "cancel-all")
+		time.Sleep(time.Second)
+	}
+	waitRebootCompletion(cluster)
+}
+
+func checkDeploymentEventually(namespace, name string) *appsv1.Deployment {
+	var deploy appsv1.Deployment
+	EventuallyWithOffset(1, func(g Gomega) {
+		stdout, stderr, err := kubectl("get", "-n", namespace, "deployment", name, "-o=json")
+		g.Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+		err = json.Unmarshal(stdout, &deploy)
+		g.Expect(err).ShouldNot(HaveOccurred())
+
+		expectedReplicas := int32(1)
+		if deploy.Spec.Replicas != nil {
+			expectedReplicas = *deploy.Spec.Replicas
+		}
+		g.Expect(deploy.Status.ReadyReplicas).Should(Equal(expectedReplicas), "deployment %s/%s is not ready", namespace, name)
+	}).Should(Succeed())
+
+	return &deploy
+}
+
+func getPodListGomega(g Gomega, namespace, selector string) *corev1.PodList {
+	stdout, stderr, err := kubectl("get", "-n", namespace, "pod", selector, "-o=json")
+	g.ExpectWithOffset(1, err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+	var podList corev1.PodList
+	err = json.Unmarshal(stdout, &podList)
+	g.ExpectWithOffset(1, err).ShouldNot(HaveOccurred())
+
+	return &podList
+}
+
 func testRebootOperations() {
 	// this will run:
 	// - RebootDrainStartOp
@@ -185,37 +226,21 @@ func testRebootOperations() {
 		waitRebootCompletion(cluster)
 	})
 
-	It("checks Pod protection", func() {
-		By("Preparing a deployment to test protected_namespaces")
+	It("prepares a namespace", func() {
 		_, stderr, err := kubectl("create", "namespace", "reboot-test")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 		_, stderr, err = kubectl("label", "namespaces", "reboot-test", "reboot-test=sample")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
-		_, stderr, err = kubectlWithInput(rebootDeploymentYAML, "apply", "-f", "-")
+	})
+
+	It("checks Pod protection", func() {
+		By("Preparing a deployment to test protected_namespaces")
+		_, stderr, err := kubectlWithInput(rebootDeploymentYAML, "apply", "-f", "-")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
-		Eventually(func() error {
-			out, _, err := kubectl("get", "-n=reboot-test", "deployments/sample", "-o=json")
-			if err != nil {
-				return err
-			}
+		checkDeploymentEventually("reboot-test", "sample")
 
-			var deploy appsv1.Deployment
-			err = json.Unmarshal(out, &deploy)
-			if err != nil {
-				return err
-			}
-			if deploy.Status.ReadyReplicas != 3 {
-				return fmt.Errorf("deployment is not ready")
-			}
-			return nil
-		}).Should(Succeed())
-
-		out, _, err := kubectl("get", "-n=reboot-test", "pod", "-l=reboot-app=sample", "-o=json")
-		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
-		var deploymentPods corev1.PodList
-		err = json.Unmarshal(out, &deploymentPods)
-		Expect(err).ShouldNot(HaveOccurred())
+		deploymentPods := getPodListGomega(Default, "reboot-test", "-l=reboot-app=sample")
 		Expect(deploymentPods.Items).Should(HaveLen(3))
 
 		By("Reboot operation will protect all pods if protected_namespaces is nil")
@@ -223,14 +248,7 @@ func testRebootOperations() {
 		rebootQueueAdd([]string{nodeName})
 		rebootShouldNotProceed()
 
-		// Due to race condition between cke and `ckecli reboot-queue cancel/cancel-all`,
-		// we need do it several times for stable test
-		for i := 0; i < 5; i++ {
-			// ignore error because the entry may have been deleted
-			ckecli("reboot-queue", "cancel-all")
-			time.Sleep(time.Second)
-		}
-		waitRebootCompletion(cluster)
+		rebootQueueCancelAllAndWait(cluster)
 		nodesShouldBeSchedulable(nodeName)
 
 		By("Reboot operation will protect pods in protected namespaces")
@@ -244,12 +262,7 @@ func testRebootOperations() {
 		rebootQueueAdd([]string{nodeName})
 		rebootShouldNotProceed()
 
-		for i := 0; i < 5; i++ {
-			// ignore error because the entry may have been deleted
-			ckecli("reboot-queue", "cancel-all")
-			time.Sleep(time.Second)
-		}
-		waitRebootCompletion(cluster)
+		rebootQueueCancelAllAndWait(cluster)
 		nodesShouldBeSchedulable(nodeName)
 
 		By("Reboot operation deletes non-protected pods")
@@ -276,36 +289,17 @@ func testRebootOperations() {
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
 		var runningJobPod *corev1.Pod
-		Eventually(func() error {
-			out, _, err := kubectl("get", "-n=reboot-test", "pod", "-l=job-name=job-running", "-o=json")
-			if err != nil {
-				return err
-			}
-
-			var pods corev1.PodList
-			err = json.Unmarshal(out, &pods)
-			if err != nil {
-				return err
-			}
-			if len(pods.Items) != 1 {
-				return fmt.Errorf("pod is not created")
-			}
-			if pods.Items[0].Status.Phase != corev1.PodRunning {
-				return fmt.Errorf("pod is not running")
-			}
+		Eventually(func(g Gomega) {
+			pods := getPodListGomega(g, "reboot-test", "-l=job-name=job-running")
+			g.Expect(pods.Items).To(HaveLen(1), "pod is not created")
+			g.Expect(pods.Items[0].Status.Phase).To(Equal(corev1.PodRunning), "pod is not running")
 			runningJobPod = &pods.Items[0]
-			return nil
 		}).Should(Succeed())
 
 		rebootQueueAdd([]string{runningJobPod.Spec.NodeName})
 		rebootShouldNotProceed()
 
-		for i := 0; i < 5; i++ {
-			// ignore error because the entry may have been deleted
-			ckecli("reboot-queue", "cancel-all")
-			time.Sleep(time.Second)
-		}
-		waitRebootCompletion(cluster)
+		rebootQueueCancelAllAndWait(cluster)
 		nodesShouldBeSchedulable(nodeName)
 
 		_, stderr, err = kubectlWithInput(rebootJobRunningYAML, "delete", "-f", "-")
@@ -316,36 +310,18 @@ func testRebootOperations() {
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
 		var completedJobPod *corev1.Pod
-		Eventually(func() error {
-			out, _, err := kubectl("get", "-n=reboot-test", "pod", "-l=job-name=job-completed", "-o=json")
-			if err != nil {
-				return err
-			}
-
-			var pods corev1.PodList
-			err = json.Unmarshal(out, &pods)
-			if err != nil {
-				return err
-			}
-			if len(pods.Items) != 1 {
-				return fmt.Errorf("pod is not created")
-			}
-			if pods.Items[0].Status.Phase != corev1.PodSucceeded {
-				return fmt.Errorf("pod is not succeeded")
-			}
+		Eventually(func(g Gomega) {
+			pods := getPodListGomega(g, "reboot-test", "-l=job-name=job-completed")
+			g.Expect(pods.Items).To(HaveLen(1), "pod is not created")
+			g.Expect(pods.Items[0].Status.Phase).To(Equal(corev1.PodSucceeded), "pod is not succeeded")
 			completedJobPod = &pods.Items[0]
-			return nil
 		}).Should(Succeed())
 
 		rebootQueueAdd([]string{completedJobPod.Spec.NodeName})
 		waitRebootCompletion(cluster)
 		nodesShouldBeSchedulable(completedJobPod.Spec.NodeName)
 
-		out, _, err = kubectl("get", "-n=reboot-test", "pod", "-l=job-name=job-completed", "-o=json")
-		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
-		var afterPods corev1.PodList
-		err = json.Unmarshal(out, &afterPods)
-		Expect(err).ShouldNot(HaveOccurred())
+		afterPods := getPodListGomega(Default, "reboot-test", "-l=job-name=job-completed")
 		Expect(afterPods.Items).Should(HaveLen(1))
 		Expect(afterPods.Items[0].UID).Should(Equal(completedJobPod.UID))
 
@@ -358,28 +334,9 @@ func testRebootOperations() {
 		_, stderr, err := kubectlWithInput(rebootSlowEvictionDeploymentYAML, "apply", "-f", "-")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
-		Eventually(func() error {
-			out, _, err := kubectl("get", "-n=reboot-test", "deployments/slow", "-o=json")
-			if err != nil {
-				return err
-			}
+		checkDeploymentEventually("reboot-test", "slow")
 
-			var deploy appsv1.Deployment
-			err = json.Unmarshal(out, &deploy)
-			if err != nil {
-				return err
-			}
-			if deploy.Status.ReadyReplicas != 1 {
-				return fmt.Errorf("deployment is not ready")
-			}
-			return nil
-		}).Should(Succeed())
-
-		out, _, err := kubectl("get", "-n=reboot-test", "pod", "-l=reboot-app=slow", "-o=json")
-		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
-		var deploymentPods corev1.PodList
-		err = json.Unmarshal(out, &deploymentPods)
-		Expect(err).ShouldNot(HaveOccurred())
+		deploymentPods := getPodListGomega(Default, "reboot-test", "-l=reboot-app=slow")
 		Expect(deploymentPods.Items).Should(HaveLen(1))
 
 		By("Starting to reboot the node running the pod")
@@ -431,19 +388,9 @@ func testRebootOperations() {
 		_, stderr, err = kubectlWithInput(rebootSlowEvictionDeploymentYAML, "delete", "-f", "-")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
-		Eventually(func() error {
-			out, _, err = kubectl("get", "-n=reboot-test", "pod", "-l=reboot-app=slow", "-o=json")
-			if err != nil {
-				return err
-			}
-			err = json.Unmarshal(out, &deploymentPods)
-			if err != nil {
-				return err
-			}
-			if len(deploymentPods.Items) != 0 {
-				return fmt.Errorf("Pod does not terminate")
-			}
-			return nil
+		Eventually(func(g Gomega) {
+			deploymentPods := getPodListGomega(g, "reboot-test", "-l=reboot-app=slow")
+			g.Expect(deploymentPods.Items).Should(HaveLen(0), "Pod does not terminate")
 		}).Should(Succeed())
 	})
 
@@ -689,28 +636,9 @@ func testRebootOperations() {
 		_, stderr, err := kubectlWithInput(rebootALittleSlowEvictionDeploymentYAML, "apply", "-f", "-")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
-		Eventually(func() error {
-			out, _, err := kubectl("get", "-n=reboot-test", "deployments/alittleslow", "-o=json")
-			if err != nil {
-				return err
-			}
+		checkDeploymentEventually("reboot-test", "alittleslow")
 
-			var deploy appsv1.Deployment
-			err = json.Unmarshal(out, &deploy)
-			if err != nil {
-				return err
-			}
-			if deploy.Status.ReadyReplicas != 1 {
-				return fmt.Errorf("deployment is not ready")
-			}
-			return nil
-		}).Should(Succeed())
-
-		out, _, err := kubectl("get", "-n=reboot-test", "pod", "-l=reboot-app=alittleslow", "-o=json")
-		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
-		var deploymentPods corev1.PodList
-		err = json.Unmarshal(out, &deploymentPods)
-		Expect(err).ShouldNot(HaveOccurred())
+		deploymentPods := getPodListGomega(Default, "reboot-test", "-l=reboot-app=alittleslow")
 		Expect(deploymentPods.Items).Should(HaveLen(1))
 
 		By("Starting to reboot the node running the pod")
@@ -760,20 +688,9 @@ func testRebootOperations() {
 		_, stderr, err = kubectlWithInput(rebootALittleSlowEvictionDeploymentYAML, "delete", "-f", "-")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
-		Eventually(func() error {
-			out, _, err := kubectl("get", "-n=reboot-test", "pod", "-l=reboot-app=worker", "-o=json")
-			if err != nil {
-				return err
-			}
-			var deploymentPods corev1.PodList
-			err = json.Unmarshal(out, &deploymentPods)
-			if err != nil {
-				return err
-			}
-			if len(deploymentPods.Items) != 0 {
-				return fmt.Errorf("Pod does not terminate")
-			}
-			return nil
+		Eventually(func(g Gomega) {
+			deploymentPods := getPodListGomega(g, "reboot-test", "-l=reboot-app=worker")
+			g.Expect(deploymentPods.Items).Should(HaveLen(0), "Pod does not terminate")
 		}).Should(Succeed())
 	})
 }
