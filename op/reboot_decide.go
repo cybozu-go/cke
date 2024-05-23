@@ -61,29 +61,54 @@ func enumeratePods(ctx context.Context, cs *kubernetes.Clientset, node string,
 	return nil
 }
 
-// checkJobPodNotExist checks running Pods on the specified Node.
-// It returns an error if a running Pod exists.
-func checkJobPodNotExist(ctx context.Context, cs *kubernetes.Clientset, node string) error {
-	return enumeratePods(ctx, cs, node, func(_ *corev1.Pod) error {
-		return nil
-	}, func(pod *corev1.Pod) error {
-		return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
-	})
+// dryRunEvictOrDeleteNodePod checks eviction or deletion of Pods on the specified Node can proceed.
+// It returns an error if a running Pod exists or an eviction of the Pod in protected namespace failed.
+func dryRunEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool) error {
+	return doEvictOrDeleteNodePod(ctx, cs, node, protected, 0, 0, true)
 }
 
 // evictOrDeleteNodePod evicts or delete Pods on the specified Node.
-// It first tries eviction. If the eviction failed and the Pod's namespace is not protected, it deletes the Pod.
 // If a running Job Pod exists, this function returns an error.
 func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool, attempts int, interval time.Duration) error {
+	return doEvictOrDeleteNodePod(ctx, cs, node, protected, attempts, interval, false)
+}
+
+// doEvictOrDeleteNodePod evicts or delete Pods on the specified Node.
+// It first tries eviction.
+// If the eviction failed and the Pod's namespace is not protected, it deletes the Pod.
+// If the eviction failed and the Pod's namespace is protected, it retries after `interval` interval at most `attempts` times.
+// If a running Job Pod exists, this function returns an error.
+// If `dry` is true, it performs dry run and `attempts` and `interval` are ignored.
+func doEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool, attempts int, interval time.Duration, dry bool) error {
+	var deleteOptions *metav1.DeleteOptions
+	if dry {
+		deleteOptions = &metav1.DeleteOptions{
+			DryRun: []string{"All"},
+		}
+	}
+
 	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
+		if dry && !protected[pod.Namespace] {
+			// in case of dry-run for Pods in non-protected namespace,
+			// return immediately because its "eviction or deletion" never fails
+			log.Info("skip evicting pod because its namespace is not protected", map[string]interface{}{
+				"namespace": pod.Namespace,
+				"name":      pod.Name,
+				"dry":       dry, // for consistency
+			})
+			return nil
+		}
+
 		evictCount := 0
 	EVICT:
 		log.Info("start evicting pod", map[string]interface{}{
 			"namespace": pod.Namespace,
 			"name":      pod.Name,
+			"dry":       dry,
 		})
 		err := cs.CoreV1().Pods(pod.Namespace).EvictV1(ctx, &policyv1.Eviction{
-			ObjectMeta: metav1.ObjectMeta{Name: pod.Name, Namespace: pod.Namespace},
+			ObjectMeta:    metav1.ObjectMeta{Name: pod.Name, Namespace: pod.Namespace},
+			DeleteOptions: deleteOptions,
 		})
 		evictCount++
 		switch {
@@ -91,6 +116,7 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 			log.Info("evicted pod", map[string]interface{}{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
+				"dry":       dry,
 			})
 		case apierrors.IsNotFound(err):
 			// already evicted or deleted.
@@ -98,9 +124,11 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 			// not a PDB related error
 			return fmt.Errorf("failed to evict pod %s/%s: %w", pod.Namespace, pod.Name, err)
 		case !protected[pod.Namespace]:
+			// not dry here
 			log.Warn("failed to evict non-protected pod due to PDB", map[string]interface{}{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
+				"dry":       dry, // for consistency (same for below)
 				log.FnError: err,
 			})
 			err := cs.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
@@ -110,9 +138,11 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 			log.Warn("deleted non-protected pod", map[string]interface{}{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
+				"dry":       dry,
 			})
 		default:
-			if evictCount < attempts {
+			// in case of dry-run, do not retry.
+			if !dry && evictCount < attempts {
 				select {
 				case <-ctx.Done():
 					return ctx.Err()
@@ -121,6 +151,7 @@ func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node st
 				log.Info("retry eviction of pod", map[string]interface{}{
 					"namespace": pod.Namespace,
 					"name":      pod.Name,
+					"dry":       dry,
 				})
 				goto EVICT
 			}

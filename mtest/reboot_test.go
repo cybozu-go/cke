@@ -329,6 +329,50 @@ func testRebootOperations() {
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 	})
 
+	It("checks eviction dry run behavior", func() {
+		deploymentNames := []string{"0-evictable", "1-not-evictable", "2-evictable"}
+
+		By("Deploying Pods")
+		_, stderr, err := kubectlWithInput(rebootEvictionDryRunYAML, "apply", "-f", "-")
+		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+		creationTime := map[string]time.Time{}
+		var nodeName string
+		for _, name := range deploymentNames {
+			checkDeploymentEventually("reboot-test", name)
+			pods := getPodListGomega(Default, "reboot-test", "-l=reboot-app="+name)
+			Expect(pods.Items).Should(HaveLen(1), "pod is not created")
+			pod := &pods.Items[0]
+			Expect(pod.Status.Phase).Should(Equal(corev1.PodRunning), "pod is not running")
+			creationTime[name] = pod.ObjectMeta.CreationTimestamp.Time
+			nodeName = pod.Spec.NodeName // all pods run on the same node
+		}
+
+		By("Reboot operation will not delete evictable pods if non-evictable pods exist on the same node")
+		rebootQueueAdd([]string{nodeName})
+		rebootShouldNotProceed()
+
+		for _, name := range deploymentNames {
+			pods := getPodListGomega(Default, "reboot-test", "-l=reboot-app="+name)
+			Expect(pods.Items).Should(HaveLen(1), "pod does not exist (probably evicted)")
+			pod := pods.Items[0]
+			Expect(pod.ObjectMeta.CreationTimestamp.Time).Should(Equal(creationTime[name]), "pod by deployment %s is recreated (probably evicted)", name)
+		}
+
+		By("Cleaning up")
+		rebootQueueCancelAllAndWait(cluster)
+
+		_, stderr, err = kubectlWithInput(rebootEvictionDryRunYAML, "delete", "-f", "-")
+		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+		for _, name := range deploymentNames {
+			Eventually(func(g Gomega) {
+				deploymentPods := getPodListGomega(g, "reboot-test", "-l=reboot-app="+name)
+				g.Expect(deploymentPods.Items).Should(HaveLen(0), "Pod does not terminate")
+			}).Should(Succeed())
+		}
+	})
+
 	It("checks drain timeout behavior", func() {
 		By("Deploying a slow eviction pod")
 		_, stderr, err := kubectlWithInput(rebootSlowEvictionDeploymentYAML, "apply", "-f", "-")

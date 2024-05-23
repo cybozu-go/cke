@@ -138,11 +138,20 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 			// This "check and cordon" order may overlook Job pods just started.
 			// On the other hand, "cordon and check" may cause excessive cordon.
 			// The overlook is acceptable because it is rare case and detected by the following evictOrDeleteNodePod().
-
-			err = checkJobPodNotExist(ctx, cs, entry.Node)
+			log.Info("start eviction dry-run", map[string]interface{}{
+				"name": entry.Node,
+			})
+			err = dryRunEvictOrDeleteNodePod(ctx, cs, entry.Node, protected)
 			if err != nil {
+				log.Warn("eviction dry-run failed", map[string]interface{}{
+					"name":      entry.Node,
+					log.FnError: err,
+				})
 				return err
 			}
+			log.Info("eviction dry-run succeeded", map[string]interface{}{
+				"name": entry.Node,
+			})
 
 			_, err = nodesAPI.Patch(ctx, entry.Node, types.StrategicMergePatchType, []byte(`
 {
@@ -169,13 +178,23 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 
 	// next, evict pods on each node
 	for _, entry := range evictNodes {
+		log.Info("start eviction", map[string]interface{}{
+			"name": entry.Node,
+		})
 		err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected, c.evictAttempts, c.evictInterval)
 		if err != nil {
+			log.Warn("eviction failed", map[string]interface{}{
+				"name":      entry.Node,
+				log.FnError: err,
+			})
 			c.notifyFailedNode(entry.Node)
 			err = drainBackOff(ctx, inf, entry, err)
 			if err != nil {
 				return err
 			}
+			log.Info("eviction succeeded", map[string]interface{}{
+				"name": entry.Node,
+			})
 		}
 	}
 
