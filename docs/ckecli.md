@@ -97,6 +97,7 @@ Set a constraint on the cluster configuration.
 - `maximum-workers`
 - `maximum-unreachable-nodes-for-reboot`
 - `maximum-repair-queue-entries`
+- `wait-seconds-to-repair-rebooting`
 
 ### `ckecli constraints show`
 
