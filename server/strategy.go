@@ -704,8 +704,8 @@ func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 
 	// Sort/filter entries to limit the number of concurrent repairs.
 	// - Entries being deleted are dequeued unconditionally.
-	// - Entries just repaired are moved to succeeded status unconditionally.
 	// - Succeeded/failed entries are left unchanged.
+	// - Entries just repaired are moved to succeeded status.
 	// - Entries already being processed have higher priority than newly queued entries.
 	//     - Entries waiting for unexpired drain-retry-timeout are filtered out.
 	//     - Other types of timeout-wait are considered as "being processed" and

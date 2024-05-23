@@ -7,7 +7,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ### Added
 
-- Add sabakan-triggered automatic repair functionality in [#725](https://github.com/cybozu-go/cke/pull/725)
+- Add sabakan-triggered automatic repair functionality in [#725](https://github.com/cybozu-go/cke/pull/725) and [#732](https://github.com/cybozu-go/cke/pull/732)
 
 ### Fixed
 
