@@ -5,9 +5,15 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.28.2]
+
 ### Added
 
 - Add sabakan-triggered automatic repair functionality in [#725](https://github.com/cybozu-go/cke/pull/725) and [#732](https://github.com/cybozu-go/cke/pull/732)
+
+### Changed
+
+- Perform eviction dry-run before actual eviction during node reboot feature in [#736](https://github.com/cybozu-go/cke/pull/736)
 
 ### Fixed
 
@@ -59,7 +65,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.28.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.28.2...HEAD
+[1.28.2]: https://github.com/cybozu-go/cke/compare/v1.28.1...v1.28.2
 [1.28.1]: https://github.com/cybozu-go/cke/compare/v1.28.0...v1.28.1
 [1.28.0]: https://github.com/cybozu-go/cke/compare/v1.27.10...v1.28.0
 [1.28.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.27.10...v1.28.0-rc.1
