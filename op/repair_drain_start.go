@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -87,10 +88,20 @@ func (c repairDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 			return err
 		}
 
-		err = checkJobPodNotExist(ctx, cs, c.entry.Nodename)
+		log.Info("start eviction dry-run", map[string]interface{}{
+			"address": c.entry.Address,
+		})
+		err = dryRunEvictOrDeleteNodePod(ctx, cs, c.entry.Nodename, protected)
 		if err != nil {
+			log.Warn("eviction dry-run failed", map[string]interface{}{
+				"address":   c.entry.Address,
+				log.FnError: err,
+			})
 			return err
 		}
+		log.Info("eviction dry-run succeeded", map[string]interface{}{
+			"address": c.entry.Address,
+		})
 
 		// Note: The annotation name is shared with reboot operations.
 		_, err = nodesAPI.Patch(ctx, c.entry.Nodename, types.StrategicMergePatchType, []byte(`
@@ -109,10 +120,20 @@ func (c repairDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 		return repairDrainBackOff(ctx, inf, c.entry, err)
 	}
 
+	log.Info("start eviction", map[string]interface{}{
+		"address": c.entry.Address,
+	})
 	err = evictOrDeleteNodePod(ctx, cs, c.entry.Nodename, protected, c.evictAttempts, c.evictInterval)
 	if err != nil {
+		log.Warn("eviction failed", map[string]interface{}{
+			"address":   c.entry.Address,
+			log.FnError: err,
+		})
 		return repairDrainBackOff(ctx, inf, c.entry, err)
 	}
+	log.Info("eviction succeeded", map[string]interface{}{
+		"address": c.entry.Address,
+	})
 
 	return nil
 }

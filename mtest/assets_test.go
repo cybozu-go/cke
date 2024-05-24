@@ -14,6 +14,9 @@ var rebootJobCompletedYAML []byte
 //go:embed reboot-job-running.yaml
 var rebootJobRunningYAML []byte
 
+//go:embed reboot-eviction-dry-run.yaml
+var rebootEvictionDryRunYAML []byte
+
 //go:embed reboot-slow-eviction-deployment.yaml
 var rebootSlowEvictionDeploymentYAML []byte
 

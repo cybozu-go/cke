@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: reboot-test
+  name: 1-not-evictable
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      reboot-app: 1-not-evictable
+  template:
+    metadata:
+      labels:
+        reboot-app: 1-not-evictable
+    spec:
+      containers:
+        - name: httpd
+          image: ghcr.io/cybozu/testhttpd:0
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  namespace: reboot-test
+  name: 1-not-evictable
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      reboot-app: 1-not-evictable
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: reboot-test
+  name: 0-evictable
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      reboot-app: 0-evictable
+  template:
+    metadata:
+      labels:
+        reboot-app: 0-evictable
+    spec:
+      containers:
+        - name: httpd
+          image: ghcr.io/cybozu/testhttpd:0
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                reboot-app: 1-not-evictable
+            topologyKey: kubernetes.io/hostname
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: reboot-test
+  name: 2-evictable
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      reboot-app: 2-evictable
+  template:
+    metadata:
+      labels:
+        reboot-app: 2-evictable
+    spec:
+      containers:
+        - name: httpd
+          image: ghcr.io/cybozu/testhttpd:0
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                reboot-app: 1-not-evictable
+            topologyKey: kubernetes.io/hostname
