@@ -2,7 +2,6 @@ package sabakan
 
 import (
 	"testing"
-	"time"
 
 	"github.com/cybozu-go/cke"
 	"github.com/google/go-cmp/cmp"
@@ -17,10 +16,10 @@ func TestRepairer(t *testing.T) {
 
 	machines := []Machine{
 		{Spec: MachineSpec{Serial: "0000"}, Status: MachineStatus{State: StateUnhealthy}},
-		{Spec: MachineSpec{Serial: "1111", IPv4: []string{"1.1.1.1"}, BMC: BMC{Type: "type1"}}, Status: MachineStatus{State: StateUnreachable}},
-		{Spec: MachineSpec{Serial: "2222", IPv4: []string{"2.2.2.2"}, BMC: BMC{Type: "type2"}}, Status: MachineStatus{State: StateUnhealthy}},
-		{Spec: MachineSpec{Serial: "3333", IPv4: []string{"3.3.3.3"}, BMC: BMC{Type: "type3"}}, Status: MachineStatus{State: StateUnreachable}},
-		{Spec: MachineSpec{Serial: "4444", IPv4: []string{"4.4.4.4"}, BMC: BMC{Type: "type4"}}, Status: MachineStatus{State: StateUnreachable}},
+		{Spec: MachineSpec{Serial: "1111", IPv4: []string{"1.1.1.1"}, BMC: BMC{Type: "type1"}}, Status: MachineStatus{State: StateUnreachable, Duration: 30}},
+		{Spec: MachineSpec{Serial: "2222", IPv4: []string{"2.2.2.2"}, BMC: BMC{Type: "type2"}}, Status: MachineStatus{State: StateUnhealthy, Duration: 30}},
+		{Spec: MachineSpec{Serial: "3333", IPv4: []string{"3.3.3.3"}, BMC: BMC{Type: "type3"}}, Status: MachineStatus{State: StateUnreachable, Duration: 3000}},
+		{Spec: MachineSpec{Serial: "4444", IPv4: []string{"4.4.4.4"}, BMC: BMC{Type: "type4"}}, Status: MachineStatus{State: StateUnreachable, Duration: 30}},
 	}
 
 	entries := []*cke.RepairQueueEntry{
@@ -31,15 +30,19 @@ func TestRepairer(t *testing.T) {
 		cke.NewRepairQueueEntry("unreachable", "type4", "4.4.4.4"),
 	}
 
-	now := time.Now().UTC()
-	recent := now.Add(-30 * time.Second)
-	stale := now.Add(-3000 * time.Second)
 	rebootEntries := []*cke.RebootQueueEntry{
 		nil,
-		{Node: "1.1.1.1", Status: cke.RebootStatusRebooting, LastTransitionTime: recent},
-		{Node: "2.2.2.2", Status: cke.RebootStatusRebooting, LastTransitionTime: recent},
-		{Node: "3.3.3.3", Status: cke.RebootStatusRebooting, LastTransitionTime: stale},
-		{Node: "4.4.4.4", Status: cke.RebootStatusDraining, LastTransitionTime: recent},
+		{Node: "1.1.1.1", Status: cke.RebootStatusRebooting},
+		{Node: "2.2.2.2", Status: cke.RebootStatusRebooting},
+		{Node: "3.3.3.3", Status: cke.RebootStatusRebooting},
+		{Node: "4.4.4.4", Status: cke.RebootStatusDraining},
+	}
+
+	nodeStatuses := map[string]*cke.NodeStatus{
+		"1.1.1.1": nil,
+		"2.2.2.2": nil,
+		"3.3.3.3": nil,
+		"4.4.4.4": nil,
 	}
 
 	tests := []struct {
@@ -47,6 +50,7 @@ func TestRepairer(t *testing.T) {
 		failedMachines  []Machine
 		queuedEntries   []*cke.RepairQueueEntry
 		rebootEntries   []*cke.RebootQueueEntry
+		nodeStatuses    map[string]*cke.NodeStatus
 		expectedEntries []*cke.RepairQueueEntry
 	}{
 		{
@@ -54,6 +58,7 @@ func TestRepairer(t *testing.T) {
 			failedMachines:  []Machine{},
 			queuedEntries:   []*cke.RepairQueueEntry{entries[2]},
 			rebootEntries:   nil,
+			nodeStatuses:    nodeStatuses,
 			expectedEntries: []*cke.RepairQueueEntry{},
 		},
 		{
@@ -61,6 +66,7 @@ func TestRepairer(t *testing.T) {
 			failedMachines:  []Machine{machines[1]},
 			queuedEntries:   []*cke.RepairQueueEntry{entries[2]},
 			rebootEntries:   nil,
+			nodeStatuses:    nodeStatuses,
 			expectedEntries: []*cke.RepairQueueEntry{entries[1]},
 		},
 		{
@@ -68,6 +74,7 @@ func TestRepairer(t *testing.T) {
 			failedMachines:  []Machine{machines[0], machines[1]},
 			queuedEntries:   []*cke.RepairQueueEntry{entries[2]},
 			rebootEntries:   nil,
+			nodeStatuses:    nodeStatuses,
 			expectedEntries: []*cke.RepairQueueEntry{entries[1]},
 		},
 		{
@@ -75,6 +82,7 @@ func TestRepairer(t *testing.T) {
 			failedMachines:  []Machine{machines[1], machines[2], machines[3]},
 			queuedEntries:   []*cke.RepairQueueEntry{entries[2]},
 			rebootEntries:   nil,
+			nodeStatuses:    nodeStatuses,
 			expectedEntries: []*cke.RepairQueueEntry{entries[1], entries[3]},
 		},
 		{
@@ -82,6 +90,7 @@ func TestRepairer(t *testing.T) {
 			failedMachines:  []Machine{machines[1], machines[2], machines[3]},
 			queuedEntries:   []*cke.RepairQueueEntry{cke.NewRepairQueueEntry("unreachable", "type2", "2.2.2.2")},
 			rebootEntries:   nil,
+			nodeStatuses:    nodeStatuses,
 			expectedEntries: []*cke.RepairQueueEntry{entries[1], entries[3]},
 		},
 		{
@@ -89,6 +98,7 @@ func TestRepairer(t *testing.T) {
 			failedMachines:  []Machine{machines[1], machines[2], machines[3]},
 			queuedEntries:   []*cke.RepairQueueEntry{entries[2], entries[4]},
 			rebootEntries:   nil,
+			nodeStatuses:    nodeStatuses,
 			expectedEntries: []*cke.RepairQueueEntry{},
 		},
 		{
@@ -96,6 +106,7 @@ func TestRepairer(t *testing.T) {
 			failedMachines:  []Machine{machines[1]},
 			queuedEntries:   []*cke.RepairQueueEntry{},
 			rebootEntries:   []*cke.RebootQueueEntry{rebootEntries[1]},
+			nodeStatuses:    nodeStatuses,
 			expectedEntries: []*cke.RepairQueueEntry{},
 		},
 		{
@@ -103,6 +114,7 @@ func TestRepairer(t *testing.T) {
 			failedMachines:  []Machine{machines[2]},
 			queuedEntries:   []*cke.RepairQueueEntry{},
 			rebootEntries:   []*cke.RebootQueueEntry{rebootEntries[2]},
+			nodeStatuses:    nodeStatuses,
 			expectedEntries: []*cke.RepairQueueEntry{entries[2]},
 		},
 		{
@@ -110,6 +122,7 @@ func TestRepairer(t *testing.T) {
 			failedMachines:  []Machine{machines[3]},
 			queuedEntries:   []*cke.RepairQueueEntry{},
 			rebootEntries:   []*cke.RebootQueueEntry{rebootEntries[3]},
+			nodeStatuses:    nodeStatuses,
 			expectedEntries: []*cke.RepairQueueEntry{entries[3]},
 		},
 		{
@@ -117,7 +130,32 @@ func TestRepairer(t *testing.T) {
 			failedMachines:  []Machine{machines[4]},
 			queuedEntries:   []*cke.RepairQueueEntry{},
 			rebootEntries:   []*cke.RebootQueueEntry{rebootEntries[4]},
+			nodeStatuses:    nodeStatuses,
 			expectedEntries: []*cke.RepairQueueEntry{entries[4]},
+		},
+		{
+			name:            "IgnoreOutOfClusterUnreachableMachine",
+			failedMachines:  []Machine{machines[1]},
+			queuedEntries:   []*cke.RepairQueueEntry{},
+			rebootEntries:   []*cke.RebootQueueEntry{rebootEntries[1]},
+			nodeStatuses:    nil,
+			expectedEntries: []*cke.RepairQueueEntry{},
+		},
+		{
+			name:            "OutOfClusterButUnhealthy",
+			failedMachines:  []Machine{machines[2]},
+			queuedEntries:   []*cke.RepairQueueEntry{},
+			rebootEntries:   []*cke.RebootQueueEntry{rebootEntries[2]},
+			nodeStatuses:    nil,
+			expectedEntries: []*cke.RepairQueueEntry{entries[2]},
+		},
+		{
+			name:            "OutOfClusterButStale",
+			failedMachines:  []Machine{machines[3]},
+			queuedEntries:   []*cke.RepairQueueEntry{},
+			rebootEntries:   []*cke.RebootQueueEntry{rebootEntries[3]},
+			nodeStatuses:    nil,
+			expectedEntries: []*cke.RepairQueueEntry{entries[3]},
 		},
 	}
 
@@ -126,7 +164,7 @@ func TestRepairer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			entries := Repairer(tt.failedMachines, tt.queuedEntries, tt.rebootEntries, constraints, now)
+			entries := Repairer(tt.failedMachines, tt.queuedEntries, tt.rebootEntries, tt.nodeStatuses, constraints)
 			if !cmp.Equal(entries, tt.expectedEntries, cmpopts.EquateEmpty()) {
 				t.Errorf("!cmp.Equal(entries, tt.newEntries), actual: %v, expected: %v", entries, tt.expectedEntries)
 			}

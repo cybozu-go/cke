@@ -2,24 +2,22 @@ package sabakan
 
 import (
 	"strings"
-	"time"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 )
 
-func Repairer(machines []Machine, repairEntries []*cke.RepairQueueEntry, rebootEntries []*cke.RebootQueueEntry, constraints *cke.Constraints, now time.Time) []*cke.RepairQueueEntry {
+func Repairer(machines []Machine, repairEntries []*cke.RepairQueueEntry, rebootEntries []*cke.RebootQueueEntry, nodeStatuses map[string]*cke.NodeStatus, constraints *cke.Constraints) []*cke.RepairQueueEntry {
 	recent := make(map[string]bool)
 	for _, entry := range repairEntries {
 		// entry.Operation is ignored when checking duplication
 		recent[entry.Address] = true
 	}
 
-	rebootLimit := now.Add(time.Duration(-constraints.RepairRebootingSeconds) * time.Second)
-	rebootingSince := make(map[string]time.Time)
+	rebooting := make(map[string]bool)
 	for _, entry := range rebootEntries {
 		if entry.Status == cke.RebootStatusRebooting {
-			rebootingSince[entry.Node] = entry.LastTransitionTime // entry.Node denotes IP address
+			rebooting[entry.Node] = true // entry.Node denotes IP address
 		}
 	}
 
@@ -32,21 +30,33 @@ func Repairer(machines []Machine, repairEntries []*cke.RepairQueueEntry, rebootE
 			continue
 		}
 
-		if recent[machine.Spec.IPv4[0]] {
+		serial := machine.Spec.Serial
+		address := machine.Spec.IPv4[0]
+
+		if recent[address] {
 			log.Warn("ignore recently-repaired non-healthy machine", map[string]interface{}{
-				"serial":  machine.Spec.Serial,
-				"address": machine.Spec.IPv4[0],
+				"serial":  serial,
+				"address": address,
 			})
 			continue
 		}
 
-		since, ok := rebootingSince[machine.Spec.IPv4[0]]
-		if ok && since.After(rebootLimit) && machine.Status.State == StateUnreachable {
-			log.Info("ignore rebooting unreachable machine", map[string]interface{}{
-				"serial":  machine.Spec.Serial,
-				"address": machine.Spec.IPv4[0],
-			})
-			continue
+		if machine.Status.State == StateUnreachable && machine.Status.Duration < float64(constraints.RepairRebootingSeconds) {
+			if rebooting[address] {
+				log.Info("ignore rebooting unreachable machine", map[string]interface{}{
+					"serial":  serial,
+					"address": address,
+				})
+				continue
+			}
+
+			if _, ok := nodeStatuses[address]; !ok {
+				log.Info("ignore out-of-cluster unreachable machine", map[string]interface{}{
+					"serial":  serial,
+					"address": address,
+				})
+				continue
+			}
 		}
 
 		newMachines = append(newMachines, machine)

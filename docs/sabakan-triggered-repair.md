@@ -86,7 +86,11 @@ As stated above, CKE considers all persisting queue entries as "recent" for simp
 A machine may become "UNREACHABLE" very quickly even if it is [being rebooted in a planned manner](reboot.md).
 CKE should wait for a while before starting repair operations for a rebooting machine.
 
-A user can [configure the wait time](ckecli.md#ckecli-constraints-set-name-value) as a [constraint `wait-seconds-to-repair-rebooting`](constraints.md)
+A user can [configure the wait time](ckecli.md#ckecli-constraints-set-name-value) as a [constraint `wait-seconds-to-repair-rebooting`](constraints.md).
+
+CKE does not manage the reboot operations of out-of-cluster machines.
+It cannot distinguish between the reboot and the crash of an out-of-cluster machine.
+To avoid filling the repair queue with unnecessary entries, CKE waits for a while also before repairing an out-of-cluster machine.
 
 [sabakan]: https://github.com/cybozu-go/sabakan
 [schema]: https://github.com/cybozu-go/sabakan/blob/main/gql/graph/schema.graphqls
