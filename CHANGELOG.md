@@ -5,6 +5,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+- Delay repair of an out-of-cluster unreachable machine in [#744](https://github.com/cybozu-go/cke/pull/744)
+
 ## [1.28.4]
 
 ### Changed

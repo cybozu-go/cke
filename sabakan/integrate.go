@@ -185,7 +185,7 @@ func (ig integrator) runRepairer(ctx context.Context, clusterStatus *cke.Cluster
 		return err
 	}
 
-	entries := Repairer(machines, clusterStatus.RepairQueue.Entries, rebootEntries, constraints, time.Now().UTC())
+	entries := Repairer(machines, clusterStatus.RepairQueue.Entries, rebootEntries, clusterStatus.NodeStatuses, constraints)
 
 	for _, entry := range entries {
 		err := st.RegisterRepairsEntry(ctx, entry)
