@@ -5,6 +5,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.28.5]
+
+### Changed
+
 - Delay repair of an out-of-cluster unreachable machine in [#744](https://github.com/cybozu-go/cke/pull/744)
 
 ## [1.28.4]
@@ -79,7 +83,9 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.28.3...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.28.5...HEAD
+[1.28.5]: https://github.com/cybozu-go/cke/compare/v1.28.4...v1.28.5
+[1.28.4]: https://github.com/cybozu-go/cke/compare/v1.28.3...v1.28.4
 [1.28.3]: https://github.com/cybozu-go/cke/compare/v1.28.2...v1.28.3
 [1.28.2]: https://github.com/cybozu-go/cke/compare/v1.28.1...v1.28.2
 [1.28.1]: https://github.com/cybozu-go/cke/compare/v1.28.0...v1.28.1
