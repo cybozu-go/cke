@@ -203,6 +203,137 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 
 //
 
+type rebootEvictDaemonSetPodOp struct {
+	finished bool
+
+	entries   []*cke.RebootQueueEntry
+	config    *cke.Reboot
+	apiserver *cke.Node
+
+	mu          sync.Mutex
+	failedNodes []string
+}
+
+func RebootEvictDaemonSetPodOp(apiserver *cke.Node, entries []*cke.RebootQueueEntry, config *cke.Reboot) cke.InfoOperator {
+	return &rebootEvictDaemonSetPodOp{
+		entries:   entries,
+		config:    config,
+		apiserver: apiserver,
+	}
+}
+
+type rebootEvictDaemonSetPodCommand struct {
+	entries             []*cke.RebootQueueEntry
+	protectedNamespaces *metav1.LabelSelector
+	apiserver           *cke.Node
+	evictAttempts       int
+	evictInterval       time.Duration
+
+	notifyFailedNode func(string)
+}
+
+func (o *rebootEvictDaemonSetPodOp) Name() string {
+	return "reboot-evict-daemonset-pod"
+}
+
+func (o *rebootEvictDaemonSetPodOp) notifyFailedNode(node string) {
+	o.mu.Lock()
+	o.failedNodes = append(o.failedNodes, node)
+	o.mu.Unlock()
+}
+
+func (o *rebootEvictDaemonSetPodOp) Targets() []string {
+	ipAddresses := make([]string, len(o.entries))
+	for i, entry := range o.entries {
+		ipAddresses[i] = entry.Node
+	}
+	return ipAddresses
+}
+
+func (o *rebootEvictDaemonSetPodOp) Info() string {
+	if len(o.failedNodes) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("failed to evict DaemonSet pods on some nodes: %v", o.failedNodes)
+}
+
+func (o *rebootEvictDaemonSetPodOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
+
+	attempts := 1
+	if o.config.EvictRetries != nil {
+		attempts = *o.config.EvictRetries + 1
+	}
+	interval := 0 * time.Second
+	if o.config.EvictInterval != nil {
+		interval = time.Second * time.Duration(*o.config.EvictInterval)
+	}
+
+	return rebootEvictDaemonSetPodCommand{
+		entries:             o.entries,
+		protectedNamespaces: o.config.ProtectedNamespaces,
+		apiserver:           o.apiserver,
+		notifyFailedNode:    o.notifyFailedNode,
+		evictAttempts:       attempts,
+		evictInterval:       interval,
+	}
+}
+
+func (c rebootEvictDaemonSetPodCommand) Command() cke.Command {
+	ipAddresses := make([]string, len(c.entries))
+	for i, entry := range c.entries {
+		ipAddresses[i] = entry.Node
+	}
+	return cke.Command{
+		Name:   "rebootEvictDaemonSetPodCommand",
+		Target: strings.Join(ipAddresses, ","),
+	}
+}
+
+func (c rebootEvictDaemonSetPodCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	protected, err := listProtectedNamespaces(ctx, cs, c.protectedNamespaces)
+	if err != nil {
+		return err
+	}
+
+	// evict DaemonSet pod on each node
+	// cordon is unnecessary for DaemonSet pods, so dry-run eviction is also skipped.
+	for _, entry := range c.entries {
+		// keep entry.Status as RebootStatusDraining and don't update it here.
+
+		log.Info("start eviction of DaemonSet pod", map[string]interface{}{
+			"name": entry.Node,
+		})
+		err := evictOrDeleteOnDeleteDaemonSetPod(ctx, cs, entry.Node, protected, c.evictAttempts, c.evictInterval)
+		if err != nil {
+			log.Warn("eviction of DaemonSet pod failed", map[string]interface{}{
+				"name":      entry.Node,
+				log.FnError: err,
+			})
+			c.notifyFailedNode(entry.Node)
+			err = drainBackOff(ctx, inf, entry, err)
+			if err != nil {
+				return err
+			}
+			log.Info("eviction of DaemonSet pod succeeded", map[string]interface{}{
+				"name": entry.Node,
+			})
+		}
+	}
+
+	return nil
+}
+
+//
+
 type rebootRebootOp struct {
 	finished bool
 
