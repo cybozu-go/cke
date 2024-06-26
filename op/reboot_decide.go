@@ -101,36 +101,27 @@ func enumerateOnDeleteDaemonSetPods(ctx context.Context, cs *kubernetes.Clientse
 // dryRunEvictOrDeleteNodePod checks eviction or deletion of Pods on the specified Node can proceed.
 // It returns an error if a running Pod exists or an eviction of the Pod in protected namespace failed.
 func dryRunEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool) error {
-	return enumeratePods(ctx, cs, node,
-		doEvictOrDeleteNodePod(ctx, cs, node, protected, 0, time.Duration(0), true),
-		func(pod *corev1.Pod) error {
-			return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
-		},
-	)
+	return doEvictOrDeleteNodePod(ctx, cs, node, protected, 0, 0, true)
 }
 
 // evictOrDeleteNodePod evicts or delete Pods on the specified Node.
 // If a running Job Pod exists, this function returns an error.
 func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool, attempts int, interval time.Duration) error {
-	return enumeratePods(ctx, cs, node,
-		doEvictOrDeleteNodePod(ctx, cs, node, protected, attempts, interval, false),
-		func(pod *corev1.Pod) error {
-			return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
-		},
-	)
+	return doEvictOrDeleteNodePod(ctx, cs, node, protected, attempts, interval, false)
 }
 
-// evictOrDeleteOnDeleteDaemonSetPod evicts or delete Pods on the specified Node that are owned by "updateStrategy:OnDelete" DaemonSets.
-func evictOrDeleteOnDeleteDaemonSetPod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool, attempts int, interval time.Duration) error {
-	return enumerateOnDeleteDaemonSetPods(ctx, cs, node, doEvictOrDeleteNodePod(ctx, cs, node, protected, attempts, interval, false))
+// deleteOnDeleteDaemonSetPod evicts or delete Pods on the specified Node that are owned by "updateStrategy:OnDelete" DaemonSets.
+func deleteOnDeleteDaemonSetPod(ctx context.Context, cs *kubernetes.Clientset, node string) error {
+	return doDeleteOnDeleteDaemonSetPod(ctx, cs, node)
 }
 
-// doEvictOrDeleteNodePod returns a pod handler that evicts or delete Pods on the specified Node.
+// doEvictOrDeleteNodePod evicts or delete Pods on the specified Node.
 // It first tries eviction.
 // If the eviction failed and the Pod's namespace is not protected, it deletes the Pod.
 // If the eviction failed and the Pod's namespace is protected, it retries after `interval` interval at most `attempts` times.
+// If a running Job Pod exists, this function returns an error.
 // If `dry` is true, it performs dry run and `attempts` and `interval` are ignored.
-func doEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool, attempts int, interval time.Duration, dry bool) func(pod *corev1.Pod) error {
+func doEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool, attempts int, interval time.Duration, dry bool) error {
 	var deleteOptions *metav1.DeleteOptions
 	if dry {
 		deleteOptions = &metav1.DeleteOptions{
@@ -138,7 +129,7 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node 
 		}
 	}
 
-	return func(pod *corev1.Pod) error {
+	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
 		if dry && !protected[pod.Namespace] {
 			// in case of dry-run for Pods in non-protected namespace,
 			// return immediately because its "eviction or deletion" never fails
@@ -209,7 +200,24 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node 
 			return fmt.Errorf("failed to evict pod %s/%s due to PDB: %w", pod.Namespace, pod.Name, err)
 		}
 		return nil
-	}
+	}, func(pod *corev1.Pod) error {
+		return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
+	})
+}
+
+// doDeleteOnDeleteDaemonSetPod deletes 'OnDelete' DaemonSet pods on the specified Node.
+func doDeleteOnDeleteDaemonSetPod(ctx context.Context, cs *kubernetes.Clientset, node string) error {
+	return enumerateOnDeleteDaemonSetPods(ctx, cs, node, func(pod *corev1.Pod) error {
+		err := cs.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		log.Info("deleted daemonset pod", map[string]interface{}{
+			"namespace": pod.Namespace,
+			"name":      pod.Name,
+		})
+		return nil
+	})
 }
 
 // checkPodDeletion checks whether the evicted or deleted Pods are eventually deleted.

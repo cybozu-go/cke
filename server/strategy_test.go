@@ -2637,7 +2637,7 @@ func TestDecideOps(t *testing.T) {
 				},
 			}),
 			ExpectedOps: []opData{
-				{"reboot-evict-daemonset-pod", 1},
+				{"reboot-delete-daemonset-pod", 1},
 				{"reboot-reboot", 1},
 			},
 		},

@@ -899,7 +899,7 @@ func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOp
 
 	if len(rebootArgs.DrainCompleted) > 0 {
 		// After eviction of normal pods, evict "OnDelete" daemonset pods.
-		ops = append(ops, op.RebootEvictDaemonSetPodOp(nf.HealthyAPIServer(), rebootArgs.DrainCompleted, &c.Reboot))
+		ops = append(ops, op.RebootDeleteDaemonSetPodOp(nf.HealthyAPIServer(), rebootArgs.DrainCompleted, &c.Reboot))
 		ops = append(ops, op.RebootRebootOp(nf.HealthyAPIServer(), rebootArgs.DrainCompleted, &c.Reboot))
 	}
 	if len(rebootArgs.NewlyDrained) > 0 {
