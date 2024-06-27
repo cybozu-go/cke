@@ -9,6 +9,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -61,6 +62,42 @@ func enumeratePods(ctx context.Context, cs *kubernetes.Clientset, node string,
 	return nil
 }
 
+// enumerateOnDeleteDaemonSetPods enumerates Pods on a specified node that are owned by "updateStrategy:OnDelete" DaemonSets.
+// It calls podHandler for each target pods.
+// If the handler returns error, this function returns the error immediately.
+// Note: This function does not distinguish API errors and state evaluation returned from subfunction.
+func enumerateOnDeleteDaemonSetPods(ctx context.Context, cs *kubernetes.Clientset, node string,
+	podHandler func(pod *corev1.Pod) error) error {
+
+	daemonSets, err := cs.AppsV1().DaemonSets(corev1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, ds := range daemonSets.Items {
+		if ds.Spec.UpdateStrategy.Type == appsv1.OnDeleteDaemonSetStrategyType {
+			labelSelector := metav1.FormatLabelSelector(ds.Spec.Selector)
+			pods, err := cs.CoreV1().Pods(ds.Namespace).List(ctx, metav1.ListOptions{
+				LabelSelector: labelSelector,
+			})
+			if err != nil {
+				return err
+			}
+
+			for _, pod := range pods.Items {
+				if pod.Spec.NodeName == node {
+					err = podHandler(&pod)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 // dryRunEvictOrDeleteNodePod checks eviction or deletion of Pods on the specified Node can proceed.
 // It returns an error if a running Pod exists or an eviction of the Pod in protected namespace failed.
 func dryRunEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool) error {
@@ -71,6 +108,11 @@ func dryRunEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, n
 // If a running Job Pod exists, this function returns an error.
 func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool, attempts int, interval time.Duration) error {
 	return doEvictOrDeleteNodePod(ctx, cs, node, protected, attempts, interval, false)
+}
+
+// deleteOnDeleteDaemonSetPod evicts or delete Pods on the specified Node that are owned by "updateStrategy:OnDelete" DaemonSets.
+func deleteOnDeleteDaemonSetPod(ctx context.Context, cs *kubernetes.Clientset, node string) error {
+	return doDeleteOnDeleteDaemonSetPod(ctx, cs, node)
 }
 
 // doEvictOrDeleteNodePod evicts or delete Pods on the specified Node.
@@ -160,6 +202,21 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node 
 		return nil
 	}, func(pod *corev1.Pod) error {
 		return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
+	})
+}
+
+// doDeleteOnDeleteDaemonSetPod deletes 'OnDelete' DaemonSet pods on the specified Node.
+func doDeleteOnDeleteDaemonSetPod(ctx context.Context, cs *kubernetes.Clientset, node string) error {
+	return enumerateOnDeleteDaemonSetPods(ctx, cs, node, func(pod *corev1.Pod) error {
+		err := cs.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		log.Info("deleted daemonset pod", map[string]interface{}{
+			"namespace": pod.Namespace,
+			"name":      pod.Name,
+		})
+		return nil
 	})
 }
 

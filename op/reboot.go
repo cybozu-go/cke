@@ -203,6 +203,109 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 
 //
 
+type rebootDeleteDaemonSetPodOp struct {
+	finished bool
+
+	entries   []*cke.RebootQueueEntry
+	config    *cke.Reboot
+	apiserver *cke.Node
+
+	mu          sync.Mutex
+	failedNodes []string
+}
+
+func RebootDeleteDaemonSetPodOp(apiserver *cke.Node, entries []*cke.RebootQueueEntry, config *cke.Reboot) cke.InfoOperator {
+	return &rebootDeleteDaemonSetPodOp{
+		entries:   entries,
+		config:    config,
+		apiserver: apiserver,
+	}
+}
+
+type rebootDeleteDaemonSetPodCommand struct {
+	entries   []*cke.RebootQueueEntry
+	apiserver *cke.Node
+
+	notifyFailedNode func(string)
+}
+
+func (o *rebootDeleteDaemonSetPodOp) Name() string {
+	return "reboot-delete-daemonset-pod"
+}
+
+func (o *rebootDeleteDaemonSetPodOp) notifyFailedNode(node string) {
+	o.mu.Lock()
+	o.failedNodes = append(o.failedNodes, node)
+	o.mu.Unlock()
+}
+
+func (o *rebootDeleteDaemonSetPodOp) Targets() []string {
+	ipAddresses := make([]string, len(o.entries))
+	for i, entry := range o.entries {
+		ipAddresses[i] = entry.Node
+	}
+	return ipAddresses
+}
+
+func (o *rebootDeleteDaemonSetPodOp) Info() string {
+	if len(o.failedNodes) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("failed to delete DaemonSet pods on some nodes: %v", o.failedNodes)
+}
+
+func (o *rebootDeleteDaemonSetPodOp) NextCommand() cke.Commander {
+	if o.finished {
+		return nil
+	}
+	o.finished = true
+
+	return rebootDeleteDaemonSetPodCommand{
+		entries:          o.entries,
+		apiserver:        o.apiserver,
+		notifyFailedNode: o.notifyFailedNode,
+	}
+}
+
+func (c rebootDeleteDaemonSetPodCommand) Command() cke.Command {
+	ipAddresses := make([]string, len(c.entries))
+	for i, entry := range c.entries {
+		ipAddresses[i] = entry.Node
+	}
+	return cke.Command{
+		Name:   "rebootDeleteDaemonSetPodCommand",
+		Target: strings.Join(ipAddresses, ","),
+	}
+}
+
+func (c rebootDeleteDaemonSetPodCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
+	cs, err := inf.K8sClient(ctx, c.apiserver)
+	if err != nil {
+		return err
+	}
+
+	// delete DaemonSet pod on each node
+	for _, entry := range c.entries {
+		// keep entry.Status as RebootStatusDraining and don't update it here.
+
+		log.Info("start deletion of DaemonSet pod", map[string]interface{}{
+			"name": entry.Node,
+		})
+		err := deleteOnDeleteDaemonSetPod(ctx, cs, entry.Node)
+		if err != nil {
+			log.Warn("deletion of DaemonSet pod failed", map[string]interface{}{
+				"name":      entry.Node,
+				log.FnError: err,
+			})
+			c.notifyFailedNode(entry.Node)
+		}
+	}
+
+	return nil
+}
+
+//
+
 type rebootRebootOp struct {
 	finished bool
 
