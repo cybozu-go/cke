@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.28.6]
+
+### Changed
+
+- Add operation to delete 'updateStrategy: OnDelete' daemonset pods before rebooting in [#746](https://github.com/cybozu-go/cke/pull/746)
+
 ## [1.28.5]
 
 ### Changed
@@ -83,7 +89,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.28.5...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.28.6...HEAD
+[1.28.6]: https://github.com/cybozu-go/cke/compare/v1.28.5...v1.28.6
 [1.28.5]: https://github.com/cybozu-go/cke/compare/v1.28.4...v1.28.5
 [1.28.4]: https://github.com/cybozu-go/cke/compare/v1.28.3...v1.28.4
 [1.28.3]: https://github.com/cybozu-go/cke/compare/v1.28.2...v1.28.3
