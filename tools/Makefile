@@ -1,4 +1,4 @@
-CNI_PLUGIN_VERSION = 1.4.1
+CNI_PLUGIN_VERSION = 1.5.1
 TAG = ghcr.io/cybozu-go/cke-tools:dev
 GOBUILD = CGO_ENABLED=0 go build -ldflags="-w -s"
 
