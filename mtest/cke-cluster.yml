@@ -29,6 +29,11 @@ repair:
         need_drain: true
         watch_seconds: 30
       health_check_command: ["sh", "-c", "test -f /tmp/mtest-repair-$1 && echo true", "health_check"]
+retire:
+  shutdown_command: ["true"]
+  check_command: ["bash", "-c", "echo 'Off'"]
+  command_timeout_seconds: 30
+  check_timeout_seconds: 300
 options:
   kube-api:
     extra_binds:

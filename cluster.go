@@ -320,6 +320,16 @@ const DefaultRepairEvictionTimeoutSeconds = 600
 const DefaultRepairHealthCheckCommandTimeoutSeconds = 30
 const DefaultRepairCommandTimeoutSeconds = 30
 
+type Retire struct {
+	ShutdownCommand       []string `json:"shutdown_command"`
+	CheckCommand          []string `json:"check_command"`
+	CommandTimeoutSeconds *int     `json:"command_timeout_seconds,omitempty"`
+	CheckTimeoutSeconds   *int     `json:"check_timeout_seconds,omitempty"`
+}
+
+const DefaultRetireCommandTimeoutSeconds = 30
+const DefaultRetireCheckTimeoutSeconds = 300
+
 // Options is a set of optional parameters for k8s components.
 type Options struct {
 	Etcd              EtcdParams      `json:"etcd"`
@@ -343,6 +353,7 @@ type Cluster struct {
 	DNSService    string   `json:"dns_service"`
 	Reboot        Reboot   `json:"reboot"`
 	Repair        Repair   `json:"repair"`
+	Retire        Retire   `json:"retire"`
 	Options       Options  `json:"options"`
 }
 
