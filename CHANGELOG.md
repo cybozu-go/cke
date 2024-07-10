@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.29.0-rc.1]
+
+### Changed
+
+- Upgrade for Kubernetes 1.29.6 [#749](https://github.com/cybozu-go/cke/pull/749), [#750](https://github.com/cybozu-go/cke/pull/750), [#752](https://github.com/cybozu-go/cke/pull/752), [#754](https://github.com/cybozu-go/cke/pull/754)
+
 ## Ancient changes
 
 - See [release-1.28/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.28/CHANGELOG.md) for changes in CKE 1.28.
@@ -25,4 +31,5 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.28.6...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/1.29.0-rc.1...HEAD
+[1.29.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.28.6...1.29.0-rc.1
