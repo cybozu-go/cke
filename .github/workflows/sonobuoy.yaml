@@ -22,3 +22,10 @@ jobs:
       - name: Check failures
         run: |
           grep -F 'no tests failed for plugin "e2e" in tarball' /tmp/e2e-check.log
+      - name: Upload sonobuoy test result
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonobuoy-test
+          path: /tmp/sonobuoy.tar.gz
+          retention-days: 1
+        if: always()
