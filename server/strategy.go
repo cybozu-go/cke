@@ -353,7 +353,7 @@ OUTER_ETCD:
 	}
 
 	if nodes := nf.NonClusterNodes(); len(nodes) > 0 {
-		ops = append(ops, op.KubeNodeRemoveOp(apiServer, nodes))
+		ops = append(ops, op.KubeNodeRemoveOp(apiServer, nodes, &c.Retire))
 	}
 
 	return ops
