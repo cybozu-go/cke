@@ -35,7 +35,7 @@ SERVICE_ACCOUNT=neco-test@neco-test.iam.gserviceaccount.com
 ## Run Sonobuoy
 
 Run `bin/run-sonobuoy.sh`.
-This script creates 4 GCE VMs, runs CKE on VM #0 by using `docker-compose`, runs Kubernetes deployed by CKE on VM #1~#3, and runs [Sonobuoy][] on VM #0.
+This script creates 4 GCE VMs, runs CKE on VM #0 by using `docker compose`, runs Kubernetes deployed by CKE on VM #1~#3, and runs [Sonobuoy][] on VM #0.
 
 ```console
 $ env INSTANCE_NAME=sonobuoy-vm GITHUB_SHA=vX.Y.Z GITHUB_REPOSITORY=cybozu-go/cke ./bin/run-sonobuoy.sh

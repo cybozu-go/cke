@@ -1,4 +1,4 @@
-# Demonstration with docker-compose and Vagrant
+# Demonstration with `docker compose` and Vagrant
 
 ## Overview
 
@@ -19,14 +19,14 @@ Use this only for testing and development.
 
 ## Setup CKE
 
-Follow the steps to setup CKE with docker-compose.
+Follow the steps to setup CKE with `docker compose`.
 
 ```console
 $ git clone https://github.com/cybozu-go/cke.git
 $ cd ./cke/example/
 $ mkdir bin
 $ mkdir etcd-data
-$ docker-compose up -d
+$ docker compose up -d
 ```
 
 `bin` is the directory where the cli tools are installed.
