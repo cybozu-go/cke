@@ -44,7 +44,7 @@ bin/sonobuoy:
 .PHONY: run
 run: bin/cke bin/ckecli bin/kubectl
 	mkdir -p etcd-data
-	/usr/local/bin/docker-compose up -d
+	docker compose up -d
 	./wait-up.sh
 	$(CKECLI) vault ssh-privkey /home/cybozu/gcp_rsa
 	$(CKECLI) constraints set minimum-workers 2
@@ -66,13 +66,14 @@ sonobuoy: bin/sonobuoy
 
 .PHONY: clean
 clean:
-	-/usr/local/bin/docker-compose down
+	-docker compose down
 	$(SUDO) rm -rf bin etcd-data
 
 .PHONY: setup
 setup:
-	$(SUDO) $(CURL) -o /usr/local/bin/docker-compose $(DOCKER_COMPOSE_URL)
-	$(SUDO) chmod +x /usr/local/bin/docker-compose
+	$(SUDO) mkdir -p /usr/local/lib/docker/cli-plugins
+	$(SUDO) $(CURL) -o /usr/local/lib/docker/cli-plugins/docker-compose $(DOCKER_COMPOSE_URL)
+	$(SUDO) chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 $(CT):
 	mkdir -p bin
