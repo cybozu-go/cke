@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
-	apiserverv1 "k8s.io/apiserver/pkg/apis/config/v1"
+	apiserverv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
 	"k8s.io/client-go/tools/clientcmd/api"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"

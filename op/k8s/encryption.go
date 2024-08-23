@@ -6,7 +6,7 @@ import (
 	"errors"
 
 	"github.com/cybozu-go/cke"
-	apiserverv1 "k8s.io/apiserver/pkg/apis/config/v1"
+	apiserverv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
 )
 
 const (
