@@ -10,7 +10,7 @@ import (
 	"github.com/cybozu-go/cke"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/spf13/cobra"
-	apiserverv1 "k8s.io/apiserver/pkg/apis/config/v1"
+	apiserverv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
 )
 
 var vaultEncKeyCmd = &cobra.Command{
