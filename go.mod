@@ -3,7 +3,7 @@ module github.com/cybozu-go/cke
 go 1.22.5
 
 require (
-	github.com/99designs/gqlgen v0.17.53
+	github.com/99designs/gqlgen v0.17.50
 	github.com/containernetworking/cni v1.2.3
 	github.com/cybozu-go/etcdutil v1.6.8
 	github.com/cybozu-go/log v1.7.0
