@@ -5,27 +5,15 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
-## [1.29.0]
+## [1.30.0-rc.1]
 
 ### Changed
 
-- Upgrade Kubernetes to 1.29.7 [#759](https://github.com/cybozu-go/cke/pull/759), [#749](https://github.com/cybozu-go/cke/pull/749), [#750](https://github.com/cybozu-go/cke/pull/750), [#752](https://github.com/cybozu-go/cke/pull/752), [#754](https://github.com/cybozu-go/cke/pull/754)
-- Use docker compose v2 in appropriate way in CI [#764](https://github.com/cybozu-go/cke/pull/764)
-
-## [1.29.0-rc.2]
-
-### Changed
-
-- Upgrade Kubernetes to 1.29.7 [#759](https://github.com/cybozu-go/cke/pull/759)
-
-## [1.29.0-rc.1]
-
-### Changed
-
-- Upgrade for Kubernetes 1.29.6 [#749](https://github.com/cybozu-go/cke/pull/749), [#750](https://github.com/cybozu-go/cke/pull/750), [#752](https://github.com/cybozu-go/cke/pull/752), [#754](https://github.com/cybozu-go/cke/pull/754)
+- Upgrade for Kubernetes 1.30.5 [#768](https://github.com/cybozu-go/cke/pull/768)
 
 ## Ancient changes
 
+- See [release-1.29/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.29/CHANGELOG.md) for changes in CKE 1.29.
 - See [release-1.28/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.28/CHANGELOG.md) for changes in CKE 1.28.
 - See [release-1.27/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.27/CHANGELOG.md) for changes in CKE 1.27.
 - See [release-1.26/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.26/CHANGELOG.md) for changes in CKE 1.26.
@@ -44,7 +32,5 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.29.0...HEAD
-[1.29.0]: https://github.com/cybozu-go/cke/compare/v1.28.6...v1.29.0
-[1.29.0-rc.2]: https://github.com/cybozu-go/cke/compare/v1.29.0-rc.1...v1.29.0-rc.2
-[1.29.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.28.6...v1.29.0-rc.1
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.30.0-rc.1...HEAD
+[1.30.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.29.0...v1.30.0-rc.1

@@ -43,7 +43,9 @@ It should look like:
 2. Make a branch to release
 
     ```console
-    $ git neco dev "bump-$VERSION"
+    $ git checkout main
+    $ git pull
+    $ git checkout -b "bump-$VERSION"
     ```
 
 3. Update `version.go`.
@@ -52,7 +54,8 @@ It should look like:
 
     ```console
     $ git commit -a -m "Bump version to $VERSION"
-    $ git neco review
+    $ git push -u origin HEAD
+    $ gh pr create -f
     ```
 
 6. When updating to `x.y.0` or its RC, run Sonobuoy test manually and make sure that it has been passed.

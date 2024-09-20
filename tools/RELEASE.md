@@ -22,7 +22,9 @@ The patch version is increased with `cke-tools` update.
 2. Make a branch to release
 
     ```console
-    $ git neco dev "bump-tools-$VERSION"
+    $ git checkout main
+    $ git pull
+    $ git checkout -b "bump-tools-$VERSION"
     ```
 
 3. Edit `CHANGELOG.md` in this directory.
@@ -30,7 +32,8 @@ The patch version is increased with `cke-tools` update.
 
     ```console
     $ git commit -a -m "Bump cke-tools version to $VERSION"
-    $ git neco review
+    $ git push -u origin HEAD
+    $ gh pr create -f
     ```
 
 5. Merge the pull request.
