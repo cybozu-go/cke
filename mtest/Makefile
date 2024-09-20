@@ -36,7 +36,7 @@ export HOST1 HOST2 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 PLACEMAT GINKGO SUITE
 # non-configuration variables
 MANAGEMENT_ETCD_ARCHIVE := etcd-v$(MANAGEMENT_ETCD_VERSION)-linux-amd64.tar.gz
 VAULT_ARCHIVE := vault_$(VAULT_VERSION)_linux_amd64.zip
-KUBECTL_URL := https://storage.googleapis.com/kubernetes-release/release/v$(K8S_VERSION)/bin/linux/amd64/kubectl
+KUBECTL_URL := https://dl.k8s.io/v$(K8S_VERSION)/bin/linux/amd64/kubectl
 SSH_PRIVKEY = $(realpath ./mtest_key)
 OUTPUT := ./output
 DATA_DIR := $(abspath $(OUTPUT))/data
