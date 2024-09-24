@@ -9,7 +9,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ### Changed
 
-- Upgrade for Kubernetes 1.30.5 [#768](https://github.com/cybozu-go/cke/pull/768)
+- Update Kubernetes to 1.30.5 [#767](https://github.com/cybozu-go/cke/pull/767)
 
 ## Ancient changes
 
