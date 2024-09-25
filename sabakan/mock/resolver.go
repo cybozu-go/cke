@@ -1,13 +1,10 @@
 package mock
 
-import (
-	"context"
-	"errors"
-	"fmt"
-	"time"
-)
+// This file will not be regenerated automatically.
+//
+// It serves as dependency injection for your app, add any dependencies you require here.
 
-// THIS CODE IS A STARTING POINT ONLY. IT WILL NOT BE UPDATED WITH SCHEMA CHANGES.
+import "time"
 
 var machines = map[string]*Machine{
 	"m1": {
@@ -69,68 +66,10 @@ var machines = map[string]*Machine{
 	},
 }
 
+type Resolver struct{}
+
 type mockResolver struct{}
 
 func (r mockResolver) Query() QueryResolver {
-	return queryResolver{}
-}
-
-type queryResolver struct{}
-
-func (r queryResolver) Machine(ctx context.Context, serial string) (*Machine, error) {
-	if m, ok := machines[serial]; ok {
-		return m, nil
-	}
-	return nil, errors.New("not found")
-}
-func (r queryResolver) SearchMachines(ctx context.Context, having *MachineParams, notHaving *MachineParams) ([]*Machine, error) {
-	if having == nil {
-		if notHaving == nil {
-			return []*Machine{machines["m1"], machines["m2"], machines["m3"]}, nil
-		}
-		return []*Machine{machines["m1"], machines["m3"]}, nil
-	}
-
-	if len(having.Labels) == 1 {
-		if having.Labels[0].Name != "foo" {
-			return nil, errors.New("wrong label name: " + having.Labels[0].Name)
-		}
-		if having.Labels[0].Value != "bar" {
-			return nil, errors.New("wrong label value: " + having.Labels[0].Value)
-		}
-		return []*Machine{machines["m3"]}, nil
-	}
-
-	if len(having.Racks) == 1 {
-		if having.Racks[0] != 1 {
-			return nil, fmt.Errorf("wrong rack number: %d", having.Racks[0])
-		}
-		return []*Machine{machines["m1"]}, nil
-	}
-
-	if len(having.Roles) == 1 {
-		if having.Roles[0] != "worker" {
-			return nil, errors.New("wrong role: " + having.Roles[0])
-		}
-		return []*Machine{machines["m2"]}, nil
-	}
-
-	if len(having.States) == 1 {
-		if string(having.States[0]) == "bad" {
-			return nil, errors.New("bad state value")
-		}
-		if having.States[0] != MachineStateUninitialized {
-			return nil, errors.New("unexpected state: " + string(having.States[0]))
-		}
-		return []*Machine{machines["m3"]}, nil
-	}
-
-	if having.MinDaysBeforeRetire != nil {
-		if *having.MinDaysBeforeRetire != 90 {
-			return nil, fmt.Errorf("unexpected days: %d", *having.MinDaysBeforeRetire)
-		}
-		return []*Machine{machines["m2"]}, nil
-	}
-
-	return nil, nil
+	return &queryResolver{}
 }

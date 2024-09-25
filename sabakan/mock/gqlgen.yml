@@ -1,11 +1,13 @@
 # Generate test GraphQL server.
 
 schema:
-- schema.graphql
+  - schema.graphql
 exec:
   filename: generated.go
+  package: mock
 model:
   filename: models.go
 resolver:
-  filename: resolver.go
-  type: Resolver
+  layout: follow-schema
+  dir: .
+  package: mock

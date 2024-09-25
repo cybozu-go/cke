@@ -1,7 +1,7 @@
 ### Configurable variables
-SONOBUOY_VERSION = 0.57.1
-KUBECTL_VERSION = 1.29.7
-DOCKER_COMPOSE_VERSION = 2.28.1
+SONOBUOY_VERSION = 0.57.2
+KUBECTL_VERSION = 1.30.5
+DOCKER_COMPOSE_VERSION = 2.29.6
 CT_VERSION = 0.9.3
 
 ### Unconfigurable
@@ -13,7 +13,7 @@ SUDO = sudo
 endif
 
 SONOBUOY_URL = https://github.com/vmware-tanzu/sonobuoy/releases/download/v$(SONOBUOY_VERSION)/sonobuoy_$(SONOBUOY_VERSION)_linux_amd64.tar.gz
-KUBECTL_URL = https://storage.googleapis.com/kubernetes-release/release/v$(KUBECTL_VERSION)/bin/linux/amd64/kubectl
+KUBECTL_URL = https://dl.k8s.io/v$(KUBECTL_VERSION)/bin/linux/amd64/kubectl
 DOCKER_COMPOSE_URL = https://github.com/docker/compose/releases/download/v$(DOCKER_COMPOSE_VERSION)/docker-compose-Linux-x86_64
 CKECLI = ./bin/ckecli --config=./cke.config
 KUBECONFIG := $(shell pwd)/.kubeconfig
