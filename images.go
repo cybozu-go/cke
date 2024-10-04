@@ -15,7 +15,7 @@ const (
 	ToolsImage           = Image("ghcr.io/cybozu-go/cke-tools:1.30.0")
 	PauseImage           = Image("ghcr.io/cybozu/pause:3.9.0.6")
 	CoreDNSImage         = Image("ghcr.io/cybozu/coredns:1.11.3.1")
-	UnboundImage         = Image("ghcr.io/cybozu/unbound:1.21.0.1")
+	UnboundImage         = Image("ghcr.io/cybozu/unbound:1.21.1.1")
 	UnboundExporterImage = Image("ghcr.io/cybozu/unbound_exporter:0.4.6.2")
 )
 
