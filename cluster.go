@@ -321,14 +321,11 @@ const DefaultRepairHealthCheckCommandTimeoutSeconds = 30
 const DefaultRepairCommandTimeoutSeconds = 30
 
 type Retire struct {
-	ShutdownCommand       []string `json:"shutdown_command"`
-	CheckCommand          []string `json:"check_command"`
-	CommandTimeoutSeconds *int     `json:"command_timeout_seconds,omitempty"`
-	CheckTimeoutSeconds   *int     `json:"check_timeout_seconds,omitempty"`
+	OptionalCommand               []string `json:"optional_command,omitempty"`
+	OptionalCommandTimeoutSeconds *int     `json:"optional_command_timeout_seconds,omitempty"`
 }
 
-const DefaultRetireCommandTimeoutSeconds = 30
-const DefaultRetireCheckTimeoutSeconds = 300
+const DefaultRetireOptionalCommandTimeoutSeconds = 30
 
 // Options is a set of optional parameters for k8s components.
 type Options struct {
