@@ -304,6 +304,8 @@ type RepairOperation struct {
 	RepairSteps           []RepairStep `json:"repair_steps"`
 	HealthCheckCommand    []string     `json:"health_check_command"`
 	CommandTimeoutSeconds *int         `json:"command_timeout_seconds,omitempty"`
+	SuccessCommand        []string     `json:"success_command,omitempty"`
+	SuccessCommandTimeout *int         `json:"success_command_timeout,omitempty"`
 }
 
 type RepairStep struct {
@@ -319,6 +321,7 @@ const DefaultMaxConcurrentRepairs = 1
 const DefaultRepairEvictionTimeoutSeconds = 600
 const DefaultRepairHealthCheckCommandTimeoutSeconds = 30
 const DefaultRepairCommandTimeoutSeconds = 30
+const DefaultRepairSuccessCommandTimeoutSeconds = 30
 
 type Retire struct {
 	OptionalCommand               []string `json:"optional_command,omitempty"`

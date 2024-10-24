@@ -613,6 +613,31 @@ func GetRepairQueueStatus(ctx context.Context, inf cke.Infrastructure, n *cke.No
 		}
 		if healthy {
 			rqs.RepairCompleted[entry.Address] = true
+			//execute Success command
+			op, err := entry.GetMatchingRepairOperation(cluster)
+			if err != nil {
+				return cke.RepairQueueStatus{}, err
+			}
+			if op.SuccessCommand != nil {
+				err := func() error {
+					ctx := ctx
+					timeout := cke.DefaultRepairSuccessCommandTimeoutSeconds
+					if op.SuccessCommandTimeout != nil {
+						timeout = *op.SuccessCommandTimeout
+					}
+					if timeout != 0 {
+						var cancel context.CancelFunc
+						ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(timeout))
+						defer cancel()
+					}
+					args := append(op.SuccessCommand[1:], entry.Address)
+					command := well.CommandContext(ctx, op.SuccessCommand[0], args...)
+					return command.Run()
+				}()
+				if err != nil {
+					return cke.RepairQueueStatus{}, err
+				}
+			}
 		}
 	}
 
