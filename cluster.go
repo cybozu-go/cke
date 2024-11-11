@@ -323,13 +323,6 @@ const DefaultRepairHealthCheckCommandTimeoutSeconds = 30
 const DefaultRepairCommandTimeoutSeconds = 30
 const DefaultRepairSuccessCommandTimeoutSeconds = 30
 
-type Retire struct {
-	OptionalCommand               []string `json:"optional_command,omitempty"`
-	OptionalCommandTimeoutSeconds *int     `json:"optional_command_timeout_seconds,omitempty"`
-}
-
-const DefaultRetireOptionalCommandTimeoutSeconds = 30
-
 // Options is a set of optional parameters for k8s components.
 type Options struct {
 	Etcd              EtcdParams      `json:"etcd"`
@@ -353,7 +346,6 @@ type Cluster struct {
 	DNSService    string   `json:"dns_service"`
 	Reboot        Reboot   `json:"reboot"`
 	Repair        Repair   `json:"repair"`
-	Retire        Retire   `json:"retire"`
 	Options       Options  `json:"options"`
 }
 

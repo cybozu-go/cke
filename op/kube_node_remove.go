@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/well"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -18,13 +16,12 @@ import (
 type kubeNodeRemove struct {
 	apiserver *cke.Node
 	nodes     []*corev1.Node
-	config    *cke.Retire
 	done      bool
 }
 
 // KubeNodeRemoveOp removes k8s Node resources.
-func KubeNodeRemoveOp(apiserver *cke.Node, nodes []*corev1.Node, config *cke.Retire) cke.Operator {
-	return &kubeNodeRemove{apiserver: apiserver, nodes: nodes, config: config}
+func KubeNodeRemoveOp(apiserver *cke.Node, nodes []*corev1.Node) cke.Operator {
+	return &kubeNodeRemove{apiserver: apiserver, nodes: nodes}
 }
 
 func (o *kubeNodeRemove) Name() string {
@@ -37,12 +34,7 @@ func (o *kubeNodeRemove) NextCommand() cke.Commander {
 	}
 
 	o.done = true
-	return nodeRemoveCommand{
-		o.apiserver,
-		o.nodes,
-		o.config.OptionalCommand,
-		o.config.OptionalCommandTimeoutSeconds,
-	}
+	return nodeRemoveCommand{o.apiserver, o.nodes}
 }
 
 func (o *kubeNodeRemove) Targets() []string {
@@ -52,10 +44,8 @@ func (o *kubeNodeRemove) Targets() []string {
 }
 
 type nodeRemoveCommand struct {
-	apiserver                     *cke.Node
-	nodes                         []*corev1.Node
-	optionalCommand               []string
-	optionalCommandTimeoutSeconds *int
+	apiserver *cke.Node
+	nodes     []*corev1.Node
 }
 
 func (c nodeRemoveCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
@@ -87,27 +77,6 @@ func (c nodeRemoveCommand) Run(ctx context.Context, inf cke.Infrastructure, _ st
 				return fmt.Errorf("failed to patch node %s: %v", n.Name, err)
 			}
 		}
-		if len(c.optionalCommand) != 0 {
-			err := func() error {
-				ctx := ctx
-				timeout := cke.DefaultRetireOptionalCommandTimeoutSeconds
-				if c.optionalCommandTimeoutSeconds != nil {
-					timeout = *c.optionalCommandTimeoutSeconds
-				}
-				if timeout != 0 {
-					var cancel context.CancelFunc
-					ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(timeout))
-					defer cancel()
-				}
-				args := append(c.optionalCommand[1:], n.Name)
-				command := well.CommandContext(ctx, c.optionalCommand[0], args...)
-				return command.Run()
-			}()
-			if err != nil {
-				return fmt.Errorf("failed to execute optional command in retirement %s: %v", n.Name, err)
-			}
-		}
-
 		err = nodesAPI.Delete(ctx, n.Name, metav1.DeleteOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to delete node %s: %v", n.Name, err)
