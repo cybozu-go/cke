@@ -731,7 +731,7 @@ func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 			continue
 		}
 		if rqs.RepairCompleted[entry.Address] {
-			ops = append(ops, op.RepairFinishOp(entry, true))
+			ops = append(ops, op.RepairFinishOp(entry, true, c))
 			continue
 		}
 		switch entry.Status {
@@ -826,7 +826,7 @@ func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 			// Though ErrRepairStepOutOfRange may be caused by real misconfiguration,
 			// e.g., by decreasing "repair_steps" in cluster.yaml, we treat the error
 			// as the end of the steps for simplicity.
-			ops = append(ops, op.RepairFinishOp(entry, false))
+			ops = append(ops, op.RepairFinishOp(entry, false, c))
 			continue
 		}
 
@@ -838,7 +838,7 @@ func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 				continue
 			}
 			if !(step.NeedDrain && entry.IsInCluster()) {
-				ops = append(ops, op.RepairExecuteOp(entry, step))
+				ops = append(ops, op.RepairExecuteOp(entry, step, c))
 				continue
 			}
 			// DrainBackOffExpire has been confirmed, so start drain now.
@@ -849,7 +849,7 @@ func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 				continue
 			}
 			if rqs.DrainCompleted[entry.Address] {
-				ops = append(ops, op.RepairExecuteOp(entry, step))
+				ops = append(ops, op.RepairExecuteOp(entry, step, c))
 				continue
 			}
 			if entry.LastTransitionTime.Before(evictionStartLimit) {
