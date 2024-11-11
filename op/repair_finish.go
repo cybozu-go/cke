@@ -68,6 +68,7 @@ func (c repairFinishCommand) Command() cke.Command {
 
 func repairFinish(ctx context.Context, inf cke.Infrastructure, entry *cke.RepairQueueEntry, succeeded bool, cluster *cke.Cluster) error {
 	if succeeded {
+		entry.Status = cke.RepairStatusSucceeded
 		//execute Success command
 		err := func() error {
 			op, err := entry.GetMatchingRepairOperation(cluster)
@@ -104,7 +105,6 @@ func repairFinish(ctx context.Context, inf cke.Infrastructure, entry *cke.Repair
 				"address":   entry.Address,
 			})
 		}
-		entry.Status = cke.RepairStatusSucceeded
 	} else {
 		entry.Status = cke.RepairStatusFailed
 	}
