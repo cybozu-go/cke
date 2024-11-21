@@ -53,9 +53,6 @@ type repairFinishCommand struct {
 }
 
 func (c repairFinishCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	if c.succeeded {
-
-	}
 	return repairFinish(ctx, inf, c.entry, c.succeeded, c.cluster)
 }
 
