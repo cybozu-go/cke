@@ -124,12 +124,14 @@ The repair configurations control the [repair functionality](repair.md).
 
 #### RepairOperation
 
-| Name                      | Required | Type           | Description                                                     |
-| ------------------------- | -------- | -------------- | --------------------------------------------------------------- |
-| `operation`               | true     | string         | Name of repair operation.                                       |
-| `repair_steps`            | true     | `[]RepairStep` | Sequences of [repair steps](#repairstep).                       |
-| `health_check_command`    | true     | array          | A command to check repaired machine's health. List of strings.  |
-| `command_timeout_seconds` | false    | \*int          | Deadline for health retrieval. Zero means infinity. Default: 30 |
+|           Name            | Required |      Type      |                                  Description                                  |
+| ------------------------- | -------- | -------------- | ----------------------------------------------------------------------------- |
+| `operation`               | true     | string         | Name of repair operation.                                                     |
+| `repair_steps`            | true     | `[]RepairStep` | Sequences of [repair steps](#repairstep).                                     |
+| `health_check_command`    | true     | array          | A command to check repaired machine's health. List of strings.                |
+| `command_timeout_seconds` | false    | \*int          | Deadline for health retrieval. Zero means infinity. Default: 30               |
+| `success_command`         | false    | array          | A command executed when repair is succeeded. List of strings.                |
+| `success_command_timeout` | false    | \*int          | Deadline for execution of succcess_command.  Zero means infinity. Default: 30 |
 
 ##### RepairStep
 
@@ -296,6 +298,4 @@ It should end with either `.conf` or `.conflist`.
 Fields in `config` may have default values.  Some fields are overwritten by CKE.
 Please see the source code for more details.
 
-[CRI]: https://github.com/kubernetes/kubernetes/blob/242a97307b34076d5d8f5bbeb154fa4d97c9ef1d/docs/devel/container-runtime-interface.md
-[log rotation for CRI runtime]: https://github.com/kubernetes/kubernetes/issues/58823
 [LabelSelector]: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors
