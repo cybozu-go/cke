@@ -438,7 +438,7 @@ func KubeletServiceParams(n *cke.Node, params cke.KubeletParams) cke.ServicePara
 			{
 				Source:      "/sys",
 				Destination: "/sys",
-				ReadOnly:    true,
+				ReadOnly:    false,
 				Propagation: "",
 				Label:       "",
 			},
