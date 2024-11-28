@@ -3,5 +3,5 @@ ZONE=asia-northeast2-c
 SERVICE_ACCOUNT=neco-test@neco-test.iam.gserviceaccount.com
 MACHINE_TYPE=c2-standard-30
 DISK_TYPE=pd-ssd
-BOOT_DISK_SIZE=20GB
+BOOT_DISK_SIZE=30GB
 GCLOUD="gcloud --quiet --account ${SERVICE_ACCOUNT} --project ${PROJECT}"
