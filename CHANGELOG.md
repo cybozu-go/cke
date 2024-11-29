@@ -49,7 +49,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
 [Unreleased]: https://github.com/cybozu-go/cke/compare/v1.29.1...HEAD
-[1.29.1]: https://github.com/cybozu-go/cke/compare/v1.29.0...v1.29.1`
+[1.29.1]: https://github.com/cybozu-go/cke/compare/v1.29.0...v1.29.1
 [1.29.0]: https://github.com/cybozu-go/cke/compare/v1.28.6...v1.29.0
 [1.29.0-rc.2]: https://github.com/cybozu-go/cke/compare/v1.29.0-rc.1...v1.29.0-rc.2
 [1.29.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.28.6...v1.29.0-rc.1
