@@ -72,22 +72,22 @@ func repairFinish(ctx context.Context, inf cke.Infrastructure, entry *cke.Repair
 			if err != nil {
 				return err
 			}
-			if op.SuccessCommand != nil {
-				ctx := ctx
-				timeout := cke.DefaultRepairSuccessCommandTimeoutSeconds
-				if op.SuccessCommandTimeout != nil {
-					timeout = *op.SuccessCommandTimeout
-				}
-				if timeout != 0 {
-					var cancel context.CancelFunc
-					ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(timeout))
-					defer cancel()
-				}
-				args := append(op.SuccessCommand[1:], entry.Address)
-				command := well.CommandContext(ctx, op.SuccessCommand[0], args...)
-				return command.Run()
+			if op.SuccessCommand == nil {
+				return nil
 			}
-			return nil
+			ctx := ctx
+			timeout := cke.DefaultRepairSuccessCommandTimeoutSeconds
+			if op.SuccessCommandTimeout != nil {
+				timeout = *op.SuccessCommandTimeout
+			}
+			if timeout != 0 {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(timeout))
+				defer cancel()
+			}
+			args := append(op.SuccessCommand[1:], entry.Address)
+			command := well.CommandContext(ctx, op.SuccessCommand[0], args...)
+			return command.Run()
 		}()
 		if err != nil {
 			entry.Status = cke.RepairStatusFailed

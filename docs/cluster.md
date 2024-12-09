@@ -130,7 +130,7 @@ The repair configurations control the [repair functionality](repair.md).
 | `repair_steps`            | true     | `[]RepairStep` | Sequences of [repair steps](#repairstep).                                     |
 | `health_check_command`    | true     | array          | A command to check repaired machine's health. List of strings.                |
 | `command_timeout_seconds` | false    | \*int          | Deadline for health retrieval. Zero means infinity. Default: 30               |
-| `success_command`         | false    | array          | A command executed when repair is succeeded. List of strings.                |
+| `success_command`         | false    | array          | A command executed when repair succeeded. List of strings.                    |
 | `success_command_timeout` | false    | \*int          | Deadline for execution of succcess_command.  Zero means infinity. Default: 30 |
 
 ##### RepairStep

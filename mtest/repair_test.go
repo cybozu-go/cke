@@ -127,7 +127,7 @@ func testRepairOperations() {
 		waitRepairEmpty(cluster)
 
 		By("setting erroneous success command")
-		originalSuceessCommand := cluster.Repair.RepairProcedures[0].RepairOperations[0].SuccessCommand
+		originalSuccessCommand := cluster.Repair.RepairProcedures[0].RepairOperations[0].SuccessCommand
 		cluster.Repair.RepairProcedures[0].RepairOperations[0].SuccessCommand = []string{"false"}
 		_, err := ckecliClusterSet(cluster)
 		Expect(err).NotTo(HaveOccurred())
@@ -140,7 +140,7 @@ func testRepairOperations() {
 		waitRepairEmpty(cluster)
 
 		By("restoring success command")
-		cluster.Repair.RepairProcedures[0].RepairOperations[0].SuccessCommand = originalSuceessCommand
+		cluster.Repair.RepairProcedures[0].RepairOperations[0].SuccessCommand = originalSuccessCommand
 		_, err = ckecliClusterSet(cluster)
 		Expect(err).NotTo(HaveOccurred())
 		time.Sleep(time.Second * 3)
