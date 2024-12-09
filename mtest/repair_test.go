@@ -62,6 +62,17 @@ func repairShouldNotProceed() {
 	}).WithTimeout(time.Second * 60).Should(Succeed())
 }
 
+func repairSuccessCommandSuccess(node string) {
+	cmdSuccess := false
+	for _, host := range []string{host1, host2} {
+		_, _, err := execAt(host, "docker", "exec", "cke", "test", "-f", "/tmp/mtest-repair-success-"+node)
+		if err == nil {
+			cmdSuccess = true
+		}
+	}
+	Expect(cmdSuccess).To(BeTrue())
+}
+
 func testRepairOperations() {
 	// this will run:
 	// - RepairDrainStartOp
@@ -110,15 +121,34 @@ func testRepairOperations() {
 		repairQueueAdd(node1)
 		waitRepairSuccess(cluster)
 		nodesShouldBeSchedulable(node1)
+		repairSuccessCommandSuccess(node1)
 
 		ckecliSafe("repair-queue", "delete-finished")
 		waitRepairEmpty(cluster)
 
+		By("setting erroneous success command")
+		originalSuccessCommand := cluster.Repair.RepairProcedures[0].RepairOperations[0].SuccessCommand
+		cluster.Repair.RepairProcedures[0].RepairOperations[0].SuccessCommand = []string{"false"}
+		_, err := ckecliClusterSet(cluster)
+		Expect(err).NotTo(HaveOccurred())
+		time.Sleep(time.Second * 3)
+
+		repairQueueAdd(node1)
+		waitRepairFailure(cluster)
+
+		ckecliSafe("repair-queue", "delete-finished")
+		waitRepairEmpty(cluster)
+
+		By("restoring success command")
+		cluster.Repair.RepairProcedures[0].RepairOperations[0].SuccessCommand = originalSuccessCommand
+		_, err = ckecliClusterSet(cluster)
+		Expect(err).NotTo(HaveOccurred())
+		time.Sleep(time.Second * 3)
+
 		By("setting erroneous repair command")
 		originalRepairCommand := cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].RepairCommand
-
 		cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].RepairCommand = []string{"false"}
-		_, err := ckecliClusterSet(cluster)
+		_, err = ckecliClusterSet(cluster)
 		Expect(err).NotTo(HaveOccurred())
 		time.Sleep(time.Second * 3)
 

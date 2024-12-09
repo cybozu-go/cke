@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/log"
+	"github.com/cybozu-go/well"
 )
 
 type repairFinishOp struct {
@@ -12,12 +14,14 @@ type repairFinishOp struct {
 
 	entry     *cke.RepairQueueEntry
 	succeeded bool
+	cluster   *cke.Cluster
 }
 
-func RepairFinishOp(entry *cke.RepairQueueEntry, succeeded bool) cke.Operator {
+func RepairFinishOp(entry *cke.RepairQueueEntry, succeeded bool, cluster *cke.Cluster) cke.Operator {
 	return &repairFinishOp{
 		entry:     entry,
 		succeeded: succeeded,
+		cluster:   cluster,
 	}
 }
 
@@ -34,6 +38,7 @@ func (o *repairFinishOp) NextCommand() cke.Commander {
 	return repairFinishCommand{
 		entry:     o.entry,
 		succeeded: o.succeeded,
+		cluster:   o.cluster,
 	}
 }
 
@@ -44,10 +49,11 @@ func (o *repairFinishOp) Targets() []string {
 type repairFinishCommand struct {
 	entry     *cke.RepairQueueEntry
 	succeeded bool
+	cluster   *cke.Cluster
 }
 
 func (c repairFinishCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	return repairFinish(ctx, inf, c.entry, c.succeeded)
+	return repairFinish(ctx, inf, c.entry, c.succeeded, c.cluster)
 }
 
 func (c repairFinishCommand) Command() cke.Command {
@@ -57,9 +63,40 @@ func (c repairFinishCommand) Command() cke.Command {
 	}
 }
 
-func repairFinish(ctx context.Context, inf cke.Infrastructure, entry *cke.RepairQueueEntry, succeeded bool) error {
+func repairFinish(ctx context.Context, inf cke.Infrastructure, entry *cke.RepairQueueEntry, succeeded bool, cluster *cke.Cluster) error {
 	if succeeded {
 		entry.Status = cke.RepairStatusSucceeded
+		//execute Success command
+		err := func() error {
+			op, err := entry.GetMatchingRepairOperation(cluster)
+			if err != nil {
+				return err
+			}
+			if op.SuccessCommand == nil {
+				return nil
+			}
+			ctx := ctx
+			timeout := cke.DefaultRepairSuccessCommandTimeoutSeconds
+			if op.SuccessCommandTimeout != nil {
+				timeout = *op.SuccessCommandTimeout
+			}
+			if timeout != 0 {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(timeout))
+				defer cancel()
+			}
+			args := append(op.SuccessCommand[1:], entry.Address)
+			command := well.CommandContext(ctx, op.SuccessCommand[0], args...)
+			return command.Run()
+		}()
+		if err != nil {
+			entry.Status = cke.RepairStatusFailed
+			log.Warn("SuccessCommand failed", map[string]interface{}{
+				log.FnError: err,
+				"index":     entry.Index,
+				"address":   entry.Address,
+			})
+		}
 	} else {
 		entry.Status = cke.RepairStatusFailed
 	}

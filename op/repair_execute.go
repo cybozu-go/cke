@@ -13,14 +13,16 @@ import (
 type repairExecuteOp struct {
 	finished bool
 
-	entry *cke.RepairQueueEntry
-	step  *cke.RepairStep
+	entry   *cke.RepairQueueEntry
+	step    *cke.RepairStep
+	cluster *cke.Cluster
 }
 
-func RepairExecuteOp(entry *cke.RepairQueueEntry, step *cke.RepairStep) cke.Operator {
+func RepairExecuteOp(entry *cke.RepairQueueEntry, step *cke.RepairStep, cluster *cke.Cluster) cke.Operator {
 	return &repairExecuteOp{
-		entry: entry,
-		step:  step,
+		entry:   entry,
+		step:    step,
+		cluster: cluster,
 	}
 }
 
@@ -40,6 +42,7 @@ func (o *repairExecuteOp) NextCommand() cke.Commander {
 		timeoutSeconds: o.step.CommandTimeoutSeconds,
 		retries:        o.step.CommandRetries,
 		interval:       o.step.CommandInterval,
+		cluster:        o.cluster,
 	}
 }
 
@@ -53,6 +56,7 @@ type repairExecuteCommand struct {
 	timeoutSeconds *int
 	retries        *int
 	interval       *int
+	cluster        *cke.Cluster
 }
 
 func (c repairExecuteCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
@@ -110,7 +114,7 @@ RETRY:
 		"address": c.entry.Address,
 		"command": strings.Join(c.command, " "),
 	})
-	return repairFinish(ctx, inf, c.entry, false)
+	return repairFinish(ctx, inf, c.entry, false, c.cluster)
 }
 
 func (c repairExecuteCommand) Command() cke.Command {

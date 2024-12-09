@@ -108,6 +108,12 @@ CKE decides to execute a repair operations if its `operation` matches `OPERATION
 When CKE executes the check command, it appends the IP address of the target machine to the command.
 The command should return a string `true` if it evaluates the machine as healthy.
 
+`success_command` and its timeout are used when the machine is evaluated as healthy and the repair operation finishes successfully.
+When CKE executes the success command, it appends the IP address of the target machine to the command.
+If the repair operation has failed, the command is not executed.
+If the `success_command` fails, CKE changes the status of the queue entry to `failed`.
+Users can use this command if they want to execute a command as a post-processing of repair operation.
+
 ### Repair steps
 
 A repair step is a combination of:
