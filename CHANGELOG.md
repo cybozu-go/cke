@@ -5,7 +5,15 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.30.2]
+
+### Added
+
+- add feature to execute user-defined command when repair is successfully finished [#753](https://github.com/cybozu-go/cke/pull/753)
+
 ## [1.30.1]
+
+### Changed
 
 - Set /sys mount of kubelet as read-write [#773](https://github.com/cybozu-go/cke/pull/773)
 
@@ -46,7 +54,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.30.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.30.2...HEAD
+[1.30.2]: https://github.com/cybozu-go/cke/compare/v1.30.1...v1.30.2
 [1.30.1]: https://github.com/cybozu-go/cke/compare/v1.30.0...v1.30.1
 [1.30.0]: https://github.com/cybozu-go/cke/compare/v1.30.0-rc.2...v1.30.0
 [1.30.0-rc.2]: https://github.com/cybozu-go/cke/compare/v1.30.0-rc.1...v1.30.0-rc.2
