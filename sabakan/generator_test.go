@@ -86,15 +86,20 @@ func testMachineToNode(t *testing.T) {
 		t.Error(`res1.Taints do not have corev1.Taint{Key"foo", Effect: corev1.TaintEffectNoSchedule}, actual:`, res1.Taints)
 	}
 
-	machine.Status.State = StateRetiring
+	machine.Status.State = StateUnreachable
 	res2 := MachineToNode(machine, node)
-	if !containsTaint(res2.Taints, corev1.Taint{Key: domain + "/state", Value: "retiring", Effect: corev1.TaintEffectNoExecute}) {
-		t.Error(`res2.Taints do not have corev1.Taint{Key: "cke.cybozu.com/state", Value: "retiring", Effect: "NoExecute"}, actual:`, res2.Taints)
+	if !containsTaint(res2.Taints, corev1.Taint{Key: domain + "/state", Value: "unreachable", Effect: corev1.TaintEffectNoSchedule}) {
+		t.Error(`res2.Taints do not have corev1.Taint{Key: "cke.cybozu.com/state", Value: "unreachable", Effect: "NoSchedule"}, actual:`, res2.Taints)
+	}
+	machine.Status.State = StateRetiring
+	res3 := MachineToNode(machine, node)
+	if !containsTaint(res3.Taints, corev1.Taint{Key: domain + "/state", Value: "retiring", Effect: corev1.TaintEffectNoExecute}) {
+		t.Error(`res3.Taints do not have corev1.Taint{Key: "cke.cybozu.com/state", Value: "retiring", Effect: "NoExecute"}, actual:`, res3.Taints)
 	}
 	machine.Status.State = StateRetired
-	res3 := MachineToNode(machine, node)
-	if !containsTaint(res3.Taints, corev1.Taint{Key: domain + "/state", Value: "retired", Effect: corev1.TaintEffectNoExecute}) {
-		t.Error(`res3.Taints do not have corev1.Taint{Key: "cke.cybozu.com/state", Value: "retired", Effect: "NoExecute"}, actual:`, res3.Taints)
+	res4 := MachineToNode(machine, node)
+	if !containsTaint(res4.Taints, corev1.Taint{Key: domain + "/state", Value: "retired", Effect: corev1.TaintEffectNoExecute}) {
+		t.Error(`res4.Taints do not have corev1.Taint{Key: "cke.cybozu.com/state", Value: "retired", Effect: "NoExecute"}, actual:`, res4.Taints)
 	}
 }
 
