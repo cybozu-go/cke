@@ -5,6 +5,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.30.3]
+
+### Changed
+
+- Revive unreachable taint [#780](https://github.com/cybozu-go/cke/pull/780)
+
 ## [1.30.2]
 
 ### Added
@@ -54,7 +60,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.30.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.30.3...HEAD
+[1.30.3]: https://github.com/cybozu-go/cke/compare/v1.30.2...v1.30.3
 [1.30.2]: https://github.com/cybozu-go/cke/compare/v1.30.1...v1.30.2
 [1.30.1]: https://github.com/cybozu-go/cke/compare/v1.30.0...v1.30.1
 [1.30.0]: https://github.com/cybozu-go/cke/compare/v1.30.0-rc.2...v1.30.0
