@@ -164,6 +164,7 @@ CKE generates cluster configuration with the following conditions.
 * The servers which have the same role should be distributed evenly over the racks.
 * Newer machines should be preferred than old ones.
 * Healthy machines should be preferred than non-healthy ones.
+* Unreachable machines in the cluster should be [tainted][taint] with `NoSchedule`.
 * Retiring and retired machines should be [tainted][taint] with `NoExecute`.
 * Retired machines should be removed if the machines are kept retired for a while.
 * Rebooting machines should not be removed from the cluster nor be tainted.
@@ -304,6 +305,7 @@ The taint key is `cke.cybozu.com/state`.
 
 | Machine state | Taint value   | Taint effect |
 | ------------- | ------------- | ------------ |
+| Unreachable   | `unreachable` | `NoSchedule` |
 | Retiring      | `retiring`    | `NoExecute`  |
 | Retired       | `retired`     | `NoExecute`  |
 
@@ -320,7 +322,7 @@ Other Machine fields are also translated to labels as follows.
 `node-role.kubernetes.io/<role>` are used by `kubectl` to display the node's role.
 
 | Field               | Label key                                | Value                                               |
-|---------------------|------------------------------------------|-----------------------------------------------------|
+| ------------------- | ---------------------------------------- | --------------------------------------------------- |
 | `spec.rack`         | `cke.cybozu.com/rack`                    | `spec.rack` converted to string.                    |
 | `spec.rack`         | `topology.kubernetes.io/zone`            | `spec.rack` converted to string with prefix `rack`. |
 | `spec.rack`         | `failure-domain.beta.kubernetes.io/zone` | `spec.rack` converted to string with prefix `rack`. |
