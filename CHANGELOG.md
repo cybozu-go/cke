@@ -5,7 +5,13 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Revive unreachable taint (backport of [#780](https://github.com/cybozu-go/cke/pull/780)) [#782](https://github.com/cybozu-go/cke/pull/782)
+
 ## [1.29.1]
+
+### Changed
 
 - Set /sys mount of kubelet as read-write (backport of [#773](https://github.com/cybozu-go/cke/pull/773)) [#775](https://github.com/cybozu-go/cke/pull/775)
 
