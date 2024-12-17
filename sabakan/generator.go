@@ -2,6 +2,7 @@ package sabakan
 
 import (
 	"errors"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -178,12 +179,25 @@ func (g *Generator) clearIntermediateData() {
 	g.countWorkerByRole = make(map[string]int)
 }
 
+func (g *Generator) countSabakanMachineByRole(role string) int {
+	count := 0
+	for _, m := range g.machineMap {
+		if m.Spec.Role == role {
+			count++
+		}
+	}
+	return count
+}
+
 func (g *Generator) chooseWorkerTmpl() nodeTemplate {
 	count := g.countWorkerByRole
 
-	least := float64(count[g.workerTmpls[0].Role]) / g.workerTmpls[0].Weight
+	least := math.MaxFloat64
 	leastIndex := 0
 	for i, tmpl := range g.workerTmpls {
+		if g.countSabakanMachineByRole(tmpl.Role) == 0 {
+			continue
+		}
 		w := float64(count[tmpl.Role]) / tmpl.Weight
 		if w < least {
 			least = w
