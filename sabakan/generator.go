@@ -18,6 +18,7 @@ var (
 	errNotAvailable       = errors.New("no healthy machine is available")
 	errMissingMachine     = errors.New("failed to apply new template due to missing machines")
 	errTooManyNonExistent = errors.New("too many non-existent control plane nodes")
+	errClusterNotFound    = errors.New("CKE cluster does not exist")
 
 	// DefaultWaitRetiredSeconds before removing retired nodes from the cluster.
 	DefaultWaitRetiredSeconds = 300.0

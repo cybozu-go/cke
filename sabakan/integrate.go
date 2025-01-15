@@ -156,6 +156,10 @@ func (ig integrator) runGenerator(ctx context.Context, leaderKey string, cluster
 func (ig integrator) runRepairer(ctx context.Context, clusterStatus *cke.ClusterStatus) error {
 	st := cke.Storage{Client: ig.etcd}
 
+	if clusterStatus == nil {
+		return errClusterNotFound
+	}
+
 	disabled, err := st.IsAutoRepairDisabled(ctx)
 	if err != nil {
 		return err
