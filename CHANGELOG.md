@@ -5,6 +5,13 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.30.5]
+
+### Changed
+
+- fix runRepairer to check nil in order to avoid SEGV [#788](https://github.com/cybozu-go/cke/pull/788)
+- Enabling etcd data corruption detection [#787](https://github.com/cybozu-go/cke/pull/787)
+
 ## [1.30.4]
 
 ### Changed
@@ -66,7 +73,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.30.4...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.30.5...HEAD
+[1.30.5]: https://github.com/cybozu-go/cke/compare/v1.30.4...v1.30.5
 [1.30.4]: https://github.com/cybozu-go/cke/compare/v1.30.3...v1.30.4
 [1.30.3]: https://github.com/cybozu-go/cke/compare/v1.30.2...v1.30.3
 [1.30.2]: https://github.com/cybozu-go/cke/compare/v1.30.1...v1.30.2
