@@ -28,7 +28,7 @@ server:
   logfile: ""
   use-syslog: no
   log-time-ascii: yes
-  log-queries: yes
+  log-queries: no
   log-replies: yes
   log-local-actions: yes
   log-servfail: yes
