@@ -17,7 +17,9 @@ var clusterDNSTemplate = template.Must(template.New("").Parse(`.:1053 {
     errors
     health
     ready
-    log
+    log . {combined} {
+        class denial error
+    }
     kubernetes {{ .Domain }} in-addr.arpa ip6.arpa {
       pods verified
 {{- if .Upstreams }}
