@@ -3,7 +3,17 @@
 All notable changes to this project will be documented in this file.
 This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#versioning).
 
+
 ## [Unreleased]
+
+## [1.30.6]
+
+### Changed
+
+- Supress dns log [#790](https://github.com/cybozu-go/cke/pull/790)
+  - Supress cluster-dns's log
+  - Supress node-dns's log
+  - Change the test instance's zone
 
 ## [1.30.5]
 
@@ -73,7 +83,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.30.5...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.30.6...HEAD
+[1.30.6]: https://github.com/cybozu-go/cke/compare/v1.30.5...v1.30.6
 [1.30.5]: https://github.com/cybozu-go/cke/compare/v1.30.4...v1.30.5
 [1.30.4]: https://github.com/cybozu-go/cke/compare/v1.30.3...v1.30.4
 [1.30.3]: https://github.com/cybozu-go/cke/compare/v1.30.2...v1.30.3
