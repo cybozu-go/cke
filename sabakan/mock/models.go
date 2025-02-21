@@ -99,7 +99,7 @@ func (e MachineState) String() string {
 	return string(e)
 }
 
-func (e *MachineState) UnmarshalGQL(v interface{}) error {
+func (e *MachineState) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
