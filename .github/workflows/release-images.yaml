@@ -8,7 +8,7 @@ env:
 jobs:
   sonobuoy:
     name: Run sonobuoy
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -39,7 +39,7 @@ jobs:
   release-cke-image:
     name: Release CKE Image
     needs: sonobuoy
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -73,7 +73,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
   release-github:
     name: Release on GitHub
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: release-cke-image
     steps:
       - uses: actions/checkout@v4

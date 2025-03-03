@@ -9,7 +9,7 @@ env:
 jobs:
   build:
     name: Build CKE
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -17,13 +17,13 @@ jobs:
           go-version-file: go.mod
       - name: Check auto-generated files
         run: make check-generate
-      - run: docker run -d --network host gcr.io/etcd-development/etcd:v3.5.14
+      - run: docker run -d --network host gcr.io/etcd-development/etcd:v3.5.18
       - run: make test
       - run: make install GOBIN=$(pwd)/docker
       - run: docker build -t ghcr.io/cybozu-go/cke:latest ./docker
   mtest:
     name: Mtest
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         suite: [functions, robustness, operators, reboot, repair]
@@ -95,7 +95,7 @@ jobs:
           $GCLOUD compute instances delete ${INSTANCE_NAME} --zone ${ZONE}
   compose:
     name: Compose test
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
