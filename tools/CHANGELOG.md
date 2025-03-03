@@ -2,6 +2,10 @@
 
 cke-tools related changes.
 
+## 1.31.0 - 2025-03-03
+
+- Update cke-tool's dependencies [#793](https://github.com/cybozu-go/cke/pull/793)
+
 ## 1.30.0 - 2024-09-18
 
 - Update Go modules dependencies [#766](https://github.com/cybozu-go/cke/pull/766)
