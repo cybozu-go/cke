@@ -1,6 +1,7 @@
 ### Configurable variables
 SONOBUOY_VERSION = 0.57.3
 KUBECTL_VERSION = 1.31.6
+KUSTOMIZE_VERSION = 5.6.0
 DOCKER_COMPOSE_VERSION = 2.33.1
 CT_VERSION = 0.9.3
 
@@ -14,6 +15,7 @@ endif
 
 SONOBUOY_URL = https://github.com/vmware-tanzu/sonobuoy/releases/download/v$(SONOBUOY_VERSION)/sonobuoy_$(SONOBUOY_VERSION)_linux_amd64.tar.gz
 KUBECTL_URL = https://dl.k8s.io/v$(KUBECTL_VERSION)/bin/linux/amd64/kubectl
+KUSTOMIZE_URL = https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv$(KUSTOMIZE_VERSION)/kustomize_v$(KUSTOMIZE_VERSION)_linux_amd64.tar.gz
 DOCKER_COMPOSE_URL = https://github.com/docker/compose/releases/download/v$(DOCKER_COMPOSE_VERSION)/docker-compose-Linux-x86_64
 CKECLI = ./bin/ckecli --config=./cke.config
 KUBECONFIG := $(shell pwd)/.kubeconfig
@@ -37,12 +39,16 @@ bin/kubectl:
 	$(CURL) -o bin/kubectl $(KUBECTL_URL)
 	chmod +x ./bin/kubectl
 
+bin/kustomize:
+	mkdir -p bin
+	$(CURL) $(KUSTOMIZE_URL) | tar xzf - -C bin kustomize
+
 bin/sonobuoy:
 	mkdir -p bin
 	$(CURL) $(SONOBUOY_URL) | tar xzf - -C bin sonobuoy
 
 .PHONY: run
-run: bin/cke bin/ckecli bin/kubectl
+run: bin/cke bin/ckecli bin/kubectl bin/kustomize
 	mkdir -p etcd-data
 	docker compose up -d
 	./wait-up.sh
@@ -52,7 +58,8 @@ run: bin/cke bin/ckecli bin/kubectl
 	$(CKECLI) cluster set /home/cybozu/cke-cluster.yml
 	$(CKECLI) kubernetes issue > .kubeconfig
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system ds/node-dns -o json | jq .status.numberReady)" = 3 ]; then break; fi; done
-	./bin/kubectl apply -k ../example
+	KUSTOMIZE=$(shell pwd)/bin/kustomize ../example/cni-manifest.sh
+	./bin/kubectl apply -k ../example/manifests
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get nodes --no-headers | grep Ready | wc -l)" = 3 ]; then break; fi; done
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system deployments/cluster-dns -o json | jq .status.readyReplicas)" = 2 ]; then break; fi; done
 
