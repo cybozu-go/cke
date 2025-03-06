@@ -47,7 +47,6 @@ run: bin/cke bin/ckecli bin/kubectl
 	docker compose up -d
 	./wait-up.sh
 	$(CKECLI) vault ssh-privkey /home/cybozu/gcp_rsa
-	$(CKECLI) constraints set minimum-workers 2
 	$(CKECLI) constraints set control-plane-count 1
 	$(CKECLI) cluster set /home/cybozu/cke-cluster.yml
 	$(CKECLI) kubernetes issue > .kubeconfig
