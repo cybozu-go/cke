@@ -645,7 +645,7 @@ func (nf *NodeFilter) UnhealthyAPIServerNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-func isInternal(name string) bool {
+func isInternal(name string, roles []string) bool {
 	if name == op.CKEAnnotationReboot {
 		return false
 	}
@@ -655,8 +655,10 @@ func isInternal(name string) bool {
 	if strings.Contains(name, ".cke.cybozu.com/") {
 		return true
 	}
-	if strings.HasPrefix(name, "node-role.kubernetes.io/") {
-		return true
+	for _, role := range roles {
+		if strings.HasPrefix(name, "node-role.kubernetes.io/"+role) {
+			return true
+		}
 	}
 	return false
 }
@@ -670,6 +672,12 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 	}
 
 	for _, n := range nf.cluster.Nodes {
+		var roles []string
+		for k, _ := range n.Labels {
+			if strings.HasPrefix(k, "node-role.kubernetes.io/") {
+				roles = append(roles, strings.TrimPrefix(k, "node-role.kubernetes.io/"))
+			}
+		}
 		current, ok := curNodes[n.Nodename()]
 		if !ok {
 			log.Warn("missing Kubernetes Node resource", map[string]interface{}{
@@ -682,7 +690,7 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 		if nodeIsOutdated(n, current, nf.cluster.TaintCP) {
 			labels := make(map[string]string)
 			for k, v := range current.Labels {
-				if isInternal(k) {
+				if isInternal(k, roles) {
 					continue
 				}
 				labels[k] = v
@@ -697,7 +705,7 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 
 			annotations := make(map[string]string)
 			for k, v := range current.Annotations {
-				if isInternal(k) {
+				if isInternal(k, roles) {
 					continue
 				}
 				annotations[k] = v
@@ -714,7 +722,7 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 			taints := make([]corev1.Taint, len(n.Taints))
 			copy(taints, n.Taints)
 			for _, taint := range current.Spec.Taints {
-				if isInternal(taint.Key) || nTaints[taint.Key] {
+				if isInternal(taint.Key, roles) || nTaints[taint.Key] {
 					continue
 				}
 				taints = append(taints, taint)
@@ -741,10 +749,15 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node, taintCP bool) bool {
 			return true
 		}
 	}
-
+	var roles []string
+	for k, _ := range n.Labels {
+		if strings.HasPrefix(k, "node-role.kubernetes.io/") {
+			roles = append(roles, strings.TrimPrefix(k, "node-role.kubernetes.io/"))
+		}
+	}
 	// Labels for CKE internal use need to be synchronized.
 	for k := range current.Labels {
-		if !isInternal(k) {
+		if !isInternal(k, roles) {
 			continue
 		}
 		if k == op.CKELabelMaster {
@@ -775,7 +788,7 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node, taintCP bool) bool {
 
 	// Annotations for CKE internal use need to be synchronized.
 	for k := range current.Annotations {
-		if !isInternal(k) {
+		if !isInternal(k, roles) {
 			continue
 		}
 		if _, ok := n.Annotations[k]; !ok {
@@ -806,7 +819,7 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node, taintCP bool) bool {
 		nTaints[taint.Key] = taint
 	}
 	for _, taint := range current.Spec.Taints {
-		if !isInternal(taint.Key) {
+		if !isInternal(taint.Key, roles) {
 			continue
 		}
 		if taint.Key == op.CKETaintMaster {
