@@ -324,6 +324,10 @@ const DefaultRepairHealthCheckCommandTimeoutSeconds = 30
 const DefaultRepairCommandTimeoutSeconds = 30
 const DefaultRepairSuccessCommandTimeoutSeconds = 30
 
+type Sabakan struct {
+	SpareNodeTaintKey string `json:"spare_node_taint_key"`
+}
+
 // Options is a set of optional parameters for k8s components.
 type Options struct {
 	Etcd              EtcdParams      `json:"etcd"`
@@ -347,6 +351,7 @@ type Cluster struct {
 	DNSService    string   `json:"dns_service"`
 	Reboot        Reboot   `json:"reboot"`
 	Repair        Repair   `json:"repair"`
+	Sabakan       Sabakan  `json:"sabakan"`
 	Options       Options  `json:"options"`
 }
 
