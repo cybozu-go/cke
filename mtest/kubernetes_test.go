@@ -129,7 +129,7 @@ func testKubernetes() {
 
 		By("waiting pods are ready")
 		Eventually(func() error {
-			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "true")
+			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "--", "true")
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
@@ -138,12 +138,12 @@ func testKubernetes() {
 
 		By("resolving domain names")
 		Eventually(func() error {
-			_, stderr, err := kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "httpd")
+			_, stderr, err := kubectl("exec", "-n="+namespace, "client", "--", "getent", "hosts", "httpd")
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
 
-			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "httpd."+namespace+".svc.cluster.local")
+			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "--", "getent", "hosts", "httpd."+namespace+".svc.cluster.local")
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
@@ -157,7 +157,7 @@ func testKubernetes() {
 			}
 			ip := string(stdout)
 
-			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "getent", "hosts", ip)
+			_, stderr, err = kubectl("exec", "-n="+namespace, "client", "--", "getent", "hosts", ip)
 			if err != nil {
 				return fmt.Errorf("%v: stderr=%s", err, stderr)
 			}
@@ -255,13 +255,13 @@ func testKubernetes() {
 			"client", "--", "pause")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		Eventually(func() error {
-			_, _, err := kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "www.cybozu.com")
+			_, _, err := kubectl("exec", "-n="+namespace, "client", "--", "getent", "hosts", "www.cybozu.com")
 			return err
 		}).Should(Succeed())
 
 		By("querying www.dnssec-failed.org using node DNS from ubuntu pod")
 		Consistently(func() error {
-			_, _, err := kubectl("exec", "-n="+namespace, "client", "getent", "hosts", "www.dnssec-failed.org")
+			_, _, err := kubectl("exec", "-n="+namespace, "client", "--", "getent", "hosts", "www.dnssec-failed.org")
 			return err
 		}).WithTimeout(time.Second * 5).WithPolling(time.Second * 1).ShouldNot(Succeed())
 

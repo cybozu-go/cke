@@ -45,7 +45,7 @@ func encodeToYAML(obj runtime.Object) ([]byte, error) {
 	if err := scm.Convert(obj, unst, nil); err != nil {
 		return nil, err
 	}
-
+	delete(unst.Object, "typeMeta")
 	buf := &bytes.Buffer{}
 	if err := resourceEncoder.Encode(unst, buf); err != nil {
 		return nil, err
