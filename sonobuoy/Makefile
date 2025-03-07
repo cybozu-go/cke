@@ -59,7 +59,9 @@ run: bin/cke bin/ckecli bin/kubectl bin/kustomize
 	$(CKECLI) kubernetes issue > .kubeconfig
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system ds/node-dns -o json | jq .status.numberReady)" = 3 ]; then break; fi; done
 	KUSTOMIZE=$(shell pwd)/bin/kustomize ../example/cni-manifest.sh
-	./bin/kubectl apply -k ../example/manifests
+	./bin/kubectl apply -f ../example/manifests/cni.yaml
+	sleep 10
+	./bin/kubectl apply -f ../example/manifests/addresspool.yaml
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get nodes --no-headers | grep Ready | wc -l)" = 3 ]; then break; fi; done
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system deployments/cluster-dns -o json | jq .status.readyReplicas)" = 2 ]; then break; fi; done
 

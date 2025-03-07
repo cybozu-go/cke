@@ -121,7 +121,8 @@ You can deploy Coil on Kubernetes cluster with the following command.
 
 ```console
 $ ./cni-manifest.sh
-$ kubectl apply -k ./manifests
+$ kubectl apply -f manifests/cni.yaml
+$ kubectl apply -f manifests/addresspool.yaml
 ```
 
 See [Coil Documentation](https://github.com/cybozu-go/coil/blob/main/docs/setup.md) for details.
