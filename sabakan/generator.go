@@ -313,7 +313,19 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 		return nil, errNotAvailable
 	}
 
-	for i := len(g.nextWorkers); i < g.constraints.MinimumWorkers; i++ {
+	var requiredK8sNodes int
+	if g.template.Sabakan.UseAllAvailableMachines {
+		availableWorkers := len(g.machineMap) - len(g.nextControlPlanes)
+		if g.constraints.MaximumWorkers != 0 && g.constraints.MaximumWorkers < availableWorkers {
+			requiredK8sNodes = g.constraints.MaximumWorkers
+		} else {
+			requiredK8sNodes = availableWorkers
+		}
+	} else {
+		requiredK8sNodes = g.constraints.MinimumWorkers
+	}
+
+	for i := len(g.nextWorkers); i < requiredK8sNodes; i++ {
 		m := g.selectWorker(g.nextUnused)
 		if m == nil {
 			return nil, errNotAvailable
@@ -580,7 +592,19 @@ func (g *Generator) increaseWorker() (*updateOp, error) {
 		}
 	}
 
-	if healthyWorkers >= g.constraints.MinimumWorkers {
+	var requiredK8sNodes int
+	if g.template.Sabakan.UseAllAvailableMachines {
+		availableWorkers := len(g.machineMap) - len(g.nextControlPlanes)
+		if g.constraints.MaximumWorkers != 0 && g.constraints.MaximumWorkers < availableWorkers {
+			requiredK8sNodes = g.constraints.MaximumWorkers
+		} else {
+			requiredK8sNodes = availableWorkers
+		}
+	} else {
+		requiredK8sNodes = g.constraints.MinimumWorkers
+	}
+
+	if healthyWorkers >= requiredK8sNodes {
 		return nil, nil
 	}
 
@@ -588,7 +612,7 @@ func (g *Generator) increaseWorker() (*updateOp, error) {
 		name: "increase worker",
 	}
 
-	for i := healthyWorkers; i < g.constraints.MinimumWorkers; i++ {
+	for i := healthyWorkers; i < requiredK8sNodes; i++ {
 		if g.constraints.MaximumWorkers != 0 && len(g.nextWorkers) >= g.constraints.MaximumWorkers {
 			break
 		}
