@@ -117,13 +117,9 @@ $ export KUBECONFIG
 CKE itself does not install any network plugins.
 To implement the [Kubernetes networking model](https://kubernetes.io/docs/concepts/cluster-administration/networking/), you have to install [a plugin](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/).
 
-You can deploy Calico on Kubernetes cluster with the following command.
+You can use Cilium as one of the CNI plugins.
 
-```console
-$ kubectl apply -k .
-```
-
-See [Calico Documentation](https://docs.tigera.io/calico/latest/getting-started/kubernetes/self-managed-onprem/onpremises) for details.
+See [Cilium Documentation](https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/) for details.
 
 After a few minutes, Kubernetes cluster will become ready.
 
