@@ -1,8 +1,9 @@
 ### Configurable variables
-SONOBUOY_VERSION = 0.57.2
-KUBECTL_VERSION = 1.30.5
-DOCKER_COMPOSE_VERSION = 2.29.6
+SONOBUOY_VERSION = 0.57.3
+KUBECTL_VERSION = 1.31.6
+DOCKER_COMPOSE_VERSION = 2.33.1
 CT_VERSION = 0.9.3
+CILIUM_VERSION = 1.17.1
 
 ### Unconfigurable
 CURL = curl -fsL
@@ -11,6 +12,11 @@ SUDO =
 else
 SUDO = sudo
 endif
+
+CILIUM_CLI_VERSION := $(shell curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
+CILIUM_CLI_ARCH := $(shell if [ "$$(uname -m)" = "aarch64" ]; then echo arm64; else echo amd64; fi)
+CILIUM_TARBALL = cilium-linux-$(CILIUM_CLI_ARCH).tar.gz
+CILIUM_CHECKSUM = $(CILIUM_TARBALL).sha256sum
 
 SONOBUOY_URL = https://github.com/vmware-tanzu/sonobuoy/releases/download/v$(SONOBUOY_VERSION)/sonobuoy_$(SONOBUOY_VERSION)_linux_amd64.tar.gz
 KUBECTL_URL = https://dl.k8s.io/v$(KUBECTL_VERSION)/bin/linux/amd64/kubectl
@@ -41,8 +47,15 @@ bin/sonobuoy:
 	mkdir -p bin
 	$(CURL) $(SONOBUOY_URL) | tar xzf - -C bin sonobuoy
 
+bin/cilium:
+	mkdir -p bin
+	curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/$(CILIUM_CLI_VERSION)/$(CILIUM_TARBALL){,.sha256sum}
+	sha256sum --check $(CILIUM_CHECKSUM)
+	sudo tar xzvfC $(CILIUM_TARBALL) ./bin
+	rm $(CILIUM_TARBALL) $(CILIUM_CHECKSUM)
+
 .PHONY: run
-run: bin/cke bin/ckecli bin/kubectl
+run: bin/cke bin/ckecli bin/kubectl bin/cilium
 	mkdir -p etcd-data
 	docker compose up -d
 	./wait-up.sh
@@ -52,7 +65,7 @@ run: bin/cke bin/ckecli bin/kubectl
 	$(CKECLI) cluster set /home/cybozu/cke-cluster.yml
 	$(CKECLI) kubernetes issue > .kubeconfig
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system ds/node-dns -o json | jq .status.numberReady)" = 3 ]; then break; fi; done
-	./bin/kubectl apply -k ../example
+	./bin/cilium install --version $(CILIUM_VERSION) --wait
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get nodes --no-headers | grep Ready | wc -l)" = 3 ]; then break; fi; done
 	for i in $$(seq 300); do sleep 1; if [ "$$(./bin/kubectl get -n kube-system deployments/cluster-dns -o json | jq .status.readyReplicas)" = 2 ]; then break; fi; done
 

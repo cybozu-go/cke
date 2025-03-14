@@ -20,7 +20,7 @@ $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --zone ${ZONE} \
   --machine-type ${MACHINE_TYPE_SONOBUOY} \
   --image-project ubuntu-os-cloud \
-  --image-family ubuntu-2204-lts \
+  --image-family ubuntu-2404-lts-amd64 \
   --boot-disk-type ${DISK_TYPE} \
   --boot-disk-size ${BOOT_DISK_SIZE} \
   --metadata shutdown-at=$(date -Iseconds -d+4hours)

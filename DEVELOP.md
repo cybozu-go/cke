@@ -3,7 +3,7 @@ How to develop CKE
 
 ## Go environment
 
-Use Go 1.21 or higher.
+Use Go 1.23 or higher.
 
 ## Starting development for a new Kubernetes minor release
 
