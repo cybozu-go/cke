@@ -656,9 +656,12 @@ func isInternal(name string, roles []string) bool {
 		return true
 	}
 	for _, role := range roles {
-		if strings.HasPrefix(name, "node-role.kubernetes.io/"+role) {
+		if strings.EqualFold(name, "node-role.kubernetes.io/"+role) {
 			return true
 		}
+	}
+	if name == "node-role.kubernetes.io/master" || name == "node-role.kubernetes.io/control-plane" {
+		return true
 	}
 	return false
 }
