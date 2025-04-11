@@ -301,31 +301,19 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 		}
 
 		// If no unused machines available, steal a redundant worker and promote it as a control plane.
-		if len(g.nextWorkers) > g.constraints.MinimumWorkers {
-			promote := g.selectControlPlane(g.nextWorkers)
-			if promote != nil {
-				op.promoteWorker(promote)
-				g.nextControlPlanes = append(g.nextControlPlanes, promote)
-				g.removeNextWorker(promote)
-				continue
-			}
+		promote := g.selectControlPlane(g.nextWorkers)
+		if promote != nil {
+			op.promoteWorker(promote)
+			g.nextControlPlanes = append(g.nextControlPlanes, promote)
+			g.removeNextWorker(promote)
+			continue
 		}
 		return nil, errNotAvailable
 	}
 
-	var requiredK8sNodes int
-	if g.template.Sabakan.UseAllAvailableMachines {
-		availableWorkers := len(g.machineMap) - len(g.nextControlPlanes)
-		if g.constraints.MaximumWorkers != 0 && g.constraints.MaximumWorkers < availableWorkers {
-			requiredK8sNodes = g.constraints.MaximumWorkers
-		} else {
-			requiredK8sNodes = availableWorkers
-		}
-	} else {
-		requiredK8sNodes = g.constraints.MinimumWorkers
-	}
+	availableWorkers := len(g.machineMap) - len(g.nextControlPlanes)
 
-	for i := len(g.nextWorkers); i < requiredK8sNodes; i++ {
+	for i := len(g.nextWorkers); i < availableWorkers; i++ {
 		m := g.selectWorker(g.nextUnused)
 		if m == nil {
 			return nil, errNotAvailable
@@ -527,14 +515,9 @@ func (g *Generator) decreaseControlPlane() (*updateOp, error) {
 	for len(g.nextControlPlanes) > g.constraints.ControlPlaneCount {
 		m := g.deselectControlPlane()
 		g.nextControlPlanes = removeMachine(g.nextControlPlanes, m)
+		op.demoteControlPlane(m)
+		g.appendNextWorker(m)
 
-		if g.constraints.MaximumWorkers == 0 || len(g.nextWorkers) < g.constraints.MaximumWorkers {
-			op.demoteControlPlane(m)
-			g.appendNextWorker(m)
-			continue
-		}
-		op.record("remove excessive control plane: " + m.Spec.IPv4[0])
-		g.nextUnused = append(g.nextUnused, m)
 	}
 
 	return op, nil
@@ -564,24 +547,10 @@ func (g *Generator) replaceControlPlane() (*updateOp, error) {
 	}
 	g.nextControlPlanes = removeMachine(g.nextControlPlanes, demote)
 
-	if g.constraints.MaximumWorkers == 0 || len(g.nextWorkers) < g.constraints.MaximumWorkers {
-		op.demoteControlPlane(demote)
-		g.appendNextWorker(demote)
-		return op, nil
-	}
-
-	promote := g.selectControlPlane(g.nextWorkers)
-	if promote == nil {
-		op.record("remove bad control plane: " + demote.Spec.IPv4[0])
-		return op, nil
-	}
-
-	op.promoteWorker(promote)
-	g.nextControlPlanes = append(g.nextControlPlanes, promote)
-	g.removeNextWorker(promote)
+	op.demoteControlPlane(demote)
 	g.appendNextWorker(demote)
-
 	return op, nil
+
 }
 
 func (g *Generator) increaseWorker() (*updateOp, error) {
@@ -592,19 +561,9 @@ func (g *Generator) increaseWorker() (*updateOp, error) {
 		}
 	}
 
-	var requiredK8sNodes int
-	if g.template.Sabakan.UseAllAvailableMachines {
-		availableWorkers := len(g.machineMap) - len(g.nextControlPlanes)
-		if g.constraints.MaximumWorkers != 0 && g.constraints.MaximumWorkers < availableWorkers {
-			requiredK8sNodes = g.constraints.MaximumWorkers
-		} else {
-			requiredK8sNodes = availableWorkers
-		}
-	} else {
-		requiredK8sNodes = g.constraints.MinimumWorkers
-	}
+	availableWorkers := len(g.machineMap) - len(g.nextControlPlanes)
 
-	if healthyWorkers >= requiredK8sNodes {
+	if healthyWorkers >= availableWorkers {
 		return nil, nil
 	}
 
@@ -612,10 +571,7 @@ func (g *Generator) increaseWorker() (*updateOp, error) {
 		name: "increase worker",
 	}
 
-	for i := healthyWorkers; i < requiredK8sNodes; i++ {
-		if g.constraints.MaximumWorkers != 0 && len(g.nextWorkers) >= g.constraints.MaximumWorkers {
-			break
-		}
+	for i := healthyWorkers; i < availableWorkers; i++ {
 		m := g.selectWorker(g.nextUnused)
 		if m == nil {
 			break
@@ -648,9 +604,8 @@ func (g *Generator) decreaseWorker() (*updateOp, error) {
 		name: "decrease worker",
 	}
 
-	healthyUnused := g.selectWorker(g.nextUnused)
-	if healthyUnused == nil && len(g.nextWorkers)-1 < g.constraints.MinimumWorkers {
-		// in this condition, CKE cannot decrease worker because `minimum-workers` will not be filled.
+	if float32(len(g.nextWorkers)) < 0.8*float32(len(g.machineMap)) {
+		// If there are less than 80% of workers, we cannot remove any worker.
 		return nil, nil
 	}
 
