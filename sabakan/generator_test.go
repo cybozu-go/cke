@@ -32,9 +32,14 @@ func testMachineToNode(t *testing.T) {
 		ControlPlane: true,
 		Labels:       map[string]string{"foo": "bar"},
 		Annotations:  map[string]string{"hoge": "fuga"},
-		Taints:       []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoSchedule}},
+		Taints:       []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoSchedule}, {Key: "node.cybozu.io/spare", Effect: corev1.TaintEffectNoSchedule}},
 	}
-	res1 := MachineToNode(machine, node)
+	cluster := &cke.Cluster{
+		Sabakan: cke.Sabakan{
+			SpareNodeTaintKey: "node.cybozu.io/spare",
+		},
+	}
+	res1 := MachineToNode(machine, node, cluster)
 
 	domain := "cke.cybozu.com"
 	if res1.Annotations["hoge"] != "fuga" {
@@ -85,19 +90,22 @@ func testMachineToNode(t *testing.T) {
 	if !containsTaint(res1.Taints, corev1.Taint{Key: "foo", Effect: corev1.TaintEffectNoSchedule}) {
 		t.Error(`res1.Taints do not have corev1.Taint{Key"foo", Effect: corev1.TaintEffectNoSchedule}, actual:`, res1.Taints)
 	}
+	if containsTaint(res1.Taints, corev1.Taint{Key: "node.cybozu.io/spare", Effect: corev1.TaintEffectNoSchedule}) {
+		t.Error(`res1.Taints have corev1.Taint{Key: "node.cybozu.io/spare", Effect: corev1.TaintEffectNoSchedule}, actual:`, res1.Taints)
+	}
 
 	machine.Status.State = StateUnreachable
-	res2 := MachineToNode(machine, node)
+	res2 := MachineToNode(machine, node, cluster)
 	if !containsTaint(res2.Taints, corev1.Taint{Key: domain + "/state", Value: "unreachable", Effect: corev1.TaintEffectNoSchedule}) {
 		t.Error(`res2.Taints do not have corev1.Taint{Key: "cke.cybozu.com/state", Value: "unreachable", Effect: "NoSchedule"}, actual:`, res2.Taints)
 	}
 	machine.Status.State = StateRetiring
-	res3 := MachineToNode(machine, node)
+	res3 := MachineToNode(machine, node, cluster)
 	if !containsTaint(res3.Taints, corev1.Taint{Key: domain + "/state", Value: "retiring", Effect: corev1.TaintEffectNoExecute}) {
 		t.Error(`res3.Taints do not have corev1.Taint{Key: "cke.cybozu.com/state", Value: "retiring", Effect: "NoExecute"}, actual:`, res3.Taints)
 	}
 	machine.Status.State = StateRetired
-	res4 := MachineToNode(machine, node)
+	res4 := MachineToNode(machine, node, cluster)
 	if !containsTaint(res4.Taints, corev1.Taint{Key: domain + "/state", Value: "retired", Effect: corev1.TaintEffectNoExecute}) {
 		t.Error(`res4.Taints do not have corev1.Taint{Key: "cke.cybozu.com/state", Value: "retired", Effect: "NoExecute"}, actual:`, res4.Taints)
 	}
