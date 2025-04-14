@@ -324,7 +324,8 @@ const DefaultRepairCommandTimeoutSeconds = 30
 const DefaultRepairSuccessCommandTimeoutSeconds = 30
 
 type Sabakan struct {
-	UseAllAvailableMachines bool `json:"use_all_available_machines"`
+	UseAllAvailableMachines bool   `json:"use_all_available_machines"`
+	SpareNodeTaintKey       string `json:"spare_node_taint_key"`
 }
 
 // Options is a set of optional parameters for k8s components.

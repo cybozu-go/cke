@@ -262,10 +262,13 @@ func (g *Generator) selectWorker(machines []*Machine) *Machine {
 func (g *Generator) selectControlPlane(machines []*Machine) *Machine {
 	candidates := filterHealthyMachinesByRole(machines, g.cpTmpl.Role)
 	candidates = g.filterTaintedMachines(candidates)
+	spare := g.filterSpareNodes(candidates)
+	if len(spare) > 0 {
+		candidates = spare
+	}
 	if len(candidates) == 0 {
 		return nil
 	}
-
 	countByRack := g.countMachinesByRack(true, "")
 	sort.Slice(candidates, func(i, j int) bool {
 		si := scoreMachine(candidates[i], countByRack, g.timestamp)
@@ -653,7 +656,7 @@ func (g *Generator) isTaintedInCluster(m *Machine) bool {
 
 OUTER:
 	for _, t := range n.Spec.Taints {
-		if strings.HasPrefix(t.Key, "node.kubernetes.io/") || t.Key == "cke.cybozu.com/state" || t.Key == op.CKETaintMaster {
+		if strings.HasPrefix(t.Key, "node.kubernetes.io/") || t.Key == "cke.cybozu.com/state" || t.Key == op.CKETaintMaster || t.Key == g.template.Sabakan.SpareNodeTaintKey {
 			continue
 		}
 		for _, toleration := range g.template.CPTolerations {
@@ -672,6 +675,22 @@ func (g *Generator) filterTaintedMachines(ms []*Machine) []*Machine {
 	for _, m := range ms {
 		if !g.isTaintedInCluster(m) {
 			filtered = append(filtered, m)
+		}
+	}
+	return filtered
+}
+
+func (g *Generator) filterSpareNodes(ms []*Machine) []*Machine {
+	var filtered []*Machine
+	for _, m := range ms {
+		n, ok := g.k8sNodeMap[m.Spec.IPv4[0]]
+		if !ok {
+			continue
+		}
+		for _, t := range n.Spec.Taints {
+			if t.Key == g.template.Sabakan.SpareNodeTaintKey {
+				filtered = append(filtered, m)
+			}
 		}
 	}
 	return filtered
