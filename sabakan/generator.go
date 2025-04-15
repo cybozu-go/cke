@@ -322,10 +322,10 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 	availableWorkers := healthyMachines - len(g.nextControlPlanes)
 
 	for i := len(g.nextWorkers); i < availableWorkers; i++ {
-		m := g.selectWorker(g.nextUnused)
-		if m == nil {
+		if len(g.nextUnused) == 0 {
 			return nil, errNotAvailable
 		}
+		m := g.nextUnused[0]
 		op.addWorker(m)
 		g.appendNextWorker(m)
 		g.nextUnused = removeMachine(g.nextUnused, m)
