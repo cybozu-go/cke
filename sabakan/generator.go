@@ -3,7 +3,6 @@ package sabakan
 import (
 	"errors"
 	"math"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -30,7 +29,7 @@ var (
 //   - https://github.com/cybozu-go/cke/blob/main/docs/sabakan-integration.md#taint-nodes
 //   - https://github.com/cybozu-go/cke/blob/main/docs/sabakan-integration.md#node-labels
 //   - https://github.com/cybozu-go/cke/blob/main/docs/sabakan-integration.md#node-annotations
-func MachineToNode(m *Machine, tmpl *cke.Node, cluster *cke.Cluster) *cke.Node {
+func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 	n := &cke.Node{
 		Address:      m.Spec.IPv4[0],
 		User:         tmpl.User,
@@ -84,15 +83,6 @@ func MachineToNode(m *Machine, tmpl *cke.Node, cluster *cke.Cluster) *cke.Node {
 			Value:  "retired",
 			Effect: corev1.TaintEffectNoExecute,
 		})
-	}
-	if n.ControlPlane {
-		// remove spare node taint if it exists
-		i := slices.IndexFunc(n.Taints, func(t corev1.Taint) bool {
-			return t.Key == cluster.Sabakan.SpareNodeTaintKey
-		})
-		if i != -1 {
-			n.Taints = slices.Delete(n.Taints, i, i+1)
-		}
 	}
 	return n
 }
@@ -351,10 +341,10 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 
 	nodes := make([]*cke.Node, 0, len(g.nextControlPlanes)+len(g.nextWorkers))
 	for _, m := range g.nextControlPlanes {
-		nodes = append(nodes, MachineToNode(m, g.cpTmpl.Node, g.template))
+		nodes = append(nodes, MachineToNode(m, g.cpTmpl.Node))
 	}
 	for _, m := range g.nextWorkers {
-		nodes = append(nodes, MachineToNode(m, g.getWorkerTmpl(m.Spec.Role).Node, g.template))
+		nodes = append(nodes, MachineToNode(m, g.getWorkerTmpl(m.Spec.Role).Node))
 	}
 
 	c := *g.template
