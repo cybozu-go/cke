@@ -2,7 +2,9 @@ package sabakan
 
 import (
 	"errors"
+	"maps"
 	"math"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -84,14 +86,12 @@ func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 			Effect: corev1.TaintEffectNoExecute,
 		})
 	}
-
 	return n
 }
 
 type nodeTemplate struct {
 	*cke.Node
-	Role   string
-	Weight float64
+	Role string
 }
 
 // Generator generates cluster configuration.
@@ -153,14 +153,9 @@ func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machi
 	}
 
 	for _, n := range template.Nodes {
-		weight := 1.0
-		if val, ok := n.Labels[CKELabelWeight]; ok {
-			weight, _ = strconv.ParseFloat(val, 64)
-		}
 		tmpl := nodeTemplate{
-			Node:   n,
-			Role:   n.Labels[CKELabelRole],
-			Weight: weight,
+			Node: n,
+			Role: n.Labels[CKELabelRole],
 		}
 
 		if n.ControlPlane {
@@ -180,26 +175,21 @@ func (g *Generator) clearIntermediateData() {
 	g.countWorkerByRole = make(map[string]int)
 }
 
-func (g *Generator) countSabakanMachineByRole(role string) int {
-	count := 0
-	for _, m := range g.machineMap {
-		if m.Spec.Role == role {
-			count++
-		}
-	}
-	return count
-}
-
 func (g *Generator) chooseWorkerTmpl() nodeTemplate {
 	count := g.countWorkerByRole
 
 	least := math.MaxFloat64
 	leastIndex := 0
 	for i, tmpl := range g.workerTmpls {
-		if g.countSabakanMachineByRole(tmpl.Role) == 0 {
+		machineList := slices.Collect(maps.Values(g.machineMap))
+		numHealthyMachines := len(filterHealthyMachinesByRole(machineList, tmpl.Role))
+		if tmpl.Role == g.cpTmpl.Role {
+			numHealthyMachines = numHealthyMachines - len(g.nextControlPlanes)
+		}
+		if numHealthyMachines <= 0 {
 			continue
 		}
-		w := float64(count[tmpl.Role]) / tmpl.Weight
+		w := float64(count[tmpl.Role]) / float64(numHealthyMachines)
 		if w < least {
 			least = w
 			leastIndex = i
@@ -246,14 +236,6 @@ func (g *Generator) selectWorker(machines []*Machine) *Machine {
 	if len(candidates) == 0 {
 		return nil
 	}
-
-	countByRack := g.countMachinesByRack(false, workerTmpl.Role)
-	sort.Slice(candidates, func(i, j int) bool {
-		si := scoreMachine(candidates[i], countByRack, g.timestamp)
-		sj := scoreMachine(candidates[j], countByRack, g.timestamp)
-		// higher first
-		return si > sj
-	})
 	return candidates[0]
 }
 
@@ -262,10 +244,13 @@ func (g *Generator) selectWorker(machines []*Machine) *Machine {
 func (g *Generator) selectControlPlane(machines []*Machine) *Machine {
 	candidates := filterHealthyMachinesByRole(machines, g.cpTmpl.Role)
 	candidates = g.filterTaintedMachines(candidates)
+	spare := g.filterSpareNodes(candidates)
+	if len(spare) > 0 {
+		candidates = spare
+	}
 	if len(candidates) == 0 {
 		return nil
 	}
-
 	countByRack := g.countMachinesByRack(true, "")
 	sort.Slice(candidates, func(i, j int) bool {
 		si := scoreMachine(candidates[i], countByRack, g.timestamp)
@@ -301,19 +286,31 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 		}
 
 		// If no unused machines available, steal a redundant worker and promote it as a control plane.
-		if len(g.nextWorkers) > g.constraints.MinimumWorkers {
-			promote := g.selectControlPlane(g.nextWorkers)
-			if promote != nil {
-				op.promoteWorker(promote)
-				g.nextControlPlanes = append(g.nextControlPlanes, promote)
-				g.removeNextWorker(promote)
-				continue
-			}
+		promote := g.selectControlPlane(g.nextWorkers)
+		if promote != nil {
+			op.promoteWorker(promote)
+			g.nextControlPlanes = append(g.nextControlPlanes, promote)
+			g.removeNextWorker(promote)
+			continue
 		}
 		return nil, errNotAvailable
 	}
 
-	for i := len(g.nextWorkers); i < g.constraints.MinimumWorkers; i++ {
+	var numAvailableMachines int
+	for _, n := range g.workerTmpls {
+		//If there are worker template without role, we need to count all machines
+		if n.Role == "" {
+			numAvailableMachines = len(filterHealthyMachinesByRole(slices.Collect(maps.Values(g.machineMap)), ""))
+			numAvailableMachines -= len(g.nextControlPlanes)
+			break
+		}
+		numAvailableMachines += len(filterHealthyMachinesByRole(slices.Collect(maps.Values(g.machineMap)), n.Role))
+		if n.Role == g.cpTmpl.Role {
+			numAvailableMachines -= len(g.nextControlPlanes)
+		}
+	}
+
+	for i := len(g.nextWorkers); i < numAvailableMachines; i++ {
 		m := g.selectWorker(g.nextUnused)
 		if m == nil {
 			return nil, errNotAvailable
@@ -515,14 +512,9 @@ func (g *Generator) decreaseControlPlane() (*updateOp, error) {
 	for len(g.nextControlPlanes) > g.constraints.ControlPlaneCount {
 		m := g.deselectControlPlane()
 		g.nextControlPlanes = removeMachine(g.nextControlPlanes, m)
+		op.demoteControlPlane(m)
+		g.appendNextWorker(m)
 
-		if g.constraints.MaximumWorkers == 0 || len(g.nextWorkers) < g.constraints.MaximumWorkers {
-			op.demoteControlPlane(m)
-			g.appendNextWorker(m)
-			continue
-		}
-		op.record("remove excessive control plane: " + m.Spec.IPv4[0])
-		g.nextUnused = append(g.nextUnused, m)
 	}
 
 	return op, nil
@@ -551,25 +543,19 @@ func (g *Generator) replaceControlPlane() (*updateOp, error) {
 		name: "replace control plane",
 	}
 	g.nextControlPlanes = removeMachine(g.nextControlPlanes, demote)
-
-	if g.constraints.MaximumWorkers == 0 || len(g.nextWorkers) < g.constraints.MaximumWorkers {
-		op.demoteControlPlane(demote)
-		g.appendNextWorker(demote)
-		return op, nil
-	}
+	op.demoteControlPlane(demote)
+	g.appendNextWorker(demote)
 
 	promote := g.selectControlPlane(g.nextWorkers)
 	if promote == nil {
 		op.record("remove bad control plane: " + demote.Spec.IPv4[0])
 		return op, nil
 	}
-
 	op.promoteWorker(promote)
 	g.nextControlPlanes = append(g.nextControlPlanes, promote)
 	g.removeNextWorker(promote)
-	g.appendNextWorker(demote)
-
 	return op, nil
+
 }
 
 func (g *Generator) increaseWorker() (*updateOp, error) {
@@ -579,8 +565,15 @@ func (g *Generator) increaseWorker() (*updateOp, error) {
 			healthyWorkers++
 		}
 	}
+	var healthyMachines int
+	for _, m := range g.machineMap {
+		if m.Status.State == StateHealthy {
+			healthyMachines++
+		}
+	}
+	availableWorkers := healthyMachines - len(g.nextControlPlanes)
 
-	if healthyWorkers >= g.constraints.MinimumWorkers {
+	if healthyWorkers >= availableWorkers {
 		return nil, nil
 	}
 
@@ -588,10 +581,7 @@ func (g *Generator) increaseWorker() (*updateOp, error) {
 		name: "increase worker",
 	}
 
-	for i := healthyWorkers; i < g.constraints.MinimumWorkers; i++ {
-		if g.constraints.MaximumWorkers != 0 && len(g.nextWorkers) >= g.constraints.MaximumWorkers {
-			break
-		}
+	for i := healthyWorkers; i < availableWorkers; i++ {
 		m := g.selectWorker(g.nextUnused)
 		if m == nil {
 			break
@@ -624,9 +614,8 @@ func (g *Generator) decreaseWorker() (*updateOp, error) {
 		name: "decrease worker",
 	}
 
-	healthyUnused := g.selectWorker(g.nextUnused)
-	if healthyUnused == nil && len(g.nextWorkers)-1 < g.constraints.MinimumWorkers {
-		// in this condition, CKE cannot decrease worker because `minimum-workers` will not be filled.
+	if float64(len(g.nextWorkers)-1)/float64(len(g.machineMap))*100 < float64(g.constraints.MinimumWorkersRate) {
+		// If there are less than 80% of workers, we cannot remove any worker.
 		return nil, nil
 	}
 
@@ -674,7 +663,7 @@ func (g *Generator) isTaintedInCluster(m *Machine) bool {
 
 OUTER:
 	for _, t := range n.Spec.Taints {
-		if strings.HasPrefix(t.Key, "node.kubernetes.io/") || t.Key == "cke.cybozu.com/state" || t.Key == op.CKETaintMaster {
+		if strings.HasPrefix(t.Key, "node.kubernetes.io/") || t.Key == "cke.cybozu.com/state" || t.Key == op.CKETaintMaster || t.Key == g.template.Sabakan.SpareNodeTaintKey {
 			continue
 		}
 		for _, toleration := range g.template.CPTolerations {
@@ -693,6 +682,22 @@ func (g *Generator) filterTaintedMachines(ms []*Machine) []*Machine {
 	for _, m := range ms {
 		if !g.isTaintedInCluster(m) {
 			filtered = append(filtered, m)
+		}
+	}
+	return filtered
+}
+
+func (g *Generator) filterSpareNodes(ms []*Machine) []*Machine {
+	var filtered []*Machine
+	for _, m := range ms {
+		n, ok := g.k8sNodeMap[m.Spec.IPv4[0]]
+		if !ok {
+			continue
+		}
+		for _, t := range n.Spec.Taints {
+			if t.Key == g.template.Sabakan.SpareNodeTaintKey {
+				filtered = append(filtered, m)
+			}
 		}
 	}
 	return filtered

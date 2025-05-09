@@ -19,7 +19,7 @@ a YAML or JSON object with these fields:
   - [KubeletParams](#kubeletparams)
   - [SchedulerParams](#schedulerparams)
 
-| Name                        | Required | Type      | Description                                                      |
+|            Name             | Required |   Type    |                           Description                            |
 | --------------------------- | -------- | --------- | ---------------------------------------------------------------- |
 | `name`                      | true     | string    | The k8s cluster name.                                            |
 | `nodes`                     | true     | array     | `Node` list.                                                     |
@@ -30,6 +30,7 @@ a YAML or JSON object with these fields:
 | `dns_service`               | false    | string    | Upstream DNS service name with namespace as `namespace/service`. |
 | `reboot`                    | false    | `Reboot`  | See [Reboot](#reboot).                                           |
 | `repair`                    | false    | `Repair`  | See [Repair](#repair).                                           |
+| `sabakan`                   | false    | `Sabakan` | See [Sabakan](#sabakan).                                         |
 | `options`                   | false    | `Options` | See [Options](#options).                                         |
 
 * `control_plane_tolerations` is used in [sabakan integration](sabakan-integration.md#strategy).
@@ -143,6 +144,12 @@ The repair configurations control the [repair functionality](repair.md).
 | `command_interval`        | false    | \*int | Interval of time between repair retries in seconds. Default: 0                                                                   |
 | `need_drain`              | false    | bool  | If true, perform drain of Pods on the target machine prior to the execution of the repair command. Default: false                |
 | `watch_seconds`           | false    | \*int | Follow-up duration in seconds to watch whether the machine becomes healthy after the execution of the repair command. Default: 0 |
+
+Sabakan
+------
+|          Name          | Required |   Type   |                                                                Description                                                                |
+| ---------------------- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `spare_node_taint_key` | true     | `string` | A taint key that indicated the node is spare machine. Sabakan integration selects the controle-plane from the nodes which has this taint. |
 
 Options
 -------

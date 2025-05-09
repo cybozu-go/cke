@@ -2,7 +2,6 @@ package sabakan
 
 import (
 	"errors"
-	"strconv"
 
 	"github.com/cybozu-go/cke"
 )
@@ -23,15 +22,6 @@ func ValidateTemplate(tmpl *cke.Cluster) error {
 
 		ncpCount++
 		roles[n.Labels[CKELabelRole]] = true
-		if val, ok := n.Labels[CKELabelWeight]; ok {
-			weight, err := strconv.ParseFloat(val, 64)
-			if err != nil {
-				return errors.New("weight must be a float: " + val)
-			}
-			if weight <= 0 {
-				return errors.New("weight must be positive: " + val)
-			}
-		}
 	}
 
 	if cpCount != 1 {
