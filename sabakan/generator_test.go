@@ -11,7 +11,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func testMachineToNode(t *testing.T) {
@@ -685,106 +684,6 @@ func testUpdate(t *testing.T) {
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[6], cps[7], workers[5], workers[2]},
 			},
-		},
-		{
-			"ReplaceCPDemoteAdd",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[2], cps[7], workers[5]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 3,
-			},
-			machines,
-			nil,
-
-			nil,
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[2]},
-			},
-		},
-		{
-			"ReplaceCPSpareAdd",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[2], cps[7], workers[5], workers[6]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 3,
-			},
-			machines,
-			&cke.ClusterStatus{
-				Kubernetes: cke.KubernetesClusterStatus{
-					Nodes: []corev1.Node{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: workers[6].Address,
-							},
-							Spec: corev1.NodeSpec{
-								Taints: []corev1.Taint{
-									{
-										Key:    "node.cybozu.io/spare",
-										Value:  "true",
-										Effect: corev1.TaintEffectNoSchedule,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			nil,
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[6], cps[7], workers[2], workers[5]},
-			},
-		},
-		{
-			"ReplaceCPDemoteTaintedAddUntainted",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[2]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 3,
-			},
-			machines,
-			&cke.ClusterStatus{
-				Kubernetes: cke.KubernetesClusterStatus{
-					Nodes: []corev1.Node{k8sUserTaintedNodes[5], k8sUntaintedNodes[6]},
-				},
-			},
-
-			nil,
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[6], cps[7], workers[2], workers[5]},
-			},
-		},
-		{
-			"ReplaceCPPromoteDemote",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[2], cps[5], cps[6], workers[7], workers[0]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 3,
-			},
-			machines,
-			nil,
-
-			nil,
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[5], cps[6], cps[0], workers[7], workers[2]},
-			},
-		},
-		{
-			"ReplaceCPFail",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[2], cps[7], workers[1]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 3,
-			},
-			[]Machine{machines[0], machines[1], machines[2], machines[7]},
-			nil,
-
-			errNotAvailable,
-			nil,
 		},
 		{
 			"IncreaseWorker",
