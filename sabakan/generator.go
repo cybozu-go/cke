@@ -419,13 +419,13 @@ func (g *Generator) Update(current *cke.Cluster) (*cke.Cluster, error) {
 		return g.fill(op)
 	}
 
-	op, err = g.replaceControlPlane()
-	if err != nil {
-		return nil, err
-	}
-	if op != nil {
-		return g.fill(op)
-	}
+	// op, err = g.replaceControlPlane()
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if op != nil {
+	// 	return g.fill(op)
+	// }
 
 	op, err = g.increaseWorker()
 	if err != nil {
@@ -520,43 +520,43 @@ func (g *Generator) decreaseControlPlane() (*updateOp, error) {
 	return op, nil
 }
 
-func (g *Generator) replaceControlPlane() (*updateOp, error) {
-	// If there is only one control plane, this algorithm cannot be chosen.
-	if len(g.nextControlPlanes) < 2 {
-		return nil, nil
-	}
+// func (g *Generator) replaceControlPlane() (*updateOp, error) {
+// 	// If there is only one control plane, this algorithm cannot be chosen.
+// 	if len(g.nextControlPlanes) < 2 {
+// 		return nil, nil
+// 	}
 
-	var demote *Machine
-	for _, m := range g.nextControlPlanes {
-		state := m.Status.State
-		if !(state == StateHealthy || state == StateUpdating || state == StateUninitialized) ||
-			g.isTaintedInCluster(m) {
-			demote = m
-			break
-		}
-	}
-	if demote == nil {
-		return nil, nil
-	}
+// 	var demote *Machine
+// 	for _, m := range g.nextControlPlanes {
+// 		state := m.Status.State
+// 		if !(state == StateHealthy || state == StateUpdating || state == StateUninitialized) ||
+// 			g.isTaintedInCluster(m) {
+// 			demote = m
+// 			break
+// 		}
+// 	}
+// 	if demote == nil {
+// 		return nil, nil
+// 	}
 
-	op := &updateOp{
-		name: "replace control plane",
-	}
-	g.nextControlPlanes = removeMachine(g.nextControlPlanes, demote)
-	op.demoteControlPlane(demote)
-	g.appendNextWorker(demote)
+// 	op := &updateOp{
+// 		name: "replace control plane",
+// 	}
+// 	g.nextControlPlanes = removeMachine(g.nextControlPlanes, demote)
+// 	op.demoteControlPlane(demote)
+// 	g.appendNextWorker(demote)
 
-	promote := g.selectControlPlane(g.nextWorkers)
-	if promote == nil {
-		op.record("remove bad control plane: " + demote.Spec.IPv4[0])
-		return op, nil
-	}
-	op.promoteWorker(promote)
-	g.nextControlPlanes = append(g.nextControlPlanes, promote)
-	g.removeNextWorker(promote)
-	return op, nil
-
-}
+// 	promote := g.selectControlPlane(g.nextWorkers)
+// 	if promote == nil {
+// 		op.record("remove bad control plane: " + demote.Spec.IPv4[0])
+// 		return op, nil
+// 	}
+// 	op.promoteWorker(promote)
+// 	g.nextControlPlanes = append(g.nextControlPlanes, promote)
+// 	g.removeNextWorker(promote)
+// 	return op, nil
+//
+// }
 
 func (g *Generator) increaseWorker() (*updateOp, error) {
 	var healthyWorkers int
