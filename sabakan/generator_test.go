@@ -524,11 +524,10 @@ func testUpdate(t *testing.T) {
 		{Address: "10.100.0.12"}, // [11] non-existent
 	}
 
-	var k8sUntaintedNodes, k8sSystemTaintedNodes, k8sUserTaintedNodes []corev1.Node
+	var k8sSystemTaintedNodes, k8sUserTaintedNodes []corev1.Node
 	for _, m := range machines {
 		n := corev1.Node{}
 		n.Name = m.Spec.IPv4[0]
-		k8sUntaintedNodes = append(k8sUntaintedNodes, n)
 		n.Spec.Taints = []corev1.Taint{
 			{Key: corev1.TaintNodeNotReady, Effect: corev1.TaintEffectNoSchedule},
 			{Key: op.CKETaintMaster, Effect: corev1.TaintEffectNoSchedule},
