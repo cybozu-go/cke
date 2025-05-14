@@ -231,15 +231,6 @@ When `control-plane-count` constraint is decreased, control plane nodes are
 *changed* to non-control-plane nodes.
 
 
-#### Replace control nodes
-
-If a control plane node (1) is neither healthy, updating, nor uninitialized,
-or (2) has intolerable taints, the node is demoted to a worker, and a new
-machine is added as a control plane node.
-
-When there is no worker node that has a taint specified in the `spare_node_taint_key`, existing healthy-and-untainted
-worker node is selected to be promoted to a control plane node.
-
 #### Increase worker nodes
 
 If there are healthy machines that are not used in the current cluster configuration, the machines are promoted to a worker node.
