@@ -230,7 +230,7 @@ Changing `KubeProxyConfiguration.Mode` requires full node restarts.
 
 ### KubeletParams
 
-| Name            | Required | Type                            | Description                                                             |
+|      Name       | Required |              Type               |                               Description                               |
 | --------------- | -------- | ------------------------------- | ----------------------------------------------------------------------- |
 | `boot_taints`   | false    | `[]Taint`                       | Bootstrap node taints.                                                  |
 | `cni_conf_file` | false    | `CNIConfFile`                   | CNI configuration file.                                                 |
@@ -239,6 +239,7 @@ Changing `KubeProxyConfiguration.Mode` requires full node restarts.
 | `extra_args`    | false    | array                           | Extra command-line arguments.  List of strings.                         |
 | `extra_binds`   | false    | array                           | Extra bind mounts.  List of `Mount`.                                    |
 | `extra_env`     | false    | object                          | Extra environment variables.                                            |
+| `skip_update`   | false    | bool                            | Skip update of the outdated kubelet.                                    |
 
 #### Boot taints
 

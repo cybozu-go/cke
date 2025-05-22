@@ -1013,6 +1013,15 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
+			Name: "RestartKubelet10",
+			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false).with(func(d testData) {
+				d.Cluster.Options.Kubelet.SkipUpdate = true
+			}).withSSHNotConnectedNodes(),
+			ExpectedOps: []opData{
+				{"wait-kubernetes", 1},
+			},
+		},
+		{
 			Name: "RestartProxy",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
