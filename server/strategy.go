@@ -186,7 +186,7 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrent
 		}
 		ops = append(ops, k8s.KubeletBootOp(nodes[:max], nf.RegisteredNodes(nodes[:max]), apiServer, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.KubeletOutdatedNodes(), true, true); len(nodes) > 0 && !c.Options.Kubelet.SkipUpdate {
+	if nodes := nf.SSHConnectedNodes(nf.KubeletOutdatedNodes(), true, true); len(nodes) > 0 && c.Options.Kubelet.InPlaceUpdate {
 		max := maxConcurrentUpdates
 		if len(nodes) < max {
 			max = len(nodes)

@@ -234,7 +234,7 @@ type KubeletParams struct {
 	CNIConfFile   CNIConfFile                `json:"cni_conf_file"`
 	Config        *unstructured.Unstructured `json:"config,omitempty"`
 	CRIEndpoint   string                     `json:"cri_endpoint"`
-	SkipUpdate    bool                       `json:"skip_update"`
+	InPlaceUpdate bool                       `json:"in_place_update"`
 }
 
 // MergeConfig merges the input struct with `base`.
