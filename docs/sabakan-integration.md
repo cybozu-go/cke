@@ -176,6 +176,39 @@ Algorithms
 
 Sabakan integration promotes all healthy machines as Kubernetes nodes.
 
+The selection of control-plane is as follows:
+
+1. Select unused healthy machines of preferred roles. If there are no
+   such machines, select healthy machines of preferred roles from the existing workers.
+2. Filter out machines which are tainted outside of the CKE.
+3. If there are machines with a taint specified in `spare_node_taint_key`, prefer them.
+4. Add the following score to each machine:
+    - (100 - (machine counts which have the same role and in the same rack)) * 10
+5. Add the following scores to each machine:
+    - If the machine's lifetime is > 250 days, +1.
+    - If the machine's lifetime is > 500 days, +1 (+2 in total).
+    - If the machine's lifetime is > 1000 days, +1 (+3 in total).
+    - If the machine's lifetime is < -250 days, -1.
+    - If the machine's lifetime is < -500 days, -1 (-2 in total).
+    - If the machine's lifetime is < -1000 days, -1 (-3 in total).
+6. Select the highest scored machine.
+
+When an existing control-plane need to be removed from the cluster configuration,
+the algorithm select one as follows:
+
+1. Add the following score to each machine:
+    - If the machine's state is healthy, +1000.
+2. Add the following score to each machine:
+    - (100 - (machine counts which have the same role and in the same rack)) * 10
+3. Add scores to each machine as follows:
+    - If the machine's lifetime is > 250 days, +1.
+    - If the machine's lifetime is > 500 days, +1 (+2 in total).
+    - If the machine's lifetime is > 1000 days, +1 (+3 in total).
+    - If the machine's lifetime is < -250 days, -1.
+    - If the machine's lifetime is < -500 days, -1 (-2 in total).
+    - If the machine's lifetime is < -1000 days, -1 (-3 in total).
+4. Select the lowest scored machine.
+
 ### Initialization
 
 The first time CKE generates cluster configuration from a template, it works
@@ -189,6 +222,7 @@ The algorithm fails when available healthy nodes are not enough to
 satisfy constraints.
 
 ### Spare node
+
 By adding the taint specified by `spare_node_taint_key` to a node, you can indicate that the node is a spare node.
 CKE gives priority to spare nodes when replacing a control-plane. Even if it becomes a control-plane, the taint is not removed by CKE, so it must be deleted manually if necessary.
 

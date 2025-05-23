@@ -21,6 +21,9 @@ func ValidateTemplate(tmpl *cke.Cluster) error {
 		}
 
 		ncpCount++
+		if n.Labels[CKELabelRole] == "" {
+			continue
+		}
 		roles[n.Labels[CKELabelRole]] = true
 	}
 
