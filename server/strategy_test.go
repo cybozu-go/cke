@@ -128,8 +128,9 @@ func newData() testData {
 	kubeletConfig.Object["containerLogMaxSize"] = "20Mi"
 	kubeletConfig.Object["clusterDomain"] = testDefaultDNSDomain
 	cluster.Options.Kubelet = cke.KubeletParams{
-		CRIEndpoint: "/var/run/k8s-containerd.sock",
-		Config:      kubeletConfig,
+		CRIEndpoint:   "/var/run/k8s-containerd.sock",
+		Config:        kubeletConfig,
+		InPlaceUpdate: true,
 	}
 
 	nodeReadyStatus := corev1.NodeStatus{
@@ -1010,6 +1011,15 @@ func TestDecideOps(t *testing.T) {
 			}).withSSHNotConnectedNodes(),
 			ExpectedOps: []opData{
 				{"kubelet-restart", 2},
+			},
+		},
+		{
+			Name: "RestartKubelet10",
+			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false).with(func(d testData) {
+				d.Cluster.Options.Kubelet.InPlaceUpdate = false
+			}).withSSHNotConnectedNodes(),
+			ExpectedOps: []opData{
+				{"wait-kubernetes", 1},
 			},
 		},
 		{

@@ -311,6 +311,9 @@ rules:
 	if len(c.Options.Kubelet.CNIConfFile.Content) == 0 {
 		t.Error(`len(c.Options.Kubelet.CNIConfFile.Content) == 0`)
 	}
+	if c.Options.Kubelet.InPlaceUpdate != false {
+		t.Error(`c.Options.Kubelet.InPlaceUpdate != false`)
+	}
 	kubeletConfig, err := c.Options.Kubelet.MergeConfig(&kubeletv1beta1.KubeletConfiguration{
 		ClusterDomain: "hoge.com",
 		MaxPods:       100,
