@@ -643,7 +643,9 @@ func testUpdate(t *testing.T) {
 			nil,
 
 			nil,
-			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[3], cps[5], workers[6]},
+			},
 		},
 		{
 			"IncreaseCPUnused",
