@@ -35,8 +35,6 @@ var (
 	testDefaultDNSServers = []string{"8.8.8.8"}
 	testConstraints       = &cke.Constraints{
 		ControlPlaneCount:        3,
-		MinimumWorkers:           1,
-		MaximumWorkers:           6,
 		RebootMaximumUnreachable: 1,
 	}
 	testResources = []cke.ResourceDefinition{
@@ -96,8 +94,11 @@ func newData() testData {
 			{Address: nodeNames[1], ControlPlane: true},
 			{Address: nodeNames[2], ControlPlane: true},
 			{
-				Address:     nodeNames[3],
-				Labels:      map[string]string{"label1": "value"},
+				Address: nodeNames[3],
+				Labels: map[string]string{
+					"label1":                         "value",
+					"node-role.kubernetes.io/worker": "true",
+				},
 				Annotations: map[string]string{"annotation1": "value"},
 				Taints: []corev1.Taint{
 					{
@@ -1435,7 +1436,7 @@ func TestDecideOps(t *testing.T) {
 					Name: "10.0.0.14",
 					Labels: map[string]string{
 						"label1":                         "value",
-						"node-role.kubernetes.io/worker": "true",
+						"node-role.kubernetes.io/worker": "false",
 					},
 					Annotations: map[string]string{"annotation1": "value"},
 				},
@@ -1454,6 +1455,34 @@ func TestDecideOps(t *testing.T) {
 				},
 			}),
 			ExpectedOps: []opData{{"update-node", 1}},
+		},
+		{
+			Name: "NodeLabel6",
+			Input: newData().withNodes(corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "10.0.0.14",
+					Labels: map[string]string{
+						"label1":                         "value",
+						"node-role.kubernetes.io/worker": "true",
+						"node-role.kubernetes.io/hoge":   "true",
+					},
+					Annotations: map[string]string{"annotation1": "value"},
+				},
+				Spec: corev1.NodeSpec{
+					Taints: []corev1.Taint{
+						{
+							Key:    "taint1",
+							Value:  "value1",
+							Effect: corev1.TaintEffectNoSchedule,
+						},
+						{
+							Key:    "taint2",
+							Effect: corev1.TaintEffectPreferNoSchedule,
+						},
+					},
+				},
+			}),
+			ExpectedOps: nil,
 		},
 		{
 			Name: "NodeLabelCP1",
@@ -1852,8 +1881,9 @@ func TestDecideOps(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "10.0.0.14",
 					Labels: map[string]string{
-						"label1":              "value",
-						"acke.cybozu.com/foo": "bar",
+						"label1":                         "value",
+						"node-role.kubernetes.io/worker": "true",
+						"acke.cybozu.com/foo":            "bar",
 					},
 					Annotations: map[string]string{
 						"annotation1":         "value",
@@ -1893,8 +1923,11 @@ func TestDecideOps(t *testing.T) {
 			Name: "AllGreen",
 			Input: newData().withNodes(corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "10.0.0.14",
-					Labels:      map[string]string{"label1": "value"},
+					Name: "10.0.0.14",
+					Labels: map[string]string{
+						"label1":                         "value",
+						"node-role.kubernetes.io/worker": "true",
+					},
 					Annotations: map[string]string{"annotation1": "value"},
 				},
 				Spec: corev1.NodeSpec{
