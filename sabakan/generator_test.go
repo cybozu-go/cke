@@ -698,6 +698,40 @@ func testUpdate(t *testing.T) {
 			},
 		},
 		{
+			"IncreaseCPUnusedAndSpare",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], workers[6]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+			},
+			machines,
+			&cke.ClusterStatus{
+				Kubernetes: cke.KubernetesClusterStatus{
+					Nodes: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: workers[6].Address,
+							},
+							Spec: corev1.NodeSpec{
+								Taints: []corev1.Taint{
+									{
+										Key:    "node.cybozu.io/spare",
+										Value:  "true",
+										Effect: corev1.TaintEffectNoSchedule,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[6]},
+			},
+		},
+		{
 			"IncreaseCPSteal",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[5], workers[6], workers[7]},
