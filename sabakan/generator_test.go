@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func testMachineToNode(t *testing.T) {
@@ -617,7 +618,35 @@ func testUpdate(t *testing.T) {
 			nil,
 		},
 		{
-			"IncreaseCP",
+			"NotRemoveUnhealthyCP",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[2], cps[5], workers[6]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+			},
+			machines,
+			nil,
+
+			nil,
+			nil,
+		},
+		{
+			"NotRemoveUnreachableCP",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[3], cps[5], workers[6]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+			},
+			machines,
+			nil,
+
+			nil,
+			nil,
+		},
+		{
+			"IncreaseCPUnused",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[5], workers[6]},
 			},
@@ -630,6 +659,74 @@ func testUpdate(t *testing.T) {
 			nil,
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[6]},
+			},
+		},
+		{
+			"IncreaseCPSpare",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], workers[6], workers[7]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+			},
+			machines,
+			&cke.ClusterStatus{
+				Kubernetes: cke.KubernetesClusterStatus{
+					Nodes: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: workers[6].Address,
+							},
+							Spec: corev1.NodeSpec{
+								Taints: []corev1.Taint{
+									{
+										Key:    "node.cybozu.io/spare",
+										Value:  "true",
+										Effect: corev1.TaintEffectNoSchedule,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], cps[6], workers[7]},
+			},
+		},
+		{
+			"IncreaseCPSteal",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], workers[6], workers[7]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+			},
+			machines,
+			&cke.ClusterStatus{
+				Kubernetes: cke.KubernetesClusterStatus{
+					Nodes: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: workers[7].Address,
+							},
+							Spec: corev1.NodeSpec{
+								Taints: []corev1.Taint{
+									{
+										Key:    "node.cybozu.io/hoge",
+										Value:  "true",
+										Effect: corev1.TaintEffectNoSchedule,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], cps[6], workers[7]},
 			},
 		},
 		{
