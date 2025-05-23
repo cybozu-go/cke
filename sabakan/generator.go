@@ -177,11 +177,11 @@ func (g *Generator) clearIntermediateData() {
 
 func (g *Generator) chooseWorkerTmpl() nodeTemplate {
 	count := g.countWorkerByRole
+	machineList := slices.Collect(maps.Values(g.machineMap))
 
 	least := math.MaxFloat64
 	leastIndex := 0
 	for i, tmpl := range g.workerTmpls {
-		machineList := slices.Collect(maps.Values(g.machineMap))
 		numHealthyMachines := len(filterHealthyMachinesByRole(machineList, tmpl.Role))
 		if tmpl.Role == g.cpTmpl.Role {
 			numHealthyMachines = numHealthyMachines - len(g.nextControlPlanes)
@@ -419,14 +419,6 @@ func (g *Generator) Update(current *cke.Cluster) (*cke.Cluster, error) {
 		return g.fill(op)
 	}
 
-	// op, err = g.replaceControlPlane()
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if op != nil {
-	// 	return g.fill(op)
-	// }
-
 	op, err = g.increaseWorker()
 	if err != nil {
 		return nil, err
@@ -520,44 +512,6 @@ func (g *Generator) decreaseControlPlane() (*updateOp, error) {
 	return op, nil
 }
 
-// func (g *Generator) replaceControlPlane() (*updateOp, error) {
-// 	// If there is only one control plane, this algorithm cannot be chosen.
-// 	if len(g.nextControlPlanes) < 2 {
-// 		return nil, nil
-// 	}
-
-// 	var demote *Machine
-// 	for _, m := range g.nextControlPlanes {
-// 		state := m.Status.State
-// 		if !(state == StateHealthy || state == StateUpdating || state == StateUninitialized) ||
-// 			g.isTaintedInCluster(m) {
-// 			demote = m
-// 			break
-// 		}
-// 	}
-// 	if demote == nil {
-// 		return nil, nil
-// 	}
-
-// 	op := &updateOp{
-// 		name: "replace control plane",
-// 	}
-// 	g.nextControlPlanes = removeMachine(g.nextControlPlanes, demote)
-// 	op.demoteControlPlane(demote)
-// 	g.appendNextWorker(demote)
-
-// 	promote := g.selectControlPlane(g.nextWorkers)
-// 	if promote == nil {
-// 		op.record("remove bad control plane: " + demote.Spec.IPv4[0])
-// 		return op, nil
-// 	}
-// 	op.promoteWorker(promote)
-// 	g.nextControlPlanes = append(g.nextControlPlanes, promote)
-// 	g.removeNextWorker(promote)
-// 	return op, nil
-//
-// }
-
 func (g *Generator) increaseWorker() (*updateOp, error) {
 	var healthyWorkers int
 	for _, m := range g.nextWorkers {
@@ -615,7 +569,7 @@ func (g *Generator) decreaseWorker() (*updateOp, error) {
 	}
 
 	if float64(len(g.nextWorkers)-1)/float64(len(g.machineMap))*100 < float64(g.constraints.MinimumWorkersRate) {
-		// If there are less than 80% of workers, we cannot remove any worker.
+		// If the rate of machines is less than threshold, we cannot remove any worker.
 		return nil, nil
 	}
 

@@ -147,6 +147,7 @@ The repair configurations control the [repair functionality](repair.md).
 
 Sabakan
 ------
+
 |          Name          | Required |   Type   |                                                                Description                                                                |
 | ---------------------- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `spare_node_taint_key` | true     | `string` | A taint key that indicated the node is spare machine. Sabakan integration selects the controle-plane from the nodes which has this taint. |

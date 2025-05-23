@@ -171,6 +171,35 @@ func TestClusterValidate(t *testing.T) {
 			true,
 		},
 		{
+			"invalid case: without role and with role",
+			&cke.Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Nodes: []*cke.Node{
+					{
+						User:         "user",
+						ControlPlane: true,
+					},
+					{
+						User: "another",
+						Labels: map[string]string{
+							"cke.cybozu.com/role": "role1",
+						},
+					},
+					{
+						User:   "another",
+						Labels: map[string]string{},
+					},
+				},
+				Options: cke.Options{
+					Kubelet: cke.KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
+			},
+			true,
+		},
+		{
 			"invalid case: non-empty address",
 			&cke.Cluster{
 				Name:          "testcluster",
