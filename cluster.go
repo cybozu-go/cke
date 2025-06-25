@@ -627,7 +627,7 @@ func validateOptions(opts Options) error {
 				return err
 			}
 		} else {
-			_, err = libcni.ConfFromBytes([]byte(opts.Kubelet.CNIConfFile.Content))
+			_, err = libcni.NetworkPluginConfFromBytes([]byte(opts.Kubelet.CNIConfFile.Content))
 			if err != nil {
 				return err
 			}
