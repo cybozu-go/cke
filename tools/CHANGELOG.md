@@ -2,6 +2,11 @@
 
 cke-tools related changes.
 
+## 1.32.0 - 2025-06-25
+
+- Update go modules and actions [#800](https://github.com/cybozu-go/cke/pull/800)
+- Update CNI plugins to v1.7.1 [#801](https://github.com/cybozu-go/cke/pull/801)
+
 ## 1.31.0 - 2025-03-03
 
 - Update cke-tool's dependencies [#793](https://github.com/cybozu-go/cke/pull/793)
