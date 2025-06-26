@@ -6,24 +6,16 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
-## [1.31.1]
+## [1.32.0-rc.1]
 
 ### Changed
 
-- Add option to skip kubelet in-place update [#797](https://github.com/cybozu-go/cke/pull/797)
-
-## [1.31.0]
-
-- No changes from 1.31.0-rc.1
-
-## [1.31.0-rc.1]
-
-### Changed
-
-- Support Kubernetes 1.31 [#791](https://github.com/cybozu-go/cke/pull/791)
+- Support Kubernetes 1.32 [#802](https://github.com/cybozu-go/cke/pull/802)
+- Update go modules and actions [#800](https://github.com/cybozu-go/cke/pull/800)
 
 ## Ancient changes
 
+- See [release-1.31/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.31/CHANGELOG.md) for changes in CKE 1.31.
 - See [release-1.30/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.30/CHANGELOG.md) for changes in CKE 1.30.
 - See [release-1.29/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.29/CHANGELOG.md) for changes in CKE 1.29.
 - See [release-1.28/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.28/CHANGELOG.md) for changes in CKE 1.28.
@@ -44,7 +36,5 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.31.1...HEAD
-[1.31.1]: https://github.com/cybozu-go/cke/compare/v1.31.0...v1.31.1
-[1.31.0]: https://github.com/cybozu-go/cke/compare/v1.31.0-rc.1...v1.31.0
-[1.31.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.30.6...v1.31.0-rc.1
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.32.0-rc.1...HEAD
+[1.32.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.31.1...v1.32.0-rc.1
