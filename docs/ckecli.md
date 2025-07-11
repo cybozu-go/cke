@@ -52,7 +52,7 @@ $ ckecli [--config FILE] <subcommand> args...
 - [`ckecli repair-queue`](#ckecli-repair-queue)
   - [`ckecli repair-queue enable|disable`](#ckecli-repair-queue-enabledisable)
   - [`ckecli repair-queue is-enabled`](#ckecli-repair-queue-is-enabled)
-  - [`ckecli repair-queue add OPERATION MACHINE_TYPE ADDRESS`](#ckecli-repair-queue-add-operation-machine_type-address)
+  - [`ckecli repair-queue add OPERATION MACHINE_TYPE ADDRESS [SERIAL]`](#ckecli-repair-queue-add-operation-machine_type-address-serial)
   - [`ckecli repair-queue list`](#ckecli-repair-queue-list)
   - [`ckecli repair-queue delete INDEX`](#ckecli-repair-queue-delete-index)
   - [`ckecli repair-queue delete-finished`](#ckecli-repair-queue-delete-finished)
@@ -340,11 +340,12 @@ Enable/Disable processing repair queue entries.
 Show repair queue is enabled or disabled.
 This displays `true` or `false`.
 
-### `ckecli repair-queue add OPERATION MACHINE_TYPE ADDRESS`
+### `ckecli repair-queue add OPERATION MACHINE_TYPE ADDRESS [SERIAL]`
 
 Append a repair request to the repair queue.
 The repair target is a machine with an IP address `ADDRESS` and a machine type `MACHINE_TYPE`.
 The machine should be processed with an operation `OPERATION`.
+Optionally, you can specify the machine's serial number `SERIAL` as the fourth argument.
 
 ### `ckecli repair-queue list`
 

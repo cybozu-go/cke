@@ -918,14 +918,14 @@ func testStorageRepair(t *testing.T) {
 	}
 
 	// first write - index is 0
-	entry := NewRepairQueueEntry("operation1", "machine1", "1.2.3.4")
+	entry := NewRepairQueueEntry("operation1", "machine1", "1.2.3.4", "")
 	err = storage.RegisterRepairsEntry(ctx, entry)
 	if err != nil {
 		t.Fatal("RegisterRepairsEntry failed:", err)
 	}
 
 	// second write - index is 1
-	entry2 := NewRepairQueueEntry("operation2", "machine2", "12.34.56.78")
+	entry2 := NewRepairQueueEntry("operation2", "machine2", "12.34.56.78", "")
 	err = storage.RegisterRepairsEntry(ctx, entry2)
 	if err != nil {
 		t.Fatal("RegisterRepairsEntry failed:", err)

@@ -24,10 +24,10 @@ func TestRepairer(t *testing.T) {
 
 	entries := []*cke.RepairQueueEntry{
 		nil,
-		cke.NewRepairQueueEntry("unreachable", "type1", "1.1.1.1"),
-		cke.NewRepairQueueEntry("unhealthy", "type2", "2.2.2.2"),
-		cke.NewRepairQueueEntry("unreachable", "type3", "3.3.3.3"),
-		cke.NewRepairQueueEntry("unreachable", "type4", "4.4.4.4"),
+		cke.NewRepairQueueEntry("unreachable", "type1", "1.1.1.1", "1111"),
+		cke.NewRepairQueueEntry("unhealthy", "type2", "2.2.2.2", "2222"),
+		cke.NewRepairQueueEntry("unreachable", "type3", "3.3.3.3", "3333"),
+		cke.NewRepairQueueEntry("unreachable", "type4", "4.4.4.4", "4444"),
 	}
 
 	rebootEntries := []*cke.RebootQueueEntry{
@@ -88,7 +88,7 @@ func TestRepairer(t *testing.T) {
 		{
 			name:            "IgnoreRecentlyRepairedWithDifferentOperation",
 			failedMachines:  []Machine{machines[1], machines[2], machines[3]},
-			queuedEntries:   []*cke.RepairQueueEntry{cke.NewRepairQueueEntry("unreachable", "type2", "2.2.2.2")},
+			queuedEntries:   []*cke.RepairQueueEntry{cke.NewRepairQueueEntry("unreachable", "type2", "2.2.2.2", "2222")},
 			rebootEntries:   nil,
 			nodeStatuses:    nodeStatuses,
 			expectedEntries: []*cke.RepairQueueEntry{entries[1], entries[3]},
