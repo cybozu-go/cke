@@ -48,7 +48,7 @@ service_subnet: 10.68.0.0/16
 When the configuration template is updated, CKE will soon regenerate
 the cluster configuration from the new template.
 
-Roles and weights
+Roles
 -----------------
 
 In general, servers in data centers can be classified into several types.
@@ -59,13 +59,11 @@ Servers defined in sabakan have a mandatory attribute "role" for this classifica
 
 To support a Kubernetes cluster consisting of multiple roles such as
 "compute", "storage", and "gpu", sabakan integration of CKE allows users to
-specify node templates for each server role and its weight (ratio) in the
-cluster.
+specify node templates for each server role in the cluster.
 
 The node role is specified with `cke.cybozu.com/role` label value.
-The weight (ratio) in the cluster is specified with `cke.cybozu.com/weight` label value.
 
-An example to specify the ratio between compute/storage/gpu to 6:3:1 looks like:
+An example to specify the compute/storage/gpu  looks like:
 
 ```yaml
 name: cluster
@@ -78,11 +76,9 @@ nodes:
 - user: cybozu
   labels:
     cke.cybozu.com/role: "compute"
-    cke.cybozu.com/weight: "6.0"
 - user: cybozu
   labels:
     cke.cybozu.com/role: "storage"
-    cke.cybozu.com/weight: "3.0"
   taints:
   - key: cke.cybozu.com/role
     value: storage
@@ -90,7 +86,6 @@ nodes:
 - user: cybozu
   labels:
     cke.cybozu.com/role: "gpu"
-    cke.cybozu.com/weight: "1.0"
   taints:
   - key: cke.cybozu.com/role
     value: gpu
@@ -105,9 +100,6 @@ If a node template lacks `cke.cybozu.com/role` label, any servers can match it.
 If there are more than two templates for non-control plane nodes, they must have
 `cke.cybozu.com/role` label.
 
-### Node template without weight
-
-If a non-control plane node template lacks `cke.cybozu.com/weight` label, its weight becomes "1.0".
 
 Query and variables
 -------------------
@@ -160,10 +152,7 @@ CKE generates cluster configuration with the following conditions.
 
 * If the template node for control plane has `cke.cybozu.com/role` label,
     servers of control plane nodes should be the specified role.
-* The number of servers for each role should be proportional to the given weights in the template.
-* The servers which have the same role should be distributed evenly over the racks.
-* Newer machines should be preferred than old ones.
-* Healthy machines should be preferred than non-healthy ones.
+* Promote all healthy servers as kubernetes node.
 * Unreachable machines in the cluster should be [tainted][taint] with `NoSchedule`.
 * Retiring and retired machines should be [tainted][taint] with `NoExecute`.
 * Retired machines should be removed if the machines are kept retired for a while.
@@ -176,6 +165,7 @@ CKE generates cluster configuration with the following conditions.
     * Transitional taints added by CKE, i.e. `cke.cybozu.com/state`
     * Taints for control plane nodes added by CKE, i.e. `cke.cybozu.com/master`
     * User-tolerated taints specified in the [cluster template](#cluster-template)
+    * A taint which specified in the `spare_node_taint_key` field in the [cluster template](cluster.md#spare_node_taint_key)
 
 To understand the status and lifecycle of a machine, see [sabakan lifecycle][lifecycle].
 
@@ -184,15 +174,14 @@ Algorithms
 
 ### Node selection
 
-When a new node needs to be added to the cluster configuration, the algorithm
-selects a machine as follows:
+Sabakan integration promotes all healthy machines as Kubernetes nodes.
 
-1. Deselect non-healthy machines.
-2. Deselect machines used in the current cluster configuration.
-3. Select machines of preferred roles.
-    - If the new node will be a control plane and a role is specified, select servers of the same role.
-    - Otherwise, choose a node template with the smallest number of servers than the specified weight,
-        and use the role specified for the template.
+The selection of control-plane is as follows:
+
+1. Select unused healthy machines of preferred roles. If there are no
+   such machines, select healthy machines of preferred roles from the existing workers.
+2. Filter out machines which are tainted outside of the CKE.
+3. If there are machines with a taint specified in `spare_node_taint_key`, prefer them.
 4. Add the following score to each machine:
     - (100 - (machine counts which have the same role and in the same rack)) * 10
 5. Add the following scores to each machine:
@@ -204,7 +193,7 @@ selects a machine as follows:
     - If the machine's lifetime is < -1000 days, -1 (-3 in total).
 6. Select the highest scored machine.
 
-When an existing node need to be removed from the cluster configuration,
+When an existing control-plane need to be removed from the cluster configuration,
 the algorithm select one as follows:
 
 1. Add the following score to each machine:
@@ -220,9 +209,6 @@ the algorithm select one as follows:
     - If the machine's lifetime is < -1000 days, -1 (-3 in total).
 4. Select the lowest scored machine.
 
-Note that node selection should be done separately for control plane nodes
-and non-control plane nodes.
-
 ### Initialization
 
 The first time CKE generates cluster configuration from a template, it works
@@ -230,10 +216,15 @@ as follows:
 
 1. Search sabakan to acquire the list of available machines.
 2. Select `control-plane-count` nodes for Kubernetes/etcd control plane.
-3. Select `minimum-workers` nodes.
+3. Select worker nodes.
 
 The algorithm fails when available healthy nodes are not enough to
 satisfy constraints.
+
+### Spare node
+
+By adding the taint specified by `spare_node_taint_key` to a node, you can indicate that the node is a spare node.
+CKE gives priority to spare nodes when replacing a control-plane. Even if it becomes a control-plane, the taint is not removed by CKE, so it must be deleted manually if necessary.
 
 ### Maintenance
 
@@ -262,9 +253,10 @@ configuration manually.
 #### Increase control plane nodes
 
 When `control-plane-count` constraint is increased, control plane nodes are
-added.  If there are too few unused healthy-and-untainted machines and
-the number of worker nodes is greater than `minimum-workers` constraint,
-existing healthy-and-untainted worker nodes are *changed* to control plane
+added.
+A node which has a taint that is specified in the `spare_node_taint_key` becomes
+a candidate for a control plane node.
+If there are no such worker nodes, existing healthy-and-untainted worker nodes are *changed* to control plane
 nodes.
 
 #### Decrease control plane nodes
@@ -272,31 +264,15 @@ nodes.
 When `control-plane-count` constraint is decreased, control plane nodes are
 *changed* to non-control-plane nodes.
 
-If the total number of worker nodes exceeds `maximum-workers`, existing
-worker nodes are removed to satisfy the constraint.
-
-#### Replace control nodes
-
-If a control plane node (1) is neither healthy, updating, nor uninitialized,
-or (2) has intolerable taints, the node is demoted to a worker, and a new
-machine is added as a control plane node.
-
-When there is no unused healthy-and-untainted machine, a healthy-and-untainted
-worker node is selected to be promoted to a control plane node.
 
 #### Increase worker nodes
 
-If the number of healthy worker nodes is less than `minimum-workers` and
-the total number of worker nodes is less than `maximum-workers`, new worker
-nodes are added.
+If there are healthy machines that are not used in the current cluster configuration, the machines are promoted to a worker node.
 
 #### Decrease worker nodes
 
 If a worker node is kept retired for a while,
-
-1. it is removed from the cluster if the number of workers is greater than `minimum-workers`, or
-2. it is replaced with a new machine if available, otherwise,
-3. it is left untouched.
+it is removed from the cluster if the rate of healthy workers and available machines is greater than `minimum-workers-rate`.
 
 #### Taint nodes
 

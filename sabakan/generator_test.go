@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func testMachineToNode(t *testing.T) {
@@ -136,9 +137,8 @@ func testNewGenerator(t *testing.T) {
 			{
 				ControlPlane: false,
 				Labels: map[string]string{
-					"foo":                   "aaa",
-					"cke.cybozu.com/role":   "cs",
-					"cke.cybozu.com/weight": "3",
+					"foo":                 "aaa",
+					"cke.cybozu.com/role": "cs",
 				},
 				Annotations: map[string]string{"hoge": "bbb"},
 				Taints:      []corev1.Taint{{Key: "foo", Effect: corev1.TaintEffectNoExecute}},
@@ -220,9 +220,9 @@ func testNewGenerator(t *testing.T) {
 					"10.0.0.4": &machines[3],
 				},
 				k8sNodeMap: map[string]*corev1.Node{},
-				cpTmpl:     nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				cpTmpl:     nodeTemplate{tmpl.Nodes[0], ""},
 				workerTmpls: []nodeTemplate{
-					{tmpl.Nodes[1], "cs", 3.0},
+					{tmpl.Nodes[1], "cs"},
 				},
 			},
 		},
@@ -237,9 +237,9 @@ func testNewGenerator(t *testing.T) {
 					"10.0.0.4": &machines[3],
 				},
 				k8sNodeMap: map[string]*corev1.Node{"10.0.0.1": &k8sNode},
-				cpTmpl:     nodeTemplate{tmpl.Nodes[0], "", 1.0},
+				cpTmpl:     nodeTemplate{tmpl.Nodes[0], ""},
 				workerTmpls: []nodeTemplate{
-					{tmpl.Nodes[1], "cs", 3.0},
+					{tmpl.Nodes[1], "cs"},
 				},
 			},
 		},
@@ -375,9 +375,6 @@ func testGenerate(t *testing.T) {
 			}
 			if cps != tt.cstr.ControlPlaneCount {
 				t.Error(`cps != tt.cstr.ControlPlaneCount`, cps)
-			}
-			if workers != tt.cstr.MinimumWorkers {
-				t.Error(`workers != tt.cstr.MinimumWorkers`, workers)
 			}
 		})
 	}
@@ -528,11 +525,10 @@ func testUpdate(t *testing.T) {
 		{Address: "10.100.0.12"}, // [11] non-existent
 	}
 
-	var k8sUntaintedNodes, k8sSystemTaintedNodes, k8sUserTaintedNodes []corev1.Node
+	var k8sSystemTaintedNodes, k8sUserTaintedNodes []corev1.Node
 	for _, m := range machines {
 		n := corev1.Node{}
 		n.Name = m.Spec.IPv4[0]
-		k8sUntaintedNodes = append(k8sUntaintedNodes, n)
 		n.Spec.Taints = []corev1.Taint{
 			{Key: corev1.TaintNodeNotReady, Effect: corev1.TaintEffectNoSchedule},
 			{Key: op.CKETaintMaster, Effect: corev1.TaintEffectNoSchedule},
@@ -562,6 +558,9 @@ func testUpdate(t *testing.T) {
 				CRIEndpoint: "/var/run/k8s-containerd.sock",
 			},
 		},
+		Sabakan: cke.Sabakan{
+			SpareNodeTaintKey: "node.cybozu.io/spare",
+		},
 	}
 
 	tests := []struct {
@@ -581,7 +580,6 @@ func testUpdate(t *testing.T) {
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 3,
-				MinimumWorkers:    1,
 			},
 			machines,
 			nil,
@@ -598,7 +596,6 @@ func testUpdate(t *testing.T) {
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 3,
-				MinimumWorkers:    1,
 			},
 			[]Machine{machines[3], machines[5]},
 			nil,
@@ -609,26 +606,54 @@ func testUpdate(t *testing.T) {
 		{
 			"NotAvailable",
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[3], cps[5], workers[6]},
+				Nodes: []*cke.Node{cps[0], cps[3], cps[5], workers[4]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 3,
-				MinimumWorkers:    1,
 			},
-			[]Machine{machines[0], machines[3], machines[6]},
+			[]Machine{machines[0], machines[3], machines[4]},
 			nil,
 
 			errNotAvailable,
 			nil,
 		},
 		{
-			"IncreaseCP",
+			"NotRemoveUnhealthyCP",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[2], cps[5], workers[6]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+			},
+			machines,
+			nil,
+
+			nil,
+			nil,
+		},
+		{
+			"NotRemoveUnreachableCP",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[3], cps[5], workers[6]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+			},
+			machines,
+			nil,
+
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[3], cps[5], workers[6]},
+			},
+		},
+		{
+			"IncreaseCPUnused",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[5], workers[6]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 3,
-				MinimumWorkers:    1,
 			},
 			machines,
 			nil,
@@ -639,13 +664,114 @@ func testUpdate(t *testing.T) {
 			},
 		},
 		{
+			"IncreaseCPSpare",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], workers[6], workers[7]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+			},
+			machines,
+			&cke.ClusterStatus{
+				Kubernetes: cke.KubernetesClusterStatus{
+					Nodes: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: workers[6].Address,
+							},
+							Spec: corev1.NodeSpec{
+								Taints: []corev1.Taint{
+									{
+										Key:    "node.cybozu.io/spare",
+										Value:  "true",
+										Effect: corev1.TaintEffectNoSchedule,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], cps[6], workers[7]},
+			},
+		},
+		{
+			"IncreaseCPUnusedAndSpare",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], workers[6]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+			},
+			machines,
+			&cke.ClusterStatus{
+				Kubernetes: cke.KubernetesClusterStatus{
+					Nodes: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: workers[6].Address,
+							},
+							Spec: corev1.NodeSpec{
+								Taints: []corev1.Taint{
+									{
+										Key:    "node.cybozu.io/spare",
+										Value:  "true",
+										Effect: corev1.TaintEffectNoSchedule,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[6]},
+			},
+		},
+		{
+			"IncreaseCPSteal",
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], workers[6], workers[7]},
+			},
+			&cke.Constraints{
+				ControlPlaneCount: 3,
+			},
+			machines,
+			&cke.ClusterStatus{
+				Kubernetes: cke.KubernetesClusterStatus{
+					Nodes: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: workers[7].Address,
+							},
+							Spec: corev1.NodeSpec{
+								Taints: []corev1.Taint{
+									{
+										Key:    "node.cybozu.io/hoge",
+										Value:  "true",
+										Effect: corev1.TaintEffectNoSchedule,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			nil,
+			&cke.Cluster{
+				Nodes: []*cke.Node{cps[0], cps[5], cps[6], workers[7]},
+			},
+		},
+		{
 			"IncreaseCPIgnoringLongLifeButUserTaintedNode",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[5], workers[8]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 3,
-				MinimumWorkers:    1,
 			},
 			machines,
 			&cke.ClusterStatus{
@@ -660,30 +786,12 @@ func testUpdate(t *testing.T) {
 			},
 		},
 		{
-			"PromoteWorker",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[6], workers[7]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 3,
-				MinimumWorkers:    1,
-			},
-			machines,
-			nil,
-
-			nil,
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], cps[6], workers[7]},
-			},
-		},
-		{
-			"DecreaseCPDemote",
+			"DecreaseCPRemoveAllCPsHealthy",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[6], cps[7], workers[5]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 2,
-				MinimumWorkers:    1,
 			},
 			machines,
 			nil,
@@ -694,139 +802,28 @@ func testUpdate(t *testing.T) {
 			},
 		},
 		{
-			"DecreaseCPRemoveAllCPsHealthy",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[6], cps[7], workers[5]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 2,
-				MinimumWorkers:    1,
-				MaximumWorkers:    1,
-			},
-			machines,
-			nil,
-
-			nil,
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[6], workers[5]},
-			},
-		},
-		{
 			"DecreaseCPRemoveUnhealthyCP",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[2], cps[6], cps[7], workers[5]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 2,
-				MinimumWorkers:    1,
-				MaximumWorkers:    1,
 			},
 			machines,
 			nil,
 
 			nil,
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[6], cps[7], workers[5]},
+				Nodes: []*cke.Node{cps[6], cps[7], workers[5], workers[2]},
 			},
 		},
 		{
-			"ReplaceCPDemoteAdd",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[2], cps[7], workers[5]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 3,
-				MinimumWorkers:    1,
-			},
-			machines,
-			nil,
-
-			nil,
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[6], cps[7], workers[2], workers[5]},
-			},
-		},
-		{
-			"ReplaceCPDemoteTaintedAddUntainted",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[2]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 3,
-				MinimumWorkers:    1,
-			},
-			machines,
-			&cke.ClusterStatus{
-				Kubernetes: cke.KubernetesClusterStatus{
-					Nodes: []corev1.Node{k8sUserTaintedNodes[5], k8sUntaintedNodes[6]},
-				},
-			},
-
-			nil,
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[6], cps[7], workers[2], workers[5]},
-			},
-		},
-		{
-			"ReplaceCPPromoteDemote",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[2], cps[5], cps[6], workers[7], workers[0]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 3,
-				MinimumWorkers:    2,
-				MaximumWorkers:    2,
-			},
-			machines,
-			nil,
-
-			nil,
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[5], cps[6], cps[0], workers[7], workers[2]},
-			},
-		},
-		{
-			"ReplaceCPDrop",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[2], cps[7], workers[1]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 3,
-				MinimumWorkers:    1,
-				MaximumWorkers:    1,
-			},
-			machines,
-			nil,
-
-			nil,
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], cps[7], workers[1]},
-			},
-		},
-		{
-			"ReplaceCPFail",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[2], cps[7], workers[1]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 3,
-				MinimumWorkers:    1,
-				MaximumWorkers:    1,
-			},
-			[]Machine{machines[0], machines[1], machines[2], machines[7]},
-			nil,
-
-			errNotAvailable,
-			nil,
-		},
-		{
-			"IncreaseWorkerUnlimited",
+			"IncreaseWorker",
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[5], workers[1]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 2,
-				MinimumWorkers:    2,
 			},
 			machines,
 			nil,
@@ -834,59 +831,22 @@ func testUpdate(t *testing.T) {
 			nil,
 			&cke.Cluster{
 				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[6], workers[7]},
-			},
-		},
-		{
-			"IncreaseWorkerLimited",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[1]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 2,
-				MinimumWorkers:    2,
-				MaximumWorkers:    2,
-			},
-			machines,
-			nil,
-
-			nil,
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[6]},
 			},
 		},
 		{
 			"DecreaseWorkerRemove",
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[9], workers[7]},
+				Nodes: []*cke.Node{cps[0], cps[5], workers[9], workers[7], workers[6]},
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 2,
-				MinimumWorkers:    1,
 			},
 			machines,
 			nil,
 
 			nil,
 			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[7]},
-			},
-		},
-		{
-			"DecreaseWorkerReplace",
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7], workers[9]},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 2,
-				MinimumWorkers:    3,
-				MaximumWorkers:    3,
-			},
-			machines,
-			nil,
-
-			nil,
-			&cke.Cluster{
-				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[6], workers[7]},
+				Nodes: []*cke.Node{cps[0], cps[5], workers[7], workers[6]},
 			},
 		},
 		{
@@ -904,8 +864,6 @@ func testUpdate(t *testing.T) {
 			},
 			&cke.Constraints{
 				ControlPlaneCount: 2,
-				MinimumWorkers:    2,
-				MaximumWorkers:    2,
 			},
 			[]Machine{machines[0], machines[2], machines[5], machines[7]},
 			nil,
@@ -928,9 +886,8 @@ func testUpdate(t *testing.T) {
 				Nodes: []*cke.Node{cps[0], cps[5], workers[1], workers[7], workers[9]},
 			},
 			&cke.Constraints{
-				ControlPlaneCount: 2,
-				MinimumWorkers:    3,
-				MaximumWorkers:    3,
+				ControlPlaneCount:  2,
+				MinimumWorkersRate: 90,
 			},
 			[]Machine{machines[0], machines[1], machines[5], machines[7], machines[9]},
 			nil,
@@ -1001,8 +958,8 @@ func testUpdate(t *testing.T) {
 func testRegenerateAfterUpdate(t *testing.T) {
 	machines := []Machine{
 		newTestMachineWithIP(0, testFuture250, StateHealthy, "10.0.0.1", "cs"),
-		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.2", "cs"),
-		newTestMachineWithIP(0, testFuture250, StateHealthy, "10.0.0.3", "cs"),
+		newTestMachineWithIP(1, testFuture250, StateRetired, "10.0.0.2", "cs"),
+		newTestMachineWithIP(0, testFuture250, StateUnreachable, "10.0.0.3", "cs"),
 		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4", "cs"),
 	}
 
@@ -1072,194 +1029,6 @@ func testRegenerateAfterUpdate(t *testing.T) {
 	}
 	if nodes[1].ControlPlane {
 		t.Error(`nodes[1].ControlPlane`)
-	}
-}
-
-func testWeighted(t *testing.T) {
-	addresses := []string{
-		"10.0.0.1",
-		"10.0.0.2",
-		"10.0.0.3",
-		"10.0.0.4",
-		"10.0.0.5",
-		"10.0.0.6",
-		"10.0.0.7",
-	}
-	machines := []Machine{
-		newTestMachineWithIP(0, testFuture500, StateHealthy, addresses[0], "cs"),
-		newTestMachineWithIP(0, testFuture250, StateHealthy, addresses[1], "ss"),
-		newTestMachineWithIP(1, testFuture250, StateHealthy, addresses[2], "cs"),
-		newTestMachineWithIP(1, testFuture250, StateHealthy, addresses[3], "ss"),
-		newTestMachineWithIP(2, testFuture250, StateHealthy, addresses[4], "cs"),
-		newTestMachineWithIP(2, testFuture250, StateHealthy, addresses[5], "ss"),
-		newTestMachineWithIP(3, testFuture1000, StateHealthy, addresses[6], "new"),
-	}
-
-	cases := []struct {
-		name        string
-		tmplCP      *cke.Node
-		tmplWorkers []*cke.Node
-		cstr        *cke.Constraints
-
-		expectCPs         []string
-		expectWorkerRoles map[string]int
-	}{
-		{
-			"blank",
-			&cke.Node{},
-			[]*cke.Node{{}},
-			cke.DefaultConstraints(),
-
-			[]string{addresses[6]},
-			map[string]int{"cs": 1},
-		},
-		{
-			"cp-role",
-			&cke.Node{
-				Labels: map[string]string{
-					"cke.cybozu.com/role": "cs",
-				},
-			},
-			[]*cke.Node{{}},
-			cke.DefaultConstraints(),
-
-			[]string{addresses[0]},
-			map[string]int{"new": 1},
-		},
-		{
-			"worker-role",
-			&cke.Node{},
-			[]*cke.Node{{
-				Labels: map[string]string{
-					"cke.cybozu.com/role": "ss",
-				},
-			}},
-			cke.DefaultConstraints(),
-
-			[]string{addresses[6]},
-			map[string]int{"ss": 1},
-		},
-		{
-			"weight1",
-			&cke.Node{},
-			[]*cke.Node{
-				{
-					Labels: map[string]string{
-						"cke.cybozu.com/role":   "cs",
-						"cke.cybozu.com/weight": "3",
-					},
-				},
-				{
-					Labels: map[string]string{
-						"cke.cybozu.com/role": "ss",
-					},
-				},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 1,
-				MinimumWorkers:    2,
-			},
-
-			[]string{addresses[6]},
-			map[string]int{"cs": 1, "ss": 1},
-		},
-		{
-			"weight2",
-			&cke.Node{},
-			[]*cke.Node{
-				{
-					Labels: map[string]string{
-						"cke.cybozu.com/role":   "cs",
-						"cke.cybozu.com/weight": "3",
-					},
-				},
-				{
-					Labels: map[string]string{
-						"cke.cybozu.com/role": "ss",
-					},
-				},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 1,
-				MinimumWorkers:    4,
-			},
-
-			[]string{addresses[6]},
-			map[string]int{"cs": 3, "ss": 1},
-		},
-		{
-			"weight3",
-			&cke.Node{},
-			[]*cke.Node{
-				{
-					Labels: map[string]string{
-						"cke.cybozu.com/role":   "cs",
-						"cke.cybozu.com/weight": "0.1",
-					},
-				},
-				{
-					Labels: map[string]string{
-						"cke.cybozu.com/role":   "ss",
-						"cke.cybozu.com/weight": "0.3",
-					},
-				},
-			},
-			&cke.Constraints{
-				ControlPlaneCount: 1,
-				MinimumWorkers:    4,
-			},
-
-			[]string{addresses[6]},
-			map[string]int{"cs": 1, "ss": 3},
-		},
-	}
-
-	for _, tt := range cases {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			tt.tmplCP.ControlPlane = true
-			tt.tmplCP.User = "cybozu"
-			for _, w := range tt.tmplWorkers {
-				w.User = "cybozu"
-			}
-			tmpl := &cke.Cluster{
-				Name:          "test",
-				ServiceSubnet: "10.0.0.0/14",
-				Nodes:         append(tt.tmplWorkers, tt.tmplCP),
-				Options: cke.Options{
-					Kubelet: cke.KubeletParams{
-						CRIEndpoint: "/var/run/k8s-containerd.sock",
-					},
-				},
-			}
-
-			g := NewGenerator(tmpl, tt.cstr, machines, nil, testBaseTS)
-			cluster, err := g.Generate()
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			var cps []string
-			workerRoles := make(map[string]int)
-			for _, n := range cluster.Nodes {
-				if n.ControlPlane {
-					cps = append(cps, n.Address)
-					continue
-				}
-
-				role := n.Labels["cke.cybozu.com/role"]
-				workerRoles[role]++
-			}
-
-			if !cmp.Equal(tt.expectCPs, cps) {
-				t.Error("unexpected CPs", cmp.Diff(tt.expectCPs, cps))
-			}
-			if !cmp.Equal(tt.expectWorkerRoles, workerRoles) {
-				t.Error("unexpected workers", cmp.Diff(tt.expectWorkerRoles, workerRoles))
-			}
-		})
 	}
 }
 
@@ -1357,16 +1126,14 @@ func testRackDistribution(t *testing.T) {
 				User:         "cybozu",
 				ControlPlane: false,
 				Labels: map[string]string{
-					"cke.cybozu.com/role":   "cs",
-					"cke.cybozu.com/weight": "18",
+					"cke.cybozu.com/role": "cs",
 				},
 			},
 			{
 				User:         "cybozu",
 				ControlPlane: false,
 				Labels: map[string]string{
-					"cke.cybozu.com/role":   "ss",
-					"cke.cybozu.com/weight": "9",
+					"cke.cybozu.com/role": "ss",
 				},
 			},
 		},
@@ -1378,8 +1145,6 @@ func testRackDistribution(t *testing.T) {
 	}
 	baseConstraints := &cke.Constraints{
 		ControlPlaneCount: 3,
-		MinimumWorkers:    27,
-		MaximumWorkers:    56,
 	}
 
 	t.Run("GenerateInitialCluster", func(t *testing.T) {
@@ -1396,44 +1161,9 @@ func testRackDistribution(t *testing.T) {
 		}
 
 		expect := map[string]map[string]int{
-			"0": {"cs": 6, "ss": 3},
-			"1": {"cs": 6, "ss": 3},
-			"2": {"cs": 6, "ss": 3},
-		}
-		actual := countRolesByRack(cluster.Nodes)
-		if !cmp.Equal(actual, expect) {
-			t.Errorf("expect=%v, actual=%v", expect, actual)
-		}
-	})
-
-	t.Run("IncreaseMinimumWorkers", func(t *testing.T) {
-		rackIDs := []int{0, 1, 2}
-		var machines []Machine
-		for i := range rackIDs {
-			machines = append(machines, createRack(i, "standard")...)
-		}
-
-		g := NewGenerator(baseTemplate, baseConstraints, machines, nil, testBaseTS)
-		cluster, err := g.Generate()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		constraints := &cke.Constraints{
-			ControlPlaneCount: 3,
-			MinimumWorkers:    36,
-			MaximumWorkers:    56,
-		}
-		g = NewGenerator(baseTemplate, constraints, machines, nil, testBaseTS)
-		cluster, err = g.Update(cluster)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		expect := map[string]map[string]int{
-			"0": {"cs": 8, "ss": 4},
-			"1": {"cs": 8, "ss": 4},
-			"2": {"cs": 8, "ss": 4},
+			"0": {"cs": 17, "ss": 10},
+			"1": {"cs": 17, "ss": 10},
+			"2": {"cs": 17, "ss": 10},
 		}
 		actual := countRolesByRack(cluster.Nodes)
 		if !cmp.Equal(actual, expect) {
@@ -1442,10 +1172,10 @@ func testRackDistribution(t *testing.T) {
 	})
 
 	t.Run("MultipleRackTypes", func(t *testing.T) {
-		rackIDs := []int{0, 1, 2}
+		rackIDs := []int{0, 1, 2, 3}
 		var machines []Machine
 		for i := range rackIDs {
-			if i == 2 {
+			if i == 3 {
 				machines = append(machines, createRack(i, "storage")...)
 				continue
 			}
@@ -1459,9 +1189,10 @@ func testRackDistribution(t *testing.T) {
 		}
 
 		expect := map[string]map[string]int{
-			"0": {"cs": 9, "ss": 3},
-			"1": {"cs": 9, "ss": 3},
-			"2": {"ss": 3},
+			"0": {"cs": 17, "ss": 10},
+			"1": {"cs": 17, "ss": 10},
+			"2": {"cs": 17, "ss": 10},
+			"3": {"ss": 19},
 		}
 		actual := countRolesByRack(cluster.Nodes)
 		if !cmp.Equal(actual, expect) {
@@ -1482,8 +1213,6 @@ func testRackDistribution(t *testing.T) {
 
 		constraints := &cke.Constraints{
 			ControlPlaneCount: 3,
-			MinimumWorkers:    33,
-			MaximumWorkers:    56,
 		}
 
 		withoutCSTemplate := &cke.Cluster{
@@ -1512,7 +1241,7 @@ func testRackDistribution(t *testing.T) {
 		expect := map[string]map[string]int{
 			"0": {"ss": 10},
 			"1": {"ss": 10},
-			"2": {"ss": 13},
+			"2": {"ss": 19},
 		}
 		actual := countRolesByRack(cluster.Nodes)
 		if !cmp.Equal(actual, expect) {
@@ -1536,8 +1265,6 @@ func testRackDistribution(t *testing.T) {
 		machines = append(machines, createRack(3, "storage")...)
 		constraints := &cke.Constraints{
 			ControlPlaneCount: 3,
-			MinimumWorkers:    36,
-			MaximumWorkers:    56,
 		}
 		g = NewGenerator(baseTemplate, constraints, machines, nil, testBaseTS)
 		cluster, err = g.Update(cluster)
@@ -1546,10 +1273,10 @@ func testRackDistribution(t *testing.T) {
 		}
 
 		expect := map[string]map[string]int{
-			"0": {"cs": 8, "ss": 3},
-			"1": {"cs": 8, "ss": 3},
-			"2": {"cs": 8, "ss": 3},
-			"3": {"ss": 3},
+			"0": {"cs": 17, "ss": 10},
+			"1": {"cs": 17, "ss": 10},
+			"2": {"cs": 17, "ss": 10},
+			"3": {"ss": 19},
 		}
 		actual := countRolesByRack(cluster.Nodes)
 		if !cmp.Equal(actual, expect) {
@@ -1578,9 +1305,9 @@ func testRackDistribution(t *testing.T) {
 		}
 
 		expect := map[string]map[string]int{
-			"1": {"cs": 6, "ss": 3},
-			"2": {"cs": 6, "ss": 3},
-			"3": {"cs": 6, "ss": 3},
+			"1": {"cs": 17, "ss": 10},
+			"2": {"cs": 17, "ss": 10},
+			"3": {"cs": 17, "ss": 10},
 		}
 		actual := countRolesByRack(cluster.Nodes)
 		if !cmp.Equal(actual, expect) {
@@ -1605,9 +1332,9 @@ func testRackDistribution(t *testing.T) {
 		}
 
 		expect := map[string]map[string]int{
-			"1": {"cs": 6, "ss": 3},
-			"2": {"cs": 6, "ss": 3},
-			"3": {"cs": 6, "ss": 3},
+			"1": {"cs": 17, "ss": 10},
+			"2": {"cs": 17, "ss": 10},
+			"3": {"cs": 17, "ss": 10},
 		}
 		actual := countRolesByRack(cluster.Nodes)
 		if !cmp.Equal(actual, expect) {
@@ -1664,6 +1391,5 @@ func TestGenerator(t *testing.T) {
 	t.Run("Regenerate", testRegenerate)
 	t.Run("Update", testUpdate)
 	t.Run("RegenerateAfterUpdate", testRegenerateAfterUpdate)
-	t.Run("Weighted", testWeighted)
 	t.Run("RackDistribution", testRackDistribution)
 }

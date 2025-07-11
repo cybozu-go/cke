@@ -20,8 +20,7 @@ var constraintsSetCmd = &cobra.Command{
 
 NAME is one of:
     control-plane-count
-    minimum-workers
-    maximum-workers
+    minimum-workers-rate
     maximum-unreachable-nodes-for-reboot
     maximum-repair-queue-entries
     wait-seconds-to-repair-rebooting
@@ -43,13 +42,9 @@ VALUE is an integer.`,
 			cstrSet = func(cstr *cke.Constraints) {
 				cstr.ControlPlaneCount = val
 			}
-		case "minimum-workers":
+		case "minimum-workers-rate":
 			cstrSet = func(cstr *cke.Constraints) {
-				cstr.MinimumWorkers = val
-			}
-		case "maximum-workers":
-			cstrSet = func(cstr *cke.Constraints) {
-				cstr.MaximumWorkers = val
+				cstr.MinimumWorkersRate = val
 			}
 		case "maximum-unreachable-nodes-for-reboot":
 			cstrSet = func(cstr *cke.Constraints) {

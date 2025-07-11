@@ -70,10 +70,9 @@ $ ./bin/ckecli --config=./cke.config vault ssh-privkey ~/.vagrant.d/insecure_pri
 
 ## Declare Kubernetes Cluster Configuration
 
-Declares the number of control planes and workers of Kubernetes cluster and configuration.
+Declares the number of control planes of Kubernetes cluster and configuration.
 
 ```console
-$ ./bin/ckecli --config=./cke.config constraints set minimum-workers 2
 $ ./bin/ckecli --config=./cke.config constraints set control-plane-count 1
 $ ./bin/ckecli --config=./cke.config cluster set ./cke-cluster.yml
 ```

@@ -104,9 +104,8 @@ func testStorageConstraints(t *testing.T) {
 		t.Fatal("constraints found.")
 	}
 	c := &Constraints{
-		ControlPlaneCount: 3,
-		MinimumWorkers:    3,
-		MaximumWorkers:    100,
+		ControlPlaneCount:  3,
+		MinimumWorkersRate: 50,
 	}
 	err = storage.PutConstraints(ctx, c)
 	if err != nil {
