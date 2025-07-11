@@ -13,11 +13,11 @@ First see the [description of the reboot functionality](reboot.md#description).
 The behavior of the repair functionality is almost the same with the reboot.
 A significant difference is that the repair functionality issues a series of repair commands instead of one reboot command.
 
-An administrator can request CKE to repair a machine via `ckecli repair-queue add OPERATION MACHINE_TYPE ADDRESS`.
+An administrator can request CKE to repair a machine via `ckecli repair-queue add OPERATION MACHINE_TYPE ADDRESS [SERIAL]`.
 The request is appended to the repair queue.
 Each request entry corresponds to a machine.
 
-The command `ckecli repair-queue add` takes extra two arguments in addition to the IP address of the target machine; the operation name and the type of the target machine.
+The command `ckecli repair-queue add` takes extra two required arguments and one optional argument: the operation name, the type of the target machine, the IP address of the target machine, and optionally the serial number of the machine.
 
 CKE watches the repair queue and handles the repair requests.
 CKE processes a repair request in the following manner:

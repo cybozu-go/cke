@@ -53,7 +53,7 @@ func TestRepairQueueEntry(t *testing.T) {
 	}
 
 	// for in-cluster machine
-	entry := NewRepairQueueEntry("unreachable", "type2", "1.1.1.1")
+	entry := NewRepairQueueEntry("unreachable", "type2", "1.1.1.1", "")
 	entry.FillNodename(cluster)
 	if entry.Nodename != "node1" {
 		t.Error("FillNodename() failed to fill Nodename:", entry.Nodename)
@@ -64,7 +64,7 @@ func TestRepairQueueEntry(t *testing.T) {
 
 	// for out-of-cluster machine
 	// GetCorrespondingNode should fail for bad address
-	entry = NewRepairQueueEntry("unreachable", "type2", "2.2.2.2")
+	entry = NewRepairQueueEntry("unreachable", "type2", "2.2.2.2", "")
 	entry.FillNodename(cluster)
 	if entry.Nodename != "" {
 		t.Error("FillNodename() filled wrong Nodename:", entry.Nodename)
@@ -74,7 +74,7 @@ func TestRepairQueueEntry(t *testing.T) {
 	}
 
 	// HaveFinished should return true iff entry has succeeded or failed
-	entry = NewRepairQueueEntry("unreachable", "type2", "1.1.1.1")
+	entry = NewRepairQueueEntry("unreachable", "type2", "1.1.1.1", "")
 	for _, testCase := range []struct {
 		status   RepairStatus
 		finished bool
@@ -91,7 +91,7 @@ func TestRepairQueueEntry(t *testing.T) {
 	}
 
 	// GetMatchingRepairOperation should succeed
-	entry = NewRepairQueueEntry("unreachable", "type2", "1.1.1.1")
+	entry = NewRepairQueueEntry("unreachable", "type2", "1.1.1.1", "")
 	op, err := entry.GetMatchingRepairOperation(cluster)
 	if err != nil {
 		t.Fatal("GetMatchingRepairOperation() failed:", err)
@@ -101,21 +101,21 @@ func TestRepairQueueEntry(t *testing.T) {
 	}
 
 	// GetMatchingRepairOperation should fail for bad machine type
-	entry = NewRepairQueueEntry("unreachable", "type4", "1.1.1.1")
+	entry = NewRepairQueueEntry("unreachable", "type4", "1.1.1.1", "")
 	_, err = entry.GetMatchingRepairOperation(cluster)
 	if err != ErrRepairProcedureNotFound {
 		t.Error("GetMatchingRepairOperation() returned wrong error:", err)
 	}
 
 	// GetMatchingRepairOperation should fail for bad operation
-	entry = NewRepairQueueEntry("noop", "type2", "1.1.1.1")
+	entry = NewRepairQueueEntry("noop", "type2", "1.1.1.1", "")
 	_, err = entry.GetMatchingRepairOperation(cluster)
 	if err != ErrRepairOperationNotFound {
 		t.Error("GetMatchingRepairOperation() returned wrong error:", err)
 	}
 
 	// GetCurrentRepairStep should succeed
-	entry = NewRepairQueueEntry("unreachable", "type2", "1.1.1.1")
+	entry = NewRepairQueueEntry("unreachable", "type2", "1.1.1.1", "")
 	entry.Status = RepairStatusProcessing
 	entry.Step = 1
 	entry.StepStatus = RepairStepStatusWatching
@@ -135,7 +135,7 @@ func TestRepairQueueEntry(t *testing.T) {
 	}
 
 	// GetCurrentRepairStep should fail for bad machine type
-	entry = NewRepairQueueEntry("unreachable", "type4", "1.1.1.1")
+	entry = NewRepairQueueEntry("unreachable", "type4", "1.1.1.1", "")
 	entry.Status = RepairStatusProcessing
 	entry.Step = 1
 	entry.StepStatus = RepairStepStatusWatching
@@ -145,7 +145,7 @@ func TestRepairQueueEntry(t *testing.T) {
 	}
 
 	// GetCurrentRepairStep should fail for bad operation
-	entry = NewRepairQueueEntry("noop", "type2", "1.1.1.1")
+	entry = NewRepairQueueEntry("noop", "type2", "1.1.1.1", "")
 	entry.Status = RepairStatusProcessing
 	entry.Step = 1
 	entry.StepStatus = RepairStepStatusWatching

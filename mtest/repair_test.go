@@ -97,7 +97,7 @@ func testRepairOperations() {
 		repairQueueAdd := func(address string) {
 			execSafeAt(host1, "docker", "exec", "cke", "find", "/tmp", "-maxdepth", "1", "-name", "mtest-repair-*", "-delete")
 			execSafeAt(host2, "docker", "exec", "cke", "find", "/tmp", "-maxdepth", "1", "-name", "mtest-repair-*", "-delete")
-			_, stderr, err := ckecli("repair-queue", "add", "op1", "type1", address)
+			_, stderr, err := ckecli("repair-queue", "add", "op1", "type1", address, "SN1234")
 			ExpectWithOffset(1, err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 			currentWriteIndex++
 		}

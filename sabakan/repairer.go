@@ -72,7 +72,8 @@ func Repairer(machines []Machine, repairEntries []*cke.RepairQueueEntry, rebootE
 		operation := strings.ToLower(string(machine.Status.State))
 		typ := machine.Spec.BMC.Type
 		address := machine.Spec.IPv4[0]
-		entry := cke.NewRepairQueueEntry(operation, typ, address)
+		serial := machine.Spec.Serial
+		entry := cke.NewRepairQueueEntry(operation, typ, address, serial)
 		log.Info("initiate sabakan-triggered automatic repair", map[string]interface{}{
 			"serial":    machine.Spec.Serial,
 			"address":   address,

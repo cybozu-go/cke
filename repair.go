@@ -32,6 +32,7 @@ type RepairQueueEntry struct {
 	Index              int64            `json:"index,string"`
 	Address            string           `json:"address"`
 	Nodename           string           `json:"nodename"`
+	Serial             string           `json:"serial,omitempty"`
 	MachineType        string           `json:"machine_type"`
 	Operation          string           `json:"operation"`
 	Status             RepairStatus     `json:"status"`
@@ -49,11 +50,12 @@ var (
 	ErrRepairStepOutOfRange    = errors.New("repair step of repair queue entry is out of range")
 )
 
-func NewRepairQueueEntry(operation, machineType, address string) *RepairQueueEntry {
+func NewRepairQueueEntry(operation, machineType, address, serial string) *RepairQueueEntry {
 	return &RepairQueueEntry{
 		Operation:   operation,
 		MachineType: machineType,
 		Address:     address,
+		Serial:      serial,
 		Status:      RepairStatusQueued,
 		StepStatus:  RepairStepStatusWaiting,
 	}
