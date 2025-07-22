@@ -68,31 +68,6 @@ func TestClusterValidate(t *testing.T) {
 			false,
 		},
 		{
-			"valid case: 1cp, 1worker (valid weight)",
-			&cke.Cluster{
-				Name:          "testcluster",
-				ServiceSubnet: "10.0.0.0/14",
-				Nodes: []*cke.Node{
-					{
-						User:         "user",
-						ControlPlane: true,
-					},
-					{
-						User: "another",
-						Labels: map[string]string{
-							"cke.cybozu.com/weight": "1.0",
-						},
-					},
-				},
-				Options: cke.Options{
-					Kubelet: cke.KubeletParams{
-						CRIEndpoint: "/var/run/k8s-containerd.sock",
-					},
-				},
-			},
-			false,
-		},
-		{
 			"invalid case: 1node",
 			&cke.Cluster{
 				Name:          "testcluster",
@@ -101,6 +76,11 @@ func TestClusterValidate(t *testing.T) {
 					{
 						User:         "user",
 						ControlPlane: true,
+					},
+				},
+				Options: cke.Options{
+					Kubelet: cke.KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -124,6 +104,11 @@ func TestClusterValidate(t *testing.T) {
 						User: "another",
 					},
 				},
+				Options: cke.Options{
+					Kubelet: cke.KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
 			},
 			true,
 		},
@@ -144,6 +129,11 @@ func TestClusterValidate(t *testing.T) {
 						Labels: map[string]string{
 							"cke.cybozu.com/role": "role2",
 						},
+					},
+				},
+				Options: cke.Options{
+					Kubelet: cke.KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},
@@ -172,6 +162,40 @@ func TestClusterValidate(t *testing.T) {
 						},
 					},
 				},
+				Options: cke.Options{
+					Kubelet: cke.KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
+			},
+			true,
+		},
+		{
+			"invalid case: without role and with role",
+			&cke.Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Nodes: []*cke.Node{
+					{
+						User:         "user",
+						ControlPlane: true,
+					},
+					{
+						User: "another",
+						Labels: map[string]string{
+							"cke.cybozu.com/role": "role1",
+						},
+					},
+					{
+						User:   "another",
+						Labels: map[string]string{},
+					},
+				},
+				Options: cke.Options{
+					Kubelet: cke.KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
 			},
 			true,
 		},
@@ -191,64 +215,9 @@ func TestClusterValidate(t *testing.T) {
 						User:    "another",
 					},
 				},
-			},
-			true,
-		},
-		{
-			"invalid case: zero weight",
-			&cke.Cluster{
-				Name:          "testcluster",
-				ServiceSubnet: "10.0.0.0/14",
-				Nodes: []*cke.Node{
-					{
-						ControlPlane: true,
-						User:         "user",
-					},
-					{
-						User: "another",
-						Labels: map[string]string{
-							"cke.cybozu.com/weight": "0",
-						},
-					},
-				},
-			},
-			true,
-		},
-		{
-			"invalid case: negative weight",
-			&cke.Cluster{
-				Name:          "testcluster",
-				ServiceSubnet: "10.0.0.0/14",
-				Nodes: []*cke.Node{
-					{
-						ControlPlane: true,
-						User:         "user",
-					},
-					{
-						User: "another",
-						Labels: map[string]string{
-							"cke.cybozu.com/weight": "-1.0",
-						},
-					},
-				},
-			},
-			true,
-		},
-		{
-			"invalid case: not float weight",
-			&cke.Cluster{
-				Name:          "testcluster",
-				ServiceSubnet: "10.0.0.0/14",
-				Nodes: []*cke.Node{
-					{
-						ControlPlane: true,
-						User:         "user",
-					},
-					{
-						User: "another",
-						Labels: map[string]string{
-							"cke.cybozu.com/weight": "weight",
-						},
+				Options: cke.Options{
+					Kubelet: cke.KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
 					},
 				},
 			},

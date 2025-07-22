@@ -645,7 +645,7 @@ func (nf *NodeFilter) UnhealthyAPIServerNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-func isInternal(name string) bool {
+func isInternal(name string, n *cke.Node) bool {
 	if name == op.CKEAnnotationReboot {
 		return false
 	}
@@ -655,7 +655,12 @@ func isInternal(name string) bool {
 	if strings.Contains(name, ".cke.cybozu.com/") {
 		return true
 	}
-	if strings.HasPrefix(name, "node-role.kubernetes.io/") {
+	for k := range n.Labels {
+		if strings.HasPrefix(k, "node-role.kubernetes.io/") && name == k {
+			return true
+		}
+	}
+	if name == "node-role.kubernetes.io/master" || name == "node-role.kubernetes.io/control-plane" {
 		return true
 	}
 	return false
@@ -682,7 +687,7 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 		if nodeIsOutdated(n, current, nf.cluster.TaintCP) {
 			labels := make(map[string]string)
 			for k, v := range current.Labels {
-				if isInternal(k) {
+				if isInternal(k, n) {
 					continue
 				}
 				labels[k] = v
@@ -697,7 +702,7 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 
 			annotations := make(map[string]string)
 			for k, v := range current.Annotations {
-				if isInternal(k) {
+				if isInternal(k, n) {
 					continue
 				}
 				annotations[k] = v
@@ -714,7 +719,7 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 			taints := make([]corev1.Taint, len(n.Taints))
 			copy(taints, n.Taints)
 			for _, taint := range current.Spec.Taints {
-				if isInternal(taint.Key) || nTaints[taint.Key] {
+				if isInternal(taint.Key, n) || nTaints[taint.Key] {
 					continue
 				}
 				taints = append(taints, taint)
@@ -741,10 +746,9 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node, taintCP bool) bool {
 			return true
 		}
 	}
-
 	// Labels for CKE internal use need to be synchronized.
 	for k := range current.Labels {
-		if !isInternal(k) {
+		if !isInternal(k, n) {
 			continue
 		}
 		if k == op.CKELabelMaster {
@@ -775,7 +779,7 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node, taintCP bool) bool {
 
 	// Annotations for CKE internal use need to be synchronized.
 	for k := range current.Annotations {
-		if !isInternal(k) {
+		if !isInternal(k, n) {
 			continue
 		}
 		if _, ok := n.Annotations[k]; !ok {
@@ -806,7 +810,7 @@ func nodeIsOutdated(n *cke.Node, current *corev1.Node, taintCP bool) bool {
 		nTaints[taint.Key] = taint
 	}
 	for _, taint := range current.Spec.Taints {
-		if !isInternal(taint.Key) {
+		if !isInternal(taint.Key, n) {
 			continue
 		}
 		if taint.Key == op.CKETaintMaster {

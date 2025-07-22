@@ -93,8 +93,7 @@ Set a constraint on the cluster configuration.
 `NAME` is one of:
 
 - `control-plane-count`
-- `minimum-workers`
-- `maximum-workers`
+- `minimum-workers-rate`
 - `maximum-unreachable-nodes-for-reboot`
 - `maximum-repair-queue-entries`
 - `wait-seconds-to-repair-rebooting`
