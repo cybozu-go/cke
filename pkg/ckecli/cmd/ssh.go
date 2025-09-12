@@ -25,6 +25,22 @@ func detectSSHNode(arg string) string {
 	}
 	return nodeName
 }
+func createFifo() (string, error) {
+	usr, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	err = os.MkdirAll(filepath.Join(usr.HomeDir, ".ssh"), 0700)
+	if err != nil {
+		return "", err
+	}
+	fifo := filepath.Join(usr.HomeDir, ".ssh", "ckecli-ssh-key-"+strconv.Itoa(os.Getpid()))
+	err = syscall.Mkfifo(fifo, 0600)
+	if err != nil {
+		return "", err
+	}
+	return fifo, err
+}
 
 func writeToFifo(fifo string, data string) {
 	f, err := os.OpenFile(fifo, os.O_WRONLY, 0600)
@@ -46,21 +62,7 @@ func writeToFifo(fifo string, data string) {
 	}
 }
 
-func sshPrivateKey(nodeName string) (string, error) {
-	usr, err := user.Current()
-	if err != nil {
-		return "", err
-	}
-	err = os.MkdirAll(filepath.Join(usr.HomeDir, ".ssh"), 0700)
-	if err != nil {
-		return "", err
-	}
-	fifo := filepath.Join(usr.HomeDir, ".ssh", "ckecli-ssh-key-"+strconv.Itoa(os.Getpid()))
-	err = syscall.Mkfifo(fifo, 0600)
-	if err != nil {
-		return "", err
-	}
-
+func sshPrivateKey(nodeName string, fifo string) (string, error) {
 	vc, err := inf.Vault()
 	if err != nil {
 		return "", err
@@ -96,7 +98,12 @@ func sshPrivateKey(nodeName string) (string, error) {
 
 func ssh(ctx context.Context, args []string) error {
 	node := detectSSHNode(args[0])
-	fifo, err := sshPrivateKey(node)
+	fifo, err := createFifo()
+	if err != nil {
+		return err
+	}
+
+	fifo, err = sshPrivateKey(node, fifo)
 	if err != nil {
 		return err
 	}

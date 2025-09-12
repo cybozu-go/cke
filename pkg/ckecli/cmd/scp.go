@@ -33,7 +33,12 @@ func scp(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	fifo, err := sshPrivateKey(node)
+	fifo, err := createFifo()
+	if err != nil {
+		return err
+	}
+
+	fifo, err = sshPrivateKey(node, fifo)
 	if err != nil {
 		return err
 	}
