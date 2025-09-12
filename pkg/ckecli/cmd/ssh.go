@@ -88,13 +88,11 @@ func sshPrivateKey(nodeName string, fifo string) (string, error) {
 
 	go func() {
 		// OpenSSH reads the private key file three times, it need to write key three times.
-		writeToFifo(fifo, "")
+		writeToFifo(fifo, mykey.(string))
 		time.Sleep(100 * time.Millisecond)
 		writeToFifo(fifo, mykey.(string))
-		//time.Sleep(100 * time.Millisecond)
-		//writeToFifo(fifo, mykey.(string))
-		//	time.Sleep(100 * time.Millisecond)
-		//	writeToFifo(fifo, mykey.(string))
+		time.Sleep(100 * time.Millisecond)
+		writeToFifo(fifo, mykey.(string))
 	}()
 
 	return fifo, nil
