@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -25,6 +26,7 @@ func detectSSHNode(arg string) string {
 	}
 	return nodeName
 }
+
 func createFifo() (string, error) {
 	usr, err := user.Current()
 	if err != nil {
@@ -102,25 +104,34 @@ func ssh(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	defer os.Remove(fifo)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() error {
+		defer wg.Done()
+		sshArgs := []string{
+			"-i", fifo,
+			"-o", "UserKnownHostsFile=/dev/null",
+			"-o", "StrictHostKeyChecking=no",
+			"-o", "ConnectTimeout=60",
+		}
+		sshArgs = append(sshArgs, args...)
+		c := exec.CommandContext(ctx, "ssh", sshArgs...)
+		c.Stdin = os.Stdin
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		return c.Run()
+	}()
 
 	fifo, err = sshPrivateKey(node, fifo)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(fifo)
 
-	sshArgs := []string{
-		"-i", fifo,
-		"-o", "UserKnownHostsFile=/dev/null",
-		"-o", "StrictHostKeyChecking=no",
-		"-o", "ConnectTimeout=60",
-	}
-	sshArgs = append(sshArgs, args...)
-	c := exec.CommandContext(ctx, "ssh", sshArgs...)
-	c.Stdin = os.Stdin
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	return c.Run()
+	wg.Wait()
+	return nil
 }
 
 // sshCmd represents the ssh command
