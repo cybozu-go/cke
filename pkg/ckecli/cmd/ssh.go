@@ -86,14 +86,16 @@ func sshPrivateKey(nodeName string, fifo string) (string, error) {
 		return "", errors.New("no ssh private key for " + nodeName)
 	}
 
-	//go func() {
-	// OpenSSH reads the private key file three times, it need to write key three times.
-	writeToFifo(fifo, mykey.(string))
-	time.Sleep(100 * time.Millisecond)
-	writeToFifo(fifo, mykey.(string))
-	//	time.Sleep(100 * time.Millisecond)
-	//	writeToFifo(fifo, mykey.(string))
-	//}()
+	go func() {
+		// OpenSSH reads the private key file three times, it need to write key three times.
+		writeToFifo(fifo, "")
+		time.Sleep(100 * time.Millisecond)
+		writeToFifo(fifo, mykey.(string))
+		//time.Sleep(100 * time.Millisecond)
+		//writeToFifo(fifo, mykey.(string))
+		//	time.Sleep(100 * time.Millisecond)
+		//	writeToFifo(fifo, mykey.(string))
+	}()
 
 	return fifo, nil
 }
