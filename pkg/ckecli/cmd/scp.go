@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
@@ -33,30 +34,42 @@ func scp(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	fifo, err := sshPrivateKey(node)
+
+	fifo, err := createFifo()
 	if err != nil {
 		return err
 	}
 	defer os.Remove(fifo)
 
-	scpArgs := []string{
-		"-i", fifo,
-		"-o", "UserKnownHostsFile=/dev/null",
-		"-o", "StrictHostKeyChecking=no",
-		"-o", "ConnectTimeout=60",
-	}
-	if scpParams.recursive {
-		scpArgs = append(scpArgs, "-r")
-	}
+	var wg sync.WaitGroup
+	wg.Add(1)
 
-	scpArgs = append(scpArgs, args...)
+	go func() error {
+		scpArgs := []string{
+			"-i", fifo,
+			"-o", "UserKnownHostsFile=/dev/null",
+			"-o", "StrictHostKeyChecking=no",
+			"-o", "ConnectTimeout=60",
+		}
+		if scpParams.recursive {
+			scpArgs = append(scpArgs, "-r")
+		}
 
-	fmt.Println(scpArgs)
-	c := exec.CommandContext(ctx, "scp", scpArgs...)
-	c.Stdin = os.Stdin
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	return c.Run()
+		scpArgs = append(scpArgs, args...)
+		fmt.Println(scpArgs)
+		c := exec.CommandContext(ctx, "scp", scpArgs...)
+		c.Stdin = os.Stdin
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		return c.Run()
+	}()
+
+	err = sshPrivateKey(node, fifo)
+	if err != nil {
+		return err
+	}
+	wg.Wait()
+	return nil
 }
 
 var scpParams struct {
