@@ -64,17 +64,17 @@ func writeToFifo(fifo string, data string) {
 	}
 }
 
-func sshPrivateKey(nodeName string, fifo string) (string, error) {
+func sshPrivateKey(nodeName string, fifo string) error {
 	vc, err := inf.Vault()
 	if err != nil {
-		return "", err
+		return err
 	}
 	secret, err := vc.Logical().Read(cke.SSHSecret)
 	if err != nil {
-		return "", err
+		return err
 	}
 	if secret == nil {
-		return "", errors.New("no ssh private keys")
+		return errors.New("no ssh private keys")
 	}
 	privKeys := secret.Data
 
@@ -83,7 +83,7 @@ func sshPrivateKey(nodeName string, fifo string) (string, error) {
 		mykey = privKeys[""]
 	}
 	if mykey == nil {
-		return "", errors.New("no ssh private key for " + nodeName)
+		return errors.New("no ssh private key for " + nodeName)
 	}
 
 	//go func() {
@@ -95,7 +95,7 @@ func sshPrivateKey(nodeName string, fifo string) (string, error) {
 	writeToFifo(fifo, mykey.(string))
 	//}()
 
-	return fifo, nil
+	return nil
 }
 
 func ssh(ctx context.Context, args []string) error {
@@ -125,7 +125,7 @@ func ssh(ctx context.Context, args []string) error {
 		return c.Run()
 	}()
 
-	fifo, err = sshPrivateKey(node, fifo)
+	err = sshPrivateKey(node, fifo)
 	if err != nil {
 		return err
 	}
