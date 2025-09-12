@@ -85,13 +85,13 @@ func sshPrivateKey(nodeName string, fifo string) error {
 	if mykey == nil {
 		return errors.New("no ssh private key for " + nodeName)
 	}
-
-	writeToFifo(fifo, mykey.(string))
-	time.Sleep(100 * time.Millisecond)
-	writeToFifo(fifo, mykey.(string))
-	time.Sleep(100 * time.Millisecond)
-	writeToFifo(fifo, mykey.(string))
-
+	go func() {
+		writeToFifo(fifo, mykey.(string))
+		time.Sleep(100 * time.Millisecond)
+		writeToFifo(fifo, mykey.(string))
+		time.Sleep(100 * time.Millisecond)
+		writeToFifo(fifo, mykey.(string))
+	}()
 	return nil
 }
 
