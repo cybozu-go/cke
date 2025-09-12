@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -34,11 +33,11 @@ func scp(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	fifo, err := createFifo()
 	if err != nil {
 		return err
 	}
-
 	defer os.Remove(fifo)
 
 	var wg sync.WaitGroup
@@ -55,10 +54,7 @@ func scp(ctx context.Context, args []string) error {
 		if scpParams.recursive {
 			scpArgs = append(scpArgs, "-r")
 		}
-
 		scpArgs = append(scpArgs, args...)
-
-		fmt.Println(scpArgs)
 		c := exec.CommandContext(ctx, "scp", scpArgs...)
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
@@ -70,6 +66,7 @@ func scp(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	wg.Wait()
 	return nil
 }
