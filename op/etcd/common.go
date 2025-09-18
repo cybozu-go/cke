@@ -64,15 +64,10 @@ func BuiltInParams(node *cke.Node, initialCluster []string, state string) cke.Se
 		// value if the value is less than 1 hour.
 		// https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/maintenance.md#auto-compaction
 		"--auto-compaction-retention=5m",
-		// etcd 3.5.[0-2] has data inconsistency issue.
-		// https://groups.google.com/a/kubernetes.io/g/dev/c/B7gJs88XtQc/m/rSgNOzV2BwAJ
-		// This flag can detect an inconsistency.
-		"--experimental-initial-corrupt-check",
-
 		// Enabling data corruption detection
-		// https://etcd.io/docs/v3.5/op-guide/data_corruption/
-		"--experimental-compact-hash-check-enabled=true",
-		"--experimental-corrupt-check-time=3h",
+		// https://etcd.io/docs/v3.6/op-guide/data_corruption/
+		"--feature-gates=InitialCorruptCheck=true,CompactHashCheck=true",
+		"--corrupt-check-time=3h",
 	}
 	if len(initialCluster) > 0 {
 		args = append(args,
