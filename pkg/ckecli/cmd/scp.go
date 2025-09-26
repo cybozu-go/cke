@@ -93,7 +93,7 @@ NODE is IP address or hostname of the node.
 		return well.Wait()
 	},
 }
-
+ 
 func init() {
 	scpCmd.Flags().BoolVarP(&scpParams.recursive, "", "r", false, "recursively copy entire directories")
 	rootCmd.AddCommand(scpCmd)
