@@ -116,9 +116,9 @@ func ssh(ctx context.Context, args []string) error {
 		}
 		sshArgs = append(sshArgs, args...)
 		c := exec.CommandContext(ctx, "ssh", sshArgs...)
-		//c.Stdin = os.Stdin
-		//c.Stdout = os.Stdout
-		//c.Stderr = os.Stderr
+		c.Stdin = os.Stdin
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
 		return c.Run()
 	}()
 
