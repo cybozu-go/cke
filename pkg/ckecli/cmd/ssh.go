@@ -96,9 +96,9 @@ func sshPrivateKey(nodeName string, fifo string) error {
 		time.Sleep(100 * time.Millisecond)
 		err = writeToFifo(fifo, mykey.(string))
 		fmt.Println("----------2 err=", err)
-		//time.Sleep(100 * time.Millisecond)
-		//writeToFifo(fifo, mykey.(string))
-		//fmt.Println("----------3 err=", err)
+		time.Sleep(100 * time.Millisecond)
+		writeToFifo(fifo, mykey.(string))
+		fmt.Println("----------3 err=", err)
 	}()
 	return nil
 }
