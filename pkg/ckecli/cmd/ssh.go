@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"os/user"
@@ -44,14 +45,14 @@ func createFifo() (string, error) {
 	return fifo, err
 }
 
-func writeToFifo(fifo string, data string) {
+func writeToFifo(fifo string, data string) error {
 	f, err := os.OpenFile(fifo, os.O_WRONLY, 0600)
 	if err != nil {
 		log.Error("failed to open fifo", map[string]interface{}{
 			log.FnError: err,
 			"fifo":      fifo,
 		})
-		return
+		return err
 	}
 	defer f.Close()
 
@@ -61,6 +62,7 @@ func writeToFifo(fifo string, data string) {
 			log.FnError: err,
 			"fifo":      fifo,
 		})
+		return err
 	}
 }
 
@@ -85,12 +87,16 @@ func sshPrivateKey(nodeName string, fifo string) error {
 	if mykey == nil {
 		return errors.New("no ssh private key for " + nodeName)
 	}
+
 	go func() {
-		writeToFifo(fifo, mykey.(string))
+		err := writeToFifo(fifo, mykey.(string))
+		fmt.Println("----------1 err=", err)
+		time.Sleep(100 * time.Millisecond)
+		err = writeToFifo(fifo, mykey.(string))
+		fmt.Println("----------2 err=", err)
 		time.Sleep(100 * time.Millisecond)
 		writeToFifo(fifo, mykey.(string))
-		time.Sleep(100 * time.Millisecond)
-		writeToFifo(fifo, mykey.(string))
+		fmt.Println("----------3 err=", err)	
 	}()
 	return nil
 }
