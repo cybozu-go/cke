@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
@@ -85,13 +84,13 @@ func sshPrivateKey(nodeName string, fifo string) error {
 	if mykey == nil {
 		return errors.New("no ssh private key for " + nodeName)
 	}
-	go func() {
-		writeToFifo(fifo, mykey.(string))
-		time.Sleep(100 * time.Millisecond)
-		writeToFifo(fifo, mykey.(string))
-		time.Sleep(100 * time.Millisecond)
-		writeToFifo(fifo, mykey.(string))
-	}()
+	//go func() {
+	writeToFifo(fifo, mykey.(string))
+	//time.Sleep(100 * time.Millisecond)
+	//writeToFifo(fifo, mykey.(string))
+	//time.Sleep(100 * time.Millisecond)
+	//writeToFifo(fifo, mykey.(string))
+	//}()
 	return nil
 }
 
