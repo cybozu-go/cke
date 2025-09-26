@@ -64,6 +64,7 @@ func writeToFifo(fifo string, data string) error {
 		})
 		return err
 	}
+	return nil
 }
 
 func sshPrivateKey(nodeName string, fifo string) error {
