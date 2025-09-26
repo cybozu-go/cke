@@ -89,17 +89,17 @@ func sshPrivateKey(nodeName string, fifo string) error {
 		return errors.New("no ssh private key for " + nodeName)
 	}
 
-	//go func() {
-	fmt.Println("----------0")
-	err = writeToFifo(fifo, mykey.(string))
-	fmt.Println("----------1 err=", err)
-	time.Sleep(100 * time.Millisecond)
-	err = writeToFifo(fifo, mykey.(string))
-	fmt.Println("----------2 err=", err)
-	//time.Sleep(100 * time.Millisecond)
-	//writeToFifo(fifo, mykey.(string))
-	//fmt.Println("----------3 err=", err)
-	//}()
+	go func() {
+		fmt.Println("----------0")
+		err = writeToFifo(fifo, mykey.(string))
+		fmt.Println("----------1 err=", err)
+		time.Sleep(100 * time.Millisecond)
+		err = writeToFifo(fifo, mykey.(string))
+		fmt.Println("----------2 err=", err)
+		//time.Sleep(100 * time.Millisecond)
+		//writeToFifo(fifo, mykey.(string))
+		//fmt.Println("----------3 err=", err)
+	}()
 	return nil
 }
 
