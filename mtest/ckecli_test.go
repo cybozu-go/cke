@@ -98,6 +98,10 @@ func testCKECLI() {
 			Eventually(func() error {
 				_, _, err := ckecli("ssh", "cybozu@"+node, "/bin/true")
 				if err != nil {
+					fmt.Println("-----------------------------------------")
+					fmt.Println("node=", node)
+					fmt.Println("err=", err)
+					fmt.Println("-----------------------------------------")
 					return err
 				}
 				return nil
