@@ -63,7 +63,7 @@ metadata:
   namespace: kube-system
   annotations:
     cke.cybozu.com/image: "{{ .coredns }}"
-    cke.cybozu.com/revision: "4"
+    cke.cybozu.com/revision: "5"
 spec:
   replicas: 2
   strategy:
@@ -91,6 +91,20 @@ spec:
         - key: kubernetes.io/e2e-evict-taint-key
           operator: Exists
           # for sonobuoy https://github.com/vmware-tanzu/sonobuoy/pull/878
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                cke.cybozu.com/appname: cluster-dns
+            topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - labelSelector:
+            matchLabels:
+              cke.cybozu.com/appname: cluster-dns
+          maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
       containers:
       - name: coredns
         image: {{ .coredns }}
@@ -146,13 +160,6 @@ spec:
             items:
             - key: Corefile
               path: Corefile
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchLabels:
-                cke.cybozu.com/appname: cluster-dns
-            topologyKey: "kubernetes.io/hostname"
 ---
 
 kind: Service
