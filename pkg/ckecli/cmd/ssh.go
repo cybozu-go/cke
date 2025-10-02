@@ -3,12 +3,14 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -26,27 +28,7 @@ func detectSSHNode(arg string) string {
 	return nodeName
 }
 
-func writeToFifo(fifo string, data string) {
-	f, err := os.OpenFile(fifo, os.O_WRONLY, 0600)
-	if err != nil {
-		log.Error("failed to open fifo", map[string]interface{}{
-			log.FnError: err,
-			"fifo":      fifo,
-		})
-		return
-	}
-	defer f.Close()
-
-	_, err = f.WriteString(data)
-	if err != nil {
-		log.Error("failed to write to fifo", map[string]interface{}{
-			log.FnError: err,
-			"fifo":      fifo,
-		})
-	}
-}
-
-func sshPrivateKey(nodeName string) (string, error) {
+func createFifo() (string, error) {
 	usr, err := user.Current()
 	if err != nil {
 		return "", err
@@ -60,17 +42,42 @@ func sshPrivateKey(nodeName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return fifo, err
+}
 
+func writeToFifo(fifo string, data string) error {
+	f, err := os.OpenFile(fifo, os.O_WRONLY, 0600)
+	if err != nil {
+		log.Error("failed to open fifo", map[string]interface{}{
+			log.FnError: err,
+			"fifo":      fifo,
+		})
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(data)
+	if err != nil {
+		log.Error("failed to write to fifo", map[string]interface{}{
+			log.FnError: err,
+			"fifo":      fifo,
+		})
+		return err
+	}
+	return nil
+}
+
+func sshPrivateKey(nodeName string, fifo string) error {
 	vc, err := inf.Vault()
 	if err != nil {
-		return "", err
+		return err
 	}
 	secret, err := vc.Logical().Read(cke.SSHSecret)
 	if err != nil {
-		return "", err
+		return err
 	}
 	if secret == nil {
-		return "", errors.New("no ssh private keys")
+		return errors.New("no ssh private keys")
 	}
 	privKeys := secret.Data
 
@@ -79,41 +86,57 @@ func sshPrivateKey(nodeName string) (string, error) {
 		mykey = privKeys[""]
 	}
 	if mykey == nil {
-		return "", errors.New("no ssh private key for " + nodeName)
+		return errors.New("no ssh private key for " + nodeName)
 	}
 
 	go func() {
-		// OpenSSH reads the private key file three times, it need to write key three times.
-		writeToFifo(fifo, mykey.(string))
+		fmt.Println("----------0")
+		err = writeToFifo(fifo, mykey.(string))
+		fmt.Println("----------1 err=", err)
+		time.Sleep(100 * time.Millisecond)
+		err = writeToFifo(fifo, mykey.(string))
+		fmt.Println("----------2 err=", err)
 		time.Sleep(100 * time.Millisecond)
 		writeToFifo(fifo, mykey.(string))
-		time.Sleep(100 * time.Millisecond)
-		writeToFifo(fifo, mykey.(string))
+		fmt.Println("----------3 err=", err)
 	}()
-
-	return fifo, nil
+	return nil
 }
 
 func ssh(ctx context.Context, args []string) error {
 	node := detectSSHNode(args[0])
-	fifo, err := sshPrivateKey(node)
+	fifo, err := createFifo()
 	if err != nil {
 		return err
 	}
 	defer os.Remove(fifo)
 
-	sshArgs := []string{
-		"-i", fifo,
-		"-o", "UserKnownHostsFile=/dev/null",
-		"-o", "StrictHostKeyChecking=no",
-		"-o", "ConnectTimeout=60",
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() error {
+		defer wg.Done()
+		sshArgs := []string{
+			"-i", fifo,
+			"-o", "UserKnownHostsFile=/dev/null",
+			"-o", "StrictHostKeyChecking=no",
+			"-o", "ConnectTimeout=60",
+		}
+		sshArgs = append(sshArgs, args...)
+		c := exec.CommandContext(ctx, "ssh", sshArgs...)
+		c.Stdin = os.Stdin
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		return c.Run()
+	}()
+
+	err = sshPrivateKey(node, fifo)
+	if err != nil {
+		return err
 	}
-	sshArgs = append(sshArgs, args...)
-	c := exec.CommandContext(ctx, "ssh", sshArgs...)
-	c.Stdin = os.Stdin
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	return c.Run()
+
+	wg.Wait()
+	return nil
 }
 
 // sshCmd represents the ssh command
