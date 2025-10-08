@@ -33,7 +33,11 @@ func scpSubMain(ctx context.Context, args []string) error {
 		return err
 	}
 
-	node := detectSSHNode(args[0])
+	node, err := detectSCPNode(args)
+	if err != nil {
+		return err
+	}
+
 	pirvateKey, err := getPrivateKey(node)
 	if err != nil {
 		return err
@@ -89,7 +93,7 @@ NODE is IP address or hostname of the node.
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		well.Go(func(ctx context.Context) error {
-			return scp(ctx, args)
+			return scpSubMain(ctx, args)
 		})
 		well.Stop()
 		return well.Wait()
