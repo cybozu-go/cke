@@ -287,9 +287,21 @@ func sshSubMain(ctx context.Context, args []string) (error, string) {
 	defer os.Remove(pipeFilename)
 	defer killSshAgent(ctx)
 
-	return ssh(ctx, args)
+	//return ssh(ctx, args)
+	sshArgs := []string{
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "ConnectTimeout=60",
+	}
+	sshArgs = append(sshArgs, args...)
+	c := exec.CommandContext(ctx, "ssh", sshArgs...)
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	return c.Run(), "OK"
 }
 
+/*
 func ssh(ctx context.Context, args []string) (error, string) {
 	sshArgs := []string{
 		"-o", "UserKnownHostsFile=/dev/null",
@@ -303,6 +315,7 @@ func ssh(ctx context.Context, args []string) (error, string) {
 	c.Stderr = os.Stderr
 	return c.Run(), "OK"
 }
+*/
 
 // sshCmd represents the ssh command
 var sshCmd = &cobra.Command{
