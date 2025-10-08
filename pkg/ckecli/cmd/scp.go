@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
 
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
@@ -28,47 +27,50 @@ func detectSCPNode(args []string) (string, error) {
 	return nodeName, nil
 }
 
-func scp(ctx context.Context, args []string) error {
-	node, err := detectSCPNode(args)
+func scpSubMain(ctx context.Context, args []string) error {
+	pipeFilename, err := createFifo2()
 	if err != nil {
 		return err
 	}
 
-	fifo, err := createFifo()
+	node := detectSSHNode(args[0])
+	pirvateKey, err := getPrivateKey(node)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(fifo)
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go func() error {
-		defer wg.Done()
-		scpArgs := []string{
-			"-i", fifo,
-			"-o", "UserKnownHostsFile=/dev/null",
-			"-o", "StrictHostKeyChecking=no",
-			"-o", "ConnectTimeout=60",
+	go func() {
+		if _, err := sshAgent(ctx, pipeFilename); err != nil {
+			// ログ出力
+			return
 		}
-		if scpParams.recursive {
-			scpArgs = append(scpArgs, "-r")
-		}
-		scpArgs = append(scpArgs, args...)
-		c := exec.CommandContext(ctx, "scp", scpArgs...)
-		c.Stdin = os.Stdin
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		return c.Run()
 	}()
 
-	err = sshPrivateKey(node, fifo)
-	if err != nil {
+	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
 		return err
 	}
+	defer os.Remove(pipeFilename)
+	defer killSshAgent(ctx)
 
-	wg.Wait()
-	return nil
+	return scp(ctx, args)
+}
+
+func scp(ctx context.Context, args []string) error {
+	scpArgs := []string{
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "ConnectTimeout=60",
+	}
+	if scpParams.recursive {
+		scpArgs = append(scpArgs, "-r")
+	}
+
+	scpArgs = append(scpArgs, args...)
+	c := exec.CommandContext(ctx, "scp", scpArgs...)
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	return c.Run()
 }
 
 var scpParams struct {
