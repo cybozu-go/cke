@@ -261,16 +261,16 @@ func writeToFifo(fifo string, data []byte) error {
 	return nil
 }
 
-func sshSubMain(ctx context.Context, args []string) (error, string) {
+func sshSubMain(ctx context.Context, args []string) error {
 	pipeFilename, err := createFifo2()
 	if err != nil {
-		return err, fmt.Sprintln("createFifo2 err=", err)
+		return err
 	}
 
 	node := detectSSHNode(args[0])
 	pirvateKey, err := getPrivateKey(node)
 	if err != nil {
-		return err, fmt.Sprintln("getPrivateKey err=", err, "node=", node)
+		return err
 	}
 
 	go func() {
@@ -282,7 +282,7 @@ func sshSubMain(ctx context.Context, args []string) (error, string) {
 	}()
 
 	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
-		return err, fmt.Sprintln("writeToFifo err=", err)
+		return err
 	}
 	defer os.Remove(pipeFilename)
 	defer killSshAgent(ctx)
@@ -298,7 +298,7 @@ func sshSubMain(ctx context.Context, args []string) (error, string) {
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
-	return c.Run(), "OK"
+	return c.Run()
 }
 
 /*
@@ -331,9 +331,7 @@ If COMMAND is specified, it will be executed on the node.
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		well.Go(func(ctx context.Context) error {
-			err, msg := sshSubMain(ctx, args)
-			fmt.Println("error message =", msg)
-			return err
+			return sshSubMain(ctx, args)
 		})
 		well.Stop()
 		return well.Wait()
