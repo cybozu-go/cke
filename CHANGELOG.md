@@ -6,6 +6,14 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.32.3]
+
+### Changed
+
+- Update vault to 1.20 [#807](https://github.com/cybozu-go/cke/pull/807)
+- Udpate etcd to v3.6.5 [#812](https://github.com/cybozu-go/cke/pull/812)
+- Add topologySpreadConstraints to cluster-dns deployment [#813](https://github.com/cybozu-go/cke/pull/813)
+
 ## [1.32.2]
 
 ### Changed
@@ -56,7 +64,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.32.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.32.3...HEAD
+[1.32.3]: https://github.com/cybozu-go/cke/compare/v1.32.2...v1.32.3
 [1.32.2]: https://github.com/cybozu-go/cke/compare/v1.32.1...v1.32.2
 [1.32.1]: https://github.com/cybozu-go/cke/compare/v1.32.0...v1.32.1
 [1.32.0]: https://github.com/cybozu-go/cke/compare/v1.32.0-rc.1...v1.32.0
