@@ -1,7 +1,7 @@
 package cke
 
 // Version represents current cke version
-const Version = "1.32.2"
+const Version = "1.32.3"
 
 // ConfigVersion represents the current configuration scheme
 // of how CKE constructs its Kubernetes cluster.
