@@ -28,7 +28,7 @@ func detectSCPNode(args []string) (string, error) {
 }
 
 func scpSubMain(ctx context.Context, args []string) error {
-	pipeFilename, err := createFifo2()
+	pipeFilename, err := createFifo()
 	if err != nil {
 		return err
 	}
@@ -72,26 +72,6 @@ func scpSubMain(ctx context.Context, args []string) error {
 	c.Stderr = os.Stderr
 	return c.Run()
 }
-
-/*
-func scp(ctx context.Context, args []string) error {
-	scpArgs := []string{
-		"-o", "UserKnownHostsFile=/dev/null",
-		"-o", "StrictHostKeyChecking=no",
-		"-o", "ConnectTimeout=60",
-	}
-	if scpParams.recursive {
-		scpArgs = append(scpArgs, "-r")
-	}
-
-	scpArgs = append(scpArgs, args...)
-	c := exec.CommandContext(ctx, "scp", scpArgs...)
-	c.Stdin = os.Stdin
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	return c.Run()
-}
-*/
 
 var scpParams struct {
 	recursive bool
