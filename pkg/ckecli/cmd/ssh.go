@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"os/user"
@@ -61,6 +62,8 @@ func sshPrivateKey(nodeName string) (string, error) {
 		return "", err
 	}
 
+	// ---------------------------------------------
+	fmt.Println("cke.SSHSecret=", cke.SSHSecret)
 	vc, err := inf.Vault()
 	if err != nil {
 		return "", err
@@ -81,6 +84,7 @@ func sshPrivateKey(nodeName string) (string, error) {
 	if mykey == nil {
 		return "", errors.New("no ssh private key for " + nodeName)
 	}
+	fmt.Println("mykey.(string)=", mykey.(string))
 
 	go func() {
 		// OpenSSH reads the private key file three times, it need to write key three times.
