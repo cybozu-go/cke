@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -28,19 +27,36 @@ func detectSCPNode(args []string) (string, error) {
 	return nodeName, nil
 }
 
-func scp(ctx context.Context, args []string) error {
+func scpSubMain(ctx context.Context, args []string) error {
+	pipeFilename, err := createFifo2()
+	if err != nil {
+		return err
+	}
+
 	node, err := detectSCPNode(args)
 	if err != nil {
 		return err
 	}
-	fifo, err := sshPrivateKey(node)
+
+	pirvateKey, err := getPrivateKey(node)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(fifo)
+
+	go func() {
+		if _, err := sshAgent(ctx, pipeFilename); err != nil {
+			// ログ出力
+			return
+		}
+	}()
+
+	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
+		return err
+	}
+	defer os.Remove(pipeFilename)
+	defer killSshAgent(ctx)
 
 	scpArgs := []string{
-		"-i", fifo,
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "StrictHostKeyChecking=no",
 		"-o", "ConnectTimeout=60",
@@ -50,14 +66,32 @@ func scp(ctx context.Context, args []string) error {
 	}
 
 	scpArgs = append(scpArgs, args...)
-
-	fmt.Println(scpArgs)
 	c := exec.CommandContext(ctx, "scp", scpArgs...)
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()
 }
+
+/*
+func scp(ctx context.Context, args []string) error {
+	scpArgs := []string{
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "ConnectTimeout=60",
+	}
+	if scpParams.recursive {
+		scpArgs = append(scpArgs, "-r")
+	}
+
+	scpArgs = append(scpArgs, args...)
+	c := exec.CommandContext(ctx, "scp", scpArgs...)
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	return c.Run()
+}
+*/
 
 var scpParams struct {
 	recursive bool
@@ -75,7 +109,7 @@ NODE is IP address or hostname of the node.
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		well.Go(func(ctx context.Context) error {
-			return scp(ctx, args)
+			return scpSubMain(ctx, args)
 		})
 		well.Stop()
 		return well.Wait()
