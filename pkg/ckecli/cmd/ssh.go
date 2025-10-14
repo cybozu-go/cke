@@ -75,16 +75,6 @@ func getPrivateKey(nodeName string) ([]byte, error) {
 	if mykey == nil {
 		return nil, errors.New("no ssh private key for " + nodeName)
 	}
-	/*
-		go func() {
-			// OpenSSH reads the private key file three times, it need to write key three times.
-			writeToFifo(fifo, mykey.(string))
-			time.Sleep(100 * time.Millisecond)
-			writeToFifo(fifo, mykey.(string))
-			time.Sleep(100 * time.Millisecond)
-			writeToFifo(fifo, mykey.(string))
-		}()
-	*/
 	return mykey.([]byte), nil
 }
 
@@ -202,22 +192,6 @@ func sshSubMain(ctx context.Context, args []string) error {
 	c.Stderr = os.Stderr
 	return c.Run()
 }
-
-/*
-func ssh(ctx context.Context, args []string) (error, string) {
-	sshArgs := []string{
-		"-o", "UserKnownHostsFile=/dev/null",
-		"-o", "StrictHostKeyChecking=no",
-		"-o", "ConnectTimeout=60",
-	}
-	sshArgs = append(sshArgs, args...)
-	c := exec.CommandContext(ctx, "ssh", sshArgs...)
-	c.Stdin = os.Stdin
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	return c.Run(), "OK"
-}
-*/
 
 // sshCmd represents the ssh command
 var sshCmd = &cobra.Command{
