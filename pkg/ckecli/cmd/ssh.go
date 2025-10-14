@@ -26,7 +26,7 @@ func detectSSHNode(arg string) string {
 	return nodeName
 }
 
-func createFifo2() (string, error) {
+func createFifo() (string, error) {
 	usr, err := user.Current()
 	if err != nil {
 		return "", err
@@ -54,17 +54,17 @@ func createFifo2() (string, error) {
 	return fifoFilePath, err
 }
 
-func getPrivateKey(nodeName string) ([]byte, error) {
+func getPrivateKey(nodeName string) (string, error) {
 	vc, err := inf.Vault()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	secret, err := vc.Logical().Read(cke.SSHSecret)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if secret == nil {
-		return nil, errors.New("no ssh private keys")
+		return "", errors.New("no ssh private keys")
 	}
 	privKeys := secret.Data
 
@@ -73,19 +73,9 @@ func getPrivateKey(nodeName string) ([]byte, error) {
 		mykey = privKeys[""]
 	}
 	if mykey == nil {
-		return nil, errors.New("no ssh private key for " + nodeName)
+		return "", errors.New("no ssh private key for " + nodeName)
 	}
-	/*
-		go func() {
-			// OpenSSH reads the private key file three times, it need to write key three times.
-			writeToFifo(fifo, mykey.(string))
-			time.Sleep(100 * time.Millisecond)
-			writeToFifo(fifo, mykey.(string))
-			time.Sleep(100 * time.Millisecond)
-			writeToFifo(fifo, mykey.(string))
-		}()
-	*/
-	return mykey.([]byte), nil
+	return mykey.(string), nil
 }
 
 func sshAgent(ctx context.Context, privateKeyFile string) (map[string]string, error) {
@@ -143,7 +133,7 @@ func killSshAgent(ctx context.Context) error {
 	return nil
 }
 
-func writeToFifo(fifo string, data []byte) error {
+func writeToFifo(fifo string, data string) error {
 	f, err := os.OpenFile(fifo, os.O_WRONLY|os.O_CREATE|os.O_APPEND, os.ModeNamedPipe)
 	if err != nil {
 		log.Error("failed to open fifo", map[string]interface{}{
@@ -153,7 +143,7 @@ func writeToFifo(fifo string, data []byte) error {
 		return err
 	}
 	defer f.Close()
-	if _, err = f.Write(data); err != nil {
+	if _, err = f.Write([]byte(data)); err != nil {
 		log.Error("failed to write to fifo", map[string]interface{}{
 			log.FnError: err,
 			"fifo":      fifo,
@@ -164,7 +154,7 @@ func writeToFifo(fifo string, data []byte) error {
 }
 
 func sshSubMain(ctx context.Context, args []string) error {
-	pipeFilename, err := createFifo2()
+	pipeFilename, err := createFifo()
 	if err != nil {
 		return err
 	}
@@ -202,22 +192,6 @@ func sshSubMain(ctx context.Context, args []string) error {
 	c.Stderr = os.Stderr
 	return c.Run()
 }
-
-/*
-func ssh(ctx context.Context, args []string) (error, string) {
-	sshArgs := []string{
-		"-o", "UserKnownHostsFile=/dev/null",
-		"-o", "StrictHostKeyChecking=no",
-		"-o", "ConnectTimeout=60",
-	}
-	sshArgs = append(sshArgs, args...)
-	c := exec.CommandContext(ctx, "ssh", sshArgs...)
-	c.Stdin = os.Stdin
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	return c.Run(), "OK"
-}
-*/
 
 // sshCmd represents the ssh command
 var sshCmd = &cobra.Command{
