@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
@@ -30,27 +31,42 @@ func detectSCPNode(args []string) (string, error) {
 func scpSubMain(ctx context.Context, args []string) error {
 	pipeFilename, err := createFifo()
 	if err != nil {
+		log.Error("failed to create named pipe", map[string]interface{}{
+			log.FnError: err,
+		})
 		return err
 	}
 
 	node, err := detectSCPNode(args)
 	if err != nil {
+		log.Error("failed to find the node name for scp", map[string]interface{}{
+			log.FnError: err,
+		})
 		return err
 	}
 
 	pirvateKey, err := getPrivateKey(node)
 	if err != nil {
+		log.Error("failed to get the private key for scp", map[string]interface{}{
+			log.FnError: err,
+		})
 		return err
 	}
 
 	go func() {
 		if _, err := sshAgent(ctx, pipeFilename); err != nil {
-			// ログ出力
-			return
+			log.Error("failed to start ssh-agent for scp", map[string]interface{}{
+				log.FnError: err,
+				"node":      node,
+			})
 		}
 	}()
 
 	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
+		log.Error("failed to write the named pipe", map[string]interface{}{
+			log.FnError:  err,
+			"named pipe": pipeFilename,
+		})
 		return err
 	}
 	defer os.Remove(pipeFilename)
