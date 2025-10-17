@@ -340,7 +340,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 
 	nf := NewNodeFilter(cluster, status)
 	apiServers := map[string]bool{}
-	for _, node := range nf.ControlPlane() {
+	for _, node := range nf.ControlPlanes() {
 		apiServers[node.Address] = true
 	}
 	newlyDrained := op.ChooseDrainedNodes(cluster, apiServers, rqEntries)

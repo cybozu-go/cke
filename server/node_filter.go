@@ -59,14 +59,19 @@ func (nf *NodeFilter) InCluster(address string) bool {
 	return ok
 }
 
-// ControlPlane returns control plane nodes.
-func (nf *NodeFilter) ControlPlane() []*cke.Node {
+// AllNode returns nodes.
+func (nf *NodeFilter) AllNodes() []*cke.Node {
+	return nf.cluster.Nodes
+}
+
+// ControlPlanes returns control plane nodes.
+func (nf *NodeFilter) ControlPlanes() []*cke.Node {
 	return nf.cp
 }
 
-// RiversStoppedNodes returns nodes that are not running rivers.
-func (nf *NodeFilter) RiversStoppedNodes() (nodes []*cke.Node) {
-	for _, n := range nf.cluster.Nodes {
+// RiversStopped filters nodes that are not running rivers.
+func (nf *NodeFilter) RiversStopped(targets []*cke.Node) (nodes []*cke.Node) {
+	for _, n := range targets {
 		if !nf.nodeStatus(n).Rivers.Running {
 			nodes = append(nodes, n)
 		}
@@ -74,12 +79,12 @@ func (nf *NodeFilter) RiversStoppedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-// RiversOutdatedNodes returns nodes that are running rivers with outdated image or params.
-func (nf *NodeFilter) RiversOutdatedNodes() (nodes []*cke.Node) {
-	currentBuiltIn := op.RiversParams(nf.cp, op.RiversUpstreamPort, op.RiversListenPort)
+// RiversOutdated filters nodes that are running rivers with outdated image or params.
+func (nf *NodeFilter) RiversOutdated(targets []*cke.Node) (nodes []*cke.Node) {
+	currentBuiltIn := op.RiversParams(nf.ControlPlanes(), op.RiversUpstreamPort, op.RiversListenPort)
 	currentExtra := nf.cluster.Options.Rivers
 
-	for _, n := range nf.cluster.Nodes {
+	for _, n := range targets {
 		st := nf.nodeStatus(n).Rivers
 		switch {
 		case !st.Running:
@@ -95,22 +100,22 @@ func (nf *NodeFilter) RiversOutdatedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-// EtcdRiversStoppedNodes returns nodes that are not running rivers.
-func (nf *NodeFilter) EtcdRiversStoppedNodes() (cps []*cke.Node) {
-	for _, n := range nf.ControlPlane() {
+// EtcdRiversStopped filters nodes that are not running rivers.
+func (nf *NodeFilter) EtcdRiversStopped(targets []*cke.Node) (nodes []*cke.Node) {
+	for _, n := range targets {
 		if !nf.nodeStatus(n).EtcdRivers.Running {
-			cps = append(cps, n)
+			nodes = append(nodes, n)
 		}
 	}
-	return cps
+	return nodes
 }
 
-// EtcdRiversOutdatedNodes returns nodes that are running rivers with outdated image or params.
-func (nf *NodeFilter) EtcdRiversOutdatedNodes() (cps []*cke.Node) {
-	currentBuiltIn := op.RiversParams(nf.cp, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)
+// EtcdRiversOutdated filters nodes that are running rivers with outdated image or params.
+func (nf *NodeFilter) EtcdRiversOutdated(targets []*cke.Node) (nodes []*cke.Node) {
+	currentBuiltIn := op.RiversParams(nf.ControlPlanes(), op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)
 	currentExtra := nf.cluster.Options.EtcdRivers
 
-	for _, n := range nf.ControlPlane() {
+	for _, n := range targets {
 		st := nf.nodeStatus(n).EtcdRivers
 		switch {
 		case !st.Running:
@@ -120,15 +125,15 @@ func (nf *NodeFilter) EtcdRiversOutdatedNodes() (cps []*cke.Node) {
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
 		case !currentExtra.Equal(st.ExtraParams):
-			cps = append(cps, n)
+			nodes = append(nodes, n)
 		}
 	}
-	return cps
+	return nodes
 }
 
 // EtcdBootstrapped returns true if etcd cluster has been bootstrapped.
 func (nf *NodeFilter) EtcdBootstrapped() bool {
-	for _, n := range nf.cp {
+	for _, n := range nf.ControlPlanes() {
 		if nf.nodeStatus(n).Etcd.HasData {
 			return true
 		}
@@ -150,9 +155,9 @@ func (nf *NodeFilter) EtcdIsGood() bool {
 	return true
 }
 
-// EtcdStoppedMembers returns control plane nodes that are not running etcd.
-func (nf *NodeFilter) EtcdStoppedMembers() (nodes []*cke.Node) {
-	for _, n := range nf.cp {
+// EtcdStopped filters nodes that are not running etcd.
+func (nf *NodeFilter) EtcdStopped(targets []*cke.Node) (nodes []*cke.Node) {
+	for _, n := range targets {
 		if _, ok := nf.status.Etcd.Members[n.Address]; !ok && nf.status.Etcd.IsHealthy {
 			continue
 		}
@@ -250,7 +255,7 @@ func (nf *NodeFilter) EtcdUnmarkedMembers() (nodes []*cke.Node) {
 // EtcdNewMembers returns control plane nodes to be added to the etcd cluster.
 func (nf *NodeFilter) EtcdNewMembers() (nodes []*cke.Node) {
 	members := nf.status.Etcd.Members
-	for _, n := range nf.cp {
+	for _, n := range nf.ControlPlanes() {
 		if _, ok := members[n.Address]; ok {
 			continue
 		}
@@ -291,7 +296,7 @@ func etcdEqualParams(running, current cke.ServiceParams) bool {
 func (nf *NodeFilter) EtcdOutdatedMembers() (nodes []*cke.Node) {
 	currentExtra := nf.cluster.Options.Etcd.ServiceParams
 
-	for _, n := range nf.cp {
+	for _, n := range nf.ControlPlanes() {
 		st := nf.nodeStatus(n).Etcd
 		if !st.Running {
 			continue
@@ -309,9 +314,9 @@ func (nf *NodeFilter) EtcdOutdatedMembers() (nodes []*cke.Node) {
 	return nodes
 }
 
-// APIServerStoppedNodes returns control plane nodes that are not running API server.
-func (nf *NodeFilter) APIServerStoppedNodes() (nodes []*cke.Node) {
-	for _, n := range nf.cp {
+// APIServerStopped filters nodes that are not running API server.
+func (nf *NodeFilter) APIServerStopped(targets []*cke.Node) (nodes []*cke.Node) {
+	for _, n := range targets {
 		if !nf.nodeStatus(n).APIServer.Running {
 			nodes = append(nodes, n)
 		}
@@ -319,12 +324,12 @@ func (nf *NodeFilter) APIServerStoppedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-// APIServerOutdatedNodes returns nodes that are running API server with outdated image or params.
-func (nf *NodeFilter) APIServerOutdatedNodes() (nodes []*cke.Node) {
+// APIServerOutdated filters nodes that are running API server with outdated image or params.
+func (nf *NodeFilter) APIServerOutdated(targets []*cke.Node) (nodes []*cke.Node) {
 	currentExtra := nf.cluster.Options.APIServer
 	kubeletConfig := k8s.GenerateKubeletConfiguration(nf.cluster.Options.Kubelet, "0.0.0.0", nil)
 
-	for _, n := range nf.cp {
+	for _, n := range targets {
 		st := nf.nodeStatus(n).APIServer
 		currentBuiltIn := k8s.APIServerParams(n.Address, nf.cluster.ServiceSubnet,
 			currentExtra.AuditLogEnabled, currentExtra.AuditLogPolicy, currentExtra.AuditLogPath, kubeletConfig.ClusterDomain)
@@ -342,9 +347,9 @@ func (nf *NodeFilter) APIServerOutdatedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-// ControllerManagerStoppedNodes returns control plane nodes that are not running controller manager.
-func (nf *NodeFilter) ControllerManagerStoppedNodes() (nodes []*cke.Node) {
-	for _, n := range nf.cp {
+// ControllerManagerStopped filters nodes that are not running controller manager.
+func (nf *NodeFilter) ControllerManagerStopped(targets []*cke.Node) (nodes []*cke.Node) {
+	for _, n := range targets {
 		if !nf.nodeStatus(n).ControllerManager.Running {
 			nodes = append(nodes, n)
 		}
@@ -352,12 +357,12 @@ func (nf *NodeFilter) ControllerManagerStoppedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-// ControllerManagerOutdatedNodes returns nodes that are running controller manager with outdated image or params.
-func (nf *NodeFilter) ControllerManagerOutdatedNodes() (nodes []*cke.Node) {
+// ControllerManagerOutdated filters nodes that are running controller manager with outdated image or params.
+func (nf *NodeFilter) ControllerManagerOutdated(targets []*cke.Node) (nodes []*cke.Node) {
 	currentBuiltIn := k8s.ControllerManagerParams(nf.cluster.Name, nf.cluster.ServiceSubnet)
 	currentExtra := nf.cluster.Options.ControllerManager
 
-	for _, n := range nf.cp {
+	for _, n := range targets {
 		st := nf.nodeStatus(n).ControllerManager
 		switch {
 		case !st.Running:
@@ -373,9 +378,9 @@ func (nf *NodeFilter) ControllerManagerOutdatedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-// SchedulerStoppedNodes returns control plane nodes that are not running kube-scheduler.
-func (nf *NodeFilter) SchedulerStoppedNodes() (nodes []*cke.Node) {
-	for _, n := range nf.cp {
+// SchedulerStopped filters nodes that are not running kube-scheduler.
+func (nf *NodeFilter) SchedulerStopped(targets []*cke.Node) (nodes []*cke.Node) {
+	for _, n := range targets {
 		if !nf.nodeStatus(n).Scheduler.Running {
 			nodes = append(nodes, n)
 		}
@@ -383,12 +388,13 @@ func (nf *NodeFilter) SchedulerStoppedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) (nodes []*cke.Node) {
+// SchedulerStopped filters nodes that are running kube-scheduler with outdated image or params.
+func (nf *NodeFilter) SchedulerOutdated(targets []*cke.Node, params cke.SchedulerParams) (nodes []*cke.Node) {
 	currentBuiltIn := k8s.SchedulerParams()
 	currentExtra := nf.cluster.Options.Scheduler
 	currentConfig := k8s.GenerateSchedulerConfiguration(params)
 
-	for _, n := range nf.cp {
+	for _, n := range targets {
 		st := nf.nodeStatus(n).Scheduler
 		runningConfig := st.Config
 
@@ -421,9 +427,9 @@ func (nf *NodeFilter) SchedulerOutdatedNodes(params cke.SchedulerParams) (nodes 
 	return nodes
 }
 
-// KubeletStoppedNodes returns nodes that are not running kubelet.
-func (nf *NodeFilter) KubeletStoppedNodes() (nodes []*cke.Node) {
-	for _, n := range nf.cluster.Nodes {
+// KubeletStopped filters nodes that are not running kubelet.
+func (nf *NodeFilter) KubeletStopped(targets []*cke.Node) (nodes []*cke.Node) {
+	for _, n := range targets {
 		if !nf.nodeStatus(n).Kubelet.Running {
 			nodes = append(nodes, n)
 		}
@@ -431,14 +437,14 @@ func (nf *NodeFilter) KubeletStoppedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-// RegisteredNodes returns nodes that are registered on Kubernetes out of targets.
-func (nf *NodeFilter) RegisteredNodes(target []*cke.Node) (nodes []*cke.Node) {
+// RegisteredNodes filters nodes that are registered on Kubernetes out of targets.
+func (nf *NodeFilter) RegisteredNodes(targets []*cke.Node) (nodes []*cke.Node) {
 	registered := make(map[string]bool)
 	for _, kn := range nf.status.Kubernetes.Nodes {
 		registered[kn.Name] = true
 	}
 
-	for _, n := range target {
+	for _, n := range targets {
 		if registered[n.Nodename()] {
 			nodes = append(nodes, n)
 		}
@@ -446,12 +452,12 @@ func (nf *NodeFilter) RegisteredNodes(target []*cke.Node) (nodes []*cke.Node) {
 	return nodes
 }
 
-// KubeletOutdatedNodes returns nodes that are running kubelet with outdated image or params.
-func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
+// KubeletOutdated filters nodes that are running kubelet with outdated image or params.
+func (nf *NodeFilter) KubeletOutdated(targets []*cke.Node) (nodes []*cke.Node) {
 	currentOpts := nf.cluster.Options.Kubelet
 	currentExtra := nf.cluster.Options.Kubelet.ServiceParams
 
-	for _, n := range nf.cluster.Nodes {
+	for _, n := range targets {
 		st := nf.nodeStatus(n).Kubelet
 		currentConfig := k8s.GenerateKubeletConfiguration(currentOpts, n.Address, st.Config)
 		currentBuiltIn := k8s.KubeletServiceParams(n, currentOpts)
@@ -488,9 +494,9 @@ func (nf *NodeFilter) KubeletOutdatedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-// KubeletUnrecognizedNodes returns nodes of which kubelet is still running but not recognized by k8s.
-func (nf *NodeFilter) KubeletUnrecognizedNodes() (nodes []*cke.Node) {
-	for _, n := range nf.cluster.Nodes {
+// KubeletUnrecognized filters nodes of which kubelet is still running but not recognized by k8s.
+func (nf *NodeFilter) KubeletUnrecognized(targets []*cke.Node) (nodes []*cke.Node) {
+	for _, n := range targets {
 		if nf.nodeStatus(n).Kubelet.Running && !nf.existsNodeResource(n.Nodename()) {
 			nodes = append(nodes, n)
 		}
@@ -543,13 +549,13 @@ func kubeletRuntimeChanged(running, current cke.ServiceParams) bool {
 	return runningRuntimeEndpoint != currentRuntimeEndpoint
 }
 
-// ProxyStoppedNodes returns nodes that are not running kube-proxy.
-func (nf *NodeFilter) ProxyStoppedNodes() (nodes []*cke.Node) {
+// ProxyStopped filters nodes that are not running kube-proxy.
+func (nf *NodeFilter) ProxyStopped(targets []*cke.Node) (nodes []*cke.Node) {
 	if nf.cluster.Options.Proxy.Disable {
 		return nil
 	}
 
-	for _, n := range nf.cluster.Nodes {
+	for _, n := range targets {
 		if !nf.nodeStatus(n).Proxy.Running {
 			nodes = append(nodes, n)
 		}
@@ -557,13 +563,13 @@ func (nf *NodeFilter) ProxyStoppedNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-// ProxyRunningUnexpectedlyNodes returns nodes that are running kube-proxy unexpectedly.
-func (nf *NodeFilter) ProxyRunningUnexpectedlyNodes() (nodes []*cke.Node) {
+// ProxyRunningUnexpectedly filters nodes that are running kube-proxy unexpectedly.
+func (nf *NodeFilter) ProxyRunningUnexpectedly(targets []*cke.Node) (nodes []*cke.Node) {
 	if !nf.cluster.Options.Proxy.Disable {
 		return nil
 	}
 
-	for _, n := range nf.cluster.Nodes {
+	for _, n := range targets {
 		if nf.nodeStatus(n).Proxy.Running {
 			nodes = append(nodes, n)
 		}
@@ -571,14 +577,14 @@ func (nf *NodeFilter) ProxyRunningUnexpectedlyNodes() (nodes []*cke.Node) {
 	return nodes
 }
 
-// ProxyOutdatedNodes returns nodes that are running kube-proxy with outdated image or params.
-func (nf *NodeFilter) ProxyOutdatedNodes(params cke.ProxyParams) (nodes []*cke.Node) {
+// ProxyOutdated filters nodes that are running kube-proxy with outdated image or params.
+func (nf *NodeFilter) ProxyOutdated(targets []*cke.Node, params cke.ProxyParams) (nodes []*cke.Node) {
 	if nf.cluster.Options.Proxy.Disable {
 		return nil
 	}
 	currentExtra := nf.cluster.Options.Proxy
 
-	for _, n := range nf.cluster.Nodes {
+	for _, n := range targets {
 		st := nf.nodeStatus(n).Proxy
 		currentBuiltIn := k8s.ProxyParams()
 		currentConfig := k8s.GenerateProxyConfiguration(params, n)
@@ -616,7 +622,7 @@ func (nf *NodeFilter) ProxyOutdatedNodes(params cke.ProxyParams) (nodes []*cke.N
 // If there is no healthy API server, it returns the first control plane node.
 func (nf *NodeFilter) HealthyAPIServer() *cke.Node {
 	var node *cke.Node
-	for _, n := range nf.ControlPlane() {
+	for _, n := range nf.ControlPlanes() {
 		node = n
 		if nf.nodeStatus(n).APIServer.IsHealthy {
 			break
@@ -627,7 +633,7 @@ func (nf *NodeFilter) HealthyAPIServer() *cke.Node {
 
 // HealthyAPIServerNodes returns nodes which have healthy API servers
 func (nf *NodeFilter) HealthyAPIServerNodes() (nodes []*cke.Node) {
-	for _, n := range nf.ControlPlane() {
+	for _, n := range nf.ControlPlanes() {
 		if nf.nodeStatus(n).APIServer.IsHealthy {
 			nodes = append(nodes, n)
 		}
@@ -637,7 +643,7 @@ func (nf *NodeFilter) HealthyAPIServerNodes() (nodes []*cke.Node) {
 
 // UnhealthyAPIServerNodes returns nodes which have unhealthy API servers
 func (nf *NodeFilter) UnhealthyAPIServerNodes() (nodes []*cke.Node) {
-	for _, n := range nf.ControlPlane() {
+	for _, n := range nf.ControlPlanes() {
 		if !nf.nodeStatus(n).APIServer.IsHealthy {
 			nodes = append(nodes, n)
 		}
@@ -674,7 +680,7 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 		curNodes[cn.Name] = cn.DeepCopy()
 	}
 
-	for _, n := range nf.cluster.Nodes {
+	for _, n := range nf.AllNodes() {
 		current, ok := curNodes[n.Nodename()]
 		if !ok {
 			log.Warn("missing Kubernetes Node resource", map[string]interface{}{
@@ -846,38 +852,22 @@ func (nf *NodeFilter) CordonedNodes() (nodes []*corev1.Node) {
 	return nodes
 }
 
-// SSHNotConnectedNodes returns nodes that are not connected via SSH out of targets.
-func (nf *NodeFilter) SSHNotConnectedNodes(targets []*cke.Node, includeControlPlane, includeWorker bool) (nodes []*cke.Node) {
+// SSHConnected filters nodes that can be connected to via SSH from targets.
+func (nf *NodeFilter) SSHConnected(targets []*cke.Node) (nodes []*cke.Node) {
 	for _, n := range targets {
-		if n.ControlPlane && !includeControlPlane {
-			continue
-		}
-		if !n.ControlPlane && !includeWorker {
-			continue
-		}
 		if nf.status.NodeStatuses[n.Address].SSHConnected {
-			continue
+			nodes = append(nodes, n)
 		}
-
-		nodes = append(nodes, n)
 	}
 	return nodes
 }
 
-// SSHConnectedNodes returns nodes that are connected via SSH out of targets
-func (nf *NodeFilter) SSHConnectedNodes(targets []*cke.Node, includeControlPlane, includeWorker bool) (nodes []*cke.Node) {
+// SSHNotCnnected filters nodes that cannot be connected to via SSH from targets.
+func (nf *NodeFilter) SSHNotConnected(targets []*cke.Node) (nodes []*cke.Node) {
 	for _, n := range targets {
-		if n.ControlPlane && !includeControlPlane {
-			continue
-		}
-		if !n.ControlPlane && !includeWorker {
-			continue
-		}
 		if !nf.status.NodeStatuses[n.Address].SSHConnected {
-			continue
+			nodes = append(nodes, n)
 		}
-
-		nodes = append(nodes, n)
 	}
 	return nodes
 }
