@@ -388,7 +388,7 @@ func (nf *NodeFilter) SchedulerStopped(targets []*cke.Node) (nodes []*cke.Node) 
 	return nodes
 }
 
-// SchedulerStopped filters nodes that are running kube-scheduler with outdated image or params.
+// SchedulerOutdated filters nodes that are running kube-scheduler with outdated image or params.
 func (nf *NodeFilter) SchedulerOutdated(targets []*cke.Node, params cke.SchedulerParams) (nodes []*cke.Node) {
 	currentBuiltIn := k8s.SchedulerParams()
 	currentExtra := nf.cluster.Options.Scheduler
