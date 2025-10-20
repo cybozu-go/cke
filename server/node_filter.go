@@ -64,8 +64,8 @@ func (nf *NodeFilter) AllNodes() []*cke.Node {
 	return nf.cluster.Nodes
 }
 
-// ControlPlanes returns control plane nodes.
-func (nf *NodeFilter) ControlPlanes() []*cke.Node {
+// ControlPlaneNodes returns control plane nodes.
+func (nf *NodeFilter) ControlPlaneNodes() []*cke.Node {
 	return nf.cp
 }
 
@@ -81,7 +81,7 @@ func (nf *NodeFilter) RiversStopped(targets []*cke.Node) (nodes []*cke.Node) {
 
 // RiversOutdated filters nodes that are running rivers with outdated image or params.
 func (nf *NodeFilter) RiversOutdated(targets []*cke.Node) (nodes []*cke.Node) {
-	currentBuiltIn := op.RiversParams(nf.ControlPlanes(), op.RiversUpstreamPort, op.RiversListenPort)
+	currentBuiltIn := op.RiversParams(nf.ControlPlaneNodes(), op.RiversUpstreamPort, op.RiversListenPort)
 	currentExtra := nf.cluster.Options.Rivers
 
 	for _, n := range targets {
@@ -112,7 +112,7 @@ func (nf *NodeFilter) EtcdRiversStopped(targets []*cke.Node) (nodes []*cke.Node)
 
 // EtcdRiversOutdated filters nodes that are running rivers with outdated image or params.
 func (nf *NodeFilter) EtcdRiversOutdated(targets []*cke.Node) (nodes []*cke.Node) {
-	currentBuiltIn := op.RiversParams(nf.ControlPlanes(), op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)
+	currentBuiltIn := op.RiversParams(nf.ControlPlaneNodes(), op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)
 	currentExtra := nf.cluster.Options.EtcdRivers
 
 	for _, n := range targets {
@@ -133,7 +133,7 @@ func (nf *NodeFilter) EtcdRiversOutdated(targets []*cke.Node) (nodes []*cke.Node
 
 // EtcdBootstrapped returns true if etcd cluster has been bootstrapped.
 func (nf *NodeFilter) EtcdBootstrapped() bool {
-	for _, n := range nf.ControlPlanes() {
+	for _, n := range nf.ControlPlaneNodes() {
 		if nf.nodeStatus(n).Etcd.HasData {
 			return true
 		}
@@ -255,7 +255,7 @@ func (nf *NodeFilter) EtcdUnmarkedMembers() (nodes []*cke.Node) {
 // EtcdNewMembers returns control plane nodes to be added to the etcd cluster.
 func (nf *NodeFilter) EtcdNewMembers() (nodes []*cke.Node) {
 	members := nf.status.Etcd.Members
-	for _, n := range nf.ControlPlanes() {
+	for _, n := range nf.ControlPlaneNodes() {
 		if _, ok := members[n.Address]; ok {
 			continue
 		}
@@ -296,7 +296,7 @@ func etcdEqualParams(running, current cke.ServiceParams) bool {
 func (nf *NodeFilter) EtcdOutdatedMembers() (nodes []*cke.Node) {
 	currentExtra := nf.cluster.Options.Etcd.ServiceParams
 
-	for _, n := range nf.ControlPlanes() {
+	for _, n := range nf.ControlPlaneNodes() {
 		st := nf.nodeStatus(n).Etcd
 		if !st.Running {
 			continue
@@ -622,7 +622,7 @@ func (nf *NodeFilter) ProxyOutdated(targets []*cke.Node, params cke.ProxyParams)
 // If there is no healthy API server, it returns the first control plane node.
 func (nf *NodeFilter) HealthyAPIServer() *cke.Node {
 	var node *cke.Node
-	for _, n := range nf.ControlPlanes() {
+	for _, n := range nf.ControlPlaneNodes() {
 		node = n
 		if nf.nodeStatus(n).APIServer.IsHealthy {
 			break
@@ -633,7 +633,7 @@ func (nf *NodeFilter) HealthyAPIServer() *cke.Node {
 
 // HealthyAPIServerNodes returns nodes which have healthy API servers
 func (nf *NodeFilter) HealthyAPIServerNodes() (nodes []*cke.Node) {
-	for _, n := range nf.ControlPlanes() {
+	for _, n := range nf.ControlPlaneNodes() {
 		if nf.nodeStatus(n).APIServer.IsHealthy {
 			nodes = append(nodes, n)
 		}
@@ -643,7 +643,7 @@ func (nf *NodeFilter) HealthyAPIServerNodes() (nodes []*cke.Node) {
 
 // UnhealthyAPIServerNodes returns nodes which have unhealthy API servers
 func (nf *NodeFilter) UnhealthyAPIServerNodes() (nodes []*cke.Node) {
-	for _, n := range nf.ControlPlanes() {
+	for _, n := range nf.ControlPlaneNodes() {
 		if !nf.nodeStatus(n).APIServer.IsHealthy {
 			nodes = append(nodes, n)
 		}
