@@ -1,6 +1,8 @@
 package server
 
 import (
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/cybozu-go/cke"
@@ -117,32 +119,30 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 
 func riversOps(c *cke.Cluster, nf *NodeFilter, maxConcurrentUpdates int) (ops []cke.Operator) {
 	if nodes := nf.SSHConnected(nf.RiversStopped(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
+		nodesMap := nf.SplitZone(nodes)
+		for _, zone := range slices.Sorted(maps.Keys(nodesMap)) {
+			for _, n := range nf.SplitN(nodesMap[zone], maxConcurrentUpdates) {
+				ops = append(ops, op.RiversBootOp(n, nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
+			}
 		}
-		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
 	}
 	if nodes := nf.SSHConnected(nf.RiversOutdated(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
+		nodesMap := nf.SplitZone(nodes)
+		for _, zone := range slices.Sorted(maps.Keys(nodesMap)) {
+			for _, n := range nf.SplitN(nodesMap[zone], maxConcurrentUpdates) {
+				ops = append(ops, op.RiversRestartOp(n, nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
+			}
 		}
-		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
 	}
 	if nodes := nf.SSHConnected(nf.EtcdRiversStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
+		for _, n := range nf.SplitN(nodes, maxConcurrentUpdates) {
+			ops = append(ops, op.RiversBootOp(n, nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 		}
-		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 	}
 	if nodes := nf.SSHConnected(nf.EtcdRiversOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
+		for _, n := range nf.SplitN(nodes, 1) { // To prevent API server outages, update etcd-rivers one by one at time.
+			ops = append(ops, op.RiversRestartOp(n, nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 		}
-		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 	}
 	return ops
 }
