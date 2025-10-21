@@ -686,12 +686,12 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name:        "BootRivers",
 			Input:       newData(),
-			ExpectedOps: []opData{{"rivers-bootstrap", 5}, {"etcd-rivers-bootstrap", 3}},
+			ExpectedOps: []opData{{"etcd-rivers-bootstrap", 3}, {"rivers-bootstrap", 5}, {"rivers-bootstrap", 1}},
 		},
 		{
 			Name:        "BootRivers2",
 			Input:       newData().withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps: []opData{{"rivers-bootstrap", 4}, {"etcd-rivers-bootstrap", 2}},
+			ExpectedOps: []opData{{"etcd-rivers-bootstrap", 2}, {"rivers-bootstrap", 4}},
 		},
 		{
 			Name: "RestartRivers",
@@ -827,7 +827,9 @@ func TestDecideOps(t *testing.T) {
 				{"kube-controller-manager-bootstrap", 3},
 				{"kube-scheduler-bootstrap", 3},
 				{"kubelet-bootstrap", 5},
+				{"kubelet-bootstrap", 1},
 				{"kube-proxy-bootstrap", 5},
+				{"kube-proxy-bootstrap", 1},
 			},
 		},
 		{
@@ -844,7 +846,8 @@ func TestDecideOps(t *testing.T) {
 			Name:  "RestartAPIServer",
 			Input: newData().withAllServices().withAPIServer("11.22.33.0/24", testDefaultDNSDomain).withSSHNotConnectedNodes(),
 			ExpectedOps: []opData{
-				{"kube-apiserver-restart", 2},
+				{"kube-apiserver-restart", 1},
+				{"kube-apiserver-restart", 1},
 			},
 		},
 		{
@@ -871,7 +874,8 @@ func TestDecideOps(t *testing.T) {
 			Name:  "RestartControllerManager",
 			Input: newData().withAllServices().withControllerManager("another", testServiceSubnet).withSSHNotConnectedNodes(),
 			ExpectedOps: []opData{
-				{"kube-controller-manager-restart", 2},
+				{"kube-controller-manager-restart", 1},
+				{"kube-controller-manager-restart", 1},
 			},
 		},
 		{
@@ -1067,7 +1071,7 @@ func TestDecideOps(t *testing.T) {
 			Name:  "StopProxy",
 			Input: newData().withAllServices().withDisableProxy(),
 			ExpectedOps: []opData{
-				{"stop-kube-proxy", 5},
+				{"stop-kube-proxy", 6},
 			},
 		},
 		{
@@ -1114,8 +1118,11 @@ func TestDecideOps(t *testing.T) {
 				d.Cluster.Options.Kubelet.Config.Object["clusterDomain"] = "neco.local"
 			}),
 			ExpectedOps: []opData{
-				{"kube-apiserver-restart", 3},
+				{"kube-apiserver-restart", 1},
+				{"kube-apiserver-restart", 1},
+				{"kube-apiserver-restart", 1},
 				{"kubelet-restart", 5},
+				{"kubelet-restart", 1},
 			},
 		},
 		{

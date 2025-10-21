@@ -1,6 +1,8 @@
 package server
 
 import (
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/cybozu-go/cke"
@@ -116,103 +118,109 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 }
 
 func riversOps(c *cke.Cluster, nf *NodeFilter, maxConcurrentUpdates int) (ops []cke.Operator) {
-	if nodes := nf.SSHConnected(nf.RiversStopped(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
-		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
-	}
-	if nodes := nf.SSHConnected(nf.RiversOutdated(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
-		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
-	}
 	if nodes := nf.SSHConnected(nf.EtcdRiversStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
+		for _, n := range nf.SplitN(nodes, maxConcurrentUpdates) {
+			ops = append(ops, op.RiversBootOp(n, nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 		}
-		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 	}
 	if nodes := nf.SSHConnected(nf.EtcdRiversOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
+		for _, n := range nf.SplitN(nodes, 1) { // To prevent API server outages, update one by one at time.
+			ops = append(ops, op.RiversRestartOp(n, nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 		}
-		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 	}
+
+	if nodes := nf.SSHConnected(nf.RiversStopped(nf.AllNodes())); len(nodes) > 0 {
+		for _, n := range nf.SplitN(nodes, maxConcurrentUpdates) {
+			ops = append(ops, op.RiversBootOp(n, nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
+		}
+	}
+	if nodes := nf.SSHConnected(nf.RiversOutdated(nf.AllNodes())); len(nodes) > 0 {
+		nodesMap := nf.SplitZone(nodes)
+		for _, zone := range slices.Sorted(maps.Keys(nodesMap)) {
+			for _, n := range nf.SplitN(nodesMap[zone], maxConcurrentUpdates) {
+				ops = append(ops, op.RiversRestartOp(n, nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
+			}
+		}
+	}
+
 	return ops
 }
 
 func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrentUpdates int) (ops []cke.Operator) {
 	// For cp nodes
+	// If any CP components are stopped, start as many as possible at once.
+	// However, when updating, update only one node at a time to prevent disruptions.
 	if nodes := nf.SSHConnected(nf.APIServerStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
-		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlaneNodes(), c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
+		for _, n := range nf.SplitN(nodes, maxConcurrentUpdates) {
+			ops = append(ops, k8s.APIServerRestartOp(n, nf.ControlPlaneNodes(), c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
+		}
 	}
 	if nodes := nf.SSHConnected(nf.APIServerOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
-		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlaneNodes(), c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
+		for _, n := range nf.SplitN(nodes, 1) {
+			ops = append(ops, k8s.APIServerRestartOp(n, nf.ControlPlaneNodes(), c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
+		}
 	}
 	if nodes := nf.SSHConnected(nf.ControllerManagerStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
-		ops = append(ops, k8s.ControllerManagerBootOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
+		for _, n := range nf.SplitN(nodes, maxConcurrentUpdates) {
+			ops = append(ops, k8s.ControllerManagerBootOp(n, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
+		}
 	}
 	if nodes := nf.SSHConnected(nf.ControllerManagerOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
-		ops = append(ops, k8s.ControllerManagerRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
+		for _, n := range nf.SplitN(nodes, 1) {
+			ops = append(ops, k8s.ControllerManagerRestartOp(n, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
+		}
 	}
 	if nodes := nf.SSHConnected(nf.SchedulerStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
-		ops = append(ops, k8s.SchedulerBootOp(nodes, c.Name, c.Options.Scheduler))
+		for _, n := range nf.SplitN(nodes, maxConcurrentUpdates) {
+			ops = append(ops, k8s.SchedulerBootOp(n, c.Name, c.Options.Scheduler))
+		}
 	}
 	if nodes := nf.SSHConnected(nf.SchedulerOutdated(nf.ControlPlaneNodes(), c.Options.Scheduler)); len(nodes) > 0 {
-		ops = append(ops, k8s.SchedulerRestartOp(nodes, c.Name, c.Options.Scheduler))
+		for _, n := range nf.SplitN(nodes, 1) {
+			ops = append(ops, k8s.SchedulerRestartOp(n, c.Name, c.Options.Scheduler))
+		}
 	}
 
 	// For all nodes
+	// If any Node components are stopped, start as many as possible at once.
+	// However, when updating, update separately for each failure domain to prevent disruptions.
 	apiServer := nf.HealthyAPIServer()
 	if nodes := nf.SSHConnected(nf.KubeletUnrecognized(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
+		for _, n := range nf.SplitN(nodes, maxConcurrentUpdates) {
+			ops = append(ops, k8s.KubeletRestartOp(n, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 		}
-		ops = append(ops, k8s.KubeletRestartOp(nodes[:max], c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
 	if nodes := nf.SSHConnected(nf.KubeletStopped(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
+		for _, n := range nf.SplitN(nodes, maxConcurrentUpdates) {
+			ops = append(ops, k8s.KubeletBootOp(n, nf.RegisteredNodes(n), apiServer, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 		}
-		ops = append(ops, k8s.KubeletBootOp(nodes[:max], nf.RegisteredNodes(nodes[:max]), apiServer, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
 	if nodes := nf.SSHConnected(nf.KubeletOutdated(nf.AllNodes())); len(nodes) > 0 && c.Options.Kubelet.InPlaceUpdate {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
+		nodesMap := nf.SplitZone(nodes)
+		for _, zone := range slices.Sorted(maps.Keys(nodesMap)) {
+			for _, n := range nf.SplitN(nodesMap[zone], maxConcurrentUpdates) {
+				ops = append(ops, k8s.KubeletRestartOp(n, c.Name, c.Options.Kubelet, cs.NodeStatuses))
+			}
 		}
-		ops = append(ops, k8s.KubeletRestartOp(nodes[:max], c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
+
 	if nodes := nf.SSHConnected(nf.ProxyStopped(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
+		for _, n := range nf.SplitN(nodes, maxConcurrentUpdates) {
+			ops = append(ops, k8s.KubeProxyBootOp(n, c.Name, "", c.Options.Proxy))
 		}
-		ops = append(ops, k8s.KubeProxyBootOp(nodes[:max], c.Name, "", c.Options.Proxy))
 	}
 	if nodes := nf.SSHConnected(nf.ProxyOutdated(nf.AllNodes(), c.Options.Proxy)); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
+		nodesMap := nf.SplitZone(nodes)
+		for _, zone := range slices.Sorted(maps.Keys(nodesMap)) {
+			for _, n := range nf.SplitN(nodesMap[zone], maxConcurrentUpdates) {
+				ops = append(ops, k8s.KubeProxyRestartOp(n, c.Name, "", c.Options.Proxy))
+			}
 		}
-		ops = append(ops, k8s.KubeProxyRestartOp(nodes[:max], c.Name, "", c.Options.Proxy))
 	}
 	if nodes := nf.SSHConnected(nf.ProxyRunningUnexpectedly(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
-		ops = append(ops, op.ProxyStopOp(nodes[:max]))
+		ops = append(ops, op.ProxyStopOp(nodes))
 	}
 	return ops
 }
