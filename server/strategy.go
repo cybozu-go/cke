@@ -33,11 +33,11 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	// 0. Execute upgrade operation if necessary
 	if cs.ConfigVersion != cke.ConfigVersion {
 		// Upgrade operations run only when all CPs are SSH reachable
-		if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, false)) > 0 {
+		if len(nf.SSHNotConnected(nf.ControlPlaneNodes())) > 0 {
 			log.Warn("cannot upgrade for unreachable nodes", nil)
 			return nil, cke.PhaseUpgradeAborted
 		}
-		return []cke.Operator{op.UpgradeOp(cs.ConfigVersion, nf.ControlPlane())}, cke.PhaseUpgrade
+		return []cke.Operator{op.UpgradeOp(cs.ConfigVersion, nf.ControlPlaneNodes())}, cke.PhaseUpgrade
 	}
 
 	// 1. Run or restart rivers.  This guarantees:
@@ -50,21 +50,21 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	// 2. Bootstrap etcd cluster, if not yet.
 	if !nf.EtcdBootstrapped() {
 		// Etcd boot operations run only when all CPs are SSH reachable
-		if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, false)) > 0 {
+		if len(nf.SSHNotConnected(nf.ControlPlaneNodes())) > 0 {
 			log.Warn("cannot bootstrap etcd for unreachable nodes", nil)
 			return nil, cke.PhaseEtcdBootAborted
 		}
-		return []cke.Operator{etcd.BootOp(nf.ControlPlane(), c.Options.Etcd)}, cke.PhaseEtcdBoot
+		return []cke.Operator{etcd.BootOp(nf.ControlPlaneNodes(), c.Options.Etcd)}, cke.PhaseEtcdBoot
 	}
 
 	// 3. Start etcd containers.
-	if nodes := nf.SSHConnectedNodes(nf.EtcdStoppedMembers(), true, false); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.EtcdStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		return []cke.Operator{etcd.StartOp(nodes, c.Options.Etcd)}, cke.PhaseEtcdStart
 	}
 
 	// 4. Wait for etcd cluster to become ready
 	if !cs.Etcd.IsHealthy {
-		return []cke.Operator{etcd.WaitClusterOp(nf.ControlPlane())}, cke.PhaseEtcdWait
+		return []cke.Operator{etcd.WaitClusterOp(nf.ControlPlaneNodes())}, cke.PhaseEtcdWait
 	}
 
 	// 5. Run or restart kubernetes components.
@@ -73,7 +73,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 6. Maintain etcd cluster, only when all CPs are SSH reachable.
-	if len(nf.SSHNotConnectedNodes(nf.cluster.Nodes, true, false)) == 0 {
+	if len(nf.SSHNotConnected(nf.ControlPlaneNodes())) == 0 {
 		if o := etcdMaintOp(c, nf); o != nil {
 			return []cke.Operator{o}, cke.PhaseEtcdMaintain
 		}
@@ -116,98 +116,98 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 }
 
 func riversOps(c *cke.Cluster, nf *NodeFilter, maxConcurrentUpdates int) (ops []cke.Operator) {
-	if nodes := nf.SSHConnectedNodes(nf.RiversStoppedNodes(), true, true); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.RiversStopped(nf.AllNodes())); len(nodes) > 0 {
 		max := maxConcurrentUpdates
 		if len(nodes) < max {
 			max = len(nodes)
 		}
-		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlane(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
+		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.RiversOutdatedNodes(), true, true); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.RiversOutdated(nf.AllNodes())); len(nodes) > 0 {
 		max := maxConcurrentUpdates
 		if len(nodes) < max {
 			max = len(nodes)
 		}
-		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlane(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
+		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.EtcdRiversStoppedNodes(), true, false); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.EtcdRiversStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		max := maxConcurrentUpdates
 		if len(nodes) < max {
 			max = len(nodes)
 		}
-		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlane(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
+		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.EtcdRiversOutdatedNodes(), true, false); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.EtcdRiversOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		max := maxConcurrentUpdates
 		if len(nodes) < max {
 			max = len(nodes)
 		}
-		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlane(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
+		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 	}
 	return ops
 }
 
 func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrentUpdates int) (ops []cke.Operator) {
 	// For cp nodes
-	if nodes := nf.SSHConnectedNodes(nf.APIServerStoppedNodes(), true, false); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.APIServerStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
-		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
+		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlaneNodes(), c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.APIServerOutdatedNodes(), true, false); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.APIServerOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
-		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlane(), c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
+		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlaneNodes(), c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.ControllerManagerStoppedNodes(), true, false); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.ControllerManagerStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		ops = append(ops, k8s.ControllerManagerBootOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.ControllerManagerOutdatedNodes(), true, false); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.ControllerManagerOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		ops = append(ops, k8s.ControllerManagerRestartOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.SchedulerStoppedNodes(), true, false); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.SchedulerStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		ops = append(ops, k8s.SchedulerBootOp(nodes, c.Name, c.Options.Scheduler))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.SchedulerOutdatedNodes(c.Options.Scheduler), true, false); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.SchedulerOutdated(nf.ControlPlaneNodes(), c.Options.Scheduler)); len(nodes) > 0 {
 		ops = append(ops, k8s.SchedulerRestartOp(nodes, c.Name, c.Options.Scheduler))
 	}
 
 	// For all nodes
 	apiServer := nf.HealthyAPIServer()
-	if nodes := nf.SSHConnectedNodes(nf.KubeletUnrecognizedNodes(), true, true); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.KubeletUnrecognized(nf.AllNodes())); len(nodes) > 0 {
 		max := maxConcurrentUpdates
 		if len(nodes) < max {
 			max = len(nodes)
 		}
 		ops = append(ops, k8s.KubeletRestartOp(nodes[:max], c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.KubeletStoppedNodes(), true, true); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.KubeletStopped(nf.AllNodes())); len(nodes) > 0 {
 		max := maxConcurrentUpdates
 		if len(nodes) < max {
 			max = len(nodes)
 		}
 		ops = append(ops, k8s.KubeletBootOp(nodes[:max], nf.RegisteredNodes(nodes[:max]), apiServer, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.KubeletOutdatedNodes(), true, true); len(nodes) > 0 && c.Options.Kubelet.InPlaceUpdate {
+	if nodes := nf.SSHConnected(nf.KubeletOutdated(nf.AllNodes())); len(nodes) > 0 && c.Options.Kubelet.InPlaceUpdate {
 		max := maxConcurrentUpdates
 		if len(nodes) < max {
 			max = len(nodes)
 		}
 		ops = append(ops, k8s.KubeletRestartOp(nodes[:max], c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.ProxyStoppedNodes(), true, true); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.ProxyStopped(nf.AllNodes())); len(nodes) > 0 {
 		max := maxConcurrentUpdates
 		if len(nodes) < max {
 			max = len(nodes)
 		}
 		ops = append(ops, k8s.KubeProxyBootOp(nodes[:max], c.Name, "", c.Options.Proxy))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.ProxyOutdatedNodes(c.Options.Proxy), true, true); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.ProxyOutdated(nf.AllNodes(), c.Options.Proxy)); len(nodes) > 0 {
 		max := maxConcurrentUpdates
 		if len(nodes) < max {
 			max = len(nodes)
 		}
 		ops = append(ops, k8s.KubeProxyRestartOp(nodes[:max], c.Name, "", c.Options.Proxy))
 	}
-	if nodes := nf.SSHConnectedNodes(nf.ProxyRunningUnexpectedlyNodes(), true, true); len(nodes) > 0 {
+	if nodes := nf.SSHConnected(nf.ProxyRunningUnexpectedly(nf.AllNodes())); len(nodes) > 0 {
 		max := maxConcurrentUpdates
 		if len(nodes) < max {
 			max = len(nodes)
@@ -219,16 +219,16 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrent
 
 func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	// this function is called only when all the CPs are reachable.
-	// so, filtering by SSHConnectedNodes(nodes, true, ...) is not required.
+	// so, filtering by SSHConnected() is not required.
 
 	if members := nf.EtcdNonClusterMembers(false); len(members) > 0 {
-		return etcd.RemoveMemberOp(nf.ControlPlane(), members)
+		return etcd.RemoveMemberOp(nf.ControlPlaneNodes(), members)
 	}
 	if nodes, ids := nf.EtcdNonCPMembers(false); len(nodes) > 0 {
-		return etcd.DestroyMemberOp(nf.ControlPlane(), nf.SSHConnectedNodes(nodes, false, true), ids)
+		return etcd.DestroyMemberOp(nf.ControlPlaneNodes(), nf.SSHConnected(nodes), ids)
 	}
 	if nodes := nf.EtcdUnstartedMembers(); len(nodes) > 0 {
-		return etcd.AddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
+		return etcd.AddMemberOp(nf.ControlPlaneNodes(), nodes[0], c.Options.Etcd)
 	}
 	if nodes := nf.EtcdUnmarkedMembers(); len(nodes) > 0 {
 		return etcd.MarkMemberOp(nodes)
@@ -244,16 +244,16 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	// all members are in sync.
 
 	if nodes := nf.EtcdNewMembers(); len(nodes) > 0 {
-		return etcd.AddMemberOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
+		return etcd.AddMemberOp(nf.ControlPlaneNodes(), nodes[0], c.Options.Etcd)
 	}
 	if members := nf.EtcdNonClusterMembers(true); len(members) > 0 {
-		return etcd.RemoveMemberOp(nf.ControlPlane(), members)
+		return etcd.RemoveMemberOp(nf.ControlPlaneNodes(), members)
 	}
 	if nodes, ids := nf.EtcdNonCPMembers(true); len(nodes) > 0 {
-		return etcd.DestroyMemberOp(nf.ControlPlane(), nf.SSHConnectedNodes(nodes, false, true), ids)
+		return etcd.DestroyMemberOp(nf.ControlPlaneNodes(), nf.SSHConnected(nodes), ids)
 	}
 	if nodes := nf.EtcdOutdatedMembers(); len(nodes) > 0 {
-		return etcd.RestartOp(nf.ControlPlane(), nodes[0], c.Options.Etcd)
+		return etcd.RestartOp(nf.ControlPlaneNodes(), nodes[0], c.Options.Etcd)
 	}
 
 	return nil
@@ -319,7 +319,7 @@ OUTER_MASTER:
 
 	var etcdReadyAddresses, etcdNotReadyAddresses []string
 OUTER_ETCD:
-	for _, n := range nf.ControlPlane() {
+	for _, n := range nf.ControlPlaneNodes() {
 		for _, entry := range rqEntries {
 			if entry.Node != n.Address {
 				continue
@@ -712,7 +712,7 @@ func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	//         taken into account for the concurrency limits.
 	// - Entries for the API servers have higher priority.
 	apiServers := make(map[string]bool)
-	for _, cp := range nf.ControlPlane() {
+	for _, cp := range nf.ControlPlaneNodes() {
 		apiServers[cp.Address] = true
 	}
 
@@ -780,7 +780,7 @@ func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	concurrentRepairs := 0
 
 	rebootingApiServers := make(map[string]bool)
-	for _, cp := range nf.ControlPlane() {
+	for _, cp := range nf.ControlPlaneNodes() {
 		if rebootProcessing(rebootArgs.RQEntries, cp.Nodename()) {
 			rebootingApiServers[cp.Address] = true
 		}
@@ -903,13 +903,14 @@ func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOp
 		ops = append(ops, op.RebootRebootOp(nf.HealthyAPIServer(), rebootArgs.DrainCompleted, &c.Reboot))
 	}
 	if len(rebootArgs.NewlyDrained) > 0 {
-		sshCheckNodes := make([]*cke.Node, 0, len(nf.cluster.Nodes))
-		for _, node := range nf.cluster.Nodes {
+		allNodes := nf.AllNodes()
+		sshCheckNodes := make([]*cke.Node, 0, len(allNodes))
+		for _, node := range allNodes {
 			if !rebootProcessing(rebootArgs.RQEntries, node.Address) {
 				sshCheckNodes = append(sshCheckNodes, node)
 			}
 		}
-		if len(nf.SSHNotConnectedNodes(sshCheckNodes, true, true)) > constraints.RebootMaximumUnreachable {
+		if len(nf.SSHNotConnected(sshCheckNodes)) > constraints.RebootMaximumUnreachable {
 			log.Warn("cannot reboot nodes because too many nodes are unreachable", nil)
 		} else {
 			ops = append(ops, op.RebootDrainStartOp(nf.HealthyAPIServer(), rebootArgs.NewlyDrained, &c.Reboot))
