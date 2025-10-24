@@ -36,6 +36,7 @@ func scpSubMain(ctx context.Context, args []string) error {
 		})
 		return err
 	}
+	defer os.Remove(pipeFilename)
 
 	node, err := detectSCPNode(args)
 	if err != nil {
@@ -54,23 +55,22 @@ func scpSubMain(ctx context.Context, args []string) error {
 	}
 
 	go func() {
-		if _, err := sshAgent(ctx, pipeFilename); err != nil {
+		if _, err := startSshAgent(ctx, pipeFilename); err != nil {
 			log.Error("failed to start ssh-agent for scp", map[string]interface{}{
 				log.FnError: err,
 				"node":      node,
 			})
 		}
 	}()
+	defer killSshAgent(ctx)
 
 	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
 		log.Error("failed to write the named pipe", map[string]interface{}{
 			log.FnError:  err,
-			"named pipe": pipeFilename,
+			"pipe": pipeFilename,
 		})
 		return err
 	}
-	defer os.Remove(pipeFilename)
-	defer killSshAgent(ctx)
 
 	scpArgs := []string{
 		"-o", "UserKnownHostsFile=/dev/null",
