@@ -79,13 +79,10 @@ func getPrivateKey(nodeName string) (string, error) {
 	return mykey.(string), nil
 }
 
-func sshAgent(ctx context.Context, privateKeyFile string) (map[string]string, error) {
+func startSshAgent(ctx context.Context, privateKeyFile string) (map[string]string, error) {
 	myEnv := make(map[string]string)
-	sshArgs := []string{
-		"-s",
-	}
 
-	cmd := exec.CommandContext(ctx, "ssh-agent", sshArgs...)
+	cmd := exec.CommandContext(ctx, "ssh-agent", "-s")
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
@@ -118,11 +115,8 @@ func sshAgent(ctx context.Context, privateKeyFile string) (map[string]string, er
 		return nil, err
 	}
 
-	sshArgs2 := []string{
-		privateKeyFile,
-	}
-	cmd0 := exec.CommandContext(ctx, "ssh-add", sshArgs2...)
-	_, err = cmd0.CombinedOutput()
+	cmd = exec.CommandContext(ctx, "ssh-add", privateKeyFile)
+	_, err = cmd.CombinedOutput()
 	if err != nil {
 		log.Error("failed to add the private key", map[string]interface{}{
 			log.FnError: err,
@@ -138,10 +132,7 @@ func sshAgent(ctx context.Context, privateKeyFile string) (map[string]string, er
 }
 
 func killSshAgent(ctx context.Context) error {
-	sshArgs := []string{
-		"-k",
-	}
-	cmd := exec.CommandContext(ctx, "ssh-agent", sshArgs...)
+	cmd := exec.CommandContext(ctx, "ssh-agent", "-k")
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Error("failed to run ssh-agent -k", map[string]interface{}{
@@ -149,14 +140,14 @@ func killSshAgent(ctx context.Context) error {
 		})
 		return err
 	}
-	log.Info("killed ssh-agent", map[string]interface{}{
-		"message": string(stdoutStderr),
+	log.Debug("killed ssh-agent", map[string]interface{}{
+		"stdout_stderr": string(stdoutStderr),
 	})
 	return nil
 }
 
 func writeToFifo(fifo string, data string) error {
-	f, err := os.OpenFile(fifo, os.O_WRONLY|os.O_CREATE|os.O_APPEND, os.ModeNamedPipe)
+	f, err := os.OpenFile(fifo, os.O_WRONLY|os.O_APPEND, os.ModeNamedPipe)
 	if err != nil {
 		return err
 	}
@@ -172,10 +163,10 @@ func sshSubMain(ctx context.Context, args []string) error {
 	if err != nil {
 		log.Error("failed to create the named pipe", map[string]interface{}{
 			log.FnError: err,
-			"fifo name": pipeFilename,
 		})
 		return err
 	}
+	defer os.Remove(pipeFilename)
 
 	node := detectSSHNode(args[0])
 	pirvateKey, err := getPrivateKey(node)
@@ -187,23 +178,22 @@ func sshSubMain(ctx context.Context, args []string) error {
 	}
 
 	go func() {
-		if _, err := sshAgent(ctx, pipeFilename); err != nil {
+		if _, err := startSshAgent(ctx, pipeFilename); err != nil {
 			log.Error("failed to start ssh-agent for ssh", map[string]interface{}{
 				log.FnError: err,
-				"node name": node,
+				"node": node,
 			})
 		}
 	}()
+	defer killSshAgent(ctx)
 
 	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
 		log.Error("failed to write the named pipe", map[string]interface{}{
 			log.FnError:  err,
-			"named pipe": pipeFilename,
+			"pipe": pipeFilename,
 		})
 		return err
 	}
-	defer os.Remove(pipeFilename)
-	defer killSshAgent(ctx)
 
 	sshArgs := []string{
 		"-o", "UserKnownHostsFile=/dev/null",
