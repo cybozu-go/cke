@@ -181,7 +181,7 @@ func sshSubMain(ctx context.Context, args []string) error {
 		if _, err := startSshAgent(ctx, pipeFilename); err != nil {
 			log.Error("failed to start ssh-agent for ssh", map[string]interface{}{
 				log.FnError: err,
-				"node": node,
+				"node":      node,
 			})
 		}
 	}()
@@ -189,8 +189,8 @@ func sshSubMain(ctx context.Context, args []string) error {
 
 	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
 		log.Error("failed to write the named pipe", map[string]interface{}{
-			log.FnError:  err,
-			"pipe": pipeFilename,
+			log.FnError: err,
+			"pipe":      pipeFilename,
 		})
 		return err
 	}

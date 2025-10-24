@@ -66,8 +66,8 @@ func scpSubMain(ctx context.Context, args []string) error {
 
 	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
 		log.Error("failed to write the named pipe", map[string]interface{}{
-			log.FnError:  err,
-			"pipe": pipeFilename,
+			log.FnError: err,
+			"pipe":      pipeFilename,
 		})
 		return err
 	}
