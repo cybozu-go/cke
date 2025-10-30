@@ -871,3 +871,24 @@ func (nf *NodeFilter) SSHNotConnected(targets []*cke.Node) (nodes []*cke.Node) {
 	}
 	return nodes
 }
+
+func (nf *NodeFilter) SplitZone(targets []*cke.Node) map[string][]*cke.Node {
+	nodesMap := make(map[string][]*cke.Node)
+	for _, n := range targets {
+		zone := n.Labels[corev1.LabelTopologyZone]
+		nodesMap[zone] = append(nodesMap[zone], n)
+	}
+	return nodesMap
+}
+
+func (nf *NodeFilter) SplitN(targets []*cke.Node, n int) [][]*cke.Node {
+	var nodesSlice [][]*cke.Node
+	for i := 0; i < len(targets); i += n {
+		end := i + n
+		if end > len(targets) {
+			end = len(targets)
+		}
+		nodesSlice = append(nodesSlice, targets[i:end])
+	}
+	return nodesSlice
+}
