@@ -10,7 +10,6 @@ import (
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/metrics"
-	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -310,29 +309,13 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		return err
 	}
 
-	rqEntries, err := inf.Storage().GetRebootsEntries(ctx)
+	currentRunningState, err := inf.Storage().IsRebootQueueRunning(ctx)
 	if err != nil {
 		return err
 	}
-	rqEntries = cke.DedupRebootQueueEntries(rqEntries)
-
-	if len(rqEntries) > 0 {
-		disabled, err := inf.Storage().IsRebootQueueDisabled(ctx)
-		if err != nil {
-			return err
-		}
-		if disabled {
-			rqEntries = nil
-		}
-	}
-
-	running, err := inf.Storage().IsRebootQueueRunning(ctx)
-	if err != nil {
-		return err
-	}
-	runningNext := len(rqEntries) > 0
-	if running != runningNext {
-		err := inf.Storage().SetRebootQueueRunning(ctx, runningNext)
+	nextRunningState := status.RebootQueue.Enabled && len(status.RebootQueue.Entries) > 0
+	if currentRunningState != nextRunningState {
+		err := inf.Storage().SetRebootQueueRunning(ctx, nextRunningState)
 		if err != nil {
 			return err
 		}
@@ -343,19 +326,8 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	for _, node := range nf.ControlPlaneNodes() {
 		apiServers[node.Address] = true
 	}
-	newlyDrained := op.ChooseDrainedNodes(cluster, apiServers, rqEntries)
-	drainCompleted, drainTimedout, _ := op.CheckDrainCompletion(ctx, inf, nf.HealthyAPIServer(), cluster, rqEntries)
-	rebootDequeued := op.CheckRebootDequeue(ctx, cluster, rqEntries)
-	rebootCancelled := op.CheckRebootCancelled(ctx, cluster, rqEntries)
 
-	ops, phase := DecideOps(cluster, status, constraints, rcs, DecideOpsRebootArgs{
-		RQEntries:       rqEntries,
-		NewlyDrained:    newlyDrained,
-		DrainCompleted:  drainCompleted,
-		DrainTimedout:   drainTimedout,
-		RebootDequeued:  rebootDequeued,
-		RebootCancelled: rebootCancelled,
-	}, c.config)
+	ops, phase := DecideOps(cluster, status, constraints, rcs, c.config)
 
 	st := &cke.ServerStatus{
 		Phase:     phase,

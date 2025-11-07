@@ -94,5 +94,19 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 	}
 	cs.RepairQueue = repairQueueStatus
 
+	var apiServers = map[string]bool{}
+	for _, n := range cke.ControlPlanes(cluster.Nodes) {
+		ns := statuses[n.Address]
+		if ns.APIServer.Running {
+			apiServers[n.Address] = true
+		}
+	}
+
+	rebootQueueStatus, err := op.GetRebootQueueStatus(ctx, inf, livingMaster, cluster, apiServers)
+	if err != nil {
+		return nil, err
+	}
+	cs.RebootQueue = rebootQueueStatus
+
 	return cs, nil
 }

@@ -664,3 +664,36 @@ func isRepairTargetHealthy(ctx context.Context, entry *cke.RepairQueueEntry, clu
 	}
 	return strings.TrimSpace(string(stdout)) == "true", nil
 }
+
+func GetRebootQueueStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node, cluster *cke.Cluster, apiServers map[string]bool) (cke.RebootQueueStatus, error) {
+	status := cke.RebootQueueStatus{}
+
+	disabled, err := inf.Storage().IsRebootQueueDisabled(ctx)
+	if err != nil {
+		return cke.RebootQueueStatus{}, err
+	}
+	status.Enabled = !disabled
+
+	entries, err := inf.Storage().GetRebootsEntries(ctx)
+	if err != nil {
+		return cke.RebootQueueStatus{}, err
+	}
+	entries = cke.DedupRebootQueueEntries(entries)
+
+	nextCandidates := ChooseRebootCandidates(cluster, apiServers, entries)
+	drainCompleted, drainTimedout, err := CheckDrainCompletion(ctx, inf, n, cluster, entries)
+	if err != nil {
+		return cke.RebootQueueStatus{}, err
+	}
+	rebootDequeued := CheckRebootDequeue(ctx, cluster, entries)
+	rebootCancelled := CheckRebootCancelled(ctx, cluster, entries)
+
+	status.Entries = entries
+	status.NextCandidates = nextCandidates
+	status.DrainCompleted = drainCompleted
+	status.DrainTimedout = drainTimedout
+	status.RebootDequeued = rebootDequeued
+	status.RebootCancelled = rebootCancelled
+
+	return status, nil
+}
