@@ -151,11 +151,11 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrent
 	// For cp nodes
 	if nodes := nf.SSHConnected(nf.APIServerStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
-		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlaneNodes(), c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
+		ops = append(ops, k8s.APIServerRestartOp(nodes, c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
 	}
 	if nodes := nf.SSHConnected(nf.APIServerOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
-		ops = append(ops, k8s.APIServerRestartOp(nodes, nf.ControlPlaneNodes(), c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
+		ops = append(ops, k8s.APIServerRestartOp(nodes, c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
 	}
 	if nodes := nf.SSHConnected(nf.ControllerManagerStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		ops = append(ops, k8s.ControllerManagerBootOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))

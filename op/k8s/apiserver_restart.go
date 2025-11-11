@@ -27,7 +27,6 @@ var (
 
 type apiServerRestartOp struct {
 	nodes []*cke.Node
-	cps   []*cke.Node
 
 	serviceSubnet string
 	params        cke.APIServerParams
@@ -38,10 +37,9 @@ type apiServerRestartOp struct {
 }
 
 // APIServerRestartOp returns an Operator to restart kube-apiserver
-func APIServerRestartOp(nodes, cps []*cke.Node, serviceSubnet string, params cke.APIServerParams, clusterDomain string) cke.Operator {
+func APIServerRestartOp(nodes []*cke.Node, serviceSubnet string, params cke.APIServerParams, clusterDomain string) cke.Operator {
 	return &apiServerRestartOp{
 		nodes:         nodes,
-		cps:           cps,
 		serviceSubnet: serviceSubnet,
 		clusterDomain: clusterDomain,
 		params:        params,
