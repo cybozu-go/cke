@@ -25,7 +25,7 @@ func KubeEndpointsCreateOp(apiserver *cke.Node, ep *corev1.Endpoints) cke.Operat
 }
 
 func (o *kubeEndpointsCreateOp) Name() string {
-	return "create-endpoints"
+	return "create-" + o.endpoints.Name + "-endpoints"
 }
 
 func (o *kubeEndpointsCreateOp) NextCommand() cke.Commander {
@@ -62,7 +62,7 @@ func KubeEndpointsUpdateOp(apiserver *cke.Node, ep *corev1.Endpoints) cke.Operat
 }
 
 func (o *kubeEndpointsUpdateOp) Name() string {
-	return "update-endpoints"
+	return "update-" + o.endpoints.Name + "-endpoints"
 }
 
 func (o *kubeEndpointsUpdateOp) NextCommand() cke.Commander {

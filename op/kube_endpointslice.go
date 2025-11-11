@@ -31,7 +31,7 @@ func KubeEndpointSliceCreateOp(apiserver *cke.Node, eps *discoveryv1.EndpointSli
 }
 
 func (o *kubeEndpointSliceCreateOp) Name() string {
-	return "create-endpointslice"
+	return "create-" + o.endpointslice.Name + "-endpointslice"
 }
 
 func (o *kubeEndpointSliceCreateOp) NextCommand() cke.Commander {
@@ -68,7 +68,7 @@ func KubeEndpointSliceUpdateOp(apiserver *cke.Node, eps *discoveryv1.EndpointSli
 }
 
 func (o *kubeEndpointSliceUpdateOp) Name() string {
-	return "update-endpointslice"
+	return "update-" + o.endpointslice.Name + "-endpointslice"
 }
 
 func (o *kubeEndpointSliceUpdateOp) NextCommand() cke.Commander {
