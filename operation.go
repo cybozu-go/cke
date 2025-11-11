@@ -37,5 +37,9 @@ type Command struct {
 
 // String implements fmt.Stringer
 func (c Command) String() string {
-	return fmt.Sprintf("%s %s", c.Name, c.Target)
+	if len(c.Target) == 0 {
+		return c.Name
+	} else {
+		return fmt.Sprintf("%s %s", c.Name, c.Target)
+	}
 }

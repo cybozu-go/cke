@@ -3,8 +3,10 @@ package op
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op/common"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -12,8 +14,13 @@ import (
 type kubeEndpointSliceCreateOp struct {
 	apiserver     *cke.Node
 	endpointslice *discoveryv1.EndpointSlice
-	finished      bool
+	step          int
 }
+
+var (
+	// Wait time for endpoint changes to propagate to each node.
+	waitTimeEndpointChangePropagate = 300 * time.Millisecond
+)
 
 // KubeEndpointSliceCreateOp returns an Operator to create EndpointSlice resource.
 func KubeEndpointSliceCreateOp(apiserver *cke.Node, eps *discoveryv1.EndpointSlice) cke.Operator {
@@ -28,12 +35,16 @@ func (o *kubeEndpointSliceCreateOp) Name() string {
 }
 
 func (o *kubeEndpointSliceCreateOp) NextCommand() cke.Commander {
-	if o.finished {
+	switch o.step {
+	case 0:
+		o.step++
+		return createEndpointSliceCommand{o.apiserver, o.endpointslice}
+	case 1:
+		o.step++
+		return common.WaitCommand(waitTimeEndpointChangePropagate)
+	default:
 		return nil
 	}
-
-	o.finished = true
-	return createEndpointSliceCommand{o.apiserver, o.endpointslice}
 }
 
 func (o *kubeEndpointSliceCreateOp) Targets() []string {
@@ -45,7 +56,7 @@ func (o *kubeEndpointSliceCreateOp) Targets() []string {
 type kubeEndpointSliceUpdateOp struct {
 	apiserver     *cke.Node
 	endpointslice *discoveryv1.EndpointSlice
-	finished      bool
+	step          int
 }
 
 // KubeEndpointSliceUpdateOp returns an Operator to update Endpoints resource.
@@ -61,12 +72,16 @@ func (o *kubeEndpointSliceUpdateOp) Name() string {
 }
 
 func (o *kubeEndpointSliceUpdateOp) NextCommand() cke.Commander {
-	if o.finished {
+	switch o.step {
+	case 0:
+		o.step++
+		return updateEndpointSliceCommand{o.apiserver, o.endpointslice}
+	case 1:
+		o.step++
+		return common.WaitCommand(waitTimeEndpointChangePropagate)
+	default:
 		return nil
 	}
-
-	o.finished = true
-	return updateEndpointSliceCommand{o.apiserver, o.endpointslice}
 }
 
 func (o *kubeEndpointSliceUpdateOp) Targets() []string {

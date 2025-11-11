@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op/common"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -12,7 +13,7 @@ import (
 type kubeEndpointsCreateOp struct {
 	apiserver *cke.Node
 	endpoints *corev1.Endpoints
-	finished  bool
+	step      int
 }
 
 // KubeEndpointsCreateOp returns an Operator to create Endpoints resource.
@@ -28,12 +29,16 @@ func (o *kubeEndpointsCreateOp) Name() string {
 }
 
 func (o *kubeEndpointsCreateOp) NextCommand() cke.Commander {
-	if o.finished {
+	switch o.step {
+	case 0:
+		o.step++
+		return createEndpointsCommand{o.apiserver, o.endpoints}
+	case 1:
+		o.step++
+		return common.WaitCommand(waitTimeEndpointChangePropagate)
+	default:
 		return nil
 	}
-
-	o.finished = true
-	return createEndpointsCommand{o.apiserver, o.endpoints}
 }
 
 func (o *kubeEndpointsCreateOp) Targets() []string {
@@ -45,7 +50,7 @@ func (o *kubeEndpointsCreateOp) Targets() []string {
 type kubeEndpointsUpdateOp struct {
 	apiserver *cke.Node
 	endpoints *corev1.Endpoints
-	finished  bool
+	step      int
 }
 
 // KubeEndpointsUpdateOp returns an Operator to update Endpoints resource.
@@ -61,12 +66,16 @@ func (o *kubeEndpointsUpdateOp) Name() string {
 }
 
 func (o *kubeEndpointsUpdateOp) NextCommand() cke.Commander {
-	if o.finished {
+	switch o.step {
+	case 0:
+		o.step++
+		return updateEndpointsCommand{o.apiserver, o.endpoints}
+	case 1:
+		o.step++
+		return common.WaitCommand(waitTimeEndpointChangePropagate)
+	default:
 		return nil
 	}
-
-	o.finished = true
-	return updateEndpointsCommand{o.apiserver, o.endpoints}
 }
 
 func (o *kubeEndpointsUpdateOp) Targets() []string {
