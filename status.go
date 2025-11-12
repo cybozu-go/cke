@@ -89,6 +89,7 @@ type ClusterStatus struct {
 	Etcd        EtcdClusterStatus
 	Kubernetes  KubernetesClusterStatus
 	RepairQueue RepairQueueStatus
+	RebootQueue RebootQueueStatus
 }
 
 // NodeStatus status of a node.
@@ -156,4 +157,15 @@ type RepairQueueStatus struct {
 	Entries         []*RepairQueueEntry
 	RepairCompleted map[string]bool
 	DrainCompleted  map[string]bool
+}
+
+// RebootQueueStatus represents reboot queue status
+type RebootQueueStatus struct {
+	Enabled         bool
+	Entries         []*RebootQueueEntry
+	NextCandidates  []*RebootQueueEntry
+	DrainCompleted  []*RebootQueueEntry
+	DrainTimedout   []*RebootQueueEntry
+	RebootDequeued  []*RebootQueueEntry
+	RebootCancelled []*RebootQueueEntry
 }

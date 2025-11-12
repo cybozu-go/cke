@@ -16,18 +16,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type DecideOpsRebootArgs struct {
-	RQEntries       []*cke.RebootQueueEntry
-	NewlyDrained    []*cke.RebootQueueEntry
-	DrainCompleted  []*cke.RebootQueueEntry
-	DrainTimedout   []*cke.RebootQueueEntry
-	RebootDequeued  []*cke.RebootQueueEntry
-	RebootCancelled []*cke.RebootQueueEntry
-}
-
 // DecideOps returns the next operations to do and the operation phase.
 // This returns nil when no operations need to be done.
-func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, rebootArgs DecideOpsRebootArgs, config *Config) ([]cke.Operator, cke.OperationPhase) {
+func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, resources []cke.ResourceDefinition, config *Config) ([]cke.Operator, cke.OperationPhase) {
 	nf := NewNodeFilter(c, cs)
 
 	// 0. Execute upgrade operation if necessary
@@ -80,7 +71,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 7. Maintain k8s resources.
-	if ops := k8sMaintOps(c, cs, resources, rebootArgs.RQEntries, rebootArgs.NewlyDrained, nf); len(ops) > 0 {
+	if ops := k8sMaintOps(c, cs, resources, nf); len(ops) > 0 {
 		return ops, cke.PhaseK8sMaintain
 	}
 
@@ -90,12 +81,12 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 9. Uncordon nodes if nodes are cordoned by CKE.
-	if o := rebootUncordonOp(cs, rebootArgs.RQEntries, nf); o != nil {
+	if o := rebootUncordonOp(cs, nf); o != nil {
 		return []cke.Operator{o}, cke.PhaseUncordonNodes
 	}
 
 	// 10. Repair machines if repair requests have been arrived to the repair queue, and the number of unreachable nodes is less than a threshold.
-	if ops, phaseRepair := repairOps(c, cs, constraints, rebootArgs, nf); phaseRepair {
+	if ops, phaseRepair := repairOps(c, cs, constraints, nf); phaseRepair {
 		if !nf.EtcdIsGood() {
 			log.Warn("cannot repair machines because etcd cluster is not responding and in-sync", nil)
 			return nil, cke.PhaseRepairMachines
@@ -104,7 +95,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 11. Reboot nodes if reboot request has been arrived to the reboot queue, and the number of unreachable nodes is less than a threshold.
-	if ops := rebootOps(c, constraints, rebootArgs, nf); len(ops) > 0 {
+	if ops := rebootOps(c, cs, constraints, nf); len(ops) > 0 {
 		if !nf.EtcdIsGood() {
 			log.Warn("cannot reboot nodes because etcd cluster is not responding and in-sync", nil)
 			return nil, cke.PhaseRebootNodes
@@ -259,7 +250,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	return nil
 }
 
-func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition, rqEntries []*cke.RebootQueueEntry, newlyDrained []*cke.RebootQueueEntry, nf *NodeFilter) (ops []cke.Operator) {
+func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition, nf *NodeFilter) (ops []cke.Operator) {
 	ks := cs.Kubernetes
 	apiServer := nf.HealthyAPIServer()
 
@@ -273,80 +264,9 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 
 	ops = append(ops, decideNodeDNSOps(apiServer, c, ks)...)
 
-	var masterReadyAddresses, masterNotReadyAddresses []string
-OUTER_MASTER:
-	for _, n := range nf.HealthyAPIServerNodes() {
-		for _, entry := range rqEntries {
-			if entry.Node != n.Address {
-				continue
-			}
-			switch entry.Status {
-			case cke.RebootStatusDraining, cke.RebootStatusRebooting:
-				masterNotReadyAddresses = append(masterNotReadyAddresses, n.Address)
-				continue OUTER_MASTER
-			}
-		}
-		for _, entry := range newlyDrained {
-			if entry.Node == n.Address {
-				masterNotReadyAddresses = append(masterNotReadyAddresses, n.Address)
-				continue OUTER_MASTER
-			}
-		}
-		masterReadyAddresses = append(masterReadyAddresses, n.Address)
-	}
-	for _, n := range nf.UnhealthyAPIServerNodes() {
-		masterNotReadyAddresses = append(masterNotReadyAddresses, n.Address)
-	}
+	ops = append(ops, masterEndpointOps(c, cs, nf)...)
 
-	masterEP := &endpointParams{}
-	masterEP.namespace = metav1.NamespaceDefault
-	masterEP.name = "kubernetes"
-	masterEP.readyIPs = masterReadyAddresses
-	masterEP.notReadyIPs = masterNotReadyAddresses
-	masterEP.portName = "https"
-	masterEP.port = 6443
-	masterEP.serviceName = "kubernetes"
-	epOps := decideEpEpsOps(masterEP, ks.MasterEndpoints, ks.MasterEndpointSlice, apiServer)
-	ops = append(ops, epOps...)
-
-	// Endpoints needs a corresponding Service.
-	// If an Endpoints lacks such a Service, it will be removed.
-	// https://github.com/kubernetes/kubernetes/blob/b7c2d923ef4e166b9572d3aa09ca72231b59b28b/pkg/controller/endpoint/endpoints_controller.go#L392-L397
-	svcOp := decideEtcdServiceOps(apiServer, ks.EtcdService)
-	if svcOp != nil {
-		ops = append(ops, svcOp)
-	}
-
-	var etcdReadyAddresses, etcdNotReadyAddresses []string
-OUTER_ETCD:
-	for _, n := range nf.ControlPlaneNodes() {
-		for _, entry := range rqEntries {
-			if entry.Node != n.Address {
-				continue
-			}
-			switch entry.Status {
-			case cke.RebootStatusDraining, cke.RebootStatusRebooting:
-				etcdNotReadyAddresses = append(etcdNotReadyAddresses, n.Address)
-				continue OUTER_ETCD
-			}
-		}
-		for _, entry := range newlyDrained {
-			if entry.Node == n.Address {
-				etcdNotReadyAddresses = append(etcdNotReadyAddresses, n.Address)
-				continue OUTER_ETCD
-			}
-		}
-		etcdReadyAddresses = append(etcdReadyAddresses, n.Address)
-	}
-	etcdEP := &endpointParams{}
-	etcdEP.namespace = metav1.NamespaceSystem
-	etcdEP.name = op.EtcdEndpointsName
-	etcdEP.readyIPs = etcdReadyAddresses
-	etcdEP.notReadyIPs = etcdNotReadyAddresses
-	etcdEP.port = 2379
-	etcdEP.serviceName = op.EtcdServiceName
-	epOps = decideEpEpsOps(etcdEP, ks.EtcdEndpoints, ks.EtcdEndpointSlice, apiServer)
-	ops = append(ops, epOps...)
+	ops = append(ops, etcdEndpointOps(c, cs, nf)...)
 
 	if nodes := nf.OutdatedAttrsNodes(); len(nodes) > 0 {
 		ops = append(ops, op.KubeNodeUpdateOp(apiServer, nodes))
@@ -423,6 +343,63 @@ type endpointParams struct {
 	port        int32
 	portName    string
 	serviceName string
+}
+
+func masterEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) []cke.Operator {
+	var readyIPs, notReadyIPs []string
+
+	for _, n := range nf.HealthyAPIServerNodes() {
+		if cs.RebootQueue.Enabled && (rebootProcessing(cs, n.Address) || rebootNextCandidate(cs, n.Address)) {
+			notReadyIPs = append(notReadyIPs, n.Address)
+		} else {
+			readyIPs = append(readyIPs, n.Address)
+		}
+	}
+	for _, n := range nf.UnhealthyAPIServerNodes() {
+		notReadyIPs = append(notReadyIPs, n.Address)
+	}
+
+	ep := &endpointParams{}
+	ep.namespace = metav1.NamespaceDefault
+	ep.name = "kubernetes"
+	ep.readyIPs = readyIPs
+	ep.notReadyIPs = notReadyIPs
+	ep.portName = "https"
+	ep.port = 6443
+	ep.serviceName = "kubernetes"
+
+	return decideEpEpsOps(ep, cs.Kubernetes.MasterEndpoints, cs.Kubernetes.MasterEndpointSlice, nf.HealthyAPIServer())
+}
+
+func etcdEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []cke.Operator) {
+	// Endpoints needs a corresponding Service.
+	// If an Endpoints lacks such a Service, it will be removed.
+	// https://github.com/kubernetes/kubernetes/blob/b7c2d923ef4e166b9572d3aa09ca72231b59b28b/pkg/controller/endpoint/endpoints_controller.go#L392-L397
+	svcOp := decideEtcdServiceOps(nf.HealthyAPIServer(), cs.Kubernetes.EtcdService)
+	if svcOp != nil {
+		ops = append(ops, svcOp)
+	}
+
+	var readyIPs, notReadyIPs []string
+	for _, n := range nf.ControlPlaneNodes() {
+		if cs.RebootQueue.Enabled && (rebootProcessing(cs, n.Address) || rebootNextCandidate(cs, n.Address)) {
+			notReadyIPs = append(notReadyIPs, n.Address)
+		} else {
+			readyIPs = append(readyIPs, n.Address)
+		}
+	}
+
+	ep := &endpointParams{}
+	ep.namespace = metav1.NamespaceSystem
+	ep.name = op.EtcdEndpointsName
+	ep.readyIPs = readyIPs
+	ep.notReadyIPs = notReadyIPs
+	ep.port = 2379
+	ep.serviceName = op.EtcdServiceName
+
+	ops = append(ops, decideEpEpsOps(ep, cs.Kubernetes.EtcdEndpoints, cs.Kubernetes.EtcdEndpointSlice, nf.HealthyAPIServer())...)
+
+	return ops
 }
 
 func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEPS *discoveryv1.EndpointSlice, apiserver *cke.Node) []cke.Operator {
@@ -699,7 +676,7 @@ func cleanOps(c *cke.Cluster, nf *NodeFilter) (ops []cke.Operator) {
 	return ops
 }
 
-func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, rebootArgs DecideOpsRebootArgs, nf *NodeFilter) (ops []cke.Operator, phaseRepair bool) {
+func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, nf *NodeFilter) (ops []cke.Operator, phaseRepair bool) {
 	rqs := &cs.RepairQueue
 
 	// Sort/filter entries to limit the number of concurrent repairs.
@@ -781,7 +758,7 @@ func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 
 	rebootingApiServers := make(map[string]bool)
 	for _, cp := range nf.ControlPlaneNodes() {
-		if rebootProcessing(rebootArgs.RQEntries, cp.Nodename()) {
+		if cs.RebootQueue.Enabled && rebootProcessing(cs, cp.Nodename()) {
 			rebootingApiServers[cp.Address] = true
 		}
 	}
@@ -874,8 +851,21 @@ func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	return ops, phaseRepair
 }
 
-func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOpsRebootArgs, nf *NodeFilter) (ops []cke.Operator) {
-	if len(rebootArgs.RQEntries) == 0 {
+func rebootOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constraints, nf *NodeFilter) (ops []cke.Operator) {
+	if len(cs.RebootQueue.RebootCancelled) > 0 {
+		ops = append(ops, op.RebootCancelOp(cs.RebootQueue.RebootCancelled))
+	}
+	if len(cs.RebootQueue.RebootDequeued) > 0 {
+		ops = append(ops, op.RebootDequeueOp(cs.RebootQueue.RebootDequeued))
+	}
+	if len(ops) > 0 {
+		return ops
+	}
+
+	if !cs.RebootQueue.Enabled {
+		return nil
+	}
+	if len(cs.RebootQueue.Entries) == 0 {
 		return nil
 	}
 	if len(c.Reboot.RebootCommand) == 0 {
@@ -887,52 +877,43 @@ func rebootOps(c *cke.Cluster, constraints *cke.Constraints, rebootArgs DecideOp
 		return nil
 	}
 
-	if len(rebootArgs.RebootCancelled) > 0 {
-		ops = append(ops, op.RebootCancelOp(rebootArgs.RebootCancelled))
-	}
-	if len(rebootArgs.RebootDequeued) > 0 {
-		ops = append(ops, op.RebootDequeueOp(rebootArgs.RebootDequeued))
-	}
-	if len(ops) > 0 {
-		return ops
-	}
-
-	if len(rebootArgs.DrainCompleted) > 0 {
+	if len(cs.RebootQueue.DrainCompleted) > 0 {
 		// After eviction of normal pods, evict "OnDelete" daemonset pods.
-		ops = append(ops, op.RebootDeleteDaemonSetPodOp(nf.HealthyAPIServer(), rebootArgs.DrainCompleted, &c.Reboot))
-		ops = append(ops, op.RebootRebootOp(nf.HealthyAPIServer(), rebootArgs.DrainCompleted, &c.Reboot))
+		ops = append(ops, op.RebootDeleteDaemonSetPodOp(nf.HealthyAPIServer(), cs.RebootQueue.DrainCompleted, &c.Reboot))
+		ops = append(ops, op.RebootRebootOp(nf.HealthyAPIServer(), cs.RebootQueue.DrainCompleted, &c.Reboot))
 	}
-	if len(rebootArgs.NewlyDrained) > 0 {
+	if len(cs.RebootQueue.NextCandidates) > 0 {
 		allNodes := nf.AllNodes()
 		sshCheckNodes := make([]*cke.Node, 0, len(allNodes))
 		for _, node := range allNodes {
-			if !rebootProcessing(rebootArgs.RQEntries, node.Address) {
+			if !rebootProcessing(cs, node.Address) {
 				sshCheckNodes = append(sshCheckNodes, node)
 			}
 		}
 		if len(nf.SSHNotConnected(sshCheckNodes)) > constraints.RebootMaximumUnreachable {
 			log.Warn("cannot reboot nodes because too many nodes are unreachable", nil)
 		} else {
-			ops = append(ops, op.RebootDrainStartOp(nf.HealthyAPIServer(), rebootArgs.NewlyDrained, &c.Reboot))
+			ops = append(ops, op.RebootDrainStartOp(nf.HealthyAPIServer(), cs.RebootQueue.NextCandidates, &c.Reboot))
 		}
 	}
-	if len(rebootArgs.DrainTimedout) > 0 {
-		ops = append(ops, op.RebootDrainTimeoutOp(rebootArgs.DrainTimedout))
+	if len(cs.RebootQueue.DrainTimedout) > 0 {
+		ops = append(ops, op.RebootDrainTimeoutOp(cs.RebootQueue.DrainTimedout))
 	}
 
 	return ops
 }
 
-func rebootUncordonOp(cs *cke.ClusterStatus, rqEntries []*cke.RebootQueueEntry, nf *NodeFilter) cke.Operator {
+func rebootUncordonOp(cs *cke.ClusterStatus, nf *NodeFilter) cke.Operator {
 	attrNodes := nf.CordonedNodes()
 	if len(attrNodes) == 0 {
 		return nil
 	}
 	nodes := make([]string, 0, len(attrNodes))
 	for _, n := range attrNodes {
-		if !(rebootProcessing(rqEntries, n.Name) || repairProcessing(cs.RepairQueue.Entries, n.Name)) {
-			nodes = append(nodes, n.Name)
+		if (cs.RebootQueue.Enabled && rebootProcessing(cs, n.Name)) || repairProcessing(cs, n.Name) {
+			continue
 		}
+		nodes = append(nodes, n.Name)
 	}
 	if len(nodes) == 0 {
 		return nil
@@ -940,20 +921,34 @@ func rebootUncordonOp(cs *cke.ClusterStatus, rqEntries []*cke.RebootQueueEntry, 
 	return op.RebootUncordonOp(nf.HealthyAPIServer(), nodes)
 }
 
-func rebootProcessing(rqEntries []*cke.RebootQueueEntry, node string) bool {
-	for _, entry := range rqEntries {
+// NOTE: This function does not check whether the reboot queue is enabled or not.
+func rebootProcessing(cs *cke.ClusterStatus, node string) bool {
+	for _, entry := range cs.RebootQueue.Entries {
+		if entry.Node != node {
+			continue
+		}
 		switch entry.Status {
 		case cke.RebootStatusDraining, cke.RebootStatusRebooting:
-			if node == entry.Node {
-				return true
-			}
+			return true
+		default:
+			return false
 		}
 	}
 	return false
 }
 
-func repairProcessing(entries []*cke.RepairQueueEntry, nodename string) bool {
-	for _, entry := range entries {
+// NOTE: This function does not check whether the reboot queue is enabled or not.
+func rebootNextCandidate(cs *cke.ClusterStatus, node string) bool {
+	for _, entry := range cs.RebootQueue.NextCandidates {
+		if entry.Node == node {
+			return true
+		}
+	}
+	return false
+}
+
+func repairProcessing(cs *cke.ClusterStatus, nodename string) bool {
+	for _, entry := range cs.RepairQueue.Entries {
 		if entry.IsInCluster() && entry.Nodename == nodename &&
 			entry.Status == cke.RepairStatusProcessing &&
 			(entry.StepStatus == cke.RepairStepStatusDraining || entry.StepStatus == cke.RepairStepStatusWatching) {

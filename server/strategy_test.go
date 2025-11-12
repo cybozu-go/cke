@@ -61,7 +61,6 @@ type testData struct {
 	Status      *cke.ClusterStatus
 	Constraints *cke.Constraints
 	Resources   []cke.ResourceDefinition
-	RebootArgs  DecideOpsRebootArgs
 }
 
 func (d testData) ControlPlane() (nodes []*cke.Node) {
@@ -173,6 +172,7 @@ func newData() testData {
 			Nodes: nodeList,
 		},
 		RepairQueue: cke.RepairQueueStatus{Enabled: true},
+		RebootQueue: cke.RebootQueueStatus{Enabled: true},
 	}
 
 	return testData{
@@ -629,6 +629,11 @@ func (d testData) withRepairDisabled() testData {
 	return d
 }
 
+func (d testData) withRebootDisabled() testData {
+	d.Status.RebootQueue.Enabled = false
+	return d
+}
+
 func (d testData) withRebootConfig() testData {
 	d.Cluster.Reboot.RebootCommand = []string{"reboot"}
 	d.Cluster.Reboot.BootCheckCommand = []string{"true"}
@@ -636,32 +641,32 @@ func (d testData) withRebootConfig() testData {
 }
 
 func (d testData) withRebootEntries(entries []*cke.RebootQueueEntry) testData {
-	d.RebootArgs.RQEntries = entries
+	d.Status.RebootQueue.Entries = entries
 	return d
 }
 
-func (d testData) withNewlyDrained(entries []*cke.RebootQueueEntry) testData {
-	d.RebootArgs.NewlyDrained = entries
+func (d testData) withNextCandidates(entries []*cke.RebootQueueEntry) testData {
+	d.Status.RebootQueue.NextCandidates = entries
 	return d
 }
 
 func (d testData) withDrainCompleted(entries []*cke.RebootQueueEntry) testData {
-	d.RebootArgs.DrainCompleted = entries
+	d.Status.RebootQueue.DrainCompleted = entries
 	return d
 }
 
 func (d testData) withDrainTimedout(entries []*cke.RebootQueueEntry) testData {
-	d.RebootArgs.DrainTimedout = entries
+	d.Status.RebootQueue.DrainTimedout = entries
 	return d
 }
 
 func (d testData) withRebootDequeued(entries []*cke.RebootQueueEntry) testData {
-	d.RebootArgs.RebootDequeued = entries
+	d.Status.RebootQueue.RebootDequeued = entries
 	return d
 }
 
 func (d testData) withRebootCancelled(entries []*cke.RebootQueueEntry) testData {
-	d.RebootArgs.RebootCancelled = entries
+	d.Status.RebootQueue.RebootCancelled = entries
 	return d
 }
 
@@ -1251,7 +1256,7 @@ func TestDecideOps(t *testing.T) {
 					Node:   nodeNames[2],
 					Status: cke.RebootStatusQueued,
 				},
-			}).withNewlyDrained([]*cke.RebootQueueEntry{
+			}).withNextCandidates([]*cke.RebootQueueEntry{
 				{
 					Index:  1,
 					Node:   nodeNames[2],
@@ -1266,6 +1271,34 @@ func TestDecideOps(t *testing.T) {
 			},
 		},
 		{
+			Name: "EndpointsUpdateWithRebootDisabled1",
+			Input: newData().withK8sResourceReady().withRebootDisabled().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[2],
+					Status: cke.RebootStatusDraining,
+				},
+			}),
+			ExpectedOps: nil,
+		},
+		{
+			Name: "EndpointsUpdateWithRebootDisabled2",
+			Input: newData().withK8sResourceReady().withRebootDisabled().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[2],
+					Status: cke.RebootStatusQueued,
+				},
+			}).withNextCandidates([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[2],
+					Status: cke.RebootStatusQueued,
+				},
+			}),
+			ExpectedOps: nil,
+		},
+		{
 			Name: "EndpointsWithRebootEntry",
 			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
 				{
@@ -1273,7 +1306,7 @@ func TestDecideOps(t *testing.T) {
 					Node:   nodeNames[2],
 					Status: cke.RebootStatusQueued,
 				},
-			}).withNewlyDrained([]*cke.RebootQueueEntry{
+			}).withNextCandidates([]*cke.RebootQueueEntry{
 				{
 					Index:  1,
 					Node:   nodeNames[2],
@@ -1281,6 +1314,76 @@ func TestDecideOps(t *testing.T) {
 				},
 			}).withNotReadyEndpoint(2),
 			ExpectedOps: []opData{{"reboot-drain-start", 1}},
+		},
+		{
+			Name:  "RestoreEndpoints",
+			Input: newData().withK8sResourceReady().withNotReadyEndpoint(2),
+			ExpectedOps: []opData{
+				{"update-endpoints", 1},
+				{"update-endpointslice", 1},
+				{"update-endpoints", 1},
+				{"update-endpointslice", 1},
+			},
+		},
+		{
+			Name: "RestoreEndpointsWithCancelledRebootEntry",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[2],
+					Status: cke.RebootStatusCancelled,
+				},
+			}).withRebootCancelled([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[2],
+					Status: cke.RebootStatusCancelled,
+				},
+			}).withNotReadyEndpoint(2),
+			ExpectedOps: []opData{
+				{"update-endpoints", 1},
+				{"update-endpointslice", 1},
+				{"update-endpoints", 1},
+				{"update-endpointslice", 1},
+			},
+		},
+		{
+			Name: "RestoreEndpointsWithRebootDisabled1",
+			Input: newData().withK8sResourceReady().withRebootDisabled().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[2],
+					Status: cke.RebootStatusQueued,
+				},
+			}).withNotReadyEndpoint(2),
+			ExpectedOps: []opData{
+				{"update-endpoints", 1},
+				{"update-endpointslice", 1},
+				{"update-endpoints", 1},
+				{"update-endpointslice", 1},
+			},
+		},
+		{
+			Name: "RestoreEndpointsWithRebootDisabled2",
+			Input: newData().withK8sResourceReady().withRebootDisabled().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[2],
+					Status: cke.RebootStatusQueued,
+				},
+			}).withNextCandidates([]*cke.RebootQueueEntry{
+				{
+					Index:  1,
+					Node:   nodeNames[2],
+					Status: cke.RebootStatusQueued,
+				},
+			}).withNotReadyEndpoint(2),
+			ExpectedOps: []opData{
+				{"update-endpoints", 1},
+				{"update-endpointslice", 1},
+				{"update-endpoints", 1},
+				{"update-endpointslice", 1},
+			},
 		},
 		{
 			Name: "EndpointsWithCancelledRebootEntry",
@@ -2636,7 +2739,7 @@ func TestDecideOps(t *testing.T) {
 					Node:   nodeNames[5],
 					Status: cke.RebootStatusQueued,
 				},
-			}).withNewlyDrained([]*cke.RebootQueueEntry{
+			}).withNextCandidates([]*cke.RebootQueueEntry{
 				{
 					Index:  1,
 					Node:   nodeNames[4],
@@ -2655,7 +2758,7 @@ func TestDecideOps(t *testing.T) {
 					Node:   nodeNames[4],
 					Status: cke.RebootStatusQueued,
 				},
-			}).withNewlyDrained([]*cke.RebootQueueEntry{
+			}).withNextCandidates([]*cke.RebootQueueEntry{
 				{
 					Index:  1,
 					Node:   nodeNames[4],
@@ -2730,7 +2833,7 @@ func TestDecideOps(t *testing.T) {
 					Node:   nodeNames[4],
 					Status: cke.RebootStatusQueued,
 				},
-			}).withNewlyDrained([]*cke.RebootQueueEntry{
+			}).withNextCandidates([]*cke.RebootQueueEntry{
 				{
 					Index:  1,
 					Node:   nodeNames[4],
@@ -2764,7 +2867,7 @@ func TestDecideOps(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, c.Input.RebootArgs, &Config{
+			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, &Config{
 				Interval:             0,
 				CertsGCInterval:      0,
 				MaxConcurrentUpdates: 5,

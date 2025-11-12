@@ -231,9 +231,9 @@ func checkPodDeletion(ctx context.Context, cs *kubernetes.Clientset, node string
 	})
 }
 
-// chooseDrainedNodes chooses nodes to be newly drained.
+// chooseRebootCandidates chooses next targets to drain attempt.
 // For now, this function does not check "drainability".
-func ChooseDrainedNodes(c *cke.Cluster, apiServers map[string]bool, rqEntries []*cke.RebootQueueEntry) []*cke.RebootQueueEntry {
+func ChooseRebootCandidates(c *cke.Cluster, apiServers map[string]bool, rqEntries []*cke.RebootQueueEntry) []*cke.RebootQueueEntry {
 	maxConcurrentReboots := cke.DefaultMaxConcurrentReboots
 	if c.Reboot.MaxConcurrentReboots != nil {
 		maxConcurrentReboots = *c.Reboot.MaxConcurrentReboots
