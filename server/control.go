@@ -321,12 +321,6 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		}
 	}
 
-	nf := NewNodeFilter(cluster, status)
-	apiServers := map[string]bool{}
-	for _, node := range nf.ControlPlaneNodes() {
-		apiServers[node.Address] = true
-	}
-
 	ops, phase := DecideOps(cluster, status, constraints, rcs, c.config)
 
 	st := &cke.ServerStatus{
