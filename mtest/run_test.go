@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"golang.org/x/crypto/ssh"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -488,4 +489,13 @@ func getRandomNumber() *rand.Rand {
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
 	return r1
+}
+
+func nodeConditionStatus(node *corev1.Node, condType corev1.NodeConditionType) corev1.ConditionStatus {
+	for _, cond := range node.Status.Conditions {
+		if cond.Type == condType {
+			return cond.Status
+		}
+	}
+	return ""
 }

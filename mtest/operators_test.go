@@ -17,7 +17,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func testOperators(isDegraded bool) {
+func testOperators() {
 	AfterEach(initializeControlPlane)
 
 	It("run all operators / commanders", func() {
@@ -62,22 +62,12 @@ func testOperators(isDegraded bool) {
 		err = json.Unmarshal(out, &ep)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(ep.Subsets).Should(HaveLen(1))
-		if isDegraded {
-			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-				corev1.EndpointAddress{IP: node1},
-			))
-			Expect(ep.Subsets[0].NotReadyAddresses).Should(ConsistOf(
-				corev1.EndpointAddress{IP: node2},
-				corev1.EndpointAddress{IP: node3},
-			))
-		} else {
-			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-				corev1.EndpointAddress{IP: node1},
-				corev1.EndpointAddress{IP: node2},
-				corev1.EndpointAddress{IP: node3},
-			))
-			Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
-		}
+		Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+			corev1.EndpointAddress{IP: node1},
+			corev1.EndpointAddress{IP: node2},
+			corev1.EndpointAddress{IP: node3},
+		))
+		Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
 
 		By("Testing default/kubernetes EndpointSlices")
 		out, _, err = kubectl("get", "-o=json", "endpointslices/kubernetes")
@@ -85,51 +75,32 @@ func testOperators(isDegraded bool) {
 		var eps discoveryv1.EndpointSlice
 		err = json.Unmarshal(out, &eps)
 		Expect(err).NotTo(HaveOccurred())
-		if isDegraded {
-			Expect(eps.Endpoints).To(ConsistOf(
-				discoveryv1.Endpoint{
-					Addresses:  []string{node1},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
-				},
-				discoveryv1.Endpoint{
-					Addresses:  []string{node2},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(false)},
-				},
-				discoveryv1.Endpoint{
-					Addresses:  []string{node3},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(false)},
-				},
-			))
-		} else {
-			Expect(eps.Endpoints).To(ConsistOf(
-				discoveryv1.Endpoint{
-					Addresses:  []string{node1},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
-				},
-				discoveryv1.Endpoint{
-					Addresses:  []string{node2},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
-				},
-				discoveryv1.Endpoint{
-					Addresses:  []string{node3},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
-				},
-			))
-		}
+		Expect(eps.Endpoints).To(ConsistOf(
+			discoveryv1.Endpoint{
+				Addresses:  []string{node1},
+				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+			},
+			discoveryv1.Endpoint{
+				Addresses:  []string{node2},
+				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+			},
+			discoveryv1.Endpoint{
+				Addresses:  []string{node3},
+				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+			},
+		))
 
 		By("Stopping etcd servers")
 		// this will run:
 		// - EtcdStartOp
 		// - EtcdWaitClusterOp
-		if !isDegraded {
-			stopCKE()
-			execSafeAt(node2, "docker", "stop", "etcd")
-			execSafeAt(node2, "docker", "rm", "etcd")
-			execSafeAt(node3, "docker", "stop", "etcd")
-			execSafeAt(node3, "docker", "rm", "etcd")
-			runCKE(ckeImageURL)
-			waitServerStatusCompletion()
-		}
+		stopCKE()
+		execSafeAt(node2, "docker", "stop", "etcd")
+		execSafeAt(node2, "docker", "rm", "etcd")
+		execSafeAt(node3, "docker", "stop", "etcd")
+		execSafeAt(node3, "docker", "rm", "etcd")
+		runCKE(ckeImageURL)
+		waitServerStatusCompletion()
 
 		By("Removing a control plane node from the cluster")
 		// this will run:
@@ -156,20 +127,11 @@ func testOperators(isDegraded bool) {
 		err = json.Unmarshal(out, &ep)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(ep.Subsets).Should(HaveLen(1))
-		if isDegraded {
-			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-				corev1.EndpointAddress{IP: node1},
-			))
-			Expect(ep.Subsets[0].NotReadyAddresses).Should(ConsistOf(
-				corev1.EndpointAddress{IP: node3},
-			))
-		} else {
-			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-				corev1.EndpointAddress{IP: node1},
-				corev1.EndpointAddress{IP: node3},
-			))
-			Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
-		}
+		Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+			corev1.EndpointAddress{IP: node1},
+			corev1.EndpointAddress{IP: node3},
+		))
+		Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
 
 		By("Testing default/kubernetes EndpointSlices")
 		out, _, err = kubectl("get", "-o=json", "endpointslices/kubernetes")
@@ -177,29 +139,16 @@ func testOperators(isDegraded bool) {
 		eps = discoveryv1.EndpointSlice{}
 		err = json.Unmarshal(out, &eps)
 		Expect(err).NotTo(HaveOccurred())
-		if isDegraded {
-			Expect(eps.Endpoints).To(ConsistOf(
-				discoveryv1.Endpoint{
-					Addresses:  []string{node1},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
-				},
-				discoveryv1.Endpoint{
-					Addresses:  []string{node3},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(false)},
-				},
-			))
-		} else {
-			Expect(eps.Endpoints).To(ConsistOf(
-				discoveryv1.Endpoint{
-					Addresses:  []string{node1},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
-				},
-				discoveryv1.Endpoint{
-					Addresses:  []string{node3},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
-				},
-			))
-		}
+		Expect(eps.Endpoints).To(ConsistOf(
+			discoveryv1.Endpoint{
+				Addresses:  []string{node1},
+				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+			},
+			discoveryv1.Endpoint{
+				Addresses:  []string{node3},
+				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+			},
+		))
 
 		By("Adding a new node to the cluster as a control plane")
 		// this will run AddMemberOp as well as other boot/restart ops.
@@ -226,12 +175,7 @@ func testOperators(isDegraded bool) {
 
 		// reboot node2 and node4 to check bootstrap taints
 		rebootTime := time.Now()
-		var rebootedNodes []string
-		if isDegraded {
-			rebootedNodes = []string{node4}
-		} else {
-			rebootedNodes = []string{node2, node4}
-		}
+		rebootedNodes := []string{node2, node4}
 		for _, n := range rebootedNodes {
 			execAt(n, "sudo", "systemd-run", "reboot", "-f", "-f")
 		}
@@ -276,14 +220,8 @@ func testOperators(isDegraded bool) {
 					return errors.New("node is not ready: " + n.Name)
 				}
 			}
-			var numKubernetesNodes int
-			if isDegraded {
-				numKubernetesNodes = len(cluster.Nodes) - 2 // 2 == (dummy 7th node) + (halted 2nd node)
-			} else {
-				numKubernetesNodes = len(cluster.Nodes)
-			}
-			if len(status.Kubernetes.Nodes) != numKubernetesNodes {
-				return fmt.Errorf("nodes length should be %d, actual %d", numKubernetesNodes, len(status.Kubernetes.Nodes))
+			if len(status.Kubernetes.Nodes) != len(cluster.Nodes) {
+				return fmt.Errorf("nodes length should be %d, actual %d", len(cluster.Nodes), len(status.Kubernetes.Nodes))
 			}
 			return nil
 		}).Should(Succeed())
@@ -318,13 +256,11 @@ func testOperators(isDegraded bool) {
 
 		// check leader change
 		// AddMemberOp will not be called if degraded, and leader will not change
-		if !isDegraded {
-			newLeader := strings.TrimSpace(string(ckecliSafe("leader")))
-			Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
-			Expect(newLeader).NotTo(Equal(firstLeader))
-			stopCKE()
-			runCKE(ckeImageURL)
-		}
+		newLeader := strings.TrimSpace(string(ckecliSafe("leader")))
+		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
+		Expect(newLeader).NotTo(Equal(firstLeader))
+		stopCKE()
+		runCKE(ckeImageURL)
 
 		By("Converting a control plane node to a worker node")
 		// this will run these ops:
@@ -363,13 +299,11 @@ func testOperators(isDegraded bool) {
 
 		// check leader change
 		// RemoveMemberOp will not be called if degraded, and leader will not change
-		if !isDegraded {
-			newLeader := strings.TrimSpace(string(ckecliSafe("leader")))
-			Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
-			Expect(newLeader).NotTo(Equal(firstLeader))
-			stopCKE()
-			runCKE(ckeImageURL)
-		}
+		newLeader = strings.TrimSpace(string(ckecliSafe("leader")))
+		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
+		Expect(newLeader).NotTo(Equal(firstLeader))
+		stopCKE()
+		runCKE(ckeImageURL)
 
 		By("Changing service options")
 		// this will run these ops:
@@ -449,14 +383,7 @@ func testOperators(isDegraded bool) {
 		clusterSetAndWait(cluster)
 
 		By("testing control plane taints")
-		var runningCPs []string
-		if isDegraded {
-			// node2 has been removed from cluster once, and it cannot be restored in degraded mode
-			runningCPs = []string{node1, node3}
-		} else {
-			runningCPs = []string{node1, node2, node3}
-		}
-		for _, n := range runningCPs {
+		for _, n := range []string{node1, node2, node3} {
 			out, stderr, err := kubectl("get", "-o=json", "node", n)
 			Expect(err).ShouldNot(HaveOccurred(), "stdout: %s, stderr: %s", out, stderr)
 			var node corev1.Node
@@ -555,10 +482,6 @@ func testOperators(isDegraded bool) {
 	})
 
 	It("should exclude updateOp of the shutdowned node", func() {
-		if isDegraded {
-			return
-		}
-
 		By("Terminating a control plane")
 		stopCKE()
 		execAt(node2, "sudo", "systemd-run", "halt", "-f", "-f")
