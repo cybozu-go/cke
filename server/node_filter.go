@@ -314,6 +314,38 @@ func (nf *NodeFilter) EtcdOutdatedMembers() (nodes []*cke.Node) {
 	return nodes
 }
 
+// HealthyAPIServer returns a control plane node running healthy API server.
+// If there is no healthy API server, it returns the first control plane node.
+func (nf *NodeFilter) HealthyAPIServer() *cke.Node {
+	for _, n := range nf.ControlPlaneNodes() {
+		if nf.nodeStatus(n).APIServer.IsHealthy {
+			return n
+		}
+	}
+	return nil
+}
+
+// APIServerHealthy filters nodes which have healthy API servers.
+func (nf *NodeFilter) APIServerHealthy(targets []*cke.Node) (nodes []*cke.Node) {
+	for _, n := range targets {
+		if nf.nodeStatus(n).APIServer.IsHealthy {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
+// APIServerUnhealthy filters nodes which have unhealthy API servers.
+// This function also returns nodes on which the API server is not running.
+func (nf *NodeFilter) APIServerUnhealthy(targets []*cke.Node) (nodes []*cke.Node) {
+	for _, n := range targets {
+		if !nf.nodeStatus(n).APIServer.IsHealthy {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
 // APIServerStopped filters nodes that are not running API server.
 func (nf *NodeFilter) APIServerStopped(targets []*cke.Node) (nodes []*cke.Node) {
 	for _, n := range targets {
@@ -612,39 +644,6 @@ func (nf *NodeFilter) ProxyOutdated(targets []*cke.Node, params cke.ProxyParams)
 				"config":               currentConfig,
 				"diff":                 cmp.Diff(currentConfig, runningConfig),
 			})
-			nodes = append(nodes, n)
-		}
-	}
-	return nodes
-}
-
-// HealthyAPIServer returns a control plane node running healthy API server.
-// If there is no healthy API server, it returns the first control plane node.
-func (nf *NodeFilter) HealthyAPIServer() *cke.Node {
-	var node *cke.Node
-	for _, n := range nf.ControlPlaneNodes() {
-		node = n
-		if nf.nodeStatus(n).APIServer.IsHealthy {
-			break
-		}
-	}
-	return node
-}
-
-// HealthyAPIServerNodes returns nodes which have healthy API servers
-func (nf *NodeFilter) HealthyAPIServerNodes() (nodes []*cke.Node) {
-	for _, n := range nf.ControlPlaneNodes() {
-		if nf.nodeStatus(n).APIServer.IsHealthy {
-			nodes = append(nodes, n)
-		}
-	}
-	return nodes
-}
-
-// UnhealthyAPIServerNodes returns nodes which have unhealthy API servers
-func (nf *NodeFilter) UnhealthyAPIServerNodes() (nodes []*cke.Node) {
-	for _, n := range nf.ControlPlaneNodes() {
-		if !nf.nodeStatus(n).APIServer.IsHealthy {
 			nodes = append(nodes, n)
 		}
 	}
