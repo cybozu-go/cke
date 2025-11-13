@@ -1,6 +1,7 @@
 package server
 
 import (
+	"slices"
 	"time"
 
 	"github.com/cybozu-go/cke"
@@ -139,15 +140,53 @@ func riversOps(c *cke.Cluster, nf *NodeFilter, maxConcurrentUpdates int) (ops []
 }
 
 func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrentUpdates int) (ops []cke.Operator) {
-	// For cp nodes
-	if nodes := nf.SSHConnected(nf.APIServerStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
+	// kube-apiserver
+	// First, start up kube-apiservers or repairing the unhealthy kube-apiservers due to configuration issues.
+	var apiserverStoppedNodes []*cke.Node
+	apiserverStoppedNodes = append(apiserverStoppedNodes, nf.SSHConnected(nf.APIServerStopped(nf.ControlPlaneNodes()))...)
+	apiserverStoppedNodes = append(apiserverStoppedNodes, nf.SSHConnected(nf.APIServerOutdated(nf.UnhealthyAPIServerNodes()))...)
+	if len(apiserverStoppedNodes) > 0 {
+		// Set the broken kube-apiservers as NotReady.
+		// But should not maintain the kubernetes endpoint during cluster startup.
+		if len(nf.HealthyAPIServerNodes()) > 0 {
+			var notReadyIPs []string
+			for _, n := range apiserverStoppedNodes {
+				notReadyIPs = append(notReadyIPs, n.Address)
+			}
+			ops = append(ops, masterEndpointOps(c, cs, nf, notReadyIPs)...)
+		}
 		kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
-		ops = append(ops, k8s.APIServerRestartOp(nodes, c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
+		ops = append(ops, k8s.APIServerRestartOp(apiserverStoppedNodes, c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
 	}
+	if len(ops) > 0 {
+		return ops
+	}
+
+	// Updating kube-apiservers should be performed only when all kube-apiservers are healthy.
+	if len(nf.UnhealthyAPIServerNodes()) > 0 {
+		return nil
+	}
+
+	// Updating kube-apiservers one by one.
 	if nodes := nf.SSHConnected(nf.APIServerOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
+		target := nodes[0] // one by one.
+
+		ops = append(ops, masterEndpointOps(c, cs, nf, []string{target.Address})...)
 		kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
-		ops = append(ops, k8s.APIServerRestartOp(nodes, c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
+		ops = append(ops, k8s.APIServerRestartOp([]*cke.Node{target}, c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
+		return ops
 	}
+
+	// Other k8s components should be maintained only when all kube-apiservers are *updated* and healthy.
+	if len(nf.UnhealthyAPIServerNodes()) > 0 {
+		return nil
+	}
+
+	// Set kube-apiservers as Ready.
+	// If a control plane node is next to restart, set it as NotReady to prevent communication errors during restart.
+	ops = append(ops, masterEndpointOps(c, cs, nf, rebootNextCandidates(cs))...)
+
+	// Other CP components
 	if nodes := nf.SSHConnected(nf.ControllerManagerStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		ops = append(ops, k8s.ControllerManagerBootOp(nodes, c.Name, c.ServiceSubnet, c.Options.ControllerManager))
 	}
@@ -264,9 +303,7 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 
 	ops = append(ops, decideNodeDNSOps(apiServer, c, ks)...)
 
-	ops = append(ops, masterEndpointOps(c, cs, nf)...)
-
-	ops = append(ops, etcdEndpointOps(c, cs, nf)...)
+	ops = append(ops, etcdEndpointOps(c, cs, nf, rebootNextCandidates(cs))...)
 
 	if nodes := nf.OutdatedAttrsNodes(); len(nodes) > 0 {
 		ops = append(ops, op.KubeNodeUpdateOp(apiServer, nodes))
@@ -345,11 +382,11 @@ type endpointParams struct {
 	serviceName string
 }
 
-func masterEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) []cke.Operator {
+func masterEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter, markedAsNotReadyIPs []string) []cke.Operator {
 	var readyIPs, notReadyIPs []string
 
 	for _, n := range nf.HealthyAPIServerNodes() {
-		if cs.RebootQueue.Enabled && (rebootProcessing(cs, n.Address) || rebootNextCandidate(cs, n.Address)) {
+		if rebootProcessing(cs, n.Address) || slices.Contains(markedAsNotReadyIPs, n.Address) {
 			notReadyIPs = append(notReadyIPs, n.Address)
 		} else {
 			readyIPs = append(readyIPs, n.Address)
@@ -371,7 +408,7 @@ func masterEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) []
 	return decideEpEpsOps(ep, cs.Kubernetes.MasterEndpoints, cs.Kubernetes.MasterEndpointSlice, nf.HealthyAPIServer())
 }
 
-func etcdEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops []cke.Operator) {
+func etcdEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter, markedAsNotReadyIPs []string) (ops []cke.Operator) {
 	// Endpoints needs a corresponding Service.
 	// If an Endpoints lacks such a Service, it will be removed.
 	// https://github.com/kubernetes/kubernetes/blob/b7c2d923ef4e166b9572d3aa09ca72231b59b28b/pkg/controller/endpoint/endpoints_controller.go#L392-L397
@@ -382,7 +419,7 @@ func etcdEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops
 
 	var readyIPs, notReadyIPs []string
 	for _, n := range nf.ControlPlaneNodes() {
-		if cs.RebootQueue.Enabled && (rebootProcessing(cs, n.Address) || rebootNextCandidate(cs, n.Address)) {
+		if rebootProcessing(cs, n.Address) || slices.Contains(markedAsNotReadyIPs, n.Address) {
 			notReadyIPs = append(notReadyIPs, n.Address)
 		} else {
 			readyIPs = append(readyIPs, n.Address)
@@ -758,7 +795,7 @@ func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 
 	rebootingApiServers := make(map[string]bool)
 	for _, cp := range nf.ControlPlaneNodes() {
-		if cs.RebootQueue.Enabled && rebootProcessing(cs, cp.Nodename()) {
+		if rebootProcessing(cs, cp.Nodename()) {
 			rebootingApiServers[cp.Address] = true
 		}
 	}
@@ -910,7 +947,7 @@ func rebootUncordonOp(cs *cke.ClusterStatus, nf *NodeFilter) cke.Operator {
 	}
 	nodes := make([]string, 0, len(attrNodes))
 	for _, n := range attrNodes {
-		if (cs.RebootQueue.Enabled && rebootProcessing(cs, n.Name)) || repairProcessing(cs, n.Name) {
+		if rebootProcessing(cs, n.Name) || repairProcessing(cs, n.Name) {
 			continue
 		}
 		nodes = append(nodes, n.Name)
@@ -921,8 +958,22 @@ func rebootUncordonOp(cs *cke.ClusterStatus, nf *NodeFilter) cke.Operator {
 	return op.RebootUncordonOp(nf.HealthyAPIServer(), nodes)
 }
 
-// NOTE: This function does not check whether the reboot queue is enabled or not.
+func rebootNextCandidates(cs *cke.ClusterStatus) []string {
+	if !cs.RebootQueue.Enabled {
+		return nil
+	}
+	ret := []string{}
+	for _, entry := range cs.RebootQueue.NextCandidates {
+		ret = append(ret, entry.Node)
+	}
+	return ret
+}
+
 func rebootProcessing(cs *cke.ClusterStatus, node string) bool {
+	if !cs.RebootQueue.Enabled {
+		return false
+	}
+
 	for _, entry := range cs.RebootQueue.Entries {
 		if entry.Node != node {
 			continue
@@ -932,16 +983,6 @@ func rebootProcessing(cs *cke.ClusterStatus, node string) bool {
 			return true
 		default:
 			return false
-		}
-	}
-	return false
-}
-
-// NOTE: This function does not check whether the reboot queue is enabled or not.
-func rebootNextCandidate(cs *cke.ClusterStatus, node string) bool {
-	for _, entry := range cs.RebootQueue.NextCandidates {
-		if entry.Node == node {
-			return true
 		}
 	}
 	return false
