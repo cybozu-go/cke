@@ -1094,11 +1094,11 @@ func TestDecideOps(t *testing.T) {
 				{"resource-apply", 1},
 				{"resource-apply", 1},
 				{"create-cluster-dns-configmap", 1},
-				{"create-endpoints", 1},
-				{"create-endpointslice", 1},
+				{"create-kubernetes-endpoints", 1},
+				{"create-kubernetes-endpointslice", 1},
 				{"create-etcd-service", 1},
-				{"create-endpoints", 1},
-				{"create-endpointslice", 1},
+				{"create-cke-etcd-endpoints", 1},
+				{"create-cke-etcd-endpointslice", 1},
 			},
 		},
 		{
@@ -1160,35 +1160,35 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets = []corev1.EndpointSubset{}
 			}),
-			ExpectedOps: []opData{{"update-endpoints", 1}},
+			ExpectedOps: []opData{{"update-kubernetes-endpoints", 1}},
 		},
 		{
 			Name: "MasterEndpointsUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Ports = []corev1.EndpointPort{}
 			}),
-			ExpectedOps: []opData{{"update-endpoints", 1}},
+			ExpectedOps: []opData{{"update-kubernetes-endpoints", 1}},
 		},
 		{
 			Name: "MasterEndpointsUpdate3",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
-			ExpectedOps: []opData{{"update-endpoints", 1}},
+			ExpectedOps: []opData{{"update-kubernetes-endpoints", 1}},
 		},
 		{
 			Name: "MasterEndpointSliceUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpointSlice.Endpoints[0].Addresses = []string{}
 			}),
-			ExpectedOps: []opData{{"update-endpointslice", 1}},
+			ExpectedOps: []opData{{"update-kubernetes-endpointslice", 1}},
 		},
 		{
 			Name: "MasterEndpointSliceUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpointSlice.Ports[0] = discoveryv1.EndpointPort{}
 			}),
-			ExpectedOps: []opData{{"update-endpointslice", 1}},
+			ExpectedOps: []opData{{"update-kubernetes-endpointslice", 1}},
 		},
 		{
 			Name: "EtcdServiceUpdate",
@@ -1202,35 +1202,35 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets = []corev1.EndpointSubset{}
 			}),
-			ExpectedOps: []opData{{"update-endpoints", 1}},
+			ExpectedOps: []opData{{"update-cke-etcd-endpoints", 1}},
 		},
 		{
 			Name: "EtcdEndpointsUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Ports = []corev1.EndpointPort{}
 			}),
-			ExpectedOps: []opData{{"update-endpoints", 1}},
+			ExpectedOps: []opData{{"update-cke-etcd-endpoints", 1}},
 		},
 		{
 			Name: "EtcdEndpointsUpdate3",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
-			ExpectedOps: []opData{{"update-endpoints", 1}},
+			ExpectedOps: []opData{{"update-cke-etcd-endpoints", 1}},
 		},
 		{
 			Name: "EtcdEndpointSliceUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[0].Addresses = []string{}
 			}),
-			ExpectedOps: []opData{{"update-endpointslice", 1}},
+			ExpectedOps: []opData{{"update-cke-etcd-endpointslice", 1}},
 		},
 		{
 			Name: "EtcdEndpointSliceUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpointSlice.Ports[0] = discoveryv1.EndpointPort{}
 			}),
-			ExpectedOps: []opData{{"update-endpointslice", 1}},
+			ExpectedOps: []opData{{"update-cke-etcd-endpointslice", 1}},
 		},
 		{
 			Name: "EndpointsUpdateWithRebootEntry",
@@ -1242,10 +1242,10 @@ func TestDecideOps(t *testing.T) {
 				},
 			}),
 			ExpectedOps: []opData{
-				{"update-endpoints", 1},
-				{"update-endpointslice", 1},
-				{"update-endpoints", 1},
-				{"update-endpointslice", 1},
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+				{"update-cke-etcd-endpoints", 1},
+				{"update-cke-etcd-endpointslice", 1},
 			},
 		},
 		{
@@ -1264,10 +1264,10 @@ func TestDecideOps(t *testing.T) {
 				},
 			}),
 			ExpectedOps: []opData{
-				{"update-endpoints", 1},
-				{"update-endpointslice", 1},
-				{"update-endpoints", 1},
-				{"update-endpointslice", 1},
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+				{"update-cke-etcd-endpoints", 1},
+				{"update-cke-etcd-endpointslice", 1},
 			},
 		},
 		{
@@ -1319,10 +1319,10 @@ func TestDecideOps(t *testing.T) {
 			Name:  "RestoreEndpoints",
 			Input: newData().withK8sResourceReady().withNotReadyEndpoint(2),
 			ExpectedOps: []opData{
-				{"update-endpoints", 1},
-				{"update-endpointslice", 1},
-				{"update-endpoints", 1},
-				{"update-endpointslice", 1},
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+				{"update-cke-etcd-endpoints", 1},
+				{"update-cke-etcd-endpointslice", 1},
 			},
 		},
 		{
@@ -1341,10 +1341,10 @@ func TestDecideOps(t *testing.T) {
 				},
 			}).withNotReadyEndpoint(2),
 			ExpectedOps: []opData{
-				{"update-endpoints", 1},
-				{"update-endpointslice", 1},
-				{"update-endpoints", 1},
-				{"update-endpointslice", 1},
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+				{"update-cke-etcd-endpoints", 1},
+				{"update-cke-etcd-endpointslice", 1},
 			},
 		},
 		{
@@ -1357,10 +1357,10 @@ func TestDecideOps(t *testing.T) {
 				},
 			}).withNotReadyEndpoint(2),
 			ExpectedOps: []opData{
-				{"update-endpoints", 1},
-				{"update-endpointslice", 1},
-				{"update-endpoints", 1},
-				{"update-endpointslice", 1},
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+				{"update-cke-etcd-endpoints", 1},
+				{"update-cke-etcd-endpointslice", 1},
 			},
 		},
 		{
@@ -1379,10 +1379,10 @@ func TestDecideOps(t *testing.T) {
 				},
 			}).withNotReadyEndpoint(2),
 			ExpectedOps: []opData{
-				{"update-endpoints", 1},
-				{"update-endpointslice", 1},
-				{"update-endpoints", 1},
-				{"update-endpointslice", 1},
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+				{"update-cke-etcd-endpoints", 1},
+				{"update-cke-etcd-endpointslice", 1},
 			},
 		},
 		{
