@@ -117,12 +117,14 @@ func newData() testData {
 		ServiceSubnet: testServiceSubnet,
 		DNSServers:    testDefaultDNSServers,
 	}
+
 	schedulerConfig := &unstructured.Unstructured{}
 	schedulerConfig.SetGroupVersionKind(schedulerv1.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
 	schedulerConfig.Object["parallelism"] = 999
 	cluster.Options.Scheduler = cke.SchedulerParams{
 		Config: schedulerConfig,
 	}
+
 	kubeletConfig := &unstructured.Unstructured{}
 	kubeletConfig.SetGroupVersionKind(kubeletv1beta1.SchemeGroupVersion.WithKind("KubeletConfiguration"))
 	kubeletConfig.Object["containerLogMaxSize"] = "20Mi"
@@ -133,35 +135,37 @@ func newData() testData {
 		InPlaceUpdate: true,
 	}
 
-	nodeReadyStatus := corev1.NodeStatus{
-		Conditions: []corev1.NodeCondition{
-			{
-				Type:   corev1.NodeReady,
-				Status: corev1.ConditionTrue,
-			},
-		},
-	}
-
 	nodeStatuses := make(map[string]*cke.NodeStatus)
-	var nodeList []corev1.Node
 	for _, nodeName := range nodeNames {
 		nodeStatuses[nodeName] = &cke.NodeStatus{
 			Etcd:         cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false, IsAddedMember: false},
 			SSHConnected: true,
 		}
+	}
+
+	var nodeList []corev1.Node
+	for _, nodeName := range nodeNames {
 		nodeList = append(nodeList, corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: nodeName,
 			},
-			Status: nodeReadyStatus,
+			Status: corev1.NodeStatus{
+				Conditions: []corev1.NodeCondition{
+					{
+						Type:   corev1.NodeReady,
+						Status: corev1.ConditionTrue,
+					},
+				},
+			},
 		})
 	}
-	for i := 0; i < 3; i++ {
-		nodeList[i].Labels = map[string]string{op.CKELabelMaster: "true"}
-	}
+	nodeList[0].Labels = map[string]string{op.CKELabelMaster: "true"}
+	nodeList[1].Labels = map[string]string{op.CKELabelMaster: "true"}
+	nodeList[2].Labels = map[string]string{op.CKELabelMaster: "true"}
 	nodeList[3].Annotations = cluster.Nodes[3].Annotations
 	nodeList[3].Labels = cluster.Nodes[3].Labels
 	nodeList[3].Spec.Taints = cluster.Nodes[3].Taints
+
 	status := &cke.ClusterStatus{
 		ConfigVersion: cke.ConfigVersion,
 		NodeStatuses:  nodeStatuses,
@@ -314,7 +318,6 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 			CRIEndpoint: "/var/run/k8s-containerd.sock",
 		})
 
-		webhookEnabled := true
 		st.Config = &kubeletv1beta1.KubeletConfiguration{
 			ClusterDomain:         domain,
 			RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
@@ -325,7 +328,7 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 			TLSPrivateKeyFile:     "/etc/kubernetes/pki/kubelet.key",
 			Authentication: kubeletv1beta1.KubeletAuthentication{
 				X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: "/etc/kubernetes/pki/ca.crt"},
-				Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: &webhookEnabled},
+				Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: ptr.To(true)},
 			},
 			Authorization: kubeletv1beta1.KubeletAuthorization{Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook},
 			ClusterDNS:    []string{n.Address},
@@ -383,24 +386,8 @@ func (d testData) withK8sReady() testData {
 	return d
 }
 
-func (d testData) withK8sResourceReady() testData {
-	d.withK8sReady()
-	ks := &d.Status.Kubernetes
-	for _, res := range static.Resources {
-		ks.ResourceStatuses[res.Key] = cke.ResourceStatus{
-			Annotations: map[string]string{cke.AnnotationResourceRevision: "1"},
-		}
-	}
-	ks.ResourceStatuses["ClusterRole/system:cluster-dns"].Annotations[cke.AnnotationResourceRevision] = "2"
-	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"].Annotations[cke.AnnotationResourceImage] = cke.CoreDNSImage.Name()
-	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"].Annotations[cke.AnnotationResourceRevision] = "5"
-	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"].Annotations[cke.AnnotationResourceImage] = cke.UnboundImage.Name() + "," + cke.UnboundExporterImage.Name()
-	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"].Annotations[cke.AnnotationResourceRevision] = "4"
-	ks.ClusterDNS.ConfigMap = clusterdns.ConfigMap(testDefaultDNSDomain, testDefaultDNSServers)
-	ks.ClusterDNS.ClusterIP = testDefaultDNSAddr
-	ks.NodeDNS.ConfigMap = nodedns.ConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers, true)
-
-	ks.MasterEndpoints = &corev1.Endpoints{
+func (d testData) withMasterEndpoint() testData {
+	d.Status.Kubernetes.MasterEndpoints = &corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				"endpointslice.kubernetes.io/skip-mirror": "true",
@@ -417,10 +404,8 @@ func (d testData) withK8sResourceReady() testData {
 			},
 		},
 	}
-	endpointReady := true
-	masterPortName := "https"
-	var masterPort int32 = 6443
-	ks.MasterEndpointSlice = &discoveryv1.EndpointSlice{
+
+	d.Status.Kubernetes.MasterEndpointSlice = &discoveryv1.EndpointSlice{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				"endpointslice.kubernetes.io/managed-by": "cke.cybozu.com",
@@ -430,34 +415,34 @@ func (d testData) withK8sResourceReady() testData {
 		AddressType: discoveryv1.AddressTypeIPv4,
 		Endpoints: []discoveryv1.Endpoint{
 			{
-				Addresses: []string{
-					"10.0.0.11",
-				},
-				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
+				Addresses:  []string{"10.0.0.11"},
+				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
 			},
 			{
-				Addresses: []string{
-					"10.0.0.12",
-				},
-				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
+				Addresses:  []string{"10.0.0.12"},
+				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
 			},
 			{
-				Addresses: []string{
-					"10.0.0.13",
-				},
-				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
+				Addresses:  []string{"10.0.0.13"},
+				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
 			},
 		},
-		Ports: []discoveryv1.EndpointPort{{Name: &masterPortName, Port: &masterPort}},
+		Ports: []discoveryv1.EndpointPort{{Name: ptr.To("https"), Port: ptr.To(int32(6443))}},
 	}
-	ks.EtcdService = &corev1.Service{
+
+	return d
+}
+
+func (d testData) withEtcdEndpoint() testData {
+	d.Status.Kubernetes.EtcdService = &corev1.Service{
 		Spec: corev1.ServiceSpec{
 			Ports:     []corev1.ServicePort{{Port: 2379}},
 			Type:      corev1.ServiceTypeClusterIP,
 			ClusterIP: corev1.ClusterIPNone,
 		},
 	}
-	ks.EtcdEndpoints = &corev1.Endpoints{
+
+	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				"endpointslice.kubernetes.io/skip-mirror": "true",
@@ -474,9 +459,8 @@ func (d testData) withK8sResourceReady() testData {
 			},
 		},
 	}
-	etcdPortName := ""
-	var etcdPort int32 = 2379
-	ks.EtcdEndpointSlice = &discoveryv1.EndpointSlice{
+
+	d.Status.Kubernetes.EtcdEndpointSlice = &discoveryv1.EndpointSlice{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				"endpointslice.kubernetes.io/managed-by": "cke.cybozu.com",
@@ -486,100 +470,128 @@ func (d testData) withK8sResourceReady() testData {
 		AddressType: discoveryv1.AddressTypeIPv4,
 		Endpoints: []discoveryv1.Endpoint{
 			{
-				Addresses: []string{
-					"10.0.0.11",
-				},
-				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
+				Addresses:  []string{"10.0.0.11"},
+				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
 			},
 			{
-				Addresses: []string{
-					"10.0.0.12",
-				},
-				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
+				Addresses:  []string{"10.0.0.12"},
+				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
 			},
 			{
-				Addresses: []string{
-					"10.0.0.13",
-				},
-				Conditions: discoveryv1.EndpointConditions{Ready: &endpointReady},
+				Addresses:  []string{"10.0.0.13"},
+				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
 			},
 		},
-		Ports: []discoveryv1.EndpointPort{{Name: &etcdPortName, Port: &etcdPort}},
+		Ports: []discoveryv1.EndpointPort{{Name: ptr.To(""), Port: ptr.To(int32(2379))}},
 	}
 
 	return d
 }
 
+func (d testData) withNotReadyMasterEndpoint(i int) testData {
+	// No need to check the range of `i`. If it's invalid, just panic.
+	origAddrs := d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses
+	d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = slices.Delete(slices.Clone(origAddrs), i, i+1)
+	d.Status.Kubernetes.MasterEndpoints.Subsets[0].NotReadyAddresses = origAddrs[i : i+1]
+	d.Status.Kubernetes.MasterEndpointSlice.Endpoints[i].Conditions.Ready = ptr.To(false)
+	return d
+}
+
+func (d testData) withNotReadyEtcdEndpoint(i int) testData {
+	// No need to check the range of `i`. If it's invalid, just panic.
+	origAddrs := d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses
+	d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = slices.Delete(slices.Clone(origAddrs), i, i+1)
+	d.Status.Kubernetes.EtcdEndpoints.Subsets[0].NotReadyAddresses = origAddrs[i : i+1]
+	d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[i].Conditions.Ready = ptr.To(false)
+	return d
+}
+
 func (d testData) withNotReadyEndpoint(i int) testData {
-	masterAddresses := d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses
-	etcdAddresses := d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses
-	if i < 0 || i >= len(masterAddresses) {
-		return d
+	d.withNotReadyMasterEndpoint(i)
+	d.withNotReadyEtcdEndpoint(i)
+	return d
+}
+
+func (d testData) withK8sResourceReady() testData {
+	d.withK8sReady()
+	ks := &d.Status.Kubernetes
+	for _, res := range static.Resources {
+		ks.ResourceStatuses[res.Key] = cke.ResourceStatus{
+			Annotations: map[string]string{cke.AnnotationResourceRevision: "1"},
+		}
 	}
-	d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = masterAddresses[0:i]
-	d.Status.Kubernetes.MasterEndpoints.Subsets[0].NotReadyAddresses = masterAddresses[i:3]
-	d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = etcdAddresses[0:i]
-	d.Status.Kubernetes.EtcdEndpoints.Subsets[0].NotReadyAddresses = etcdAddresses[i:3]
-	endpointReady := false
-	d.Status.Kubernetes.MasterEndpointSlice.Endpoints[i].Conditions.Ready = &endpointReady
-	d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[i].Conditions.Ready = &endpointReady
+	ks.ResourceStatuses["ClusterRole/system:cluster-dns"].Annotations[cke.AnnotationResourceRevision] = "2"
+	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"].Annotations[cke.AnnotationResourceImage] = cke.CoreDNSImage.Name()
+	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"].Annotations[cke.AnnotationResourceRevision] = "5"
+	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"].Annotations[cke.AnnotationResourceImage] = cke.UnboundImage.Name() + "," + cke.UnboundExporterImage.Name()
+	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"].Annotations[cke.AnnotationResourceRevision] = "4"
+	ks.ClusterDNS.ConfigMap = clusterdns.ConfigMap(testDefaultDNSDomain, testDefaultDNSServers)
+	ks.ClusterDNS.ClusterIP = testDefaultDNSAddr
+	ks.NodeDNS.ConfigMap = nodedns.ConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers, true)
+	d.withMasterEndpoint()
+	d.withEtcdEndpoint()
 	return d
 }
 
 func (d testData) withNodes(nodes ...corev1.Node) testData {
 	d.withK8sResourceReady()
-OUTER:
-	for _, argNode := range nodes {
-		for i, testDataNode := range d.Status.Kubernetes.Nodes {
-			if testDataNode.Name == argNode.Name {
-				d.Status.Kubernetes.Nodes[i] = argNode
-				continue OUTER
-			}
-		}
-		d.Status.Kubernetes.Nodes = append(d.Status.Kubernetes.Nodes, argNode)
-	}
-	return d
-}
 
-func (d testData) withSSHNotConnectedCP() testData {
-	n := d.ControlPlane()[0]
-	st := d.NodeStatus(n)
-	d.Status.NodeStatuses[n.Address] = &cke.NodeStatus{
-		Labels: st.Labels,
+	nodeIndex := make(map[string]int)
+	for i, n := range d.Status.Kubernetes.Nodes {
+		nodeIndex[n.Name] = i
+	}
+
+	for _, n := range nodes {
+		if i, ok := nodeIndex[n.Name]; ok {
+			d.Status.Kubernetes.Nodes[i] = n
+		} else {
+			d.Status.Kubernetes.Nodes = append(d.Status.Kubernetes.Nodes, n)
+		}
 	}
 
 	return d
 }
 
-func (d testData) withSSHNotConnectedNonCPWorker(num int) testData {
-	// If num is larger than num of non-cp worker, all of them treat as unreachable
-	if num > len(d.NonCPWorkers()) {
-		num = len(d.NonCPWorkers())
+func (d testData) withSSHNotConnectedCP(indexes ...int) testData {
+	if len(indexes) <= 0 {
+		panic("at least one index is required")
 	}
 
-	for i, n := range d.NonCPWorkers() {
-		if i > num-1 {
-			break
-		}
-		st := d.NodeStatus(n)
+	nodes := d.ControlPlane()
+	for _, i := range indexes {
+		n := nodes[i] // No need to check for out-of-range access. In that case, just panic.
+		origLabels := d.NodeStatus(n).Labels
 		d.Status.NodeStatuses[n.Address] = &cke.NodeStatus{
-			Labels: st.Labels,
+			Labels: origLabels,
 		}
 	}
+	return d
+}
 
+func (d testData) withSSHNotConnectedNonCPWorker(indexes ...int) testData {
+	if len(indexes) <= 0 {
+		panic("at least one index is required")
+	}
+
+	nodes := d.NonCPWorkers()
+	for _, i := range indexes {
+		n := nodes[i] // No need to check for out-of-range access. In that case, just panic.
+		origLabels := d.NodeStatus(n).Labels
+		d.Status.NodeStatuses[n.Address] = &cke.NodeStatus{
+			Labels: origLabels,
+		}
+	}
 	return d
 }
 
 func (d testData) withSSHNotConnectedNodes() testData {
-	d.withSSHNotConnectedCP()
-	d.withSSHNotConnectedNonCPWorker(1)
+	d.withSSHNotConnectedCP(0)
+	d.withSSHNotConnectedNonCPWorker(0)
 	return d
 }
 
 func (d testData) withRebootCordon(i int) testData {
-	if i < 0 || i >= len(d.Status.Kubernetes.Nodes) {
-		return d
-	}
+	// No need to check the range of `i`. If it's invalid, just panic.
 	d.Status.Kubernetes.Nodes[i].Spec.Unschedulable = true
 	d.Status.Kubernetes.Nodes[i].Annotations = map[string]string{
 		op.CKEAnnotationReboot: "true",
@@ -2078,7 +2090,7 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 3}
 				d.Status.Etcd.InSyncMembers["10.0.0.14"] = false
-			}).withSSHNotConnectedNonCPWorker(3),
+			}).withSSHNotConnectedNonCPWorker(0, 1, 2),
 			ExpectedOps: []opData{{"etcd-destroy-member", 0}},
 		},
 		{
@@ -2137,7 +2149,7 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 14}
 				d.Status.Etcd.InSyncMembers["10.0.0.14"] = true
-			}).withSSHNotConnectedNonCPWorker(3),
+			}).withSSHNotConnectedNonCPWorker(0, 1, 2),
 			ExpectedOps: []opData{{"etcd-destroy-member", 0}},
 		},
 		{
@@ -2160,7 +2172,7 @@ func TestDecideOps(t *testing.T) {
 					st.Scheduler.Running = true
 					st.EtcdRivers.Running = true
 				}
-			}).withSSHNotConnectedNonCPWorker(1),
+			}).withSSHNotConnectedNonCPWorker(0),
 			ExpectedOps: []opData{
 				{"stop-kube-apiserver", 1},
 				{"stop-kube-controller-manager", 1},
@@ -2218,7 +2230,7 @@ func TestDecideOps(t *testing.T) {
 				},
 			}).with(func(data testData) {
 				data.Status.ConfigVersion = "1"
-			}).withSSHNotConnectedCP(),
+			}).withSSHNotConnectedCP(0),
 			ExpectedOps: nil,
 		},
 		{
@@ -2752,7 +2764,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "SkipStartDrainTooManyUnreachableNodes",
-			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(2).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(0, 1).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
 				{
 					Index:  1,
 					Node:   nodeNames[4],
@@ -2769,7 +2781,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "DontSkipStartRebootDrainedTooManyUnreachableNodes",
-			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(2).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(0, 1).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
 				{
 					Index:  1,
 					Node:   nodeNames[4],
@@ -2789,7 +2801,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "DontSkipDrainBackoffTooManyUnreachableNodes",
-			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(2).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(0, 1).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
 				{
 					Index:  1,
 					Node:   nodeNames[4],
@@ -2808,7 +2820,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "DontSkipRebootDequeueoffTooManyUnreachableNodes",
-			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(2).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+			Input: newData().withK8sResourceReady().withSSHNotConnectedNonCPWorker(0, 1).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
 				{
 					Index:  1,
 					Node:   nodeNames[4],
