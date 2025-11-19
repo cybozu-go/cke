@@ -83,7 +83,6 @@ func (s KubernetesClusterStatus) SetResourceStatus(rkey string, ann map[string]s
 // The structure reflects Cluster, of course.
 type ClusterStatus struct {
 	ConfigVersion string
-	Name          string
 	NodeStatuses  map[string]*NodeStatus // keys are IP address strings.
 
 	Etcd        EtcdClusterStatus
@@ -103,7 +102,6 @@ type NodeStatus struct {
 	Scheduler         SchedulerStatus
 	Proxy             ProxyStatus
 	Kubelet           KubeletStatus
-	Labels            map[string]string // are labels for k8s Node resource.
 }
 
 // ServiceStatus represents statuses of a service.

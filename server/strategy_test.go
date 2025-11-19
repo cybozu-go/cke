@@ -25,10 +25,11 @@ import (
 )
 
 const (
-	testClusterName      = "test"
-	testServiceSubnet    = "12.34.56.0/24"
-	testDefaultDNSDomain = "cluster.local"
-	testDefaultDNSAddr   = "10.0.0.53"
+	testClusterName          = "test"
+	testServiceSubnet        = "12.34.56.0/24"
+	testDefaultDNSDomain     = "cluster.local"
+	testDefaultDNSAddr       = "10.0.0.53"
+	testMaxConcurrentUpdates = 5
 )
 
 var (
@@ -135,46 +136,20 @@ func newData() testData {
 		InPlaceUpdate: true,
 	}
 
-	nodeStatuses := make(map[string]*cke.NodeStatus)
-	for _, nodeName := range nodeNames {
-		nodeStatuses[nodeName] = &cke.NodeStatus{
-			Etcd:         cke.EtcdStatus{ServiceStatus: cke.ServiceStatus{Running: false}, HasData: false, IsAddedMember: false},
-			SSHConnected: true,
-		}
-	}
-
-	var nodeList []corev1.Node
-	for _, nodeName := range nodeNames {
-		nodeList = append(nodeList, corev1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: nodeName,
-			},
-			Status: corev1.NodeStatus{
-				Conditions: []corev1.NodeCondition{
-					{
-						Type:   corev1.NodeReady,
-						Status: corev1.ConditionTrue,
-					},
-				},
-			},
-		})
-	}
-	nodeList[0].Labels = map[string]string{op.CKELabelMaster: "true"}
-	nodeList[1].Labels = map[string]string{op.CKELabelMaster: "true"}
-	nodeList[2].Labels = map[string]string{op.CKELabelMaster: "true"}
-	nodeList[3].Annotations = cluster.Nodes[3].Annotations
-	nodeList[3].Labels = cluster.Nodes[3].Labels
-	nodeList[3].Spec.Taints = cluster.Nodes[3].Taints
-
 	status := &cke.ClusterStatus{
 		ConfigVersion: cke.ConfigVersion,
-		NodeStatuses:  nodeStatuses,
-		Kubernetes: cke.KubernetesClusterStatus{
-			ResourceStatuses: map[string]cke.ResourceStatus{
-				"Namespace/foo": {Annotations: map[string]string{cke.AnnotationResourceRevision: "1"}},
-			},
-			Nodes: nodeList,
+		// All nodes are ssh connected, but no services are running.
+		NodeStatuses: map[string]*cke.NodeStatus{
+			nodeNames[0]: {SSHConnected: true},
+			nodeNames[1]: {SSHConnected: true},
+			nodeNames[2]: {SSHConnected: true},
+			nodeNames[3]: {SSHConnected: true},
+			nodeNames[4]: {SSHConnected: true},
+			nodeNames[5]: {SSHConnected: true},
 		},
+		// Statuses are empty.
+		Etcd:        cke.EtcdClusterStatus{},
+		Kubernetes:  cke.KubernetesClusterStatus{},
 		RepairQueue: cke.RepairQueueStatus{Enabled: true},
 		RebootQueue: cke.RebootQueueStatus{Enabled: true},
 	}
@@ -299,11 +274,10 @@ func (d testData) withScheduler() testData {
 		st.Image = cke.KubernetesImage.Name()
 		st.BuiltInParams = k8s.SchedulerParams()
 
-		leaderElect := true
 		st.Config = &schedulerv1.KubeSchedulerConfiguration{}
 		st.Config.Parallelism = ptr.To(int32(999))
 		st.Config.ClientConnection.Kubeconfig = op.SchedulerKubeConfigPath
-		st.Config.LeaderElection.LeaderElect = &leaderElect
+		st.Config.LeaderElection.LeaderElect = ptr.To(true)
 	}
 	return d
 }
@@ -341,6 +315,35 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 	return d
 }
 
+func (d testData) withK8sNodes() testData {
+	var nodeList []corev1.Node
+	for _, nodeName := range nodeNames {
+		nodeList = append(nodeList, corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: nodeName,
+			},
+			Status: corev1.NodeStatus{
+				Conditions: []corev1.NodeCondition{
+					{
+						Type:   corev1.NodeReady,
+						Status: corev1.ConditionTrue,
+					},
+				},
+			},
+		})
+	}
+
+	nodeList[0].Labels = map[string]string{op.CKELabelMaster: "true"}
+	nodeList[1].Labels = map[string]string{op.CKELabelMaster: "true"}
+	nodeList[2].Labels = map[string]string{op.CKELabelMaster: "true"}
+	nodeList[3].Annotations = d.Cluster.Nodes[3].Annotations
+	nodeList[3].Labels = d.Cluster.Nodes[3].Labels
+	nodeList[3].Spec.Taints = d.Cluster.Nodes[3].Taints
+
+	d.Status.Kubernetes.Nodes = nodeList
+	return d
+}
+
 func (d testData) withProxy() testData {
 	for _, n := range d.Cluster.Nodes {
 		st := &d.NodeStatus(n).Proxy
@@ -368,19 +371,12 @@ func (d testData) withAllServices() testData {
 	d.withControllerManager(testClusterName, testServiceSubnet)
 	d.withScheduler()
 	d.withKubelet(testDefaultDNSDomain, testDefaultDNSAddr, false)
+	d.withK8sNodes()
 	d.withProxy()
 	return d
 }
 
 func (d testData) withK8sReady() testData {
-	for i, n := range d.Status.Kubernetes.Nodes {
-		n.Status.Conditions = append(n.Status.Conditions, corev1.NodeCondition{
-			Type:   corev1.NodeReady,
-			Status: corev1.ConditionTrue,
-		})
-		d.Status.Kubernetes.Nodes[i] = n
-	}
-
 	d.withAllServices()
 	d.Status.Kubernetes.IsControlPlaneReady = true
 	return d
@@ -515,6 +511,17 @@ func (d testData) withNotReadyEndpoint(i int) testData {
 func (d testData) withK8sResourceReady() testData {
 	d.withK8sReady()
 	ks := &d.Status.Kubernetes
+
+	if ks.ResourceStatuses == nil {
+		ks.ResourceStatuses = make(map[string]cke.ResourceStatus)
+	}
+
+	for _, res := range testResources {
+		ks.ResourceStatuses[res.Key] = cke.ResourceStatus{
+			Annotations: map[string]string{cke.AnnotationResourceRevision: "1"},
+		}
+	}
+
 	for _, res := range static.Resources {
 		ks.ResourceStatuses[res.Key] = cke.ResourceStatus{
 			Annotations: map[string]string{cke.AnnotationResourceRevision: "1"},
@@ -559,11 +566,9 @@ func (d testData) withSSHNotConnectedCP(indexes ...int) testData {
 
 	nodes := d.ControlPlane()
 	for _, i := range indexes {
-		n := nodes[i] // No need to check for out-of-range access. In that case, just panic.
-		origLabels := d.NodeStatus(n).Labels
-		d.Status.NodeStatuses[n.Address] = &cke.NodeStatus{
-			Labels: origLabels,
-		}
+		// No need to check for out-of-range access. In that case, just panic.
+		ip := nodes[i].Address
+		d.Status.NodeStatuses[ip] = &cke.NodeStatus{}
 	}
 	return d
 }
@@ -575,11 +580,9 @@ func (d testData) withSSHNotConnectedNonCPWorker(indexes ...int) testData {
 
 	nodes := d.NonCPWorkers()
 	for _, i := range indexes {
-		n := nodes[i] // No need to check for out-of-range access. In that case, just panic.
-		origLabels := d.NodeStatus(n).Labels
-		d.Status.NodeStatuses[n.Address] = &cke.NodeStatus{
-			Labels: origLabels,
-		}
+		// No need to check for out-of-range access. In that case, just panic.
+		ip := nodes[i].Address
+		d.Status.NodeStatuses[ip] = &cke.NodeStatus{}
 	}
 	return d
 }
@@ -1144,6 +1147,7 @@ func TestDecideOps(t *testing.T) {
 			Name:  "K8sResources",
 			Input: newData().withK8sReady(),
 			ExpectedOps: []opData{
+				{"resource-apply", 1},
 				{"resource-apply", 1},
 				{"resource-apply", 1},
 				{"resource-apply", 1},
@@ -2007,7 +2011,7 @@ func TestDecideOps(t *testing.T) {
 		},
 		{
 			Name: "NodeTaintCP4",
-			Input: newData().withK8sResourceReady().withNodes(corev1.Node{
+			Input: newData().withNodes(corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "10.0.0.11",
 					Labels: map[string]string{op.CKELabelMaster: "true"},
@@ -3051,7 +3055,7 @@ func TestDecideOps(t *testing.T) {
 			ops, phase := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, &Config{
 				Interval:             0,
 				CertsGCInterval:      0,
-				MaxConcurrentUpdates: 5,
+				MaxConcurrentUpdates: testMaxConcurrentUpdates,
 			})
 
 			if phase != c.ExpectedPhase {
