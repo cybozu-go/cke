@@ -696,19 +696,22 @@ func TestDecideOps(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		Name        string
-		Input       testData
-		ExpectedOps []opData
+		Name          string
+		Input         testData
+		ExpectedOps   []opData
+		ExpectedPhase cke.OperationPhase
 	}{
 		{
-			Name:        "BootRivers",
-			Input:       newData(),
-			ExpectedOps: []opData{{"rivers-bootstrap", 5}, {"etcd-rivers-bootstrap", 3}},
+			Name:          "BootRivers",
+			Input:         newData(),
+			ExpectedOps:   []opData{{"rivers-bootstrap", 5}, {"etcd-rivers-bootstrap", 3}},
+			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
-			Name:        "BootRivers2",
-			Input:       newData().withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps: []opData{{"rivers-bootstrap", 4}, {"etcd-rivers-bootstrap", 2}},
+			Name:          "BootRivers2",
+			Input:         newData().withHealthyEtcd().withSSHNotConnectedNodes(),
+			ExpectedOps:   []opData{{"rivers-bootstrap", 4}, {"etcd-rivers-bootstrap", 2}},
+			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
 			Name: "RestartRivers",
@@ -716,7 +719,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.Image = ""
 			}).withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps: []opData{{"rivers-restart", 1}},
+			ExpectedOps:   []opData{{"rivers-restart", 1}},
+			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
 			Name: "RestartRivers2",
@@ -724,7 +728,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.BuiltInParams.ExtraArguments = nil
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.BuiltInParams.ExtraArguments = nil
 			}).withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps: []opData{{"rivers-restart", 1}},
+			ExpectedOps:   []opData{{"rivers-restart", 1}},
+			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
 			Name: "RestartRivers3",
@@ -732,7 +737,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.ExtraParams.ExtraArguments = []string{"foo"}
 			}).withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps: []opData{{"rivers-restart", 1}},
+			ExpectedOps:   []opData{{"rivers-restart", 1}},
+			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
 			Name: "StartRestartRivers",
@@ -740,7 +746,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.Running = false
 			}).withEtcdRivers(),
-			ExpectedOps: []opData{{"rivers-bootstrap", 1}, {"rivers-restart", 1}},
+			ExpectedOps:   []opData{{"rivers-bootstrap", 1}, {"rivers-restart", 1}},
+			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
 			Name: "RestartEtcdRivers",
@@ -748,7 +755,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.Image = ""
 			}).withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps: []opData{{"etcd-rivers-restart", 1}},
+			ExpectedOps:   []opData{{"etcd-rivers-restart", 1}},
+			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
 			Name: "RestartEtcdRivers2",
@@ -756,7 +764,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.BuiltInParams.ExtraArguments = nil
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.BuiltInParams.ExtraArguments = nil
 			}).withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps: []opData{{"etcd-rivers-restart", 1}},
+			ExpectedOps:   []opData{{"etcd-rivers-restart", 1}},
+			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
 			Name: "RestartEtcdRivers3",
@@ -764,7 +773,8 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.ExtraParams.ExtraArguments = []string{"foo"}
 			}).withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps: []opData{{"etcd-rivers-restart", 1}},
+			ExpectedOps:   []opData{{"etcd-rivers-restart", 1}},
+			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
 			Name: "StartRestartEtcdRivers",
@@ -772,30 +782,35 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.Running = false
 			}),
-			ExpectedOps: []opData{{"etcd-rivers-bootstrap", 1}, {"etcd-rivers-restart", 1}},
+			ExpectedOps:   []opData{{"etcd-rivers-bootstrap", 1}, {"etcd-rivers-restart", 1}},
+			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
-			Name:        "EtcdBootstrap",
-			Input:       newData().withRivers().withEtcdRivers(),
-			ExpectedOps: []opData{{"etcd-bootstrap", 3}},
+			Name:          "EtcdBootstrap",
+			Input:         newData().withRivers().withEtcdRivers(),
+			ExpectedOps:   []opData{{"etcd-bootstrap", 3}},
+			ExpectedPhase: cke.PhaseEtcdBoot,
 		},
 		{
-			Name:        "SkipEtcdBootstrap",
-			Input:       newData().withRivers().withEtcdRivers().withSSHNotConnectedNodes(),
-			ExpectedOps: nil,
+			Name:          "SkipEtcdBootstrap",
+			Input:         newData().withRivers().withEtcdRivers().withSSHNotConnectedNodes(),
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseEtcdBootAborted,
 		},
 		{
-			Name:        "SkipEtcdBootstrap2",
-			Input:       newData().withRivers().withEtcdRivers().withInitFailedEtcd(),
-			ExpectedOps: []opData{{"etcd-wait-cluster", 3}},
+			Name:          "SkipEtcdBootstrap2",
+			Input:         newData().withRivers().withEtcdRivers().withInitFailedEtcd(),
+			ExpectedOps:   []opData{{"etcd-wait-cluster", 3}},
+			ExpectedPhase: cke.PhaseEtcdWait,
 			// This wait will never succeed.
 			// The recovery from this failure case may need deletion of the data volumes, so it should be handled manually.
 			// The failure case is very rare.  It will not occur once after the etcd cluster started to work.
 		},
 		{
-			Name:        "EtcdStart",
-			Input:       newData().withRivers().withEtcdRivers().withStoppedEtcd(),
-			ExpectedOps: []opData{{"etcd-start", 3}},
+			Name:          "EtcdStart",
+			Input:         newData().withRivers().withEtcdRivers().withStoppedEtcd(),
+			ExpectedOps:   []opData{{"etcd-start", 3}},
+			ExpectedPhase: cke.PhaseEtcdStart,
 		},
 		{
 			Name: "EtcdStart2",
@@ -806,6 +821,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"etcd-start", 1},
 			},
+			ExpectedPhase: cke.PhaseEtcdStart,
 		},
 		{
 			Name:  "EtcdStart3",
@@ -813,6 +829,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"etcd-start", 2},
 			},
+			ExpectedPhase: cke.PhaseEtcdStart,
 		},
 		{
 			Name:  "EtcdStart4",
@@ -820,11 +837,13 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"etcd-start", 2},
 			},
+			ExpectedPhase: cke.PhaseEtcdStart,
 		},
 		{
-			Name:        "WaitEtcd",
-			Input:       newData().withRivers().withEtcdRivers().withUnhealthyEtcd(),
-			ExpectedOps: []opData{{"etcd-wait-cluster", 3}},
+			Name:          "WaitEtcd",
+			Input:         newData().withRivers().withEtcdRivers().withUnhealthyEtcd(),
+			ExpectedOps:   []opData{{"etcd-wait-cluster", 3}},
+			ExpectedPhase: cke.PhaseEtcdWait,
 		},
 		{
 			Name:  "BootK8s",
@@ -836,6 +855,7 @@ func TestDecideOps(t *testing.T) {
 				{"kubelet-bootstrap", 4},
 				{"kube-proxy-bootstrap", 4},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name:  "BootK8sFromPartiallyRunning",
@@ -846,6 +866,7 @@ func TestDecideOps(t *testing.T) {
 				{"kubelet-bootstrap", 5},
 				{"kube-proxy-bootstrap", 5},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name:  "BootK8sWithoutProxy",
@@ -856,6 +877,7 @@ func TestDecideOps(t *testing.T) {
 				{"kube-scheduler-bootstrap", 2},
 				{"kubelet-bootstrap", 4},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name:  "RestartAPIServer",
@@ -863,6 +885,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-apiserver-restart", 2},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartAPIServer2",
@@ -873,6 +896,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-apiserver-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartAPIServer3",
@@ -883,6 +907,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-apiserver-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name:  "RestartControllerManager",
@@ -890,6 +915,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-controller-manager-restart", 2},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartControllerManager2",
@@ -900,6 +926,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-controller-manager-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartControllerManager3",
@@ -910,6 +937,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-controller-manager-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartScheduler",
@@ -920,6 +948,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-scheduler-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartScheduler2",
@@ -930,6 +959,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-scheduler-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartScheduler3",
@@ -940,6 +970,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-scheduler-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartScheduler4",
@@ -950,6 +981,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-scheduler-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name:  "RestartKubelet",
@@ -957,6 +989,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kubelet-restart", 4},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name:  "RestartKubelet2",
@@ -964,6 +997,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kubelet-restart", 4},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartKubelet3",
@@ -974,6 +1008,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kubelet-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartKubelet4",
@@ -984,6 +1019,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kubelet-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartKubelet5",
@@ -994,6 +1030,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kubelet-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartKubelet6",
@@ -1003,6 +1040,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kubelet-restart", 4},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartKubelet7",
@@ -1012,6 +1050,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kubelet-restart", 4},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartKubelet8",
@@ -1021,6 +1060,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"wait-kubernetes", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "RestartKubelet9",
@@ -1030,6 +1070,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kubelet-restart", 2},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartKubelet10",
@@ -1039,6 +1080,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"wait-kubernetes", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "RestartProxy",
@@ -1049,6 +1091,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-proxy-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartProxy2",
@@ -1059,6 +1102,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-proxy-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartProxy3",
@@ -1069,6 +1113,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-proxy-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartProxy4",
@@ -1079,6 +1124,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"kube-proxy-restart", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name:  "StopProxy",
@@ -1086,11 +1132,13 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"stop-kube-proxy", 5},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
-			Name:        "WaitKube",
-			Input:       newData().withAllServices(),
-			ExpectedOps: []opData{{"wait-kubernetes", 1}},
+			Name:          "WaitKube",
+			Input:         newData().withAllServices(),
+			ExpectedOps:   []opData{{"wait-kubernetes", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name:  "K8sResources",
@@ -1112,6 +1160,7 @@ func TestDecideOps(t *testing.T) {
 				{"create-cke-etcd-endpoints", 1},
 				{"create-cke-etcd-endpointslice", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "UpdateDNSService",
@@ -1124,6 +1173,7 @@ func TestDecideOps(t *testing.T) {
 				{"update-cluster-dns-configmap", 1},
 				{"update-node-dns-configmap", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "DNSUpdate1",
@@ -1134,6 +1184,7 @@ func TestDecideOps(t *testing.T) {
 				{"kube-apiserver-restart", 3},
 				{"kubelet-restart", 5},
 			},
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "DNSUpdate2",
@@ -1147,6 +1198,7 @@ func TestDecideOps(t *testing.T) {
 				{"update-cluster-dns-configmap", 1},
 				{"update-node-dns-configmap", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "DNSUpdate3",
@@ -1157,6 +1209,7 @@ func TestDecideOps(t *testing.T) {
 				{"update-cluster-dns-configmap", 1},
 				{"update-node-dns-configmap", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeDNSUpdate",
@@ -1166,83 +1219,95 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"update-node-dns-configmap", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "MasterEndpointsUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets = []corev1.EndpointSubset{}
 			}),
-			ExpectedOps: []opData{{"update-kubernetes-endpoints", 1}},
+			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "MasterEndpointsUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Ports = []corev1.EndpointPort{}
 			}),
-			ExpectedOps: []opData{{"update-kubernetes-endpoints", 1}},
+			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "MasterEndpointsUpdate3",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
-			ExpectedOps: []opData{{"update-kubernetes-endpoints", 1}},
+			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "MasterEndpointSliceUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpointSlice.Endpoints[0].Addresses = []string{}
 			}),
-			ExpectedOps: []opData{{"update-kubernetes-endpointslice", 1}},
+			ExpectedOps:   []opData{{"update-kubernetes-endpointslice", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "MasterEndpointSliceUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpointSlice.Ports[0] = discoveryv1.EndpointPort{}
 			}),
-			ExpectedOps: []opData{{"update-kubernetes-endpointslice", 1}},
+			ExpectedOps:   []opData{{"update-kubernetes-endpointslice", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "EtcdServiceUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdService.Spec.Ports = []corev1.ServicePort{}
 			}),
-			ExpectedOps: []opData{{"update-etcd-service", 1}},
+			ExpectedOps:   []opData{{"update-etcd-service", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "EtcdEndpointsUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets = []corev1.EndpointSubset{}
 			}),
-			ExpectedOps: []opData{{"update-cke-etcd-endpoints", 1}},
+			ExpectedOps:   []opData{{"update-cke-etcd-endpoints", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "EtcdEndpointsUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Ports = []corev1.EndpointPort{}
 			}),
-			ExpectedOps: []opData{{"update-cke-etcd-endpoints", 1}},
+			ExpectedOps:   []opData{{"update-cke-etcd-endpoints", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "EtcdEndpointsUpdate3",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
-			ExpectedOps: []opData{{"update-cke-etcd-endpoints", 1}},
+			ExpectedOps:   []opData{{"update-cke-etcd-endpoints", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "EtcdEndpointSliceUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[0].Addresses = []string{}
 			}),
-			ExpectedOps: []opData{{"update-cke-etcd-endpointslice", 1}},
+			ExpectedOps:   []opData{{"update-cke-etcd-endpointslice", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "EtcdEndpointSliceUpdate2",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpointSlice.Ports[0] = discoveryv1.EndpointPort{}
 			}),
-			ExpectedOps: []opData{{"update-cke-etcd-endpointslice", 1}},
+			ExpectedOps:   []opData{{"update-cke-etcd-endpointslice", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "EndpointsUpdateWithRebootEntry",
@@ -1259,6 +1324,7 @@ func TestDecideOps(t *testing.T) {
 				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "EndpointsUpdateWithRebootEntry2",
@@ -1281,6 +1347,7 @@ func TestDecideOps(t *testing.T) {
 				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "EndpointsUpdateWithRebootDisabled1",
@@ -1291,7 +1358,8 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusDraining,
 				},
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "EndpointsUpdateWithRebootDisabled2",
@@ -1308,7 +1376,8 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusQueued,
 				},
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "EndpointsWithRebootEntry",
@@ -1325,7 +1394,8 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusQueued,
 				},
 			}).withNotReadyEndpoint(2),
-			ExpectedOps: []opData{{"reboot-drain-start", 1}},
+			ExpectedOps:   []opData{{"reboot-drain-start", 1}},
+			ExpectedPhase: cke.PhaseRebootNodes,
 		},
 		{
 			Name:  "RestoreEndpoints",
@@ -1336,6 +1406,7 @@ func TestDecideOps(t *testing.T) {
 				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "RestoreEndpointsWithCancelledRebootEntry",
@@ -1358,6 +1429,7 @@ func TestDecideOps(t *testing.T) {
 				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "RestoreEndpointsWithRebootDisabled1",
@@ -1374,6 +1446,7 @@ func TestDecideOps(t *testing.T) {
 				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "RestoreEndpointsWithRebootDisabled2",
@@ -1396,6 +1469,7 @@ func TestDecideOps(t *testing.T) {
 				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "EndpointsWithCancelledRebootEntry",
@@ -1412,7 +1486,8 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusCancelled,
 				},
 			}),
-			ExpectedOps: []opData{{"reboot-cancel", 1}},
+			ExpectedOps:   []opData{{"reboot-cancel", 1}},
+			ExpectedPhase: cke.PhaseRebootNodes,
 		},
 		{
 			Name: "UserResourceAdd",
@@ -1428,6 +1503,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"resource-apply", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "UserResourceUpdate",
@@ -1442,6 +1518,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"resource-apply", 1},
 			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeLabel1",
@@ -1464,7 +1541,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeLabel2",
@@ -1488,7 +1566,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeLabel3",
@@ -1515,7 +1594,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeLabel4",
@@ -1542,7 +1622,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeLabel5",
@@ -1569,7 +1650,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeLabel6",
@@ -1597,7 +1679,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "NodeLabelCP1",
@@ -1607,7 +1690,8 @@ func TestDecideOps(t *testing.T) {
 					Labels: map[string]string{},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeLabelCP2",
@@ -1617,7 +1701,8 @@ func TestDecideOps(t *testing.T) {
 					Labels: map[string]string{op.CKELabelMaster: "true"},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeLabelCP3",
@@ -1627,7 +1712,8 @@ func TestDecideOps(t *testing.T) {
 					Labels: map[string]string{op.CKELabelMaster: "hoge"},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeAnnotation1",
@@ -1650,7 +1736,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeAnnotation2",
@@ -1674,7 +1761,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeAnnotation3",
@@ -1701,7 +1789,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeTaint1",
@@ -1726,7 +1815,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeTaint2",
@@ -1750,7 +1840,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeTaint3",
@@ -1774,7 +1865,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeTaint4",
@@ -1802,14 +1894,16 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeTaintCP1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Cluster.TaintCP = true
 			}),
-			ExpectedOps: []opData{{"update-node", 3}},
+			ExpectedOps:   []opData{{"update-node", 3}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeTaintCP2",
@@ -1858,7 +1952,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{},
+			ExpectedOps:   []opData{},
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "NodeTaintCP3",
@@ -1907,7 +2002,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeTaintCP4",
@@ -1926,7 +2022,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeTaintCP5",
@@ -1988,7 +2085,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: []opData{{"update-node", 1}},
+			ExpectedOps:   []opData{{"update-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "NodeExtraAttrs",
@@ -2023,7 +2121,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "RemoveNonClusterNodes",
@@ -2032,7 +2131,8 @@ func TestDecideOps(t *testing.T) {
 					Name: "10.0.0.20",
 				},
 			}),
-			ExpectedOps: []opData{{"remove-node", 1}},
+			ExpectedOps:   []opData{{"remove-node", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "AllGreen",
@@ -2059,7 +2159,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "EtcdRemoveNonClusterMember",
@@ -2067,7 +2168,8 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.100"] = &etcdserverpb.Member{Name: "10.0.0.100", ID: 3}
 				d.Status.Etcd.InSyncMembers["10.0.0.100"] = false
 			}),
-			ExpectedOps: []opData{{"etcd-remove-member", 1}},
+			ExpectedOps:   []opData{{"etcd-remove-member", 1}},
+			ExpectedPhase: cke.PhaseEtcdMaintain,
 		},
 		{
 			Name: "SkipEtcdRemoveNonClusterMember",
@@ -2075,7 +2177,8 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.100"] = &etcdserverpb.Member{Name: "10.0.0.100", ID: 3}
 				d.Status.Etcd.InSyncMembers["10.0.0.100"] = false
 			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []opData{{"wait-kubernetes", 1}},
+			ExpectedOps:   []opData{{"wait-kubernetes", 1}},
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "EtcdDestroyNonCPMember",
@@ -2083,7 +2186,8 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 3}
 				d.Status.Etcd.InSyncMembers["10.0.0.14"] = false
 			}),
-			ExpectedOps: []opData{{"etcd-destroy-member", 1}},
+			ExpectedOps:   []opData{{"etcd-destroy-member", 1}},
+			ExpectedPhase: cke.PhaseEtcdMaintain,
 		},
 		{
 			Name: "EtcdDestroyNonCPMemberSSHNotConnected",
@@ -2091,7 +2195,8 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 3}
 				d.Status.Etcd.InSyncMembers["10.0.0.14"] = false
 			}).withSSHNotConnectedNonCPWorker(0, 1, 2),
-			ExpectedOps: []opData{{"etcd-destroy-member", 0}},
+			ExpectedOps:   []opData{{"etcd-destroy-member", 0}},
+			ExpectedPhase: cke.PhaseEtcdMaintain,
 		},
 		{
 			Name: "EtcdReAdd",
@@ -2100,14 +2205,16 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.13"].ID = 0
 				d.Status.Etcd.InSyncMembers["10.0.0.13"] = false
 			}),
-			ExpectedOps: []opData{{"etcd-add-member", 1}},
+			ExpectedOps:   []opData{{"etcd-add-member", 1}},
+			ExpectedPhase: cke.PhaseEtcdMaintain,
 		},
 		{
 			Name: "EtcdMark",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.NodeStatuses["10.0.0.13"].Etcd.IsAddedMember = false
 			}),
-			ExpectedOps: []opData{{"etcd-mark-member", 1}},
+			ExpectedOps:   []opData{{"etcd-mark-member", 1}},
+			ExpectedPhase: cke.PhaseEtcdMaintain,
 		},
 		{
 			Name: "EtcdIsNotGood",
@@ -2118,7 +2225,8 @@ func TestDecideOps(t *testing.T) {
 				// but the cluster is not good enough
 				d.Status.Etcd.InSyncMembers["10.0.0.12"] = false
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "EtcdAdd",
@@ -2126,7 +2234,8 @@ func TestDecideOps(t *testing.T) {
 				delete(d.Status.Etcd.Members, "10.0.0.13")
 				delete(d.Status.Etcd.InSyncMembers, "10.0.0.13")
 			}),
-			ExpectedOps: []opData{{"etcd-add-member", 1}},
+			ExpectedOps:   []opData{{"etcd-add-member", 1}},
+			ExpectedPhase: cke.PhaseEtcdMaintain,
 		},
 		{
 			Name: "EtcdRemoveHealthyNonClusterMember",
@@ -2134,7 +2243,8 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.100"] = &etcdserverpb.Member{Name: "10.0.0.100", ID: 3}
 				d.Status.Etcd.InSyncMembers["10.0.0.100"] = true
 			}),
-			ExpectedOps: []opData{{"etcd-remove-member", 1}},
+			ExpectedOps:   []opData{{"etcd-remove-member", 1}},
+			ExpectedPhase: cke.PhaseEtcdMaintain,
 		},
 		{
 			Name: "EtcdDestroyHealthyNonCPMember",
@@ -2142,7 +2252,8 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 14}
 				d.Status.Etcd.InSyncMembers["10.0.0.14"] = true
 			}),
-			ExpectedOps: []opData{{"etcd-destroy-member", 1}},
+			ExpectedOps:   []opData{{"etcd-destroy-member", 1}},
+			ExpectedPhase: cke.PhaseEtcdMaintain,
 		},
 		{
 			Name: "EtcdDestroyHealthyNonCPMemberSSHNotConnected",
@@ -2150,14 +2261,16 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Etcd.Members["10.0.0.14"] = &etcdserverpb.Member{Name: "10.0.0.14", ID: 14}
 				d.Status.Etcd.InSyncMembers["10.0.0.14"] = true
 			}).withSSHNotConnectedNonCPWorker(0, 1, 2),
-			ExpectedOps: []opData{{"etcd-destroy-member", 0}},
+			ExpectedOps:   []opData{{"etcd-destroy-member", 0}},
+			ExpectedPhase: cke.PhaseEtcdMaintain,
 		},
 		{
 			Name: "EtcdRestart",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Etcd.Image = ""
 			}),
-			ExpectedOps: []opData{{"etcd-restart", 1}},
+			ExpectedOps:   []opData{{"etcd-restart", 1}},
+			ExpectedPhase: cke.PhaseEtcdMaintain,
 		},
 		{
 			Name: "Clean",
@@ -2180,6 +2293,7 @@ func TestDecideOps(t *testing.T) {
 				{"stop-etcd", 1},
 				{"stop-etcd-rivers", 1},
 			},
+			ExpectedPhase: cke.PhaseStopCP,
 		},
 		{
 			Name: "Upgrade",
@@ -2205,7 +2319,8 @@ func TestDecideOps(t *testing.T) {
 			}).with(func(data testData) {
 				data.Status.ConfigVersion = "1"
 			}),
-			ExpectedOps: []opData{{"upgrade", 3}},
+			ExpectedOps:   []opData{{"upgrade", 3}},
+			ExpectedPhase: cke.PhaseUpgrade,
 		},
 		{
 			Name: "UpgradeAbort",
@@ -2231,7 +2346,8 @@ func TestDecideOps(t *testing.T) {
 			}).with(func(data testData) {
 				data.Status.ConfigVersion = "1"
 			}).withSSHNotConnectedCP(0),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseUpgradeAborted,
 		},
 		{
 			Name:  "UncordonNodes",
@@ -2239,13 +2355,15 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"reboot-uncordon", 1},
 			},
+			ExpectedPhase: cke.PhaseUncordonNodes,
 		},
 		{
 			Name: "SkipManuallyCordondedNodes",
 			Input: newData().withK8sResourceReady().withRebootConfig().with(func(d testData) {
 				d.Status.Kubernetes.Nodes[0].Spec.Unschedulable = true
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "Repair",
@@ -2255,20 +2373,23 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-execute", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairWithoutConfig",
 			Input: newData().withK8sResourceReady().withRepairEntries([]*cke.RepairQueueEntry{
 				{Address: nodeNames[4], MachineType: "type1", Operation: "op1"},
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "RepairBadMachineType",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
 				{Address: nodeNames[4], MachineType: "type2", Operation: "op1"},
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "RepairBadOperation",
@@ -2276,7 +2397,8 @@ func TestDecideOps(t *testing.T) {
 				{Address: nodeNames[4], MachineType: "type1", Operation: "noop"},
 				{Address: nodeNames[5], MachineType: "type1", Operation: "op1"},
 			}),
-			ExpectedOps: nil, // implementation dependent; bad entry consumes concurrency slot
+			ExpectedOps:   nil, // implementation dependent; bad entry consumes concurrency slot
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "RepairOutOfCluster",
@@ -2286,6 +2408,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-execute", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairApiServerHighPriority",
@@ -2296,6 +2419,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-execute", 1}, // implementation dependent; cf. RepairBadOperation
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairMaxConcurrent",
@@ -2311,6 +2435,7 @@ func TestDecideOps(t *testing.T) {
 				{"repair-execute", 1},
 				{"repair-execute", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairMaxConcurrentSameMachine",
@@ -2324,6 +2449,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-execute", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairMaxConcurrentApiServer",
@@ -2337,6 +2463,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-execute", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairApiServerAnotherRebooting",
@@ -2345,7 +2472,8 @@ func TestDecideOps(t *testing.T) {
 			}).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
 				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusRebooting},
 			}).withRebootCordon(2).withNotReadyEndpoint(2),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "RepairRebootingApiServer",
@@ -2357,6 +2485,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-execute", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDrain",
@@ -2368,6 +2497,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-drain-start", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDrainWaitCompletion",
@@ -2380,7 +2510,8 @@ func TestDecideOps(t *testing.T) {
 				d.Cluster.Repair.EvictionTimeoutSeconds = &timeout
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}).withRebootCordon(4),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDrainWaitCompletionExpire",
@@ -2396,6 +2527,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-drain-timeout", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDrainWaitCompletionDefaultTimeout",
@@ -2406,7 +2538,8 @@ func TestDecideOps(t *testing.T) {
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}).withRebootCordon(4),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDrainWaitCompletionExpireDefaultTimeout",
@@ -2420,6 +2553,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-drain-timeout", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDrainWaitRetryUncordon",
@@ -2433,6 +2567,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"reboot-uncordon", 1},
 			},
+			ExpectedPhase: cke.PhaseUncordonNodes,
 		},
 		{
 			Name: "RepairDrainWaitRetry",
@@ -2443,7 +2578,8 @@ func TestDecideOps(t *testing.T) {
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "RepairDrainWaitRetryExpire",
@@ -2457,6 +2593,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-drain-start", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDrainCompleted",
@@ -2470,6 +2607,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-execute", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairWatch",
@@ -2481,7 +2619,8 @@ func TestDecideOps(t *testing.T) {
 				watch := 60
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds = &watch
 			}).withRebootCordon(4),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairWatchExpire",
@@ -2496,6 +2635,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-execute", 1}, // next step
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairWatchExpireDefaultTimeout",
@@ -2507,6 +2647,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-execute", 1}, // next step
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairWatchExpireLastStep",
@@ -2518,6 +2659,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-finish", 1}, // failed
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairCompleted",
@@ -2531,6 +2673,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-finish", 1}, // succeeded
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairSucceededUncordon",
@@ -2541,6 +2684,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"reboot-uncordon", 1},
 			},
+			ExpectedPhase: cke.PhaseUncordonNodes,
 		},
 		{
 			Name: "RepairSucceeded",
@@ -2548,7 +2692,8 @@ func TestDecideOps(t *testing.T) {
 				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusSucceeded},
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "RepairFailedUncordon",
@@ -2559,6 +2704,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"reboot-uncordon", 1},
 			},
+			ExpectedPhase: cke.PhaseUncordonNodes,
 		},
 		{
 			Name: "RepairFailed",
@@ -2566,7 +2712,8 @@ func TestDecideOps(t *testing.T) {
 				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusFailed},
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "RepairDeletedUncordon",
@@ -2577,6 +2724,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"reboot-uncordon", 1},
 			},
+			ExpectedPhase: cke.PhaseUncordonNodes,
 		},
 		{
 			Name: "RepairDeleted",
@@ -2587,13 +2735,15 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-dequeue", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDisabled",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
 				{Address: nodeNames[4], MachineType: "type1", Operation: "op1"},
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDisabledDrain",
@@ -2602,7 +2752,8 @@ func TestDecideOps(t *testing.T) {
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDisabledDrainWaitCompletion",
@@ -2618,6 +2769,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-drain-timeout", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDisabledDrainWaitCompletionExpire",
@@ -2633,6 +2785,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-drain-timeout", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDisabledDrainWaitRetry",
@@ -2643,7 +2796,8 @@ func TestDecideOps(t *testing.T) {
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "RepairDisabledDrainWaitRetryExpire",
@@ -2654,7 +2808,8 @@ func TestDecideOps(t *testing.T) {
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDisabledDrainCompleted",
@@ -2668,6 +2823,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-drain-timeout", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDisabledWatch",
@@ -2679,7 +2835,8 @@ func TestDecideOps(t *testing.T) {
 				watch := 60
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds = &watch
 			}).withRebootCordon(4),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDisabledWatchExpire",
@@ -2691,7 +2848,8 @@ func TestDecideOps(t *testing.T) {
 				watch := 60
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds = &watch
 			}).withRebootCordon(4),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDisabledWatchExpireLastStep",
@@ -2703,6 +2861,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-finish", 1}, // failed
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDisabledCompleted",
@@ -2716,6 +2875,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-finish", 1}, // succeeded
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RepairDisabledDeleted",
@@ -2726,6 +2886,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-dequeue", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
 			Name: "RebootWithoutConfig",
@@ -2736,7 +2897,8 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusQueued,
 				},
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "Reboot",
@@ -2761,6 +2923,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"reboot-drain-start", 1},
 			},
+			ExpectedPhase: cke.PhaseRebootNodes,
 		},
 		{
 			Name: "SkipStartDrainTooManyUnreachableNodes",
@@ -2777,7 +2940,8 @@ func TestDecideOps(t *testing.T) {
 					Status: cke.RebootStatusQueued,
 				},
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "DontSkipStartRebootDrainedTooManyUnreachableNodes",
@@ -2798,6 +2962,7 @@ func TestDecideOps(t *testing.T) {
 				{"reboot-delete-daemonset-pod", 1},
 				{"reboot-reboot", 1},
 			},
+			ExpectedPhase: cke.PhaseRebootNodes,
 		},
 		{
 			Name: "DontSkipDrainBackoffTooManyUnreachableNodes",
@@ -2817,6 +2982,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"reboot-drain-timeout", 1},
 			},
+			ExpectedPhase: cke.PhaseRebootNodes,
 		},
 		{
 			Name: "DontSkipRebootDequeueoffTooManyUnreachableNodes",
@@ -2836,6 +3002,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"reboot-dequeue", 1},
 			},
+			ExpectedPhase: cke.PhaseRebootNodes,
 		},
 		{
 			Name: "SkipRebootEtcdOutOfSync",
@@ -2854,7 +3021,8 @@ func TestDecideOps(t *testing.T) {
 			}).with(func(d testData) {
 				d.Status.Etcd.InSyncMembers["10.0.0.11"] = false
 			}),
-			ExpectedOps: nil,
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRebootNodes,
 		},
 		{
 			Name: "CancelReboot",
@@ -2874,16 +3042,22 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"reboot-cancel", 1},
 			},
+			ExpectedPhase: cke.PhaseRebootNodes,
 		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			ops, _ := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, &Config{
+			ops, phase := DecideOps(c.Input.Cluster, c.Input.Status, c.Input.Constraints, c.Input.Resources, &Config{
 				Interval:             0,
 				CertsGCInterval:      0,
 				MaxConcurrentUpdates: 5,
 			})
+
+			if phase != c.ExpectedPhase {
+				t.Error("unexpected phase:", cmp.Diff(c.ExpectedPhase, phase))
+			}
+
 			if len(ops) == 0 && len(c.ExpectedOps) == 0 {
 				return
 			}
