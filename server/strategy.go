@@ -123,21 +123,23 @@ func riversOps(c *cke.Cluster, nf *NodeFilter, maxConcurrentUpdates int) (ops []
 		}
 		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
 	}
+	if len(ops) > 0 {
+		return ops
+	}
+
+	// Starting stopped etcd-rivers all at once.
+	// The maxConcurrentUpdates is not considered for etcd-rivers, because the number of etcd rivers is small.
 	if nodes := nf.SSHConnected(nf.EtcdRiversStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
-		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
+		return []cke.Operator{op.RiversBootOp(nodes, nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)}
 	}
+
+	// Updating etcd-rivers one by one.
 	if nodes := nf.SSHConnected(nf.EtcdRiversOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
-		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
+		target := nodes[0] // just one
+		return []cke.Operator{op.RiversRestartOp([]*cke.Node{target}, nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)}
 	}
-	return ops
+
+	return nil
 }
 
 func apiserverOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrentUpdates int) (ops []cke.Operator, skipOtherOps bool) {
