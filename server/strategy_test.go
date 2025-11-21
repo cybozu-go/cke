@@ -723,13 +723,13 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name:          "BootRivers",
 			Input:         newData(),
-			ExpectedOps:   []opData{{"rivers-bootstrap", 5}, {"etcd-rivers-bootstrap", 3}},
+			ExpectedOps:   []opData{{"rivers-bootstrap", 5}},
 			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
 			Name:          "BootRivers2",
-			Input:         newData().withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps:   []opData{{"rivers-bootstrap", 4}, {"etcd-rivers-bootstrap", 2}},
+			Input:         newData().withSSHNotConnectedNodes(),
+			ExpectedOps:   []opData{{"rivers-bootstrap", 4}},
 			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
@@ -737,7 +737,7 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.Image = ""
-			}).withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes(),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps:   []opData{{"rivers-restart", 1}},
 			ExpectedPhase: cke.PhaseRivers,
 		},
@@ -746,7 +746,7 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.BuiltInParams.ExtraArguments = nil
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.BuiltInParams.ExtraArguments = nil
-			}).withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes(),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps:   []opData{{"rivers-restart", 1}},
 			ExpectedPhase: cke.PhaseRivers,
 		},
@@ -755,7 +755,7 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.ExtraParams.ExtraArguments = []string{"foo"}
-			}).withEtcdRivers().withHealthyEtcd().withSSHNotConnectedNodes(),
+			}).withSSHNotConnectedNodes(),
 			ExpectedOps:   []opData{{"rivers-restart", 1}},
 			ExpectedPhase: cke.PhaseRivers,
 		},
@@ -764,8 +764,26 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Rivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).Rivers.Running = false
-			}).withEtcdRivers(),
+			}),
 			ExpectedOps:   []opData{{"rivers-bootstrap", 1}, {"rivers-restart", 1}},
+			ExpectedPhase: cke.PhaseRivers,
+		},
+		{
+			Name:          "BootEtcdRivers",
+			Input:         newData().withRivers(),
+			ExpectedOps:   []opData{{"etcd-rivers-bootstrap", 3}},
+			ExpectedPhase: cke.PhaseRivers,
+		},
+		{
+			Name:          "BootEtcdRivers2",
+			Input:         newData().withRivers().withSSHNotConnectedCP(1),
+			ExpectedOps:   []opData{{"etcd-rivers-bootstrap", 2}},
+			ExpectedPhase: cke.PhaseRivers,
+		},
+		{
+			Name:          "BootEtcdRivers3",
+			Input:         newData().withRivers().withSSHNotConnectedNonCPWorker(0),
+			ExpectedOps:   []opData{{"etcd-rivers-bootstrap", 3}},
 			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
@@ -773,35 +791,62 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.Image = ""
-			}).withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps:   []opData{{"etcd-rivers-restart", 1}},
+			}),
+			ExpectedOps:   []opData{{"etcd-rivers-restart", 1}}, // just one
 			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
 			Name: "RestartEtcdRivers2",
 			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.BuiltInParams.ExtraArguments = nil
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.BuiltInParams.ExtraArguments = nil
-			}).withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps:   []opData{{"etcd-rivers-restart", 1}},
+				d.NodeStatus(d.ControlPlane()[2]).EtcdRivers.BuiltInParams.ExtraArguments = nil
+			}),
+			ExpectedOps:   []opData{{"etcd-rivers-restart", 1}}, // just one
 			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
 			Name: "RestartEtcdRivers3",
 			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.ExtraParams.ExtraArguments = []string{"foo"}
-			}).withHealthyEtcd().withSSHNotConnectedNodes(),
-			ExpectedOps:   []opData{{"etcd-rivers-restart", 1}},
+				d.NodeStatus(d.ControlPlane()[2]).EtcdRivers.ExtraParams.ExtraArguments = []string{"foo"}
+			}),
+			ExpectedOps:   []opData{{"etcd-rivers-restart", 1}}, // just one
 			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
-			Name: "StartRestartEtcdRivers",
+			Name: "RestartEtcdRivers4",
 			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.Image = ""
 				d.NodeStatus(d.ControlPlane()[1]).EtcdRivers.Running = false
 			}),
-			ExpectedOps:   []opData{{"etcd-rivers-bootstrap", 1}, {"etcd-rivers-restart", 1}},
+			ExpectedOps: []opData{
+				// Don't restart running etcd-rivers, when stopped exists.
+				{"etcd-rivers-bootstrap", 1},
+			},
+			ExpectedPhase: cke.PhaseRivers,
+		},
+		{
+			Name: "RestartEtcdRivers5",
+			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.Image = ""
+				d.NodeStatus(d.NonCPWorkers()[1]).Rivers.Running = false
+			}),
+			ExpectedOps: []opData{
+				// Don't restart running etcd-rivers, when stopped *rivers* exists.
+				{"rivers-bootstrap", 1},
+			},
+			ExpectedPhase: cke.PhaseRivers,
+		},
+		{
+			Name: "RestartEtcdRivers6",
+			Input: newData().withRivers().withEtcdRivers().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).EtcdRivers.Image = ""
+				d.NodeStatus(d.NonCPWorkers()[1]).Rivers.Image = ""
+			}),
+			ExpectedOps: []opData{
+				// Don't restart running etcd-rivers, when outdated *rivers* exists.
+				{"rivers-restart", 1},
+			},
 			ExpectedPhase: cke.PhaseRivers,
 		},
 		{
