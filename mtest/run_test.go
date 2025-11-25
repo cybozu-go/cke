@@ -320,17 +320,16 @@ func remoteTempFile(body string) string {
 	return remoteFile
 }
 
-func getCluster() *cke.Cluster {
+func getCluster(controlPlaneNodes ...int) *cke.Cluster {
 	b, err := os.ReadFile(ckeClusterPath)
 	Expect(err).NotTo(HaveOccurred())
 
 	var cluster cke.Cluster
-
-	err = yaml.Unmarshal(b, &cluster)
-	Expect(err).NotTo(HaveOccurred())
-	err = cluster.Validate(false)
-	Expect(err).NotTo(HaveOccurred())
-
+	Expect(yaml.Unmarshal(b, &cluster)).To(Succeed())
+	Expect(cluster.Validate(false)).To(Succeed())
+	for i := range controlPlaneNodes {
+		cluster.Nodes[i].ControlPlane = true
+	}
 	return &cluster
 }
 
@@ -443,10 +442,7 @@ func clusterSetAndWait(cluster *cke.Cluster) {
 
 func initializeControlPlane() {
 	ckecliSafe("constraints", "set", "control-plane-count", "3")
-	cluster := getCluster()
-	for i := 0; i < 3; i++ {
-		cluster.Nodes[i].ControlPlane = true
-	}
+	cluster := getCluster(0, 1, 2)
 	clusterSetAndWait(cluster)
 }
 

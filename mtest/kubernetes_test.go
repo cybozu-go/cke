@@ -166,12 +166,8 @@ func testKubernetes() {
 	})
 
 	It("updates unbound config", func() {
-		cluster := getCluster()
-		for i := 0; i < 3; i++ {
-			cluster.Nodes[i].ControlPlane = true
-		}
-
 		By("updating domain name to neco.local")
+		cluster := getCluster(0, 1, 2)
 		if cluster.Options.Kubelet.Config == nil {
 			cluster.Options.Kubelet.Config = &unstructured.Unstructured{}
 		}
@@ -200,10 +196,7 @@ func testKubernetes() {
 			return errors.New("unbound.conf is not updated")
 		}).Should(Succeed())
 
-		cluster = getCluster()
-		for i := 0; i < 3; i++ {
-			cluster.Nodes[i].ControlPlane = true
-		}
+		cluster = getCluster(0, 1, 2)
 		clusterSetAndWait(cluster)
 	})
 
@@ -333,10 +326,7 @@ func testKubernetes() {
 		Expect(logs).Should(BeEmpty())
 
 		By("enabling audit log")
-		cluster := getCluster()
-		for i := 0; i < 3; i++ {
-			cluster.Nodes[i].ControlPlane = true
-		}
+		cluster := getCluster(0, 1, 2)
 		cluster.Options.APIServer.AuditLogEnabled = true
 		cluster.Options.APIServer.AuditLogPolicy = `apiVersion: audit.k8s.io/v1
 kind: Policy
@@ -388,10 +378,7 @@ rules:
 		Expect(err).Should(HaveOccurred())
 
 		By("enabling audit log")
-		cluster := getCluster()
-		for i := 0; i < 3; i++ {
-			cluster.Nodes[i].ControlPlane = true
-		}
+		cluster := getCluster(0, 1, 2)
 		cluster.Options.APIServer.AuditLogEnabled = true
 		cluster.Options.APIServer.AuditLogPolicy = `apiVersion: audit.k8s.io/v1
 kind: Policy

@@ -136,10 +136,7 @@ func testRebootOperations() {
 	// - RebootUncordonOp
 	// - RebootDequeueOp
 
-	cluster := getCluster()
-	for i := 0; i < 3; i++ {
-		cluster.Nodes[i].ControlPlane = true
-	}
+	cluster := getCluster(0, 1, 2)
 
 	currentWriteIndex := 0
 	rebootQueueAdd := func(nodes []string) {

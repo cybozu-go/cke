@@ -88,10 +88,7 @@ func testRepairOperations() {
 	// "true" and "echo true" are insufficient for repair queue test because
 	// CKE first checks health and never calls "RepairDrainStartOp" for healthy machines.
 	It("should execute repair commands", func() {
-		cluster := getCluster()
-		for i := 0; i < 3; i++ {
-			cluster.Nodes[i].ControlPlane = true
-		}
+		cluster := getCluster(0, 1, 2)
 
 		currentWriteIndex := 0
 		repairQueueAdd := func(address string) {
