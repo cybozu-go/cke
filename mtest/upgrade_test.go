@@ -37,15 +37,8 @@ func testUpgrade() {
 	})
 
 	It("runs new CKE", func() {
-		ts := time.Now()
 		runCKE(ckeImageURL)
-		cluster := getCluster()
-		for i := 0; i < 3; i++ {
-			cluster.Nodes[i].ControlPlane = true
-		}
-		Eventually(func() error {
-			return checkCluster(cluster, ts)
-		}).Should(Succeed())
+		waitServerStatusCompletion()
 	})
 
 	It("removes kubectl cache", func() {

@@ -81,6 +81,7 @@ func testOperators(isDegraded bool) {
 		for i := 0; i < 3; i++ {
 			cluster.Nodes[i].ControlPlane = true
 		}
+		clusterSetAndWait(cluster)
 
 		By("Stopping etcd servers")
 		// this will run:
@@ -92,11 +93,8 @@ func testOperators(isDegraded bool) {
 			execSafeAt(node2, "docker", "rm", "etcd")
 			execSafeAt(node3, "docker", "stop", "etcd")
 			execSafeAt(node3, "docker", "rm", "etcd")
-			ts := time.Now()
 			runCKE(ckeImageURL)
-			Eventually(func() error {
-				return checkCluster(cluster, ts)
-			}).Should(Succeed())
+			waitServerStatusCompletion()
 		}
 
 		By("Removing a control plane node from the cluster")
@@ -110,12 +108,10 @@ func testOperators(isDegraded bool) {
 		stopCKE()
 		ckecliSafe("constraints", "set", "control-plane-count", "2")
 		cluster.Nodes = append(cluster.Nodes[:1], cluster.Nodes[2:]...)
-		ts, err := ckecliClusterSet(cluster)
-		Expect(err).ShouldNot(HaveOccurred())
+		err = ckecliClusterSet(cluster)
+		Expect(err).NotTo(HaveOccurred())
 		runCKE(ckeImageURL)
-		Eventually(func() error {
-			return checkCluster(cluster, ts)
-		}).Should(Succeed())
+		waitServerStatusCompletion()
 
 		By("Testing default/kubernetes Endpoints")
 		out, _, err = kubectl("get", "-o=json", "endpoints/kubernetes")
@@ -163,8 +159,7 @@ func testOperators(isDegraded bool) {
 				Effect: corev1.TaintEffectNoSchedule,
 			},
 		}
-		_, err = ckecliClusterSet(cluster)
-		Expect(err).ShouldNot(HaveOccurred())
+		clusterSetAndWait(cluster)
 
 		// reboot node2 and node4 to check bootstrap taints
 		rebootTime := time.Now()
@@ -177,7 +172,7 @@ func testOperators(isDegraded bool) {
 		for _, n := range rebootedNodes {
 			execAt(n, "sudo", "systemd-run", "reboot", "-f", "-f")
 		}
-		ts = time.Now()
+
 		Eventually(func() error {
 			for _, n := range rebootedNodes {
 				err := reconnectSSH(n)
@@ -196,9 +191,7 @@ func testOperators(isDegraded bool) {
 			return nil
 		}).Should(Succeed())
 
-		Eventually(func() error {
-			return checkCluster(cluster, ts)
-		}).Should(Succeed())
+		waitServerStatusCompletion()
 
 		// check node6 is added
 		var status *cke.ClusterStatus
@@ -366,41 +359,18 @@ func testOperators(isDegraded bool) {
 			cluster.Nodes[i].ControlPlane = true
 		}
 		cluster.Nodes[0].Labels = map[string]string{"label2": "value2"}
-		ts, err := ckecliClusterSet(cluster)
-		Expect(err).ShouldNot(HaveOccurred())
-		Eventually(func() error {
-			err := checkCluster(cluster, ts)
-			if err != nil {
-				return err
-			}
+		clusterSetAndWait(cluster)
 
-			stdout, stderr, err := kubectl("get", "nodes/"+node1, "-o", "json")
-			if err != nil {
-				return fmt.Errorf("stdout:%s, stderr:%s", stdout, stderr)
-			}
-			var node corev1.Node
-			err = json.Unmarshal(stdout, &node)
-			if err != nil {
-				return err
-			}
-			if node.Labels["label1"] != "value" {
-				return fmt.Errorf(`expect node.Labels["label1"] to be "value", but actual: %s`, node.Labels["label1"])
-			}
-			if node.Labels["label2"] != "value2" {
-				return fmt.Errorf(`expect node.Labels["label2"] to be "value2", but actual: %s`, node.Labels["label2"])
-			}
-			if node.Annotations["annotation1"] != "value" {
-				return fmt.Errorf(`expect node.Labels["annotation1"] to be "value", but actual: %s`, node.Annotations["annotation1"])
-			}
-			if len(node.Spec.Taints) != 1 {
-				return fmt.Errorf(`expect len(node.Spec.Taints) to be 1, but actual: %d`, len(node.Spec.Taints))
-			}
-			taint := node.Spec.Taints[0]
-			if taint.Key != "taint1" {
-				return fmt.Errorf(`expect taint.Key to be "taint1", but actual: %s`, taint.Key)
-			}
-			return nil
-		}).Should(Succeed())
+		out, stderr, err := kubectl("get", "nodes/"+node1, "-o", "json")
+		Expect(err).NotTo(HaveOccurred(), "stdout: %s, stderr: %s", out, stderr)
+		var node corev1.Node
+		err = json.Unmarshal(out, &node)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(node.Labels["label1"]).To(Equal("value"))
+		Expect(node.Labels["label2"]).To(Equal("value2"))
+		Expect(node.Annotations["annotation1"]).To(Equal("value"))
+		Expect(node.Spec.Taints).To(HaveLen(1))
+		Expect(node.Spec.Taints[0].Key).To(Equal("taint1"))
 
 		By("updating existing labels, annotations, and taints")
 		cluster = getCluster()
@@ -464,13 +434,9 @@ func testOperators(isDegraded bool) {
 			cluster.Nodes[i].ControlPlane = true
 		}
 		cluster.Nodes[0].Hostname = "node1"
-		ts, err = ckecliClusterSet(cluster)
-		Expect(err).ShouldNot(HaveOccurred())
+		clusterSetAndWait(cluster)
+
 		Eventually(func() error {
-			err := checkCluster(cluster, ts)
-			if err != nil {
-				return err
-			}
 			status, _, err := getClusterStatus(cluster)
 			if err != nil {
 				return err

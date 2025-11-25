@@ -459,15 +459,7 @@ roleRef:
 `
 		ckecliWithInput([]byte(resources), "resource", "set", "-")
 		defer ckecliWithInput([]byte(resources), "resource", "delete", "-")
-		ts := time.Now()
-
-		cluster := getCluster()
-		for i := 0; i < 3; i++ {
-			cluster.Nodes[i].ControlPlane = true
-		}
-		Eventually(func() error {
-			return checkCluster(cluster, ts)
-		}).Should(Succeed())
+		waitServerStatusCompletion()
 
 		By("getting user-defined resources")
 		data := ckecliSafe("resource", "get", "Namespace/foo")
@@ -483,10 +475,7 @@ metadata:
 `
 		ckecliWithInput([]byte(newResources), "resource", "set", "-")
 		defer ckecliWithInput([]byte(newResources), "resource", "delete", "-")
-		ts = time.Now()
-		Eventually(func() error {
-			return checkCluster(cluster, ts)
-		}).Should(Succeed())
+		waitServerStatusCompletion()
 
 		stdout, _, err := kubectl("get", "namespaces/foo", "-o", "json")
 		Expect(err).ShouldNot(HaveOccurred())
@@ -501,15 +490,7 @@ metadata:
 		_, _, err := ckecliWithInput(webhookYAML, "resource", "set", "-")
 		Expect(err).NotTo(HaveOccurred())
 		defer ckecliWithInput(webhookYAML, "resource", "delete", "-")
-		ts := time.Now()
-
-		cluster := getCluster()
-		for i := 0; i < 3; i++ {
-			cluster.Nodes[i].ControlPlane = true
-		}
-		Eventually(func() error {
-			return checkCluster(cluster, ts)
-		}).Should(Succeed())
+		waitServerStatusCompletion()
 
 		By("checking ValidatingWebhookConfiguration")
 		stdout, _, err := kubectl("get", "validatingwebhookconfigurations/test", "-o", "json")
