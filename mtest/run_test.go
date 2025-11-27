@@ -327,7 +327,7 @@ func getCluster(controlPlaneNodes ...int) *cke.Cluster {
 	var cluster cke.Cluster
 	Expect(yaml.Unmarshal(b, &cluster)).To(Succeed())
 	Expect(cluster.Validate(false)).To(Succeed())
-	for i := range controlPlaneNodes {
+	for _, i := range controlPlaneNodes {
 		cluster.Nodes[i].ControlPlane = true
 	}
 	return &cluster
