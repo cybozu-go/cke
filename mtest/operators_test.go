@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
@@ -74,6 +75,29 @@ func testOperators(isDegraded bool) {
 				corev1.EndpointAddress{IP: node3},
 			))
 			Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
+		}
+
+		By("Testing default/kubernetes EndpointSlice")
+		out, _, err = kubectl("get", "-o=json", "endpointslice/kubernetes")
+		Expect(err).ShouldNot(HaveOccurred())
+		var eps discoveryv1.EndpointSlice
+		err = json.Unmarshal(out, &eps)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(eps.Endpoints).Should(HaveLen(3))
+		if isDegraded {
+			Expect(eps.Endpoints[0].Addresses).To(Equal([]string{node1}))
+			Expect(eps.Endpoints[1].Addresses).To(Equal([]string{node2}))
+			Expect(eps.Endpoints[2].Addresses).To(Equal([]string{node3}))
+			Expect(*eps.Endpoints[0].Conditions.Ready).To(BeTrue())
+			Expect(*eps.Endpoints[1].Conditions.Ready).To(BeFalse())
+			Expect(*eps.Endpoints[2].Conditions.Ready).To(BeFalse())
+		} else {
+			Expect(eps.Endpoints[0].Addresses).To(Equal([]string{node1}))
+			Expect(eps.Endpoints[1].Addresses).To(Equal([]string{node2}))
+			Expect(eps.Endpoints[2].Addresses).To(Equal([]string{node3}))
+			Expect(*eps.Endpoints[0].Conditions.Ready).To(BeTrue())
+			Expect(*eps.Endpoints[1].Conditions.Ready).To(BeTrue())
+			Expect(*eps.Endpoints[2].Conditions.Ready).To(BeTrue())
 		}
 
 		By("Stopping etcd servers")
