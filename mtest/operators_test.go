@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
@@ -55,25 +56,95 @@ func testOperators(isDegraded bool) {
 		By("Testing default/kubernetes Endpoints")
 		out, _, err := kubectl("get", "-o=json", "endpoints/kubernetes")
 		Expect(err).ShouldNot(HaveOccurred())
-		var ep corev1.Endpoints
-		err = json.Unmarshal(out, &ep)
+		var k8sEp corev1.Endpoints
+		err = json.Unmarshal(out, &k8sEp)
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(ep.Subsets).Should(HaveLen(1))
+		Expect(k8sEp.Subsets).Should(HaveLen(1))
 		if isDegraded {
-			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+			Expect(k8sEp.Subsets[0].Addresses).Should(ConsistOf(
 				corev1.EndpointAddress{IP: node1},
 			))
-			Expect(ep.Subsets[0].NotReadyAddresses).Should(ConsistOf(
+			Expect(k8sEp.Subsets[0].NotReadyAddresses).Should(ConsistOf(
 				corev1.EndpointAddress{IP: node2},
 				corev1.EndpointAddress{IP: node3},
 			))
 		} else {
-			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+			Expect(k8sEp.Subsets[0].Addresses).Should(ConsistOf(
 				corev1.EndpointAddress{IP: node1},
 				corev1.EndpointAddress{IP: node2},
 				corev1.EndpointAddress{IP: node3},
 			))
-			Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
+			Expect(k8sEp.Subsets[0].NotReadyAddresses).Should(BeEmpty())
+		}
+
+		By("Testing kube-system/cke-etcd Endpoints")
+		out, _, err = kubectl("get", "-o=json", "-n=kube-system", "endpoints/cke-etcd")
+		Expect(err).ShouldNot(HaveOccurred())
+		var etcdEp corev1.Endpoints
+		err = json.Unmarshal(out, &etcdEp)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(etcdEp.Subsets).Should(HaveLen(1))
+		if isDegraded {
+			Expect(etcdEp.Subsets[0].Addresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node1},
+			))
+			Expect(etcdEp.Subsets[0].NotReadyAddresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node2},
+				corev1.EndpointAddress{IP: node3},
+			))
+		} else {
+			Expect(etcdEp.Subsets[0].Addresses).Should(ConsistOf(
+				corev1.EndpointAddress{IP: node1},
+				corev1.EndpointAddress{IP: node2},
+				corev1.EndpointAddress{IP: node3},
+			))
+			Expect(etcdEp.Subsets[0].NotReadyAddresses).Should(BeEmpty())
+		}
+
+		By("Testing default/kubernetes EndpointSlice")
+		out, _, err = kubectl("get", "-o=json", "endpointslice/kubernetes")
+		Expect(err).ShouldNot(HaveOccurred())
+		var k8sEps discoveryv1.EndpointSlice
+		err = json.Unmarshal(out, &k8sEps)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(k8sEps.Endpoints).Should(HaveLen(3))
+		if isDegraded {
+			Expect(k8sEps.Endpoints[0].Addresses).To(Equal([]string{node1}))
+			Expect(k8sEps.Endpoints[1].Addresses).To(Equal([]string{node2}))
+			Expect(k8sEps.Endpoints[2].Addresses).To(Equal([]string{node3}))
+			Expect(*k8sEps.Endpoints[0].Conditions.Ready).To(BeTrue())
+			Expect(*k8sEps.Endpoints[1].Conditions.Ready).To(BeFalse())
+			Expect(*k8sEps.Endpoints[2].Conditions.Ready).To(BeFalse())
+		} else {
+			Expect(k8sEps.Endpoints[0].Addresses).To(Equal([]string{node1}))
+			Expect(k8sEps.Endpoints[1].Addresses).To(Equal([]string{node2}))
+			Expect(k8sEps.Endpoints[2].Addresses).To(Equal([]string{node3}))
+			Expect(*k8sEps.Endpoints[0].Conditions.Ready).To(BeTrue())
+			Expect(*k8sEps.Endpoints[1].Conditions.Ready).To(BeTrue())
+			Expect(*k8sEps.Endpoints[2].Conditions.Ready).To(BeTrue())
+		}
+
+		By("Testing kube-system/cke-etcd EndpointSlice")
+		out, _, err = kubectl("get", "-o=json", "-n=kube-system", "endpointslice/cke-etcd")
+		Expect(err).ShouldNot(HaveOccurred())
+		var etcdEps discoveryv1.EndpointSlice
+		err = json.Unmarshal(out, &etcdEps)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(etcdEps.Endpoints).Should(HaveLen(3))
+		if isDegraded {
+			Expect(etcdEps.Endpoints[0].Addresses).To(Equal([]string{node1}))
+			Expect(etcdEps.Endpoints[1].Addresses).To(Equal([]string{node2}))
+			Expect(etcdEps.Endpoints[2].Addresses).To(Equal([]string{node3}))
+			Expect(*etcdEps.Endpoints[0].Conditions.Ready).To(BeTrue())
+			Expect(*etcdEps.Endpoints[1].Conditions.Ready).To(BeFalse())
+			Expect(*etcdEps.Endpoints[2].Conditions.Ready).To(BeFalse())
+		} else {
+			Expect(etcdEps.Endpoints[0].Addresses).To(Equal([]string{node1}))
+			Expect(etcdEps.Endpoints[1].Addresses).To(Equal([]string{node2}))
+			Expect(etcdEps.Endpoints[2].Addresses).To(Equal([]string{node3}))
+			Expect(*etcdEps.Endpoints[0].Conditions.Ready).To(BeTrue())
+			Expect(*etcdEps.Endpoints[1].Conditions.Ready).To(BeTrue())
+			Expect(*etcdEps.Endpoints[2].Conditions.Ready).To(BeTrue())
 		}
 
 		By("Stopping etcd servers")
@@ -110,23 +181,23 @@ func testOperators(isDegraded bool) {
 		By("Testing default/kubernetes Endpoints")
 		out, _, err = kubectl("get", "-o=json", "endpoints/kubernetes")
 		Expect(err).ShouldNot(HaveOccurred())
-		ep = corev1.Endpoints{}
-		err = json.Unmarshal(out, &ep)
+		k8sEp = corev1.Endpoints{}
+		err = json.Unmarshal(out, &k8sEp)
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(ep.Subsets).Should(HaveLen(1))
+		Expect(k8sEp.Subsets).Should(HaveLen(1))
 		if isDegraded {
-			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+			Expect(k8sEp.Subsets[0].Addresses).Should(ConsistOf(
 				corev1.EndpointAddress{IP: node1},
 			))
-			Expect(ep.Subsets[0].NotReadyAddresses).Should(ConsistOf(
+			Expect(k8sEp.Subsets[0].NotReadyAddresses).Should(ConsistOf(
 				corev1.EndpointAddress{IP: node3},
 			))
 		} else {
-			Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
+			Expect(k8sEp.Subsets[0].Addresses).Should(ConsistOf(
 				corev1.EndpointAddress{IP: node1},
 				corev1.EndpointAddress{IP: node3},
 			))
-			Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
+			Expect(k8sEp.Subsets[0].NotReadyAddresses).Should(BeEmpty())
 		}
 
 		By("Adding a new node to the cluster as a control plane")

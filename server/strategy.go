@@ -1,6 +1,7 @@
 package server
 
 import (
+	"slices"
 	"time"
 
 	"github.com/cybozu-go/cke"
@@ -14,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 // DecideOps returns the next operations to do and the operation phase.
@@ -441,6 +443,17 @@ func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEP
 		ops = append(ops, epOp)
 	}
 
+	ready := make(map[string]bool)
+	for _, ip := range expect.readyIPs {
+		ready[ip] = true
+	}
+	for _, ip := range expect.notReadyIPs {
+		ready[ip] = false
+	}
+	addrs := slices.Concat(expect.readyIPs, expect.notReadyIPs)
+	slices.Sort(addrs)
+	addrs = slices.Compact(addrs)
+
 	eps := &discoveryv1.EndpointSlice{}
 	eps.Namespace = expect.namespace
 	eps.Name = expect.name
@@ -449,23 +462,11 @@ func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEP
 		"kubernetes.io/service-name":             expect.serviceName,
 	}
 	eps.AddressType = discoveryv1.AddressTypeIPv4
-	eps.Endpoints = make([]discoveryv1.Endpoint, len(expect.readyIPs)+len(expect.notReadyIPs))
-	readyTrue := true
-	for i := range expect.readyIPs {
+	eps.Endpoints = make([]discoveryv1.Endpoint, len(addrs))
+	for i, ip := range addrs {
 		eps.Endpoints[i] = discoveryv1.Endpoint{
-			Addresses: expect.readyIPs[i : i+1],
-			Conditions: discoveryv1.EndpointConditions{
-				Ready: &readyTrue,
-			},
-		}
-	}
-	readyFalse := false
-	for i := range expect.notReadyIPs {
-		eps.Endpoints[len(expect.readyIPs)+i] = discoveryv1.Endpoint{
-			Addresses: expect.notReadyIPs[i : i+1],
-			Conditions: discoveryv1.EndpointConditions{
-				Ready: &readyFalse,
-			},
+			Addresses:  []string{ip},
+			Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(ready[ip])},
 		}
 	}
 	eps.Ports = []discoveryv1.EndpointPort{
