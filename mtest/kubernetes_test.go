@@ -317,6 +317,8 @@ func testKubernetes() {
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		_, stderr, err = kubectl("-n", "kube-system", "get", "endpoints/cke-etcd")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+		_, stderr, err = kubectl("-n", "kube-system", "get", "endpointslices/cke-etcd")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 	})
 
 	It("can output audit log to journal log", func() {

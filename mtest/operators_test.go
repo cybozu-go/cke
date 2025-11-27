@@ -11,8 +11,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"k8s.io/utils/ptr"
 )
 
 func testOperators(isDegraded bool) {
@@ -76,6 +78,44 @@ func testOperators(isDegraded bool) {
 			Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
 		}
 
+		By("Testing default/kubernetes EndpointSlices")
+		out, _, err = kubectl("get", "-o=json", "endpointslices/kubernetes")
+		Expect(err).NotTo(HaveOccurred())
+		var eps discoveryv1.EndpointSlice
+		err = json.Unmarshal(out, &eps)
+		Expect(err).NotTo(HaveOccurred())
+		if isDegraded {
+			Expect(eps.Endpoints).To(ConsistOf(
+				discoveryv1.Endpoint{
+					Addresses:  []string{node1},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				},
+				discoveryv1.Endpoint{
+					Addresses:  []string{node2},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(false)},
+				},
+				discoveryv1.Endpoint{
+					Addresses:  []string{node3},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(false)},
+				},
+			))
+		} else {
+			Expect(eps.Endpoints).To(ConsistOf(
+				discoveryv1.Endpoint{
+					Addresses:  []string{node1},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				},
+				discoveryv1.Endpoint{
+					Addresses:  []string{node2},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				},
+				discoveryv1.Endpoint{
+					Addresses:  []string{node3},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				},
+			))
+		}
+
 		By("Stopping etcd servers")
 		// this will run:
 		// - EtcdStartOp
@@ -127,6 +167,36 @@ func testOperators(isDegraded bool) {
 				corev1.EndpointAddress{IP: node3},
 			))
 			Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
+		}
+
+		By("Testing default/kubernetes EndpointSlices")
+		out, _, err = kubectl("get", "-o=json", "endpointslices/kubernetes")
+		Expect(err).NotTo(HaveOccurred())
+		eps = discoveryv1.EndpointSlice{}
+		err = json.Unmarshal(out, &eps)
+		Expect(err).NotTo(HaveOccurred())
+		if isDegraded {
+			Expect(eps.Endpoints).To(ConsistOf(
+				discoveryv1.Endpoint{
+					Addresses:  []string{node1},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				},
+				discoveryv1.Endpoint{
+					Addresses:  []string{node3},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(false)},
+				},
+			))
+		} else {
+			Expect(eps.Endpoints).To(ConsistOf(
+				discoveryv1.Endpoint{
+					Addresses:  []string{node1},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				},
+				discoveryv1.Endpoint{
+					Addresses:  []string{node3},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				},
+			))
 		}
 
 		By("Adding a new node to the cluster as a control plane")
