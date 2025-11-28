@@ -320,17 +320,16 @@ func remoteTempFile(body string) string {
 	return remoteFile
 }
 
-func getCluster() *cke.Cluster {
+func getCluster(controlPlaneNodes ...int) *cke.Cluster {
 	b, err := os.ReadFile(ckeClusterPath)
 	Expect(err).NotTo(HaveOccurred())
 
 	var cluster cke.Cluster
-
-	err = yaml.Unmarshal(b, &cluster)
-	Expect(err).NotTo(HaveOccurred())
-	err = cluster.Validate(false)
-	Expect(err).NotTo(HaveOccurred())
-
+	Expect(yaml.Unmarshal(b, &cluster)).To(Succeed())
+	Expect(cluster.Validate(false)).To(Succeed())
+	for _, i := range controlPlaneNodes {
+		cluster.Nodes[i].ControlPlane = true
+	}
 	return &cluster
 }
 
@@ -386,18 +385,18 @@ func getServerStatus() (*cke.ServerStatus, error) {
 	return st.GetStatus(ctx)
 }
 
-func ckecliClusterSet(cluster *cke.Cluster) (time.Time, error) {
+func ckecliClusterSet(cluster *cke.Cluster) error {
 	y, err := yaml.Marshal(cluster)
 	if err != nil {
-		return time.Time{}, err
+		return err
 	}
 
 	rf := remoteTempFile(string(y))
 	stdout, stderr, err := ckecli("cluster", "set", rf)
 	if err != nil {
-		return time.Now(), fmt.Errorf("failed to execute cluster set command. stdout: %v, stderr: %v, err: %v", string(stdout), string(stderr), err)
+		return fmt.Errorf("failed to execute cluster set command. stdout: %v, stderr: %v, err: %v", string(stdout), string(stderr), err)
 	}
-	return time.Now(), nil
+	return nil
 }
 
 func setupCKE(img string) {
@@ -407,7 +406,7 @@ func setupCKE(img string) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func checkCluster(c *cke.Cluster, ts time.Time) error {
+func checkServerStatusCompletion(ts time.Time) error {
 	st, err := getServerStatus()
 	if err != nil {
 		if err == cke.ErrNotFound {
@@ -425,20 +424,25 @@ func checkCluster(c *cke.Cluster, ts time.Time) error {
 	return nil
 }
 
-func clusterSetAndWait(cluster *cke.Cluster) {
-	ts, err := ckecliClusterSet(cluster)
-	ExpectWithOffset(1, err).ShouldNot(HaveOccurred())
+func waitServerStatusCompletion() {
+	ts := time.Now()
 	EventuallyWithOffset(1, func() error {
-		return checkCluster(cluster, ts)
+		return checkServerStatusCompletion(ts)
+	}).Should(Succeed())
+}
+
+func clusterSetAndWait(cluster *cke.Cluster) {
+	err := ckecliClusterSet(cluster)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	ts := time.Now()
+	EventuallyWithOffset(1, func() error {
+		return checkServerStatusCompletion(ts)
 	}).Should(Succeed())
 }
 
 func initializeControlPlane() {
 	ckecliSafe("constraints", "set", "control-plane-count", "3")
-	cluster := getCluster()
-	for i := 0; i < 3; i++ {
-		cluster.Nodes[i].ControlPlane = true
-	}
+	cluster := getCluster(0, 1, 2)
 	clusterSetAndWait(cluster)
 }
 
