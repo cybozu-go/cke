@@ -145,8 +145,7 @@ var _ = Describe("Test CKE", func() {
 			testOperators()
 		})
 	case "robustness":
-		Context("operators", Ordered, func() {
-			testStopCP()
+		Context("robustness", Ordered, func() {
 			testRobustness()
 		})
 	case "reboot":
