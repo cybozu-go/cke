@@ -206,11 +206,6 @@ func (c *SshConfig) Ssh(ctx context.Context, args []string) error {
 				})
 			}
 		}
-
-		// Print command output
-		fmt.Println("COMMAND:", command)
-		fmt.Println("STDOUT:", session.Stdout)
-		fmt.Println("STDERR:", session.Stderr)
 	}
 
 	return nil
