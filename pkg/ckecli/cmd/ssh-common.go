@@ -246,7 +246,6 @@ func ParseSCPArgs(args []string) (string, string, string, string, string, error)
 		return "", "", "", "", "", fmt.Errorf("invalid scp arguments")
 	}
 
-	//var user string
 	// Parse remoteSpec
 	// user@host:/path/to/file or host:/path/to/file
 	atIndex := strings.Index(remoteSpec, "@")
@@ -263,16 +262,15 @@ func ParseSCPArgs(args []string) (string, string, string, string, string, error)
 		user = remoteSpec[:atIndex]
 	}
 
-	//var host string
 	colonIndex := strings.Index(remoteSpec, ":")
 	if colonIndex == -1 {
 		return "", "", "", "", "", fmt.Errorf("invalid remote spec format")
 	}
 
 	if atIndex != -1 {
-		host = remoteSpec[:colonIndex]
-	} else {
 		host = remoteSpec[atIndex+1 : colonIndex]
+	} else {
+		host = remoteSpec[:colonIndex]
 	}
 
 	remoteFile := remoteSpec[colonIndex+1:]
