@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
@@ -581,7 +582,6 @@ func testRebootOperations() {
 			Expect(apiServerInProgress).Should(BeNumerically("<=", 1), "API servers should be processed one by one")
 
 			// Both default/kubernetes and kube-system/cke-etcd Endpoints should have no less than two endpoints during API server reboots.
-			// (Check for EndpointsSlices is omitted since their members are same as Endpoints)
 			epNames := []struct {
 				name      string
 				namespace string
@@ -604,6 +604,23 @@ func testRebootOperations() {
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(ep.Subsets).Should(HaveLen(1))
 				Expect(len(ep.Subsets[0].Addresses)).Should(BeNumerically(">=", 2))
+			}
+			for _, epName := range epNames {
+				out, _, err := kubectl("get", "endpointslices", "-n", epName.namespace, epName.name, "-o=json")
+				Expect(err).NotTo(HaveOccurred())
+
+				var eps discoveryv1.EndpointSlice
+				err = json.Unmarshal(out, &eps)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(eps.Endpoints).To(HaveLen(3))
+
+				readyCount := 0
+				for _, e := range eps.Endpoints {
+					if *e.Conditions.Ready {
+						readyCount++
+					}
+				}
+				Expect(readyCount).To(BeNumerically(">=", 2))
 			}
 
 			if apiServerRemain == 0 {
