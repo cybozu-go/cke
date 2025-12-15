@@ -231,10 +231,10 @@ If COMMAND is specified, it will be executed on the node.
 	RunE: func(cmd *cobra.Command, args []string) error {
 		well.Go(func(ctx context.Context) error {
 			s := &SshConfig{
-				ConnectionTimeout:     20 * time.Second,
-				SessionTimeout:        30 * time.Second, // Intentionally short timeout
-				KeepAliveInterval:     30 * time.Second,
-				KeepAliveReplyTimeout: 5 * time.Second, // Time out of keep-alive reply from client to server
+				ConnectionTimeout:     30 * time.Second,
+				SessionTimeout:        60 * time.Second, // Intentionally short timeout
+				KeepAliveInterval:     60 * time.Second,
+				KeepAliveReplyTimeout: 10 * time.Second, // Time out of keep-alive reply from client to server
 			}
 			return s.Ssh(ctx, args)
 		})
