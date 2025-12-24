@@ -75,6 +75,13 @@ var repairQueueEnabled = prometheus.NewDesc(
 	nil,
 )
 
+var autoRepairEnabled = prometheus.NewDesc(
+	prometheus.BuildFQName(namespace, "", "auto_repair_enabled"),
+	"1 if auto repair is enabled.",
+	nil,
+	nil,
+)
+
 var repairQueueItems = prometheus.NewDesc(
 	prometheus.BuildFQName(namespace, "", "repair_queue_items"),
 	"The number of repair queue entries remaining per status.",
