@@ -43,6 +43,7 @@ type storage interface {
 	IsRebootQueueRunning(ctx context.Context) (bool, error)
 	GetRebootsEntries(ctx context.Context) ([]*cke.RebootQueueEntry, error)
 	IsRepairQueueDisabled(ctx context.Context) (bool, error)
+	IsAutoRepairDisabled(ctx context.Context) (bool, error)
 	GetRepairsEntries(ctx context.Context) ([]*cke.RepairQueueEntry, error)
 	GetCluster(ctx context.Context) (*cke.Cluster, error)
 }
@@ -241,16 +242,28 @@ func (c nodeMetricsCollector) collectRepair(ch chan<- prometheus.Metric) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	disabled, err := c.storage.IsRepairQueueDisabled(ctx)
+	repairQueueDisabled, err := c.storage.IsRepairQueueDisabled(ctx)
 	if err != nil {
 		log.Error("failed to get if repair queue is enabled", map[string]interface{}{
 			log.FnError: err,
 		})
 		return
 	}
-	var enabled float64
-	if !disabled {
-		enabled = 1
+	var rqEnabled float64
+	if !repairQueueDisabled {
+		rqEnabled = 1
+	}
+
+	autoRepairDisabled, err := c.storage.IsAutoRepairDisabled(ctx)
+	if err != nil {
+		log.Error("failed to get if auto repair is disabled", map[string]interface{}{
+			log.FnError: err,
+		})
+		return
+	}
+	var arEnabled float64
+	if !autoRepairDisabled {
+		arEnabled = 1
 	}
 
 	entries, err := c.storage.GetRepairsEntries(ctx)
@@ -274,7 +287,12 @@ func (c nodeMetricsCollector) collectRepair(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(
 		repairQueueEnabled,
 		prometheus.GaugeValue,
-		enabled,
+		rqEnabled,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		autoRepairEnabled,
+		prometheus.GaugeValue,
+		arEnabled,
 	)
 	for status, count := range itemCounts {
 		ch <- prometheus.MustNewConstMetric(

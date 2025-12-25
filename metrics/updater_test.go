@@ -58,14 +58,16 @@ type updateRebootQueueItemsTestCase struct {
 }
 
 type repairInput struct {
-	enabled bool
-	entries []*cke.RepairQueueEntry
+	repairQueueEnabled bool
+	autoRepairEnabled  bool
+	entries            []*cke.RepairQueueEntry
 }
 
 type repairExpected struct {
-	enabled       float64
-	items         map[string]float64
-	machineStatus map[string]map[string]float64
+	rebootQueueEnabled float64
+	autoRepairEnabled  float64
+	items              map[string]float64
+	machineStatus      map[string]map[string]float64
 }
 
 type repairTestCase struct {
@@ -564,11 +566,13 @@ func testRepair(t *testing.T) {
 		{
 			name: "disabled",
 			input: repairInput{
-				enabled: false,
-				entries: nil,
+				repairQueueEnabled: false,
+				autoRepairEnabled:  false,
+				entries:            nil,
 			},
 			expected: repairExpected{
-				enabled: 0,
+				rebootQueueEnabled: 0,
+				autoRepairEnabled:  0,
 				items: map[string]float64{
 					"queued":     0,
 					"processing": 0,
@@ -594,7 +598,8 @@ func testRepair(t *testing.T) {
 		{
 			name: "enabled",
 			input: repairInput{
-				enabled: true,
+				repairQueueEnabled: true,
+				autoRepairEnabled:  true,
 				entries: []*cke.RepairQueueEntry{
 					{
 						Address: "1.1.1.1",
@@ -611,7 +616,8 @@ func testRepair(t *testing.T) {
 				},
 			},
 			expected: repairExpected{
-				enabled: 1,
+				rebootQueueEnabled: 1,
+				autoRepairEnabled:  1,
 				items: map[string]float64{
 					"queued":     0,
 					"processing": 1,
@@ -655,7 +661,8 @@ func testRepair(t *testing.T) {
 
 			collector, storage := newTestCollector()
 			storage.setCluster(cluster)
-			storage.enableRepairQueue(tt.input.enabled)
+			storage.enableRepairQueue(tt.input.repairQueueEnabled)
+			storage.enableAutoRepair(tt.input.autoRepairEnabled)
 			storage.setRepairsEntries(tt.input.entries)
 			handler := GetHandler(collector)
 
@@ -668,16 +675,24 @@ func testRepair(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			metricsEnabledFound := false
+			metricsRebootQueueEnabledFound := false
+			metricsAutoRepairEnabledFound := false
 			metricsItems := make(map[string]float64)
 			metricsStatus := make(map[string]map[string]float64)
 			for _, mf := range metricsFamily {
 				switch *mf.Name {
 				case "cke_repair_queue_enabled":
 					for _, m := range mf.Metric {
-						metricsEnabledFound = true
-						if *m.Gauge.Value != tt.expected.enabled {
-							t.Errorf("value for cke_repair_queue_enabled is wrong.  expected: %f, actual %f", tt.expected.enabled, *m.Gauge.Value)
+						metricsRebootQueueEnabledFound = true
+						if *m.Gauge.Value != tt.expected.rebootQueueEnabled {
+							t.Errorf("value for cke_repair_queue_enabled is wrong.  expected: %f, actual %f", tt.expected.rebootQueueEnabled, *m.Gauge.Value)
+						}
+					}
+				case "cke_auto_repair_enabled":
+					for _, m := range mf.Metric {
+						metricsAutoRepairEnabledFound = true
+						if *m.Gauge.Value != tt.expected.autoRepairEnabled {
+							t.Errorf("value for cke_auto_repair_enabled is wrong.  expected: %f, actual %f", tt.expected.autoRepairEnabled, *m.Gauge.Value)
 						}
 					}
 				case "cke_repair_queue_items":
@@ -704,8 +719,11 @@ func testRepair(t *testing.T) {
 					}
 				}
 			}
-			if !metricsEnabledFound {
+			if !metricsRebootQueueEnabledFound {
 				t.Error("metrics cke_repair_queue_enabled was not found")
+			}
+			if !metricsAutoRepairEnabledFound {
+				t.Error("metrics cke_auto_repair_enabled was not found")
 			}
 			if !cmp.Equal(metricsItems, tt.expected.items) {
 				t.Errorf("metrics cke_repair_queue_items is wrong. expected: %v, actual: %v", tt.expected.items, metricsItems)
@@ -878,6 +896,7 @@ func newTestCollector() (prometheus.Collector, *testStorage) {
 type testStorage struct {
 	sabakanEnabled     bool
 	rebootQueueEnabled bool
+	autoRepairEnabled  bool
 	rebootQueueRunning bool
 	rebootEntries      []*cke.RebootQueueEntry
 	repairQueueEnabled bool
@@ -895,6 +914,10 @@ func (s *testStorage) IsSabakanDisabled(_ context.Context) (bool, error) {
 
 func (s *testStorage) IsRebootQueueDisabled(_ context.Context) (bool, error) {
 	return !s.rebootQueueEnabled, nil
+}
+
+func (s *testStorage) IsAutoRepairDisabled(_ context.Context) (bool, error) {
+	return !s.autoRepairEnabled, nil
 }
 
 func (s *testStorage) enableRebootQueue(flag bool) {
@@ -919,6 +942,10 @@ func (s *testStorage) GetRebootsEntries(ctx context.Context) ([]*cke.RebootQueue
 
 func (s *testStorage) enableRepairQueue(flag bool) {
 	s.repairQueueEnabled = flag
+}
+
+func (s *testStorage) enableAutoRepair(flag bool) {
+	s.autoRepairEnabled = flag
 }
 
 func (s *testStorage) IsRepairQueueDisabled(_ context.Context) (bool, error) {

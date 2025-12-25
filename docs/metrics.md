@@ -3,7 +3,7 @@ Metrics
 
 CKE exposes the following metrics with the Prometheus format at `/metrics` REST API endpoint.  All these metrics are prefixed with `cke_`
 
-| Name                                  | Description                                                                | Type  | Labels              |
+|                 Name                  |                                Description                                 | Type  |       Labels        |
 | ------------------------------------- | -------------------------------------------------------------------------- | ----- | ------------------- |
 | leader                                | True (=1) if this server is the leader of CKE.                             | Gauge |                     |
 | node_reboot_status                    | The reboot status of a node.                                               | Gauge | `node`, `status`    |
@@ -15,6 +15,7 @@ CKE exposes the following metrics with the Prometheus format at `/metrics` REST 
 | reboot_queue_items                    | The number of reboot queue entries remaining per status.                   | Gauge | `status`            |
 | reboot_queue_running                  | True (=1) if reboot queue is running.                                      | Gauge |                     |
 | repair_queue_enabled                  | True (=1) if repair queue is enabled.                                      | Gauge |                     |
+| auto_repair_enabled                   | True (=1) if sabakan-triggered automatic repair is enabled.                | Gauge |                     |
 | repair_queue_items                    | The number of repair queue entries remaining per status.                   | Gauge | `status`            |
 | sabakan_integration_successful        | True (=1) if sabakan-integration satisfies constraints.                    | Gauge |                     |
 | sabakan_integration_timestamp_seconds | The Unix timestamp when `sabakan_integration_successful` was last updated. | Gauge |                     |
