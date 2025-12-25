@@ -6,6 +6,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.32.5]
+
+### Added
+
+- add metrics about auto-repair [#836](https://github.com/cybozu-go/cke/pull/836)
+
 ## [1.32.4]
 
 ### Changed
@@ -71,7 +77,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.32.4...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.32.5...HEAD
+[1.32.5]: https://github.com/cybozu-go/cke/compare/v1.32.4...v1.32.5
 [1.32.4]: https://github.com/cybozu-go/cke/compare/v1.32.3...v1.32.4
 [1.32.3]: https://github.com/cybozu-go/cke/compare/v1.32.2...v1.32.3
 [1.32.2]: https://github.com/cybozu-go/cke/compare/v1.32.1...v1.32.2
