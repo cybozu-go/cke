@@ -134,7 +134,15 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 			if err != nil {
 				return err
 			}
-
+			_, err = nodesAPI.Patch(ctx, entry.Node, types.StrategicMergePatchType, []byte(`
+{
+	"metadata":{"annotations":{"`+CKEAnnotationReboot+`": "true"}},
+	"spec":{"unschedulable": true}
+}
+`), metav1.PatchOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to cordon node %s: %v", entry.Node, err)
+			}
 			// This "check and cordon" order may overlook Job pods just started.
 			// On the other hand, "cordon and check" may cause excessive cordon.
 			// The overlook is acceptable because it is rare case and detected by the following evictOrDeleteNodePod().
@@ -152,17 +160,6 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 			log.Info("eviction dry-run succeeded", map[string]interface{}{
 				"name": entry.Node,
 			})
-
-			_, err = nodesAPI.Patch(ctx, entry.Node, types.StrategicMergePatchType, []byte(`
-{
-	"metadata":{"annotations":{"`+CKEAnnotationReboot+`": "true"}},
-	"spec":{"unschedulable": true}
-}
-`), metav1.PatchOptions{})
-			if err != nil {
-				return fmt.Errorf("failed to cordon node %s: %v", entry.Node, err)
-			}
-
 			return nil
 		}()
 		if err != nil {
