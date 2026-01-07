@@ -10,6 +10,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 - Update CoreDNS to 1.13.2.1 in [#838](https://github.com/cybozu-go/cke/pull/838)
 - Update etcd to 3.6.7.1 in [#838](https://github.com/cybozu-go/cke/pull/838)
+- Update pause to 3.10.1.3 in [#838](https://github.com/cybozu-go/cke/pull/838)
 
 ## [1.32.5]
 
