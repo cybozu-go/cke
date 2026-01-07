@@ -16,7 +16,7 @@ const (
 	PauseImage           = Image("ghcr.io/cybozu/pause:3.10.1.3")
 	CoreDNSImage         = Image("ghcr.io/cybozu/coredns:1.13.2.1")
 	UnboundImage         = Image("ghcr.io/cybozu/unbound:1.24.2.1")
-	UnboundExporterImage = Image("ghcr.io/cybozu/unbound_exporter:0.4.6.3")
+	UnboundExporterImage = Image("ghcr.io/cybozu/unbound_exporter:0.5.0.1")
 )
 
 // AllImages return container images list used by CKE
