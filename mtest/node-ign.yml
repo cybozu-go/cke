@@ -99,7 +99,7 @@ storage:
               stream_server_port = "10010"
               stream_idle_timeout = "4h0m0s"
               enable_selinux = false
-              sandbox_image = "ghcr.io/cybozu/pause:3.9"
+              sandbox_image = "ghcr.io/cybozu/pause:3.10"
               stats_collect_period = 10
               systemd_cgroup = false
               enable_tls_streaming = false
