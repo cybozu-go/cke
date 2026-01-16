@@ -9,6 +9,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 ### Changed
 
 - Update Go modules and GitHub Actions in [#840](https://github.com/cybozu-go/cke/pull/840)
+- Update Sabakan mock in [#840](https://github.com/cybozu-go/cke/pull/840)
 
 ## Ancient changes
 
