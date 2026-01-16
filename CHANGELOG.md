@@ -6,66 +6,9 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
-## [1.32.6]
-
-### Changed
-
-- Update CoreDNS to 1.13.2.1 in [#838](https://github.com/cybozu-go/cke/pull/838)
-- Update etcd to 3.6.7.1 in [#838](https://github.com/cybozu-go/cke/pull/838)
-- Update pause to 3.10.1.3 in [#838](https://github.com/cybozu-go/cke/pull/838)
-- Update Unbound to 1.24.2.1 in [#838](https://github.com/cybozu-go/cke/pull/838)
-- Update Unbound exporter to 0.5.0.1 in [#838](https://github.com/cybozu-go/cke/pull/838)
-
-## [1.32.5]
-
-### Added
-
-- add metrics about auto-repair [#836](https://github.com/cybozu-go/cke/pull/836)
-
-## [1.32.4]
-
-### Changed
-
-- Update unbound to v1.24.1 [#819](https://github.com/cybozu-go/cke/pull/819)
-- Refactor NodeFilter [#817](https://github.com/cybozu-go/cke/pull/817)
-
-## [1.32.3]
-
-### Changed
-
-- Update vault to 1.20 [#807](https://github.com/cybozu-go/cke/pull/807)
-- Udpate etcd to v3.6.5 [#812](https://github.com/cybozu-go/cke/pull/812)
-- Add topologySpreadConstraints to cluster-dns deployment [#813](https://github.com/cybozu-go/cke/pull/813)
-
-## [1.32.2]
-
-### Changed
-
-- Change behaviour of sabakan integration [#796](https://github.com/cybozu-go/cke/pull/796)
-
-## [1.32.1]
-
-### Added
-
-- Add machine serial to repair queue entries [#806](https://github.com/cybozu-go/cke/pull/806)
-
-### Changed
-
-- Update Kubernetes to v1.32.7 [#808](https://github.com/cybozu-go/cke/pull/808)
-
-## [1.32.0]
-
-- No changes from 1.32.0-rc.1
-
-## [1.32.0-rc.1]
-
-### Changed
-
-- Support Kubernetes 1.32 [#802](https://github.com/cybozu-go/cke/pull/802)
-- Update go modules and actions [#800](https://github.com/cybozu-go/cke/pull/800)
-
 ## Ancient changes
 
+- See [release-1.32/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.32/CHANGELOG.md) for changes in CKE 1.32.
 - See [release-1.31/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.31/CHANGELOG.md) for changes in CKE 1.31.
 - See [release-1.30/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.30/CHANGELOG.md) for changes in CKE 1.30.
 - See [release-1.29/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.29/CHANGELOG.md) for changes in CKE 1.29.
@@ -88,11 +31,3 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
 [Unreleased]: https://github.com/cybozu-go/cke/compare/v1.32.6...HEAD
-[1.32.6]: https://github.com/cybozu-go/cke/compare/v1.32.5...v1.32.6
-[1.32.5]: https://github.com/cybozu-go/cke/compare/v1.32.4...v1.32.5
-[1.32.4]: https://github.com/cybozu-go/cke/compare/v1.32.3...v1.32.4
-[1.32.3]: https://github.com/cybozu-go/cke/compare/v1.32.2...v1.32.3
-[1.32.2]: https://github.com/cybozu-go/cke/compare/v1.32.1...v1.32.2
-[1.32.1]: https://github.com/cybozu-go/cke/compare/v1.32.0...v1.32.1
-[1.32.0]: https://github.com/cybozu-go/cke/compare/v1.32.0-rc.1...v1.32.0
-[1.32.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.31.1...v1.32.0-rc.1
