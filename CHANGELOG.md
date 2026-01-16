@@ -6,6 +6,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Update Go modules and GitHub Actions in [#840](https://github.com/cybozu-go/cke/pull/840)
+
 ## Ancient changes
 
 - See [release-1.32/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.32/CHANGELOG.md) for changes in CKE 1.32.

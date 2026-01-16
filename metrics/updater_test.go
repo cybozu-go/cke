@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 )
 
 type labeledValue struct {
@@ -993,7 +994,7 @@ func hasLabels(lm map[string]string, expectedLabels map[string]string) bool {
 }
 
 func parseMetrics(resp *http.Response) ([]*dto.MetricFamily, error) {
-	var parser expfmt.TextParser
+	parser := expfmt.NewTextParser(model.UTF8Validation)
 	parsed, err := parser.TextToMetricFamilies(resp.Body)
 	if err != nil {
 		return nil, err
