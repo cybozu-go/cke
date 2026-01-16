@@ -599,6 +599,7 @@ func testRebootOperations() {
 				out, _, err := kubectl("get", "endpoints", "-n", epName.namespace, epName.name, "-o=json")
 				Expect(err).ShouldNot(HaveOccurred())
 
+				//lint:ignore SA1019 code for Endpoints will be removed later
 				var ep corev1.Endpoints
 				err = json.Unmarshal(out, &ep)
 				Expect(err).ShouldNot(HaveOccurred())

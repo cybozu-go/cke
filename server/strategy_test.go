@@ -399,12 +399,14 @@ func (d testData) withK8sReady() testData {
 }
 
 func (d testData) withMasterEndpoint() testData {
+	//lint:ignore SA1019 code for Endpoints will be removed later
 	d.Status.Kubernetes.MasterEndpoints = &corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				"endpointslice.kubernetes.io/skip-mirror": "true",
 			},
 		},
+		//lint:ignore SA1019 code for Endpoints will be removed later
 		Subsets: []corev1.EndpointSubset{
 			{
 				Addresses: []corev1.EndpointAddress{
@@ -454,12 +456,14 @@ func (d testData) withEtcdEndpoint() testData {
 		},
 	}
 
+	//lint:ignore SA1019 code for Endpoints will be removed later
 	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				"endpointslice.kubernetes.io/skip-mirror": "true",
 			},
 		},
+		//lint:ignore SA1019 code for Endpoints will be removed later
 		Subsets: []corev1.EndpointSubset{
 			{
 				Addresses: []corev1.EndpointAddress{
@@ -1244,6 +1248,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "MasterEndpointsUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
+				//lint:ignore SA1019 code for Endpoints will be removed later
 				d.Status.Kubernetes.MasterEndpoints.Subsets = []corev1.EndpointSubset{}
 			}),
 			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
@@ -1292,6 +1297,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "EtcdEndpointsUpdate1",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
+				//lint:ignore SA1019 code for Endpoints will be removed later
 				d.Status.Kubernetes.EtcdEndpoints.Subsets = []corev1.EndpointSubset{}
 			}),
 			ExpectedOps:   []opData{{"update-cke-etcd-endpoints", 1}},

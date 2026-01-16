@@ -57,6 +57,7 @@ func testOperators(isDegraded bool) {
 		By("Testing default/kubernetes Endpoints")
 		out, _, err := kubectl("get", "-o=json", "endpoints/kubernetes")
 		Expect(err).ShouldNot(HaveOccurred())
+		//lint:ignore SA1019 code for Endpoints will be removed later
 		var ep corev1.Endpoints
 		err = json.Unmarshal(out, &ep)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -150,6 +151,7 @@ func testOperators(isDegraded bool) {
 		By("Testing default/kubernetes Endpoints")
 		out, _, err = kubectl("get", "-o=json", "endpoints/kubernetes")
 		Expect(err).ShouldNot(HaveOccurred())
+		//lint:ignore SA1019 code for Endpoints will be removed later
 		ep = corev1.Endpoints{}
 		err = json.Unmarshal(out, &ep)
 		Expect(err).ShouldNot(HaveOccurred())
