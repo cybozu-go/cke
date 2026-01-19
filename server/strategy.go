@@ -404,6 +404,7 @@ func etcdEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter) (ops
 	return ops
 }
 
+//lint:ignore SA1019 code for Endpoints will be removed later
 func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEPS *discoveryv1.EndpointSlice, apiserver *cke.Node) []cke.Operator {
 	var ops []cke.Operator
 
@@ -420,12 +421,14 @@ func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEP
 		}
 	}
 
+	//lint:ignore SA1019 code for Endpoints will be removed later
 	ep := &corev1.Endpoints{}
 	ep.Namespace = expect.namespace
 	ep.Name = expect.name
 	ep.Labels = map[string]string{
 		"endpointslice.kubernetes.io/skip-mirror": "true",
 	}
+	//lint:ignore SA1019 code for Endpoints will be removed later
 	ep.Subsets = []corev1.EndpointSubset{
 		{
 			Addresses:         readyAddresses,
@@ -483,6 +486,7 @@ func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEP
 	return ops
 }
 
+//lint:ignore SA1019 code for Endpoints will be removed later
 func decideEpOp(expect, actual *corev1.Endpoints, apiServer *cke.Node) cke.Operator {
 	if actual == nil {
 		return op.KubeEndpointsCreateOp(apiServer, expect)
