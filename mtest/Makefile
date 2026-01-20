@@ -5,7 +5,7 @@
 MANAGEMENT_ETCD_VERSION = 3.6.7
 VAULT_VERSION = 1.21.1
 K8S_VERSION = 1.33.7
-CONTAINERD_VERSION = 1.7.27
+CONTAINERD_VERSION = 2.2.1
 CRITOOLS_VERSION = 1.33.0
 CT_VERSION = 0.9.3
 
@@ -52,8 +52,6 @@ export SSH_PRIVKEY CKE_IMAGE CKE_IMAGE_URL CKECLUSTER CKECONFIG KUBECTL
 
 CONTAINERD_FILES = \
 	$(DATA_DIR)/containerd \
-	$(DATA_DIR)/containerd-shim \
-	$(DATA_DIR)/containerd-shim-runc-v1 \
 	$(DATA_DIR)/containerd-shim-runc-v2 \
 	$(DATA_DIR)/ctr
 
@@ -278,7 +276,7 @@ $(OUTPUT)/cke.yml: cke.yml
 unpack-containerd:
 	mkdir -p $(DATA_DIR)
 	$(CURL) https://github.com/containerd/containerd/releases/download/v$(CONTAINERD_VERSION)/containerd-$(CONTAINERD_VERSION)-linux-amd64.tar.gz | \
-	tar xzf - --strip-components=1 -C $(DATA_DIR) bin/containerd bin/containerd-shim bin/containerd-shim-runc-v1 bin/containerd-shim-runc-v2 bin/ctr --warning=no-unknown-keyword
+	tar xzf - --strip-components=1 -C $(DATA_DIR) bin/containerd bin/containerd-shim-runc-v2 bin/ctr --warning=no-unknown-keyword
 
 $(CONTAINERD_FILES): unpack-containerd
 
