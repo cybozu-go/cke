@@ -1,9 +1,10 @@
 # Makefile for multi-host testing using ginkgo
 
 # tool versions
+## Make sure the binary is included in the GitHub release. The release of ct v0.9.4 does not include binary files.
 MANAGEMENT_ETCD_VERSION = 3.6.7
-VAULT_VERSION = 1.19.5
-K8S_VERSION = 1.32.7
+VAULT_VERSION = 1.21.1
+K8S_VERSION = 1.33.7
 CONTAINERD_VERSION = 1.7.27
 CRITOOLS_VERSION = 1.33.0
 CT_VERSION = 0.9.3
