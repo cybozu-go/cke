@@ -158,6 +158,7 @@ CKE maintains these objects on behalf of the API servers.
 
 ## Default settings
 
+- `kube-apiserver` runs with coordinated leader election enabled.
 - `kube-proxy` runs in IPVS mode.
 
 [unbound]: https://www.nlnetlabs.nl/projects/unbound/

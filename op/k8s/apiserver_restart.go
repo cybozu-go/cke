@@ -285,6 +285,10 @@ func APIServerParams(advertiseAddress, serviceSubnet string, auditLogEnabled boo
 
 		"--service-cluster-ip-range=" + serviceSubnet,
 		"--encryption-provider-config=" + encryptionConfigFile,
+
+		// enable coordinated leader election for stable rolling restart of API server processes
+		"--feature-gates=CoordinatedLeaderElection=true",
+		"--runtime-config=coordination.k8s.io/v1beta1=true",
 	}
 	if auditLogEnabled {
 		logPath := "-"
