@@ -141,7 +141,7 @@ func riversOps(c *cke.Cluster, nf *NodeFilter, maxConcurrentUpdates int) (ops []
 }
 
 func apiserverOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []cke.Operator, skipOtherOps bool) {
-	// First, do the following operations together.
+	// First, do the following operations together to SSH-reachable nodes.
 	// - Starting stopped kube-apiservers. (for bootstrapping the Kubernetes cluster or for rebooting controle plane nodes)
 	// - Updating outdated and unhealhy apiservers. (for repairing configuration errors)
 	var nodes []*cke.Node
@@ -160,11 +160,12 @@ func apiserverOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []
 		return ops, true
 	}
 
-	// Waiting for all kube-apiservers to be healthy. Because...
-	// - Updating kube-apiservers should be performed only when all kube-apiservers are healthy.
-	// - Other k8s components should be maintained only when all kube-apiservers are *updated* and healthy, to ensure the upgrade order.
-	//   See the version skew policy: https://kubernetes.io/releases/version-skew-policy/
-	if len(nf.APIServerUnhealthy(nf.ControlPlaneNodes())) > 0 {
+	// 1. When SSH-unreachable control plane nodes exist, skip updating k8s components and prioritize recovery via the repair queue or the reboot queue, etc.
+	// 2. When unhealthy kube-apiservers exist, wait until they become healthy. Because...
+	//     - Updating kube-apiservers should be performed only when all kube-apiservers are healthy.
+	//     - Other k8s components should be maintained only when all kube-apiservers are *updated* and healthy, to ensure the upgrade order.
+	//       See the version skew policy: https://kubernetes.io/releases/version-skew-policy/
+	if len(nf.SSHNotConnected(nf.ControlPlaneNodes())) > 0 || len(nf.SSHConnected(nf.APIServerUnhealthy(nf.ControlPlaneNodes()))) > 0 {
 		// Set the unhealthy kube-apiservers to NotReady.
 		if nf.HealthyAPIServer() != nil {
 			ops = append(ops, masterEndpointOps(c, cs, nf, nil)...)

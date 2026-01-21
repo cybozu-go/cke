@@ -314,8 +314,8 @@ func (nf *NodeFilter) EtcdOutdatedMembers() (nodes []*cke.Node) {
 	return nodes
 }
 
-// HealthyAPIServer returns a control plane node running healthy API server.
-// If there is no healthy API server, it returns the first control plane node.
+// HealthyAPIServer returns one of the control plane nodes that is running healthy API server.
+// If there is no healthy API server, it returns `nil`.
 func (nf *NodeFilter) HealthyAPIServer() *cke.Node {
 	for _, n := range nf.ControlPlaneNodes() {
 		if nf.nodeStatus(n).APIServer.IsHealthy {
