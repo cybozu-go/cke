@@ -5,7 +5,7 @@ metadata:
   labels:
     kubernetes.io/bootstrapping: rbac-defaults
   annotations:
-    cke.cybozu.com/revision: "1"
+    cke.cybozu.com/revision: "2"
     # turn on auto-reconciliation
     # https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation
     rbac.authorization.kubernetes.io/autoupdate: "true"
@@ -17,6 +17,9 @@ rules:
       - nodes/log
       - nodes/spec
       - nodes/metrics
+      - nodes/configz
+      - nodes/healthz
+      - nodes/pods
     verbs: ["*"]
 ---
 kind: ClusterRoleBinding
