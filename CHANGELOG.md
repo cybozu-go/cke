@@ -8,9 +8,15 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ### Changed
 
+- Support Kubernetes 1.33 in [#841](https://github.com/cybozu-go/cke/pull/841)
 - Update Go modules and GitHub Actions in [#840](https://github.com/cybozu-go/cke/pull/840)
 - Update Sabakan mock in [#840](https://github.com/cybozu-go/cke/pull/840)
 - Disable deprecation check for Endpoints temporarily in [#840](https://github.com/cybozu-go/cke/pull/840)
+- Update Ubuntu of CKE container base to 24.04 in [#841](https://github.com/cybozu-go/cke/pull/841)
+- Update miscellaneous tools in [#841](https://github.com/cybozu-go/cke/pull/841)
+- Update containerd for mtest to 2.2.1 in [#841](https://github.com/cybozu-go/cke/pull/841)
+- Enable coordinated leader election by default in [#841](https://github.com/cybozu-go/cke/pull/841)
+- Update ClusterRole `system:kube-apiserver-to-kubelet` for kubelet fine-grained authorization in [#841](https://github.com/cybozu-go/cke/pull/841)
 
 ## Ancient changes
 

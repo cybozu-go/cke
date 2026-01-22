@@ -32,9 +32,9 @@ var Resources = []cke.ResourceDefinition{
 		Kind:       "ClusterRole",
 		Namespace:  "",
 		Name:       "system:kube-apiserver-to-kubelet",
-		Revision:   1,
+		Revision:   2,
 		Image:      "",
-		Definition: []byte("kind: ClusterRole\napiVersion: rbac.authorization.k8s.io/v1\nmetadata:\n  name: system:kube-apiserver-to-kubelet\n  labels:\n    kubernetes.io/bootstrapping: rbac-defaults\n  annotations:\n    cke.cybozu.com/revision: \"1\"\n    # turn on auto-reconciliation\n    # https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation\n    rbac.authorization.kubernetes.io/autoupdate: \"true\"\nrules:\n  - apiGroups: [\"\"]\n    resources:\n      - nodes/proxy\n      - nodes/stats\n      - nodes/log\n      - nodes/spec\n      - nodes/metrics\n    verbs: [\"*\"]\n"),
+		Definition: []byte("kind: ClusterRole\napiVersion: rbac.authorization.k8s.io/v1\nmetadata:\n  name: system:kube-apiserver-to-kubelet\n  labels:\n    kubernetes.io/bootstrapping: rbac-defaults\n  annotations:\n    cke.cybozu.com/revision: \"2\"\n    # turn on auto-reconciliation\n    # https://kubernetes.io/docs/reference/access-authn-authz/rbac/#auto-reconciliation\n    rbac.authorization.kubernetes.io/autoupdate: \"true\"\nrules:\n  - apiGroups: [\"\"]\n    resources:\n      - nodes/proxy\n      - nodes/stats\n      - nodes/log\n      - nodes/spec\n      - nodes/metrics\n      - nodes/configz\n      - nodes/healthz\n      - nodes/pods\n    verbs: [\"*\"]\n"),
 	},
 	{
 		Key:        "ClusterRoleBinding/system:cluster-dns",

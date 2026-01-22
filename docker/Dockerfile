@@ -1,5 +1,5 @@
 # CKE container
-FROM ghcr.io/cybozu/ubuntu:22.04
+FROM ghcr.io/cybozu/ubuntu:24.04
 
 COPY cke /usr/local/cke/bin/cke
 COPY ckecli /usr/local/cke/bin/ckecli
