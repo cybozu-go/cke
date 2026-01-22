@@ -97,8 +97,8 @@ func startSshAgent(ctx context.Context, privateKeyFile string) (map[string]strin
 	if err != nil {
 		log.Error("failed to set environment variable 1", map[string]interface{}{
 			log.FnError: err,
-			"Env":       kvPair1[0],
-			"Val":       kvPair1[1],
+			"env":       kvPair1[0],
+			"val":       kvPair1[1],
 		})
 		return nil, err
 	}
@@ -109,8 +109,8 @@ func startSshAgent(ctx context.Context, privateKeyFile string) (map[string]strin
 	if err != nil {
 		log.Error("failed to set environment variable 2", map[string]interface{}{
 			log.FnError: err,
-			"Env":       kvPair2[0],
-			"Val":       kvPair2[1],
+			"env":       kvPair2[0],
+			"val":       kvPair2[1],
 		})
 		return nil, err
 	}
@@ -123,9 +123,9 @@ func startSshAgent(ctx context.Context, privateKeyFile string) (map[string]strin
 		})
 		return nil, err
 	}
-	log.Info("Successfuly added the private key", map[string]interface{}{
-		"Env": kvPair1[0],
-		"Val": kvPair1[1],
+	log.Debug("Successfuly added the private key", map[string]interface{}{
+		"env": kvPair1[0],
+		"val": kvPair1[1],
 	})
 
 	return myEnv, nil
