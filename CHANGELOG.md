@@ -6,6 +6,27 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.33.0]
+
+### Changed
+
+- Support Kubernetes 1.33 in [#841](https://github.com/cybozu-go/cke/pull/841)
+    - Update Go modules and GitHub Actions in [#840](https://github.com/cybozu-go/cke/pull/840)
+    - Update Sabakan mock in [#840](https://github.com/cybozu-go/cke/pull/840)
+    - Disable deprecation check for Endpoints temporarily in [#840](https://github.com/cybozu-go/cke/pull/840)
+    - Update Ubuntu of CKE container base to 24.04 in [#841](https://github.com/cybozu-go/cke/pull/841)
+    - Update miscellaneous tools in [#841](https://github.com/cybozu-go/cke/pull/841)
+    - Update containerd for mtest to 2.2.1 in [#841](https://github.com/cybozu-go/cke/pull/841)
+    - Enable coordinated leader election by default in [#841](https://github.com/cybozu-go/cke/pull/841)
+    - Update ClusterRole `system:kube-apiserver-to-kubelet` for kubelet fine-grained authorization in [#841](https://github.com/cybozu-go/cke/pull/841)
+- Change key transferring method for `ckecli ssh` and `ckecli scp`in [#815](https://github.com/cybozu-go/cke/pull/815)
+
+### [update since 1.33.0-rc.1](https://github.com/cybozu-go/cke/compare/v1.33.0-rc.1...v1.33.0)
+
+#### Changed
+
+- Change key transferring method for `ckecli ssh` and `ckecli scp`in [#815](https://github.com/cybozu-go/cke/pull/815)
+
 ## [1.33.0-rc.1]
 
 ### Changed
@@ -44,5 +65,6 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.33.0-rc.1...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.33.0...HEAD
+[1.33.0]: https://github.com/cybozu-go/cke/compare/v1.32.6...v1.33.0
 [1.33.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.32.6...v1.33.0-rc.1
