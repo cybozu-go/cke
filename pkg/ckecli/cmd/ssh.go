@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
@@ -26,45 +25,40 @@ func detectSSHNode(arg string) string {
 	return nodeName
 }
 
-func writeToFifo(fifo string, data string) {
-	f, err := os.OpenFile(fifo, os.O_WRONLY, 0600)
-	if err != nil {
-		log.Error("failed to open fifo", map[string]interface{}{
-			log.FnError: err,
-			"fifo":      fifo,
-		})
-		return
-	}
-	defer f.Close()
-
-	_, err = f.WriteString(data)
-	if err != nil {
-		log.Error("failed to write to fifo", map[string]interface{}{
-			log.FnError: err,
-			"fifo":      fifo,
-		})
-	}
-}
-
-func sshPrivateKey(nodeName string) (string, error) {
+func createFifo() (string, error) {
 	usr, err := user.Current()
 	if err != nil {
 		return "", err
 	}
+
+	fifoFilePath := filepath.Join(usr.HomeDir, ".ssh", "ckecli-ssh-key-"+strconv.Itoa(os.Getpid()))
+	_, err = os.Stat(fifoFilePath)
+	if os.IsExist(err) {
+		return fifoFilePath, nil
+	}
+	if !os.IsNotExist(err) {
+		return "", err
+	}
+
 	err = os.MkdirAll(filepath.Join(usr.HomeDir, ".ssh"), 0700)
 	if err != nil {
 		return "", err
 	}
-	fifo := filepath.Join(usr.HomeDir, ".ssh", "ckecli-ssh-key-"+strconv.Itoa(os.Getpid()))
-	err = syscall.Mkfifo(fifo, 0600)
+
+	err = syscall.Mkfifo(fifoFilePath, 0600)
 	if err != nil {
 		return "", err
 	}
 
+	return fifoFilePath, err
+}
+
+func getPrivateKey(nodeName string) (string, error) {
 	vc, err := inf.Vault()
 	if err != nil {
 		return "", err
 	}
+
 	secret, err := vc.Logical().Read(cke.SSHSecret)
 	if err != nil {
 		return "", err
@@ -72,8 +66,8 @@ func sshPrivateKey(nodeName string) (string, error) {
 	if secret == nil {
 		return "", errors.New("no ssh private keys")
 	}
-	privKeys := secret.Data
 
+	privKeys := secret.Data
 	mykey, ok := privKeys[nodeName]
 	if !ok {
 		mykey = privKeys[""]
@@ -82,28 +76,126 @@ func sshPrivateKey(nodeName string) (string, error) {
 		return "", errors.New("no ssh private key for " + nodeName)
 	}
 
-	go func() {
-		// OpenSSH reads the private key file three times, it need to write key three times.
-		writeToFifo(fifo, mykey.(string))
-		time.Sleep(100 * time.Millisecond)
-		writeToFifo(fifo, mykey.(string))
-		time.Sleep(100 * time.Millisecond)
-		writeToFifo(fifo, mykey.(string))
-	}()
-
-	return fifo, nil
+	return mykey.(string), nil
 }
 
-func ssh(ctx context.Context, args []string) error {
-	node := detectSSHNode(args[0])
-	fifo, err := sshPrivateKey(node)
+func startSshAgent(ctx context.Context, privateKeyFile string) (map[string]string, error) {
+	myEnv := make(map[string]string)
+
+	cmd := exec.CommandContext(ctx, "ssh-agent", "-s")
+	stdoutStderr, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	// Set enviromental variable to communicate ssh-agent
+	line := strings.Split(string(stdoutStderr), "\n")
+	partOfLine := strings.Split(line[0], ";")
+	kvPair1 := strings.Split(partOfLine[0], "=")
+	myEnv[kvPair1[0]] = kvPair1[1]
+	err = os.Setenv(kvPair1[0], kvPair1[1])
+	if err != nil {
+		log.Error("failed to set environment variable 1", map[string]interface{}{
+			log.FnError: err,
+			"env":       kvPair1[0],
+			"val":       kvPair1[1],
+		})
+		return nil, err
+	}
+	partOfLine = strings.Split(line[1], ";")
+	kvPair2 := strings.Split(partOfLine[0], "=")
+	myEnv[kvPair2[0]] = kvPair2[1]
+	err = os.Setenv(kvPair2[0], kvPair2[1])
+	if err != nil {
+		log.Error("failed to set environment variable 2", map[string]interface{}{
+			log.FnError: err,
+			"env":       kvPair2[0],
+			"val":       kvPair2[1],
+		})
+		return nil, err
+	}
+
+	cmd = exec.CommandContext(ctx, "ssh-add", privateKeyFile)
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Error("failed to add the private key", map[string]interface{}{
+			log.FnError: err,
+		})
+		return nil, err
+	}
+	log.Debug("Successfuly added the private key", map[string]interface{}{
+		"env": kvPair1[0],
+		"val": kvPair1[1],
+	})
+
+	return myEnv, nil
+}
+
+func killSshAgent(ctx context.Context) error {
+	cmd := exec.CommandContext(ctx, "ssh-agent", "-k")
+	stdoutStderr, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Error("failed to run ssh-agent -k", map[string]interface{}{
+			log.FnError: err,
+		})
+		return err
+	}
+	log.Debug("killed ssh-agent", map[string]interface{}{
+		"stdout_stderr": string(stdoutStderr),
+	})
+	return nil
+}
+
+func writeToFifo(fifo string, data string) error {
+	f, err := os.OpenFile(fifo, os.O_WRONLY|os.O_APPEND, os.ModeNamedPipe)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(fifo)
+	defer f.Close()
+	if _, err = f.Write([]byte(data)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func sshSubMain(ctx context.Context, args []string) error {
+	pipeFilename, err := createFifo()
+	if err != nil {
+		log.Error("failed to create the named pipe", map[string]interface{}{
+			log.FnError: err,
+		})
+		return err
+	}
+	defer os.Remove(pipeFilename)
+
+	node := detectSSHNode(args[0])
+	pirvateKey, err := getPrivateKey(node)
+	if err != nil {
+		log.Error("failed to get the private key for ssh", map[string]interface{}{
+			log.FnError: err,
+		})
+		return err
+	}
+
+	go func() {
+		if _, err := startSshAgent(ctx, pipeFilename); err != nil {
+			log.Error("failed to start ssh-agent for ssh", map[string]interface{}{
+				log.FnError: err,
+				"node":      node,
+			})
+		}
+	}()
+	defer killSshAgent(ctx)
+
+	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
+		log.Error("failed to write the named pipe", map[string]interface{}{
+			log.FnError: err,
+			"pipe":      pipeFilename,
+		})
+		return err
+	}
 
 	sshArgs := []string{
-		"-i", fifo,
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "StrictHostKeyChecking=no",
 		"-o", "ConnectTimeout=60",
@@ -130,7 +222,7 @@ If COMMAND is specified, it will be executed on the node.
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		well.Go(func(ctx context.Context) error {
-			return ssh(ctx, args)
+			return sshSubMain(ctx, args)
 		})
 		well.Stop()
 		return well.Wait()
