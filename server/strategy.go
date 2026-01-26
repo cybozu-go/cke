@@ -165,7 +165,7 @@ func apiserverOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []
 	//     - Updating kube-apiservers should be performed only when all kube-apiservers are healthy.
 	//     - Other k8s components should be maintained only when all kube-apiservers are *updated* and healthy, to ensure the upgrade order.
 	//       See the version skew policy: https://kubernetes.io/releases/version-skew-policy/
-	if len(nf.SSHNotConnected(nf.ControlPlaneNodes())) > 0 || len(nf.SSHConnected(nf.APIServerUnhealthy(nf.ControlPlaneNodes()))) > 0 {
+	if len(nf.SSHNotConnected(nf.ControlPlaneNodes())) > 0 || len(nf.APIServerUnhealthy(nf.ControlPlaneNodes())) > 0 {
 		// Set the unhealthy kube-apiservers to NotReady.
 		if nf.HealthyAPIServer() != nil {
 			ops = append(ops, masterEndpointOps(c, cs, nf, nil)...)
