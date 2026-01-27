@@ -271,6 +271,12 @@ func (d testData) withAPIServer(serviceSubnet, domain string) testData {
 	return d
 }
 
+func (d testData) withAPIServerUnhealthy(i int) testData {
+	// No need to check for out-of-range access. In that case, just panic.
+	d.NodeStatus(d.ControlPlane()[i]).APIServer.IsHealthy = false
+	return d
+}
+
 func (d testData) withControllerManager(name, serviceSubnet string) testData {
 	for _, n := range d.ControlPlane() {
 		st := &d.NodeStatus(n).ControllerManager
@@ -384,6 +390,7 @@ func (d testData) withAllServices() testData {
 	d.withEtcdRivers()
 	d.withHealthyEtcd()
 	d.withAPIServer(testServiceSubnet, testDefaultDNSDomain)
+	d.withMasterEndpoint()
 	d.withControllerManager(testClusterName, testServiceSubnet)
 	d.withScheduler()
 	d.withKubelet(testDefaultDNSDomain, testDefaultDNSAddr, false)
@@ -522,12 +529,6 @@ func (d testData) withNotReadyEtcdEndpoint(i int) testData {
 	return d
 }
 
-func (d testData) withNotReadyEndpoint(i int) testData {
-	d.withNotReadyMasterEndpoint(i)
-	d.withNotReadyEtcdEndpoint(i)
-	return d
-}
-
 func (d testData) withK8sResourceReady() testData {
 	d.withK8sReady()
 	ks := &d.Status.Kubernetes
@@ -556,7 +557,6 @@ func (d testData) withK8sResourceReady() testData {
 	ks.ClusterDNS.ConfigMap = clusterdns.ConfigMap(testDefaultDNSDomain, testDefaultDNSServers)
 	ks.ClusterDNS.ClusterIP = testDefaultDNSAddr
 	ks.NodeDNS.ConfigMap = nodedns.ConfigMap(testDefaultDNSAddr, testDefaultDNSDomain, testDefaultDNSServers, true)
-	d.withMasterEndpoint()
 	d.withEtcdEndpoint()
 	return d
 }
@@ -870,21 +870,29 @@ func TestDecideOps(t *testing.T) {
 			ExpectedPhase: cke.PhaseEtcdWait,
 		},
 		{
-			Name:  "BootK8s",
-			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withSSHNotConnectedNodes(),
+			Name:  "BootAPIServer",
+			Input: newData().withRivers().withEtcdRivers().withHealthyEtcd(),
 			ExpectedOps: []opData{
-				{"kube-apiserver-restart", 2},
-				{"kube-controller-manager-bootstrap", 2},
-				{"kube-scheduler-bootstrap", 2},
-				{"kubelet-bootstrap", 4},
-				{"kube-proxy-bootstrap", 4},
+				{"kube-apiserver-restart", 3},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
-			Name:  "BootK8sFromPartiallyRunning",
-			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withAPIServer(testServiceSubnet, testDefaultDNSDomain),
+			Name:  "BootAPIServer2",
+			Input: newData().withRivers().withEtcdRivers().withHealthyEtcd().withSSHNotConnectedCP(0),
 			ExpectedOps: []opData{
+				{"kube-apiserver-restart", 2},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "BootAPIServer3",
+			Input: newData().withRivers().withEtcdRivers().withHealthyEtcd().
+				withAPIServer(testServiceSubnet, testDefaultDNSDomain),
+			ExpectedOps: []opData{
+				// When all kube-apiservers are healthy, create the kubernetes endpoint and start other components.
+				{"create-kubernetes-endpoints", 1},
+				{"create-kubernetes-endpointslice", 1},
 				{"kube-controller-manager-bootstrap", 3},
 				{"kube-scheduler-bootstrap", 3},
 				{"kubelet-bootstrap", 5},
@@ -893,30 +901,69 @@ func TestDecideOps(t *testing.T) {
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
-			Name:  "BootK8sWithoutProxy",
-			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().withSSHNotConnectedNodes().withDisableProxy(),
+			Name: "BootAPIServer4",
+			Input: newData().withRivers().withEtcdRivers().withHealthyEtcd().
+				withAPIServer(testServiceSubnet, testDefaultDNSDomain).withMasterEndpoint(),
 			ExpectedOps: []opData{
-				{"kube-apiserver-restart", 2},
-				{"kube-controller-manager-bootstrap", 2},
-				{"kube-scheduler-bootstrap", 2},
-				{"kubelet-bootstrap", 4},
+				// When the kubernetes endpoint exists, start other components.
+				{"kube-controller-manager-bootstrap", 3},
+				{"kube-scheduler-bootstrap", 3},
+				{"kubelet-bootstrap", 5},
+				{"kube-proxy-bootstrap", 5},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
-			Name:  "RestartAPIServer",
-			Input: newData().withAllServices().withAPIServer("11.22.33.0/24", testDefaultDNSDomain).withSSHNotConnectedNodes(),
+			Name: "BootAPIServer5",
+			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().
+				withAPIServer(testServiceSubnet, testDefaultDNSDomain).withMasterEndpoint().
+				withSSHNotConnectedCP(1),
 			ExpectedOps: []opData{
-				{"kube-apiserver-restart", 2},
+				// When an unreachable control plane node exists, update the kubernetes endpoint.
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "BootAPIServer6",
+			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().
+				withAPIServer(testServiceSubnet, testDefaultDNSDomain).withMasterEndpoint().
+				withAPIServerUnhealthy(2).withNotReadyMasterEndpoint(2),
+			ExpectedOps: []opData{
+				// When a unhealthy kube-apiserver exists and it's endpoint is NotReady, do nothing.
+				{"wait-kubernetes", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
+		},
+		{
+			Name: "BootAPIServer7",
+			Input: newData().withHealthyEtcd().withRivers().withEtcdRivers().
+				withAPIServer(testServiceSubnet, testDefaultDNSDomain).withMasterEndpoint().
+				withSSHNotConnectedCP(1).withNotReadyMasterEndpoint(1),
+			ExpectedOps: []opData{
+				// When an unreachable control plane node exists and it's endpoint is NotReady, do nothing.
+				{"wait-kubernetes", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
+		},
+		{
+			Name:  "RestartAPIServer",
+			Input: newData().withAllServices().withAPIServer("11.22.33.0/24", testDefaultDNSDomain), // outdated configuration
+			ExpectedOps: []opData{
+				// In this case, all kube-apiservers will be updated.
+				// But only one running kube-apiserver is updated per operation.
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+				{"kube-apiserver-restart", 1}, // just one
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartAPIServer2",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).APIServer.Image = ""
-				d.NodeStatus(d.ControlPlane()[1]).APIServer.Image = ""
-			}).withSSHNotConnectedNodes(),
+				d.NodeStatus(d.ControlPlane()[0]).APIServer.Image = "outdated" // outdated image
+			}).withNotReadyMasterEndpoint(0), // endpoint is already updated
 			ExpectedOps: []opData{
 				{"kube-apiserver-restart", 1},
 			},
@@ -925,39 +972,192 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartAPIServer3",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).APIServer.ExtraParams.ExtraArguments = []string{"foo"}
-				d.NodeStatus(d.ControlPlane()[1]).APIServer.ExtraParams.ExtraArguments = []string{"foo"}
-			}).withSSHNotConnectedNodes(),
+				d.NodeStatus(d.ControlPlane()[1]).APIServer.ExtraParams.ExtraArguments = []string{"foo"} // outdated params
+				d.NodeStatus(d.ControlPlane()[2]).APIServer.ExtraParams.ExtraArguments = []string{"foo"} // outdated params
+			}).withNotReadyMasterEndpoint(0),
 			ExpectedOps: []opData{
-				{"kube-apiserver-restart", 1},
+				{"update-kubernetes-endpoints", 1}, // CP[0]: NotReady -> Ready, CP[1]: Ready -> NotReady
+				{"update-kubernetes-endpointslice", 1},
+				{"kube-apiserver-restart", 1}, // CP[1]
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
-			Name:  "RestartControllerManager",
-			Input: newData().withAllServices().withControllerManager("another", testServiceSubnet).withSSHNotConnectedNodes(),
+			Name: "RestartAPIServer4",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[1]).APIServer.Running = false // Stopped
+				d.NodeStatus(d.ControlPlane()[1]).APIServer.IsHealthy = false
+				d.NodeStatus(d.ControlPlane()[2]).APIServer.Running = false // Stopped
+				d.NodeStatus(d.ControlPlane()[2]).APIServer.IsHealthy = false
+			}),
 			ExpectedOps: []opData{
-				{"kube-controller-manager-restart", 2},
+				// Start all stopped kube-apiservers at once.
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+				{"kube-apiserver-restart", 2}, // CP[1], CP[2]
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestartAPIServer5",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).APIServer.Image = "outdated" // outdated image
+				d.NodeStatus(d.ControlPlane()[0]).APIServer.IsHealthy = false
+				d.NodeStatus(d.ControlPlane()[1]).APIServer.Image = "outdated" // outdated image
+				d.NodeStatus(d.ControlPlane()[1]).APIServer.IsHealthy = false
+			}),
+			ExpectedOps: []opData{
+				// Update all outdated and unhealhy kube-apiservers at once.
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+				{"kube-apiserver-restart", 2}, // CP[0], CP[1]
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestartAPIServer6",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).APIServer.Running = false // stopped
+				d.NodeStatus(d.ControlPlane()[0]).APIServer.IsHealthy = false
+				d.NodeStatus(d.ControlPlane()[2]).APIServer.Image = "outdated" // healthy but outdated
+			}),
+			ExpectedOps: []opData{
+				// Don't update healthy kube-apiservers, when stopped exists.
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+				{"kube-apiserver-restart", 1}, // CP[0](stopped)
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestartAPIServer7",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[1]).APIServer.Image = "outdated" // healthy but outdated
+				d.NodeStatus(d.ControlPlane()[2]).APIServer.IsHealthy = false  // unhealthy
+			}).withMasterEndpoint().withNotReadyMasterEndpoint(2),
+			ExpectedOps: []opData{
+				// Don't update healthy apiservers, when unhealthy exists.
+				{"wait-kubernetes", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
+		},
+		{
+			Name: "SkipK8sOps",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+			}).withSSHNotConnectedCP(0).withNotReadyMasterEndpoint(0),
+			ExpectedOps: []opData{
+				// Don't block repair queue, when unreachable control plane nodes exist.
+				{"repair-execute", 1},
+			},
+			ExpectedPhase: cke.PhaseRepairMachines,
+		},
+		{
+			Name: "SkipK8sOps2",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+			}).withAPIServerUnhealthy(2).withNotReadyMasterEndpoint(2),
+			ExpectedOps: []opData{
+				// Don't block repair queue, when unhealthy kube-apiservers exist.
+				{"repair-execute", 1},
+			},
+			ExpectedPhase: cke.PhaseRepairMachines,
+		},
+		{
+			Name: "SkipK8sOps3",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[1], Status: cke.RebootStatusQueued},
+			}).withNextCandidates([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[1], Status: cke.RebootStatusQueued},
+			}).withSSHNotConnectedCP(1).withNotReadyMasterEndpoint(1).withNotReadyEtcdEndpoint(1),
+			ExpectedOps: []opData{
+				// Don't block reboot queue, when unreachable control plane nodes exist.
+				{"reboot-drain-start", 1},
+			},
+			ExpectedPhase: cke.PhaseRebootNodes,
+		},
+		{
+			Name: "SkipK8sOps4",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[3], Status: cke.RebootStatusQueued},
+			}).withNextCandidates([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[3], Status: cke.RebootStatusQueued},
+			}).withSSHNotConnectedCP(1).withNotReadyMasterEndpoint(1),
+			ExpectedOps: []opData{
+				// Don't block reboot queue, when unreachable control plane nodes exist.
+				{"reboot-drain-start", 1},
+			},
+			ExpectedPhase: cke.PhaseRebootNodes,
+		},
+		{
+			Name: "SkipK8sOps5",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[1], Status: cke.RebootStatusQueued},
+			}).withNextCandidates([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[1], Status: cke.RebootStatusQueued},
+			}).withAPIServerUnhealthy(1).withNotReadyMasterEndpoint(1).withNotReadyEtcdEndpoint(1),
+			ExpectedOps: []opData{
+				// Don't block reboot queue, when unhealthy kube-apiservers exist.
+				{"reboot-drain-start", 1},
+			},
+			ExpectedPhase: cke.PhaseRebootNodes,
+		},
+		{
+			Name: "SkipK8sOps6",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[3], Status: cke.RebootStatusQueued},
+			}).withNextCandidates([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[3], Status: cke.RebootStatusQueued},
+			}).withAPIServerUnhealthy(1).withNotReadyMasterEndpoint(1),
+			ExpectedOps: []opData{
+				// Don't block reboot queue, when unhealthy kube-apiservers exist.
+				{"reboot-drain-start", 1},
+			},
+			ExpectedPhase: cke.PhaseRebootNodes,
+		},
+		{
+			Name:  "RestartControllerManager",
+			Input: newData().withAllServices().withControllerManager("another", testServiceSubnet),
+			ExpectedOps: []opData{
+				{"kube-controller-manager-restart", 3},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartControllerManager2",
+			Input: newData().withAllServices().withControllerManager("another", testServiceSubnet).
+				withSSHNotConnectedCP(0).withNotReadyMasterEndpoint(0),
+			ExpectedOps: []opData{
+				// When unreachable control plane nodes are exist, do nothing.
+				{"wait-kubernetes", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
+		},
+		{
+			Name: "RestartControllerManager3",
+			Input: newData().withAllServices().withControllerManager("another", testServiceSubnet).
+				withAPIServerUnhealthy(1).withNotReadyMasterEndpoint(1),
+			ExpectedOps: []opData{
+				// When unhealhty apiservers are exist, do nothing.
+				{"wait-kubernetes", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
+		},
+		{
+			Name: "RestartControllerManager4",
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).ControllerManager.Image = ""
-				d.NodeStatus(d.ControlPlane()[1]).ControllerManager.Image = ""
-			}).withSSHNotConnectedNodes(),
+			}),
 			ExpectedOps: []opData{
 				{"kube-controller-manager-restart", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
-			Name: "RestartControllerManager3",
+			Name: "RestartControllerManager5",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).ControllerManager.ExtraParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.ControlPlane()[1]).ControllerManager.ExtraParams.ExtraArguments = []string{"foo"}
-			}).withSSHNotConnectedNodes(),
+			}),
 			ExpectedOps: []opData{
 				{"kube-controller-manager-restart", 1},
 			},
@@ -968,140 +1168,196 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.BuiltInParams.ExtraArguments = []string{"foo"}
 				d.NodeStatus(d.ControlPlane()[1]).Scheduler.BuiltInParams.ExtraArguments = []string{"foo"}
-			}).withSSHNotConnectedNodes(),
+			}),
 			ExpectedOps: []opData{
-				{"kube-scheduler-restart", 1},
+				{"kube-scheduler-restart", 2},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartScheduler2",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Image = ""
-				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Image = ""
-			}).withSSHNotConnectedNodes(),
+				d.NodeStatus(d.ControlPlane()[0]).Scheduler.BuiltInParams.ExtraArguments = []string{"foo"}
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.BuiltInParams.ExtraArguments = []string{"foo"}
+			}).withSSHNotConnectedCP(0).withNotReadyMasterEndpoint(0),
 			ExpectedOps: []opData{
-				{"kube-scheduler-restart", 1},
+				// When unreachable control plane nodes are exist, do nothing.
+				{"wait-kubernetes", 1},
 			},
-			ExpectedPhase: cke.PhaseK8sStart,
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "RestartScheduler3",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.ControlPlane()[0]).Scheduler.ExtraParams.ExtraArguments = []string{"foo"}
-				d.NodeStatus(d.ControlPlane()[1]).Scheduler.ExtraParams.ExtraArguments = []string{"foo"}
-			}).withSSHNotConnectedNodes(),
+				d.NodeStatus(d.ControlPlane()[0]).Scheduler.BuiltInParams.ExtraArguments = []string{"foo"}
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.BuiltInParams.ExtraArguments = []string{"foo"}
+			}).withAPIServerUnhealthy(1).withNotReadyMasterEndpoint(1),
 			ExpectedOps: []opData{
-				{"kube-scheduler-restart", 1},
+				// When unhealhty apiservers are exist, do nothing.
+				{"wait-kubernetes", 1},
 			},
-			ExpectedPhase: cke.PhaseK8sStart,
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "RestartScheduler4",
 			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Image = ""
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Image = ""
+			}),
+			ExpectedOps: []opData{
+				{"kube-scheduler-restart", 2},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestartScheduler5",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).Scheduler.ExtraParams.ExtraArguments = []string{"foo"}
+				d.NodeStatus(d.ControlPlane()[1]).Scheduler.ExtraParams.ExtraArguments = []string{"foo"}
+			}),
+			ExpectedOps: []opData{
+				{"kube-scheduler-restart", 2},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestartScheduler6",
+			Input: newData().withAllServices().with(func(d testData) {
 				d.NodeStatus(d.ControlPlane()[0]).Scheduler.Config.Parallelism = nil
 				d.NodeStatus(d.ControlPlane()[1]).Scheduler.Config.Parallelism = nil
-			}).withSSHNotConnectedNodes(),
+			}),
 			ExpectedOps: []opData{
-				{"kube-scheduler-restart", 1},
+				{"kube-scheduler-restart", 2},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name:  "RestartKubelet",
-			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false).withSSHNotConnectedNodes(),
+			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false),
 			ExpectedOps: []opData{
-				{"kubelet-restart", 4},
+				{"kubelet-restart", 5},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
-			Name:  "RestartKubelet2",
-			Input: newData().withAllServices().withKubelet("", "10.0.0.53", true).withSSHNotConnectedNodes(),
+			Name: "RestartKubelet2",
+			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false).
+				withSSHNotConnectedCP(0).withNotReadyMasterEndpoint(0),
 			ExpectedOps: []opData{
-				{"kubelet-restart", 4},
+				// When unreachable control plane nodes are exist, do nothing.
+				{"wait-kubernetes", 1},
 			},
-			ExpectedPhase: cke.PhaseK8sStart,
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "RestartKubelet3",
-			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[3]).Kubelet.Image = ""
-				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.Image = ""
-			}).withSSHNotConnectedNodes(),
+			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false).
+				withAPIServerUnhealthy(1).withNotReadyMasterEndpoint(1),
 			ExpectedOps: []opData{
-				{"kubelet-restart", 1},
+				// When unhealhty apiservers are exist, do nothing.
+				{"wait-kubernetes", 1},
 			},
-			ExpectedPhase: cke.PhaseK8sStart,
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "RestartKubelet4",
-			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[3]).Kubelet.ExtraParams.ExtraArguments = []string{"foo"}
-				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.ExtraParams.ExtraArguments = []string{"foo"}
-			}).withSSHNotConnectedNodes(),
+			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false).
+				withSSHNotConnectedNonCPWorker(0, 1, 2),
 			ExpectedOps: []opData{
-				{"kubelet-restart", 1},
+				// Ignore unreachable workers.
+				{"kubelet-restart", 3},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
-			Name: "RestartKubelet5",
-			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[3]).Kubelet.Config.ClusterDomain = "neco.local"
-				d.NodeStatus(d.Cluster.Nodes[4]).Kubelet.Config.ClusterDomain = "neco.local"
-			}).withSSHNotConnectedNodes(),
+			Name:  "RestartKubelet5",
+			Input: newData().withAllServices().withKubelet("", "10.0.0.53", true),
 			ExpectedOps: []opData{
-				{"kubelet-restart", 1},
+				{"kubelet-restart", 5},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartKubelet6",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.Cluster.Options.Kubelet.Config.Object["containerLogMaxFiles"] = 20
-			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []opData{
-				{"kubelet-restart", 4},
-			},
-			ExpectedPhase: cke.PhaseK8sStart,
-		},
-		{
-			Name: "RestartKubelet7",
-			Input: newData().withAllServices().with(func(d testData) {
-				d.Cluster.Options.Kubelet.Config.Object["containerLogMaxSize"] = "1Gi"
-			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []opData{
-				{"kubelet-restart", 4},
-			},
-			ExpectedPhase: cke.PhaseK8sStart,
-		},
-		{
-			Name: "RestartKubelet8",
-			Input: newData().withAllServices().with(func(d testData) {
-				d.Cluster.Options.Kubelet.CRIEndpoint = "/var/run/dockershim.sock"
-			}).withSSHNotConnectedNodes(),
-			ExpectedOps: []opData{
-				{"wait-kubernetes", 1},
-			},
-			ExpectedPhase: cke.PhaseK8sMaintain,
-		},
-		{
-			Name: "RestartKubelet9",
-			Input: newData().withAllServices().with(func(d testData) {
-				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[:3]
-			}).withSSHNotConnectedNodes(),
+				d.NodeStatus(d.ControlPlane()[1]).Kubelet.Image = ""
+				d.NodeStatus(d.NonCPWorkers()[1]).Kubelet.Image = ""
+			}),
 			ExpectedOps: []opData{
 				{"kubelet-restart", 2},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
+			Name: "RestartKubelet7",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[1]).Kubelet.ExtraParams.ExtraArguments = []string{"foo"}
+				d.NodeStatus(d.NonCPWorkers()[1]).Kubelet.ExtraParams.ExtraArguments = []string{"foo"}
+			}),
+			ExpectedOps: []opData{
+				{"kubelet-restart", 2},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestartKubelet8",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[1]).Kubelet.Config.ClusterDomain = "neco.local"
+				d.NodeStatus(d.NonCPWorkers()[1]).Kubelet.Config.ClusterDomain = "neco.local"
+			}),
+			ExpectedOps: []opData{
+				{"kubelet-restart", 2},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestartKubelet9",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Kubelet.Config.Object["containerLogMaxFiles"] = 20
+			}),
+			ExpectedOps: []opData{
+				{"kubelet-restart", 5},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
 			Name: "RestartKubelet10",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Kubelet.Config.Object["containerLogMaxSize"] = "1Gi"
+			}),
+			ExpectedOps: []opData{
+				{"kubelet-restart", 5},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestartKubelet11",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Cluster.Options.Kubelet.CRIEndpoint = "/var/run/dockershim.sock"
+			}),
+			ExpectedOps: []opData{
+				// Do not update the CRI endpoint.
+				{"wait-kubernetes", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
+		},
+		{
+			Name: "RestartKubelet12",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.Status.Kubernetes.Nodes = d.Status.Kubernetes.Nodes[:3]
+			}),
+			ExpectedOps: []opData{
+				{"kubelet-restart", 3},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestartKubelet13",
 			Input: newData().withAllServices().withKubelet("foo.local", "10.0.0.53", false).with(func(d testData) {
 				d.Cluster.Options.Kubelet.InPlaceUpdate = false
-			}).withSSHNotConnectedNodes(),
+			}),
 			ExpectedOps: []opData{
+				// When in-place-update is disabled, do nothing.
 				{"wait-kubernetes", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sMaintain,
@@ -1109,44 +1365,80 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestartProxy",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
-				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
-			}).withSSHNotConnectedNodes(),
+				d.NodeStatus(d.ControlPlane()[0]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
+				d.NodeStatus(d.NonCPWorkers()[0]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
+			}),
 			ExpectedOps: []opData{
-				{"kube-proxy-restart", 1},
+				{"kube-proxy-restart", 2},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestartProxy2",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.Image = ""
-				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.Image = ""
-			}).withSSHNotConnectedNodes(),
+				d.NodeStatus(d.ControlPlane()[0]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
+				d.NodeStatus(d.NonCPWorkers()[0]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
+			}).withSSHNotConnectedCP(0).withNotReadyMasterEndpoint(0),
 			ExpectedOps: []opData{
-				{"kube-proxy-restart", 1},
+				// When unreachable control plane nodes are exist, do nothing.
+				{"wait-kubernetes", 1},
 			},
-			ExpectedPhase: cke.PhaseK8sStart,
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "RestartProxy3",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.ExtraParams.ExtraArguments = []string{"foo"}
-				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.ExtraParams.ExtraArguments = []string{"foo"}
-			}).withSSHNotConnectedNodes(),
+				d.NodeStatus(d.ControlPlane()[0]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
+				d.NodeStatus(d.NonCPWorkers()[0]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
+			}).withAPIServerUnhealthy(1).withNotReadyMasterEndpoint(1),
 			ExpectedOps: []opData{
-				{"kube-proxy-restart", 1},
+				// When unhealhty apiservers are exist, do nothing.
+				{"wait-kubernetes", 1},
 			},
-			ExpectedPhase: cke.PhaseK8sStart,
+			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
 			Name: "RestartProxy4",
 			Input: newData().withAllServices().with(func(d testData) {
-				d.NodeStatus(d.Cluster.Nodes[3]).Proxy.Config.Mode = cke.ProxyModeIPVS
-				d.NodeStatus(d.Cluster.Nodes[4]).Proxy.Config.Mode = cke.ProxyModeIPVS
-			}).withSSHNotConnectedNodes(),
+				d.NodeStatus(d.ControlPlane()[0]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
+				d.NodeStatus(d.NonCPWorkers()[0]).Proxy.BuiltInParams.ExtraArguments = []string{"foo"}
+			}).withSSHNotConnectedNonCPWorker(0),
 			ExpectedOps: []opData{
-				{"kube-proxy-restart", 1},
+				// Ignore unreachable workers.
+				{"kube-proxy-restart", 1}, // CP[0]
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestartProxy5",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).Proxy.Image = ""
+				d.NodeStatus(d.NonCPWorkers()[0]).Proxy.Image = ""
+			}),
+			ExpectedOps: []opData{
+				{"kube-proxy-restart", 2},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestartProxy6",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).Proxy.ExtraParams.ExtraArguments = []string{"foo"}
+				d.NodeStatus(d.NonCPWorkers()[0]).Proxy.ExtraParams.ExtraArguments = []string{"foo"}
+			}),
+			ExpectedOps: []opData{
+				{"kube-proxy-restart", 2},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestartProxy7",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).Proxy.Config.Mode = cke.ProxyModeIPVS
+				d.NodeStatus(d.NonCPWorkers()[0]).Proxy.Config.Mode = cke.ProxyModeIPVS
+			}),
+			ExpectedOps: []opData{
+				{"kube-proxy-restart", 2},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
@@ -1179,8 +1471,6 @@ func TestDecideOps(t *testing.T) {
 				{"resource-apply", 1},
 				{"resource-apply", 1},
 				{"create-cluster-dns-configmap", 1},
-				{"create-kubernetes-endpoints", 1},
-				{"create-kubernetes-endpointslice", 1},
 				{"create-etcd-service", 1},
 				{"create-cke-etcd-endpoints", 1},
 				{"create-cke-etcd-endpointslice", 1},
@@ -1201,18 +1491,30 @@ func TestDecideOps(t *testing.T) {
 			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
-			Name: "DNSUpdate1",
+			Name: "DNSUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Cluster.Options.Kubelet.Config.Object["clusterDomain"] = "neco.local"
 			}),
 			ExpectedOps: []opData{
-				{"kube-apiserver-restart", 3},
-				{"kubelet-restart", 5},
+				// In this case, all apiservers must be updated. But only one running CP is updated per operation.
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+				{"kube-apiserver-restart", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "DNSUpdate2",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Cluster.Options.Kubelet.Config.Object["clusterDomain"] = "neco.local"
+			}).withAPIServer(testServiceSubnet, "neco.local"),
+			ExpectedOps: []opData{
+				{"kubelet-restart", 5},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "DNSUpdate3",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Cluster.Options.Kubelet.Config.Object["clusterDomain"] = "neco.local"
 				for _, st := range d.Status.NodeStatuses {
@@ -1226,7 +1528,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
-			Name: "DNSUpdate3",
+			Name: "DNSUpdate4",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Cluster.DNSServers = []string{"1.1.1.1"}
 			}),
@@ -1247,13 +1549,13 @@ func TestDecideOps(t *testing.T) {
 			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
-			Name: "MasterEndpointsUpdate1",
+			Name: "MasterEndpointsUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				//lint:ignore SA1019 code for Endpoints will be removed later
 				d.Status.Kubernetes.MasterEndpoints.Subsets = []corev1.EndpointSubset{}
 			}),
 			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
-			ExpectedPhase: cke.PhaseK8sMaintain,
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "MasterEndpointsUpdate2",
@@ -1261,7 +1563,7 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Ports = []corev1.EndpointPort{}
 			}),
 			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
-			ExpectedPhase: cke.PhaseK8sMaintain,
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "MasterEndpointsUpdate3",
@@ -1269,15 +1571,15 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
 			}),
 			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
-			ExpectedPhase: cke.PhaseK8sMaintain,
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
-			Name: "MasterEndpointSliceUpdate1",
+			Name: "MasterEndpointSliceUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpointSlice.Endpoints[0].Addresses = []string{}
 			}),
 			ExpectedOps:   []opData{{"update-kubernetes-endpointslice", 1}},
-			ExpectedPhase: cke.PhaseK8sMaintain,
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "MasterEndpointSliceUpdate2",
@@ -1285,7 +1587,7 @@ func TestDecideOps(t *testing.T) {
 				d.Status.Kubernetes.MasterEndpointSlice.Ports[0] = discoveryv1.EndpointPort{}
 			}),
 			ExpectedOps:   []opData{{"update-kubernetes-endpointslice", 1}},
-			ExpectedPhase: cke.PhaseK8sMaintain,
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "EtcdServiceUpdate",
@@ -1296,7 +1598,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
-			Name: "EtcdEndpointsUpdate1",
+			Name: "EtcdEndpointsUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				//lint:ignore SA1019 code for Endpoints will be removed later
 				d.Status.Kubernetes.EtcdEndpoints.Subsets = []corev1.EndpointSubset{}
@@ -1321,7 +1623,7 @@ func TestDecideOps(t *testing.T) {
 			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
-			Name: "EtcdEndpointSliceUpdate1",
+			Name: "EtcdEndpointSliceUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[0].Addresses = []string{}
 			}),
@@ -1339,97 +1641,112 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "EndpointsUpdateWithRebootEntry",
 			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusDraining,
-				},
+				{Index: 1, Node: nodeNames[0], Status: cke.RebootStatusDraining},
 			}),
 			ExpectedOps: []opData{
 				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
-				{"update-cke-etcd-endpoints", 1},
-				{"update-cke-etcd-endpointslice", 1},
 			},
-			ExpectedPhase: cke.PhaseK8sMaintain,
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "EndpointsUpdateWithRebootEntry2",
 			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusQueued,
-				},
-			}).withNextCandidates([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusQueued,
-				},
-			}),
+				{Index: 1, Node: nodeNames[0], Status: cke.RebootStatusDraining},
+			}).withNotReadyMasterEndpoint(0),
 			ExpectedOps: []opData{
-				{"update-kubernetes-endpoints", 1},
-				{"update-kubernetes-endpointslice", 1},
 				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
-			Name: "EndpointsUpdateWithRebootDisabled1",
-			Input: newData().withK8sResourceReady().withRebootDisabled().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusDraining,
-				},
+			Name: "EndpointsUpdateWithRebootEntry3",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[0], Status: cke.RebootStatusDraining},
+			}).withNotReadyMasterEndpoint(0).withNotReadyEtcdEndpoint(0),
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseCompleted,
+		},
+		{
+			Name: "EndpointsUpdateWithRebootEntry4",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
+			}).withNextCandidates([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
 			}),
+			ExpectedOps: []opData{
+				{"update-kubernetes-endpoints", 1},
+				{"update-kubernetes-endpointslice", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "EndpointsUpdateWithRebootEntry5",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
+			}).withNextCandidates([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
+			}).withNotReadyMasterEndpoint(2),
+			ExpectedOps: []opData{
+				{"update-cke-etcd-endpoints", 1},
+				{"update-cke-etcd-endpointslice", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
+		},
+		{
+			Name: "EndpointsUpdateWithRebootEntry6",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
+			}).withNextCandidates([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
+			}).withNotReadyMasterEndpoint(2).withNotReadyEtcdEndpoint(2),
+			ExpectedOps: []opData{
+				{"reboot-drain-start", 1},
+			},
+			ExpectedPhase: cke.PhaseRebootNodes,
+		},
+		{
+			Name: "EndpointsUpdateWithRebootDisabled",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusDraining},
+			}).withRebootDisabled(),
 			ExpectedOps:   nil,
 			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "EndpointsUpdateWithRebootDisabled2",
-			Input: newData().withK8sResourceReady().withRebootDisabled().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusQueued,
-				},
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
 			}).withNextCandidates([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusQueued,
-				},
-			}),
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
+			}).withRebootDisabled(),
 			ExpectedOps:   nil,
 			ExpectedPhase: cke.PhaseCompleted,
 		},
 		{
 			Name: "EndpointsWithRebootEntry",
 			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusQueued,
-				},
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
 			}).withNextCandidates([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusQueued,
-				},
-			}).withNotReadyEndpoint(2),
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
+			}).withNotReadyMasterEndpoint(2).withNotReadyEtcdEndpoint(2),
 			ExpectedOps:   []opData{{"reboot-drain-start", 1}},
 			ExpectedPhase: cke.PhaseRebootNodes,
 		},
 		{
 			Name:  "RestoreEndpoints",
-			Input: newData().withK8sResourceReady().withNotReadyEndpoint(2),
+			Input: newData().withK8sResourceReady().withNotReadyMasterEndpoint(1),
 			ExpectedOps: []opData{
 				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name:  "RestoreEndpoints2",
+			Input: newData().withK8sResourceReady().withNotReadyEtcdEndpoint(2),
+			ExpectedOps: []opData{
 				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
@@ -1438,61 +1755,74 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RestoreEndpointsWithCancelledRebootEntry",
 			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusCancelled,
-				},
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusCancelled},
 			}).withRebootCancelled([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusCancelled,
-				},
-			}).withNotReadyEndpoint(2),
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusCancelled},
+			}).withNotReadyMasterEndpoint(2),
 			ExpectedOps: []opData{
 				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
+				// {"update-cke-etcd-endpoints", 1},
+				// {"update-cke-etcd-endpointslice", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestoreEndpointsWithCancelledRebootEntry2",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusCancelled},
+			}).withRebootCancelled([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusCancelled},
+			}).withNotReadyEtcdEndpoint(2),
+			ExpectedOps: []opData{
 				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
-			Name: "RestoreEndpointsWithRebootDisabled1",
-			Input: newData().withK8sResourceReady().withRebootDisabled().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusQueued,
-				},
-			}).withNotReadyEndpoint(2),
+			Name: "RestoreEndpointsWithRebootDisabled",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusRebooting},
+			}).withNotReadyMasterEndpoint(2).withRebootDisabled(),
 			ExpectedOps: []opData{
 				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
-				{"update-cke-etcd-endpoints", 1},
-				{"update-cke-etcd-endpointslice", 1},
 			},
-			ExpectedPhase: cke.PhaseK8sMaintain,
+			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
 			Name: "RestoreEndpointsWithRebootDisabled2",
-			Input: newData().withK8sResourceReady().withRebootDisabled().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusQueued,
-				},
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusRebooting},
+			}).withNotReadyEtcdEndpoint(2).withRebootDisabled(),
+			ExpectedOps: []opData{
+				{"update-cke-etcd-endpoints", 1},
+				{"update-cke-etcd-endpointslice", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sMaintain,
+		},
+		{
+			Name: "RestoreEndpointsWithRebootDisabled3",
+			Input: newData().withK8sResourceReady().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
 			}).withNextCandidates([]*cke.RebootQueueEntry{
-				{
-					Index:  1,
-					Node:   nodeNames[2],
-					Status: cke.RebootStatusQueued,
-				},
-			}).withNotReadyEndpoint(2),
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
+			}).withNotReadyMasterEndpoint(2).withRebootDisabled(),
 			ExpectedOps: []opData{
 				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
+			},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "RestoreEndpointsWithRebootDisabled4",
+			Input: newData().withK8sResourceReady().withRebootDisabled().withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
+			}).withNextCandidates([]*cke.RebootQueueEntry{
+				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
+			}).withNotReadyEtcdEndpoint(2).withRebootDisabled(),
+			ExpectedOps: []opData{
 				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
@@ -2203,7 +2533,7 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withAllServices().with(func(d testData) {
 				d.Status.Etcd.Members["10.0.0.100"] = &etcdserverpb.Member{Name: "10.0.0.100", ID: 3}
 				d.Status.Etcd.InSyncMembers["10.0.0.100"] = false
-			}).withSSHNotConnectedNodes(),
+			}).withSSHNotConnectedCP(0).withNotReadyMasterEndpoint(0),
 			ExpectedOps:   []opData{{"wait-kubernetes", 1}},
 			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
@@ -2498,7 +2828,7 @@ func TestDecideOps(t *testing.T) {
 				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
 			}).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
 				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusRebooting},
-			}).withRebootCordon(2).withNotReadyEndpoint(2),
+			}).withRebootCordon(2).withNotReadyMasterEndpoint(2).withNotReadyEtcdEndpoint(2),
 			ExpectedOps:   nil,
 			ExpectedPhase: cke.PhaseCompleted,
 		},
@@ -2508,7 +2838,7 @@ func TestDecideOps(t *testing.T) {
 				{Address: nodeNames[2], MachineType: "type1", Operation: "op1"},
 			}).withRebootConfig().withRebootEntries([]*cke.RebootQueueEntry{
 				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusRebooting},
-			}).withRebootCordon(2).withNotReadyEndpoint(2),
+			}).withRebootCordon(2).withNotReadyMasterEndpoint(2).withNotReadyEtcdEndpoint(2),
 			ExpectedOps: []opData{
 				{"repair-execute", 1},
 			},

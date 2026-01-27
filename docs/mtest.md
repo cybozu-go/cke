@@ -20,7 +20,7 @@ There are following types of test suites.
 
 3. robustness
 
-    This suite runs much the same set of tests as operators with unreachable/halted nodes.
+    This suite tests CKE operators with unreachable nodes.
 
 Each test suite has an entry point of test as `<suite>/suite_test.go`.
 

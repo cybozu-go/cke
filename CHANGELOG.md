@@ -6,6 +6,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Implement rolling update for kube-apiservers in [#824](https://github.com/cybozu-go/cke/pull/824)
+
 ## [1.33.0]
 
 ### Changed
