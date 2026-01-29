@@ -6,6 +6,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Update docker-compose.yml for the new release in [#845](https://github.com/cybozu-go/cke/pull/845)
+
 ## [1.33.1]
 
 ### Changed

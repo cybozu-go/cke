@@ -2,7 +2,7 @@ version: '2'
 services:
   cke:
     container_name: cke
-    image: ghcr.io/cybozu-go/cke:1.32.6
+    image: ghcr.io/cybozu-go/cke:1.33.1
     networks:
       app_net:
         ipv4_address: 172.30.0.11
