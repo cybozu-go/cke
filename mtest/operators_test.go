@@ -232,6 +232,10 @@ func testOperators() {
 		// node2: case of rebooting node with prior removal of Node resource
 		// node4: case of rebooting node without prior manipulation on Node resource
 		Eventually(func() error {
+			status, _, err := getClusterStatus(cluster)
+			if err != nil {
+				return err
+			}
 			for _, n := range status.Kubernetes.Nodes {
 				if n.Name != node6 && n.Name != node2 && n.Name != node4 {
 					continue
