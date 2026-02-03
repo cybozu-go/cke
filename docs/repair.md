@@ -9,15 +9,16 @@ Unlike other functionalities of CKE, this repair functionality manages a specifi
 Description
 -----------
 
-First see the [description of the reboot functionality](reboot.md#description).
-The behavior of the repair functionality is almost the same with the reboot.
+First, see the [description of the reboot functionality](reboot.md#description).
+The behavior of the repair functionality is almost the same as the reboot.
 A significant difference is that the repair functionality issues a series of repair commands instead of one reboot command.
 
 An administrator can request CKE to repair a machine via `ckecli repair-queue add OPERATION MACHINE_TYPE ADDRESS [SERIAL]`.
 The request is appended to the repair queue.
 Each request entry corresponds to a machine.
 
-The command `ckecli repair-queue add` takes extra two required arguments and one optional argument: the operation name, the type of the target machine, the IP address of the target machine, and optionally the serial number of the machine.
+The command `ckecli repair-queue add` takes two extra arguments in addition to the IP address of the target machine: the operation name and the type of the target machine.
+It accepts the serial number of the target machine as an optional argument.
 
 CKE watches the repair queue and handles the repair requests.
 CKE processes a repair request in the following manner:
@@ -30,10 +31,10 @@ CKE processes a repair request in the following manner:
         3. evicts (and/or deletes) non-DaemonSet-managed Pods on the Node.
     2. executes a repair command specified in the step.
     3. watches whether the machine becomes healthy by running a check command specified for the machine type.
-    4. if the node becomes healthy, uncordons the node, recovers it, and finishs repairing.
+    4. if the node becomes healthy, uncordons the node, recovers it, and finishes repairing.
 3. if the node is not healthy even after all steps are executed, marks the entry as failed.
 
-Unlike the reboot queue, repair queue entries remain in the queue even after they finished whether they succeeded or failed.
+Unlike the reboot queue, repair queue entries remain in the queue even after they finish, no matter whether they succeed or fail.
 An administrator can delete a finished queue entry by `ckecli repair-queue delete INDEX`.
 
 Data Schema
@@ -66,7 +67,7 @@ The following are the detailed descriptions of the repair functionality and its 
 `repair_procedures` is a list of [repair procedures](#repairprocedures) for various types of machines.
 CKE selects an appropriate repair procedure according to the `TYPE` parameter specified in `ckecli repair-queue add` command line.
 
-At most `max_concurrent_repairs` entries are repaired concurrently.
+At most, `max_concurrent_repairs` entries are repaired concurrently.
 
 Other parameters under `repair` are used for [Pod eviction](#podeviction).
 
@@ -100,7 +101,7 @@ CKE decides to execute a repair operation if its name matches `OPERATION` of a r
 A repair operation is a sequence of [repair steps](#repairsteps) and their parameters.
 
 `operation` is the name of a repair operation.
-CKE decides to execute a repair operations if its `operation` matches `OPERATION` of a repair queue entry, where `OPERATION` is specified in the `ckecli repair-queue add` command line.
+CKE decides to execute a repair operation if its `operation` matches `OPERATION` of a repair queue entry, where `OPERATION` is specified in the `ckecli repair-queue add` command line.
 
 `repair_steps` is a sequence of [repair steps](#repairsteps).
 
@@ -130,7 +131,7 @@ If the command fails, CKE changes the status of the queue entry to `failed` and 
 After executing `repair_command`, CKE watches whether the machine becomes healthy.
 If the health check command returns `true`, CKE finishes repairing and changes the status of the queue entry to `succeeded`.
 If the command does not return `true` during `watch_seconds`, CKE proceeds to the next step if exists.
-If CKE reaches at the end of the steps, it changes the status of the queue entry to `failed`.
+If CKE reaches the end of the steps, it changes the status of the queue entry to `failed`.
 
 Enabling/Disabling
 ------------------
@@ -138,6 +139,6 @@ Enabling/Disabling
 An administrator can enable/disable the processing of the repair queue by `ckecli repair-queue enable|disable`.
 If the queue is disabled, CKE:
 * does not proceed to the [Pod eviction](#podeviction) nor the repair command execution
-* abandons ongoing Pod eviction
+* abandons the ongoing Pod eviction
 * still runs health check commands and migrates entries to succeeded/failed
 * still dequeues entries if instructed by `ckecli repair-queue delete`
