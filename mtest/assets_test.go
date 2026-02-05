@@ -34,3 +34,9 @@ var trustedRESTMappingCRDYAML []byte
 
 //go:embed trusted-rest-mapping-cr.yaml
 var trustedRESTMappingCRYAML []byte
+
+//go:embed crd-test.yaml
+var crdTestYAML []byte
+
+//go:embed cr-test.yaml
+var crTestYAML []byte
