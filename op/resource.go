@@ -2,12 +2,20 @@ package op
 
 import (
 	"context"
+	"time"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/log"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
+)
+
+const (
+	resourceApplyRetryCount    = 30
+	resourceApplyRetryInterval = 10 * time.Second
 )
 
 type resourceApplyOp struct {
@@ -45,6 +53,17 @@ func (o *resourceApplyOp) Targets() []string {
 	}
 }
 
+// isNonRetryableError returns true if the error is permanent and retrying will not help.
+func isNonRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	return apierrors.IsForbidden(err) ||
+		apierrors.IsUnauthorized(err) ||
+		apierrors.IsInvalid(err)
+}
+
 func (o *resourceApplyOp) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
 	cfg, err := inf.K8sConfig(ctx, o.apiserver)
 	if err != nil {
@@ -60,7 +79,31 @@ func (o *resourceApplyOp) Run(ctx context.Context, inf cke.Infrastructure, _ str
 	if err != nil {
 		return err
 	}
-	return cke.ApplyResource(ctx, dyn, mapper, inf, o.resource.Definition, o.resource.Revision, true)
+
+	var lastErr error
+	for i := range resourceApplyRetryCount {
+		lastErr = cke.ApplyResource(ctx, dyn, mapper, inf, o.resource.Definition, o.resource.Revision, o.forceConflicts)
+		if lastErr == nil {
+			return nil
+		}
+		if isNonRetryableError(lastErr) {
+			return lastErr
+		}
+
+		log.Warn("failed to apply resource, will retry", map[string]any{
+			"resource":  o.resource.String(),
+			"attempt":   i + 1,
+			log.FnError: lastErr,
+		})
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(resourceApplyRetryInterval):
+		}
+	}
+
+	return lastErr
 }
 
 func (o *resourceApplyOp) Command() cke.Command {
