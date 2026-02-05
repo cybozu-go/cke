@@ -61,7 +61,8 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 5. Run or restart kubernetes components.
-	if ops := k8sOps(c, nf, cs, config.MaxConcurrentUpdates); len(ops) > 0 {
+	ops, needRetry := k8sComponentOps(c, nf, cs, config.MaxConcurrentUpdates)
+	if len(ops) > 0 {
 		return ops, cke.PhaseK8sStart
 	}
 
@@ -73,7 +74,7 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 	}
 
 	// 7. Maintain k8s resources.
-	if ops := k8sMaintOps(c, cs, resources, nf); len(ops) > 0 {
+	if ops := k8sResourceOps(c, cs, resources, nf); len(ops) > 0 {
 		return ops, cke.PhaseK8sMaintain
 	}
 
@@ -103,6 +104,10 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 			return nil, cke.PhaseRebootNodes
 		}
 		return ops, cke.PhaseRebootNodes
+	}
+
+	if needRetry {
+		return nil, cke.PhaseK8sStart
 	}
 
 	return nil, cke.PhaseCompleted
@@ -140,7 +145,7 @@ func riversOps(c *cke.Cluster, nf *NodeFilter, maxConcurrentUpdates int) (ops []
 	return ops
 }
 
-func apiserverOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []cke.Operator, skipOtherOps bool) {
+func apiserverOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) ([]cke.Operator, bool) {
 	// First, do the following operations together to SSH-reachable nodes.
 	// - Starting stopped kube-apiservers. (for bootstrapping the Kubernetes cluster or for rebooting controle plane nodes)
 	// - Updating outdated and unhealhy apiservers. (for repairing configuration errors)
@@ -148,15 +153,14 @@ func apiserverOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []
 	nodes = append(nodes, nf.SSHConnected(nf.APIServerStopped(nf.ControlPlaneNodes()))...)
 	nodes = append(nodes, nf.SSHConnected(nf.APIServerOutdated(nf.APIServerUnhealthy(nf.ControlPlaneNodes())))...)
 	if len(nodes) > 0 {
-		// Set the unhealthy kube-apiservers to NotReady.
-		// NOTE: This step should be skipped during bootstraping.
+		ops := []cke.Operator{}
 		if nf.HealthyAPIServer() != nil {
+			// Set the unhealthy kube-apiservers to NotReady.
+			// NOTE: This step should be skipped during bootstraping.
 			ops = append(ops, masterEndpointOps(c, cs, nf, nil)...)
 		}
 		kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
 		ops = append(ops, k8s.APIServerRestartOp(nodes, c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
-	}
-	if len(ops) > 0 {
 		return ops, true
 	}
 
@@ -166,17 +170,19 @@ func apiserverOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []
 	//     - Other k8s components should be maintained only when all kube-apiservers are *updated* and healthy, to ensure the upgrade order.
 	//       See the version skew policy: https://kubernetes.io/releases/version-skew-policy/
 	if len(nf.SSHNotConnected(nf.ControlPlaneNodes())) > 0 || len(nf.APIServerUnhealthy(nf.ControlPlaneNodes())) > 0 {
-		// Set the unhealthy kube-apiservers to NotReady.
 		if nf.HealthyAPIServer() != nil {
-			ops = append(ops, masterEndpointOps(c, cs, nf, nil)...)
+			// Set the unhealthy kube-apiservers to NotReady.
+			return masterEndpointOps(c, cs, nf, nil), true
+		} else {
+			// Do nothing, because the endpoint cannot be updated.
+			return nil, true
 		}
-		return ops, true
 	}
 
 	// Updating kube-apiservers one by one.
 	if nodes := nf.SSHConnected(nf.APIServerOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		target := nodes[0] // just one
-		ops = append(ops, masterEndpointOps(c, cs, nf, []string{target.Address})...)
+		ops := masterEndpointOps(c, cs, nf, []string{target.Address})
 		kubeletConfig := k8s.GenerateKubeletConfiguration(c.Options.Kubelet, "0.0.0.0", nil)
 		ops = append(ops, k8s.APIServerRestartOp([]*cke.Node{target}, c.ServiceSubnet, c.Options.APIServer, kubeletConfig.ClusterDomain))
 		return ops, true
@@ -184,14 +190,13 @@ func apiserverOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus) (ops []
 
 	// Set kube-apiservers to Ready.
 	// If a control plane node is about to reboot, set it to NotReady.
-	ops = append(ops, masterEndpointOps(c, cs, nf, rebootNextCandidates(cs))...)
-	return ops, false
+	return masterEndpointOps(c, cs, nf, rebootNextCandidates(cs)), false
 }
 
-func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrentUpdates int) (ops []cke.Operator) {
+func k8sComponentOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrentUpdates int) (ops []cke.Operator, needRetry bool) {
 	apiserverOps, skipOtherOps := apiserverOps(c, nf, cs)
 	if skipOtherOps {
-		return apiserverOps
+		return apiserverOps, true
 	}
 	ops = append(ops, apiserverOps...)
 
@@ -253,7 +258,7 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrent
 		}
 		ops = append(ops, op.ProxyStopOp(nodes[:max]))
 	}
-	return ops
+	return ops, false
 }
 
 func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
@@ -298,7 +303,7 @@ func etcdMaintOp(c *cke.Cluster, nf *NodeFilter) cke.Operator {
 	return nil
 }
 
-func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition, nf *NodeFilter) (ops []cke.Operator) {
+func k8sResourceOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.ResourceDefinition, nf *NodeFilter) (ops []cke.Operator) {
 	ks := cs.Kubernetes
 	apiServer := nf.HealthyAPIServer()
 
