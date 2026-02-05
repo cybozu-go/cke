@@ -75,8 +75,10 @@ func testRobustness() {
 		// When a control plane node is down, CKE should not maintain k8s components.
 
 		By("stopping kubelet")
-		execAt(node5, "docker", "stop", "kubelet")
 		Eventually(func(g Gomega) {
+			// To ensure idempotency, do not perform error checking.
+			execAt(node5, "docker", "stop", "kubelet")
+
 			stdout, stderr, err := kubectl("get", "-o=json", "node", node5)
 			g.Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
