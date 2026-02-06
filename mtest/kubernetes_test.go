@@ -524,4 +524,38 @@ metadata:
 			"webhook-service.default.svc",
 		))
 	})
+
+	It("retries resource apply when CRD is not yet available", func() {
+		By("setting custom resource before CRD exists")
+		_, _, err := ckecliWithInput(crTestYAML, "resource", "set", "-")
+		Expect(err).NotTo(HaveOccurred())
+		defer ckecliWithInput(crTestYAML, "resource", "delete", "-")
+
+		By("waiting a bit to ensure CKE starts retrying")
+		time.Sleep(30 * time.Second)
+
+		By("applying CRD")
+		_, stderr, err := kubectlWithInput(crdTestYAML, "apply", "-f", "-")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		By("waiting for CKE to successfully apply the custom resource")
+		waitServerStatusCompletion()
+
+		By("verifying the custom resource was created")
+		Eventually(func(g Gomega) {
+			stdout, stderr, err := kubectl("get", "testresources.cke.cybozu.com/test-instance", "-n", "default", "-o", "json")
+			g.Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+			var obj unstructured.Unstructured
+			err = json.Unmarshal(stdout, &obj)
+			g.Expect(err).NotTo(HaveOccurred())
+			spec, ok := obj.Object["spec"].(map[string]any)
+			g.Expect(ok).To(BeTrue(), "spec not found")
+			msg, ok := spec["message"].(string)
+			g.Expect(ok).To(BeTrue(), "message not found")
+			g.Expect(msg).To(Equal("Hello from CKE resource apply retry test"))
+		}).Should(Succeed())
+
+		By("cleaning up CRD")
+		_, _, _ = kubectlWithInput(crdTestYAML, "delete", "-f", "-")
+	})
 }

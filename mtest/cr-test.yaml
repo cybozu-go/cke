@@ -1,0 +1,7 @@
+apiVersion: cke.cybozu.com/v1
+kind: TestResource
+metadata:
+  name: test-instance
+  namespace: default
+spec:
+  message: "Hello from CKE resource apply retry test"
