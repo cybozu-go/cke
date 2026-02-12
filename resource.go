@@ -41,7 +41,7 @@ const (
 var decUnstructured = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 
 // ApplyResource creates or updates given resource using server-side-apply.
-func ApplyResource(ctx context.Context, dynclient dynamic.Interface, mapper meta.RESTMapper, inf Infrastructure, data []byte, rev int64, forceConflicts bool) error {
+func ApplyResource(ctx context.Context, dynclient dynamic.Interface, mapper meta.RESTMapper, inf Infrastructure, data []byte, rev int64, trustedMappings []TrustedRESTMapping, forceConflicts bool) error {
 	obj := &unstructured.Unstructured{}
 	_, gvk, err := decUnstructured.Decode(data, nil, obj)
 	if err != nil {
@@ -54,7 +54,7 @@ func ApplyResource(ctx context.Context, dynclient dynamic.Interface, mapper meta
 	ann[AnnotationResourceRevision] = strconv.FormatInt(rev, 10)
 	obj.SetAnnotations(ann)
 
-	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	mapping, err := RESTMappingWithFallback(mapper, *gvk, trustedMappings)
 	if err != nil {
 		return fmt.Errorf("failed to find REST mapping for %s: %w", gvk.String(), err)
 	}
@@ -313,4 +313,35 @@ func SortResources(res []ResourceDefinition) {
 	}
 
 	sort.Slice(res, less)
+}
+
+// RESTMappingWithFallback attempts to find a REST mapping using the given mapper,
+// and falls back to the pre-registered trusted mappings if discovery fails.
+func RESTMappingWithFallback(mapper meta.RESTMapper, gvk schema.GroupVersionKind, trustedMappings []TrustedRESTMapping) (*meta.RESTMapping, error) {
+	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err == nil {
+		return mapping, nil
+	}
+	return LookupTrustedRESTMapping(trustedMappings, gvk)
+}
+
+// LookupTrustedRESTMapping looks up a REST mapping from the given trusted mappings.
+// It returns an error if no matching mapping is found.
+func LookupTrustedRESTMapping(mappings []TrustedRESTMapping, gvk schema.GroupVersionKind) (*meta.RESTMapping, error) {
+	for _, m := range mappings {
+		if m.Group == gvk.Group && m.Version == gvk.Version && m.Kind == gvk.Kind {
+			var scope meta.RESTScope
+			if m.Namespaced {
+				scope = meta.RESTScopeNamespace
+			} else {
+				scope = meta.RESTScopeRoot
+			}
+			return &meta.RESTMapping{
+				Resource:         schema.GroupVersionResource{Group: m.Group, Version: m.Version, Resource: m.Resource},
+				GroupVersionKind: gvk,
+				Scope:            scope,
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("no trusted REST mapping found for %s", gvk.String())
 }

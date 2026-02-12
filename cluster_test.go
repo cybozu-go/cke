@@ -7,7 +7,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
@@ -1017,10 +1019,168 @@ func testClusterValidateReboot(t *testing.T) {
 	}
 }
 
+func testValidateTrustedRESTMappings(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		mapping TrustedRESTMapping
+		wantErr bool
+	}{
+		{
+			name: "valid namespaced",
+			mapping: TrustedRESTMapping{
+				Group:      "cilium.io",
+				Version:    "v2alpha1",
+				Kind:       "CiliumNetworkPolicy",
+				Resource:   "ciliumnetworkpolicies",
+				Namespaced: true,
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid cluster-scoped",
+			mapping: TrustedRESTMapping{
+				Group:      "cilium.io",
+				Version:    "v2",
+				Kind:       "CiliumNode",
+				Resource:   "ciliumnodes",
+				Namespaced: false,
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty group (core API)",
+			mapping: TrustedRESTMapping{
+				Group:      "",
+				Version:    "v1",
+				Kind:       "ConfigMap",
+				Resource:   "configmaps",
+				Namespaced: true,
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty version",
+			mapping: TrustedRESTMapping{
+				Group:    "cilium.io",
+				Version:  "",
+				Kind:     "CiliumNetworkPolicy",
+				Resource: "ciliumnetworkpolicies",
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty kind",
+			mapping: TrustedRESTMapping{
+				Group:    "cilium.io",
+				Version:  "v2alpha1",
+				Kind:     "",
+				Resource: "ciliumnetworkpolicies",
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty resource",
+			mapping: TrustedRESTMapping{
+				Group:    "cilium.io",
+				Version:  "v2alpha1",
+				Kind:     "CiliumNetworkPolicy",
+				Resource: "",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := validateTrustedRESTMappings([]TrustedRESTMapping{tt.mapping}); (err != nil) != tt.wantErr {
+				t.Errorf("validateTrustedRESTMappings() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
+	t.Run("duplicate mapping", func(t *testing.T) {
+		dup := []TrustedRESTMapping{
+			{Group: "cilium.io", Version: "v2", Kind: "CiliumNode", Resource: "ciliumnodes"},
+			{Group: "cilium.io", Version: "v2", Kind: "CiliumNode", Resource: "ciliumnodes"},
+		}
+		if err := validateTrustedRESTMappings(dup); err == nil {
+			t.Error("expected error for duplicate mappings, got nil")
+		}
+	})
+}
+
+func testLookupTrustedRESTMapping(t *testing.T) {
+	t.Parallel()
+
+	mappings := []TrustedRESTMapping{
+		{
+			Group:      "cilium.io",
+			Version:    "v2alpha1",
+			Kind:       "CiliumNetworkPolicy",
+			Resource:   "ciliumnetworkpolicies",
+			Namespaced: true,
+		},
+		{
+			Group:      "cilium.io",
+			Version:    "v2",
+			Kind:       "CiliumNode",
+			Resource:   "ciliumnodes",
+			Namespaced: false,
+		},
+	}
+
+	t.Run("found namespaced", func(t *testing.T) {
+		gvk := schema.GroupVersionKind{Group: "cilium.io", Version: "v2alpha1", Kind: "CiliumNetworkPolicy"}
+		m, err := LookupTrustedRESTMapping(mappings, gvk)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if m.Resource.Resource != "ciliumnetworkpolicies" {
+			t.Errorf("unexpected resource: %s", m.Resource.Resource)
+		}
+		if m.Scope.Name() != meta.RESTScopeNameNamespace {
+			t.Errorf("expected namespace scope, got %s", m.Scope.Name())
+		}
+	})
+
+	t.Run("found cluster-scoped", func(t *testing.T) {
+		gvk := schema.GroupVersionKind{Group: "cilium.io", Version: "v2", Kind: "CiliumNode"}
+		m, err := LookupTrustedRESTMapping(mappings, gvk)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if m.Resource.Resource != "ciliumnodes" {
+			t.Errorf("unexpected resource: %s", m.Resource.Resource)
+		}
+		if m.Scope.Name() != meta.RESTScopeNameRoot {
+			t.Errorf("expected root scope, got %s", m.Scope.Name())
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		gvk := schema.GroupVersionKind{Group: "example.com", Version: "v1", Kind: "Foo"}
+		_, err := LookupTrustedRESTMapping(mappings, gvk)
+		if err == nil {
+			t.Error("expected error, got nil")
+		}
+	})
+
+	t.Run("empty mappings", func(t *testing.T) {
+		gvk := schema.GroupVersionKind{Group: "cilium.io", Version: "v2alpha1", Kind: "CiliumNetworkPolicy"}
+		_, err := LookupTrustedRESTMapping(nil, gvk)
+		if err == nil {
+			t.Error("expected error, got nil")
+		}
+	})
+}
+
 func TestCluster(t *testing.T) {
 	t.Run("YAML", testClusterYAML)
 	t.Run("Validate", testClusterValidate)
 	t.Run("ValidateNode", testClusterValidateNode)
 	t.Run("Nodename", testNodename)
 	t.Run("ValidateReboot", testClusterValidateReboot)
+	t.Run("ValidateTrustedRESTMappings", testValidateTrustedRESTMappings)
+	t.Run("LookupTrustedRESTMapping", testLookupTrustedRESTMapping)
 }
