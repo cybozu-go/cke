@@ -28,3 +28,9 @@ var repairDeploymentYAML []byte
 
 //go:embed webhook-resources.yaml
 var webhookYAML []byte
+
+//go:embed crd-test.yaml
+var crdTestYAML []byte
+
+//go:embed cr-test.yaml
+var crTestYAML []byte
