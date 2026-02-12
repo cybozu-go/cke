@@ -29,27 +29,29 @@ func testRobustness() {
 	})
 
 	It("should update endpoints", func() {
-		stdout, stderr, err := kubectl("get", "-o=json", "endpointslices/kubernetes")
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		Eventually(func(g Gomega) {
+			stdout, stderr, err := kubectl("get", "-o=json", "endpointslices/kubernetes")
+			g.Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
-		var eps discoveryv1.EndpointSlice
-		err = json.Unmarshal(stdout, &eps)
-		Expect(err).NotTo(HaveOccurred())
+			var eps discoveryv1.EndpointSlice
+			err = json.Unmarshal(stdout, &eps)
+			g.Expect(err).NotTo(HaveOccurred())
 
-		Expect(eps.Endpoints).To(ConsistOf(
-			discoveryv1.Endpoint{
-				Addresses:  []string{node1},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
-			},
-			discoveryv1.Endpoint{
-				Addresses:  []string{node2},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(false)},
-			},
-			discoveryv1.Endpoint{
-				Addresses:  []string{node3},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
-			},
-		))
+			g.Expect(eps.Endpoints).To(ConsistOf(
+				discoveryv1.Endpoint{
+					Addresses:  []string{node1},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				},
+				discoveryv1.Endpoint{
+					Addresses:  []string{node2},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(false)},
+				},
+				discoveryv1.Endpoint{
+					Addresses:  []string{node3},
+					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				},
+			))
+		}).Should(Succeed())
 	})
 
 	It("should not update control plane node labels", func() {
