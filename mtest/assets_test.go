@@ -28,3 +28,9 @@ var repairDeploymentYAML []byte
 
 //go:embed webhook-resources.yaml
 var webhookYAML []byte
+
+//go:embed trusted-rest-mapping-crd.yaml
+var trustedRESTMappingCRDYAML []byte
+
+//go:embed trusted-rest-mapping-cr.yaml
+var trustedRESTMappingCRYAML []byte

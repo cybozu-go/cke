@@ -1,0 +1,7 @@
+apiVersion: mtest.cybozu.com/v1
+kind: TestResource
+metadata:
+  namespace: default
+  name: test-cr
+spec:
+  message: hello

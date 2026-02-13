@@ -140,6 +140,7 @@ var _ = Describe("Test CKE", func() {
 		Context("ckecli", testCKECLI)
 		Context("local-proxy", testLocalProxy)
 		Context("kubernetes", testKubernetes)
+		Context("trusted-rest-mapping", testTrustedRESTMapping)
 	case "operators":
 		Context("operators", func() {
 			testOperators()

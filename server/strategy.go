@@ -306,7 +306,7 @@ func k8sMaintOps(c *cke.Cluster, cs *cke.ClusterStatus, resources []cke.Resource
 		return []cke.Operator{op.KubeWaitOp(apiServer)}
 	}
 
-	ops = append(ops, decideResourceOps(apiServer, ks, resources, ks.IsReady(c))...)
+	ops = append(ops, decideResourceOps(apiServer, c.TrustedRESTMappings, ks, resources, ks.IsReady(c))...)
 
 	ops = append(ops, decideClusterDNSOps(apiServer, c, ks)...)
 
@@ -658,7 +658,7 @@ func decideEtcdServiceOps(apiServer *cke.Node, svc *corev1.Service) cke.Operator
 	return nil
 }
 
-func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, resources []cke.ResourceDefinition, isReady bool) (ops []cke.Operator) {
+func decideResourceOps(apiServer *cke.Node, trustedMappings []cke.TrustedRESTMapping, ks cke.KubernetesClusterStatus, resources []cke.ResourceDefinition, isReady bool) (ops []cke.Operator) {
 	for _, res := range static.Resources {
 		// To avoid thundering herd problem. Deployments need to be created only after enough nodes become ready.
 		if res.Kind == cke.KindDeployment && !isReady {
@@ -666,7 +666,7 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 		}
 		status, ok := ks.ResourceStatuses[res.Key]
 		if !ok || res.NeedUpdate(&status) {
-			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
+			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA, trustedMappings))
 		}
 	}
 	for _, res := range resources {
@@ -675,7 +675,7 @@ func decideResourceOps(apiServer *cke.Node, ks cke.KubernetesClusterStatus, reso
 		}
 		status, ok := ks.ResourceStatuses[res.Key]
 		if !ok || res.NeedUpdate(&status) {
-			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA))
+			ops = append(ops, op.ResourceApplyOp(apiServer, res, !status.HasBeenSSA, trustedMappings))
 		}
 	}
 	return ops

@@ -328,6 +328,16 @@ type Sabakan struct {
 	SpareNodeTaintKey string `json:"spare_node_taint_key"`
 }
 
+// TrustedRESTMapping defines a pre-registered REST mapping for CRDs
+// that may not be available via API discovery at runtime.
+type TrustedRESTMapping struct {
+	Group      string `json:"group"`
+	Version    string `json:"version"`
+	Kind       string `json:"kind"`
+	Resource   string `json:"resource"`
+	Namespaced bool   `json:"namespaced"`
+}
+
 // Options is a set of optional parameters for k8s components.
 type Options struct {
 	Etcd              EtcdParams      `json:"etcd"`
@@ -342,17 +352,18 @@ type Options struct {
 
 // Cluster is a set of configurations for a etcd/Kubernetes cluster.
 type Cluster struct {
-	Name          string   `json:"name"`
-	Nodes         []*Node  `json:"nodes"`
-	TaintCP       bool     `json:"taint_control_plane"`
-	CPTolerations []string `json:"control_plane_tolerations"`
-	ServiceSubnet string   `json:"service_subnet"`
-	DNSServers    []string `json:"dns_servers"`
-	DNSService    string   `json:"dns_service"`
-	Reboot        Reboot   `json:"reboot"`
-	Repair        Repair   `json:"repair"`
-	Sabakan       Sabakan  `json:"sabakan"`
-	Options       Options  `json:"options"`
+	Name                string               `json:"name"`
+	Nodes               []*Node              `json:"nodes"`
+	TaintCP             bool                 `json:"taint_control_plane"`
+	CPTolerations       []string             `json:"control_plane_tolerations"`
+	ServiceSubnet       string               `json:"service_subnet"`
+	DNSServers          []string             `json:"dns_servers"`
+	DNSService          string               `json:"dns_service"`
+	Reboot              Reboot               `json:"reboot"`
+	Repair              Repair               `json:"repair"`
+	Sabakan             Sabakan              `json:"sabakan"`
+	Options             Options              `json:"options"`
+	TrustedRESTMappings []TrustedRESTMapping `json:"trusted_rest_mappings,omitempty"`
 }
 
 // Validate validates the cluster definition.
@@ -410,6 +421,32 @@ func (c *Cluster) Validate(isTmpl bool) error {
 		return err
 	}
 
+	err = validateTrustedRESTMappings(c.TrustedRESTMappings)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateTrustedRESTMappings(mappings []TrustedRESTMapping) error {
+	seen := make(map[string]struct{})
+	for i, m := range mappings {
+		if len(m.Version) == 0 {
+			return fmt.Errorf("trusted_rest_mappings[%d]: version is empty", i)
+		}
+		if len(m.Kind) == 0 {
+			return fmt.Errorf("trusted_rest_mappings[%d]: kind is empty", i)
+		}
+		if len(m.Resource) == 0 {
+			return fmt.Errorf("trusted_rest_mappings[%d]: resource is empty", i)
+		}
+		key := m.Group + "/" + m.Version + "/" + m.Kind
+		if _, ok := seen[key]; ok {
+			return fmt.Errorf("trusted_rest_mappings[%d]: duplicate mapping for %s", i, key)
+		}
+		seen[key] = struct{}{}
+	}
 	return nil
 }
 
