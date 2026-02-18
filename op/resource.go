@@ -71,6 +71,7 @@ func (o *resourceApplyOp) Run(ctx context.Context, inf cke.Infrastructure, _ str
 				"resource":  o.resource.String(),
 				log.FnError: err,
 			})
+			// The CRD for this resource is expected to be applied later, so we can skip this error.
 			return nil
 		}
 		return err

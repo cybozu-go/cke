@@ -12,9 +12,29 @@ import (
 )
 
 func testTrustedRESTMapping() {
-	It("applies custom resources using trusted REST mappings", func() {
+	It("applies custom resources using trusted REST mappings even when CRD is applied after CR", func() {
+		By("setting trusted REST mappings in the cluster config")
+		cluster := getCluster(0, 1, 2)
+		cluster.TrustedRESTMappings = []cke.TrustedRESTMapping{
+			{
+				Group:      "mtest.cybozu.com",
+				Version:    "v1",
+				Kind:       "TestResource",
+				Resource:   "testresources",
+				Namespaced: true,
+			},
+		}
+		clusterSetAndWait(cluster)
+
+		By("registering a custom resource as a user-defined resource (CRD does not exist yet)")
+		_, stderr, err := ckecliWithInput(trustedRESTMappingCRYAML, "resource", "set", "-")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+		defer func() {
+			ckecliWithInput(trustedRESTMappingCRYAML, "resource", "delete", "-")
+		}()
+
 		By("creating the CRD via kubectl")
-		_, stderr, err := kubectlWithInput(trustedRESTMappingCRDYAML, "apply", "-f", "-")
+		_, stderr, err = kubectlWithInput(trustedRESTMappingCRDYAML, "apply", "-f", "-")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 
 		By("waiting for the CRD to become established")
@@ -29,28 +49,7 @@ func testTrustedRESTMapping() {
 			return nil
 		}).Should(Succeed())
 
-		By("setting trusted REST mappings in the cluster config")
-		cluster := getCluster(0, 1, 2)
-		cluster.TrustedRESTMappings = []cke.TrustedRESTMapping{
-			{
-				Group:      "mtest.cybozu.com",
-				Version:    "v1",
-				Kind:       "TestResource",
-				Resource:   "testresources",
-				Namespaced: true,
-			},
-		}
-		clusterSetAndWait(cluster)
-
-		By("registering a custom resource as a user-defined resource")
-		_, stderr, err = ckecliWithInput(trustedRESTMappingCRYAML, "resource", "set", "-")
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-		defer func() {
-			ckecliWithInput(trustedRESTMappingCRYAML, "resource", "delete", "-")
-		}()
-		waitServerStatusCompletion()
-
-		By("verifying the custom resource was created in the cluster")
+		By("verifying the custom resource is eventually created after CRD becomes available")
 		Eventually(func() error {
 			stdout, stderr, err := kubectl("get", "testresources.mtest.cybozu.com", "test-cr", "-n", "default", "-o", "json")
 			if err != nil {

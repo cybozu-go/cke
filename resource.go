@@ -54,7 +54,7 @@ func ApplyResource(ctx context.Context, dynclient dynamic.Interface, mapper meta
 	ann[AnnotationResourceRevision] = strconv.FormatInt(rev, 10)
 	obj.SetAnnotations(ann)
 
-	mapping, err := RESTMappingWithFallback(mapper, *gvk, trustedMappings)
+	mapping, err := RESTMappingWithFallback(mapper, gvk, trustedMappings)
 	if err != nil {
 		return fmt.Errorf("failed to find REST mapping for %s: %w", gvk.String(), err)
 	}
@@ -317,12 +317,12 @@ func SortResources(res []ResourceDefinition) {
 
 // RESTMappingWithFallback attempts to find a REST mapping using the given mapper,
 // and falls back to the pre-registered trusted mappings if discovery fails.
-func RESTMappingWithFallback(mapper meta.RESTMapper, gvk schema.GroupVersionKind, trustedMappings []TrustedRESTMapping) (*meta.RESTMapping, error) {
+func RESTMappingWithFallback(mapper meta.RESTMapper, gvk *schema.GroupVersionKind, trustedMappings []TrustedRESTMapping) (*meta.RESTMapping, error) {
 	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err == nil {
 		return mapping, nil
 	}
-	return LookupTrustedRESTMapping(trustedMappings, gvk)
+	return LookupTrustedRESTMapping(trustedMappings, *gvk)
 }
 
 // LookupTrustedRESTMapping looks up a REST mapping from the given trusted mappings.
