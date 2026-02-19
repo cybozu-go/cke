@@ -12,6 +12,7 @@ import (
 	k8sjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	apiserverv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
 	"k8s.io/client-go/tools/clientcmd/api"
+	logsapi "k8s.io/component-base/logs/api/v1"
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
@@ -145,6 +146,9 @@ func GenerateKubeletConfiguration(params cke.KubeletParams, nodeAddress string, 
 		RuntimeRequestTimeout: metav1.Duration{Duration: 15 * time.Minute},
 		HealthzBindAddress:    "0.0.0.0",
 		VolumePluginDir:       "/opt/volume/bin",
+		Logging: logsapi.LoggingConfiguration{
+			Verbosity: 4,
+		},
 	}
 
 	// This won't raise an error because of prior validation
