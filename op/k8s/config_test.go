@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	logsapi "k8s.io/component-base/logs/api/v1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/ptr"
@@ -57,6 +58,9 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 			Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook,
 		},
 		ClusterDNS: []string{"1.2.3.4"},
+		Logging: logsapi.LoggingConfiguration{
+			Verbosity: 4,
+		},
 	}
 
 	expected := baseExpected.DeepCopy()
