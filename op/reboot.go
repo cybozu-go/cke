@@ -18,6 +18,7 @@ import (
 
 const drainBackOffBaseSeconds = 300
 const drainBackOffMaxSeconds = 1200
+const deleteDaemonSetPodDelaySeconds = 10
 
 type rebootDrainStartOp struct {
 	finished bool
@@ -292,6 +293,13 @@ func (c rebootDeleteDaemonSetPodCommand) Run(ctx context.Context, inf cke.Infras
 				log.FnError: err,
 			})
 			c.notifyFailedNode(entry.Node)
+		}
+
+		// Wait for a while to let DaemonSet controller recreate the pod.
+		select {
+		case <-time.After(deleteDaemonSetPodDelaySeconds * time.Second):
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 
