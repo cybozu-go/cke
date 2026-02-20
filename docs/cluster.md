@@ -10,6 +10,7 @@ a YAML or JSON object with these fields:
 - [Reboot](#reboot)
 - [Repair](#repair)
   - [RepairProcedure](#repairprocedure)
+- [TrustedRESTMapping](#trustedrestmapping)
 - [Options](#options)
   - [ServiceParams](#serviceparams)
   - [Mount](#mount)
@@ -31,6 +32,7 @@ a YAML or JSON object with these fields:
 | `reboot`                    | false    | `Reboot`  | See [Reboot](#reboot).                                           |
 | `repair`                    | false    | `Repair`  | See [Repair](#repair).                                           |
 | `sabakan`                   | false    | `Sabakan` | See [Sabakan](#sabakan).                                         |
+| `trusted_rest_mappings`     | false    | `[]TrustedRESTMapping` | See [TrustedRESTMapping](#trustedrestmapping).                   |
 | `options`                   | false    | `Options` | See [Options](#options).                                         |
 
 * `control_plane_tolerations` is used in [sabakan integration](sabakan-integration.md#strategy).
@@ -151,6 +153,21 @@ Sabakan
 |          Name          | Required |   Type   |                                                                Description                                                                |
 | ---------------------- | -------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `spare_node_taint_key` | true     | `string` | A taint key that indicated the node is spare machine. Sabakan integration selects the controle-plane from the nodes which has this taint. |
+
+TrustedRESTMapping
+------------------
+
+`TrustedRESTMapping` pre-registers REST mappings for custom resources whose CRDs
+may not yet be available via API discovery. When the REST mapper fails to find
+a mapping, CKE falls back to these trusted mappings.
+
+| Name         | Required | Type   | Description                                                  |
+| ------------ | -------- | ------ | ------------------------------------------------------------ |
+| `group`      | true     | string | API group of the resource.                                   |
+| `version`    | true     | string | API version (e.g. `v1`).                                     |
+| `kind`       | true     | string | Resource kind (e.g. `TestResource`).                         |
+| `resource`   | true     | string | Plural resource name (e.g. `testresources`).                 |
+| `namespaced` | false    | bool   | If true, the resource is namespace-scoped. Default: `false`. |
 
 Options
 -------

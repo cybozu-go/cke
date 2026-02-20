@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/log"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
@@ -11,19 +13,21 @@ import (
 )
 
 type resourceApplyOp struct {
-	apiserver      *cke.Node
-	resource       cke.ResourceDefinition
-	forceConflicts bool
+	apiserver       *cke.Node
+	resource        cke.ResourceDefinition
+	forceConflicts  bool
+	trustedMappings []cke.TrustedRESTMapping
 
 	finished bool
 }
 
 // ResourceApplyOp creates or updates a Kubernetes object.
-func ResourceApplyOp(apiServer *cke.Node, resource cke.ResourceDefinition, forceConflicts bool) cke.Operator {
+func ResourceApplyOp(apiServer *cke.Node, resource cke.ResourceDefinition, forceConflicts bool, trustedMappings []cke.TrustedRESTMapping) cke.Operator {
 	return &resourceApplyOp{
-		apiserver:      apiServer,
-		resource:       resource,
-		forceConflicts: forceConflicts,
+		apiserver:       apiServer,
+		resource:        resource,
+		forceConflicts:  forceConflicts,
+		trustedMappings: trustedMappings,
 	}
 }
 
@@ -60,7 +64,19 @@ func (o *resourceApplyOp) Run(ctx context.Context, inf cke.Infrastructure, _ str
 	if err != nil {
 		return err
 	}
-	return cke.ApplyResource(ctx, dyn, mapper, inf, o.resource.Definition, o.resource.Revision, true)
+
+	if err := cke.ApplyResource(ctx, dyn, mapper, inf, o.resource.Definition, o.resource.Revision, o.trustedMappings, true); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Warn("failed to apply resource, the resource type is not found on the server", map[string]any{
+				"resource":  o.resource.String(),
+				log.FnError: err,
+			})
+			// The CRD for this resource is expected to be applied later, so we can skip this error.
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (o *resourceApplyOp) Command() cke.Command {

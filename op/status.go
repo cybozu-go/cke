@@ -415,7 +415,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 			return cke.KubernetesClusterStatus{}, err
 		}
 
-		mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+		mapping, err := cke.RESTMappingWithFallback(mapper, gvk, cluster.TrustedRESTMappings)
 		if err != nil {
 			return cke.KubernetesClusterStatus{}, fmt.Errorf("failed to find rest mapping for %s: %w", gvk.String(), err)
 		}

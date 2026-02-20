@@ -8,7 +8,9 @@ This can be considered as `kubectl apply --server-side=true --field-manager=cke`
 
 All the standard Kubernetes resources, including `CustomResourceDefinition`, are supported.
 
-Custom resources (not `CustomResourceDefinition`s) are not supported.
+Custom resources (not `CustomResourceDefinition`s) are not supported by default,
+but can be managed by pre-registering their REST mappings as `trusted_rest_mappings`
+in the [cluster configuration](cluster.md#trustedrestmapping).
 
 ## Order of application
 
