@@ -31,7 +31,7 @@ jobs:
         run: |
           grep -F 'no tests failed for plugin "e2e" in tarball' /tmp/e2e-check.log
       - name: Upload sonobuoy test result
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: sonobuoy-test
           path: /tmp/sonobuoy.tar.gz
@@ -81,7 +81,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Download sonobuoy test
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: sonobuoy-test
       - name: Extract tag

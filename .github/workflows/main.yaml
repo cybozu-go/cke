@@ -17,7 +17,7 @@ jobs:
           go-version-file: go.mod
       - name: Check auto-generated files
         run: make check-generate
-      - run: docker run -d --network host gcr.io/etcd-development/etcd:v3.6.7
+      - run: docker run -d --network host gcr.io/etcd-development/etcd:v3.6.8
       - run: make test
       - run: make install GOBIN=$(pwd)/docker
       - run: docker build -t ghcr.io/cybozu-go/cke:latest ./docker
