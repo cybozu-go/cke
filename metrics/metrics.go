@@ -89,6 +89,13 @@ var repairQueueItems = prometheus.NewDesc(
 	nil,
 )
 
+var repairQueueEntries = prometheus.NewDesc(
+	prometheus.BuildFQName(namespace, "", "repair_queue_entries"),
+	"Information about repair queue entries.",
+	[]string{"index", "address", "status", "step"},
+	nil,
+)
+
 var machineRepairStatus = prometheus.NewDesc(
 	prometheus.BuildFQName(namespace, "", "machine_repair_status"),
 	"The repair status of a machine.",
