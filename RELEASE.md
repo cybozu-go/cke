@@ -32,18 +32,22 @@ It should look like:
 
 ## Bump version
 
-1. Determine a new version number. Then set `VERSION` variable.
+1. Determine a new version number. Then set `VERSION` and `BASE` variables.
 
     ```console
     # Set VERSION and confirm it. It should not have "v" prefix.
     $ VERSION=x.y.z
     $ echo $VERSION
+    # Set BASE. This is "main" in most cases.
+    # When you release a new patch version in an older minor version series of CKE, use `release-x.y` branch. You should have pushed backporting commits to `release-x.y` branch.
+    $ BASE=main
+    $ echo $BASE
     ```
 
-2. Make a branch to release
+2. Make a branch to release.
 
     ```console
-    $ git checkout main
+    $ git checkout $BASE
     $ git pull
     $ git checkout -b "bump-$VERSION"
     ```
@@ -55,7 +59,7 @@ It should look like:
     ```console
     $ git commit -a -m "Bump version to $VERSION"
     $ git push -u origin HEAD
-    $ gh pr create -f
+    $ gh pr create -f --base $BASE
     ```
 
 6. When updating to `x.y.0` or its RC, run Sonobuoy test manually and make sure that it has been passed.
@@ -63,11 +67,13 @@ It should look like:
 8. Add a git tag to the main HEAD, then push it.
 
     ```console
-    # Set VERSION again.
+    # Set VERSION and BASE again.
     $ VERSION=x.y.z
     $ echo $VERSION
+    $ BASE=main
+    $ echo $BASE
 
-    $ git checkout main
+    $ git checkout $BASE
     $ git pull
     $ git tag -a -m "Release v$VERSION" "v$VERSION"
 
