@@ -6,6 +6,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.33.3]
+
 ### Added
 
 - Add trusted REST mappings fallback for CRD resources in [#852](https://github.com/cybozu-go/cke/pull/852)
@@ -82,7 +84,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.33.2...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.33.3...HEAD
+[1.33.3]: https://github.com/cybozu-go/cke/compare/v1.33.2...v1.33.3
 [1.33.2]: https://github.com/cybozu-go/cke/compare/v1.33.1...v1.33.2
 [1.33.1]: https://github.com/cybozu-go/cke/compare/v1.33.0...v1.33.1
 [1.33.0]: https://github.com/cybozu-go/cke/compare/v1.32.6...v1.33.0
