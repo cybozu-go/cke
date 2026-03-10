@@ -758,15 +758,16 @@ func testRepair(t *testing.T) {
 				case "cke_repair_queue_entries":
 					for _, m := range mf.Metric {
 						labels := labelToMap(m.Label)
-						if len(labels) != 4 {
+						if len(labels) != 5 {
 							t.Error("cke_repair_queue_entries should have exactly four labels", labels)
 						}
 						index := labels["index"]
 						metricsEntries[index] = map[string]string{
-							"address": labels["address"],
-							"status":  labels["status"],
-							"step":    labels["step"],
-							"value":   fmt.Sprintf("%d", int(*m.Gauge.Value)),
+							"address":   labels["address"],
+							"operation": labels["operation"],
+							"status":    labels["status"],
+							"step":      labels["step"],
+							"value":     fmt.Sprintf("%d", int(*m.Gauge.Value)),
 						}
 					}
 				}
