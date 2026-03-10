@@ -326,6 +326,7 @@ func (c nodeMetricsCollector) collectRepair(ch chan<- prometheus.Metric) {
 			1,
 			strconv.FormatInt(entry.Index, 10),
 			entry.Address,
+			entry.Operation,
 			string(entry.Status),
 			strconv.Itoa(entry.Step),
 		)
