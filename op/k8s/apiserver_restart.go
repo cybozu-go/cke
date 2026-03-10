@@ -288,7 +288,7 @@ func APIServerParams(advertiseAddress, serviceSubnet string, auditLogEnabled boo
 
 		// enable coordinated leader election for stable rolling restart of API server processes
 		// disable ListFromCacheSnapshot and WatchList to check if they cause flaky tests
-		"--feature-gates=CoordinatedLeaderElection=true,WatchList=false",
+		"--feature-gates=CoordinatedLeaderElection=true,ListFromCacheSnapshot=false,WatchList=false",
 		"--runtime-config=coordination.k8s.io/v1beta1=true",
 	}
 	if auditLogEnabled {
