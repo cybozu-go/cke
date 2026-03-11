@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -69,6 +70,7 @@ type repairExpected struct {
 	autoRepairEnabled  float64
 	items              map[string]float64
 	machineStatus      map[string]map[string]float64
+	entries            map[string]map[string]string
 }
 
 type repairTestCase struct {
@@ -594,6 +596,7 @@ func testRepair(t *testing.T) {
 						"failed":     0,
 					},
 				},
+				entries: map[string]map[string]string{},
 			},
 		},
 		{
@@ -603,16 +606,25 @@ func testRepair(t *testing.T) {
 				autoRepairEnabled:  true,
 				entries: []*cke.RepairQueueEntry{
 					{
-						Address: "1.1.1.1",
-						Status:  cke.RepairStatusSucceeded,
+						Index:     1,
+						Address:   "1.1.1.1",
+						Status:    cke.RepairStatusSucceeded,
+						Operation: "unreachable",
+						Step:      0,
 					},
 					{
-						Address: "10.10.10.10",
-						Status:  cke.RepairStatusSucceeded,
+						Index:     2,
+						Address:   "10.10.10.10",
+						Status:    cke.RepairStatusSucceeded,
+						Operation: "unreachable",
+						Step:      1,
 					},
 					{
-						Address: "10.10.10.11",
-						Status:  cke.RepairStatusProcessing,
+						Index:     3,
+						Address:   "10.10.10.11",
+						Status:    cke.RepairStatusProcessing,
+						Operation: "unhealthy",
+						Step:      2,
 					},
 				},
 			},
@@ -651,6 +663,29 @@ func testRepair(t *testing.T) {
 						"failed":     0,
 					},
 				},
+				entries: map[string]map[string]string{
+					"1": {
+						"address":   "1.1.1.1",
+						"operation": "unreachable",
+						"status":    string(cke.RepairStatusSucceeded),
+						"step":      "0",
+						"value":     "1",
+					},
+					"2": {
+						"address":   "10.10.10.10",
+						"operation": "unreachable",
+						"status":    string(cke.RepairStatusSucceeded),
+						"step":      "1",
+						"value":     "1",
+					},
+					"3": {
+						"address":   "10.10.10.11",
+						"operation": "unhealthy",
+						"status":    string(cke.RepairStatusProcessing),
+						"step":      "2",
+						"value":     "1",
+					},
+				},
 			},
 		},
 	}
@@ -680,6 +715,8 @@ func testRepair(t *testing.T) {
 			metricsAutoRepairEnabledFound := false
 			metricsItems := make(map[string]float64)
 			metricsStatus := make(map[string]map[string]float64)
+			metricsEntries := make(map[string]map[string]string)
+
 			for _, mf := range metricsFamily {
 				switch *mf.Name {
 				case "cke_repair_queue_enabled":
@@ -718,6 +755,21 @@ func testRepair(t *testing.T) {
 						}
 						metricsStatus[address][status] = *m.Gauge.Value
 					}
+				case "cke_repair_queue_entries":
+					for _, m := range mf.Metric {
+						labels := labelToMap(m.Label)
+						if len(labels) != 5 {
+							t.Error("cke_repair_queue_entries should have exactly four labels", labels)
+						}
+						index := labels["index"]
+						metricsEntries[index] = map[string]string{
+							"address":   labels["address"],
+							"operation": labels["operation"],
+							"status":    labels["status"],
+							"step":      labels["step"],
+							"value":     fmt.Sprintf("%d", int(*m.Gauge.Value)),
+						}
+					}
 				}
 			}
 			if !metricsRebootQueueEnabledFound {
@@ -731,6 +783,9 @@ func testRepair(t *testing.T) {
 			}
 			if !cmp.Equal(metricsStatus, tt.expected.machineStatus) {
 				t.Errorf("metrics cke_machine_repair_status is wrong. expected: %v, actual: %v", tt.expected.machineStatus, metricsStatus)
+			}
+			if !cmp.Equal(metricsEntries, tt.expected.entries) {
+				t.Errorf("metrics cke_repair_queue_entries is wrong. expected: %v, actual: %v", tt.expected.entries, metricsEntries)
 			}
 		})
 	}
