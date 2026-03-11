@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -145,6 +146,7 @@ func (c nodeMetricsCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- repairQueueEnabled
 	ch <- repairQueueItems
 	ch <- machineRepairStatus
+	ch <- repairQueueEntries
 }
 
 func (c nodeMetricsCollector) Collect(ch chan<- prometheus.Metric) {
@@ -316,5 +318,17 @@ func (c nodeMetricsCollector) collectRepair(ch chan<- prometheus.Metric) {
 				status,
 			)
 		}
+	}
+	for _, entry := range entries {
+		ch <- prometheus.MustNewConstMetric(
+			repairQueueEntries,
+			prometheus.GaugeValue,
+			1,
+			strconv.FormatInt(entry.Index, 10),
+			entry.Address,
+			entry.Operation,
+			string(entry.Status),
+			strconv.Itoa(entry.Step),
+		)
 	}
 }
