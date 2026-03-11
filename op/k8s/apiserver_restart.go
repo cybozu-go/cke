@@ -248,8 +248,9 @@ func APIServerParams(advertiseAddress, serviceSubnet string, auditLogEnabled boo
 		"--etcd-cafile=" + op.K8sPKIPath("etcd-ca.crt"),
 		"--etcd-certfile=" + op.K8sPKIPath("apiserver-etcd-client.crt"),
 		"--etcd-keyfile=" + op.K8sPKIPath("apiserver-etcd-client.key"),
-		// disable compaction by apisever as it cannot do it.
-		"--etcd-compaction-interval=0",
+		// set workaround for etcd compaction to avoid flaky tests.
+		// https://github.com/kubernetes/kubernetes/pull/132876#issuecomment-3266469275
+		"--etcd-compaction-interval=5m",
 
 		"--bind-address=0.0.0.0",
 		"--client-ca-file=" + op.K8sPKIPath("ca.crt"),
@@ -288,7 +289,7 @@ func APIServerParams(advertiseAddress, serviceSubnet string, auditLogEnabled boo
 
 		// enable coordinated leader election for stable rolling restart of API server processes
 		// disable ListFromCacheSnapshot and WatchList to check if they cause flaky tests
-		"--feature-gates=CoordinatedLeaderElection=true,ListFromCacheSnapshot=false,WatchList=false",
+		"--feature-gates=CoordinatedLeaderElection=true,WatchList=false",
 		"--runtime-config=coordination.k8s.io/v1beta1=true",
 	}
 	if auditLogEnabled {
