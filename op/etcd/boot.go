@@ -8,6 +8,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 type bootOp struct {
@@ -115,10 +116,11 @@ func (c setupEtcdAuthCommand) Run(ctx context.Context, inf cke.Infrastructure, _
 	if err != nil {
 		return err
 	}
-	//_, err = cli.UserGrantRole(ctx, "kube-apiserver", "root")
-	//if err != nil {
-	//	return err
-	//}
+
+	_, err = cli.RoleGrantPermission(ctx, "kube-apiserver", "compact_rev_key", "", clientv3.PermissionType(clientv3.PermReadWrite))
+	if err != nil {
+		return err
+	}
 
 	_, err = cli.AuthEnable(ctx)
 	return err
