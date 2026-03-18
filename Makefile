@@ -1,6 +1,6 @@
 # Makefile for cke
 
-ETCD_VERSION = 3.6.7
+ETCD_VERSION = 3.6.8
 
 .PHONY: all
 all: test

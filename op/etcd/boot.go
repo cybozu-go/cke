@@ -8,6 +8,7 @@ import (
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 type bootOp struct {
@@ -112,6 +113,12 @@ func (c setupEtcdAuthCommand) Run(ctx context.Context, inf cke.Infrastructure, _
 	}
 
 	err = cke.AddUserRole(ctx, cli, "kube-apiserver", "/registry/")
+	if err != nil {
+		return err
+	}
+
+	// Add permission for compact_rev_key to allow compaction of etcd.
+	_, err = cli.RoleGrantPermission(ctx, "kube-apiserver", "compact_rev_key", "", clientv3.PermissionType(clientv3.PermReadWrite))
 	if err != nil {
 		return err
 	}

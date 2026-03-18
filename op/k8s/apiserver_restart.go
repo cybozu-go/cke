@@ -248,8 +248,7 @@ func APIServerParams(advertiseAddress, serviceSubnet string, auditLogEnabled boo
 		"--etcd-cafile=" + op.K8sPKIPath("etcd-ca.crt"),
 		"--etcd-certfile=" + op.K8sPKIPath("apiserver-etcd-client.crt"),
 		"--etcd-keyfile=" + op.K8sPKIPath("apiserver-etcd-client.key"),
-		// disable compaction by apisever as it cannot do it.
-		"--etcd-compaction-interval=0",
+		"--etcd-compaction-interval=5m",
 
 		"--bind-address=0.0.0.0",
 		"--client-ca-file=" + op.K8sPKIPath("ca.crt"),
