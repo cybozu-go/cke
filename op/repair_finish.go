@@ -1,6 +1,7 @@
 package op
 
 import (
+	"bytes"
 	"context"
 	"time"
 
@@ -67,6 +68,7 @@ func repairFinish(ctx context.Context, inf cke.Infrastructure, entry *cke.Repair
 	if succeeded {
 		entry.Status = cke.RepairStatusSucceeded
 		//execute Success command
+		var stderr bytes.Buffer
 		err := func() error {
 			op, err := entry.GetMatchingRepairOperation(cluster)
 			if err != nil {
@@ -87,12 +89,14 @@ func repairFinish(ctx context.Context, inf cke.Infrastructure, entry *cke.Repair
 			}
 			args := append(op.SuccessCommand[1:], entry.Address)
 			command := well.CommandContext(ctx, op.SuccessCommand[0], args...)
+			command.Stderr = &stderr
 			return command.Run()
 		}()
 		if err != nil {
 			entry.Status = cke.RepairStatusFailed
 			log.Warn("SuccessCommand failed", map[string]interface{}{
 				log.FnError: err,
+				"stderr":    stderr.String(),
 				"index":     entry.Index,
 				"address":   entry.Address,
 			})

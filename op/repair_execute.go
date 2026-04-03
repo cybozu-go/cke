@@ -1,6 +1,7 @@
 package op
 
 import (
+	"bytes"
 	"context"
 	"strings"
 	"time"
@@ -74,6 +75,7 @@ func (c repairExecuteCommand) Run(ctx context.Context, inf cke.Infrastructure, _
 	}
 RETRY:
 	for i := 0; i < attempts; i++ {
+		var stderr bytes.Buffer
 		err := func() error {
 			ctx := ctx
 			timeout := cke.DefaultRepairCommandTimeoutSeconds
@@ -88,6 +90,7 @@ RETRY:
 
 			args := append(c.command[1:], c.entry.Address)
 			command := well.CommandContext(ctx, c.command[0], args...)
+			command.Stderr = &stderr
 			return command.Run()
 		}()
 		if err == nil {
@@ -96,6 +99,7 @@ RETRY:
 
 		log.Warn("failed on executing repair command", map[string]interface{}{
 			log.FnError: err,
+			"stderr":    stderr.String(),
 			"address":   c.entry.Address,
 			"command":   strings.Join(c.command, " "),
 			"attempts":  i,
