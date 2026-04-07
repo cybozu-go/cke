@@ -307,6 +307,7 @@ Other Machine fields are also translated to labels as follows.
 | `spec.role`         | `node-role.kubernetes.io/<role>`         | `"true"`                                            |
 | `spec.registerDate` | `cke.cybozu.com/register-month`          | `spec.registerDate` in `yyyy-MM` format.            |
 | `spec.retireDate`   | `cke.cybozu.com/retire-month`            | `spec.retireDate` in `yyyy-MM` format.              |
+| `spec.retireDate`   | `cke.cybozu.com/retire-year`             | `spec.retireDate` in `yyyy` format.                 |
 
 In addition `node-role.kubernetes.io/master` is set to `"true"` in the control plane node.
 

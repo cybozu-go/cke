@@ -3,6 +3,7 @@ package sabakan
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -81,7 +82,10 @@ func testMachineToNode(t *testing.T) {
 		t.Error(`res1.Labels["cke.cybozu.com/register-month"] != machine.Spec.RegisterDate.Format("2006-01"), actual:`, res1.Labels)
 	}
 	if res1.Labels[domain+"/retire-month"] != testBaseTS.Format("2006-01") {
-		t.Error(`res1.Labels["cke.cybozu.com/register-month"] != machine.Spec.RetireDate.Format("2006-01"), actual:`, res1.Labels)
+		t.Error(`res1.Labels["cke.cybozu.com/retire-month"] != machine.Spec.RetireDate.Format("2006-01"), actual:`, res1.Labels)
+	}
+	if res1.Labels[domain+"/retire-year"] != strconv.Itoa(testBaseTS.Year()) {
+		t.Error(`res1.Labels["cke.cybozu.com/retire-year"] != strconv.Itoa(machine.Spec.RetireDate.Year()), actual:`, res1.Labels)
 	}
 	if !containsTaint(res1.Taints, corev1.Taint{Key: "foo", Effect: corev1.TaintEffectNoSchedule}) {
 		t.Error(`res1.Taints do not have corev1.Taint{Key"foo", Effect: corev1.TaintEffectNoSchedule}, actual:`, res1.Taints)
