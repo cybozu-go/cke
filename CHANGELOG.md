@@ -6,29 +6,16 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
-## [1.34.2]
-
-- Add retire-year label in sabakan integration[#869](https://github.com/cybozu-go/cke/pull/869)
-
-## [1.34.1]
+## [1.35.0-rc.1]
 
 ### Changed
 
-- Add stderr logging to repair command execution [#867](https://github.com/cybozu-go/cke/pull/867)
-- Update etcd to v3.6.9 [#866](https://github.com/cybozu-go/cke/pull/866)
-- Add how to release for older minor version[#859](https://github.com/cybozu-go/cke/pull/859)
-
-## [1.34.0]
-
-### Changed
-
-- Support Kubernetes 1.34 in [#857](https://github.com/cybozu-go/cke/pull/857)
-  - Update Go modules and GitHub Actions in [#854](https://github.com/cybozu-go/cke/pull/854)
-  - Enabled etcd compaction by kube-apiserver in [#857](https://github.com/cybozu-go/cke/pull/857)
-  - Updated dependencies to support Kubernetes 1.34 in [#857](https://github.com/cybozu-go/cke/pull/857)
+- Support Kubernetes 1.34 in [#872](https://github.com/cybozu-go/cke/pull/872)
+  - Update Go modules and GitHub Actions in [#871](https://github.com/cybozu-go/cke/pull/871)
 
 ## Ancient changes
 
+- See [release-1.34/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.34/CHANGELOG.md) for changes in CKE 1.34.
 - See [release-1.33/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.33/CHANGELOG.md) for changes in CKE 1.33.
 - See [release-1.32/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.32/CHANGELOG.md) for changes in CKE 1.32.
 - See [release-1.31/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.31/CHANGELOG.md) for changes in CKE 1.31.
@@ -52,8 +39,5 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.34.2...HEAD
-[1.34.2]: https://github.com/cybozu-go/cke/compare/v1.34.1...v1.34.2
-[1.34.1]: https://github.com/cybozu-go/cke/compare/v1.34.0...v1.34.1
-[1.34.0]: https://github.com/cybozu-go/cke/compare/v1.33.4...v1.34.0
-[1.34.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.33.4...v1.34.0-rc.1
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.35.0-rc.1...HEAD
+[1.34.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.34.2...v1.35.0-rc.1

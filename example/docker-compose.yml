@@ -2,7 +2,10 @@ version: '2'
 services:
   cke:
     container_name: cke
-    image: ghcr.io/cybozu-go/cke:1.33.2
+    image: ghcr.io/cybozu-go/cke:1.35.0
+    build:
+      context: ../docker
+      dockerfile: Dockerfile
     networks:
       app_net:
         ipv4_address: 172.30.0.11

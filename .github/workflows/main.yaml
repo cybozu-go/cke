@@ -114,9 +114,10 @@ jobs:
               echo Update CKE branch tag in example/docker-compose.yml
           fi
         working-directory: ./example
+      - name: Prepare building CKE image
+        run: make install GOBIN=$(pwd)/docker
       - name: Set up compose test
         run: |
-          docker compose build
           docker compose up -d
           ./wait-up.sh
         working-directory: ./example
