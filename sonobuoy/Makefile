@@ -1,10 +1,10 @@
 ### Configurable variables
 ### Make sure the binary is included in the GitHub release. The release of ct v0.9.4 does not include binary files.
 SONOBUOY_VERSION = 0.57.3
-KUBECTL_VERSION = 1.34.4
-DOCKER_COMPOSE_VERSION = 5.1.0
+KUBECTL_VERSION = 1.35.5
+DOCKER_COMPOSE_VERSION = 5.1.3
 CT_VERSION = 0.9.3
-CILIUM_VERSION = 1.19.1
+CILIUM_VERSION = 1.19.3
 
 ### Unconfigurable
 CURL = curl -fsL
