@@ -10,7 +10,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ### Changed
 
-- Support Kubernetes 1.34 in [#872](https://github.com/cybozu-go/cke/pull/872)
+- Support Kubernetes 1.35 in [#873](https://github.com/cybozu-go/cke/pull/873)
   - Update Go modules and GitHub Actions in [#871](https://github.com/cybozu-go/cke/pull/871)
 
 ## Ancient changes
@@ -40,4 +40,4 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
 [Unreleased]: https://github.com/cybozu-go/cke/compare/v1.35.0-rc.1...HEAD
-[1.34.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.34.2...v1.35.0-rc.1
+[1.35.0-rc.1]: https://github.com/cybozu-go/cke/compare/v1.34.2...v1.35.0-rc.1
