@@ -6,6 +6,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Update etcd to v3.6.11 in [#881](https://github.com/cybozu-go/cke/pull/881)
+
 ## [1.34.3]
 
 ### Changed
