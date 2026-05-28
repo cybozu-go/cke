@@ -63,13 +63,14 @@ type docker struct {
 }
 
 func (c docker) PullImage(img Image) error {
-	stdout, stderr, err := c.agent.Run("docker image list --format '{{.Repository}}:{{.Tag}}'")
+	stdout, stderr, err := c.agent.Run("docker image list --digests --format '{{.Repository}}@{{.Digest}}'")
 	if err != nil {
 		return fmt.Errorf("%w, stdout: %s, stderr: %s", err, stdout, stderr)
 	}
 
+	ref := img.Repository() + "@" + img.Digest()
 	for _, i := range strings.Split(string(stdout), "\n") {
-		if img.Name() == i {
+		if ref == i {
 			return nil
 		}
 	}

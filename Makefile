@@ -32,6 +32,11 @@ test: test-tools
 install:
 	go install ./pkg/...
 
+.PHONY: images
+images:
+	go generate ./
+	$(MAKE) static
+
 .PHONY: static
 static: goimports
 	go generate ./static
