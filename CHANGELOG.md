@@ -9,6 +9,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 ### Changed
 
 - Update etcd to v3.6.11 in [#881](https://github.com/cybozu-go/cke/pull/881)
+- add root role to kube-apiserver in [#883](https://github.com/cybozu-go/cke/pull/883)
 
 ## [1.34.3]
 
