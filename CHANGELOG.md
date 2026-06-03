@@ -6,6 +6,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Update Kubernetes to 1.34.8
+
 ## [1.34.4]
 
 ### Changed
