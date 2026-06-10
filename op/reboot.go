@@ -659,7 +659,7 @@ func (o *rebootCancelOp) Name() string {
 	return "reboot-cancel"
 }
 
-func listProtectedNamespaces(ctx context.Context, cs *kubernetes.Clientset, ls *metav1.LabelSelector) (map[string]bool, error) {
+func listProtectedNamespaces(ctx context.Context, cs kubernetes.Interface, ls *metav1.LabelSelector) (map[string]bool, error) {
 	selector, err := metav1.LabelSelectorAsSelector(ls)
 	if err != nil {
 		// ls should have been validated

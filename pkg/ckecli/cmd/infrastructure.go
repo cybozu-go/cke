@@ -105,7 +105,7 @@ func (i *cliInfrastructure) K8sConfig(ctx context.Context, n *cke.Node) (*rest.C
 	panic("not implemented")
 }
 
-func (i *cliInfrastructure) K8sClient(ctx context.Context, n *cke.Node) (*kubernetes.Clientset, error) {
+func (i *cliInfrastructure) K8sClient(ctx context.Context, n *cke.Node) (kubernetes.Interface, error) {
 	c, k, err := cke.KubernetesCA{}.IssueUserCert(ctx, i, cke.RoleAdmin, cke.AdminGroup, "1h")
 	if err != nil {
 		return nil, err
