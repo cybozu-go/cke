@@ -107,6 +107,16 @@ func TestCheckDrainCompletion(t *testing.T) {
 			wantCompleted: 0,
 			wantTimedout:  0,
 		},
+		{
+			name:         "draining with no pods but volumes in use should be counted as timed out if timed out",
+			clusterNodes: []string{"10.0.0.1"},
+			objects:      []runtime.Object{nodeWithVolumes("10.0.0.1")},
+			entries: []*cke.RebootQueueEntry{
+				{Node: "10.0.0.1", Status: cke.RebootStatusDraining, LastTransitionTime: timedOut},
+			},
+			wantCompleted: 0,
+			wantTimedout:  1,
+		},
 	}
 
 	for _, tt := range tests {

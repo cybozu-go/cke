@@ -316,11 +316,16 @@ func CheckDrainCompletion(ctx context.Context, inf cke.Infrastructure, apiserver
 
 		errPodDeletion := checkPodDeletion(ctx, cs, entry.Node)
 		if errPodDeletion == nil {
-			errVolumeInUse := checkVolumesInUse(ctx, cs, entry.Node)
-			if errVolumeInUse == nil {
-				completed = append(completed, entry)
+			volumesInUse, errVolumeInUse := checkVolumesInUse(ctx, cs, entry.Node)
+			if errVolumeInUse != nil {
+				return nil, nil, errVolumeInUse
 			}
-		} else if entry.LastTransitionTime.Before(t) {
+			if !volumesInUse {
+				completed = append(completed, entry)
+				continue
+			}
+		}
+		if entry.LastTransitionTime.Before(t) {
 			timedout = append(timedout, entry)
 		}
 	}
@@ -391,13 +396,13 @@ func rebootCompleted(ctx context.Context, c *cke.Cluster, entry *cke.RebootQueue
 	return result
 }
 
-func checkVolumesInUse(ctx context.Context, cs kubernetes.Interface, node string) error {
+func checkVolumesInUse(ctx context.Context, cs kubernetes.Interface, node string) (bool, error) {
 	nodeObj, err := cs.CoreV1().Nodes().Get(ctx, node, metav1.GetOptions{})
 	if err != nil {
-		return err
+		return true, err
 	}
 	if len(nodeObj.Status.VolumesInUse) > 0 {
-		return fmt.Errorf("volumesInUse exists in node %s: %v", node, nodeObj.Status.VolumesInUse)
+		return true, nil
 	}
-	return nil
+	return false, nil
 }
