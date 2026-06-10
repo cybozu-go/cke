@@ -2,6 +2,7 @@ package mtest
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -41,5 +42,24 @@ func testLocalProxy() {
 			}
 			return errors.New("cke-unbound service is not running")
 		}, 5, 0.1).Should(Succeed())
+	})
+
+	It("should use digest-pinned images", func() {
+		out := execSafeAt(host1, "docker", "inspect", "kube-proxy", "cke-unbound")
+		var inspects []struct {
+			Config struct {
+				Image string `json:"Image"`
+			} `json:"Config"`
+			Name string `json:"Name"`
+		}
+		err := json.Unmarshal(out, &inspects)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(inspects).To(HaveLen(2))
+
+		for _, inspect := range inspects {
+			fmt.Fprintf(GinkgoWriter, "container=%s image=%s\n", inspect.Name, inspect.Config.Image)
+			Expect(inspect.Config.Image).To(ContainSubstring("@sha256:"),
+				"container %s uses non-digest image: %s", inspect.Name, inspect.Config.Image)
+		}
 	})
 }

@@ -90,6 +90,30 @@ func testOperators() {
 			},
 		))
 
+		By("Checking container images")
+		for _, n := range []string{node1, node2, node3, node4, node5} {
+			out := execSafeAt(n, "docker", "ps", "-aq")
+			containerIDs := strings.Fields(strings.TrimSpace(string(out)))
+			Expect(containerIDs).NotTo(BeEmpty(), "node %s has no containers", n)
+
+			out = execSafeAt(n, append([]string{"docker", "inspect"}, containerIDs...)...)
+			var inspects []struct {
+				Config struct {
+					Image string `json:"Image"`
+				} `json:"Config"`
+				Name string `json:"Name"`
+			}
+			err := json.Unmarshal(out, &inspects)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inspects).To(HaveLen(len(containerIDs)))
+
+			for _, inspect := range inspects {
+				fmt.Fprintf(GinkgoWriter, "node=%s container=%s image=%s\n", n, inspect.Name, inspect.Config.Image)
+				Expect(inspect.Config.Image).To(ContainSubstring("@sha256:"),
+					"container %s on node %s uses non-digest image: %s", inspect.Name, n, inspect.Config.Image)
+			}
+		}
+
 		By("Stopping etcd servers")
 		// this will run:
 		// - EtcdStartOp
