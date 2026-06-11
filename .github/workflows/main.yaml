@@ -1,9 +1,8 @@
 name: main
 on:
-  pull_request:
   push:
     branches:
-      - 'main'
+      - 'test-image-ditest'
 env:
   filename: "main.yaml"
 jobs:
