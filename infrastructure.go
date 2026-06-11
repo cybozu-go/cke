@@ -136,7 +136,7 @@ type Infrastructure interface {
 
 	NewEtcdClient(ctx context.Context, endpoints []string) (*clientv3.Client, error)
 	K8sConfig(ctx context.Context, n *Node) (*rest.Config, error)
-	K8sClient(ctx context.Context, n *Node) (*kubernetes.Clientset, error)
+	K8sClient(ctx context.Context, n *Node) (kubernetes.Interface, error)
 	HTTPClient() *well.HTTPClient
 	HTTPSClient(ctx context.Context) (*well.HTTPClient, error)
 
@@ -313,7 +313,7 @@ func (i *ckeInfrastructure) K8sConfig(ctx context.Context, n *Node) (*rest.Confi
 	}, nil
 }
 
-func (i *ckeInfrastructure) K8sClient(ctx context.Context, n *Node) (*kubernetes.Clientset, error) {
+func (i *ckeInfrastructure) K8sClient(ctx context.Context, n *Node) (kubernetes.Interface, error) {
 	cfg, err := i.K8sConfig(ctx, n)
 	if err != nil {
 		return nil, err
