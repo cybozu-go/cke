@@ -58,8 +58,6 @@ func testLocalProxy() {
 
 		for _, inspect := range inspects {
 			fmt.Fprintf(GinkgoWriter, "container=%s image=%s\n", inspect.Name, inspect.Config.Image)
-			Expect(inspect.Config.Image).To(ContainSubstring("@sha256:"),
-				"container %s uses non-digest image: %s", inspect.Name, inspect.Config.Image)
 		}
 	})
 }

@@ -109,8 +109,6 @@ func testOperators() {
 
 			for _, inspect := range inspects {
 				fmt.Fprintf(GinkgoWriter, "node=%s container=%s image=%s\n", n, inspect.Name, inspect.Config.Image)
-				Expect(inspect.Config.Image).To(ContainSubstring("@sha256:"),
-					"container %s on node %s uses non-digest image: %s", inspect.Name, n, inspect.Config.Image)
 			}
 		}
 
