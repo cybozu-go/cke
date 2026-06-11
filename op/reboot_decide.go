@@ -22,7 +22,7 @@ import (
 // It calls podHandler for each Pods not owned by Job nor DaemonSet and calls jobPodHandler for each running Pods owned by a Job.
 // If those handlers returns error, this function returns the error immediately.
 // Note: This function does not distinguish API errors and state evaluation returned from subfunction.
-func enumeratePods(ctx context.Context, cs *kubernetes.Clientset, node string,
+func enumeratePods(ctx context.Context, cs kubernetes.Interface, node string,
 	podHandler func(pod *corev1.Pod) error, jobPodHandler func(pod *corev1.Pod) error) error {
 
 	podList, err := cs.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
@@ -66,7 +66,7 @@ func enumeratePods(ctx context.Context, cs *kubernetes.Clientset, node string,
 // It calls podHandler for each target pods.
 // If the handler returns error, this function returns the error immediately.
 // Note: This function does not distinguish API errors and state evaluation returned from subfunction.
-func enumerateOnDeleteDaemonSetPods(ctx context.Context, cs *kubernetes.Clientset, node string,
+func enumerateOnDeleteDaemonSetPods(ctx context.Context, cs kubernetes.Interface, node string,
 	podHandler func(pod *corev1.Pod) error) error {
 
 	daemonSets, err := cs.AppsV1().DaemonSets(corev1.NamespaceAll).List(ctx, metav1.ListOptions{})
@@ -100,18 +100,18 @@ func enumerateOnDeleteDaemonSetPods(ctx context.Context, cs *kubernetes.Clientse
 
 // dryRunEvictOrDeleteNodePod checks eviction or deletion of Pods on the specified Node can proceed.
 // It returns an error if a running Pod exists or an eviction of the Pod in protected namespace failed.
-func dryRunEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool) error {
+func dryRunEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool) error {
 	return doEvictOrDeleteNodePod(ctx, cs, node, protected, 0, 0, true)
 }
 
 // evictOrDeleteNodePod evicts or delete Pods on the specified Node.
 // If a running Job Pod exists, this function returns an error.
-func evictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool, attempts int, interval time.Duration) error {
+func evictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, attempts int, interval time.Duration) error {
 	return doEvictOrDeleteNodePod(ctx, cs, node, protected, attempts, interval, false)
 }
 
 // deleteOnDeleteDaemonSetPod evicts or delete Pods on the specified Node that are owned by "updateStrategy:OnDelete" DaemonSets.
-func deleteOnDeleteDaemonSetPod(ctx context.Context, cs *kubernetes.Clientset, node string) error {
+func deleteOnDeleteDaemonSetPod(ctx context.Context, cs kubernetes.Interface, node string) error {
 	return doDeleteOnDeleteDaemonSetPod(ctx, cs, node)
 }
 
@@ -121,7 +121,7 @@ func deleteOnDeleteDaemonSetPod(ctx context.Context, cs *kubernetes.Clientset, n
 // If the eviction failed and the Pod's namespace is protected, it retries after `interval` interval at most `attempts` times.
 // If a running Job Pod exists, this function returns an error.
 // If `dry` is true, it performs dry run and `attempts` and `interval` are ignored.
-func doEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node string, protected map[string]bool, attempts int, interval time.Duration, dry bool) error {
+func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, attempts int, interval time.Duration, dry bool) error {
 	var deleteOptions *metav1.DeleteOptions
 	if dry {
 		deleteOptions = &metav1.DeleteOptions{
@@ -206,7 +206,7 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs *kubernetes.Clientset, node 
 }
 
 // doDeleteOnDeleteDaemonSetPod deletes 'OnDelete' DaemonSet pods on the specified Node.
-func doDeleteOnDeleteDaemonSetPod(ctx context.Context, cs *kubernetes.Clientset, node string) error {
+func doDeleteOnDeleteDaemonSetPod(ctx context.Context, cs kubernetes.Interface, node string) error {
 	return enumerateOnDeleteDaemonSetPods(ctx, cs, node, func(pod *corev1.Pod) error {
 		err := cs.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -222,7 +222,7 @@ func doDeleteOnDeleteDaemonSetPod(ctx context.Context, cs *kubernetes.Clientset,
 
 // checkPodDeletion checks whether the evicted or deleted Pods are eventually deleted.
 // If those pods still exist, this function returns an error.
-func checkPodDeletion(ctx context.Context, cs *kubernetes.Clientset, node string) error {
+func checkPodDeletion(ctx context.Context, cs kubernetes.Interface, node string) error {
 	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
 		return fmt.Errorf("pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
 	}, func(pod *corev1.Pod) error {
@@ -314,10 +314,18 @@ func CheckDrainCompletion(ctx context.Context, inf cke.Infrastructure, apiserver
 			continue
 		}
 
-		err := checkPodDeletion(ctx, cs, entry.Node)
-		if err == nil {
-			completed = append(completed, entry)
-		} else if entry.LastTransitionTime.Before(t) {
+		errPodDeletion := checkPodDeletion(ctx, cs, entry.Node)
+		if errPodDeletion == nil {
+			volumesInUse, errVolumeInUse := checkVolumesInUse(ctx, cs, entry.Node)
+			if errVolumeInUse != nil {
+				return nil, nil, errVolumeInUse
+			}
+			if !volumesInUse {
+				completed = append(completed, entry)
+				continue
+			}
+		}
+		if entry.LastTransitionTime.Before(t) {
 			timedout = append(timedout, entry)
 		}
 	}
@@ -386,4 +394,15 @@ func rebootCompleted(ctx context.Context, c *cke.Cluster, entry *cke.RebootQueue
 		return false
 	}
 	return result
+}
+
+func checkVolumesInUse(ctx context.Context, cs kubernetes.Interface, node string) (bool, error) {
+	nodeObj, err := cs.CoreV1().Nodes().Get(ctx, node, metav1.GetOptions{})
+	if err != nil {
+		return true, err
+	}
+	if len(nodeObj.Status.VolumesInUse) > 0 {
+		return true, nil
+	}
+	return false, nil
 }
