@@ -6,6 +6,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.33.6]
+
+### Changed
+
+- Check volumesInUse in CheckDrainCompletion in [#891](https://github.com/cybozu-go/cke/pull/891)
+
 ## [1.33.5]
 
 ### Changed
@@ -96,7 +102,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.33.5...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.33.6...HEAD
+[1.33.6]: https://github.com/cybozu-go/cke/compare/v1.33.5...v1.33.6
 [1.33.5]: https://github.com/cybozu-go/cke/compare/v1.33.4...v1.33.5
 [1.33.4]: https://github.com/cybozu-go/cke/compare/v1.33.3...v1.33.4
 [1.33.3]: https://github.com/cybozu-go/cke/compare/v1.33.2...v1.33.3
