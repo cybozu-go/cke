@@ -1,23 +1,37 @@
 package cke
 
+import "strings"
+
+//go:generate go run ./pkg/update-images/
+
 // Image is the type of container images.
 type Image string
 
-// Name returns docker image name.
+// Name returns the full image reference.
 func (i Image) Name() string {
 	return string(i)
 }
 
-// Container image definitions
-const (
-	EtcdImage            = Image("ghcr.io/cybozu/etcd:3.6.11.1")
-	KubernetesImage      = Image("ghcr.io/cybozu/kubernetes:1.35.5.1")
-	ToolsImage           = Image("ghcr.io/cybozu-go/cke-tools:1.35.0")
-	PauseImage           = Image("ghcr.io/cybozu/pause:3.10.1.5")
-	CoreDNSImage         = Image("ghcr.io/cybozu/coredns:1.14.2.1")
-	UnboundImage         = Image("ghcr.io/cybozu/unbound:1.25.1.1")
-	UnboundExporterImage = Image("ghcr.io/cybozu/unbound_exporter:0.5.0.4")
-)
+// Repository returns the repository part of the image reference (without tag and digest).
+func (i Image) Repository() string {
+	name := string(i)
+	if idx := strings.Index(name, "@"); idx >= 0 {
+		name = name[:idx]
+	}
+	if idx := strings.LastIndex(name, ":"); idx >= 0 && !strings.Contains(name[idx:], "/") {
+		name = name[:idx]
+	}
+	return name
+}
+
+// Digest returns the digest part of the image reference (e.g. "sha256:...").
+func (i Image) Digest() string {
+	name := string(i)
+	if idx := strings.Index(name, "@"); idx >= 0 {
+		return name[idx+1:]
+	}
+	return ""
+}
 
 // AllImages return container images list used by CKE
 func AllImages() []string {
