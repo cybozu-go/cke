@@ -73,7 +73,7 @@ func (i *localInfra) K8sConfig(ctx context.Context, n *cke.Node) (*rest.Config, 
 	panic("not implemented") // TODO: Implement
 }
 
-func (i *localInfra) K8sClient(ctx context.Context, n *cke.Node) (*kubernetes.Clientset, error) {
+func (i *localInfra) K8sClient(ctx context.Context, n *cke.Node) (kubernetes.Interface, error) {
 	if err := kubeHTTP.Init(ctx, i); err != nil {
 		return nil, err
 	}
