@@ -14,9 +14,10 @@ CKE processes reboot requests in the following manner:
 1. cordons the nodes to mark them as unschedulable.
 2. checks the existence of Job-managed Pods on the nodes. If such Pods exist on the nodes, uncordons the node immediately and process it again later.
 3. evicts (and/or deletes) non-DaemonSet-managed pods on the nodes.
-4. reboot the node by running hardware reboot command for the node.
-5. waits for boot by running boot check command for the node.
-6. uncordons the nodes and recovers them.
+4. waits for the volumes to be detached from the nodes.
+5. reboot the node by running hardware reboot command for the node.
+6. waits for boot by running boot check command for the node.
+7. uncordons the nodes and recovers them.
 
 The behavior of the reboot functionality is configurable through the [cluster configuration](cluster.md#reboot).
 
@@ -52,7 +53,8 @@ The queue is processed by CKE as follows:
        - mark the entry not to be drained again immediately
      3. evict non-DaemonSet-managed Pods. If the eviction is failed due to PDBs and the namespace of the Pod is not protected by `.reboot.protected_namespaces`, delete the Pods. If the deletion is also failed, backoff the draining.
    - If draining is timed out, backoff the draining.
-   - If draining is completed, run hardware reboot command specified by `.reboot.reboot_command` for the node and update the entry status to `rebooting`.
+   - If draining is completed, waits for the volumes to be detached from the nodes.
+   - If detaching volumes is completed, run hardware reboot command specified by `.reboot.reboot_command` for the node and update the entry status to `rebooting`.
    - remove entries if:
      - the node is confirmed booted by boot check command specified by `.reboot.boot_check_command` or
      - the entry status is `cancelled`
