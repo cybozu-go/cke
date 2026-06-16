@@ -361,12 +361,15 @@ func testRepairOperations() {
 
 		By("restarting CKE")
 		runCKE(ckeImageURL)
-		// Do not wait for completion: with two control plane nodes down the etcd
-		// cluster is not healthy, so CKE stays in the etcd-wait phase.
+		// Do not wait for status completion: with two control plane nodes down the
+		// etcd cluster is not healthy, so CKE stays in the etcd-wait phase. Just
+		// wait for the CKE container to be running so the assertion is meaningful.
+		Eventually(func() error {
+			_, _, err := execAt(host1, "docker", "inspect", "cke")
+			return err
+		}).Should(Succeed())
 
 		By("adding a repair request and confirming it does not proceed")
-		execSafeAt(host1, "docker", "exec", "cke", "find", "/tmp", "-maxdepth", "1", "-name", "mtest-repair-*", "-delete")
-		execSafeAt(host2, "docker", "exec", "cke", "find", "/tmp", "-maxdepth", "1", "-name", "mtest-repair-*", "-delete")
 		ckecliSafe("repair-queue", "add", "op1", "type1", node2, "SN1234")
 		repairShouldNotProceed()
 
