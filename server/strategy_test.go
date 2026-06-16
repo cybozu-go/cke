@@ -2733,6 +2733,42 @@ func TestDecideOps(t *testing.T) {
 			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
+			// Repair runs even when a failed control plane node makes its etcd member out of sync.
+			Name: "RepairControlPlaneFailureEtcdOutOfSync",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+			}).withSSHNotConnectedCP(0).withNotReadyMasterEndpoint(0).with(func(d testData) {
+				d.Status.Etcd.InSyncMembers[nodeNames[0]] = false
+			}),
+			ExpectedOps: []opData{
+				{"repair-execute", 1},
+			},
+			ExpectedPhase: cke.PhaseRepairMachines,
+		},
+		{
+			// Repair is blocked when an etcd member is out of sync without a control plane failure.
+			Name: "RepairBlockedByEtcdOutOfSyncWithoutCPFailure",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1"},
+			}).with(func(d testData) {
+				d.Status.Etcd.InSyncMembers[nodeNames[0]] = false
+			}),
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRepairMachines,
+		},
+		{
+			// Repair is blocked by a second out-of-sync member not caused by a control plane failure.
+			Name: "RepairBlockedByExtraEtcdOutOfSync",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+			}).withSSHNotConnectedCP(0).withNotReadyMasterEndpoint(0).with(func(d testData) {
+				d.Status.Etcd.InSyncMembers[nodeNames[0]] = false
+				d.Status.Etcd.InSyncMembers[nodeNames[1]] = false
+			}),
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRepairMachines,
+		},
+		{
 			Name: "RepairWithoutConfig",
 			Input: newData().withK8sResourceReady().withRepairEntries([]*cke.RepairQueueEntry{
 				{Address: nodeNames[4], MachineType: "type1", Operation: "op1"},

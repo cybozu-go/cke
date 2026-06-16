@@ -155,6 +155,32 @@ func (nf *NodeFilter) EtcdIsGood() bool {
 	return true
 }
 
+// EtcdIsGoodForRepair returns true like EtcdIsGood, but tolerates up to one
+// out-of-sync member running on an SSH-unreachable control plane node, since
+// such a member is the result of a control plane failure to be repaired.
+func (nf *NodeFilter) EtcdIsGoodForRepair() bool {
+	st := nf.status.Etcd
+	if !st.IsHealthy {
+		return false
+	}
+	tolerated := 0
+	for k := range st.Members {
+		if st.InSyncMembers[k] {
+			continue
+		}
+		// tolerate only an out-of-sync member caused by a control plane failure
+		n, ok := nf.nodeMap[k]
+		if !ok || !n.ControlPlane || nf.nodeStatus(n).SSHConnected {
+			return false
+		}
+		tolerated++
+		if tolerated > 1 {
+			return false
+		}
+	}
+	return true
+}
+
 // EtcdStopped filters nodes that are not running etcd.
 func (nf *NodeFilter) EtcdStopped(targets []*cke.Node) (nodes []*cke.Node) {
 	for _, n := range targets {
