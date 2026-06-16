@@ -285,4 +285,91 @@ func testRepairOperations() {
 		waitRepairSuccess()
 		nodesShouldBeSchedulable(nodeNames[1])
 	})
+
+	// A control plane failure naturally makes its etcd member out of sync.
+	// CKE must still repair the node, because the out-of-sync member is
+	// explained by the very control plane failure being repaired.
+	// This test stops a control plane node, so it must run last.
+	It("should repair a stopped control plane node whose etcd member is out of sync", func() {
+		cluster := getCluster(0, 1, 2)
+
+		By("cleaning up the repair queue")
+		ckecliSafe("repair-queue", "enable")
+		ckecliSafe("repair-queue", "delete-finished")
+		waitRepairEmpty()
+
+		By("stopping CKE to avoid hang-up in SSH session due to node3 shutdown")
+		stopCKE()
+
+		By("stopping a control plane node")
+		execAt(node3, "sudo", "systemd-run", "halt", "-f", "-f")
+		Eventually(func(g Gomega) {
+			_, err := execAtLocal("ping", "-c", "1", "-W", "1", node3)
+			g.Expect(err).To(HaveOccurred())
+		}).Should(Succeed())
+
+		By("restarting CKE")
+		runCKE(ckeImageURL)
+		waitServerStatusCompletion()
+
+		By("confirming etcd is healthy but only node3 is out of sync")
+		Eventually(func(g Gomega) {
+			cs, _, err := getClusterStatus(cluster)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(cs.Etcd.IsHealthy).To(BeTrue())
+			g.Expect(cs.Etcd.InSyncMembers).To(HaveKeyWithValue(node1, true))
+			g.Expect(cs.Etcd.InSyncMembers).To(HaveKeyWithValue(node2, true))
+			g.Expect(cs.Etcd.InSyncMembers).To(HaveKeyWithValue(node3, false))
+		}).Should(Succeed())
+
+		By("disabling need_drain to repair the stopped node without draining")
+		cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = false
+		clusterSetAndWait(cluster)
+
+		By("adding a repair request for the stopped control plane node")
+		execSafeAt(host1, "docker", "exec", "cke", "find", "/tmp", "-maxdepth", "1", "-name", "mtest-repair-*", "-delete")
+		execSafeAt(host2, "docker", "exec", "cke", "find", "/tmp", "-maxdepth", "1", "-name", "mtest-repair-*", "-delete")
+		ckecliSafe("repair-queue", "add", "op1", "type1", node3, "SN1234")
+
+		By("waiting for the repair to succeed")
+		waitRepairSuccess()
+		repairSuccessCommandSuccess(node3)
+
+		ckecliSafe("repair-queue", "delete-finished")
+		waitRepairEmpty()
+	})
+
+	// When a second control plane node also goes down, the etcd cluster is no
+	// longer good for repair (it loses quorum and the control plane is degraded
+	// by more than one node), so CKE must NOT proceed with repair.
+	// This stops a second control plane node, so it must run last.
+	It("should not repair while the control plane is degraded by more than one node", func() {
+		By("cleaning up the repair queue")
+		ckecliSafe("repair-queue", "enable")
+		ckecliSafe("repair-queue", "delete-finished")
+		waitRepairEmpty()
+
+		By("stopping CKE to avoid hang-up in SSH session due to node2 shutdown")
+		stopCKE()
+
+		By("stopping a second control plane node")
+		execAt(node2, "sudo", "systemd-run", "halt", "-f", "-f")
+		Eventually(func(g Gomega) {
+			_, err := execAtLocal("ping", "-c", "1", "-W", "1", node2)
+			g.Expect(err).To(HaveOccurred())
+		}).Should(Succeed())
+
+		By("restarting CKE")
+		runCKE(ckeImageURL)
+		// Do not wait for completion: with two control plane nodes down the etcd
+		// cluster is not healthy, so CKE stays in the etcd-wait phase.
+
+		By("adding a repair request and confirming it does not proceed")
+		execSafeAt(host1, "docker", "exec", "cke", "find", "/tmp", "-maxdepth", "1", "-name", "mtest-repair-*", "-delete")
+		execSafeAt(host2, "docker", "exec", "cke", "find", "/tmp", "-maxdepth", "1", "-name", "mtest-repair-*", "-delete")
+		ckecliSafe("repair-queue", "add", "op1", "type1", node2, "SN1234")
+		repairShouldNotProceed()
+
+		ckecliSafe("repair-queue", "delete-unfinished")
+	})
 }
