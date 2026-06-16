@@ -286,10 +286,7 @@ func testRepairOperations() {
 		nodesShouldBeSchedulable(nodeNames[1])
 	})
 
-	// A control plane failure naturally makes its etcd member out of sync.
-	// CKE must still repair the node, because the out-of-sync member is
-	// explained by the very control plane failure being repaired.
-	// This test stops a control plane node, so it must run last.
+	// The two tests above stop control plane nodes, so they must run last.
 	It("should repair a stopped control plane node whose etcd member is out of sync", func() {
 		cluster := getCluster(0, 1, 2)
 
@@ -339,10 +336,6 @@ func testRepairOperations() {
 		waitRepairEmpty()
 	})
 
-	// When a second control plane node also goes down, the etcd cluster is no
-	// longer good for repair (it loses quorum and the control plane is degraded
-	// by more than one node), so CKE must NOT proceed with repair.
-	// This stops a second control plane node, so it must run last.
 	It("should not repair while the control plane is degraded by more than one node", func() {
 		By("cleaning up the repair queue")
 		ckecliSafe("repair-queue", "enable")
