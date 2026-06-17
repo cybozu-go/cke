@@ -34,11 +34,7 @@ const (
 
 var (
 	testDefaultDNSServers = []string{"8.8.8.8"}
-	testConstraints       = &cke.Constraints{
-		ControlPlaneCount:        3,
-		RebootMaximumUnreachable: 1,
-	}
-	testResources = []cke.ResourceDefinition{
+	testResources         = []cke.ResourceDefinition{
 		{
 			Key:        "Namespace/foo",
 			Kind:       "Namespace",
@@ -170,12 +166,15 @@ func newData() testData {
 		RebootQueue: cke.RebootQueueStatus{Enabled: true},
 	}
 
-	constraints := *testConstraints
+	constraints := &cke.Constraints{
+		ControlPlaneCount:        3,
+		RebootMaximumUnreachable: 1,
+	}
 
 	return testData{
 		Cluster:     cluster,
 		Status:      status,
-		Constraints: &constraints,
+		Constraints: constraints,
 		Resources:   testResources,
 	}
 }

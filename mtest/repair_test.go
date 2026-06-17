@@ -286,7 +286,7 @@ func testRepairOperations() {
 		nodesShouldBeSchedulable(nodeNames[1])
 	})
 
-	// The two tests above stop control plane nodes, so they must run last.
+	// The two tests below stop control plane nodes, so they must run last.
 	It("should repair a stopped control plane node whose etcd member is out of sync", func() {
 		cluster := getCluster(0, 1, 2)
 
