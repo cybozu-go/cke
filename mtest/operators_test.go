@@ -102,9 +102,13 @@ func testOperators() {
 		}
 		for _, n := range []string{node1, node2, node3, node4, node5} {
 			out := execSafeAt(n, "docker", "image", "list", "--digests", "--format={{.Repository}}:{{.Tag}}@{{.Digest}}")
-			images := strings.Split(strings.TrimSpace(string(out)), "\n")
-			Expect(images).To(ContainElements(fullRefs),
-				"node %s: some CKE images are missing or not tagged with expected digest", n)
+			for _, image := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+				if image == "" {
+					continue
+				}
+				Expect(image).To(BeElementOf(fullRefs),
+					"node %s: image %s is not a known CKE image", n, image)
+			}
 
 			// All image pull events should reference a CKE-defined image digest
 			out = execSafeAt(n, "docker", "system", "events",
