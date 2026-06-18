@@ -45,6 +45,16 @@ func (i Image) Digest() string {
 	return ""
 }
 
+// TagRef returns the repository:tag reference without the digest.
+func (i Image) TagRef() string {
+	return i.Repository() + ":" + i.Tag()
+}
+
+// DigestRef returns the repository@digest reference without the tag.
+func (i Image) DigestRef() string {
+	return i.Repository() + "@" + i.Digest()
+}
+
 // AllImages return container images list used by CKE
 func AllImages() []string {
 	return []string{

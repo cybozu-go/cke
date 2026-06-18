@@ -120,8 +120,8 @@ func (l localDocker) PullImage(img cke.Image) error {
 	}
 
 	// Match by digest (pulled from registry) or by tag (loaded from tar, in this case the image has no digest).
-	tagRef := img.Repository() + ":" + img.Tag()
-	digestRef := img.Repository() + "@" + img.Digest()
+	tagRef := img.TagRef()
+	digestRef := img.DigestRef()
 	for _, field := range strings.Fields(string(stdout)) {
 		if field == tagRef || field == digestRef {
 			return nil
@@ -136,6 +136,7 @@ func (l localDocker) Run(img cke.Image, binds []cke.Mount, command string, args 
 	runArgs := []string{
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"--rm",
 		"--network=host",
 		"--uts=host",
@@ -148,12 +149,12 @@ func (l localDocker) Run(img cke.Image, binds []cke.Mount, command string, args 
 		}
 		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, img.TagRef(), command)
 	runArgs = append(runArgs, args...)
 
 	out, err := exec.Command("docker", runArgs...).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to run %s: %s: %w", img.Name(), out, err)
+		return fmt.Errorf("failed to run %s: %s: %w", img.TagRef(), out, err)
 	}
 	return nil
 }
@@ -163,6 +164,7 @@ func (l localDocker) RunWithInput(img cke.Image, binds []cke.Mount, command, inp
 	runArgs := []string{
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"--rm",
 		"-i",
 		"--network=host",
@@ -176,7 +178,7 @@ func (l localDocker) RunWithInput(img cke.Image, binds []cke.Mount, command, inp
 		}
 		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, img.TagRef(), command)
 	runArgs = append(runArgs, args...)
 
 	cmd := exec.Command("docker", runArgs...)
@@ -184,7 +186,7 @@ func (l localDocker) RunWithInput(img cke.Image, binds []cke.Mount, command, inp
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to run %s: %s: %w", img.Name(), out, err)
+		return fmt.Errorf("failed to run %s: %s: %w", img.TagRef(), out, err)
 	}
 	return nil
 }
@@ -194,6 +196,7 @@ func (l localDocker) RunWithOutput(img cke.Image, binds []cke.Mount, command str
 	runArgs := []string{
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"--rm",
 		"--network=host",
 		"--uts=host",
@@ -206,7 +209,7 @@ func (l localDocker) RunWithOutput(img cke.Image, binds []cke.Mount, command str
 		}
 		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, img.TagRef(), command)
 	runArgs = append(runArgs, args...)
 
 	stdout := new(bytes.Buffer)
@@ -224,6 +227,7 @@ func (l localDocker) RunSystem(name string, img cke.Image, opts []string, params
 		"run",
 		"--rm",
 		"--log-driver=journald",
+		"--pull=never",
 		"-d",
 		"--name=" + name,
 		"--read-only",
@@ -280,7 +284,7 @@ func (l localDocker) RunSystem(name string, img cke.Image, opts []string, params
 	}
 	args = append(args, "--label-file="+labelFile.Name())
 
-	args = append(args, img.Name())
+	args = append(args, img.TagRef())
 
 	args = append(args, params.ExtraArguments...)
 	args = append(args, extra.ExtraArguments...)
