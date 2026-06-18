@@ -30,7 +30,10 @@ Each line of the output is compared against two conditions:
 2. **No-digest match** — the line equals `img.TagRef()+"@<none>"` (e.g. `ghcr.io/cybozu/etcd:3.6.11.1@<none>`).  
    This covers images loaded via `docker load` from a tar archive, which have a tag but no RepoDigest.
 
-If neither condition is met (including when the tag matches but the digest differs), the image is considered absent and `docker image pull <FullRef>` is executed.
+If neither condition is met (including when the tag matches but the digest differs), the image is considered absent and the following steps are executed:
+
+1. `docker image pull <FullRef>` — pulls the image by digest. Docker stores it with `<none>` as the tag.
+2. `docker image tag <FullRef> <TagRef>` — assigns the tag so the image can be addressed by `TagRef` in subsequent `docker run` calls.
 
 Running containers
 ------------------

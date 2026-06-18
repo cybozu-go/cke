@@ -127,7 +127,13 @@ func (l localDocker) PullImage(img cke.Image) error {
 		}
 	}
 
-	return exec.Command("docker", "image", "pull", img.FullRef()).Run()
+	if err := exec.Command("docker", "image", "pull", img.FullRef()).Run(); err != nil {
+		return fmt.Errorf("docker image pull %s: %w", img.FullRef(), err)
+	}
+	if err := exec.Command("docker", "image", "tag", img.FullRef(), img.TagRef()).Run(); err != nil {
+		return fmt.Errorf("docker image tag %s %s: %w", img.FullRef(), img.TagRef(), err)
+	}
+	return nil
 }
 
 // Run runs a container as a foreground process.
