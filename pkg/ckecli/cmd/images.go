@@ -16,8 +16,8 @@ var imagesCmd = &cobra.Command{
 	// Override rootCmd.PersistentPreRunE.
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {},
 	Run: func(cmd *cobra.Command, args []string) {
-		for _, img := range cke.AllImages() {
-			fmt.Println(img)
+		for _, img := range cke.AllImages {
+			fmt.Println(img.FullRef())
 		}
 	},
 }

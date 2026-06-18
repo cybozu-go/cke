@@ -90,7 +90,57 @@ func testOperators() {
 			},
 		))
 
-		By("Checking container images")
+		By("Checking images are tagged with expected digest")
+		fullRefs := make([]string, 0, len(cke.AllImages))
+		digestRefs := make([]string, 0, len(cke.AllImages))
+		expectedTags := make(map[string]string, len(cke.AllImages)) // digest -> tagRef
+		for _, img := range cke.AllImages {
+			fullRefs = append(fullRefs, img.FullRef())
+			digestRefs = append(digestRefs, img.DigestRef())
+			digest := strings.SplitN(img.DigestRef(), "@", 2)[1]
+			expectedTags[digest] = img.TagRef()
+		}
+		for _, n := range []string{node1, node2, node3, node4, node5} {
+			out := execSafeAt(n, "docker", "image", "list", "--digests", "--format={{.Repository}}:{{.Tag}}@{{.Digest}}")
+			images := strings.Split(strings.TrimSpace(string(out)), "\n")
+			Expect(images).To(ContainElements(fullRefs),
+				"node %s: some CKE images are missing or not tagged with expected digest", n)
+
+			// All image pull events should reference a CKE-defined image digest
+			out = execSafeAt(n, "docker", "system", "events",
+				"--since", "2020-01-01T00:00:00Z",
+				"--until", time.Now().UTC().Format(time.RFC3339),
+				"--filter", "type=image",
+				"--filter", "event=pull",
+				"--format", "{{.Actor.ID}}") // <repo>@<sha256:digest>
+			for _, pulled := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+				if pulled == "" {
+					continue
+				}
+				Expect(pulled).To(BeElementOf(digestRefs),
+					"node %s: unexpected image pull: %s", n, pulled)
+			}
+
+			// All CKE images should have been tagged from the correct digest
+			out = execSafeAt(n, "docker", "system", "events",
+				"--since", "2020-01-01T00:00:00Z",
+				"--until", time.Now().UTC().Format(time.RFC3339),
+				"--filter", "type=image",
+				"--filter", "event=tag",
+				"--format", "{{.Actor.ID}} {{.Actor.Attributes.name}}") // <sha256:digest> <repo:tag>
+			for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+				if line == "" {
+					continue
+				}
+				parts := strings.SplitN(line, " ", 2)
+				Expect(parts).To(HaveLen(2))
+				digest := parts[0]
+				actualTag := parts[1]
+				Expect(actualTag).To(Equal(expectedTags[digest]))
+			}
+		}
+
+		By("Checking container image references and pull policy")
 		for _, n := range []string{node1, node2, node3, node4, node5} {
 			out := execSafeAt(n, "docker", "ps", "-aq")
 			containerIDs := strings.Fields(strings.TrimSpace(string(out)))
@@ -109,8 +159,10 @@ func testOperators() {
 
 			for _, inspect := range inspects {
 				fmt.Fprintf(GinkgoWriter, "node=%s container=%s image=%s\n", n, inspect.Name, inspect.Config.Image)
-				Expect(inspect.Config.Image).To(ContainSubstring("@sha256:"),
-					"container %s on node %s uses non-digest image: %s", inspect.Name, n, inspect.Config.Image)
+
+				// Container's image should be TagRef format (repo:tag, no @sha256: digest)
+				Expect(inspect.Config.Image).NotTo(ContainSubstring("@"),
+					"container %s on node %s: image should be TagRef format (no digest): %s", inspect.Name, n, inspect.Config.Image)
 			}
 		}
 

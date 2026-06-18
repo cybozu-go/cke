@@ -127,11 +127,11 @@ func (l localDocker) PullImage(img cke.Image) error {
 		}
 	}
 
-	if err := exec.Command("docker", "image", "pull", img.FullRef()).Run(); err != nil {
-		return fmt.Errorf("docker image pull %s: %w", img.FullRef(), err)
+	if err := exec.Command("docker", "image", "pull", img.DigestRef()).Run(); err != nil {
+		return fmt.Errorf("docker image pull %s: %w", img.DigestRef(), err)
 	}
-	if err := exec.Command("docker", "image", "tag", img.FullRef(), img.TagRef()).Run(); err != nil {
-		return fmt.Errorf("docker image tag %s %s: %w", img.FullRef(), img.TagRef(), err)
+	if err := exec.Command("docker", "image", "tag", img.DigestRef(), img.TagRef()).Run(); err != nil {
+		return fmt.Errorf("docker image tag %s %s: %w", img.DigestRef(), img.TagRef(), err)
 	}
 	return nil
 }

@@ -33,9 +33,9 @@ func subMain() error {
 	}
 
 	images := make(map[string]string)
-	for _, img := range cke.AllImages() {
-		id := strings.SplitN(path.Base(img), ":", 2)[0]
-		images[id] = img
+	for _, img := range cke.AllImages {
+		id := strings.SplitN(path.Base(img.FullRef()), ":", 2)[0]
+		images[id] = img.FullRef()
 	}
 
 	var allResources []cke.ResourceDefinition

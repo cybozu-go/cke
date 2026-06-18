@@ -39,6 +39,13 @@ var (
 	{{.VarName}} = newImage("{{.Repository}}", "{{.Tag}}", "{{.Digest}}")
 {{- end}}
 )
+
+// AllImages is the list of all container images used by CKE.
+var AllImages = []Image{
+{{- range .}}
+	{{.VarName}},
+{{- end}}
+}
 `
 
 type packageVersion struct {
