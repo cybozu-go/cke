@@ -140,7 +140,7 @@ func testOperators() {
 			}
 		}
 
-		By("Checking container image references and pull policy")
+		By("Checking container image references")
 		for _, n := range []string{node1, node2, node3, node4, node5} {
 			out := execSafeAt(n, "docker", "ps", "-aq")
 			containerIDs := strings.Fields(strings.TrimSpace(string(out)))
