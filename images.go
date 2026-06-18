@@ -24,6 +24,18 @@ func (i Image) Repository() string {
 	return name
 }
 
+// Tag returns the tag part of the image reference.
+func (i Image) Tag() string {
+	name := string(i)
+	if idx := strings.Index(name, "@"); idx >= 0 {
+		name = name[:idx]
+	}
+	if idx := strings.LastIndex(name, ":"); idx >= 0 && !strings.Contains(name[idx:], "/") {
+		return name[idx+1:]
+	}
+	return ""
+}
+
 // Digest returns the digest part of the image reference (e.g. "sha256:...").
 func (i Image) Digest() string {
 	name := string(i)

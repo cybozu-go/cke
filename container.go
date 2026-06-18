@@ -63,14 +63,16 @@ type docker struct {
 }
 
 func (c docker) PullImage(img Image) error {
-	stdout, stderr, err := c.agent.Run("docker image list --digests --format '{{.Repository}}@{{.Digest}}'")
+	stdout, stderr, err := c.agent.Run("docker image list --digests --format '{{.Repository}}:{{.Tag}} {{.Repository}}@{{.Digest}}'")
 	if err != nil {
 		return fmt.Errorf("%w, stdout: %s, stderr: %s", err, stdout, stderr)
 	}
 
-	ref := img.Repository() + "@" + img.Digest()
-	for _, i := range strings.Split(string(stdout), "\n") {
-		if ref == i {
+	// Match by digest (pulled from registry) or by tag (loaded from tar, in this case the image has no digest).
+	tagRef := img.Repository() + ":" + img.Tag()
+	digestRef := img.Repository() + "@" + img.Digest()
+	for _, field := range strings.Fields(string(stdout)) {
+		if field == tagRef || field == digestRef {
 			return nil
 		}
 	}
