@@ -89,8 +89,8 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 
 	// 10. Repair machines if repair requests have been arrived to the repair queue, and the number of unreachable nodes is less than a threshold.
 	if ops, phaseRepair := repairOps(c, cs, constraints, nf); phaseRepair {
-		if !nf.EtcdIsGood() {
-			log.Warn("cannot repair machines because etcd cluster is not responding and in-sync", nil)
+		if !nf.EtcdIsGoodForRepair(constraints.ControlPlaneCount) {
+			log.Warn("cannot repair machines because etcd cluster is not responding, is out of sync without a control plane failure, or the control plane is degraded by more than one node", nil)
 			return nil, cke.PhaseRepairMachines
 		}
 		return ops, cke.PhaseRepairMachines

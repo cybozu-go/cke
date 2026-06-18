@@ -34,11 +34,7 @@ const (
 
 var (
 	testDefaultDNSServers = []string{"8.8.8.8"}
-	testConstraints       = &cke.Constraints{
-		ControlPlaneCount:        3,
-		RebootMaximumUnreachable: 1,
-	}
-	testResources = []cke.ResourceDefinition{
+	testResources         = []cke.ResourceDefinition{
 		{
 			Key:        "Namespace/foo",
 			Kind:       "Namespace",
@@ -170,10 +166,15 @@ func newData() testData {
 		RebootQueue: cke.RebootQueueStatus{Enabled: true},
 	}
 
+	constraints := &cke.Constraints{
+		ControlPlaneCount:        3,
+		RebootMaximumUnreachable: 1,
+	}
+
 	return testData{
 		Cluster:     cluster,
 		Status:      status,
-		Constraints: testConstraints,
+		Constraints: constraints,
 		Resources:   testResources,
 	}
 }
@@ -2730,6 +2731,50 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				{"repair-execute", 1},
 			},
+			ExpectedPhase: cke.PhaseRepairMachines,
+		},
+		{
+			Name: "RepairControlPlaneFailureEtcdOutOfSync",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+			}).withSSHNotConnectedCP(0).withNotReadyMasterEndpoint(0).with(func(d testData) {
+				d.Status.Etcd.InSyncMembers[nodeNames[0]] = false
+			}),
+			ExpectedOps: []opData{
+				{"repair-execute", 1},
+			},
+			ExpectedPhase: cke.PhaseRepairMachines,
+		},
+		{
+			Name: "RepairBlockedByEtcdOutOfSyncWithoutCPFailure",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[4], MachineType: "type1", Operation: "op1"},
+			}).with(func(d testData) {
+				d.Status.Etcd.InSyncMembers[nodeNames[0]] = false
+			}),
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRepairMachines,
+		},
+		{
+			Name: "RepairBlockedByExtraEtcdOutOfSync",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+			}).withSSHNotConnectedCP(0).withNotReadyMasterEndpoint(0).with(func(d testData) {
+				d.Status.Etcd.InSyncMembers[nodeNames[0]] = false
+				d.Status.Etcd.InSyncMembers[nodeNames[1]] = false
+			}),
+			ExpectedOps:   nil,
+			ExpectedPhase: cke.PhaseRepairMachines,
+		},
+		{
+			Name: "RepairBlockedByMissingControlPlane",
+			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
+				{Address: nodeNames[0], MachineType: "type1", Operation: "op1"},
+			}).withSSHNotConnectedCP(0).withNotReadyMasterEndpoint(0).with(func(d testData) {
+				d.Constraints.ControlPlaneCount = 4
+				d.Status.Etcd.InSyncMembers[nodeNames[0]] = false
+			}),
+			ExpectedOps:   nil,
 			ExpectedPhase: cke.PhaseRepairMachines,
 		},
 		{
