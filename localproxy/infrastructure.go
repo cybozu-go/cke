@@ -128,7 +128,7 @@ func (l localDocker) PullImage(img cke.Image) error {
 		}
 	}
 
-	return exec.Command("docker", "image", "pull", img.Name()).Run()
+	return exec.Command("docker", "image", "pull", img.FullRef()).Run()
 }
 
 // Run runs a container as a foreground process.
@@ -291,7 +291,7 @@ func (l localDocker) RunSystem(name string, img cke.Image, opts []string, params
 
 	out, err := exec.Command("docker", args...).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to docker run %s: %s: %w", img.Name(), out, err)
+		return fmt.Errorf("failed to docker run %s: %s: %w", img.TagRef(), out, err)
 	}
 	return nil
 }

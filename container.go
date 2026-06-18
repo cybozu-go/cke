@@ -77,7 +77,7 @@ func (c docker) PullImage(img Image) error {
 		}
 	}
 
-	stdout, stderr, err = c.agent.Run("docker image pull " + img.Name())
+	stdout, stderr, err = c.agent.Run("docker image pull " + img.FullRef())
 	if err != nil {
 		return fmt.Errorf("%w, stdout: %s, stderr: %s", err, stdout, stderr)
 	}

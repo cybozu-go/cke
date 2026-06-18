@@ -191,7 +191,7 @@ func (d testData) withResources(res []cke.ResourceDefinition) testData {
 func (d testData) withRivers() testData {
 	for _, v := range d.Status.NodeStatuses {
 		v.Rivers.Running = true
-		v.Rivers.Image = cke.ToolsImage.Name()
+		v.Rivers.Image = cke.ToolsImage.TagRef()
 		v.Rivers.BuiltInParams = op.RiversParams(d.ControlPlane(), op.RiversUpstreamPort, op.RiversListenPort)
 	}
 	return d
@@ -201,7 +201,7 @@ func (d testData) withEtcdRivers() testData {
 	for _, n := range d.ControlPlane() {
 		st := &d.NodeStatus(n).EtcdRivers
 		st.Running = true
-		st.Image = cke.ToolsImage.Name()
+		st.Image = cke.ToolsImage.TagRef()
 		st.BuiltInParams = op.RiversParams(d.ControlPlane(), op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)
 	}
 	return d
@@ -238,7 +238,7 @@ func (d testData) withUnhealthyEtcd() testData {
 	for _, n := range d.ControlPlane() {
 		st := &d.NodeStatus(n).Etcd
 		st.Running = true
-		st.Image = cke.EtcdImage.Name()
+		st.Image = cke.EtcdImage.TagRef()
 		st.BuiltInParams = etcd.BuiltInParams(n, nil, "")
 	}
 	return d
@@ -265,7 +265,7 @@ func (d testData) withAPIServer(serviceSubnet, domain string) testData {
 		st := &d.NodeStatus(n).APIServer
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.KubernetesImage.Name()
+		st.Image = cke.KubernetesImage.TagRef()
 		st.BuiltInParams = k8s.APIServerParams(n.Address, serviceSubnet, false, "", "", domain)
 	}
 	return d
@@ -282,7 +282,7 @@ func (d testData) withControllerManager(name, serviceSubnet string) testData {
 		st := &d.NodeStatus(n).ControllerManager
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.KubernetesImage.Name()
+		st.Image = cke.KubernetesImage.TagRef()
 		st.BuiltInParams = k8s.ControllerManagerParams(name, serviceSubnet)
 	}
 	return d
@@ -293,7 +293,7 @@ func (d testData) withScheduler() testData {
 		st := &d.NodeStatus(n).Scheduler
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.KubernetesImage.Name()
+		st.Image = cke.KubernetesImage.TagRef()
 		st.BuiltInParams = k8s.SchedulerParams()
 
 		st.Config = &schedulerv1.KubeSchedulerConfiguration{}
@@ -309,7 +309,7 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 		st := &d.NodeStatus(n).Kubelet
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.KubernetesImage.Name()
+		st.Image = cke.KubernetesImage.TagRef()
 		st.BuiltInParams = k8s.KubeletServiceParams(n, cke.KubeletParams{
 			CRIEndpoint: "/var/run/k8s-containerd.sock",
 		})
@@ -371,7 +371,7 @@ func (d testData) withProxy() testData {
 		st := &d.NodeStatus(n).Proxy
 		st.Running = true
 		st.IsHealthy = true
-		st.Image = cke.KubernetesImage.Name()
+		st.Image = cke.KubernetesImage.TagRef()
 		st.BuiltInParams = k8s.ProxyParams()
 		st.Config = &proxyv1alpha1.KubeProxyConfiguration{}
 		st.Config.HostnameOverride = n.Nodename()
@@ -550,9 +550,9 @@ func (d testData) withK8sResourceReady() testData {
 	}
 	ks.ResourceStatuses["ClusterRole/system:kube-apiserver-to-kubelet"].Annotations[cke.AnnotationResourceRevision] = "2"
 	ks.ResourceStatuses["ClusterRole/system:cluster-dns"].Annotations[cke.AnnotationResourceRevision] = "2"
-	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"].Annotations[cke.AnnotationResourceImage] = cke.CoreDNSImage.Name()
+	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"].Annotations[cke.AnnotationResourceImage] = cke.CoreDNSImage.FullRef()
 	ks.ResourceStatuses["Deployment/kube-system/cluster-dns"].Annotations[cke.AnnotationResourceRevision] = "5"
-	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"].Annotations[cke.AnnotationResourceImage] = cke.UnboundImage.Name() + "," + cke.UnboundExporterImage.Name()
+	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"].Annotations[cke.AnnotationResourceImage] = cke.UnboundImage.FullRef() + "," + cke.UnboundExporterImage.FullRef()
 	ks.ResourceStatuses["DaemonSet/kube-system/node-dns"].Annotations[cke.AnnotationResourceRevision] = "4"
 	ks.ClusterDNS.ConfigMap = clusterdns.ConfigMap(testDefaultDNSDomain, testDefaultDNSServers)
 	ks.ClusterDNS.ClusterIP = testDefaultDNSAddr

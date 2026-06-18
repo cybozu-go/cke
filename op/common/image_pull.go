@@ -37,7 +37,7 @@ func (c imagePullCommand) Run(ctx context.Context, inf cke.Infrastructure, _ str
 				}
 
 				log.Warn("failed to pull image", map[string]interface{}{
-					"image":     c.img.Name(),
+					"image":     c.img.FullRef(),
 					log.FnError: err,
 				})
 				select {
@@ -56,6 +56,6 @@ func (c imagePullCommand) Run(ctx context.Context, inf cke.Infrastructure, _ str
 func (c imagePullCommand) Command() cke.Command {
 	return cke.Command{
 		Name:   "image-pull",
-		Target: c.img.Name(),
+		Target: c.img.FullRef(),
 	}
 }
