@@ -4,16 +4,14 @@ package cke
 
 // Image represents a container image reference.
 type Image struct {
-	fullRef   string
-	tagRef    string
-	digestRef string
+	fullRef string
+	tagRef  string
 }
 
 func newImage(repository, tag, digest string) Image {
 	return Image{
-		fullRef:   repository + ":" + tag + "@" + digest,
-		tagRef:    repository + ":" + tag,
-		digestRef: repository + "@" + digest,
+		fullRef: repository + ":" + tag + "@" + digest,
+		tagRef:  repository + ":" + tag,
 	}
 }
 
@@ -25,11 +23,6 @@ func (i Image) FullRef() string {
 // TagRef returns the repository:tag reference without the digest.
 func (i Image) TagRef() string {
 	return i.tagRef
-}
-
-// DigestRef returns the repository@digest reference without the tag.
-func (i Image) DigestRef() string {
-	return i.digestRef
 }
 
 // AllImages return container images list used by CKE

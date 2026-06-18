@@ -113,17 +113,16 @@ var _ cke.ContainerEngine = localDocker{}
 
 // PullImage pulls an image.
 func (l localDocker) PullImage(img cke.Image) error {
-	cmd := exec.Command("docker", "image", "list", "--digests", "--format={{.Repository}}:{{.Tag}} {{.Repository}}@{{.Digest}}")
+	cmd := exec.Command("docker", "image", "list", "--digests", "--format={{.Repository}}:{{.Tag}}@{{.Digest}}")
 	stdout, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to execute docker image list: %w", err)
 	}
 
-	// Match by digest (pulled from registry) or by tag (loaded from tar, in this case the image has no digest).
-	tagRef := img.TagRef()
-	digestRef := img.DigestRef()
-	for _, field := range strings.Fields(string(stdout)) {
-		if field == tagRef || field == digestRef {
+	noDigest := img.TagRef() + "@<none>"
+	for _, line := range strings.Split(strings.TrimSpace(string(stdout)), "\n") {
+		// Accept if FullRef matches (registry pull) or image has no digest (docker load).
+		if line == img.FullRef() || line == noDigest {
 			return nil
 		}
 	}
