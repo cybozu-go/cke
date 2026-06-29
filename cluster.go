@@ -110,10 +110,11 @@ type EtcdParams struct {
 
 // APIServerParams is a set of extra parameters for kube-apiserver.
 type APIServerParams struct {
-	ServiceParams   `json:",inline"`
-	AuditLogEnabled bool   `json:"audit_log_enabled"`
-	AuditLogPolicy  string `json:"audit_log_policy"`
-	AuditLogPath    string `json:"audit_log_path"`
+	ServiceParams      `json:",inline"`
+	AuditLogEnabled    bool   `json:"audit_log_enabled"`
+	AuditLogPolicy     string `json:"audit_log_policy"`
+	AuditLogPath       string `json:"audit_log_path"`
+	AuditWebhookConfig string `json:"audit_webhook_config"`
 }
 
 // CNIConfFile is a config file for CNI plugin deployed on worker nodes by CKE.
@@ -731,6 +732,17 @@ func validateOptions(opts Options) error {
 	if len(opts.APIServer.AuditLogPolicy) != 0 {
 		policy := make(map[string]any)
 		err = yaml.Unmarshal([]byte(opts.APIServer.AuditLogPolicy), &policy)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(opts.APIServer.AuditWebhookConfig) != 0 {
+		if !opts.APIServer.AuditLogEnabled {
+			return errors.New("audit_webhook_config requires audit_log_enabled to be true")
+		}
+		config := make(map[string]interface{})
+		err = yaml.Unmarshal([]byte(opts.APIServer.AuditWebhookConfig), &config)
 		if err != nil {
 			return err
 		}

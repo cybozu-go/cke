@@ -334,6 +334,17 @@ func testKubernetes() {
 kind: Policy
 rules:
 - level: Metadata`
+		cluster.Options.APIServer.AuditWebhookConfig = `apiVersion: v1
+kind: Config
+clusters:
+- name: audit-webhook
+  cluster:
+    server: https://audit-webhook.example.com/webhook
+contexts:
+- name: audit-webhook
+  context:
+    cluster: audit-webhook
+current-context: audit-webhook`
 		cluster.Options.APIServer.AuditLogPath = ""
 		clusterSetAndWait(cluster)
 		logs, _, err = execAt(node1, "sudo", "journalctl", "CONTAINER_NAME=kube-apiserver", "-p", "6..6", "-q")
@@ -342,13 +353,17 @@ rules:
 		status, _, err := getClusterStatus(cluster)
 		Expect(err).ShouldNot(HaveOccurred())
 		var policyFile string
+		var webhookConfigFile string
 		for _, v := range status.NodeStatuses[node1].APIServer.BuiltInParams.ExtraArguments {
 			if strings.HasPrefix(v, "--audit-policy-file=") {
 				policyFile = v
-				break
+			}
+			if strings.HasPrefix(v, "--audit-webhook-config-file=") {
+				webhookConfigFile = v
 			}
 		}
 		Expect(policyFile).ShouldNot(BeEmpty())
+		Expect(webhookConfigFile).ShouldNot(BeEmpty())
 
 		By("changing audit policy")
 		cluster.Options.APIServer.AuditLogPolicy = `apiVersion: audit.k8s.io/v1
@@ -371,6 +386,7 @@ rules:
 		By("disabling audit log")
 		cluster.Options.APIServer.AuditLogEnabled = false
 		cluster.Options.APIServer.AuditLogPolicy = ""
+		cluster.Options.APIServer.AuditWebhookConfig = ""
 		clusterSetAndWait(cluster)
 	})
 
