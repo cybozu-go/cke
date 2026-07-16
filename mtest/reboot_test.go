@@ -297,6 +297,33 @@ func testRebootOperations() {
 		_, stderr, err = kubectlWithInput(rebootJobRunningYAML, "delete", "-f", "-")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
 
+		By("Reboot operation deletes running job-managed pods labeled ok-to-delete")
+		cluster.Reboot.DeletableJobPodSelector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{"cke.cybozu.com/job-ok-to-delete": "true"},
+		}
+		clusterSetAndWait(cluster)
+
+		_, stderr, err = kubectlWithInput(rebootJobRunningOkToDeleteYAML, "apply", "-f", "-")
+		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
+		var okToDeleteJobPod *corev1.Pod
+		Eventually(func(g Gomega) {
+			pods := getPodListGomega(g, "reboot-test", "-l=job-name=job-running-ok-to-delete")
+			g.Expect(pods.Items).To(HaveLen(1), "pod is not created")
+			g.Expect(pods.Items[0].Status.Phase).To(Equal(corev1.PodRunning), "pod is not running")
+			okToDeleteJobPod = &pods.Items[0]
+		}).Should(Succeed())
+
+		rebootQueueAdd([]string{okToDeleteJobPod.Spec.NodeName})
+		waitRebootCompletion()
+		nodesShouldBeSchedulable(okToDeleteJobPod.Spec.NodeName)
+
+		cluster.Reboot.DeletableJobPodSelector = nil
+		clusterSetAndWait(cluster)
+
+		_, stderr, err = kubectlWithInput(rebootJobRunningOkToDeleteYAML, "delete", "-f", "-")
+		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)
+
 		By("Reboot operation will not delete completed job-managed pods")
 		_, stderr, err = kubectlWithInput(rebootJobCompletedYAML, "apply", "-f", "-")
 		Expect(err).ShouldNot(HaveOccurred(), "stderr: %s", stderr)

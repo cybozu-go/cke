@@ -15,6 +15,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -100,14 +101,14 @@ func enumerateOnDeleteDaemonSetPods(ctx context.Context, cs kubernetes.Interface
 
 // dryRunEvictOrDeleteNodePod checks eviction or deletion of Pods on the specified Node can proceed.
 // It returns an error if a running Pod exists or an eviction of the Pod in protected namespace failed.
-func dryRunEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool) error {
-	return doEvictOrDeleteNodePod(ctx, cs, node, protected, 0, 0, true)
+func dryRunEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, deletableJobPodSelector *metav1.LabelSelector) error {
+	return doEvictOrDeleteNodePod(ctx, cs, node, protected, deletableJobPodSelector, 0, 0, true)
 }
 
 // evictOrDeleteNodePod evicts or delete Pods on the specified Node.
-// If a running Job Pod exists, this function returns an error.
-func evictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, attempts int, interval time.Duration) error {
-	return doEvictOrDeleteNodePod(ctx, cs, node, protected, attempts, interval, false)
+// If a running Job Pod exists and its labels do not match deletableJobPodSelector, this function returns an error.
+func evictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, deletableJobPodSelector *metav1.LabelSelector, attempts int, interval time.Duration) error {
+	return doEvictOrDeleteNodePod(ctx, cs, node, protected, deletableJobPodSelector, attempts, interval, false)
 }
 
 // deleteOnDeleteDaemonSetPod evicts or delete Pods on the specified Node that are owned by "updateStrategy:OnDelete" DaemonSets.
@@ -119,14 +120,22 @@ func deleteOnDeleteDaemonSetPod(ctx context.Context, cs kubernetes.Interface, no
 // It first tries eviction.
 // If the eviction failed and the Pod's namespace is not protected, it deletes the Pod.
 // If the eviction failed and the Pod's namespace is protected, it retries after `interval` interval at most `attempts` times.
-// If a running Job Pod exists, this function returns an error.
+// If a running Job Pod exists and its labels match deletableJobPodSelector, it deletes the Pod.
+// If a running Job Pod exists and its labels do not match deletableJobPodSelector, this function returns an error.
 // If `dry` is true, it performs dry run and `attempts` and `interval` are ignored.
-func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, attempts int, interval time.Duration, dry bool) error {
+func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, deletableJobPodSelectorSpec *metav1.LabelSelector, attempts int, interval time.Duration, dry bool) error {
 	var deleteOptions *metav1.DeleteOptions
 	if dry {
 		deleteOptions = &metav1.DeleteOptions{
 			DryRun: []string{"All"},
 		}
+	}
+
+	// LabelSelectorAsSelector(nil) returns labels.Nothing(), so Job-managed Pods are only
+	// deleted when the cluster configuration explicitly opts in with a non-nil selector.
+	deletableJobPodSelector, err := metav1.LabelSelectorAsSelector(deletableJobPodSelectorSpec)
+	if err != nil {
+		return err
 	}
 
 	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
@@ -201,7 +210,31 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 		}
 		return nil
 	}, func(pod *corev1.Pod) error {
-		return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
+		if !deletableJobPodSelector.Matches(labels.Set(pod.Labels)) {
+			return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
+		}
+		if dry {
+			// deletion of a Pod never fails, so dry-run always succeeds here.
+			log.Info("skip deleting job-managed pod because its labels match deletable_job_pod_selector", map[string]interface{}{
+				"namespace": pod.Namespace,
+				"name":      pod.Name,
+				"dry":       dry,
+			})
+			return nil
+		}
+		log.Info("start deleting job-managed pod", map[string]interface{}{
+			"namespace": pod.Namespace,
+			"name":      pod.Name,
+		})
+		err := cs.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete job-managed pod %s/%s: %w", pod.Namespace, pod.Name, err)
+		}
+		log.Info("deleted job-managed pod", map[string]interface{}{
+			"namespace": pod.Namespace,
+			"name":      pod.Name,
+		})
+		return nil
 	})
 }
 

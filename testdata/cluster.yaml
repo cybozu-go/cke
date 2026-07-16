@@ -23,6 +23,9 @@ reboot:
   protected_namespaces:
     matchLabels:
       app: sample
+  deletable_job_pod_selector:
+    matchLabels:
+      app: job-sample
 repair:
   repair_procedures:
     - machine_types: ["Cray-1", "Cray-2"]
@@ -43,6 +46,9 @@ repair:
   protected_namespaces:
     matchLabels:
       app: protected
+  deletable_job_pod_selector:
+    matchLabels:
+      app: job-protected
   evict_retries: 3
   evict_interval: 5
   eviction_timeout_seconds: 120

@@ -271,28 +271,30 @@ func (p KubeletParams) MergeConfig(base *kubeletv1beta1.KubeletConfiguration) (*
 
 // Reboot is a set of configurations for reboot.
 type Reboot struct {
-	RebootCommand          []string              `json:"reboot_command"`
-	BootCheckCommand       []string              `json:"boot_check_command"`
-	MaxConcurrentReboots   *int                  `json:"max_concurrent_reboots,omitempty"`
-	EvictionTimeoutSeconds *int                  `json:"eviction_timeout_seconds,omitempty"`
-	CommandTimeoutSeconds  *int                  `json:"command_timeout_seconds,omitempty"`
-	CommandRetries         *int                  `json:"command_retries"`
-	CommandInterval        *int                  `json:"command_interval"`
-	EvictRetries           *int                  `json:"evict_retries"`
-	EvictInterval          *int                  `json:"evict_interval"`
-	ProtectedNamespaces    *metav1.LabelSelector `json:"protected_namespaces,omitempty"`
+	RebootCommand           []string              `json:"reboot_command"`
+	BootCheckCommand        []string              `json:"boot_check_command"`
+	MaxConcurrentReboots    *int                  `json:"max_concurrent_reboots,omitempty"`
+	EvictionTimeoutSeconds  *int                  `json:"eviction_timeout_seconds,omitempty"`
+	CommandTimeoutSeconds   *int                  `json:"command_timeout_seconds,omitempty"`
+	CommandRetries          *int                  `json:"command_retries"`
+	CommandInterval         *int                  `json:"command_interval"`
+	EvictRetries            *int                  `json:"evict_retries"`
+	EvictInterval           *int                  `json:"evict_interval"`
+	ProtectedNamespaces     *metav1.LabelSelector `json:"protected_namespaces,omitempty"`
+	DeletableJobPodSelector *metav1.LabelSelector `json:"deletable_job_pod_selector,omitempty"`
 }
 
 const DefaultRebootEvictionTimeoutSeconds = 600
 const DefaultMaxConcurrentReboots = 1
 
 type Repair struct {
-	RepairProcedures       []RepairProcedure     `json:"repair_procedures"`
-	MaxConcurrentRepairs   *int                  `json:"max_concurrent_repairs,omitempty"`
-	ProtectedNamespaces    *metav1.LabelSelector `json:"protected_namespaces,omitempty"`
-	EvictRetries           *int                  `json:"evict_retries,omitempty"`
-	EvictInterval          *int                  `json:"evict_interval,omitempty"`
-	EvictionTimeoutSeconds *int                  `json:"eviction_timeout_seconds,omitempty"`
+	RepairProcedures        []RepairProcedure     `json:"repair_procedures"`
+	MaxConcurrentRepairs    *int                  `json:"max_concurrent_repairs,omitempty"`
+	ProtectedNamespaces     *metav1.LabelSelector `json:"protected_namespaces,omitempty"`
+	EvictRetries            *int                  `json:"evict_retries,omitempty"`
+	EvictInterval           *int                  `json:"evict_interval,omitempty"`
+	EvictionTimeoutSeconds  *int                  `json:"eviction_timeout_seconds,omitempty"`
+	DeletableJobPodSelector *metav1.LabelSelector `json:"deletable_job_pod_selector,omitempty"`
 }
 
 type RepairProcedure struct {
@@ -590,6 +592,10 @@ func validateReboot(reboot Reboot) error {
 	}
 	// nil is safe for LabelSelectorAsSelector
 	_, err := metav1.LabelSelectorAsSelector(reboot.ProtectedNamespaces)
+	if err != nil {
+		return fmt.Errorf("invalid label selector: %w", err)
+	}
+	_, err = metav1.LabelSelectorAsSelector(reboot.DeletableJobPodSelector)
 	if err != nil {
 		return fmt.Errorf("invalid label selector: %w", err)
 	}
