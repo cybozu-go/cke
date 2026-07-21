@@ -418,6 +418,11 @@ func (c *Cluster) Validate(isTmpl bool) error {
 		return err
 	}
 
+	err = validateRepair(c.Repair)
+	if err != nil {
+		return err
+	}
+
 	err = validateOptions(c.Options)
 	if err != nil {
 		return err
@@ -596,6 +601,31 @@ func validateReboot(reboot Reboot) error {
 		return fmt.Errorf("invalid label selector: %w", err)
 	}
 	_, err = metav1.LabelSelectorAsSelector(reboot.DeletableJobPodSelector)
+	if err != nil {
+		return fmt.Errorf("invalid label selector: %w", err)
+	}
+	return nil
+}
+
+func validateRepair(repair Repair) error {
+	if repair.MaxConcurrentRepairs != nil && *repair.MaxConcurrentRepairs <= 0 {
+		return errors.New("max_concurrent_repairs must be positive")
+	}
+	if repair.EvictRetries != nil && *repair.EvictRetries < 0 {
+		return errors.New("evict_retries must not be negative")
+	}
+	if repair.EvictInterval != nil && *repair.EvictInterval < 0 {
+		return errors.New("evict_interval must not be negative")
+	}
+	if repair.EvictionTimeoutSeconds != nil && *repair.EvictionTimeoutSeconds <= 0 {
+		return errors.New("eviction_timeout_seconds must be positive")
+	}
+	// nil is safe for LabelSelectorAsSelector
+	_, err := metav1.LabelSelectorAsSelector(repair.ProtectedNamespaces)
+	if err != nil {
+		return fmt.Errorf("invalid label selector: %w", err)
+	}
+	_, err = metav1.LabelSelectorAsSelector(repair.DeletableJobPodSelector)
 	if err != nil {
 		return fmt.Errorf("invalid label selector: %w", err)
 	}

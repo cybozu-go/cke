@@ -1046,6 +1046,136 @@ func testClusterValidateReboot(t *testing.T) {
 	}
 }
 
+func testClusterValidateRepair(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		repair  Repair
+		wantErr bool
+	}{
+		{
+			name:    "valid case",
+			repair:  Repair{},
+			wantErr: false,
+		},
+		{
+			name: "zero max_concurrent_repairs",
+			repair: Repair{
+				MaxConcurrentRepairs: ptr.To(0),
+			},
+			wantErr: true,
+		},
+		{
+			name: "positive max_concurrent_repairs",
+			repair: Repair{
+				MaxConcurrentRepairs: ptr.To(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative max_concurrent_repairs",
+			repair: Repair{
+				MaxConcurrentRepairs: ptr.To(-1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero evict_retries",
+			repair: Repair{
+				EvictRetries: ptr.To(0),
+			},
+			wantErr: false,
+		},
+		{
+			name: "positive evict_retries",
+			repair: Repair{
+				EvictRetries: ptr.To(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative evict_retries",
+			repair: Repair{
+				EvictRetries: ptr.To(-1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero evict_interval",
+			repair: Repair{
+				EvictInterval: ptr.To(0),
+			},
+			wantErr: false,
+		},
+		{
+			name: "positive evict_interval",
+			repair: Repair{
+				EvictInterval: ptr.To(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative evict_interval",
+			repair: Repair{
+				EvictInterval: ptr.To(-1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero eviction_timeout_seconds",
+			repair: Repair{
+				EvictionTimeoutSeconds: ptr.To(0),
+			},
+			wantErr: true,
+		},
+		{
+			name: "positive eviction_timeout_seconds",
+			repair: Repair{
+				EvictionTimeoutSeconds: ptr.To(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative eviction_timeout_seconds",
+			repair: Repair{
+				EvictionTimeoutSeconds: ptr.To(-1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid protected_namespaces",
+			repair: Repair{
+				ProtectedNamespaces: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{Key: "app", Operator: "invalid-operator"},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid deletable_job_pod_selector",
+			repair: Repair{
+				DeletableJobPodSelector: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{Key: "app", Operator: "invalid-operator"},
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := validateRepair(tt.repair); (err != nil) != tt.wantErr {
+				t.Errorf("validateRepair() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func testValidateTrustedRESTMappings(t *testing.T) {
 	t.Parallel()
 
@@ -1208,6 +1338,7 @@ func TestCluster(t *testing.T) {
 	t.Run("ValidateNode", testClusterValidateNode)
 	t.Run("Nodename", testNodename)
 	t.Run("ValidateReboot", testClusterValidateReboot)
+	t.Run("ValidateRepair", testClusterValidateRepair)
 	t.Run("ValidateTrustedRESTMappings", testValidateTrustedRESTMappings)
 	t.Run("LookupTrustedRESTMapping", testLookupTrustedRESTMapping)
 }
