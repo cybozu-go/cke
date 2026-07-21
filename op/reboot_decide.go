@@ -131,11 +131,14 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 		}
 	}
 
-	// LabelSelectorAsSelector(nil) returns labels.Nothing(), so Job-managed Pods are only
-	// deleted when the cluster configuration explicitly opts in with a non-nil selector.
-	deletableJobPodSelector, err := metav1.LabelSelectorAsSelector(deletableJobPodSelectorSpec)
-	if err != nil {
-		return err
+	// // LabelSelectorAsSelector(nil) returns labels.Nothing(), but set it explicitly in case that behavior changes in the future.
+	deletableJobPodSelector := labels.Nothing()
+	if deletableJobPodSelectorSpec != nil {
+		var err error
+		deletableJobPodSelector, err = metav1.LabelSelectorAsSelector(deletableJobPodSelectorSpec)
+		if err != nil {
+			return err
+		}
 	}
 
 	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
