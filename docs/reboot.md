@@ -12,7 +12,7 @@ CKE watches the reboot queue and handles the reboot requests.
 CKE processes reboot requests in the following manner:
 
 1. cordons the nodes to mark them as unschedulable.
-2. checks the existence of Job-managed Pods on the nodes, deleting those permitted by `.reboot.deletable_job_pod_selector`. If any Job-managed Pod not permitted for deletion remains, uncordons the node immediately and process it again later.
+2. checks the existence of Job-managed Pods on the nodes, deleting those permitted by `.reboot.deletable_job_pod_selector`. If any Job-managed Pod not permitted for deletion remains, uncordons the node immediately and processes it again later.
 3. evicts (and/or deletes) non-DaemonSet-managed pods on the nodes.
 4. waits for the volumes to be detached from the nodes.
 5. reboot the node by running hardware reboot command for the node.

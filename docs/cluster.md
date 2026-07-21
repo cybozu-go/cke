@@ -108,7 +108,7 @@ If `protected_namespaces` is not given, all namespaces are protected.
 CKE deletes any running Job-managed Pod permitted for deletion by `deletable_job_pod_selector`.
 If a running Job-managed Pod not permitted for deletion remains, CKE backs off the reboot until the Pod finishes on its own.
 
-If `deletable_job_pod_selector` is not given,Job-managed Pods are never deleted by reboot.
+If `deletable_job_pod_selector` is not given, Job-managed Pods are never deleted by reboot.
 
 Repair
 ------
@@ -121,7 +121,7 @@ Repair
 | `evict_retries`              | false    | \*int                            | Number of eviction retries, not including initial attempt. Default: 0 |
 | `evict_interval`             | false    | \*int                            | Number of time between eviction retries in seconds. Default: 0        |
 | `eviction_timeout_seconds`   | false    | *int                             | Deadline for eviction. Must be positive. Default: 600 (10 minutes)    |
-| `deletable_job_pod_selector` | false  | [`LabelSelector`][LabelSelector]   | A label selector to allow deletion of Job-managed Pods.               |
+| `deletable_job_pod_selector` | false    | [`LabelSelector`][LabelSelector]   | A label selector to allow deletion of Job-managed Pods.             |
 
 The repair configurations control the [repair functionality](repair.md).
 

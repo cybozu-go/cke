@@ -214,8 +214,7 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 			return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
 		}
 		if dry {
-			// deletion of a Pod never fails, so dry-run always succeeds here.
-			log.Info("skip deleting job-managed pod because its labels match deletable_job_pod_selector", map[string]interface{}{
+			log.Info("skip actually deleting job-managed pod in dry-run (labels match deletable_job_pod_selector)", map[string]interface{}{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
 				"dry":       dry,
