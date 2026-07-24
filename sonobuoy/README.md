@@ -28,7 +28,7 @@ Please choose an appropriate ZONE to run C2 machine family VMs.
 
 ```
 PROJECT=neco-test
-ZONE=asia-northeast2-c
+ZONE=asia-northeast1-b
 SERVICE_ACCOUNT=neco-test@neco-test.iam.gserviceaccount.com
 ```
 
