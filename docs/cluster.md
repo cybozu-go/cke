@@ -105,8 +105,8 @@ The Pods in the non-protected namespaces are also tried to be deleted gracefully
 
 If `protected_namespaces` is not given, all namespaces are protected.
 
-CKE deletes running Job-managed Pod that does **not** match `protected_job_pods`.
-If a running Job-managed Pod matching `protected_job_pods` remains, CKE backs off the reboot until the Pod finishes on its own.
+CKE deletes running Job-managed Pods that do **not** match `protected_job_pods`.
+If running Job-managed Pods matching `protected_job_pods` remain, CKE backs off the reboot until the Pods finish on its own.
 
 If `protected_job_pods` is `null` (not given), no Job-managed Pod matches the selector, so all Job-managed Pods are deletable by reboot.
 If it is set to an empty selector (`{}`), all Job-managed Pods match the selector and are protected from deletion.
