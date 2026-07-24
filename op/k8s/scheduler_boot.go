@@ -3,10 +3,11 @@ package k8s
 import (
 	"context"
 
+	"k8s.io/client-go/tools/clientcmd"
+
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 type schedulerBootOp struct {

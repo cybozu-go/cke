@@ -152,5 +152,4 @@ func BuildMachineRepairStatus(nodes []*Node, entries []*RepairQueueEntry) map[st
 	}
 
 	return ret
-
 }

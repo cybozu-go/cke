@@ -3,10 +3,11 @@ package nodedns
 import (
 	"context"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 )
 
 type createConfigMapOp struct {

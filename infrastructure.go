@@ -216,7 +216,7 @@ func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructu
 			}
 			a, err := SSHAgent(node, mykey.(string))
 			if err != nil {
-				log.Warn("failed to create SSHAgent for "+node.Address, map[string]interface{}{
+				log.Warn("failed to create SSHAgent for "+node.Address, map[string]any{
 					log.FnError: err,
 				})
 				// lint:ignore nilerr  Just skip adding my agent to agents.

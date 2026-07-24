@@ -1,17 +1,19 @@
 package server
 
 import (
+	"maps"
 	"strings"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
-	"github.com/cybozu-go/cke/op/etcd"
-	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/log"
 	"github.com/google/go-cmp/cmp"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/etcd"
+	"github.com/cybozu-go/cke/op/k8s"
 )
 
 // NodeFilter filters nodes to
@@ -460,10 +462,10 @@ func (nf *NodeFilter) SchedulerOutdated(targets []*cke.Node, params cke.Schedule
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
-		case !currentExtra.ServiceParams.Equal(st.ExtraParams):
+		case !currentExtra.Equal(st.ExtraParams):
 			fallthrough
 		case !equality.Semantic.DeepEqual(currentConfig, runningConfig):
-			log.Debug("kube-scheduler outdated", map[string]interface{}{
+			log.Debug("kube-scheduler outdated", map[string]any{
 				"node":                 n.Nodename(),
 				"st_builtin_args":      st.BuiltInParams.ExtraArguments,
 				"st_builtin_env":       st.BuiltInParams.ExtraEnvvar,
@@ -530,7 +532,7 @@ func (nf *NodeFilter) KubeletOutdated(targets []*cke.Node) (nodes []*cke.Node) {
 		case !currentExtra.Equal(st.ExtraParams):
 			fallthrough
 		case !equality.Semantic.DeepEqual(currentConfig, runningConfig):
-			log.Debug("kubelet outdated", map[string]interface{}{
+			log.Debug("kubelet outdated", map[string]any{
 				"node":                 n.Nodename(),
 				"st_builtin_args":      st.BuiltInParams.ExtraArguments,
 				"st_builtin_env":       st.BuiltInParams.ExtraEnvvar,
@@ -654,7 +656,7 @@ func (nf *NodeFilter) ProxyOutdated(targets []*cke.Node, params cke.ProxyParams)
 		case !currentExtra.Equal(st.ExtraParams):
 			fallthrough
 		case !equality.Semantic.DeepEqual(currentConfig, runningConfig):
-			log.Debug("proxy outdated", map[string]interface{}{
+			log.Debug("proxy outdated", map[string]any{
 				"node":                 n.Nodename(),
 				"st_builtin_args":      st.BuiltInParams.ExtraArguments,
 				"st_builtin_env":       st.BuiltInParams.ExtraEnvvar,
@@ -705,7 +707,7 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 	for _, n := range nf.AllNodes() {
 		current, ok := curNodes[n.Nodename()]
 		if !ok {
-			log.Warn("missing Kubernetes Node resource", map[string]interface{}{
+			log.Warn("missing Kubernetes Node resource", map[string]any{
 				"name":    n.Nodename(),
 				"address": n.Address,
 			})
@@ -720,9 +722,7 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 				}
 				labels[k] = v
 			}
-			for k, v := range n.Labels {
-				labels[k] = v
-			}
+			maps.Copy(labels, n.Labels)
 			if n.ControlPlane {
 				labels[op.CKELabelMaster] = "true"
 			}
@@ -735,9 +735,7 @@ func (nf *NodeFilter) OutdatedAttrsNodes() (nodes []*corev1.Node) {
 				}
 				annotations[k] = v
 			}
-			for k, v := range n.Annotations {
-				annotations[k] = v
-			}
+			maps.Copy(annotations, n.Annotations)
 			current.Annotations = annotations
 
 			nTaints := make(map[string]bool)

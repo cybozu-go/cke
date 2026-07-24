@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/spf13/cobra"
 	apiserverv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
+
+	"github.com/cybozu-go/cke"
 )
 
 var vaultEncKeyCmd = &cobra.Command{
@@ -49,11 +50,11 @@ func rotateK8sEncryptionKey(vc *vault.Client) error {
 		return err
 	}
 
-	var enckeys map[string]interface{}
+	var enckeys map[string]any
 	if secret != nil && secret.Data != nil {
 		enckeys = secret.Data
 	} else {
-		enckeys = make(map[string]interface{})
+		enckeys = make(map[string]any)
 	}
 
 	var cfg apiserverv1.AESConfiguration

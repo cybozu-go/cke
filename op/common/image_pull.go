@@ -4,9 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
+
+	"github.com/cybozu-go/cke"
 )
 
 type imagePullCommand struct {
@@ -30,13 +31,13 @@ func (c imagePullCommand) Run(ctx context.Context, inf cke.Infrastructure, _ str
 		ce := inf.Engine(n.Address)
 		env.Go(func(ctx context.Context) error {
 			var err error
-			for i := 0; i < pullMaxRetry; i++ {
+			for range pullMaxRetry {
 				err = ce.PullImage(c.img)
 				if err == nil {
 					return nil
 				}
 
-				log.Warn("failed to pull image", map[string]interface{}{
+				log.Warn("failed to pull image", map[string]any{
 					"image":     c.img.Name(),
 					log.FnError: err,
 				})

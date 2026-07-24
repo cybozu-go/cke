@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/cybozu-go/cke/sabakan"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
+
+	"github.com/cybozu-go/cke/sabakan"
 )
 
 // sabakanSetVariablesCmd represents the "sabakan set-variables" command

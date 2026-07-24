@@ -55,7 +55,7 @@ func subMain(prefix string) error {
 
 		dest := filepath.Join(prefix, hdr.Name)
 		dir := filepath.Dir(dest)
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("failed to mkdir %s: %w", dir, err)
 		}
 

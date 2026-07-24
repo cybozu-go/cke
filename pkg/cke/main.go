@@ -7,16 +7,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/metrics"
-	"github.com/cybozu-go/cke/sabakan"
-	"github.com/cybozu-go/cke/server"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/pflag"
 	"go.etcd.io/etcd/client/v3/concurrency"
 	"sigs.k8s.io/yaml"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/metrics"
+	"github.com/cybozu-go/cke/sabakan"
+	"github.com/cybozu-go/cke/server"
 )
 
 var (
@@ -143,7 +144,10 @@ func main() {
 		},
 		ShutdownTimeout: 3 * time.Minute,
 	}
-	s.ListenAndServe()
+	err = s.ListenAndServe()
+	if err != nil {
+		log.ErrorExit(err)
+	}
 	err = well.Wait()
 	if err != nil && !well.IsSignaled(err) {
 		log.ErrorExit(err)

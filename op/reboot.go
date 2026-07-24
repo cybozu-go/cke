@@ -8,16 +8,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/cybozu-go/cke"
 )
 
-const drainBackOffBaseSeconds = 300
-const drainBackOffMaxSeconds = 1200
+const (
+	drainBackOffBaseSeconds = 300
+	drainBackOffMaxSeconds  = 1200
+)
 
 type rebootDrainStartOp struct {
 	finished bool
@@ -145,18 +148,18 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 			if err != nil {
 				return fmt.Errorf("failed to cordon node %s: %v", entry.Node, err)
 			}
-			log.Info("start eviction dry-run", map[string]interface{}{
+			log.Info("start eviction dry-run", map[string]any{
 				"name": entry.Node,
 			})
 			err = dryRunEvictOrDeleteNodePod(ctx, cs, entry.Node, protected, c.protectedJobPods)
 			if err != nil {
-				log.Warn("eviction dry-run failed", map[string]interface{}{
+				log.Warn("eviction dry-run failed", map[string]any{
 					"name":      entry.Node,
 					log.FnError: err,
 				})
 				return err
 			}
-			log.Info("eviction dry-run succeeded", map[string]interface{}{
+			log.Info("eviction dry-run succeeded", map[string]any{
 				"name": entry.Node,
 			})
 			return nil
@@ -174,12 +177,12 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 
 	// next, evict pods on each node
 	for _, entry := range evictNodes {
-		log.Info("start eviction", map[string]interface{}{
+		log.Info("start eviction", map[string]any{
 			"name": entry.Node,
 		})
 		err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected, c.protectedJobPods, c.evictAttempts, c.evictInterval)
 		if err != nil {
-			log.Warn("eviction failed", map[string]interface{}{
+			log.Warn("eviction failed", map[string]any{
 				"name":      entry.Node,
 				log.FnError: err,
 			})
@@ -188,7 +191,7 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 			if err != nil {
 				return err
 			}
-			log.Info("eviction succeeded", map[string]interface{}{
+			log.Info("eviction succeeded", map[string]any{
 				"name": entry.Node,
 			})
 		}
@@ -284,12 +287,12 @@ func (c rebootDeleteDaemonSetPodCommand) Run(ctx context.Context, inf cke.Infras
 	for _, entry := range c.entries {
 		// keep entry.Status as RebootStatusDraining and don't update it here.
 
-		log.Info("start deletion of DaemonSet pod", map[string]interface{}{
+		log.Info("start deletion of DaemonSet pod", map[string]any{
 			"name": entry.Node,
 		})
 		err := deleteOnDeleteDaemonSetPod(ctx, cs, entry.Node)
 		if err != nil {
-			log.Warn("deletion of DaemonSet pod failed", map[string]interface{}{
+			log.Warn("deletion of DaemonSet pod failed", map[string]any{
 				"name":      entry.Node,
 				log.FnError: err,
 			})
@@ -390,7 +393,7 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 			inf.ReleaseAgent(entry.Node)
 			mu.Unlock()
 
-			var attempts int = 1
+			attempts := 1
 			if c.retries != nil {
 				attempts = *c.retries + 1
 			}
@@ -412,7 +415,7 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 					return nil
 				}
 
-				log.Warn("failed on rebooting node", map[string]interface{}{
+				log.Warn("failed on rebooting node", map[string]any{
 					log.FnError: err,
 					"node":      entry.Node,
 					"attempts":  i,
@@ -426,7 +429,7 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 				}
 			}
 			c.notifyFailedNode(entry.Node)
-			log.Warn("given up rebooting node", map[string]interface{}{
+			log.Warn("given up rebooting node", map[string]any{
 				"node": entry.Node,
 			})
 			return nil
@@ -683,7 +686,7 @@ func listProtectedNamespaces(ctx context.Context, cs kubernetes.Interface, ls *m
 }
 
 func drainBackOff(ctx context.Context, inf cke.Infrastructure, entry *cke.RebootQueueEntry, err error) error {
-	log.Warn("failed to drain node", map[string]interface{}{
+	log.Warn("failed to drain node", map[string]any{
 		"name":      entry.Node,
 		log.FnError: err,
 	})

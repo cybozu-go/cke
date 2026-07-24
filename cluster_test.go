@@ -15,7 +15,6 @@ import (
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 )
 
@@ -257,7 +256,7 @@ rules:
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
 	}
 	kubeSchedulerConfig, err := c.Options.Scheduler.MergeConfig(&schedulerv1.KubeSchedulerConfiguration{
-		Parallelism: ptr.To(int32(999)),
+		Parallelism: new(int32(999)),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -515,7 +514,7 @@ rules:
 				Options: Options{
 					Proxy: ProxyParams{
 						Config: &unstructured.Unstructured{
-							Object: map[string]interface{}{
+							Object: map[string]any{
 								"apiVersion": "kubeproxy.config.k8s.io/v1alpha1",
 								"kind":       "KubeProxyConfiguration",
 								"mode":       "foo",
@@ -537,7 +536,7 @@ rules:
 				Options: Options{
 					Kubelet: KubeletParams{
 						Config: &unstructured.Unstructured{
-							Object: map[string]interface{}{
+							Object: map[string]any{
 								"apiVersion":    "kubelet.config.k8s.io/v1beta1",
 								"kind":          "KubeletConfiguration",
 								"clusterDomain": "a_b.c",
@@ -756,7 +755,7 @@ rules:
 				Options: Options{
 					Proxy: ProxyParams{
 						Config: &unstructured.Unstructured{
-							Object: map[string]interface{}{
+							Object: map[string]any{
 								"apiVersion": "kubeproxy.config.k8s.io/v1alpha1",
 								"kind":       "KubeProxyConfiguration",
 								"mode":       ProxyModeIptables,
@@ -945,7 +944,6 @@ func testNodename(t *testing.T) {
 			t.Errorf("%s != %s", c.node.Nodename(), c.nodename)
 		}
 	}
-
 }
 
 func testClusterValidateReboot(t *testing.T) {
@@ -964,63 +962,63 @@ func testClusterValidateReboot(t *testing.T) {
 		{
 			name: "zero eviction_timeout_seconds",
 			reboot: Reboot{
-				EvictionTimeoutSeconds: ptr.To(0),
+				EvictionTimeoutSeconds: new(0),
 			},
 			wantErr: true,
 		},
 		{
 			name: "positive eviction_timeout_seconds",
 			reboot: Reboot{
-				EvictionTimeoutSeconds: ptr.To(1),
+				EvictionTimeoutSeconds: new(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative eviction_timeout_seconds",
 			reboot: Reboot{
-				EvictionTimeoutSeconds: ptr.To(-1),
+				EvictionTimeoutSeconds: new(-1),
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero command_timeout_seconds",
 			reboot: Reboot{
-				CommandTimeoutSeconds: ptr.To(0),
+				CommandTimeoutSeconds: new(0),
 			},
 			wantErr: false,
 		},
 		{
 			name: "positive command_timeout_seconds",
 			reboot: Reboot{
-				CommandTimeoutSeconds: ptr.To(1),
+				CommandTimeoutSeconds: new(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative command_timeout_seconds",
 			reboot: Reboot{
-				CommandTimeoutSeconds: ptr.To(-1),
+				CommandTimeoutSeconds: new(-1),
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero max_concurrent_reboots",
 			reboot: Reboot{
-				MaxConcurrentReboots: ptr.To(0),
+				MaxConcurrentReboots: new(0),
 			},
 			wantErr: true,
 		},
 		{
 			name: "positive max_concurrent_reboots",
 			reboot: Reboot{
-				MaxConcurrentReboots: ptr.To(1),
+				MaxConcurrentReboots: new(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative max_concurrent_reboots",
 			reboot: Reboot{
-				MaxConcurrentReboots: ptr.To(-1),
+				MaxConcurrentReboots: new(-1),
 			},
 			wantErr: true,
 		},
@@ -1062,84 +1060,84 @@ func testClusterValidateRepair(t *testing.T) {
 		{
 			name: "zero max_concurrent_repairs",
 			repair: Repair{
-				MaxConcurrentRepairs: ptr.To(0),
+				MaxConcurrentRepairs: new(0),
 			},
 			wantErr: true,
 		},
 		{
 			name: "positive max_concurrent_repairs",
 			repair: Repair{
-				MaxConcurrentRepairs: ptr.To(1),
+				MaxConcurrentRepairs: new(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative max_concurrent_repairs",
 			repair: Repair{
-				MaxConcurrentRepairs: ptr.To(-1),
+				MaxConcurrentRepairs: new(-1),
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero evict_retries",
 			repair: Repair{
-				EvictRetries: ptr.To(0),
+				EvictRetries: new(0),
 			},
 			wantErr: false,
 		},
 		{
 			name: "positive evict_retries",
 			repair: Repair{
-				EvictRetries: ptr.To(1),
+				EvictRetries: new(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative evict_retries",
 			repair: Repair{
-				EvictRetries: ptr.To(-1),
+				EvictRetries: new(-1),
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero evict_interval",
 			repair: Repair{
-				EvictInterval: ptr.To(0),
+				EvictInterval: new(0),
 			},
 			wantErr: false,
 		},
 		{
 			name: "positive evict_interval",
 			repair: Repair{
-				EvictInterval: ptr.To(1),
+				EvictInterval: new(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative evict_interval",
 			repair: Repair{
-				EvictInterval: ptr.To(-1),
+				EvictInterval: new(-1),
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero eviction_timeout_seconds",
 			repair: Repair{
-				EvictionTimeoutSeconds: ptr.To(0),
+				EvictionTimeoutSeconds: new(0),
 			},
 			wantErr: true,
 		},
 		{
 			name: "positive eviction_timeout_seconds",
 			repair: Repair{
-				EvictionTimeoutSeconds: ptr.To(1),
+				EvictionTimeoutSeconds: new(1),
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative eviction_timeout_seconds",
 			repair: Repair{
-				EvictionTimeoutSeconds: ptr.To(-1),
+				EvictionTimeoutSeconds: new(-1),
 			},
 			wantErr: true,
 		},

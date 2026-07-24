@@ -35,9 +35,13 @@ The output is a list of RebootQueueEntry formatted in JSON.`,
 			}
 			if rebootQueueListOptions.Output == "simple" {
 				w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 1, 1, ' ', 0)
-				w.Write([]byte("Index\tNode\tStatus\tLastTransitionTime\tDrainBackOffCount\tDrainBackOffExpire\n"))
+				if _, err := w.Write([]byte("Index\tNode\tStatus\tLastTransitionTime\tDrainBackOffCount\tDrainBackOffExpire\n")); err != nil {
+					return err
+				}
 				for _, entry := range entries {
-					w.Write([]byte(fmt.Sprintf("%v\t%v\t%v\t%v\t%v\t%v\t\n", entry.Index, entry.Node, entry.Status, entry.LastTransitionTime.Format(time.RFC3339), entry.DrainBackOffCount, entry.DrainBackOffExpire.Format(time.RFC3339))))
+					if _, err := fmt.Fprintf(w, "%v\t%v\t%v\t%v\t%v\t%v\t\n", entry.Index, entry.Node, entry.Status, entry.LastTransitionTime.Format(time.RFC3339), entry.DrainBackOffCount, entry.DrainBackOffExpire.Format(time.RFC3339)); err != nil {
+						return err
+					}
 				}
 				return w.Flush()
 			} else {
