@@ -47,12 +47,12 @@ func (o *repairDrainStartOp) NextCommand() cke.Commander {
 	}
 
 	return repairDrainStartCommand{
-		entry:                   o.entry,
-		protectedNamespaces:     o.config.ProtectedNamespaces,
-		deletableJobPodSelector: o.config.DeletableJobPodSelector,
-		apiserver:               o.apiserver,
-		evictAttempts:           attempts,
-		evictInterval:           interval,
+		entry:               o.entry,
+		protectedNamespaces: o.config.ProtectedNamespaces,
+		protectedJobPods:    o.config.ProtectedJobPods,
+		apiserver:           o.apiserver,
+		evictAttempts:       attempts,
+		evictInterval:       interval,
 	}
 }
 
@@ -61,12 +61,12 @@ func (o *repairDrainStartOp) Targets() []string {
 }
 
 type repairDrainStartCommand struct {
-	entry                   *cke.RepairQueueEntry
-	protectedNamespaces     *metav1.LabelSelector
-	deletableJobPodSelector *metav1.LabelSelector
-	apiserver               *cke.Node
-	evictAttempts           int
-	evictInterval           time.Duration
+	entry               *cke.RepairQueueEntry
+	protectedNamespaces *metav1.LabelSelector
+	protectedJobPods    *metav1.LabelSelector
+	apiserver           *cke.Node
+	evictAttempts       int
+	evictInterval       time.Duration
 }
 
 func (c repairDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
@@ -93,7 +93,7 @@ func (c repairDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 		log.Info("start eviction dry-run", map[string]interface{}{
 			"address": c.entry.Address,
 		})
-		err = dryRunEvictOrDeleteNodePod(ctx, cs, c.entry.Nodename, protected, c.deletableJobPodSelector)
+		err = dryRunEvictOrDeleteNodePod(ctx, cs, c.entry.Nodename, protected, c.protectedJobPods)
 		if err != nil {
 			log.Warn("eviction dry-run failed", map[string]interface{}{
 				"address":   c.entry.Address,
@@ -125,7 +125,7 @@ func (c repairDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 	log.Info("start eviction", map[string]interface{}{
 		"address": c.entry.Address,
 	})
-	err = evictOrDeleteNodePod(ctx, cs, c.entry.Nodename, protected, c.deletableJobPodSelector, c.evictAttempts, c.evictInterval)
+	err = evictOrDeleteNodePod(ctx, cs, c.entry.Nodename, protected, c.protectedJobPods, c.evictAttempts, c.evictInterval)
 	if err != nil {
 		log.Warn("eviction failed", map[string]interface{}{
 			"address":   c.entry.Address,

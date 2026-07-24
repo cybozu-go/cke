@@ -101,14 +101,14 @@ func enumerateOnDeleteDaemonSetPods(ctx context.Context, cs kubernetes.Interface
 
 // dryRunEvictOrDeleteNodePod checks eviction or deletion of Pods on the specified Node can proceed.
 // It returns an error if a running Pod exists or an eviction of the Pod in protected namespace failed.
-func dryRunEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, deletableJobPodSelector *metav1.LabelSelector) error {
-	return doEvictOrDeleteNodePod(ctx, cs, node, protected, deletableJobPodSelector, 0, 0, true)
+func dryRunEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, protectedJobPods *metav1.LabelSelector) error {
+	return doEvictOrDeleteNodePod(ctx, cs, node, protected, protectedJobPods, 0, 0, true)
 }
 
 // evictOrDeleteNodePod evicts or delete Pods on the specified Node.
-// If a running Job Pod exists and its labels do not match deletableJobPodSelector, this function returns an error.
-func evictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, deletableJobPodSelector *metav1.LabelSelector, attempts int, interval time.Duration) error {
-	return doEvictOrDeleteNodePod(ctx, cs, node, protected, deletableJobPodSelector, attempts, interval, false)
+// If a running Job Pod exists and its labels match protectedJobPods, this function returns an error.
+func evictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, protectedJobPods *metav1.LabelSelector, attempts int, interval time.Duration) error {
+	return doEvictOrDeleteNodePod(ctx, cs, node, protected, protectedJobPods, attempts, interval, false)
 }
 
 // deleteOnDeleteDaemonSetPod evicts or delete Pods on the specified Node that are owned by "updateStrategy:OnDelete" DaemonSets.
@@ -120,10 +120,10 @@ func deleteOnDeleteDaemonSetPod(ctx context.Context, cs kubernetes.Interface, no
 // It first tries eviction.
 // If the eviction failed and the Pod's namespace is not protected, it deletes the Pod.
 // If the eviction failed and the Pod's namespace is protected, it retries after `interval` interval at most `attempts` times.
-// If a running Job Pod exists and its labels match deletableJobPodSelector, it deletes the Pod.
-// If a running Job Pod exists and its labels do not match deletableJobPodSelector, this function returns an error.
+// If a running Job Pod exists and its labels do not match protectedJobPods, it deletes the Pod.
+// If a running Job Pod exists and its labels match protectedJobPods, this function returns an error.
 // If `dry` is true, it performs dry run and `attempts` and `interval` are ignored.
-func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, deletableJobPodSelectorSpec *metav1.LabelSelector, attempts int, interval time.Duration, dry bool) error {
+func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node string, protected map[string]bool, protectedJobPodsSpec *metav1.LabelSelector, attempts int, interval time.Duration, dry bool) error {
 	var deleteOptions *metav1.DeleteOptions
 	if dry {
 		deleteOptions = &metav1.DeleteOptions{
@@ -131,14 +131,13 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 		}
 	}
 
-	// // LabelSelectorAsSelector(nil) returns labels.Nothing(), but set it explicitly in case that behavior changes in the future.
-	deletableJobPodSelector := labels.Nothing()
-	if deletableJobPodSelectorSpec != nil {
-		var err error
-		deletableJobPodSelector, err = metav1.LabelSelectorAsSelector(deletableJobPodSelectorSpec)
-		if err != nil {
-			return err
-		}
+	// LabelSelectorAsSelector(nil) returns labels.Nothing() which matches no label,
+	// so a nil protected_job_pods protects no Job-managed Pod (all are deletable).
+	// LabelSelectorAsSelector(&metav1.LabelSelector{}) returns labels.Everything() which
+	// matches any label, so an empty protected_job_pods protects all Job-managed Pods.
+	protectedJobPodSelector, err := metav1.LabelSelectorAsSelector(protectedJobPodsSpec)
+	if err != nil {
+		return err
 	}
 
 	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
@@ -213,11 +212,11 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 		}
 		return nil
 	}, func(pod *corev1.Pod) error {
-		if !deletableJobPodSelector.Matches(labels.Set(pod.Labels)) {
-			return fmt.Errorf("job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
+		if protectedJobPodSelector.Matches(labels.Set(pod.Labels)) {
+			return fmt.Errorf("protected job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
 		}
 		if dry {
-			log.Info("skip actually deleting job-managed pod in dry-run (labels match deletable_job_pod_selector)", map[string]interface{}{
+			log.Info("skip actually deleting job-managed pod in dry-run (labels do not match protected_job_pods)", map[string]interface{}{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
 				"dry":       dry,

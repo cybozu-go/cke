@@ -135,14 +135,14 @@ func testClusterYAML(t *testing.T) {
 	if c.Reboot.ProtectedNamespaces.MatchLabels["app"] != "sample" {
 		t.Error(`c.Reboot.ProtectedNamespaces.MatchLabels["app"] != "sample"`)
 	}
-	if c.Reboot.DeletableJobPodSelector == nil {
-		t.Fatal(`c.Reboot.DeletableJobPodSelector == nil`)
+	if c.Reboot.ProtectedJobPods == nil {
+		t.Fatal(`c.Reboot.ProtectedJobPods == nil`)
 	}
-	if c.Reboot.DeletableJobPodSelector.MatchLabels == nil {
-		t.Fatal(`c.Reboot.DeletableJobPodSelector.MatchLabels == nil`)
+	if c.Reboot.ProtectedJobPods.MatchLabels == nil {
+		t.Fatal(`c.Reboot.ProtectedJobPods.MatchLabels == nil`)
 	}
-	if c.Reboot.DeletableJobPodSelector.MatchLabels["app"] != "job-sample" {
-		t.Error(`c.Reboot.DeletableJobPodSelector.MatchLabels["app"] != "job-sample"`)
+	if c.Reboot.ProtectedJobPods.MatchLabels["app"] != "job-sample" {
+		t.Error(`c.Reboot.ProtectedJobPods.MatchLabels["app"] != "job-sample"`)
 	}
 	if len(c.Repair.RepairProcedures) != 1 {
 		t.Fatal(`len(c.Repair.RepairProcedures) != 1`)
@@ -210,11 +210,11 @@ func testClusterYAML(t *testing.T) {
 	if c.Repair.ProtectedNamespaces.MatchLabels["app"] != "protected" {
 		t.Error(`c.Repair.ProtectedNamespaces.MatchLabels["app"] != "protected"`)
 	}
-	if c.Repair.DeletableJobPodSelector == nil {
-		t.Fatal(`c.Repair.DeletableJobPodSelector == nil`)
+	if c.Repair.ProtectedJobPods == nil {
+		t.Fatal(`c.Repair.ProtectedJobPods == nil`)
 	}
-	if c.Repair.DeletableJobPodSelector.MatchLabels["app"] != "job-protected" {
-		t.Error(`c.Repair.DeletableJobPodSelector.MatchLabels["app"] != "job-protected"`)
+	if c.Repair.ProtectedJobPods.MatchLabels["app"] != "job-protected" {
+		t.Error(`c.Repair.ProtectedJobPods.MatchLabels["app"] != "job-protected"`)
 	}
 	if c.Repair.EvictRetries == nil {
 		t.Fatal(`c.Repair.EvictRetries == nil`)
@@ -1025,9 +1025,9 @@ func testClusterValidateReboot(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "invalid deletable_job_pod_selector",
+			name: "invalid protected_job_pods",
 			reboot: Reboot{
-				DeletableJobPodSelector: &metav1.LabelSelector{
+				ProtectedJobPods: &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
 						{Key: "app", Operator: "invalid-operator"},
 					},
@@ -1155,9 +1155,9 @@ func testClusterValidateRepair(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "invalid deletable_job_pod_selector",
+			name: "invalid protected_job_pods",
 			repair: Repair{
-				DeletableJobPodSelector: &metav1.LabelSelector{
+				ProtectedJobPods: &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
 						{Key: "app", Operator: "invalid-operator"},
 					},

@@ -276,30 +276,11 @@ func testRepairOperations() {
 		ckecliSafe("repair-queue", "delete-finished")
 		waitRepairEmpty()
 
-		By("checking repair waits for a running job-managed pod")
-		_, stderr, err = kubectlWithInput(repairJobRunningYAML, "apply", "-f", "-")
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-
-		var runningJobPod *corev1.Pod
-		Eventually(func(g Gomega) {
-			pods := getPodListGomega(g, "repair-test", "-l=job-name=job-running")
-			g.Expect(pods.Items).To(HaveLen(1), "pod is not created")
-			g.Expect(pods.Items[0].Status.Phase).To(Equal(corev1.PodRunning), "pod is not running")
-			runningJobPod = &pods.Items[0]
-		}).Should(Succeed())
-
-		repairQueueAdd(runningJobPod.Spec.NodeName)
-		repairShouldNotProceed()
-
-		ckecliSafe("repair-queue", "delete-unfinished")
-		waitRepairEmpty()
-
-		_, stderr, err = kubectlWithInput(repairJobRunningYAML, "delete", "-f", "-")
-		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
-
-		By("checking repair deletes a running job-managed pod matching deletable_job_pod_selector")
-		cluster.Repair.DeletableJobPodSelector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{"cke.cybozu.com/job-ok-to-delete": "true"},
+		By("checking repair deletes a running job-managed pod not matching protected_job_pods")
+		cluster.Repair.ProtectedJobPods = &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{Key: "cke.cybozu.com/job-ok-to-delete", Operator: metav1.LabelSelectorOpDoesNotExist},
+			},
 		}
 		clusterSetAndWait(cluster)
 
@@ -321,11 +302,79 @@ func testRepairOperations() {
 		ckecliSafe("repair-queue", "delete-finished")
 		waitRepairEmpty()
 
-		cluster.Repair.DeletableJobPodSelector = nil
+		_, stderr, err = kubectlWithInput(repairJobRunningOkToDeleteYAML, "delete", "-f", "-")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		By("checking repair waits for a running job-managed pod matching protected_job_pods")
+		_, stderr, err = kubectlWithInput(repairJobRunningYAML, "apply", "-f", "-")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		var runningJobPod *corev1.Pod
+		Eventually(func(g Gomega) {
+			pods := getPodListGomega(g, "repair-test", "-l=job-name=job-running")
+			g.Expect(pods.Items).To(HaveLen(1), "pod is not created")
+			g.Expect(pods.Items[0].Status.Phase).To(Equal(corev1.PodRunning), "pod is not running")
+			runningJobPod = &pods.Items[0]
+		}).Should(Succeed())
+
+		repairQueueAdd(runningJobPod.Spec.NodeName)
+		repairShouldNotProceed()
+
+		ckecliSafe("repair-queue", "delete-unfinished")
+		waitRepairEmpty()
+
+		_, stderr, err = kubectlWithInput(repairJobRunningYAML, "delete", "-f", "-")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		By("checking repair deletes all running job-managed pods when protected_job_pods is null")
+		cluster.Repair.ProtectedJobPods = nil
 		clusterSetAndWait(cluster)
+
+		_, stderr, err = kubectlWithInput(repairJobRunningYAML, "apply", "-f", "-")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		Eventually(func(g Gomega) {
+			pods := getPodListGomega(g, "repair-test", "-l=job-name=job-running")
+			g.Expect(pods.Items).To(HaveLen(1), "pod is not created")
+			g.Expect(pods.Items[0].Status.Phase).To(Equal(corev1.PodRunning), "pod is not running")
+			runningJobPod = &pods.Items[0]
+		}).Should(Succeed())
+
+		repairQueueAdd(runningJobPod.Spec.NodeName)
+		waitRepairSuccess()
+		nodesShouldBeSchedulable(runningJobPod.Spec.NodeName)
+
+		ckecliSafe("repair-queue", "delete-finished")
+		waitRepairEmpty()
+
+		_, stderr, err = kubectlWithInput(repairJobRunningYAML, "delete", "-f", "-")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		By("checking repair protects all running job-managed pods when protected_job_pods is empty")
+		cluster.Repair.ProtectedJobPods = &metav1.LabelSelector{}
+		clusterSetAndWait(cluster)
+
+		_, stderr, err = kubectlWithInput(repairJobRunningOkToDeleteYAML, "apply", "-f", "-")
+		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		Eventually(func(g Gomega) {
+			pods := getPodListGomega(g, "repair-test", "-l=job-name=job-running-ok-to-delete")
+			g.Expect(pods.Items).To(HaveLen(1), "pod is not created")
+			g.Expect(pods.Items[0].Status.Phase).To(Equal(corev1.PodRunning), "pod is not running")
+			okToDeleteJobPod = &pods.Items[0]
+		}).Should(Succeed())
+
+		repairQueueAdd(okToDeleteJobPod.Spec.NodeName)
+		repairShouldNotProceed()
+
+		ckecliSafe("repair-queue", "delete-unfinished")
+		waitRepairEmpty()
 
 		_, stderr, err = kubectlWithInput(repairJobRunningOkToDeleteYAML, "delete", "-f", "-")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
+
+		cluster.Repair.ProtectedJobPods = nil
+		clusterSetAndWait(cluster)
 
 		By("restoring protected_namespace and disabling need_drain")
 		cluster.Repair.ProtectedNamespaces = nil

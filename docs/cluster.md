@@ -85,7 +85,7 @@ Reboot
 | `evict_interval`             | false    | *int                             | Interval of time between eviction retries in seconds. Default: 0        |
 | `max_concurrent_reboots`     | false    | *int                             | Maximum number of nodes to be rebooted concurrently. Default: 1         |
 | `protected_namespaces`       | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                                 |
-| `deletable_job_pod_selector` | false    | [`LabelSelector`][LabelSelector] | A label selector to allow deletion of Job-managed Pods.                 |
+| `protected_job_pods`         | false    | [`LabelSelector`][LabelSelector] | A label selector to protect Job-managed Pods from deletion.             |
 
 `reboot_command` is the command to reboot a node. The node is passed as a command argument.
 The command should return zero if the reboot is successfully started.
@@ -105,10 +105,11 @@ The Pods in the non-protected namespaces are also tried to be deleted gracefully
 
 If `protected_namespaces` is not given, all namespaces are protected.
 
-CKE deletes any running Job-managed Pod permitted for deletion by `deletable_job_pod_selector`.
-If a running Job-managed Pod not permitted for deletion remains, CKE backs off the reboot until the Pod finishes on its own.
+CKE deletes running Job-managed Pod that does **not** match `protected_job_pods`.
+If a running Job-managed Pod matching `protected_job_pods` remains, CKE backs off the reboot until the Pod finishes on its own.
 
-If `deletable_job_pod_selector` is not given, Job-managed Pods are never deleted by reboot.
+If `protected_job_pods` is `null` (not given), no Job-managed Pod matches the selector, so all Job-managed Pods are deletable by reboot.
+If it is set to an empty selector (`{}`), all Job-managed Pods match the selector and are protected from deletion.
 
 Repair
 ------
@@ -121,7 +122,7 @@ Repair
 | `evict_retries`              | false    | \*int                            | Number of eviction retries, not including initial attempt. Default: 0 |
 | `evict_interval`             | false    | \*int                            | Number of time between eviction retries in seconds. Default: 0        |
 | `eviction_timeout_seconds`   | false    | *int                             | Deadline for eviction. Must be positive. Default: 600 (10 minutes)    |
-| `deletable_job_pod_selector` | false    | [`LabelSelector`][LabelSelector]   | A label selector to allow deletion of Job-managed Pods.             |
+| `protected_job_pods`         | false    | [`LabelSelector`][LabelSelector]   | A label selector to protect Job-managed Pods from deletion.        |
 
 The repair configurations control the [repair functionality](repair.md).
 

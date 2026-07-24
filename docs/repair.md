@@ -27,7 +27,7 @@ CKE processes a repair request in the following manner:
 2. executes the steps sequentially:
     1. if Pod eviction is required in the step and the machine is used as a Node of the Kubernetes cluster:
         1. cordons the Node to mark it as unschedulable.
-        2. checks the existence of Job-managed Pods on the Node, deleting those permitted by `deletable_job_pod_selector`. If any Job-managed Pod not permitted for deletion remains, uncordons the Node immediately and processes it again later.
+        2. checks the existence of Job-managed Pods on the Node, deleting those that do not match `protected_job_pods`. If protected Job-managed Pod remains, uncordons the Node immediately and processes it again later.
         3. evicts (and/or deletes) non-DaemonSet-managed Pods on the Node.
     2. executes a repair command specified in the step.
     3. watches whether the machine becomes healthy by running a check command specified for the machine type.
@@ -78,9 +78,10 @@ If Pod eviction is required in the current repair step of the selected repair pr
 If a Pod to be deleted belongs to one of the Namespaces selected by `protected_namespaces`, CKE tries to delete that Pod gracefully with the Kubernetes Eviction API.
 If `protected_namespaces` is not given, all namespaces are protected.
 
-CKE deletes any running Job-managed Pod permitted for deletion by `deletable_job_pod_selector`.
-If a running Job-managed Pod not permitted for deletion remains, CKE interrupts the eviction, uncordons the target machine, and retries later.
-If `deletable_job_pod_selector` is not given, Job-managed Pods are never deleted.
+CKE deletes running Job-managed Pod that does **not** match `protected_job_pods`.
+If a running protected Job-managed Pod remains, CKE interrupts the eviction, uncordons the target machine, and retries later.
+If `protected_job_pods` is `null` (not given), no Job-managed Pod matches the selector, so all Job-managed Pods are deletable.
+If it is set to an empty selector (`{}`), all Job-managed Pods match the selector and are protected from deletion.
 
 If the Eviction API call has failed, i.e., if CKE fails to start the Pod deletion, CKE retries it for `evict_retries` times with `evict_interval`-second interval.
 If CKE finally fails to start the Pod deletion, it interrupts the deletion, uncordons the target machine, waits for a while using a linear backoff algorithm, and retries the deletion.

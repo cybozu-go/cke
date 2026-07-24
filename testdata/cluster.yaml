@@ -23,7 +23,7 @@ reboot:
   protected_namespaces:
     matchLabels:
       app: sample
-  deletable_job_pod_selector:
+  protected_job_pods:
     matchLabels:
       app: job-sample
 repair:
@@ -46,7 +46,7 @@ repair:
   protected_namespaces:
     matchLabels:
       app: protected
-  deletable_job_pod_selector:
+  protected_job_pods:
     matchLabels:
       app: job-protected
   evict_retries: 3

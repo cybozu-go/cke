@@ -12,7 +12,7 @@ CKE watches the reboot queue and handles the reboot requests.
 CKE processes reboot requests in the following manner:
 
 1. cordons the nodes to mark them as unschedulable.
-2. checks the existence of Job-managed Pods on the nodes, deleting those permitted by `.reboot.deletable_job_pod_selector`. If any Job-managed Pod not permitted for deletion remains, uncordons the node immediately and processes it again later.
+2. checks the existence of Job-managed Pods on the nodes, deleting those that do not match `.reboot.protected_job_pods`. If protected Job-managed Pod remains, uncordons the node immediately and processes it again later.
 3. evicts (and/or deletes) non-DaemonSet-managed pods on the nodes.
 4. waits for the volumes to be detached from the nodes.
 5. reboot the node by running hardware reboot command for the node.
@@ -49,8 +49,8 @@ The queue is processed by CKE as follows:
    - If the number of nodes under processing is less than maximum concurrent reboots and the number of unreachable nodes that are not under this reboot process is not more than `maximum-unreachable-nodes-for-reboot` in the constraints, pick several nodes from front of the queue and start draining them.
      1. Cordon the node.
      2. If there are Job-managed Pods:
-       - Delete each Job-managed Pod permitted for deletion by `.reboot.deletable_job_pod_selector`.
-       - If any Job-managed Pod not permitted for deletion remains, backoff the draining. i.e.:
+       - Delete each Job-managed Pod that does not match `.reboot.protected_job_pods`.
+       - If protected Job-managed Pod remains, backoff the draining. i.e.:
          - update the entry status back to `queued`.
          - mark the entry not to be drained again immediately
      3. evict non-DaemonSet-managed Pods. If the eviction is failed due to PDBs and the namespace of the Pod is not protected by `.reboot.protected_namespaces`, delete the Pods. If the deletion is also failed, backoff the draining.
