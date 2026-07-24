@@ -5,9 +5,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
+
+	"github.com/cybozu-go/cke"
 )
 
 type repairFinishOp struct {
@@ -67,7 +68,7 @@ func (c repairFinishCommand) Command() cke.Command {
 func repairFinish(ctx context.Context, inf cke.Infrastructure, entry *cke.RepairQueueEntry, succeeded bool, cluster *cke.Cluster) error {
 	if succeeded {
 		entry.Status = cke.RepairStatusSucceeded
-		//execute Success command
+		// execute Success command
 		var stderr bytes.Buffer
 		err := func() error {
 			op, err := entry.GetMatchingRepairOperation(cluster)
@@ -94,7 +95,7 @@ func repairFinish(ctx context.Context, inf cke.Infrastructure, entry *cke.Repair
 		}()
 		if err != nil {
 			entry.Status = cke.RepairStatusFailed
-			log.Warn("SuccessCommand failed", map[string]interface{}{
+			log.Warn("SuccessCommand failed", map[string]any{
 				log.FnError: err,
 				"stderr":    stderr.String(),
 				"index":     entry.Index,

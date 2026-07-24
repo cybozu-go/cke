@@ -4,6 +4,11 @@ import (
 	"slices"
 	"time"
 
+	"github.com/cybozu-go/log"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/clusterdns"
@@ -11,11 +16,6 @@ import (
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/op/nodedns"
 	"github.com/cybozu-go/cke/static"
-	"github.com/cybozu-go/log"
-	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 // DecideOps returns the next operations to do and the operation phase.
@@ -110,31 +110,19 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 
 func riversOps(c *cke.Cluster, nf *NodeFilter, maxConcurrentUpdates int) (ops []cke.Operator) {
 	if nodes := nf.SSHConnected(nf.RiversStopped(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
+		max := min(len(nodes), maxConcurrentUpdates)
 		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
 	}
 	if nodes := nf.SSHConnected(nf.RiversOutdated(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
+		max := min(len(nodes), maxConcurrentUpdates)
 		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
 	}
 	if nodes := nf.SSHConnected(nf.EtcdRiversStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
+		max := min(len(nodes), maxConcurrentUpdates)
 		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 	}
 	if nodes := nf.SSHConnected(nf.EtcdRiversOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
+		max := min(len(nodes), maxConcurrentUpdates)
 		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
 	}
 	return ops
@@ -212,45 +200,27 @@ func k8sOps(c *cke.Cluster, nf *NodeFilter, cs *cke.ClusterStatus, maxConcurrent
 	// For all nodes
 	apiServer := nf.HealthyAPIServer()
 	if nodes := nf.SSHConnected(nf.KubeletUnrecognized(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
+		max := min(len(nodes), maxConcurrentUpdates)
 		ops = append(ops, k8s.KubeletRestartOp(nodes[:max], c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
 	if nodes := nf.SSHConnected(nf.KubeletStopped(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
+		max := min(len(nodes), maxConcurrentUpdates)
 		ops = append(ops, k8s.KubeletBootOp(nodes[:max], nf.RegisteredNodes(nodes[:max]), apiServer, c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
 	if nodes := nf.SSHConnected(nf.KubeletOutdated(nf.AllNodes())); len(nodes) > 0 && c.Options.Kubelet.InPlaceUpdate {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
+		max := min(len(nodes), maxConcurrentUpdates)
 		ops = append(ops, k8s.KubeletRestartOp(nodes[:max], c.Name, c.Options.Kubelet, cs.NodeStatuses))
 	}
 	if nodes := nf.SSHConnected(nf.ProxyStopped(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
+		max := min(len(nodes), maxConcurrentUpdates)
 		ops = append(ops, k8s.KubeProxyBootOp(nodes[:max], c.Name, "", c.Options.Proxy))
 	}
 	if nodes := nf.SSHConnected(nf.ProxyOutdated(nf.AllNodes(), c.Options.Proxy)); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
+		max := min(len(nodes), maxConcurrentUpdates)
 		ops = append(ops, k8s.KubeProxyRestartOp(nodes[:max], c.Name, "", c.Options.Proxy))
 	}
 	if nodes := nf.SSHConnected(nf.ProxyRunningUnexpectedly(nf.AllNodes())); len(nodes) > 0 {
-		max := maxConcurrentUpdates
-		if len(nodes) < max {
-			max = len(nodes)
-		}
+		max := min(len(nodes), maxConcurrentUpdates)
 		ops = append(ops, op.ProxyStopOp(nodes[:max]))
 	}
 	return ops
@@ -448,7 +418,7 @@ func etcdEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter, mark
 	return ops
 }
 
-//lint:ignore SA1019 code for Endpoints will be removed later
+//nolint:staticcheck // code for Endpoints will be removed later
 func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEPS *discoveryv1.EndpointSlice, apiserver *cke.Node) []cke.Operator {
 	var ops []cke.Operator
 
@@ -465,14 +435,14 @@ func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEP
 		}
 	}
 
-	//lint:ignore SA1019 code for Endpoints will be removed later
+	//nolint:staticcheck // code for Endpoints will be removed later
 	ep := &corev1.Endpoints{}
 	ep.Namespace = expect.namespace
 	ep.Name = expect.name
 	ep.Labels = map[string]string{
 		"endpointslice.kubernetes.io/skip-mirror": "true",
 	}
-	//lint:ignore SA1019 code for Endpoints will be removed later
+	//nolint:staticcheck // code for Endpoints will be removed later
 	ep.Subsets = []corev1.EndpointSubset{
 		{
 			Addresses:         readyAddresses,
@@ -513,7 +483,7 @@ func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEP
 	for i, ip := range addrs {
 		eps.Endpoints[i] = discoveryv1.Endpoint{
 			Addresses:  []string{ip},
-			Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(ready[ip])},
+			Conditions: discoveryv1.EndpointConditions{Ready: new(ready[ip])},
 		}
 	}
 	eps.Ports = []discoveryv1.EndpointPort{
@@ -530,7 +500,7 @@ func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEP
 	return ops
 }
 
-//lint:ignore SA1019 code for Endpoints will be removed later
+//nolint:staticcheck // code for Endpoints will be removed later
 func decideEpOp(expect, actual *corev1.Endpoints, apiServer *cke.Node) cke.Operator {
 	if actual == nil {
 		return op.KubeEndpointsCreateOp(apiServer, expect)
@@ -839,7 +809,7 @@ func repairOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 		step, err := entry.GetCurrentRepairStep(c)
 		if err != nil {
 			if err != cke.ErrRepairStepOutOfRange {
-				log.Warn("failed to get executing repair step", map[string]interface{}{
+				log.Warn("failed to get executing repair step", map[string]any{
 					log.FnError:    err,
 					"index":        entry.Index,
 					"address":      entry.Address,

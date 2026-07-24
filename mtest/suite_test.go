@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/cybozu-go/cke"
 )
 
 const (
@@ -59,8 +60,8 @@ var _ = BeforeSuite(func() {
 
 	By("stopping previous cke.service")
 	for _, host := range []string{host1, host2} {
-		execAt(host, "sudo", "systemctl", "reset-failed", "cke.service")
-		execAt(host, "sudo", "systemctl", "stop", "cke.service")
+		_, _, _ = execAt(host, "sudo", "systemctl", "reset-failed", "cke.service")
+		_, _, _ = execAt(host, "sudo", "systemctl", "stop", "cke.service")
 	}
 
 	By("copying test files")
@@ -117,7 +118,7 @@ var _ = BeforeSuite(func() {
 
 	resp, err := etcd.Get(context.Background(), "vault")
 	Expect(err).NotTo(HaveOccurred())
-	Expect(len(resp.Kvs)).NotTo(BeZero())
+	Expect(resp.Kvs).NotTo(BeEmpty())
 	err = cke.ConnectVault(context.Background(), resp.Kvs[0].Value)
 	Expect(err).NotTo(HaveOccurred())
 

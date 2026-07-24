@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+
+	"github.com/cybozu-go/cke"
 )
 
 type kubeNodeRemove struct {

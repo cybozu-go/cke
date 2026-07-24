@@ -60,13 +60,13 @@ func NewServer(upstreams []*Upstream, cfg Config) *Server {
 		logger:    logger,
 		dialer:    dialer,
 		pool: sync.Pool{
-			New: func() interface{} {
+			New: func() any {
 				buf := make([]byte, copyBufferSize)
 				return &buf
 			},
 		},
 	}
-	s.Server.Handler = s.handleConnection
+	s.Handler = s.handleConnection
 
 	return s
 }
@@ -78,7 +78,7 @@ func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
 
 	tc, ok := conn.(*net.TCPConn)
 	if !ok {
-		s.logger.Error("non-TCP connection", map[string]interface{}{
+		s.logger.Error("non-TCP connection", map[string]any{
 			"conn": conn,
 		})
 		return
@@ -105,18 +105,18 @@ func (s *Server) handleConnection(ctx context.Context, conn net.Conn) {
 		_, err := io.CopyBuffer(destConn, tc, *buf)
 		s.pool.Put(buf)
 		if hc, ok := destConn.(netutil.HalfCloser); ok {
-			hc.CloseWrite()
+			_ = hc.CloseWrite()
 		}
-		tc.CloseRead()
+		_ = tc.CloseRead()
 		return err
 	})
 	env.Go(func(_ context.Context) error {
 		buf := s.pool.Get().(*[]byte)
 		_, err := io.CopyBuffer(tc, destConn, *buf)
 		s.pool.Put(buf)
-		tc.CloseWrite()
+		_ = tc.CloseWrite()
 		if hc, ok := destConn.(netutil.HalfCloser); ok {
-			hc.CloseRead()
+			_ = hc.CloseRead()
 		}
 		return err
 	})
@@ -150,7 +150,7 @@ func (s *Server) randomUpstream() (net.Conn, *Upstream, error) {
 			return conn, u, nil
 		}
 
-		s.logger.Warn("failed to connect to proxy server", map[string]interface{}{
+		s.logger.Warn("failed to connect to proxy server", map[string]any{
 			"upstream": a,
 		})
 	}

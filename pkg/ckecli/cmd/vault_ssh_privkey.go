@@ -4,8 +4,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/cybozu-go/cke"
 	"github.com/spf13/cobra"
+
+	"github.com/cybozu-go/cke"
 )
 
 var vaultSSHPrivKeyHost string
@@ -48,11 +49,11 @@ If FILE is -, the contents are read from stdin.`,
 			return err
 		}
 
-		var privkeys map[string]interface{}
+		var privkeys map[string]any
 		if secret != nil && secret.Data != nil {
 			privkeys = secret.Data
 		} else {
-			privkeys = make(map[string]interface{})
+			privkeys = make(map[string]any)
 		}
 		privkeys[vaultSSHPrivKeyHost] = string(data)
 

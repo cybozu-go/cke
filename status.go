@@ -34,11 +34,11 @@ type KubernetesClusterStatus struct {
 	DNSService          *corev1.Service
 	ClusterDNS          ClusterDNSStatus
 	NodeDNS             NodeDNSStatus
-	//lint:ignore SA1019 code for Endpoints will be removed later
+	//nolint:staticcheck // code for Endpoints will be removed later
 	MasterEndpoints     *corev1.Endpoints
 	MasterEndpointSlice *discoveryv1.EndpointSlice
 	EtcdService         *corev1.Service
-	//lint:ignore SA1019 code for Endpoints will be removed later
+	//nolint:staticcheck // code for Endpoints will be removed later
 	EtcdEndpoints     *corev1.Endpoints
 	EtcdEndpointSlice *discoveryv1.EndpointSlice
 	ResourceStatuses  map[string]ResourceStatus

@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
+
+	"github.com/cybozu-go/cke"
 )
 
 // LocalProxy is the controller of kube-proxy and unbound running on the same server as CKE.
@@ -49,7 +50,7 @@ func (c *LocalProxy) runOnce(ctx context.Context) error {
 
 	st, err := getStatus(ctx, inf)
 	if err != nil {
-		log.Error("failed to get status", map[string]interface{}{
+		log.Error("failed to get status", map[string]any{
 			log.FnError: err,
 		})
 		//lint:ignore nilerr intentional
@@ -65,7 +66,7 @@ func (c *LocalProxy) runOnce(ctx context.Context) error {
 
 	for _, op := range ops {
 		if err := runOp(ctx, op, inf); err != nil {
-			log.Error("failed to run an operation", map[string]interface{}{
+			log.Error("failed to run an operation", map[string]any{
 				"op":        op.Name(),
 				log.FnError: err,
 			})
@@ -75,7 +76,7 @@ func (c *LocalProxy) runOnce(ctx context.Context) error {
 }
 
 func runOp(ctx context.Context, op cke.Operator, inf cke.Infrastructure) error {
-	log.Info("begin new operation", map[string]interface{}{
+	log.Info("begin new operation", map[string]any{
 		"op": op.Name(),
 	})
 
@@ -88,14 +89,14 @@ func runOp(ctx context.Context, op cke.Operator, inf cke.Infrastructure) error {
 		// check the context before proceed
 		select {
 		case <-ctx.Done():
-			log.Info("interrupt the operation due to cancellation", map[string]interface{}{
+			log.Info("interrupt the operation due to cancellation", map[string]any{
 				"op": op.Name(),
 			})
 			return nil
 		default:
 		}
 
-		log.Info("execute a command", map[string]interface{}{
+		log.Info("execute a command", map[string]any{
 			"op":      op.Name(),
 			"command": commander.Command().String(),
 		})
@@ -103,7 +104,7 @@ func runOp(ctx context.Context, op cke.Operator, inf cke.Infrastructure) error {
 		if err == nil {
 			continue
 		}
-		log.Error("command failed", map[string]interface{}{
+		log.Error("command failed", map[string]any{
 			log.FnError: err,
 			"op":        op.Name(),
 			"command":   commander.Command().String(),
@@ -111,9 +112,8 @@ func runOp(ctx context.Context, op cke.Operator, inf cke.Infrastructure) error {
 		return err
 	}
 
-	log.Info("operation completed", map[string]interface{}{
+	log.Info("operation completed", map[string]any{
 		"op": op.Name(),
 	})
 	return nil
-
 }

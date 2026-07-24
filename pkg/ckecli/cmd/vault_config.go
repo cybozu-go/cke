@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
+
+	"github.com/cybozu-go/cke"
 )
 
 // vaultConfigCmd represents the "vault config" command

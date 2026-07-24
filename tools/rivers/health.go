@@ -79,7 +79,7 @@ func (hc *HealthChecker) doHealthCheck(ctx context.Context, first bool) {
 			if err == nil {
 				conn.Close()
 				if first || !u.IsHealthy() {
-					hc.logger.Info("an upstream becomes healthy", map[string]interface{}{
+					hc.logger.Info("an upstream becomes healthy", map[string]any{
 						"address": u.address,
 					})
 					u.SetHealthy(true)
@@ -88,7 +88,7 @@ func (hc *HealthChecker) doHealthCheck(ctx context.Context, first bool) {
 			}
 
 			if first || u.IsHealthy() {
-				hc.logger.Error("an upstream becomes unhealthy", map[string]interface{}{
+				hc.logger.Error("an upstream becomes unhealthy", map[string]any{
 					log.FnError: err.Error(),
 					"address":   u.address,
 				})

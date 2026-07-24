@@ -25,7 +25,7 @@ const SSHSecret = CKESecret + "/ssh"
 // K8sSecret is the path of encryption keys used for Kubernetes Secrets.
 const K8sSecret = CKESecret + "/k8s"
 
-type anyMap = map[string]interface{}
+type anyMap = map[string]any
 
 // VaultConfig is data to store in etcd
 type VaultConfig struct {

@@ -5,13 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
-	"github.com/cybozu-go/cke/op/clusterdns"
-	"github.com/cybozu-go/cke/op/etcd"
-	"github.com/cybozu-go/cke/op/k8s"
-	"github.com/cybozu-go/cke/op/nodedns"
-	"github.com/cybozu-go/cke/static"
 	"github.com/google/go-cmp/cmp"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	corev1 "k8s.io/api/core/v1"
@@ -21,7 +14,14 @@ import (
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/ptr"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/clusterdns"
+	"github.com/cybozu-go/cke/op/etcd"
+	"github.com/cybozu-go/cke/op/k8s"
+	"github.com/cybozu-go/cke/op/nodedns"
+	"github.com/cybozu-go/cke/static"
 )
 
 const (
@@ -298,9 +298,9 @@ func (d testData) withScheduler() testData {
 		st.BuiltInParams = k8s.SchedulerParams()
 
 		st.Config = &schedulerv1.KubeSchedulerConfiguration{}
-		st.Config.Parallelism = ptr.To(int32(999))
+		st.Config.Parallelism = new(int32(999))
 		st.Config.ClientConnection.Kubeconfig = op.SchedulerKubeConfigPath
-		st.Config.LeaderElection.LeaderElect = ptr.To(true)
+		st.Config.LeaderElection.LeaderElect = new(true)
 	}
 	return d
 }
@@ -325,7 +325,7 @@ func (d testData) withKubelet(domain, dns string, allowSwap bool) testData {
 			TLSPrivateKeyFile:     "/etc/kubernetes/pki/kubelet.key",
 			Authentication: kubeletv1beta1.KubeletAuthentication{
 				X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: "/etc/kubernetes/pki/ca.crt"},
-				Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: ptr.To(true)},
+				Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: new(true)},
 			},
 			Authorization: kubeletv1beta1.KubeletAuthorization{Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook},
 			ClusterDNS:    []string{n.Address},
@@ -407,14 +407,14 @@ func (d testData) withK8sReady() testData {
 }
 
 func (d testData) withMasterEndpoint() testData {
-	//lint:ignore SA1019 code for Endpoints will be removed later
+	//nolint:staticcheck // code for Endpoints will be removed later
 	d.Status.Kubernetes.MasterEndpoints = &corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				"endpointslice.kubernetes.io/skip-mirror": "true",
 			},
 		},
-		//lint:ignore SA1019 code for Endpoints will be removed later
+		//nolint:staticcheck // code for Endpoints will be removed later
 		Subsets: []corev1.EndpointSubset{
 			{
 				Addresses: []corev1.EndpointAddress{
@@ -438,18 +438,18 @@ func (d testData) withMasterEndpoint() testData {
 		Endpoints: []discoveryv1.Endpoint{
 			{
 				Addresses:  []string{"10.0.0.11"},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 			{
 				Addresses:  []string{"10.0.0.12"},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 			{
 				Addresses:  []string{"10.0.0.13"},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 		},
-		Ports: []discoveryv1.EndpointPort{{Name: ptr.To("https"), Port: ptr.To(int32(6443))}},
+		Ports: []discoveryv1.EndpointPort{{Name: new("https"), Port: new(int32(6443))}},
 	}
 
 	return d
@@ -464,14 +464,14 @@ func (d testData) withEtcdEndpoint() testData {
 		},
 	}
 
-	//lint:ignore SA1019 code for Endpoints will be removed later
+	//nolint:staticcheck // code for Endpoints will be removed later
 	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				"endpointslice.kubernetes.io/skip-mirror": "true",
 			},
 		},
-		//lint:ignore SA1019 code for Endpoints will be removed later
+		//nolint:staticcheck // code for Endpoints will be removed later
 		Subsets: []corev1.EndpointSubset{
 			{
 				Addresses: []corev1.EndpointAddress{
@@ -495,18 +495,18 @@ func (d testData) withEtcdEndpoint() testData {
 		Endpoints: []discoveryv1.Endpoint{
 			{
 				Addresses:  []string{"10.0.0.11"},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 			{
 				Addresses:  []string{"10.0.0.12"},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 			{
 				Addresses:  []string{"10.0.0.13"},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 		},
-		Ports: []discoveryv1.EndpointPort{{Name: ptr.To(""), Port: ptr.To(int32(2379))}},
+		Ports: []discoveryv1.EndpointPort{{Name: new(""), Port: new(int32(2379))}},
 	}
 
 	return d
@@ -517,7 +517,7 @@ func (d testData) withNotReadyMasterEndpoint(i int) testData {
 	origAddrs := d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses
 	d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = slices.Delete(slices.Clone(origAddrs), i, i+1)
 	d.Status.Kubernetes.MasterEndpoints.Subsets[0].NotReadyAddresses = origAddrs[i : i+1]
-	d.Status.Kubernetes.MasterEndpointSlice.Endpoints[i].Conditions.Ready = ptr.To(false)
+	d.Status.Kubernetes.MasterEndpointSlice.Endpoints[i].Conditions.Ready = new(false)
 	return d
 }
 
@@ -526,7 +526,7 @@ func (d testData) withNotReadyEtcdEndpoint(i int) testData {
 	origAddrs := d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses
 	d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = slices.Delete(slices.Clone(origAddrs), i, i+1)
 	d.Status.Kubernetes.EtcdEndpoints.Subsets[0].NotReadyAddresses = origAddrs[i : i+1]
-	d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[i].Conditions.Ready = ptr.To(false)
+	d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[i].Conditions.Ready = new(false)
 	return d
 }
 
@@ -1552,7 +1552,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "MasterEndpointsUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
-				//lint:ignore SA1019 code for Endpoints will be removed later
+				//nolint:staticcheck // code for Endpoints will be removed later
 				d.Status.Kubernetes.MasterEndpoints.Subsets = []corev1.EndpointSubset{}
 			}),
 			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
@@ -1601,7 +1601,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "EtcdEndpointsUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
-				//lint:ignore SA1019 code for Endpoints will be removed later
+				//nolint:staticcheck // code for Endpoints will be removed later
 				d.Status.Kubernetes.EtcdEndpoints.Subsets = []corev1.EndpointSubset{}
 			}),
 			ExpectedOps:   []opData{{"update-cke-etcd-endpoints", 1}},
@@ -2904,9 +2904,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDrainWaitCompletion",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2),
+				},
 			}).with(func(d testData) {
 				timeout := 60
 				d.Cluster.Repair.EvictionTimeoutSeconds = &timeout
@@ -2918,9 +2920,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDrainWaitCompletionExpire",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second * 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second * 2),
+				},
 			}).with(func(d testData) {
 				timeout := 60
 				d.Cluster.Repair.EvictionTimeoutSeconds = &timeout
@@ -2934,9 +2938,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDrainWaitCompletionDefaultTimeout",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
-					LastTransitionTime: time.Now().Add(-time.Duration(cke.DefaultRepairEvictionTimeoutSeconds) * time.Second / 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(cke.DefaultRepairEvictionTimeoutSeconds) * time.Second / 2),
+				},
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}).withRebootCordon(4),
@@ -2946,9 +2952,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDrainWaitCompletionExpireDefaultTimeout",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
-					LastTransitionTime: time.Now().Add(-time.Duration(cke.DefaultRepairEvictionTimeoutSeconds) * time.Second * 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(cke.DefaultRepairEvictionTimeoutSeconds) * time.Second * 2),
+				},
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}).withRebootCordon(4),
@@ -2960,9 +2968,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDrainWaitRetryUncordon",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWaiting,
-					DrainBackOffExpire: time.Now().Add(time.Duration(60) * time.Second)},
+					DrainBackOffExpire: time.Now().Add(time.Duration(60) * time.Second),
+				},
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}).withRebootCordon(4),
@@ -2974,9 +2984,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDrainWaitRetry",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWaiting,
-					DrainBackOffExpire: time.Now().Add(time.Duration(60) * time.Second)},
+					DrainBackOffExpire: time.Now().Add(time.Duration(60) * time.Second),
+				},
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}),
@@ -2986,9 +2998,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDrainWaitRetryExpire",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWaiting,
-					DrainBackOffExpire: time.Now().Add(-time.Duration(60) * time.Second)},
+					DrainBackOffExpire: time.Now().Add(-time.Duration(60) * time.Second),
+				},
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}),
@@ -3000,8 +3014,10 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDrainCompleted",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
-					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining},
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
+				},
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 				d.Status.RepairQueue.DrainCompleted = map[string]bool{nodeNames[4]: true}
@@ -3014,9 +3030,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairWatch",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2),
+				},
 			}).with(func(d testData) {
 				watch := 60
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds = &watch
@@ -3027,9 +3045,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairWatchExpire",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second * 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second * 2),
+				},
 			}).with(func(d testData) {
 				watch := 60
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds = &watch
@@ -3042,9 +3062,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairWatchExpireDefaultTimeout",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2),
+				},
 			}).withRebootCordon(4),
 			ExpectedOps: []opData{
 				{"repair-execute", 1}, // next step
@@ -3054,9 +3076,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairWatchExpireLastStep",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching, Step: 1,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2),
+				},
 			}).withRebootCordon(4),
 			ExpectedOps: []opData{
 				{"repair-finish", 1}, // failed
@@ -3066,9 +3090,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairCompleted",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2),
+				},
 			}).with(func(d testData) {
 				d.Status.RepairQueue.RepairCompleted = map[string]bool{nodeNames[4]: true}
 			}).withRebootCordon(4),
@@ -3080,8 +3106,10 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairSucceededUncordon",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
-					Status: cke.RepairStatusSucceeded},
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusSucceeded,
+				},
 			}).withRebootCordon(4),
 			ExpectedOps: []opData{
 				{"reboot-uncordon", 1},
@@ -3091,8 +3119,10 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairSucceeded",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
-					Status: cke.RepairStatusSucceeded},
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusSucceeded,
+				},
 			}),
 			ExpectedOps:   nil,
 			ExpectedPhase: cke.PhaseCompleted,
@@ -3100,8 +3130,10 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairFailedUncordon",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
-					Status: cke.RepairStatusFailed},
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusFailed,
+				},
 			}).withRebootCordon(4),
 			ExpectedOps: []opData{
 				{"reboot-uncordon", 1},
@@ -3111,8 +3143,10 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairFailed",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
-					Status: cke.RepairStatusFailed},
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusFailed,
+				},
 			}),
 			ExpectedOps:   nil,
 			ExpectedPhase: cke.PhaseCompleted,
@@ -3120,8 +3154,10 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDeletedUncordon",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
-					Deleted: true},
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Deleted: true,
+				},
 			}).withRebootCordon(4),
 			ExpectedOps: []opData{
 				{"reboot-uncordon", 1},
@@ -3131,8 +3167,10 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDeleted",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
-					Deleted: true},
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Deleted: true,
+				},
 			}),
 			ExpectedOps: []opData{
 				{"repair-dequeue", 1},
@@ -3160,9 +3198,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDisabledDrainWaitCompletion",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2),
+				},
 			}).with(func(d testData) {
 				timeout := 60
 				d.Cluster.Repair.EvictionTimeoutSeconds = &timeout
@@ -3176,9 +3216,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDisabledDrainWaitCompletionExpire",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second * 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second * 2),
+				},
 			}).with(func(d testData) {
 				timeout := 60
 				d.Cluster.Repair.EvictionTimeoutSeconds = &timeout
@@ -3192,9 +3234,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDisabledDrainWaitRetry",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWaiting,
-					DrainBackOffExpire: time.Now().Add(time.Duration(60) * time.Second)},
+					DrainBackOffExpire: time.Now().Add(time.Duration(60) * time.Second),
+				},
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}),
@@ -3204,9 +3248,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDisabledDrainWaitRetryExpire",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWaiting,
-					DrainBackOffExpire: time.Now().Add(-time.Duration(60) * time.Second)},
+					DrainBackOffExpire: time.Now().Add(-time.Duration(60) * time.Second),
+				},
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 			}),
@@ -3216,8 +3262,10 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDisabledDrainCompleted",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
-					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining},
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusDraining,
+				},
 			}).with(func(d testData) {
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].NeedDrain = true
 				d.Status.RepairQueue.DrainCompleted = map[string]bool{nodeNames[4]: true}
@@ -3230,9 +3278,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDisabledWatch",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2),
+				},
 			}).with(func(d testData) {
 				watch := 60
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds = &watch
@@ -3243,9 +3293,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDisabledWatchExpire",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second * 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second * 2),
+				},
 			}).with(func(d testData) {
 				watch := 60
 				d.Cluster.Repair.RepairProcedures[0].RepairOperations[0].RepairSteps[0].WatchSeconds = &watch
@@ -3256,9 +3308,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDisabledWatchExpireLastStep",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching, Step: 1,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2),
+				},
 			}).withRebootCordon(4),
 			ExpectedOps: []opData{
 				{"repair-finish", 1}, // failed
@@ -3268,9 +3322,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDisabledCompleted",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
 					Status: cke.RepairStatusProcessing, StepStatus: cke.RepairStepStatusWatching,
-					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2)},
+					LastTransitionTime: time.Now().Add(-time.Duration(60) * time.Second / 2),
+				},
 			}).with(func(d testData) {
 				d.Status.RepairQueue.RepairCompleted = map[string]bool{nodeNames[4]: true}
 			}).withRebootCordon(4),
@@ -3282,8 +3338,10 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RepairDisabledDeleted",
 			Input: newData().withK8sResourceReady().withRepairConfig().withRepairDisabled().withRepairEntries([]*cke.RepairQueueEntry{
-				{Address: nodeNames[4], MachineType: "type1", Operation: "op1",
-					Deleted: true},
+				{
+					Address: nodeNames[4], MachineType: "type1", Operation: "op1",
+					Deleted: true,
+				},
 			}),
 			ExpectedOps: []opData{
 				{"repair-dequeue", 1},
@@ -3473,7 +3531,7 @@ func TestDecideOps(t *testing.T) {
 			}
 		OUT:
 			for _, o := range ops {
-				for i := 0; i < 100; i++ {
+				for range 100 {
 					commander := o.NextCommand()
 					if commander == nil {
 						continue OUT

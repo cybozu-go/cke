@@ -26,7 +26,7 @@ var (
 type Upstream struct {
 	address string
 
-	health int32 // must be accessed through SetHealthy / IsHealthy
+	health atomic.Int32 // must be accessed through SetHealthy / IsHealthy
 
 	m     sync.Mutex
 	conns map[net.Conn]func()
@@ -34,11 +34,11 @@ type Upstream struct {
 
 func (u *Upstream) SetHealthy(b bool) {
 	if b {
-		atomic.StoreInt32(&u.health, 1)
+		u.health.Store(1)
 		return
 	}
 
-	atomic.StoreInt32(&u.health, 0)
+	u.health.Store(0)
 	u.m.Lock()
 	conns := u.conns
 	u.conns = make(map[net.Conn]func())
@@ -50,7 +50,7 @@ func (u *Upstream) SetHealthy(b bool) {
 }
 
 func (u *Upstream) IsHealthy() bool {
-	return atomic.LoadInt32(&u.health) != 0
+	return u.health.Load() != 0
 }
 
 func (u *Upstream) AddConn(conn net.Conn, cancelFunc func()) {
@@ -80,7 +80,7 @@ func run() error {
 		}
 	}
 
-	var dialer = &net.Dialer{}
+	dialer := &net.Dialer{}
 	var err error
 	dialer.Timeout, err = time.ParseDuration(*flgDialTimeout)
 	if err != nil {

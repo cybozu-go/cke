@@ -446,8 +446,9 @@ roleRef:
   name: pod-reader
   apiGroup: rbac.authorization.k8s.io
 `
-		ckecliWithInput([]byte(resources), "resource", "set", "-")
-		defer ckecliWithInput([]byte(resources), "resource", "delete", "-")
+		_, _, err := ckecliWithInput([]byte(resources), "resource", "set", "-")
+		Expect(err).NotTo(HaveOccurred())
+		defer func() { _, _, _ = ckecliWithInput([]byte(resources), "resource", "delete", "-") }()
 		waitServerStatusCompletion()
 
 		By("getting user-defined resources")
@@ -462,8 +463,9 @@ metadata:
   labels:
     test: value
 `
-		ckecliWithInput([]byte(newResources), "resource", "set", "-")
-		defer ckecliWithInput([]byte(newResources), "resource", "delete", "-")
+		_, _, err = ckecliWithInput([]byte(newResources), "resource", "set", "-")
+		Expect(err).NotTo(HaveOccurred())
+		defer func() { _, _, _ = ckecliWithInput([]byte(newResources), "resource", "delete", "-") }()
 		waitServerStatusCompletion()
 
 		stdout, _, err := kubectl("get", "namespaces/foo", "-o", "json")
@@ -478,7 +480,7 @@ metadata:
 		By("set user-defined resource")
 		_, _, err := ckecliWithInput(webhookYAML, "resource", "set", "-")
 		Expect(err).NotTo(HaveOccurred())
-		defer ckecliWithInput(webhookYAML, "resource", "delete", "-")
+		defer func() { _, _, _ = ckecliWithInput(webhookYAML, "resource", "delete", "-") }()
 		waitServerStatusCompletion()
 
 		By("checking ValidatingWebhookConfiguration")

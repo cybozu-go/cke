@@ -8,15 +8,17 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
 	vault "github.com/hashicorp/vault/api"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/cybozu-go/cke"
 )
 
 var kubeHTTP cke.KubeHTTP
@@ -119,10 +121,8 @@ func (l localDocker) PullImage(img cke.Image) error {
 		return fmt.Errorf("failed to execute docker image list: %w", err)
 	}
 
-	for _, i := range strings.Fields(string(stdout)) {
-		if img.Name() == i {
-			return nil
-		}
+	if slices.Contains(strings.Fields(string(stdout)), img.Name()) {
+		return nil
 	}
 
 	return exec.Command("docker", "image", "pull", img.Name()).Run()

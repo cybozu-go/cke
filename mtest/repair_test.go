@@ -7,12 +7,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/cybozu-go/cke"
 )
 
 func getRepairEntries() ([]*cke.RepairQueueEntry, error) {
@@ -395,17 +396,18 @@ func testRepairOperations() {
 		waitRepairEmpty()
 
 		By("stopping CKE to avoid hang-up in SSH session due to node3 shutdown")
-		stopCKE()
+		Expect(stopCKE()).To(Succeed())
 
 		By("stopping a control plane node")
-		execAt(node3, "sudo", "systemd-run", "halt", "-f", "-f")
+		_, _, err := execAt(node3, "sudo", "systemd-run", "halt", "-f", "-f")
+		Expect(err).NotTo(HaveOccurred())
 		Eventually(func(g Gomega) {
 			_, err := execAtLocal("ping", "-c", "1", "-W", "1", node3)
 			g.Expect(err).To(HaveOccurred())
 		}).Should(Succeed())
 
 		By("restarting CKE")
-		runCKE(ckeImageURL)
+		Expect(runCKE(ckeImageURL)).To(Succeed())
 		waitServerStatusCompletion()
 
 		By("confirming etcd is healthy but only node3 is out of sync")
@@ -442,17 +444,18 @@ func testRepairOperations() {
 		waitRepairEmpty()
 
 		By("stopping CKE to avoid hang-up in SSH session due to node2 shutdown")
-		stopCKE()
+		Expect(stopCKE()).To(Succeed())
 
 		By("stopping a second control plane node")
-		execAt(node2, "sudo", "systemd-run", "halt", "-f", "-f")
+		_, _, err := execAt(node2, "sudo", "systemd-run", "halt", "-f", "-f")
+		Expect(err).NotTo(HaveOccurred())
 		Eventually(func(g Gomega) {
 			_, err := execAtLocal("ping", "-c", "1", "-W", "1", node2)
 			g.Expect(err).To(HaveOccurred())
 		}).Should(Succeed())
 
 		By("restarting CKE")
-		runCKE(ckeImageURL)
+		Expect(runCKE(ckeImageURL)).To(Succeed())
 		// Do not wait for status completion: with two control plane nodes down the
 		// etcd cluster is not healthy, so CKE stays in the etcd-wait phase. Just
 		// wait for the CKE container to be running so the assertion is meaningful.

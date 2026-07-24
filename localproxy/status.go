@@ -10,10 +10,11 @@ import (
 	"strings"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/op/nodedns"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // the current status for running local proxy
@@ -38,7 +39,7 @@ func isRunning(name string) (bool, string, error) {
 		return false, "", fmt.Errorf("failed to run docker ps: %w", err)
 	}
 
-	for _, line := range strings.Split(string(stdout), "\n") {
+	for line := range strings.SplitSeq(string(stdout), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) != 2 {
 			continue

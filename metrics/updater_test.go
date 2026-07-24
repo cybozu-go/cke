@@ -8,12 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"github.com/prometheus/common/model"
+
+	"github.com/cybozu-go/cke"
 )
 
 type labeledValue struct {
