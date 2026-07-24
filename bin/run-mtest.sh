@@ -14,8 +14,6 @@ $GCLOUD compute instances create ${INSTANCE_NAME} \
   --boot-disk-type ${DISK_TYPE} \
   --boot-disk-size ${BOOT_DISK_SIZE} \
   --local-ssd interface=nvme \
-  --local-ssd interface=nvme \
-  --local-ssd interface=nvme \
   --local-ssd interface=nvme
 
 # Run multi-host test
