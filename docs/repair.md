@@ -80,8 +80,7 @@ If `protected_namespaces` is not given, all namespaces are protected.
 
 CKE deletes running Job-managed Pods that do **not** match `protected_job_pods`.
 If running protected Job-managed Pods remain, CKE interrupts the eviction, uncordons the target machine, and retries later.
-If `protected_job_pods` is `null` (not given), no Job-managed Pod matches the selector, so all Job-managed Pods are deletable.
-If it is set to an empty selector (`{}`), all Job-managed Pods match the selector and are protected from deletion.
+If `protected_job_pods` is `null` (not given) or an empty selector (`{}`), all Job-managed Pods are protected from deletion.
 
 If the Eviction API call has failed, i.e., if CKE fails to start the Pod deletion, CKE retries it for `evict_retries` times with `evict_interval`-second interval.
 If CKE finally fails to start the Pod deletion, it interrupts the deletion, uncordons the target machine, waits for a while using a linear backoff algorithm, and retries the deletion.

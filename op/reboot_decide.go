@@ -131,13 +131,15 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 		}
 	}
 
-	// LabelSelectorAsSelector(nil) returns labels.Nothing() which matches no label,
-	// so a nil protected_job_pods protects no Job-managed Pod (all are deletable).
-	// LabelSelectorAsSelector(&metav1.LabelSelector{}) returns labels.Everything() which
-	// matches any label, so an empty protected_job_pods protects all Job-managed Pods.
-	protectedJobPodSelector, err := metav1.LabelSelectorAsSelector(protectedJobPodsSpec)
-	if err != nil {
-		return err
+	// When protected_job_pods is nil, protects all Job-managed Pods.
+	// LabelSelectorAsSelector(nil) returns labels.Nothing(), so defult to labels.Everything() here.
+	protectedJobPodSelector := labels.Everything()
+	if protectedJobPodsSpec != nil {
+		var err error
+		protectedJobPodSelector, err = metav1.LabelSelectorAsSelector(protectedJobPodsSpec)
+		if err != nil {
+			return err
+		}
 	}
 
 	return enumeratePods(ctx, cs, node, func(pod *corev1.Pod) error {
