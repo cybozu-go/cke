@@ -6,6 +6,9 @@ on:
       - 'main'
 env:
   filename: "main.yaml"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     name: Build CKE
@@ -55,13 +58,13 @@ jobs:
         if: ${{ always() }}
         run: cat cke-service.log
       - name: Set the instance lifetime
-        if: ${{ failure() ||  cancelled() }}
+        if: ${{ failure() }}
         run: |
           . ./bin/env
           $GCLOUD compute instances add-metadata ${INSTANCE_NAME} --zone ${ZONE} \
           --metadata shutdown-at=$(date -Iseconds -d+30minutes)
       - name: Notify to Slack
-        if: ${{ failure() ||  cancelled() }}
+        if: ${{ failure() }}
         run: |
           . ./bin/env
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
@@ -70,22 +73,37 @@ jobs:
               BRANCH_NAME=${GITHUB_REF#refs/heads/}
           fi
           curl -X POST -H 'Content-type: application/json' --data "{
-            \"blocks\": [
+            \"attachments\": [
               {
-                \"type\": \"section\",
-                \"text\": {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"Failed: ${{ github.actor }}'s workflow (${{ github.workflow }}) in <https://github.com/${{ github.repository }}/actions/workflows/${{ env.filename }}|${{ github.repository }}> (<https://github.com/${{ github.repository }}/actions/workflows/${{ env.filename }}?query=branch%3A${BRANCH_NAME}|${BRANCH_NAME}>) \n Do you extend the lifetime of ${INSTANCE_NAME}?\"
-                },
-                \"accessory\": {
-                  \"type\": \"button\",
-                  \"text\": {
-                    \"type\": \"plain_text\",
-                    \"text\": \"Extend\",
-                    \"emoji\": true
-                  },
-                  \"value\": \"${INSTANCE_NAME}\"
-                }
+                \"color\": \"#ff4b00\",
+                \"blocks\": [
+                  {
+                    \"type\": \"section\",
+                    \"text\": {
+                      \"type\": \"mrkdwn\",
+                      \"text\": \"Failure: ${{ github.actor }}'s workflow in <https://github.com/${{ github.repository }}|${{ github.repository }}> (<https://github.com/${{ github.repository }}/actions/workflows/${{ env.filename }}?query=branch%3A${BRANCH_NAME}|${BRANCH_NAME}>)\"
+                    },
+                    \"fields\": [
+                      {
+                        \"type\": \"mrkdwn\",
+                        \"text\": \"*Workflow*\n<https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} #${{ github.run_number }}> [${SUITE}]\"
+                      },
+                      {
+                        \"type\": \"mrkdwn\",
+                        \"text\": \"*Instance*\n${INSTANCE_NAME}\"
+                      }
+                    ],
+                    \"accessory\": {
+                      \"type\": \"button\",
+                      \"text\": {
+                        \"type\": \"plain_text\",
+                        \"text\": \"Extend\",
+                        \"emoji\": true
+                      },
+                      \"value\": \"${INSTANCE_NAME}\"
+                    }
+                  }
+                ]
               }
             ]
           }" ${{ secrets.SLACK_WEBHOOK_URL }}
