@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#versioning).
 
 
-## [Unreleased
+## [Unreleased]
 
 ## [1.34.9]
 
