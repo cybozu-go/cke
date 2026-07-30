@@ -281,6 +281,7 @@ type Reboot struct {
 	EvictRetries           *int                  `json:"evict_retries"`
 	EvictInterval          *int                  `json:"evict_interval"`
 	ProtectedNamespaces    *metav1.LabelSelector `json:"protected_namespaces,omitempty"`
+	ProtectedJobPods       *metav1.LabelSelector `json:"protected_job_pods,omitempty"`
 }
 
 const DefaultRebootEvictionTimeoutSeconds = 600
@@ -293,6 +294,7 @@ type Repair struct {
 	EvictRetries           *int                  `json:"evict_retries,omitempty"`
 	EvictInterval          *int                  `json:"evict_interval,omitempty"`
 	EvictionTimeoutSeconds *int                  `json:"eviction_timeout_seconds,omitempty"`
+	ProtectedJobPods       *metav1.LabelSelector `json:"protected_job_pods,omitempty"`
 }
 
 type RepairProcedure struct {
@@ -412,6 +414,11 @@ func (c *Cluster) Validate(isTmpl bool) error {
 	}
 
 	err = validateReboot(c.Reboot)
+	if err != nil {
+		return err
+	}
+
+	err = validateRepair(c.Repair)
 	if err != nil {
 		return err
 	}
@@ -590,6 +597,35 @@ func validateReboot(reboot Reboot) error {
 	}
 	// nil is safe for LabelSelectorAsSelector
 	_, err := metav1.LabelSelectorAsSelector(reboot.ProtectedNamespaces)
+	if err != nil {
+		return fmt.Errorf("invalid label selector: %w", err)
+	}
+	_, err = metav1.LabelSelectorAsSelector(reboot.ProtectedJobPods)
+	if err != nil {
+		return fmt.Errorf("invalid label selector: %w", err)
+	}
+	return nil
+}
+
+func validateRepair(repair Repair) error {
+	if repair.MaxConcurrentRepairs != nil && *repair.MaxConcurrentRepairs <= 0 {
+		return errors.New("max_concurrent_repairs must be positive")
+	}
+	if repair.EvictRetries != nil && *repair.EvictRetries < 0 {
+		return errors.New("evict_retries must not be negative")
+	}
+	if repair.EvictInterval != nil && *repair.EvictInterval < 0 {
+		return errors.New("evict_interval must not be negative")
+	}
+	if repair.EvictionTimeoutSeconds != nil && *repair.EvictionTimeoutSeconds <= 0 {
+		return errors.New("eviction_timeout_seconds must be positive")
+	}
+	// nil is safe for LabelSelectorAsSelector
+	_, err := metav1.LabelSelectorAsSelector(repair.ProtectedNamespaces)
+	if err != nil {
+		return fmt.Errorf("invalid label selector: %w", err)
+	}
+	_, err = metav1.LabelSelectorAsSelector(repair.ProtectedJobPods)
 	if err != nil {
 		return fmt.Errorf("invalid label selector: %w", err)
 	}

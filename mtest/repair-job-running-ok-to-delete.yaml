@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: repair-test
+  name: job-running-ok-to-delete
+spec:
+  template:
+    metadata:
+      labels:
+        cke.cybozu.com/job-ok-to-delete: "true"
+    spec:
+      containers:
+      - name: ubuntu
+        image: ghcr.io/cybozu/ubuntu:24.04
+        command: ["sleep", "3600"]
+      restartPolicy: Never
+  backoffLimit: 1

@@ -73,18 +73,19 @@ Taint
 Reboot
 ------
 
-| Name                       | Required | Type                             | Description                                                             |
-| -------------------------- | -------- | -------------------------------- | ----------------------------------------------------------------------- |
-| `reboot_command`           | true     | array                            | A command to reboot.  List of strings.                                  |
-| `boot_check_command`       | true     | array                            | A command to check nodes booted.  List of strings.                      |
-| `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default: 600 (10 minutes).     |
-| `command_timeout_seconds`  | false    | *int                             | Deadline for rebooting. Zero means infinity. Default: wait indefinitely |
-| `command_retries`          | false    | *int                             | Number of reboot retries, not including initial attempt. Default: 0     |
-| `command_interval`         | false    | *int                             | Interval of time between reboot retries in seconds. Default: 0          |
-| `evict_retries`            | false    | *int                             | Number of eviction retries, not including initial attempt. Default: 0   |
-| `evict_interval`           | false    | *int                             | Interval of time between eviction retries in seconds. Default: 0        |
-| `max_concurrent_reboots`   | false    | *int                             | Maximum number of nodes to be rebooted concurrently. Default: 1         |
-| `protected_namespaces`     | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                                 |
+| Name                         | Required | Type                             | Description                                                             |
+| ---------------------------- | -------- | -------------------------------- | ----------------------------------------------------------------------- |
+| `reboot_command`             | true     | array                            | A command to reboot.  List of strings.                                  |
+| `boot_check_command`         | true     | array                            | A command to check nodes booted.  List of strings.                      |
+| `eviction_timeout_seconds`   | false    | *int                             | Deadline for eviction. Must be positive. Default: 600 (10 minutes).     |
+| `command_timeout_seconds`    | false    | *int                             | Deadline for rebooting. Zero means infinity. Default: wait indefinitely |
+| `command_retries`            | false    | *int                             | Number of reboot retries, not including initial attempt. Default: 0     |
+| `command_interval`           | false    | *int                             | Interval of time between reboot retries in seconds. Default: 0          |
+| `evict_retries`              | false    | *int                             | Number of eviction retries, not including initial attempt. Default: 0   |
+| `evict_interval`             | false    | *int                             | Interval of time between eviction retries in seconds. Default: 0        |
+| `max_concurrent_reboots`     | false    | *int                             | Maximum number of nodes to be rebooted concurrently. Default: 1         |
+| `protected_namespaces`       | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                                 |
+| `protected_job_pods`         | false    | [`LabelSelector`][LabelSelector] | A label selector to protect Job-managed Pods from deletion.             |
 
 `reboot_command` is the command to reboot a node. The node is passed as a command argument.
 The command should return zero if the reboot is successfully started.
@@ -104,17 +105,23 @@ The Pods in the non-protected namespaces are also tried to be deleted gracefully
 
 If `protected_namespaces` is not given, all namespaces are protected.
 
+CKE deletes running Job-managed Pods that do **not** match `protected_job_pods`.
+If running Job-managed Pods matching `protected_job_pods` remain, CKE backs off the reboot until the Pods finish on its own.
+
+If `protected_job_pods` is `nil` (not given) or an empty selector (`{}`), all Job-managed Pods are protected from deletion.
+
 Repair
 ------
 
-| Name                       | Required | Type                             | Description                                                           |
-| -------------------------- | -------- | -------------------------------- | --------------------------------------------------------------------- |
-| `repair_procedures`        | true     | `[]RepairProcedure`              | List of [repair procedures](#repairprocedure).                        |
-| `max_concurrent_repairs`   | false    | \*int                            | Maximum number of machines to be repaired concurrently. Default: 1    |
-| `protected_namespaces`     | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                               |
-| `evict_retries`            | false    | \*int                            | Number of eviction retries, not including initial attempt. Default: 0 |
-| `evict_interval`           | false    | \*int                            | Number of time between eviction retries in seconds. Default: 0        |
-| `eviction_timeout_seconds` | false    | *int                             | Deadline for eviction. Must be positive. Default: 600 (10 minutes)    |
+| Name                         | Required | Type                             | Description                                                           |
+| ---------------------------- | -------- | -------------------------------- | --------------------------------------------------------------------- |
+| `repair_procedures`          | true     | `[]RepairProcedure`              | List of [repair procedures](#repairprocedure).                        |
+| `max_concurrent_repairs`     | false    | \*int                            | Maximum number of machines to be repaired concurrently. Default: 1    |
+| `protected_namespaces`       | false    | [`LabelSelector`][LabelSelector] | A label selector to protect namespaces.                               |
+| `evict_retries`              | false    | \*int                            | Number of eviction retries, not including initial attempt. Default: 0 |
+| `evict_interval`             | false    | \*int                            | Number of time between eviction retries in seconds. Default: 0        |
+| `eviction_timeout_seconds`   | false    | *int                             | Deadline for eviction. Must be positive. Default: 600 (10 minutes)    |
+| `protected_job_pods`         | false    | [`LabelSelector`][LabelSelector]   | A label selector to protect Job-managed Pods from deletion.        |
 
 The repair configurations control the [repair functionality](repair.md).
 

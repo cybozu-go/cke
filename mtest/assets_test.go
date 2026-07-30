@@ -14,6 +14,9 @@ var rebootJobCompletedYAML []byte
 //go:embed reboot-job-running.yaml
 var rebootJobRunningYAML []byte
 
+//go:embed reboot-job-running-ok-to-delete.yaml
+var rebootJobRunningOkToDeleteYAML []byte
+
 //go:embed reboot-eviction-dry-run.yaml
 var rebootEvictionDryRunYAML []byte
 
@@ -25,6 +28,12 @@ var rebootALittleSlowEvictionDeploymentYAML []byte
 
 //go:embed repair-deployment.yaml
 var repairDeploymentYAML []byte
+
+//go:embed repair-job-running.yaml
+var repairJobRunningYAML []byte
+
+//go:embed repair-job-running-ok-to-delete.yaml
+var repairJobRunningOkToDeleteYAML []byte
 
 //go:embed webhook-resources.yaml
 var webhookYAML []byte

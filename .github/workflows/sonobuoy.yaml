@@ -5,6 +5,8 @@ jobs:
   sonobuoy:
     name: Run sonobuoy
     runs-on: ubuntu-24.04
+    env:
+      ZONE: ${{ vars.ZONE }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6

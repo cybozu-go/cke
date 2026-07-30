@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -134,6 +135,15 @@ func testClusterYAML(t *testing.T) {
 	if c.Reboot.ProtectedNamespaces.MatchLabels["app"] != "sample" {
 		t.Error(`c.Reboot.ProtectedNamespaces.MatchLabels["app"] != "sample"`)
 	}
+	if c.Reboot.ProtectedJobPods == nil {
+		t.Fatal(`c.Reboot.ProtectedJobPods == nil`)
+	}
+	if c.Reboot.ProtectedJobPods.MatchLabels == nil {
+		t.Fatal(`c.Reboot.ProtectedJobPods.MatchLabels == nil`)
+	}
+	if c.Reboot.ProtectedJobPods.MatchLabels["app"] != "job-sample" {
+		t.Error(`c.Reboot.ProtectedJobPods.MatchLabels["app"] != "job-sample"`)
+	}
 	if len(c.Repair.RepairProcedures) != 1 {
 		t.Fatal(`len(c.Repair.RepairProcedures) != 1`)
 	}
@@ -199,6 +209,12 @@ func testClusterYAML(t *testing.T) {
 	}
 	if c.Repair.ProtectedNamespaces.MatchLabels["app"] != "protected" {
 		t.Error(`c.Repair.ProtectedNamespaces.MatchLabels["app"] != "protected"`)
+	}
+	if c.Repair.ProtectedJobPods == nil {
+		t.Fatal(`c.Repair.ProtectedJobPods == nil`)
+	}
+	if c.Repair.ProtectedJobPods.MatchLabels["app"] != "job-protected" {
+		t.Error(`c.Repair.ProtectedJobPods.MatchLabels["app"] != "job-protected"`)
 	}
 	if c.Repair.EvictRetries == nil {
 		t.Fatal(`c.Repair.EvictRetries == nil`)
@@ -1008,12 +1024,153 @@ func testClusterValidateReboot(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "invalid protected_job_pods",
+			reboot: Reboot{
+				ProtectedJobPods: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{Key: "app", Operator: "invalid-operator"},
+					},
+				},
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := validateReboot(tt.reboot); (err != nil) != tt.wantErr {
 				t.Errorf("validateReboot() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func testClusterValidateRepair(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		repair  Repair
+		wantErr bool
+	}{
+		{
+			name:    "valid case",
+			repair:  Repair{},
+			wantErr: false,
+		},
+		{
+			name: "zero max_concurrent_repairs",
+			repair: Repair{
+				MaxConcurrentRepairs: ptr.To(0),
+			},
+			wantErr: true,
+		},
+		{
+			name: "positive max_concurrent_repairs",
+			repair: Repair{
+				MaxConcurrentRepairs: ptr.To(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative max_concurrent_repairs",
+			repair: Repair{
+				MaxConcurrentRepairs: ptr.To(-1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero evict_retries",
+			repair: Repair{
+				EvictRetries: ptr.To(0),
+			},
+			wantErr: false,
+		},
+		{
+			name: "positive evict_retries",
+			repair: Repair{
+				EvictRetries: ptr.To(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative evict_retries",
+			repair: Repair{
+				EvictRetries: ptr.To(-1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero evict_interval",
+			repair: Repair{
+				EvictInterval: ptr.To(0),
+			},
+			wantErr: false,
+		},
+		{
+			name: "positive evict_interval",
+			repair: Repair{
+				EvictInterval: ptr.To(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative evict_interval",
+			repair: Repair{
+				EvictInterval: ptr.To(-1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero eviction_timeout_seconds",
+			repair: Repair{
+				EvictionTimeoutSeconds: ptr.To(0),
+			},
+			wantErr: true,
+		},
+		{
+			name: "positive eviction_timeout_seconds",
+			repair: Repair{
+				EvictionTimeoutSeconds: ptr.To(1),
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative eviction_timeout_seconds",
+			repair: Repair{
+				EvictionTimeoutSeconds: ptr.To(-1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid protected_namespaces",
+			repair: Repair{
+				ProtectedNamespaces: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{Key: "app", Operator: "invalid-operator"},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid protected_job_pods",
+			repair: Repair{
+				ProtectedJobPods: &metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{Key: "app", Operator: "invalid-operator"},
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := validateRepair(tt.repair); (err != nil) != tt.wantErr {
+				t.Errorf("validateRepair() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -1181,6 +1338,7 @@ func TestCluster(t *testing.T) {
 	t.Run("ValidateNode", testClusterValidateNode)
 	t.Run("Nodename", testNodename)
 	t.Run("ValidateReboot", testClusterValidateReboot)
+	t.Run("ValidateRepair", testClusterValidateRepair)
 	t.Run("ValidateTrustedRESTMappings", testValidateTrustedRESTMappings)
 	t.Run("LookupTrustedRESTMapping", testLookupTrustedRESTMapping)
 }
