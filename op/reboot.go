@@ -41,6 +41,7 @@ func RebootDrainStartOp(apiserver *cke.Node, entries []*cke.RebootQueueEntry, co
 type rebootDrainStartCommand struct {
 	entries             []*cke.RebootQueueEntry
 	protectedNamespaces *metav1.LabelSelector
+	protectedJobPods    *metav1.LabelSelector
 	apiserver           *cke.Node
 	evictAttempts       int
 	evictInterval       time.Duration
@@ -91,6 +92,7 @@ func (o *rebootDrainStartOp) NextCommand() cke.Commander {
 	return rebootDrainStartCommand{
 		entries:             o.entries,
 		protectedNamespaces: o.config.ProtectedNamespaces,
+		protectedJobPods:    o.config.ProtectedJobPods,
 		apiserver:           o.apiserver,
 		notifyFailedNode:    o.notifyFailedNode,
 		evictAttempts:       attempts,
@@ -146,7 +148,7 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 			log.Info("start eviction dry-run", map[string]interface{}{
 				"name": entry.Node,
 			})
-			err = dryRunEvictOrDeleteNodePod(ctx, cs, entry.Node, protected)
+			err = dryRunEvictOrDeleteNodePod(ctx, cs, entry.Node, protected, c.protectedJobPods)
 			if err != nil {
 				log.Warn("eviction dry-run failed", map[string]interface{}{
 					"name":      entry.Node,
@@ -175,7 +177,7 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 		log.Info("start eviction", map[string]interface{}{
 			"name": entry.Node,
 		})
-		err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected, c.evictAttempts, c.evictInterval)
+		err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected, c.protectedJobPods, c.evictAttempts, c.evictInterval)
 		if err != nil {
 			log.Warn("eviction failed", map[string]interface{}{
 				"name":      entry.Node,
