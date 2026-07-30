@@ -1,5 +1,5 @@
 PROJECT=neco-test
-ZONE=asia-northeast1-c
+ZONE=${ZONE:-asia-northeast1-b}
 SERVICE_ACCOUNT=neco-test@neco-test.iam.gserviceaccount.com
 MACHINE_TYPE=n2-standard-16
 DISK_TYPE=pd-ssd

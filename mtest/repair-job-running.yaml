@@ -1,0 +1,14 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: repair-test
+  name: job-running
+spec:
+  template:
+    spec:
+      containers:
+      - name: ubuntu
+        image: ghcr.io/cybozu/ubuntu:24.04
+        command: ["sleep", "3600"]
+      restartPolicy: Never
+  backoffLimit: 1
