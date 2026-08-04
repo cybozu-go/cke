@@ -37,6 +37,25 @@ $ go get -d k8s.io/client-go@${VERSION} k8s.io/api@${VERSION} k8s.io/apimachiner
             k8s.io/kube-proxy@${VERSION}
 ```
 
+### Update container image digests
+
+`images_gen.go` contains the container image references (tag and digest) used by CKE.
+It is generated automatically by fetching the latest version of each image from the GitHub Packages API.
+
+Prerequisites: the `gh` CLI must be installed and authenticated with the `read:packages` scope.
+
+```console
+$ gh auth login -s "read:packages"
+```
+
+Then run:
+
+```console
+$ make images
+```
+
+This fetches the latest tagged version of each image and rewrites `images_gen.go`.
+
 ### Update the Kubernetes resource definitions embedded in CKE
 
 The Kubernetes resource definitions embedded in CKE is defined in `./static/resource.go`.

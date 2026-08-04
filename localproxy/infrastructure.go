@@ -113,19 +113,27 @@ var _ cke.ContainerEngine = localDocker{}
 
 // PullImage pulls an image.
 func (l localDocker) PullImage(img cke.Image) error {
-	cmd := exec.Command("docker", "image", "list", "--format={{.Repository}}:{{.Tag}}")
+	cmd := exec.Command("docker", "image", "list", "--digests", "--format={{.Repository}}:{{.Tag}}@{{.Digest}}")
 	stdout, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to execute docker image list: %w", err)
 	}
 
-	for _, i := range strings.Fields(string(stdout)) {
-		if img.Name() == i {
+	noDigest := img.TagRef() + "@<none>"
+	for _, line := range strings.Split(strings.TrimSpace(string(stdout)), "\n") {
+		// Accept if FullRef matches (registry pull) or image has no digest (docker load).
+		if line == img.FullRef() || line == noDigest {
 			return nil
 		}
 	}
 
-	return exec.Command("docker", "image", "pull", img.Name()).Run()
+	if err := exec.Command("docker", "image", "pull", img.DigestRef()).Run(); err != nil {
+		return fmt.Errorf("docker image pull %s: %w", img.DigestRef(), err)
+	}
+	if err := exec.Command("docker", "image", "tag", img.DigestRef(), img.TagRef()).Run(); err != nil {
+		return fmt.Errorf("docker image tag %s %s: %w", img.DigestRef(), img.TagRef(), err)
+	}
+	return nil
 }
 
 // Run runs a container as a foreground process.
@@ -133,6 +141,7 @@ func (l localDocker) Run(img cke.Image, binds []cke.Mount, command string, args 
 	runArgs := []string{
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"--rm",
 		"--network=host",
 		"--uts=host",
@@ -145,12 +154,12 @@ func (l localDocker) Run(img cke.Image, binds []cke.Mount, command string, args 
 		}
 		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, img.TagRef(), command)
 	runArgs = append(runArgs, args...)
 
 	out, err := exec.Command("docker", runArgs...).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to run %s: %s: %w", img.Name(), out, err)
+		return fmt.Errorf("failed to run %s: %s: %w", img.TagRef(), out, err)
 	}
 	return nil
 }
@@ -160,6 +169,7 @@ func (l localDocker) RunWithInput(img cke.Image, binds []cke.Mount, command, inp
 	runArgs := []string{
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"--rm",
 		"-i",
 		"--network=host",
@@ -173,7 +183,7 @@ func (l localDocker) RunWithInput(img cke.Image, binds []cke.Mount, command, inp
 		}
 		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, img.TagRef(), command)
 	runArgs = append(runArgs, args...)
 
 	cmd := exec.Command("docker", runArgs...)
@@ -181,7 +191,7 @@ func (l localDocker) RunWithInput(img cke.Image, binds []cke.Mount, command, inp
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to run %s: %s: %w", img.Name(), out, err)
+		return fmt.Errorf("failed to run %s: %s: %w", img.TagRef(), out, err)
 	}
 	return nil
 }
@@ -191,6 +201,7 @@ func (l localDocker) RunWithOutput(img cke.Image, binds []cke.Mount, command str
 	runArgs := []string{
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"--rm",
 		"--network=host",
 		"--uts=host",
@@ -203,7 +214,7 @@ func (l localDocker) RunWithOutput(img cke.Image, binds []cke.Mount, command str
 		}
 		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, img.TagRef(), command)
 	runArgs = append(runArgs, args...)
 
 	stdout := new(bytes.Buffer)
@@ -221,6 +232,7 @@ func (l localDocker) RunSystem(name string, img cke.Image, opts []string, params
 		"run",
 		"--rm",
 		"--log-driver=journald",
+		"--pull=never",
 		"-d",
 		"--name=" + name,
 		"--read-only",
@@ -277,14 +289,14 @@ func (l localDocker) RunSystem(name string, img cke.Image, opts []string, params
 	}
 	args = append(args, "--label-file="+labelFile.Name())
 
-	args = append(args, img.Name())
+	args = append(args, img.TagRef())
 
 	args = append(args, params.ExtraArguments...)
 	args = append(args, extra.ExtraArguments...)
 
 	out, err := exec.Command("docker", args...).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to docker run %s: %s: %w", img.Name(), out, err)
+		return fmt.Errorf("failed to docker run %s: %s: %w", img.TagRef(), out, err)
 	}
 	return nil
 }

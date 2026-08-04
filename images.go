@@ -1,33 +1,34 @@
 package cke
 
-// Image is the type of container images.
-type Image string
+//go:generate go run ./pkg/update-images/
 
-// Name returns docker image name.
-func (i Image) Name() string {
-	return string(i)
+// Image represents a container image reference.
+type Image struct {
+	fullRef   string
+	tagRef    string
+	digestRef string
 }
 
-// Container image definitions
-const (
-	EtcdImage            = Image("ghcr.io/cybozu/etcd:3.6.11.1")
-	KubernetesImage      = Image("ghcr.io/cybozu/kubernetes:1.35.5.1")
-	ToolsImage           = Image("ghcr.io/cybozu-go/cke-tools:1.35.0")
-	PauseImage           = Image("ghcr.io/cybozu/pause:3.10.1.5")
-	CoreDNSImage         = Image("ghcr.io/cybozu/coredns:1.14.2.1")
-	UnboundImage         = Image("ghcr.io/cybozu/unbound:1.25.1.1")
-	UnboundExporterImage = Image("ghcr.io/cybozu/unbound_exporter:0.5.0.4")
-)
-
-// AllImages return container images list used by CKE
-func AllImages() []string {
-	return []string{
-		EtcdImage.Name(),
-		ToolsImage.Name(),
-		KubernetesImage.Name(),
-		PauseImage.Name(),
-		CoreDNSImage.Name(),
-		UnboundImage.Name(),
-		UnboundExporterImage.Name(),
+func newImage(repository, tag, digest string) Image {
+	return Image{
+		fullRef:   repository + ":" + tag + "@" + digest,
+		tagRef:    repository + ":" + tag,
+		digestRef: repository + "@" + digest,
 	}
 }
+
+// FullRef returns the full image reference (repository:tag@digest).
+func (i Image) FullRef() string {
+	return i.fullRef
+}
+
+// TagRef returns the repository:tag reference without the digest.
+func (i Image) TagRef() string {
+	return i.tagRef
+}
+
+// DigestRef returns the repository@digest reference without the tag.
+func (i Image) DigestRef() string {
+	return i.digestRef
+}
+

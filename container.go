@@ -63,20 +63,26 @@ type docker struct {
 }
 
 func (c docker) PullImage(img Image) error {
-	stdout, stderr, err := c.agent.Run("docker image list --format '{{.Repository}}:{{.Tag}}'")
+	stdout, stderr, err := c.agent.Run("docker image list --digests --format '{{.Repository}}:{{.Tag}}@{{.Digest}}'")
 	if err != nil {
 		return fmt.Errorf("%w, stdout: %s, stderr: %s", err, stdout, stderr)
 	}
 
-	for _, i := range strings.Split(string(stdout), "\n") {
-		if img.Name() == i {
+	noDigest := img.TagRef() + "@<none>"
+	for _, line := range strings.Split(strings.TrimSpace(string(stdout)), "\n") {
+		// Accept if FullRef matches (registry pull) or image has no digest (docker load).
+		if line == img.FullRef() || line == noDigest {
 			return nil
 		}
 	}
 
-	stdout, stderr, err = c.agent.Run("docker image pull " + img.Name())
+	stdout, stderr, err = c.agent.Run("docker image pull " + img.DigestRef())
 	if err != nil {
-		return fmt.Errorf("%w, stdout: %s, stderr: %s", err, stdout, stderr)
+		return fmt.Errorf("docker image pull %s: %w, stdout: %s, stderr: %s", img.DigestRef(), err, stdout, stderr)
+	}
+	stdout, stderr, err = c.agent.Run("docker image tag " + img.DigestRef() + " " + img.TagRef())
+	if err != nil {
+		return fmt.Errorf("docker image tag %s %s: %w, stdout: %s, stderr: %s", img.DigestRef(), img.TagRef(), err, stdout, stderr)
 	}
 	return nil
 }
@@ -86,6 +92,7 @@ func (c docker) Run(img Image, binds []Mount, command string, args ...string) er
 		"docker",
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"--rm",
 		"--network=host",
 		"--uts=host",
@@ -98,7 +105,7 @@ func (c docker) Run(img Image, binds []Mount, command string, args ...string) er
 		}
 		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, img.TagRef(), command)
 	runArgs = append(runArgs, args...)
 
 	_, _, err := c.agent.Run(strings.Join(runArgs, " "))
@@ -110,6 +117,7 @@ func (c docker) RunWithInput(img Image, binds []Mount, command, input string, ar
 		"docker",
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"--rm",
 		"-i",
 		"--network=host",
@@ -123,7 +131,7 @@ func (c docker) RunWithInput(img Image, binds []Mount, command, input string, ar
 		}
 		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, img.TagRef(), command)
 	runArgs = append(runArgs, args...)
 
 	return c.agent.RunWithInput(strings.Join(runArgs, " "), input)
@@ -134,6 +142,7 @@ func (c docker) RunWithOutput(img Image, binds []Mount, command string, args ...
 		"docker",
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"--rm",
 		"--network=host",
 		"--uts=host",
@@ -146,7 +155,7 @@ func (c docker) RunWithOutput(img Image, binds []Mount, command string, args ...
 		}
 		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, img.TagRef(), command)
 	runArgs = append(runArgs, args...)
 
 	stdout, stderr, err := c.agent.Run(strings.Join(runArgs, " "))
@@ -171,6 +180,7 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 		"docker",
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"-d",
 		"--name=" + name,
 		"--read-only",
@@ -218,7 +228,7 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 	}
 	args = append(args, "--label-file="+labelFile)
 
-	args = append(args, img.Name())
+	args = append(args, img.TagRef())
 
 	args = append(args, params.ExtraArguments...)
 	args = append(args, extra.ExtraArguments...)

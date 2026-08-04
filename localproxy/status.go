@@ -33,22 +33,16 @@ var dialer = &net.Dialer{
 }
 
 func isRunning(name string) (bool, string, error) {
-	stdout, err := exec.Command("docker", "ps", "--format={{.Names}} {{.Image}}").Output()
+	out, err := exec.Command("docker", "container", "inspect", "--format={{.State.Running}} {{.Config.Image}}", name).Output()
 	if err != nil {
-		return false, "", fmt.Errorf("failed to run docker ps: %w", err)
+		// Container does not exist
+		return false, "", nil
 	}
-
-	for _, line := range strings.Split(string(stdout), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) != 2 {
-			continue
-		}
-		if fields[0] != name {
-			continue
-		}
-		return true, fields[1], nil
+	fields := strings.Fields(string(out))
+	if len(fields) != 2 {
+		return false, "", fmt.Errorf("unexpected docker inspect output: %s", out)
 	}
-	return false, "", nil
+	return fields[0] == "true", fields[1], nil
 }
 
 func getStatus(ctx context.Context, inf cke.Infrastructure) (*status, error) {
