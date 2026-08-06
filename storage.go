@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/clientv3util"
 )
@@ -1137,4 +1138,67 @@ func (s Storage) GetStatus(ctx context.Context) (*ServerStatus, error) {
 		return nil, err
 	}
 	return st, nil
+}
+
+// WaitRepairsEmpty waits until the repair queue contains no entries.
+func (s Storage) WaitRepairsEmpty(ctx context.Context) error {
+	resp, err := s.Get(
+		ctx,
+		KeyRepairsPrefix,
+		clientv3.WithPrefix(),
+		clientv3.WithKeysOnly(),
+	)
+	if err != nil {
+		return err
+	}
+
+	entries := make(map[string]struct{}, len(resp.Kvs))
+	for _, kv := range resp.Kvs {
+		entries[string(kv.Key)] = struct{}{}
+	}
+
+	if len(entries) == 0 {
+		return nil
+	}
+
+	watchCh := s.Watch(
+		ctx,
+		KeyRepairsPrefix,
+		clientv3.WithPrefix(),
+		clientv3.WithRev(resp.Header.Revision+1),
+	)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+
+		case watchResp, ok := <-watchCh:
+			if !ok {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+				return errors.New("repair queue watch closed")
+			}
+
+			if err := watchResp.Err(); err != nil {
+				return err
+			}
+
+			for _, event := range watchResp.Events {
+				key := string(event.Kv.Key)
+
+				if event.Type == mvccpb.DELETE {
+					delete(entries, key)
+					continue
+				}
+
+				entries[key] = struct{}{}
+			}
+
+			if len(entries) == 0 {
+				return nil
+			}
+		}
+	}
 }
