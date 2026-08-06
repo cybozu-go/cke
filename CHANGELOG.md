@@ -6,6 +6,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+- Add `ckecli repair-queue wait` command in [#910](https://github.com/cybozu-go/cke/pull/910)
+
 ## [1.35.3]
 
 ### Changed
