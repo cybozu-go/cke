@@ -1056,20 +1056,16 @@ func testStorageWaitRepairsEmpty(t *testing.T) {
 		waitCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 		defer cancel()
 
-		resultCh := make(chan error, 1)
+		delErrCh := make(chan error, 1)
 		go func() {
-			resultCh <- storage.WaitRepairsEmpty(waitCtx)
+			time.Sleep(100 * time.Millisecond)
+			delErrCh <- storage.DeleteRepairsEntry(ctx, leaderKey, entry.Index)
 		}()
 
-		if err := storage.DeleteRepairsEntry(
-			ctx,
-			leaderKey,
-			entry.Index,
-		); err != nil {
+		if err := storage.WaitRepairsEmpty(waitCtx); err != nil {
 			t.Fatal(err)
 		}
-
-		if err := <-resultCh; err != nil {
+		if err := <-delErrCh; err != nil {
 			t.Fatal(err)
 		}
 	})
