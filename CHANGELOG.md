@@ -6,6 +6,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING** `ckecli kubernetes issue` now issues certificates for `cke:user:admin` instead of `admin`, so that audit logs can tell operators from CKE itself (pass `--user=admin` to restore the old name) in [#911](https://github.com/cybozu-go/cke/pull/911)
+
 ## [1.35.3]
 
 ### Changed
