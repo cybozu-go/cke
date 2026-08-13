@@ -39,13 +39,18 @@ func testEtcd() {
 	})
 
 	It("should not run etcd with auto-compaction", func() {
-		// Compaction is done only by kube-apiserver.  See docs/etcd.md.
 		for _, node := range []string{node1, node2, node3} {
 			stdout := execSafeAt(node, "docker", "inspect", "--format='{{json .Args}}'", "etcd")
 			var args []string
 			err := json.Unmarshal(stdout, &args)
 			Expect(err).NotTo(HaveOccurred(), "stdout=%s", stdout)
+
+			// Compaction is done only by kube-apiserver.  See docs/etcd.md.
 			Expect(args).NotTo(ContainElement(HavePrefix("--auto-compaction")), "node=%s", node)
+
+			// Disabling auto-compaction must not disable data corruption detection.
+			Expect(args).To(ContainElement("--feature-gates=InitialCorruptCheck=true,CompactHashCheck=true"), "node=%s", node)
+			Expect(args).To(ContainElement("--corrupt-check-time=3h"), "node=%s", node)
 		}
 	})
 
@@ -57,9 +62,11 @@ func testEtcd() {
 		Expect(string(stdout)).To(MatchRegexp(`(?m)^Roles:.*\broot\b`), "stdout=%s", stdout)
 	})
 
-	It("should enable data corruption detection", func() {
+	It("should keep checking data corruption periodically", func() {
+		// etcd logs this at startup when --corrupt-check-time is given.  Note that
+		// the initial corruption check leaves no log here, because etcd skips it for
+		// a newly created member.
 		for _, node := range []string{node1, node2, node3} {
-			Expect(etcdLogHas(node, "initial corruption checking passed")).To(BeTrue(), "node=%s", node)
 			Expect(etcdLogHas(node, "enabled corruption checking")).To(BeTrue(), "node=%s", node)
 		}
 	})
