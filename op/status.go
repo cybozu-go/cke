@@ -650,7 +650,7 @@ func isRepairTargetHealthy(ctx context.Context, entry *cke.RepairQueueEntry, clu
 		timeout = *op.CommandTimeoutSeconds
 	}
 
-	stdout, err := runCommand(ctx, timeout, append(op.HealthCheckCommand, entry.Address))
+	stdout, err := runCommand(ctx, timeout, fnTypeRepair, append(op.HealthCheckCommand, entry.Address))
 	if err != nil {
 		return false, err
 	}

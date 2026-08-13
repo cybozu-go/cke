@@ -23,7 +23,7 @@ var (
 // runCommand runs a command (command[0] is the executable, the rest are its arguments). It blocks until the command exits.
 // If timeoutSeconds is nonzero, the command is killed after that many seconds; a zero value means no timeout is applied.
 // This function logs the result (elapsed time, stdout, and stderr of the command) and returns the captured stdout.
-func runCommand(ctx context.Context, timeoutSeconds int, command []string) (stdout string, err error) {
+func runCommand(ctx context.Context, timeoutSeconds int, fnType string, command []string) (stdout string, err error) {
 	execCtx := ctx
 	if timeoutSeconds != 0 {
 		var cancel context.CancelFunc
@@ -43,7 +43,7 @@ func runCommand(ctx context.Context, timeoutSeconds int, command []string) (stdo
 	stderr := stderrBuf.String()
 
 	fields := map[string]any{
-		log.FnType:         "exec",
+		log.FnType:         fnType,
 		log.FnResponseTime: et.Sub(st).Seconds(),
 		"command":          strings.Join(command, " "),
 	}

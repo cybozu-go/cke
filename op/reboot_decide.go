@@ -405,11 +405,13 @@ func rebootCompleted(ctx context.Context, c *cke.Cluster, entry *cke.RebootQueue
 		timeout = *c.Reboot.CommandTimeoutSeconds
 	}
 
-	stdout, err := runCommand(ctx, timeout, append(c.Reboot.BootCheckCommand, entry.Node, strconv.FormatInt(entry.LastTransitionTime.Unix(), 10)))
+	stdout, err := runCommand(ctx, timeout, fnTypeReboot, append(c.Reboot.BootCheckCommand, entry.Node, strconv.FormatInt(entry.LastTransitionTime.Unix(), 10)))
 	if err != nil {
 		log.Warn("failed to check boot", map[string]any{
+			log.FnType:  fnTypeReboot,
 			log.FnError: err,
-			"name":      entry.Node,
+			"index":     entry.Index,
+			"node":      entry.Node,
 		})
 		return false
 	}
