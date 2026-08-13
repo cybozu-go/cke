@@ -6,6 +6,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Disable etcd auto-compaction and let kube-apiserver do compaction
+
 ## [1.35.3]
 
 ### Changed

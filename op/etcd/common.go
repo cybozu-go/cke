@@ -57,13 +57,8 @@ func BuiltInParams(node *cke.Node, initialCluster []string, state string) cke.Se
 		"--peer-client-cert-auth=true",
 		"--peer-trusted-ca-file=" + op.EtcdPKIPath("ca-peer.crt"),
 		"--enable-pprof=true",
-		"--auto-compaction-mode=periodic",
-		// Mimic the default --etcd-compaction-interval of kube-apiserver (= 5 minutes).
-		// https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
-		// etcd version 3.3.3 and later will run compaction for every auto-compaction-retention
-		// value if the value is less than 1 hour.
-		// https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/maintenance.md#auto-compaction
-		"--auto-compaction-retention=5m",
+		// Auto-compaction is intentionally disabled because kube-apiserver compacts
+		// etcd instead.  Read docs/etcd.md about compaction.
 		// Enabling data corruption detection
 		// https://etcd.io/docs/v3.6/op-guide/data_corruption/
 		"--feature-gates=InitialCorruptCheck=true,CompactHashCheck=true",

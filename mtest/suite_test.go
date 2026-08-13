@@ -138,6 +138,7 @@ var _ = Describe("Test CKE", func() {
 	switch testSuite {
 	case "functions":
 		Context("ckecli", testCKECLI)
+		Context("etcd", Ordered, testEtcd)
 		Context("local-proxy", testLocalProxy)
 		Context("kubernetes", testKubernetes)
 		Context("trusted-rest-mapping", testTrustedRESTMapping)

@@ -76,6 +76,28 @@ Furthermore, these endpoints address records are registered at CoreDNS.
 
 The domain name is `cke-etcd.kube-system.svc.<cluster-domain>`.
 
+Compaction
+----------
+
+Compaction of the etcd keyspace is done only by `kube-apiserver`, which compacts
+revisions older than 5 minutes with `--etcd-compaction-interval=5m`.
+etcd's own auto-compaction is disabled not to run compaction twice.
+
+Note that compaction is not per key prefix but for the whole keyspace.  The old
+revisions of the keys of the other applications are therefore removed as well
+by the compaction requested by `kube-apiserver`.
+
+To be able to compact, the `kube-apiserver` user is granted the `root` role.
+Without the role, `kube-apiserver` fails to update `compact_rev_key` and no
+compaction happens.  Note that the role is granted only when CKE bootstraps the
+etcd cluster and is not reconciled afterwards; etcd clusters bootstrapped by CKE
+older than 1.35.0 need `etcdctl user grant-role kube-apiserver root` once.
+
+[Data corruption detection][DataCorruption] is not affected by this.  etcd
+stores KV hashes on every compaction regardless of who requests it, so
+`CompactHashCheck` works as well.  `InitialCorruptCheck` and the periodic check
+by `--corrupt-check-time` are independent of compaction.
+
 Backup
 ------
 
@@ -85,5 +107,6 @@ Read [ckecli.md](ckecli.md##ckecli-etcd-local-backup) about the usage.
 
 [etcd]: https://github.com/etcd-io/etcd
 [RBAC]: https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/authentication.md
+[DataCorruption]: https://etcd.io/docs/v3.6/op-guide/data_corruption/
 [Endpoints]: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
 [EndpointSlice]: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/
