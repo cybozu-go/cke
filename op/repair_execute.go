@@ -6,9 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
+
+	"github.com/cybozu-go/cke"
 )
 
 type repairExecuteOp struct {
@@ -97,7 +98,7 @@ RETRY:
 			return nil
 		}
 
-		log.Warn("failed on executing repair command", map[string]interface{}{
+		log.Warn("failed on executing repair command", map[string]any{
 			log.FnError: err,
 			"stderr":    stderr.String(),
 			"address":   c.entry.Address,
@@ -114,7 +115,7 @@ RETRY:
 	}
 
 	// The failure of a repair command should not be considered as a serious error of CKE.
-	log.Warn("given up repairing machine", map[string]interface{}{
+	log.Warn("given up repairing machine", map[string]any{
 		"address": c.entry.Address,
 		"command": strings.Join(c.command, " "),
 	})

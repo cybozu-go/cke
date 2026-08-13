@@ -3,8 +3,9 @@ package op
 import (
 	"context"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
+
+	"github.com/cybozu-go/cke"
 )
 
 type upgradeOp struct {

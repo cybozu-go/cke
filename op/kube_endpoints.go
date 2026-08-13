@@ -4,21 +4,22 @@ import (
 	"context"
 	"strings"
 
-	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/cybozu-go/cke"
 )
 
 type kubeEndpointsCreateOp struct {
 	apiserver *cke.Node
-	//lint:ignore SA1019 code for Endpoints will be removed later
+	//nolint:staticcheck // code for Endpoints will be removed later
 	endpoints *corev1.Endpoints
 	finished  bool
 }
 
 // KubeEndpointsCreateOp returns an Operator to create Endpoints resource.
 //
-//lint:ignore SA1019 code for Endpoints will be removed later
+//nolint:staticcheck // code for Endpoints will be removed later
 func KubeEndpointsCreateOp(apiserver *cke.Node, ep *corev1.Endpoints) cke.Operator {
 	return &kubeEndpointsCreateOp{
 		apiserver: apiserver,
@@ -47,14 +48,14 @@ func (o *kubeEndpointsCreateOp) Targets() []string {
 
 type kubeEndpointsUpdateOp struct {
 	apiserver *cke.Node
-	//lint:ignore SA1019 code for Endpoints will be removed later
+	//nolint:staticcheck // code for Endpoints will be removed later
 	endpoints *corev1.Endpoints
 	finished  bool
 }
 
 // KubeEndpointsUpdateOp returns an Operator to update Endpoints resource.
 //
-//lint:ignore SA1019 code for Endpoints will be removed later
+//nolint:staticcheck // code for Endpoints will be removed later
 func KubeEndpointsUpdateOp(apiserver *cke.Node, ep *corev1.Endpoints) cke.Operator {
 	return &kubeEndpointsUpdateOp{
 		apiserver: apiserver,
@@ -83,7 +84,7 @@ func (o *kubeEndpointsUpdateOp) Targets() []string {
 
 type createEndpointsCommand struct {
 	apiserver *cke.Node
-	//lint:ignore SA1019 code for Endpoints will be removed later
+	//nolint:staticcheck // code for Endpoints will be removed later
 	endpoints *corev1.Endpoints
 }
 
@@ -111,7 +112,7 @@ func (c createEndpointsCommand) Command() cke.Command {
 
 type updateEndpointsCommand struct {
 	apiserver *cke.Node
-	//lint:ignore SA1019 code for Endpoints will be removed later
+	//nolint:staticcheck // code for Endpoints will be removed later
 	endpoints *corev1.Endpoints
 }
 

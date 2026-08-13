@@ -1,0 +1,63 @@
+version: "2"
+linters:
+  enable:
+    - depguard
+    - ginkgolinter
+    - govet
+    - modernize
+    - nilerr
+    - staticcheck
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # Ignore modernize suggestions that carry behavioral risk in this codebase:
+      # - omitzero: changing omitempty on struct fields alters JSON serialization.
+      # - forvar: removing loop-variable copies (x := x).
+      - linters:
+          - modernize
+        text: Omitempty has no effect on nested struct fields
+      - linters:
+          - modernize
+        text: copying variable is unneeded
+      # QF1001 suggests applying De Morgan's law, but rewriting the code that
+      # way does not make it more readable, so it is ignored.
+      - linters:
+          - staticcheck
+        text: 'QF1001'
+  settings:
+    errcheck:
+      exclude-functions:
+        - (*github.com/cybozu-go/log.Logger).Debug
+        - (*github.com/cybozu-go/log.Logger).Info
+        - (*github.com/cybozu-go/log.Logger).Warn
+        - (*github.com/cybozu-go/log.Logger).Error
+        - github.com/cybozu-go/log.Debug
+        - github.com/cybozu-go/log.Info
+        - github.com/cybozu-go/log.Warn
+        - github.com/cybozu-go/log.Error
+        - (github.com/cybozu-go/well.LogConfig).Apply
+    depguard:
+      rules:
+        restricted-packages:
+          files:
+            - $all
+          deny:
+            - pkg: html/template$
+              desc: html/template must not be used
+            - pkg: log$
+              desc: log must not be used
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/cybozu-go/cke

@@ -52,9 +52,11 @@ const (
 	KeyVault                    = "vault"
 )
 
-const maxRecords = 1000
-const recordChanLength = 100
-const initialDisplayCount = 20
+const (
+	maxRecords          = 1000
+	recordChanLength    = 100
+	initialDisplayCount = 20
+)
 
 var (
 	// ErrNotFound may be returned by Storage methods when a key is not found.

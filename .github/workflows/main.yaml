@@ -20,6 +20,12 @@ jobs:
           go-version-file: go.mod
       - name: Check auto-generated files
         run: make check-generate
+      - name: Format
+        run: |
+          make fmt
+          git diff --exit-code
+      - name: Lint
+        run: make lint
       - run: docker run -d --network host gcr.io/etcd-development/etcd:v3.6.11
       - run: make test
       - run: make install GOBIN=$(pwd)/docker

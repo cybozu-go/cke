@@ -15,8 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/server"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/well"
 	. "github.com/onsi/ginkgo/v2"
@@ -25,6 +23,9 @@ import (
 	"golang.org/x/crypto/ssh"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/server"
 )
 
 const (
@@ -196,7 +197,7 @@ func stopCKE() error {
 			}
 			defer sess.Close()
 
-			sess.Run("sudo systemctl reset-failed cke.service; sudo systemctl stop cke.service")
+			_ = sess.Run("sudo systemctl reset-failed cke.service; sudo systemctl stop cke.service")
 
 			return nil // Ignore error if cke was not running
 		})
@@ -252,7 +253,7 @@ func doExec(agent *sshAgent, input io.Reader, args ...string) ([]byte, []byte, e
 	if err != nil {
 		return nil, nil, err
 	}
-	defer agent.conn.SetDeadline(time.Time{})
+	defer func() { _ = agent.conn.SetDeadline(time.Time{}) }()
 
 	sess, err := agent.client.NewSession()
 	if err != nil {
@@ -470,8 +471,10 @@ func injectFailure(failurePoint string) {
 }
 
 func etcdctl(crt, key, ca string, args ...string) ([]byte, []byte, error) {
-	args = append([]string{"/opt/bin/etcdctl", "--endpoints=https://" + node1 + ":2379,https://" + node2 + ":2379,https://" + node3 + ":2379",
-		"--cert=" + crt, "--key=" + key, "--cacert=" + ca}, args...)
+	args = append([]string{
+		"/opt/bin/etcdctl", "--endpoints=https://" + node1 + ":2379,https://" + node2 + ":2379,https://" + node3 + ":2379",
+		"--cert=" + crt, "--key=" + key, "--cacert=" + ca,
+	}, args...)
 	return execAt(host1, args...)
 }
 

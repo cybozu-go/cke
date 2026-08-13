@@ -6,14 +6,15 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
-	"github.com/cybozu-go/cke/op/common"
 	"github.com/cybozu-go/well"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/retry"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/op/common"
 )
 
 const (
@@ -321,7 +322,7 @@ type waitForKubeletReadyCommand struct {
 }
 
 func (c waitForKubeletReadyCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	for i := 0; i < 9; i++ {
+	for range 9 {
 		err := c.try(ctx, inf)
 		if err == nil {
 			return nil

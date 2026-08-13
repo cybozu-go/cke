@@ -6,9 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/cybozu-go/cke"
 )
 
 // rootCertFiles issues a certificate for the etcd root user and copies it to host1.

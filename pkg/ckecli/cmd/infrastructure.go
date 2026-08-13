@@ -7,13 +7,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/well"
 	vault "github.com/hashicorp/vault/api"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/cybozu-go/cke"
 )
 
 var httpClient = &well.HTTPClient{
@@ -130,15 +131,19 @@ func (i *cliInfrastructure) K8sClient(ctx context.Context, n *cke.Node) (kuberne
 func (i *cliInfrastructure) HTTPClient() *well.HTTPClient {
 	return httpClient
 }
+
 func (i *cliInfrastructure) HTTPSClient(ctx context.Context) (*well.HTTPClient, error) {
 	panic("not implemented")
 }
+
 func (i *cliInfrastructure) Agent(addr string) cke.Agent {
 	panic("not implemented")
 }
+
 func (i *cliInfrastructure) Engine(addr string) cke.ContainerEngine {
 	panic("not implemented")
 }
+
 func (i *cliInfrastructure) ReleaseAgent(addr string) {
 	panic("not implemented")
 }

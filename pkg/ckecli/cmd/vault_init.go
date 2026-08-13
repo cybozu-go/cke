@@ -7,11 +7,12 @@ import (
 	"os"
 	"path"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
+
+	"github.com/cybozu-go/cke"
 )
 
 const (
@@ -112,7 +113,7 @@ func connectVault(ctx context.Context) (*vault.Client, error) {
 	}
 
 	secret, err := vc.Logical().Write("/auth/userpass/login/"+username,
-		map[string]interface{}{"password": password})
+		map[string]any{"password": password})
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +149,7 @@ func initVault(ctx context.Context) error {
 	switch err {
 	case nil:
 	case cke.ErrNotFound:
-		_, err = vc.Logical().Write("auth/approle/role/cke", map[string]interface{}{
+		_, err = vc.Logical().Write("auth/approle/role/cke", map[string]any{
 			"policies": "cke",
 			"period":   "1h",
 		})
@@ -161,7 +162,7 @@ func initVault(ctx context.Context) error {
 		}
 		roleID := secret.Data["role_id"].(string)
 
-		secret, err = vc.Logical().Write("auth/approle/role/cke/secret-id", map[string]interface{}{})
+		secret, err = vc.Logical().Write("auth/approle/role/cke/secret-id", map[string]any{})
 		if err != nil {
 			return err
 		}
@@ -249,7 +250,7 @@ func createRootCA(ctx context.Context, vc *vault.Client, ca caParams) error {
 	}
 
 	pkiKey := cke.VaultPKIKey(ca.key)
-	secret, err := vc.Logical().Write(path.Join(pkiKey, "/root/generate/internal"), map[string]interface{}{
+	secret, err := vc.Logical().Write(path.Join(pkiKey, "/root/generate/internal"), map[string]any{
 		"common_name": ca.commonName,
 		"ttl":         ttl100Year,
 		"format":      "pem",

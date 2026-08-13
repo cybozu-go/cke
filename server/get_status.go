@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 )
 
 // GetClusterStatus consults the whole cluster and constructs *ClusterStatus.
@@ -59,7 +60,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 
 	ecs, err := op.GetEtcdClusterStatus(ctx, inf, cluster.Nodes)
 	if err != nil {
-		log.Warn("failed to get etcd cluster status", map[string]interface{}{
+		log.Warn("failed to get etcd cluster status", map[string]any{
 			log.FnError: err,
 		})
 		// lint:ignore nilerr  Proceed with as much cluster statuses as we can gather.
@@ -81,7 +82,7 @@ func (c Controller) GetClusterStatus(ctx context.Context, cluster *cke.Cluster, 
 
 	kcs, err := op.GetKubernetesClusterStatus(ctx, inf, livingMaster, cluster)
 	if err != nil {
-		log.Error("failed to get kubernetes cluster status", map[string]interface{}{
+		log.Error("failed to get kubernetes cluster status", map[string]any{
 			log.FnError: err,
 		})
 		return nil, err

@@ -284,8 +284,10 @@ type Reboot struct {
 	ProtectedJobPods       *metav1.LabelSelector `json:"protected_job_pods,omitempty"`
 }
 
-const DefaultRebootEvictionTimeoutSeconds = 600
-const DefaultMaxConcurrentReboots = 1
+const (
+	DefaultRebootEvictionTimeoutSeconds = 600
+	DefaultMaxConcurrentReboots         = 1
+)
 
 type Repair struct {
 	RepairProcedures       []RepairProcedure     `json:"repair_procedures"`
@@ -320,11 +322,13 @@ type RepairStep struct {
 	WatchSeconds          *int     `json:"watch_seconds,omitempty"`
 }
 
-const DefaultMaxConcurrentRepairs = 1
-const DefaultRepairEvictionTimeoutSeconds = 600
-const DefaultRepairHealthCheckCommandTimeoutSeconds = 30
-const DefaultRepairCommandTimeoutSeconds = 30
-const DefaultRepairSuccessCommandTimeoutSeconds = 30
+const (
+	DefaultMaxConcurrentRepairs                   = 1
+	DefaultRepairEvictionTimeoutSeconds           = 600
+	DefaultRepairHealthCheckCommandTimeoutSeconds = 30
+	DefaultRepairCommandTimeoutSeconds            = 30
+	DefaultRepairSuccessCommandTimeoutSeconds     = 30
+)
 
 type Sabakan struct {
 	SpareNodeTaintKey string `json:"spare_node_taint_key"`
@@ -725,7 +729,7 @@ func validateOptions(opts Options) error {
 	}
 
 	if len(opts.APIServer.AuditLogPolicy) != 0 {
-		policy := make(map[string]interface{})
+		policy := make(map[string]any)
 		err = yaml.Unmarshal([]byte(opts.APIServer.AuditLogPolicy), &policy)
 		if err != nil {
 			return err
