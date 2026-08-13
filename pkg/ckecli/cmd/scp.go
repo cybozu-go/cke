@@ -31,7 +31,7 @@ func detectSCPNode(args []string) (string, error) {
 func scpSubMain(ctx context.Context, args []string) error {
 	pipeFilename, err := createFifo()
 	if err != nil {
-		log.Error("failed to create named pipe", map[string]interface{}{
+		log.Error("failed to create named pipe", map[string]any{
 			log.FnError: err,
 		})
 		return err
@@ -40,7 +40,7 @@ func scpSubMain(ctx context.Context, args []string) error {
 
 	node, err := detectSCPNode(args)
 	if err != nil {
-		log.Error("failed to find the node name for scp", map[string]interface{}{
+		log.Error("failed to find the node name for scp", map[string]any{
 			log.FnError: err,
 		})
 		return err
@@ -48,7 +48,7 @@ func scpSubMain(ctx context.Context, args []string) error {
 
 	pirvateKey, err := getPrivateKey(node)
 	if err != nil {
-		log.Error("failed to get the private key for scp", map[string]interface{}{
+		log.Error("failed to get the private key for scp", map[string]any{
 			log.FnError: err,
 		})
 		return err
@@ -56,16 +56,16 @@ func scpSubMain(ctx context.Context, args []string) error {
 
 	go func() {
 		if _, err := startSshAgent(ctx, pipeFilename); err != nil {
-			log.Error("failed to start ssh-agent for scp", map[string]interface{}{
+			log.Error("failed to start ssh-agent for scp", map[string]any{
 				log.FnError: err,
 				"node":      node,
 			})
 		}
 	}()
-	defer killSshAgent(ctx)
+	defer func() { _ = killSshAgent(ctx) }()
 
 	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
-		log.Error("failed to write the named pipe", map[string]interface{}{
+		log.Error("failed to write the named pipe", map[string]any{
 			log.FnError: err,
 			"pipe":      pipeFilename,
 		})

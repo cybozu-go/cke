@@ -13,17 +13,15 @@ import (
 
 const auditPolicyBasePath = "/etc/kubernetes/apiserver/audit-policy-%x.yaml"
 
-var (
-	// admissionPlugins is our recommended list of admission plugins in addition to the default ones.
-	// https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#is-there-a-recommended-set-of-admission-controllers-to-use
-	admissionPlugins = []string{
-		// NodeRestriction restricts kubelet privilege.
-		"NodeRestriction",
-		// DenyServiceExternalIPs prohibits use of .spec.externalIPs for Services.
-		// LoadBalancer-type Services are still usable.
-		"DenyServiceExternalIPs",
-	}
-)
+// admissionPlugins is our recommended list of admission plugins in addition to the default ones.
+// https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#is-there-a-recommended-set-of-admission-controllers-to-use
+var admissionPlugins = []string{
+	// NodeRestriction restricts kubelet privilege.
+	"NodeRestriction",
+	// DenyServiceExternalIPs prohibits use of .spec.externalIPs for Services.
+	// LoadBalancer-type Services are still usable.
+	"DenyServiceExternalIPs",
+}
 
 type apiServerRestartOp struct {
 	nodes []*cke.Node

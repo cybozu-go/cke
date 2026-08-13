@@ -3,13 +3,14 @@ package op
 import (
 	"context"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
+
+	"github.com/cybozu-go/cke"
 )
 
 type resourceApplyOp struct {

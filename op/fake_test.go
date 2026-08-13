@@ -3,12 +3,13 @@ package op
 import (
 	"context"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
 	vault "github.com/hashicorp/vault/api"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/cybozu-go/cke"
 )
 
 type fakeInfrastructure struct {
@@ -23,9 +24,11 @@ func (f *fakeInfrastructure) Storage() cke.Storage                { panic("not i
 func (f *fakeInfrastructure) NewEtcdClient(_ context.Context, _ []string) (*clientv3.Client, error) {
 	panic("not implemented")
 }
+
 func (f *fakeInfrastructure) K8sConfig(_ context.Context, _ *cke.Node) (*rest.Config, error) {
 	panic("not implemented")
 }
+
 func (f *fakeInfrastructure) K8sClient(_ context.Context, _ *cke.Node) (kubernetes.Interface, error) {
 	return f.cs, nil
 }

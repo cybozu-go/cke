@@ -27,7 +27,6 @@ var (
 )
 
 func TestScoreMachine(t *testing.T) {
-
 	testCases := []struct {
 		name      string
 		machine   *Machine
@@ -115,7 +114,6 @@ func TestScoreMachine(t *testing.T) {
 }
 
 func TestScoreMachineWithHealthStatus(t *testing.T) {
-
 	testCases := []struct {
 		name      string
 		machine   *Machine

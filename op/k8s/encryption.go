@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/cybozu-go/cke"
 	apiserverv1 "k8s.io/apiserver/pkg/apis/apiserver/v1"
+
+	"github.com/cybozu-go/cke"
 )
 
 const (

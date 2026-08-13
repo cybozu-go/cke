@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
+	clientv3 "go.etcd.io/etcd/client/v3"
+
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
-	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 func etcdEndpoints(nodes []*cke.Node) []string {
@@ -194,7 +195,7 @@ func (c waitEtcdSyncCommand) try(ctx context.Context, inf cke.Infrastructure) er
 }
 
 func (c waitEtcdSyncCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	for i := 0; i < 9; i++ {
+	for range 9 {
 		err := c.try(ctx, inf)
 		if err == nil {
 			return nil

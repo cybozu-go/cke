@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cybozu-go/cke"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/cybozu-go/cke"
 )
 
 func testTrustedRESTMapping() {
@@ -30,7 +31,7 @@ func testTrustedRESTMapping() {
 		_, stderr, err := ckecliWithInput(trustedRESTMappingCRYAML, "resource", "set", "-")
 		Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
 		defer func() {
-			ckecliWithInput(trustedRESTMappingCRYAML, "resource", "delete", "-")
+			_, _, _ = ckecliWithInput(trustedRESTMappingCRYAML, "resource", "delete", "-")
 		}()
 
 		By("creating the CRD via kubectl")
@@ -59,7 +60,7 @@ func testTrustedRESTMapping() {
 			if err := json.Unmarshal(stdout, &obj); err != nil {
 				return err
 			}
-			spec, ok := obj.Object["spec"].(map[string]interface{})
+			spec, ok := obj.Object["spec"].(map[string]any)
 			if !ok {
 				return fmt.Errorf("spec not found")
 			}
@@ -80,7 +81,7 @@ func testTrustedRESTMapping() {
 		Expect(ann).To(HaveKey("cke.cybozu.com/revision"))
 
 		By("cleaning up the custom resource and CRD")
-		ckecliWithInput(trustedRESTMappingCRYAML, "resource", "delete", "-")
+		_, _, _ = ckecliWithInput(trustedRESTMappingCRYAML, "resource", "delete", "-")
 		waitServerStatusCompletion()
 
 		_, stderr, err = kubectl("delete", "crd", "testresources.mtest.cybozu.com")

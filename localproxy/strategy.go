@@ -3,6 +3,7 @@ package localproxy
 import (
 	"bytes"
 	"fmt"
+	"slices"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op/k8s"
@@ -14,11 +15,8 @@ func decideOps(c *cke.Cluster, currentAP string, st *status) (newAP string, ops 
 	}
 
 	newAP = st.apiServers[0]
-	for _, n := range st.apiServers {
-		if n == currentAP {
-			newAP = currentAP
-			break
-		}
+	if slices.Contains(st.apiServers, currentAP) {
+		newAP = currentAP
 	}
 
 	apURL := fmt.Sprintf("https://%s:6443", newAP)

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/opencontainers/selinux/go-selinux"
@@ -68,10 +69,8 @@ func (c docker) PullImage(img Image) error {
 		return fmt.Errorf("%w, stdout: %s, stderr: %s", err, stdout, stderr)
 	}
 
-	for _, i := range strings.Split(string(stdout), "\n") {
-		if img.Name() == i {
-			return nil
-		}
+	if slices.Contains(strings.Split(string(stdout), "\n"), img.Name()) {
+		return nil
 	}
 
 	stdout, stderr, err = c.agent.Run("docker image pull " + img.Name())
@@ -400,10 +399,8 @@ func (c docker) VolumeExists(name string) (bool, error) {
 		return false, fmt.Errorf("%w, cmdline: %s, stdout: %s, stderr: %s", err, cmdline, stdout, stderr)
 	}
 
-	for _, n := range strings.Split(string(stdout), "\n") {
-		if n == name {
-			return true, nil
-		}
+	if slices.Contains(strings.Split(string(stdout), "\n"), name) {
+		return true, nil
 	}
 	return false, nil
 }

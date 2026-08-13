@@ -9,8 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var historyCount int
-var followMode bool
+var (
+	historyCount int
+	followMode   bool
+)
 
 // historyCmd represents the history command
 var historyCmd = &cobra.Command{

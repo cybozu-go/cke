@@ -10,8 +10,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
+
+	"github.com/cybozu-go/cke"
 )
 
 var httpClient = &well.HTTPClient{

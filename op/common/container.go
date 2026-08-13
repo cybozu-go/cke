@@ -4,9 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
+
+	"github.com/cybozu-go/cke"
 )
 
 type runContainerCommand struct {
@@ -149,7 +150,7 @@ func (c stopContainerCommand) Run(ctx context.Context, inf cke.Infrastructure, _
 				}
 			}
 			err = ce.Remove(c.name)
-			log.Info("stop container", map[string]interface{}{
+			log.Info("stop container", map[string]any{
 				"container": c.name,
 				"elapsed":   time.Since(begin).Seconds(),
 			})
@@ -205,7 +206,7 @@ func (c killContainersCommand) Run(ctx context.Context, inf cke.Infrastructure, 
 	}
 	env.Stop()
 	err := env.Wait()
-	log.Info("kill container", map[string]interface{}{
+	log.Info("kill container", map[string]any{
 		"container": c.name,
 		"elapsed":   time.Since(begin).Seconds(),
 	})

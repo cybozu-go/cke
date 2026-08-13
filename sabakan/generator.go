@@ -10,10 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/log"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 )
 
 var (
@@ -40,9 +41,7 @@ func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 		Labels:       make(map[string]string),
 	}
 
-	for k, v := range tmpl.Annotations {
-		n.Annotations[k] = v
-	}
+	maps.Copy(n.Annotations, tmpl.Annotations)
 	n.Annotations["cke.cybozu.com/serial"] = m.Spec.Serial
 	n.Annotations["cke.cybozu.com/register-date"] = m.Spec.RegisterDate.Format(time.RFC3339)
 	n.Annotations["cke.cybozu.com/retire-date"] = m.Spec.RetireDate.Format(time.RFC3339)
@@ -50,9 +49,7 @@ func MachineToNode(m *Machine, tmpl *cke.Node) *cke.Node {
 	for _, label := range m.Spec.Labels {
 		n.Labels["sabakan.cke.cybozu.com/"+label.Name] = label.Value
 	}
-	for k, v := range tmpl.Labels {
-		n.Labels[k] = v
-	}
+	maps.Copy(n.Labels, tmpl.Labels)
 	n.Labels["cke.cybozu.com/rack"] = strconv.Itoa(m.Spec.Rack)
 	n.Labels["cke.cybozu.com/index-in-rack"] = strconv.Itoa(m.Spec.IndexInRack)
 	n.Labels["cke.cybozu.com/role"] = m.Spec.Role
@@ -130,7 +127,7 @@ func NewGenerator(template *cke.Cluster, cstr *cke.Constraints, machines []Machi
 
 	for _, m := range machines {
 		if len(m.Spec.IPv4) == 0 {
-			log.Warn("ignore machine w/o IPv4 address", map[string]interface{}{
+			log.Warn("ignore machine w/o IPv4 address", map[string]any{
 				"serial": m.Spec.Serial,
 			})
 			continue
@@ -299,7 +296,7 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 
 	var numAvailableMachines int
 	for _, n := range g.workerTmpls {
-		//If there are worker template without role, we need to count all machines
+		// If there are worker template without role, we need to count all machines
 		if n.Role == "" {
 			numAvailableMachines = len(filterHealthyMachinesByRole(slices.Collect(maps.Values(g.machineMap)), ""))
 			numAvailableMachines -= len(g.nextControlPlanes)
@@ -321,7 +318,7 @@ func (g *Generator) fill(op *updateOp) (*cke.Cluster, error) {
 		g.nextUnused = removeMachine(g.nextUnused, m)
 	}
 
-	err := log.Info("sabakan: generated cluster", map[string]interface{}{
+	err := log.Info("sabakan: generated cluster", map[string]any{
 		"op":      op.name,
 		"changes": op.changes,
 	})

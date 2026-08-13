@@ -94,7 +94,7 @@ func TestServerRandomUpstream(t *testing.T) {
 	s := NewServer(upstreams, cfg)
 
 	histogram := map[*Upstream]int{}
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		conn, u, err := s.randomUpstream()
 		if err != nil {
 			t.Errorf("randomUpstream() should not return error in this case.\n")
@@ -111,7 +111,7 @@ func TestServerRandomUpstream(t *testing.T) {
 	}
 
 	upstreams[0].SetHealthy(false)
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		conn, u, err := s.randomUpstream()
 		if err != nil {
 			t.Errorf("randomUpstream() should not return error in this case.\n")

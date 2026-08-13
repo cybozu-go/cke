@@ -5,10 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/log"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 )
 
 type removeMemberOp struct {
@@ -50,7 +51,7 @@ func (o *removeMemberOp) Targets() []string {
 		ip, err := op.GuessMemberName(m)
 		if err != nil {
 			strID := strconv.FormatUint(m.ID, 10)
-			log.Warn("missing member name", map[string]interface{}{
+			log.Warn("missing member name", map[string]any{
 				log.FnError: err,
 				"member_id": strID,
 			})
