@@ -12,7 +12,6 @@ import (
 	"syscall"
 
 	"github.com/cybozu-go/log"
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
 	"github.com/cybozu-go/cke"
@@ -222,11 +221,7 @@ If COMMAND is specified, it will be executed on the node.
 
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			return sshSubMain(ctx, args)
-		})
-		well.Stop()
-		return well.Wait()
+		return sshSubMain(cmd.Context(), args)
 	},
 }
 

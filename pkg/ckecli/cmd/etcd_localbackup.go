@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/etcdutl/v3/snapshot"
@@ -41,19 +40,17 @@ exceed the maximum specified with --max-backups flag.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		cmd.SilenceUsage = true
-		well.Go(func(ctx context.Context) error {
-			etcd, err := inf.NewEtcdClient(ctx, nil)
-			if err != nil {
-				return err
-			}
-			err = backup(ctx, etcd)
-			if err != nil {
-				return fmt.Errorf("failed to take a backup: %w", err)
-			}
-			return removeOldBackups()
-		})
-		well.Stop()
-		return well.Wait()
+		ctx := cmd.Context()
+
+		etcd, err := inf.NewEtcdClient(ctx, nil)
+		if err != nil {
+			return err
+		}
+		err = backup(ctx, etcd)
+		if err != nil {
+			return fmt.Errorf("failed to take a backup: %w", err)
+		}
+		return removeOldBackups()
 	},
 }
 

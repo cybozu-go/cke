@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/log"
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
 
@@ -104,11 +103,7 @@ NODE is IP address or hostname of the node.
 
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			return scpSubMain(ctx, args)
-		})
-		well.Stop()
-		return well.Wait()
+		return scpSubMain(cmd.Context(), args)
 	},
 }
 

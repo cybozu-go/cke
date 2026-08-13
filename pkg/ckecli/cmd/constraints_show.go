@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
 
@@ -16,18 +14,14 @@ var constraintsShowCmd = &cobra.Command{
 	Long:  `Show the list of current constraint values.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			cstr, err := storage.GetConstraints(ctx)
-			if err != nil {
-				return err
-			}
+		cstr, err := storage.GetConstraints(cmd.Context())
+		if err != nil {
+			return err
+		}
 
-			enc := json.NewEncoder(os.Stdout)
-			enc.SetIndent("", "    ")
-			return enc.Encode(cstr)
-		})
-		well.Stop()
-		return well.Wait()
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "    ")
+		return enc.Encode(cstr)
 	},
 }
 

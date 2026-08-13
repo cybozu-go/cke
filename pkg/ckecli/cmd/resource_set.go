@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
 	"github.com/cybozu-go/cke"
@@ -33,6 +32,8 @@ If FILE is "-", then data is read from stdin.`,
 
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+
 		r := os.Stdin
 		if args[0] != "-" {
 			f, err := os.Open(args[0])
@@ -43,25 +44,21 @@ If FILE is "-", then data is read from stdin.`,
 			r = f
 		}
 
-		well.Go(func(ctx context.Context) error {
-			y := k8sYaml.NewYAMLReader(bufio.NewReader(r))
-			for {
-				data, err := y.Read()
-				if err == io.EOF {
-					return nil
-				}
-				if err != nil {
-					return err
-				}
-
-				err = updateResource(ctx, data)
-				if err != nil {
-					return err
-				}
+		y := k8sYaml.NewYAMLReader(bufio.NewReader(r))
+		for {
+			data, err := y.Read()
+			if err == io.EOF {
+				return nil
 			}
-		})
-		well.Stop()
-		return well.Wait()
+			if err != nil {
+				return err
+			}
+
+			err = updateResource(ctx, data)
+			if err != nil {
+				return err
+			}
+		}
 	},
 }
 

@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"context"
 	"os"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
 
@@ -15,16 +13,12 @@ var autoRepairGetVariablesCmd = &cobra.Command{
 	Long:  `Get the query variables to search non-healthy machines in sabakan.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			data, err := storage.GetAutoRepairQueryVariables(ctx)
-			if err != nil {
-				return err
-			}
-			os.Stdout.Write(data)
-			return nil
-		})
-		well.Stop()
-		return well.Wait()
+		data, err := storage.GetAutoRepairQueryVariables(cmd.Context())
+		if err != nil {
+			return err
+		}
+		os.Stdout.Write(data)
+		return nil
 	},
 }
 

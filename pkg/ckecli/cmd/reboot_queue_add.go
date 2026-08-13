@@ -1,13 +1,11 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
 	"github.com/cybozu-go/cke"
@@ -22,6 +20,8 @@ The nodes should be specified with their IP addresses.
 If FILE is -, the contents are read from stdin.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+
 		f := os.Stdin
 		if args[0] != "-" {
 			var err error
@@ -36,29 +36,25 @@ If FILE is -, the contents are read from stdin.`,
 		if err != nil {
 			return err
 		}
-		nodes := strings.Fields(string(data))
+		nodes := strings.FieldsSeq(string(data))
 
-		well.Go(func(ctx context.Context) error {
-			for _, node := range nodes {
-				entry := cke.NewRebootQueueEntry(node)
-				cluster, err := storage.GetCluster(ctx)
-				if err != nil {
-					return err
-				}
-				err = validateNode(node, cluster)
-				if err != nil {
-					return err
-				}
-
-				err = storage.RegisterRebootsEntry(ctx, entry)
-				if err != nil {
-					return err
-				}
+		for node := range nodes {
+			entry := cke.NewRebootQueueEntry(node)
+			cluster, err := storage.GetCluster(ctx)
+			if err != nil {
+				return err
 			}
-			return nil
-		})
-		well.Stop()
-		return well.Wait()
+			err = validateNode(node, cluster)
+			if err != nil {
+				return err
+			}
+
+			err = storage.RegisterRebootsEntry(ctx, entry)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	},
 }
 

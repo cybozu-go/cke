@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"context"
-
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
 	"github.com/cybozu-go/cke"
@@ -15,31 +12,29 @@ var rebootQueueCancelAllCmd = &cobra.Command{
 	Long:  `Cancel all the reboot queue entries.`,
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			entries, err := storage.GetRebootsEntries(ctx)
+		ctx := cmd.Context()
+
+		entries, err := storage.GetRebootsEntries(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, entry := range entries {
+			if entry.Status == cke.RebootStatusCancelled {
+				continue
+			}
+
+			entry.Status = cke.RebootStatusCancelled
+			err := storage.UpdateRebootsEntry(ctx, entry)
+			if err == cke.ErrNotFound {
+				// The entry has just finished
+				continue
+			}
 			if err != nil {
 				return err
 			}
-
-			for _, entry := range entries {
-				if entry.Status == cke.RebootStatusCancelled {
-					continue
-				}
-
-				entry.Status = cke.RebootStatusCancelled
-				err := storage.UpdateRebootsEntry(ctx, entry)
-				if err == cke.ErrNotFound {
-					// The entry has just finished
-					continue
-				}
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-		well.Stop()
-		return well.Wait()
+		}
+		return nil
 	},
 }
 

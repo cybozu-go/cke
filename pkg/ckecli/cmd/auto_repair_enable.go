@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"context"
-
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
 
@@ -13,11 +10,7 @@ var autoRepairEnableCmd = &cobra.Command{
 	Long:  `Enable sabakan-triggered automatic repair.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			return storage.EnableAutoRepair(ctx, true)
-		})
-		well.Stop()
-		return well.Wait()
+		return storage.EnableAutoRepair(cmd.Context(), true)
 	},
 }
 

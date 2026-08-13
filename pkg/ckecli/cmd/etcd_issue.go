@@ -1,13 +1,11 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
 	"github.com/cybozu-go/cke"
@@ -42,47 +40,43 @@ NAME is the username of etcd user to be authenticated.`,
 			return errors.New("invalid option: output=" + etcdIssueOpts.Output)
 		}
 
-		well.Go(func(ctx context.Context) error {
-			cert, key, err := cke.IssueEtcdClientCertificate(inf, username, etcdIssueOpts.TTL)
-			if err != nil {
-				return err
-			}
+		cert, key, err := cke.IssueEtcdClientCertificate(inf, username, etcdIssueOpts.TTL)
+		if err != nil {
+			return err
+		}
 
-			cacert, err := storage.GetCACertificate(ctx, cke.CAServer)
-			if err != nil {
-				return err
-			}
+		cacert, err := storage.GetCACertificate(cmd.Context(), cke.CAServer)
+		if err != nil {
+			return err
+		}
 
-			if outputJSON {
-				enc := json.NewEncoder(os.Stdout)
-				enc.SetIndent("", "  ")
-				return enc.Encode(cke.IssueResponse{
-					Cert:   cert,
-					Key:    key,
-					CACert: cacert,
-				})
-			}
+		if outputJSON {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			return enc.Encode(cke.IssueResponse{
+				Cert:   cert,
+				Key:    key,
+				CACert: cacert,
+			})
+		}
 
-			cacertFile := "etcd-ca.crt"
-			certFile := fmt.Sprintf("etcd-%s.crt", username)
-			keyFile := fmt.Sprintf("etcd-%s.key", username)
-			err = os.WriteFile(cacertFile, []byte(cacert), 0o644)
-			if err != nil {
-				return err
-			}
-			err = os.WriteFile(certFile, []byte(cert), 0o644)
-			if err != nil {
-				return err
-			}
-			err = os.WriteFile(keyFile, []byte(key), 0o600)
-			if err != nil {
-				return err
-			}
-			fmt.Println("cert files: ", cacertFile, certFile, keyFile)
-			return nil
-		})
-		well.Stop()
-		return well.Wait()
+		cacertFile := "etcd-ca.crt"
+		certFile := fmt.Sprintf("etcd-%s.crt", username)
+		keyFile := fmt.Sprintf("etcd-%s.key", username)
+		err = os.WriteFile(cacertFile, []byte(cacert), 0o644)
+		if err != nil {
+			return err
+		}
+		err = os.WriteFile(certFile, []byte(cert), 0o644)
+		if err != nil {
+			return err
+		}
+		err = os.WriteFile(keyFile, []byte(key), 0o600)
+		if err != nil {
+			return err
+		}
+		fmt.Println("cert files: ", cacertFile, certFile, keyFile)
+		return nil
 	},
 }
 

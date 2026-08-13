@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"context"
-
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
 	"github.com/cybozu-go/cke"
@@ -19,6 +16,8 @@ The machine should be processed with an operation OPERATION.
 Optionally, you can specify the machine's serial number as the fourth argument.`,
 	Args: cobra.RangeArgs(3, 4),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+
 		operation := args[0]
 		machineType := args[1]
 		address := args[2]
@@ -27,20 +26,16 @@ Optionally, you can specify the machine's serial number as the fourth argument.`
 			serial = args[3]
 		}
 
-		well.Go(func(ctx context.Context) error {
-			entry := cke.NewRepairQueueEntry(operation, machineType, address, serial)
-			cluster, err := storage.GetCluster(ctx)
-			if err != nil {
-				return err
-			}
-			if _, err := entry.GetMatchingRepairOperation(cluster); err != nil {
-				return err
-			}
+		entry := cke.NewRepairQueueEntry(operation, machineType, address, serial)
+		cluster, err := storage.GetCluster(ctx)
+		if err != nil {
+			return err
+		}
+		if _, err := entry.GetMatchingRepairOperation(cluster); err != nil {
+			return err
+		}
 
-			return storage.RegisterRepairsEntry(ctx, entry)
-		})
-		well.Stop()
-		return well.Wait()
+		return storage.RegisterRepairsEntry(ctx, entry)
 	},
 }
 
