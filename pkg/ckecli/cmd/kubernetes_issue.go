@@ -26,6 +26,7 @@ var kubernetesIssueCmd = &cobra.Command{
 	Long:  `Issue TLS client certificates for k8s user.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// TODO: delete this notice after CKE 1.35.5.
 		if !cmd.Flags().Changed("user") {
 			// stderr, because stdout carries the kubeconfig.
 			fmt.Fprintf(os.Stderr,
