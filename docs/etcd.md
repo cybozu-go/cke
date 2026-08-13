@@ -88,10 +88,24 @@ revisions of the keys of the other applications are therefore removed as well
 by the compaction requested by `kube-apiserver`.
 
 To be able to compact, the `kube-apiserver` user is granted the `root` role.
-Without the role, `kube-apiserver` fails to update `compact_rev_key` and no
-compaction happens.  Note that the role is granted only when CKE bootstraps the
-etcd cluster and is not reconciled afterwards; etcd clusters bootstrapped by CKE
-older than 1.35.0 need `etcdctl user grant-role kube-apiserver root` once.
+etcd permits the Compact API only for users having the role, and
+`kube-apiserver` also updates `compact_rev_key`, which is out of its own key
+prefix.  Without the role, `kube-apiserver` only logs an error and no
+compaction happens.
+
+The role is granted when CKE bootstraps the etcd cluster and is never
+reconciled afterwards, so upgrading CKE does not grant it to an existing
+cluster.  etcd clusters bootstrapped by CKE older than v1.35.0 need the role to
+be granted once:
+
+```console
+$ etcdctl --endpoints=CONTROL_PLANE_NODE_IP:2379 user get kube-apiserver
+$ etcdctl --endpoints=CONTROL_PLANE_NODE_IP:2379 user grant-role kube-apiserver root
+```
+
+Whether compaction is actually running can be seen in the logs.  etcd logs
+`finished scheduled compaction` for each compaction, and `kube-apiserver` logs
+`compact failed` when it is not permitted to compact.
 
 [Data corruption detection][DataCorruption] is not affected by this.  etcd
 stores KV hashes on every compaction regardless of who requests it, so
