@@ -399,18 +399,11 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 			}
 		RETRY:
 			for i := 0; i < attempts; i++ {
-				err := func() error {
-					ctx := ctx
-					if c.timeoutSeconds != nil && *c.timeoutSeconds != 0 {
-						var cancel context.CancelFunc
-						ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(*c.timeoutSeconds))
-						defer cancel()
-					}
-
-					args := append(c.command[1:], entry.Node)
-					command := well.CommandContext(ctx, c.command[0], args...)
-					return command.Run()
-				}()
+				var timeout int
+				if c.timeoutSeconds != nil {
+					timeout = *c.timeoutSeconds
+				}
+				_, err := runCommand(ctx, timeout, append(c.command, entry.Node))
 				if err == nil {
 					return nil
 				}
