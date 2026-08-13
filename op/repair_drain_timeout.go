@@ -59,8 +59,10 @@ func (c repairDrainTimeoutCommand) Command() cke.Command {
 
 func repairDrainBackOff(ctx context.Context, inf cke.Infrastructure, entry *cke.RepairQueueEntry, err error) error {
 	log.Warn("failed to drain node for repair", map[string]any{
-		"address":   entry.Address,
+		log.FnType:  fnTypeRepair,
 		log.FnError: err,
+		"index":     entry.Index,
+		"address":   entry.Address,
 	})
 	entry.Status = cke.RepairStatusProcessing
 	entry.StepStatus = cke.RepairStepStatusWaiting

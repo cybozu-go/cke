@@ -149,18 +149,24 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 				return fmt.Errorf("failed to cordon node %s: %v", entry.Node, err)
 			}
 			log.Info("start eviction dry-run", map[string]any{
-				"name": entry.Node,
+				log.FnType: fnTypeReboot,
+				"index":    entry.Index,
+				"node":     entry.Node,
 			})
 			err = dryRunEvictOrDeleteNodePod(ctx, cs, entry.Node, protected, c.protectedJobPods)
 			if err != nil {
 				log.Warn("eviction dry-run failed", map[string]any{
-					"name":      entry.Node,
+					log.FnType:  fnTypeReboot,
 					log.FnError: err,
+					"index":     entry.Index,
+					"node":      entry.Node,
 				})
 				return err
 			}
 			log.Info("eviction dry-run succeeded", map[string]any{
-				"name": entry.Node,
+				log.FnType: fnTypeReboot,
+				"index":    entry.Index,
+				"node":     entry.Node,
 			})
 			return nil
 		}()
@@ -178,13 +184,17 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 	// next, evict pods on each node
 	for _, entry := range evictNodes {
 		log.Info("start eviction", map[string]any{
-			"name": entry.Node,
+			log.FnType: fnTypeReboot,
+			"index":    entry.Index,
+			"node":     entry.Node,
 		})
 		err := evictOrDeleteNodePod(ctx, cs, entry.Node, protected, c.protectedJobPods, c.evictAttempts, c.evictInterval)
 		if err != nil {
 			log.Warn("eviction failed", map[string]any{
-				"name":      entry.Node,
+				log.FnType:  fnTypeReboot,
 				log.FnError: err,
+				"index":     entry.Index,
+				"node":      entry.Node,
 			})
 			c.notifyFailedNode(entry.Node)
 			err = drainBackOff(ctx, inf, entry, err)
@@ -192,7 +202,9 @@ func (c rebootDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 				return err
 			}
 			log.Info("eviction succeeded", map[string]any{
-				"name": entry.Node,
+				log.FnType: fnTypeReboot,
+				"index":    entry.Index,
+				"node":     entry.Node,
 			})
 		}
 	}
@@ -288,13 +300,17 @@ func (c rebootDeleteDaemonSetPodCommand) Run(ctx context.Context, inf cke.Infras
 		// keep entry.Status as RebootStatusDraining and don't update it here.
 
 		log.Info("start deletion of DaemonSet pod", map[string]any{
-			"name": entry.Node,
+			log.FnType: fnTypeReboot,
+			"index":    entry.Index,
+			"node":     entry.Node,
 		})
 		err := deleteOnDeleteDaemonSetPod(ctx, cs, entry.Node)
 		if err != nil {
 			log.Warn("deletion of DaemonSet pod failed", map[string]any{
-				"name":      entry.Node,
+				log.FnType:  fnTypeReboot,
 				log.FnError: err,
+				"index":     entry.Index,
+				"node":      entry.Node,
 			})
 			c.notifyFailedNode(entry.Node)
 		}
@@ -403,13 +419,15 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 				if c.timeoutSeconds != nil {
 					timeout = *c.timeoutSeconds
 				}
-				_, err := runCommand(ctx, timeout, append(c.command, entry.Node))
+				_, err := runCommand(ctx, timeout, fnTypeReboot, append(c.command, entry.Node))
 				if err == nil {
 					return nil
 				}
 
 				log.Warn("failed on rebooting node", map[string]any{
+					log.FnType:  fnTypeReboot,
 					log.FnError: err,
+					"index":     entry.Index,
 					"node":      entry.Node,
 					"attempts":  i,
 				})
@@ -423,7 +441,9 @@ func (c rebootRebootCommand) Run(ctx context.Context, inf cke.Infrastructure, _ 
 			}
 			c.notifyFailedNode(entry.Node)
 			log.Warn("given up rebooting node", map[string]any{
-				"node": entry.Node,
+				log.FnType: fnTypeReboot,
+				"index":    entry.Index,
+				"node":     entry.Node,
 			})
 			return nil
 		})
@@ -680,8 +700,10 @@ func listProtectedNamespaces(ctx context.Context, cs kubernetes.Interface, ls *m
 
 func drainBackOff(ctx context.Context, inf cke.Infrastructure, entry *cke.RebootQueueEntry, err error) error {
 	log.Warn("failed to drain node", map[string]any{
-		"name":      entry.Node,
+		log.FnType:  fnTypeReboot,
 		log.FnError: err,
+		"index":     entry.Index,
+		"node":      entry.Node,
 	})
 	etcdEntry, err := inf.Storage().GetRebootsEntry(ctx, entry.Index)
 	if err != nil {
