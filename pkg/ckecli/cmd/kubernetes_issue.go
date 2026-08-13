@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
@@ -26,6 +27,15 @@ var kubernetesIssueCmd = &cobra.Command{
 	Long:  `Issue TLS client certificates for k8s user.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// TODO: delete this notice after CKE 1.35.5.
+		if !cmd.Flags().Changed("user") {
+			// stderr, because stdout carries the kubeconfig.
+			fmt.Fprintf(os.Stderr,
+				"issuing a certificate for user %q (previously %q)\n"+
+					"NOTE: pass --user=cke:user:YOURNAME for per-person audit attribution\n",
+				kubernetesIssueOpts.UserName, cke.RoleAdmin)
+		}
+
 		well.Go(func(ctx context.Context) error {
 			cluster, err := storage.GetCluster(ctx)
 			if err != nil {
@@ -67,6 +77,6 @@ func init() {
 	fs := kubernetesIssueCmd.Flags()
 	fs.StringVar(&kubernetesIssueOpts.TTL, "ttl", "2h", "TTL of the certificate")
 	fs.StringVarP(&kubernetesIssueOpts.GroupName, "group", "g", cke.AdminGroup, "Group name of the issuing config")
-	fs.StringVarP(&kubernetesIssueOpts.UserName, "user", "u", cke.RoleAdmin, "User name of the issuing config")
+	fs.StringVarP(&kubernetesIssueOpts.UserName, "user", "u", cke.DefaultUserName, "User name of the issuing config")
 	kubernetesCmd.AddCommand(kubernetesIssueCmd)
 }

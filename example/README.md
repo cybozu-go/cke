@@ -111,6 +111,9 @@ $ KUBECONFIG=$(pwd)/.kubeconfig
 $ export KUBECONFIG
 ```
 
+The certificate is issued for `cke:user:admin` by default.
+Pass `--user=cke:user:YOURNAME` to be identified individually in audit logs.
+
 ## Setup CNI plugin
 
 CKE itself does not install any network plugins.

@@ -54,6 +54,12 @@ const (
 // AdminGroup is the group name of cluster admin users
 const AdminGroup = "system:masters"
 
+// DefaultUserName is the default user name of client certificates issued by
+// "ckecli kubernetes issue".  User names of this command are named under the
+// "cke:user:" prefix by convention, while CKE itself uses RoleAdmin, so that
+// audit logs and admission webhooks can tell CKE's users from CKE itself.
+const DefaultUserName = "cke:user:admin"
+
 // IssueResponse is cli output format.
 type IssueResponse struct {
 	Cert   string `json:"certificate"`
