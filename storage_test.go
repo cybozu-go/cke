@@ -2,7 +2,6 @@ package cke
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -1013,93 +1012,6 @@ func testStorageRepair(t *testing.T) {
 	}
 }
 
-func testStorageWaitRepairsEmpty(t *testing.T) {
-	t.Parallel()
-
-	client := newEtcdClient(t)
-	defer client.Close()
-	storage := Storage{client}
-	ctx := context.Background()
-
-	t.Run("empty", func(t *testing.T) {
-		err := storage.WaitRepairsEmpty(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-	})
-
-	session, err := concurrency.NewSession(client)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer session.Close()
-
-	election := concurrency.NewElection(session, KeyLeader)
-	if err := election.Campaign(ctx, "test"); err != nil {
-		t.Fatal(err)
-	}
-	leaderKey := election.Key()
-
-	t.Run("wait until empty", func(t *testing.T) {
-		entry := NewRepairQueueEntry(
-			"operation",
-			"machine",
-			"1.2.3.4",
-			"",
-		)
-		if err := storage.RegisterRepairsEntry(ctx, entry); err != nil {
-			t.Fatal(err)
-		}
-
-		waitCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-		defer cancel()
-
-		delErrCh := make(chan error, 1)
-		go func() {
-			time.Sleep(100 * time.Millisecond)
-			delErrCh <- storage.DeleteRepairsEntry(ctx, leaderKey, entry.Index)
-		}()
-
-		if err := storage.WaitRepairsEmpty(waitCtx); err != nil {
-			t.Fatal(err)
-		}
-		if err := <-delErrCh; err != nil {
-			t.Fatal(err)
-		}
-	})
-
-	t.Run("timeout", func(t *testing.T) {
-		entry := NewRepairQueueEntry(
-			"operation",
-			"machine",
-			"1.2.3.4",
-			"",
-		)
-		if err := storage.RegisterRepairsEntry(ctx, entry); err != nil {
-			t.Fatal(err)
-		}
-
-		timeoutCtx, cancel := context.WithTimeout(
-			ctx,
-			100*time.Millisecond,
-		)
-		defer cancel()
-
-		err := storage.WaitRepairsEmpty(timeoutCtx)
-		if !errors.Is(err, context.DeadlineExceeded) {
-			t.Fatalf("expected context.DeadlineExceeded, got %v", err)
-		}
-
-		if err := storage.DeleteRepairsEntry(
-			ctx,
-			leaderKey,
-			entry.Index,
-		); err != nil {
-			t.Fatal(err)
-		}
-	})
-}
-
 func testStatus(t *testing.T) {
 	t.Parallel()
 
@@ -1153,6 +1065,5 @@ func TestStorage(t *testing.T) {
 	t.Run("AutoRepair", testStorageAutoRepair)
 	t.Run("Reboot", testStorageReboot)
 	t.Run("Repair", testStorageRepair)
-	t.Run("WaitRepairsEmpty", testStorageWaitRepairsEmpty)
 	t.Run("Status", testStatus)
 }

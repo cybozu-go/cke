@@ -58,7 +58,7 @@ $ ckecli [--config FILE] <subcommand> args...
   - [`ckecli repair-queue delete-finished`](#ckecli-repair-queue-delete-finished)
   - [`ckecli repair-queue delete-unfinished`](#ckecli-repair-queue-delete-unfinished)
   - [`ckecli repair-queue reset-backoff`](#ckecli-repair-queue-reset-backoff)
-  - [`ckecli repair-queue wait [--timeout-seconds=SECONDS]`](#ckecli-repair-queue-wait---timeout-secondsseconds)
+  - [`ckecli repair-queue wait [--timeout-seconds=SECONDS] [--interval-seconds=SECONDS]`](#ckecli-repair-queue-wait---timeout-secondsseconds---interval-secondsseconds)
 - [`ckecli sabakan`](#ckecli-sabakan)
   - [`ckecli sabakan enable|disable`](#ckecli-sabakan-enabledisable)
   - [`ckecli sabakan is-enabled`](#ckecli-sabakan-is-enabled)
@@ -385,13 +385,14 @@ This displays the index numbers of deleted entries, one per line.
 Reset `drain_backoff_count` and `drain_backoff_expire` of the entries in repair queue.
 Resetting these values makes CKE try to drain machines again immediately.
 
-### `ckecli repair-queue wait [--timeout-seconds=SECONDS]`
+### `ckecli repair-queue wait [--timeout-seconds=SECONDS] [--interval-seconds=SECONDS]`
 
 Wait until the repair queue is empty.
 
-| Option              | Default value | Description                                                        |
-| ------------------- | ------------- | ------------------------------------------------------------------ |
-| `--timeout-seconds` | `30`          | The number of seconds to wait. `0` checks once without waiting.    |
+| Option               | Default value | Description                                                     |
+| -------------------- | ------------- | --------------------------------------------------------------- |
+| `--timeout-seconds`  | `30`          | The number of seconds to wait. `0` checks once without waiting. |
+| `--interval-seconds` | `1`           | The number of seconds between repair queue checks.              |
 
 ## `ckecli sabakan`
 
