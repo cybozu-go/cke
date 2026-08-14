@@ -7,9 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/cybozu-go/cke"
 )
 
 func testCKECLI() {

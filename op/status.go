@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/static"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
@@ -30,6 +28,9 @@ import (
 	proxyv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/static"
 )
 
 var decUnstructured = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
@@ -83,7 +84,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	if status.APIServer.Running {
 		status.APIServer.IsHealthy, err = checkAPIServerHealth(ctx, inf, node)
 		if err != nil {
-			log.Warn("failed to check API server health", map[string]interface{}{
+			log.Warn("failed to check API server health", map[string]any{
 				log.FnError: err,
 				"node":      node.Address,
 			})
@@ -97,7 +98,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	if status.ControllerManager.Running {
 		status.ControllerManager.IsHealthy, err = checkSecureHealthz(ctx, inf, node.Address, 10257)
 		if err != nil {
-			log.Warn("failed to check controller manager health", map[string]interface{}{
+			log.Warn("failed to check controller manager health", map[string]any{
 				log.FnError: err,
 				"node":      node.Address,
 			})
@@ -112,7 +113,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	if status.Scheduler.Running {
 		status.Scheduler.IsHealthy, err = checkSecureHealthz(ctx, inf, node.Address, 10259)
 		if err != nil {
-			log.Warn("failed to check scheduler health", map[string]interface{}{
+			log.Warn("failed to check scheduler health", map[string]any{
 				log.FnError: err,
 				"node":      node.Address,
 			})
@@ -120,7 +121,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 
 		cfgData, _, err := agent.Run(fmt.Sprintf("cat %s", SchedulerConfigPath))
 		if err != nil {
-			log.Error("failed to cat "+SchedulerConfigPath, map[string]interface{}{
+			log.Error("failed to cat "+SchedulerConfigPath, map[string]any{
 				log.FnError: err,
 				"node":      node.Address,
 			})
@@ -144,7 +145,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	if status.Proxy.Running {
 		status.Proxy.IsHealthy, err = CheckHealthz(ctx, inf, node.Address, 10249)
 		if err != nil {
-			log.Warn("failed to check proxy health", map[string]interface{}{
+			log.Warn("failed to check proxy health", map[string]any{
 				log.FnError: err,
 				"node":      node.Address,
 			})
@@ -171,7 +172,7 @@ func GetNodeStatus(ctx context.Context, inf cke.Infrastructure, node *cke.Node, 
 	if status.Kubelet.Running {
 		status.Kubelet.IsHealthy, err = CheckHealthz(ctx, inf, node.Address, 10248)
 		if err != nil {
-			log.Warn("failed to check kubelet health", map[string]interface{}{
+			log.Warn("failed to check kubelet health", map[string]any{
 				log.FnError: err,
 				"node":      node.Address,
 			})
@@ -604,7 +605,7 @@ func GetRepairQueueStatus(ctx context.Context, inf cke.Infrastructure, n *cke.No
 		}
 		healthy, err := isRepairTargetHealthy(ctx, entry, cluster)
 		if err != nil {
-			log.Warn("health check failed", map[string]interface{}{
+			log.Warn("health check failed", map[string]any{
 				log.FnError: err,
 				"index":     entry.Index,
 				"address":   entry.Address,

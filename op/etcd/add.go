@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cybozu-go/log"
+
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/common"
-	"github.com/cybozu-go/log"
 )
 
 type addMemberOp struct {
@@ -133,7 +134,7 @@ func (c addMemberCommand) Run(ctx context.Context, inf cke.Infrastructure, _ str
 		}
 		members = resp.Members
 	}
-	log.Debug("retrieved memgers from etcd", map[string]interface{}{
+	log.Debug("retrieved memgers from etcd", map[string]any{
 		"members": members,
 	})
 

@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"go.etcd.io/etcd/api/v3/v3rpc/rpctypes"
 	clientv3 "go.etcd.io/etcd/client/v3"
+
+	"github.com/cybozu-go/cke"
 )
 
 // Server is the cke server.

@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
+
+	"github.com/cybozu-go/cke"
 )
 
 var etcdIssueOpts struct {
@@ -65,15 +66,15 @@ NAME is the username of etcd user to be authenticated.`,
 			cacertFile := "etcd-ca.crt"
 			certFile := fmt.Sprintf("etcd-%s.crt", username)
 			keyFile := fmt.Sprintf("etcd-%s.key", username)
-			err = os.WriteFile(cacertFile, []byte(cacert), 0644)
+			err = os.WriteFile(cacertFile, []byte(cacert), 0o644)
 			if err != nil {
 				return err
 			}
-			err = os.WriteFile(certFile, []byte(cert), 0644)
+			err = os.WriteFile(certFile, []byte(cert), 0o644)
 			if err != nil {
 				return err
 			}
-			err = os.WriteFile(keyFile, []byte(key), 0600)
+			err = os.WriteFile(keyFile, []byte(key), 0o600)
 			if err != nil {
 				return err
 			}

@@ -240,7 +240,17 @@ This config file embeds client certificate and can be used with `kubectl` to con
 | --------- | ---------------- | ------------------------------------------- |
 | `--ttl`   | `2h`             | TTL of the client certificate               |
 | `--group` | `system:masters` | organization name of the client certificate |
-| `--user`  | `admin`          | user name of the client certificate         |
+| `--user`  | `cke:user:admin` | user name of the client certificate         |
+
+Certificates issued by this command are named under the `cke:user:` prefix by
+convention, while CKE itself uses `admin`.  Keeping the two apart lets audit logs
+attribute a request to a person rather than to CKE, and lets an admission webhook
+match on `request.userInfo.username.startsWith("cke:user:")`.
+
+Pass `--user=cke:user:alice` to be identified individually in audit logs.  The
+value is used verbatim, so `--user=admin` reproduces the user name of CKE 1.35.3
+and earlier.  Giving `--user` explicitly also suppresses the notice this command
+writes to stderr about the changed default, which is useful in scripts.
 
 ## `ckecli resource`
 

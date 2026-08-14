@@ -7,12 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 )
 
 func testMachineToNode(t *testing.T) {
@@ -1326,7 +1327,7 @@ func testRackDistribution(t *testing.T) {
 			machines = append(machines, createRack(i, "standard")...)
 		}
 
-		for i := 0; i < 28; i++ {
+		for i := range 28 {
 			machines[i].Status.State = StateUnhealthy
 		}
 		g := NewGenerator(baseTemplate, baseConstraints, machines, nil, testBaseTS)

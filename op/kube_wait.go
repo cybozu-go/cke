@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/cybozu-go/cke"
 )
 
 type kubeWaitOp struct {
@@ -50,12 +51,12 @@ func (c waitKubeCommand) Run(ctx context.Context, inf cke.Infrastructure, _ stri
 	}
 
 	begin := time.Now()
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		_, err = cs.CoreV1().ServiceAccounts("kube-system").Get(ctx, "default", metav1.GetOptions{})
 		switch {
 		case err == nil:
 			elapsed := time.Since(begin)
-			log.Info("k8s gets initialized", map[string]interface{}{
+			log.Info("k8s gets initialized", map[string]any{
 				"elapsed": elapsed.Seconds(),
 			})
 			return nil

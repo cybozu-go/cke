@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	appsv1 "k8s.io/api/apps/v1"
@@ -17,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/cybozu-go/cke"
 )
 
 // enumeratePods enumerates Pods on a specified node.
@@ -24,8 +25,8 @@ import (
 // If those handlers returns error, this function returns the error immediately.
 // Note: This function does not distinguish API errors and state evaluation returned from subfunction.
 func enumeratePods(ctx context.Context, cs kubernetes.Interface, node string,
-	podHandler func(pod *corev1.Pod) error, jobPodHandler func(pod *corev1.Pod) error) error {
-
+	podHandler func(pod *corev1.Pod) error, jobPodHandler func(pod *corev1.Pod) error,
+) error {
 	podList, err := cs.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": node}).String(),
 	})
@@ -68,8 +69,8 @@ func enumeratePods(ctx context.Context, cs kubernetes.Interface, node string,
 // If the handler returns error, this function returns the error immediately.
 // Note: This function does not distinguish API errors and state evaluation returned from subfunction.
 func enumerateOnDeleteDaemonSetPods(ctx context.Context, cs kubernetes.Interface, node string,
-	podHandler func(pod *corev1.Pod) error) error {
-
+	podHandler func(pod *corev1.Pod) error,
+) error {
 	daemonSets, err := cs.AppsV1().DaemonSets(corev1.NamespaceAll).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
@@ -146,7 +147,7 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 		if dry && !protected[pod.Namespace] {
 			// in case of dry-run for Pods in non-protected namespace,
 			// return immediately because its "eviction or deletion" never fails
-			log.Info("skip evicting pod because its namespace is not protected", map[string]interface{}{
+			log.Info("skip evicting pod because its namespace is not protected", map[string]any{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
 				"dry":       dry, // for consistency
@@ -156,7 +157,7 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 
 		evictCount := 0
 	EVICT:
-		log.Info("start evicting pod", map[string]interface{}{
+		log.Info("start evicting pod", map[string]any{
 			"namespace": pod.Namespace,
 			"name":      pod.Name,
 			"dry":       dry,
@@ -168,7 +169,7 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 		evictCount++
 		switch {
 		case err == nil:
-			log.Info("evicted pod", map[string]interface{}{
+			log.Info("evicted pod", map[string]any{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
 				"dry":       dry,
@@ -180,7 +181,7 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 			return fmt.Errorf("failed to evict pod %s/%s: %w", pod.Namespace, pod.Name, err)
 		case !protected[pod.Namespace]:
 			// not dry here
-			log.Warn("failed to evict non-protected pod due to PDB", map[string]interface{}{
+			log.Warn("failed to evict non-protected pod due to PDB", map[string]any{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
 				"dry":       dry, // for consistency (same for below)
@@ -190,7 +191,7 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 			if err != nil && !apierrors.IsNotFound(err) {
 				return err
 			}
-			log.Warn("deleted non-protected pod", map[string]interface{}{
+			log.Warn("deleted non-protected pod", map[string]any{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
 				"dry":       dry,
@@ -203,7 +204,7 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 					return ctx.Err()
 				case <-time.After(interval):
 				}
-				log.Info("retry eviction of pod", map[string]interface{}{
+				log.Info("retry eviction of pod", map[string]any{
 					"namespace": pod.Namespace,
 					"name":      pod.Name,
 					"dry":       dry,
@@ -218,14 +219,14 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 			return fmt.Errorf("protected job-managed pod exists: %s/%s, phase=%s", pod.Namespace, pod.Name, pod.Status.Phase)
 		}
 		if dry {
-			log.Info("skip actually deleting job-managed pod in dry-run (labels do not match protected_job_pods)", map[string]interface{}{
+			log.Info("skip actually deleting job-managed pod in dry-run (labels do not match protected_job_pods)", map[string]any{
 				"namespace": pod.Namespace,
 				"name":      pod.Name,
 				"dry":       dry,
 			})
 			return nil
 		}
-		log.Info("start deleting job-managed pod", map[string]interface{}{
+		log.Info("start deleting job-managed pod", map[string]any{
 			"namespace": pod.Namespace,
 			"name":      pod.Name,
 		})
@@ -233,7 +234,7 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 		if err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed to delete job-managed pod %s/%s: %w", pod.Namespace, pod.Name, err)
 		}
-		log.Info("deleted job-managed pod", map[string]interface{}{
+		log.Info("deleted job-managed pod", map[string]any{
 			"namespace": pod.Namespace,
 			"name":      pod.Name,
 		})
@@ -248,7 +249,7 @@ func doDeleteOnDeleteDaemonSetPod(ctx context.Context, cs kubernetes.Interface, 
 		if err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
-		log.Info("deleted daemonset pod", map[string]interface{}{
+		log.Info("deleted daemonset pod", map[string]any{
 			"namespace": pod.Namespace,
 			"name":      pod.Name,
 		})
@@ -424,7 +425,7 @@ func rebootCompleted(ctx context.Context, c *cke.Cluster, entry *cke.RebootQueue
 	env.Stop()
 	err := env.Wait()
 	if err != nil {
-		log.Warn("failed to check boot", map[string]interface{}{
+		log.Warn("failed to check boot", map[string]any{
 			"name": entry.Node,
 		})
 		return false

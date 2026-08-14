@@ -5,11 +5,12 @@ import (
 	"errors"
 	"time"
 
+	"github.com/cybozu-go/log"
+	clientv3 "go.etcd.io/etcd/client/v3"
+
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/metrics"
 	"github.com/cybozu-go/cke/server"
-	"github.com/cybozu-go/log"
-	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 type sabakanContextKey string
@@ -87,7 +88,7 @@ func (ig integrator) runGenerator(ctx context.Context, leaderKey string, cluster
 		// the error is either harmless (cke.ErrNotFound) or already
 		// logged by well.HTTPClient.
 		if err != cke.ErrNotFound {
-			log.Warn("sabakan: query failed", map[string]interface{}{
+			log.Warn("sabakan: query failed", map[string]any{
 				log.FnError: err,
 			})
 		}
@@ -137,7 +138,7 @@ func (ig integrator) runGenerator(ctx context.Context, leaderKey string, cluster
 
 	if err != nil {
 		metrics.UpdateSabakanIntegration(false, nil, 0, time.Now().UTC())
-		log.Warn("sabakan: failed to generate cluster", map[string]interface{}{
+		log.Warn("sabakan: failed to generate cluster", map[string]any{
 			log.FnError: err,
 		})
 		// lint:ignore nilerr  Some restriction was not satisfied. Try again.
@@ -171,7 +172,7 @@ func (ig integrator) runRepairer(ctx context.Context, clusterStatus *cke.Cluster
 	machines, err := QueryNonHealthy(ctx, st)
 	if err != nil {
 		if !errors.Is(err, cke.ErrNotFound) {
-			log.Warn("query failed", map[string]interface{}{
+			log.Warn("query failed", map[string]any{
 				log.FnError: err,
 			})
 		}

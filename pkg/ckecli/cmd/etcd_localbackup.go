@@ -70,7 +70,7 @@ func backup(ctx context.Context, etcd *clientv3.Client) error {
 			return fmt.Errorf("%s is not a directory", config.dir)
 		}
 	case os.IsNotExist(err):
-		if err := os.MkdirAll(config.dir, 0755); err != nil {
+		if err := os.MkdirAll(config.dir, 0o755); err != nil {
 			return err
 		}
 	default:

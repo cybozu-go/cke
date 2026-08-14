@@ -3,9 +3,10 @@ package op
 import (
 	"context"
 
-	"github.com/cybozu-go/cke"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/cybozu-go/cke"
 )
 
 type kubeEtcdServiceCreateOp struct {

@@ -3,13 +3,14 @@ package cmd
 import (
 	"os"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"sigs.k8s.io/yaml"
+
+	"github.com/cybozu-go/cke"
 )
 
 var (

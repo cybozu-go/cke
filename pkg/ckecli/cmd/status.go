@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cybozu-go/cke"
 	"github.com/spf13/cobra"
+
+	"github.com/cybozu-go/cke"
 )
 
 var statusCmd = &cobra.Command{

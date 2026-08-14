@@ -490,7 +490,6 @@ func testStorageResource(t *testing.T) {
 	if err != ErrNotFound {
 		t.Error(`err != ErrNotFound,`, err)
 	}
-
 }
 
 func testStorageSabakan(t *testing.T) {
@@ -1012,7 +1011,6 @@ func testStorageRepair(t *testing.T) {
 	if disabled {
 		t.Error("repair queue could not be re-enabled")
 	}
-
 }
 
 func testStorageWaitRepairsEmpty(t *testing.T) {

@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/ptr"
+
+	"github.com/cybozu-go/cke"
 )
 
 func testOperators() {
@@ -57,7 +57,7 @@ func testOperators() {
 		By("Testing default/kubernetes Endpoints")
 		out, _, err := kubectl("get", "-o=json", "endpoints/kubernetes")
 		Expect(err).ShouldNot(HaveOccurred())
-		//lint:ignore SA1019 code for Endpoints will be removed later
+		//nolint:staticcheck // code for Endpoints will be removed later
 		var ep corev1.Endpoints
 		err = json.Unmarshal(out, &ep)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -78,15 +78,15 @@ func testOperators() {
 		Expect(eps.Endpoints).To(ConsistOf(
 			discoveryv1.Endpoint{
 				Addresses:  []string{node1},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 			discoveryv1.Endpoint{
 				Addresses:  []string{node2},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 			discoveryv1.Endpoint{
 				Addresses:  []string{node3},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 		))
 
@@ -94,12 +94,12 @@ func testOperators() {
 		// this will run:
 		// - EtcdStartOp
 		// - EtcdWaitClusterOp
-		stopCKE()
+		Expect(stopCKE()).To(Succeed())
 		execSafeAt(node2, "docker", "stop", "etcd")
 		execSafeAt(node2, "docker", "rm", "etcd")
 		execSafeAt(node3, "docker", "stop", "etcd")
 		execSafeAt(node3, "docker", "rm", "etcd")
-		runCKE(ckeImageURL)
+		Expect(runCKE(ckeImageURL)).To(Succeed())
 		waitServerStatusCompletion()
 
 		By("Removing a control plane node from the cluster")
@@ -110,19 +110,19 @@ func testOperators() {
 		// - EtcdRiversRestartOp
 		// - APIServerRestartOp
 		// - KubeEndpointsUpdateOp
-		stopCKE()
+		Expect(stopCKE()).To(Succeed())
 		ckecliSafe("constraints", "set", "control-plane-count", "2")
 		cluster := getCluster(0, 1, 2)
 		cluster.Nodes = append(cluster.Nodes[:1], cluster.Nodes[2:]...)
 		err = ckecliClusterSet(cluster)
 		Expect(err).NotTo(HaveOccurred())
-		runCKE(ckeImageURL)
+		Expect(runCKE(ckeImageURL)).To(Succeed())
 		waitServerStatusCompletion()
 
 		By("Testing default/kubernetes Endpoints")
 		out, _, err = kubectl("get", "-o=json", "endpoints/kubernetes")
 		Expect(err).ShouldNot(HaveOccurred())
-		//lint:ignore SA1019 code for Endpoints will be removed later
+		//nolint:staticcheck // code for Endpoints will be removed later
 		ep = corev1.Endpoints{}
 		err = json.Unmarshal(out, &ep)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -142,11 +142,11 @@ func testOperators() {
 		Expect(eps.Endpoints).To(ConsistOf(
 			discoveryv1.Endpoint{
 				Addresses:  []string{node1},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 			discoveryv1.Endpoint{
 				Addresses:  []string{node3},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 		))
 
@@ -177,7 +177,8 @@ func testOperators() {
 		rebootTime := time.Now()
 		rebootedNodes := []string{node2, node4}
 		for _, n := range rebootedNodes {
-			execAt(n, "sudo", "systemd-run", "reboot", "-f", "-f")
+			_, _, err := execAt(n, "sudo", "systemd-run", "reboot", "-f", "-f")
+			Expect(err).NotTo(HaveOccurred())
 		}
 
 		Eventually(func() error {
@@ -263,8 +264,8 @@ func testOperators() {
 		newLeader := strings.TrimSpace(string(ckecliSafe("leader")))
 		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
 		Expect(newLeader).NotTo(Equal(firstLeader))
-		stopCKE()
-		runCKE(ckeImageURL)
+		Expect(stopCKE()).To(Succeed())
+		Expect(runCKE(ckeImageURL)).To(Succeed())
 
 		By("Converting a control plane node to a worker node")
 		// this will run these ops:
@@ -306,8 +307,8 @@ func testOperators() {
 		newLeader = strings.TrimSpace(string(ckecliSafe("leader")))
 		Expect(newLeader).To(Or(Equal("host1"), Equal("host2")))
 		Expect(newLeader).NotTo(Equal(firstLeader))
-		stopCKE()
-		runCKE(ckeImageURL)
+		Expect(stopCKE()).To(Succeed())
+		Expect(runCKE(ckeImageURL)).To(Succeed())
 
 		By("Changing service options")
 		// this will run these ops:
@@ -451,9 +452,9 @@ func testOperators() {
 	})
 
 	It("removes all taints", func() {
-		kubectl("taint", "--all=true", "node", "coil.cybozu.com/bootstrap-")
-		kubectl("taint", "--all=true", "node", "taint1-")
-		kubectl("taint", "--all=true", "node", "taint2-")
+		_, _, _ = kubectl("taint", "--all=true", "node", "coil.cybozu.com/bootstrap-")
+		_, _, _ = kubectl("taint", "--all=true", "node", "taint1-")
+		_, _, _ = kubectl("taint", "--all=true", "node", "taint2-")
 	})
 
 	It("should recognize nodes that have recovered", func() {
@@ -487,13 +488,14 @@ func testOperators() {
 
 	It("should exclude updateOp of the shutdowned node", func() {
 		By("Terminating a control plane")
-		stopCKE()
-		execAt(node2, "sudo", "systemd-run", "halt", "-f", "-f")
+		Expect(stopCKE()).To(Succeed())
+		_, _, err := execAt(node2, "sudo", "systemd-run", "halt", "-f", "-f")
+		Expect(err).NotTo(HaveOccurred())
 		Eventually(func() error {
 			_, err := execAtLocal("ping", "-c", "1", "-W", "1", node2)
 			return err
 		}).ShouldNot(Succeed())
-		runCKE(ckeImageURL)
+		Expect(runCKE(ckeImageURL)).To(Succeed())
 		waitServerStatusCompletion()
 
 		By("Recovering the cluster by promoting a worker")

@@ -11,10 +11,11 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
+
+	"github.com/cybozu-go/cke"
 )
 
 func detectSSHNode(arg string) string {
@@ -40,12 +41,12 @@ func createFifo() (string, error) {
 		return "", err
 	}
 
-	err = os.MkdirAll(filepath.Join(usr.HomeDir, ".ssh"), 0700)
+	err = os.MkdirAll(filepath.Join(usr.HomeDir, ".ssh"), 0o700)
 	if err != nil {
 		return "", err
 	}
 
-	err = syscall.Mkfifo(fifoFilePath, 0600)
+	err = syscall.Mkfifo(fifoFilePath, 0o600)
 	if err != nil {
 		return "", err
 	}
@@ -95,7 +96,7 @@ func startSshAgent(ctx context.Context, privateKeyFile string) (map[string]strin
 	myEnv[kvPair1[0]] = kvPair1[1]
 	err = os.Setenv(kvPair1[0], kvPair1[1])
 	if err != nil {
-		log.Error("failed to set environment variable 1", map[string]interface{}{
+		log.Error("failed to set environment variable 1", map[string]any{
 			log.FnError: err,
 			"env":       kvPair1[0],
 			"val":       kvPair1[1],
@@ -107,7 +108,7 @@ func startSshAgent(ctx context.Context, privateKeyFile string) (map[string]strin
 	myEnv[kvPair2[0]] = kvPair2[1]
 	err = os.Setenv(kvPair2[0], kvPair2[1])
 	if err != nil {
-		log.Error("failed to set environment variable 2", map[string]interface{}{
+		log.Error("failed to set environment variable 2", map[string]any{
 			log.FnError: err,
 			"env":       kvPair2[0],
 			"val":       kvPair2[1],
@@ -118,12 +119,12 @@ func startSshAgent(ctx context.Context, privateKeyFile string) (map[string]strin
 	cmd = exec.CommandContext(ctx, "ssh-add", privateKeyFile)
 	_, err = cmd.CombinedOutput()
 	if err != nil {
-		log.Error("failed to add the private key", map[string]interface{}{
+		log.Error("failed to add the private key", map[string]any{
 			log.FnError: err,
 		})
 		return nil, err
 	}
-	log.Debug("Successfuly added the private key", map[string]interface{}{
+	log.Debug("Successfuly added the private key", map[string]any{
 		"env": kvPair1[0],
 		"val": kvPair1[1],
 	})
@@ -135,12 +136,12 @@ func killSshAgent(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "ssh-agent", "-k")
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Error("failed to run ssh-agent -k", map[string]interface{}{
+		log.Error("failed to run ssh-agent -k", map[string]any{
 			log.FnError: err,
 		})
 		return err
 	}
-	log.Debug("killed ssh-agent", map[string]interface{}{
+	log.Debug("killed ssh-agent", map[string]any{
 		"stdout_stderr": string(stdoutStderr),
 	})
 	return nil
@@ -161,7 +162,7 @@ func writeToFifo(fifo string, data string) error {
 func sshSubMain(ctx context.Context, args []string) error {
 	pipeFilename, err := createFifo()
 	if err != nil {
-		log.Error("failed to create the named pipe", map[string]interface{}{
+		log.Error("failed to create the named pipe", map[string]any{
 			log.FnError: err,
 		})
 		return err
@@ -171,7 +172,7 @@ func sshSubMain(ctx context.Context, args []string) error {
 	node := detectSSHNode(args[0])
 	pirvateKey, err := getPrivateKey(node)
 	if err != nil {
-		log.Error("failed to get the private key for ssh", map[string]interface{}{
+		log.Error("failed to get the private key for ssh", map[string]any{
 			log.FnError: err,
 		})
 		return err
@@ -179,16 +180,16 @@ func sshSubMain(ctx context.Context, args []string) error {
 
 	go func() {
 		if _, err := startSshAgent(ctx, pipeFilename); err != nil {
-			log.Error("failed to start ssh-agent for ssh", map[string]interface{}{
+			log.Error("failed to start ssh-agent for ssh", map[string]any{
 				log.FnError: err,
 				"node":      node,
 			})
 		}
 	}()
-	defer killSshAgent(ctx)
+	defer func() { _ = killSshAgent(ctx) }()
 
 	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
-		log.Error("failed to write the named pipe", map[string]interface{}{
+		log.Error("failed to write the named pipe", map[string]any{
 			log.FnError: err,
 			"pipe":      pipeFilename,
 		})

@@ -86,7 +86,7 @@ func ApplyResource(ctx context.Context, dynclient dynamic.Interface, mapper meta
 		return err
 	}
 	if log.Enabled(log.LvDebug) {
-		log.Debug("resource-apply", map[string]interface{}{
+		log.Debug("resource-apply", map[string]any{
 			"gvk":       gvk.String(),
 			"gvr":       mapping.Resource.String(),
 			"namespace": obj.GetNamespace(),

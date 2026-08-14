@@ -54,6 +54,12 @@ const (
 // AdminGroup is the group name of cluster admin users
 const AdminGroup = "system:masters"
 
+// DefaultUserName is the default user name of client certificates issued by
+// "ckecli kubernetes issue".  User names of this command are named under the
+// "cke:user:" prefix by convention, while CKE itself uses RoleAdmin, so that
+// audit logs and admission webhooks can tell CKE's users from CKE itself.
+const DefaultUserName = "cke:user:admin"
+
 // IssueResponse is cli output format.
 type IssueResponse struct {
 	Cert   string `json:"certificate"`
@@ -64,7 +70,7 @@ type IssueResponse struct {
 var roleLock sync.Mutex
 
 // addRole adds a role to CA if not exists.
-func addRole(client *vault.Client, ca, role string, data map[string]interface{}) error {
+func addRole(client *vault.Client, ca, role string, data map[string]any) error {
 	roleLock.Lock()
 	defer roleLock.Unlock()
 
@@ -81,7 +87,7 @@ func addRole(client *vault.Client, ca, role string, data map[string]interface{})
 
 	_, err = l.Write(rpath, data)
 	if err != nil {
-		log.Error("failed to create vault role", map[string]interface{}{
+		log.Error("failed to create vault role", map[string]any{
 			log.FnError: err,
 			"ca":        ca,
 			"role":      role,
@@ -97,8 +103,11 @@ func deleteRole(client *vault.Client, ca, role string) error {
 
 	l := client.Logical()
 	rpath := path.Join(ca, "roles", role)
-	l.Delete(rpath)
-	_, err := l.Read(rpath)
+	_, err := l.Delete(rpath)
+	if err != nil {
+		return err
+	}
+	_, err = l.Read(rpath)
 	if err != nil {
 		return err
 	}
@@ -117,13 +126,13 @@ func (e EtcdCA) IssueServerCert(ctx context.Context, inf Infrastructure, node *N
 		"cke-etcd.kube-system.svc",
 	}
 	return issueCertificate(inf, CAServer, RoleSystem, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
 			"client_flag":    "false",
 			"allow_any_name": "true",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name": node.Nodename(),
 			"alt_names":   strings.Join(altNames, ","),
 			"ip_sans":     "127.0.0.1," + node.Address,
@@ -133,12 +142,12 @@ func (e EtcdCA) IssueServerCert(ctx context.Context, inf Infrastructure, node *N
 // IssuePeerCert issues TLS certificates for mutual peer authentication.
 func (e EtcdCA) IssuePeerCert(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
 	return issueCertificate(inf, CAEtcdPeer, RoleSystem, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
 			"allow_any_name": "true",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name":          node.Nodename(),
 			"ip_sans":              "127.0.0.1," + node.Address,
 			"exclude_cn_from_sans": "true",
@@ -148,13 +157,13 @@ func (e EtcdCA) IssuePeerCert(ctx context.Context, inf Infrastructure, node *Nod
 // IssueForAPIServer issues TLC client certificate for Kubernetes.
 func (e EtcdCA) IssueForAPIServer(ctx context.Context, inf Infrastructure, node *Node) (crt, key string, err error) {
 	return issueCertificate(inf, CAEtcdClient, RoleSystem, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
 			"server_flag":    "false",
 			"allow_any_name": "true",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name":          "kube-apiserver",
 			"exclude_cn_from_sans": "true",
 		})
@@ -163,13 +172,13 @@ func (e EtcdCA) IssueForAPIServer(ctx context.Context, inf Infrastructure, node 
 // IssueRoot issues certificate for root user.
 func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
 	return issueCertificate(inf, CAEtcdClient, RoleAdmin, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":            "2h",
 			"max_ttl":        "24h",
 			"server_flag":    "false",
 			"allow_any_name": "true",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name":          "root",
 			"exclude_cn_from_sans": "true",
 			"ttl":                  "1h",
@@ -179,13 +188,13 @@ func (e EtcdCA) IssueRoot(ctx context.Context, inf Infrastructure) (cert, key st
 // IssueEtcdClientCertificate issues TLS client certificate for a user.
 func IssueEtcdClientCertificate(inf Infrastructure, username, ttl string) (cert, key string, err error) {
 	return issueCertificate(inf, CAEtcdClient, RoleSystem, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
 			"server_flag":    "false",
 			"allow_any_name": "true",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name":          username,
 			"exclude_cn_from_sans": "true",
 			"ttl":                  ttl,
@@ -198,14 +207,14 @@ type KubernetesCA struct{}
 // IssueUserCert issues client certificate for user.
 func (k KubernetesCA) IssueUserCert(ctx context.Context, inf Infrastructure, userName, groupName string, ttl string) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, RoleAdmin, true,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":               "2h",
 			"max_ttl":           "48h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
 			"organization":      groupName,
 		},
-		map[string]interface{}{
+		map[string]any{
 			"ttl":                  ttl,
 			"common_name":          userName,
 			"exclude_cn_from_sans": "true",
@@ -228,13 +237,13 @@ func (k KubernetesCA) IssueForAPIServer(ctx context.Context, inf Infrastructure,
 	kubeSvcAddr := netutil.IPAdd(ip, 1)
 
 	return issueCertificate(inf, CAKubernetes, RoleSystem, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name":          "kubernetes",
 			"alt_names":            strings.Join(altNames, ","),
 			"ip_sans":              "127.0.0.1," + n.Address + "," + kubeSvcAddr.String(),
@@ -245,14 +254,14 @@ func (k KubernetesCA) IssueForAPIServer(ctx context.Context, inf Infrastructure,
 // IssueForScheduler issues TLS certificate for kube-scheduler.
 func (k KubernetesCA) IssueForScheduler(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, RoleKubeScheduler, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
 			"organization":      "system:kube-scheduler",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name":          "system:kube-scheduler",
 			"exclude_cn_from_sans": "true",
 		})
@@ -261,14 +270,14 @@ func (k KubernetesCA) IssueForScheduler(ctx context.Context, inf Infrastructure)
 // IssueForControllerManager issues TLS certificate for kube-controller-manager.
 func (k KubernetesCA) IssueForControllerManager(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, RoleKubeControllerManager, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
 			"organization":      "system:kube-controller-manager",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name":          "system:kube-controller-manager",
 			"exclude_cn_from_sans": "true",
 		})
@@ -283,14 +292,14 @@ func (k KubernetesCA) IssueForKubelet(ctx context.Context, inf Infrastructure, n
 	}
 
 	return issueCertificate(inf, CAKubernetes, RoleKubelet, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
 			"organization":      "system:nodes",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name":          "system:node:" + nodename,
 			"alt_names":            altNames,
 			"ip_sans":              "127.0.0.1," + node.Address,
@@ -301,14 +310,14 @@ func (k KubernetesCA) IssueForKubelet(ctx context.Context, inf Infrastructure, n
 // IssueForProxy issues TLS certificate for kube-proxy.
 func (k KubernetesCA) IssueForProxy(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, RoleKubeProxy, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":               "87600h",
 			"max_ttl":           "87600h",
 			"enforce_hostnames": "false",
 			"allow_any_name":    "true",
 			"organization":      "system:node-proxier",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name":          "system:kube-proxy",
 			"exclude_cn_from_sans": "true",
 		})
@@ -317,7 +326,7 @@ func (k KubernetesCA) IssueForProxy(ctx context.Context, inf Infrastructure) (cr
 // IssueForServiceAccount issues TLS certificate to sign service account tokens.
 func (k KubernetesCA) IssueForServiceAccount(ctx context.Context, inf Infrastructure) (crt, key string, err error) {
 	return issueCertificate(inf, CAKubernetes, RoleServiceAccount, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
 			"allow_any_name": "true",
@@ -326,7 +335,7 @@ func (k KubernetesCA) IssueForServiceAccount(ctx context.Context, inf Infrastruc
 			"key_usage":      "DigitalSignature,CertSign",
 			"no_store":       "true",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name":          "service-account",
 			"exclude_cn_from_sans": "true",
 		})
@@ -338,13 +347,13 @@ type AggregationCA struct{}
 // IssueClientCertificate issues TLS client certificate for API server
 func (a AggregationCA) IssueClientCertificate(ctx context.Context, inf Infrastructure) (cert, key string, err error) {
 	return issueCertificate(inf, CAKubernetesAggregation, RoleSystem, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":            "87600h",
 			"max_ttl":        "87600h",
 			"server_flag":    "false",
 			"allow_any_name": "true",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name":          CNAPIServer,
 			"exclude_cn_from_sans": "true",
 		})
@@ -358,7 +367,7 @@ type WebhookCA struct{}
 func (WebhookCA) IssueCertificate(ctx context.Context, inf Infrastructure, namespace, name string) (cert, key string, err error) {
 	altNames := []string{name, name + "." + namespace, name + "." + namespace + ".svc"}
 	return issueCertificate(inf, CAWebhook, RoleSystem, false,
-		map[string]interface{}{
+		map[string]any{
 			"ttl":               "175200h",
 			"max_ttl":           "175200h",
 			"enforce_hostnames": "false",
@@ -366,14 +375,14 @@ func (WebhookCA) IssueCertificate(ctx context.Context, inf Infrastructure, names
 			"server_flag":       "true",
 			"client_flag":       "false",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"common_name":          namespace + "/" + name,
 			"alt_names":            strings.Join(altNames, ","),
 			"exclude_cn_from_sans": "true",
 		})
 }
 
-func issueCertificate(inf Infrastructure, ca, role string, onetime bool, roleOpts, certOpts map[string]interface{}) (crt, key string, err error) {
+func issueCertificate(inf Infrastructure, ca, role string, onetime bool, roleOpts, certOpts map[string]any) (crt, key string, err error) {
 	pkiKey := VaultPKIKey(ca)
 	client, err := inf.Vault()
 	if err != nil {
