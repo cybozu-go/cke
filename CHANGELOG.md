@@ -8,7 +8,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ### Changed
 
-- Disable etcd auto-compaction and let kube-apiserver do compaction
+- stop etcd compaction itself in [#913](https://github.com/cybozu-go/cke/pull/913)
 
     **Upgrade note**: etcd permits the Compact API only for users having the `root`
     role, and CKE grants the role to the `kube-apiserver` user only when it

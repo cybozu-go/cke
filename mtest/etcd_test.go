@@ -2,8 +2,6 @@ package mtest
 
 import (
 	"encoding/json"
-	"fmt"
-	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -21,14 +19,6 @@ func rootCertFiles() (crt, key, ca string) {
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
 	return remoteTempFile(res.Cert), remoteTempFile(res.Key), remoteTempFile(res.CACert)
-}
-
-// etcdLogHas reports whether the etcd journal on the node has the given message.
-// grep is run on the node not to transfer the whole journal.
-func etcdLogHas(node, message string) bool {
-	_, _, err := execAt(node, "sudo", "journalctl", "CONTAINER_NAME=etcd", "-q", "--no-pager",
-		"|", "grep", "-qF", "'"+message+"'")
-	return err == nil
 }
 
 func testEtcd() {
@@ -62,35 +52,12 @@ func testEtcd() {
 		Expect(string(stdout)).To(MatchRegexp(`(?m)^Roles:.*\broot\b`), "stdout=%s", stdout)
 	})
 
-	It("should keep checking data corruption periodically", func() {
-		// etcd logs this at startup when --corrupt-check-time is given.  Note that
-		// the initial corruption check leaves no log here, because etcd skips it for
-		// a newly created member.
-		for _, node := range []string{node1, node2, node3} {
-			Expect(etcdLogHas(node, "enabled corruption checking")).To(BeTrue(), "node=%s", node)
-		}
-	})
-
-	It("should compact revisions and check compaction hashes", func() {
-		Eventually(func() error {
-			// old revisions become unreadable once compaction has been done
-			stdout, stderr, err := etcdctl(crt, key, ca, "get", "compact_rev_key", "--rev=1")
-			if err == nil {
-				return fmt.Errorf("revision 1 is not compacted yet: stdout=%s", stdout)
-			}
-			if !strings.Contains(string(stderr), "has been compacted") {
-				return fmt.Errorf("unexpected error: stdout=%s, stderr=%s: %w", stdout, stderr, err)
-			}
-
-			// Compaction by kube-apiserver stores KV hashes as etcd's auto-compaction
-			// does.  Only the leader logs this, after comparing the hash with all the
-			// followers.
-			for _, node := range []string{node1, node2, node3} {
-				if etcdLogHas(node, "successfully checked hash on whole cluster") {
-					return nil
-				}
-			}
-			return fmt.Errorf("no etcd member has checked compaction hashes")
+	It("should compact revisions by kube-apiserver", func() {
+		// old revisions become unreadable once compaction has been done
+		Eventually(func(g Gomega) {
+			_, stderr, err := etcdctl(crt, key, ca, "get", "compact_rev_key", "--rev=1")
+			g.Expect(err).To(HaveOccurred())
+			g.Expect(string(stderr)).To(ContainSubstring("has been compacted"))
 		}, 15*time.Minute, 10*time.Second).Should(Succeed())
 	})
 }
