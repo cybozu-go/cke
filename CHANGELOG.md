@@ -8,7 +8,25 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ### Changed
 
+- stop etcd compaction itself in [#913](https://github.com/cybozu-go/cke/pull/913)
+
+    **Upgrade note**: etcd permits the Compact API only for users having the `root`
+    role, and CKE grants the role to the `kube-apiserver` user only when it
+    bootstraps an etcd cluster.  If your etcd cluster was bootstrapped by CKE older
+    than v1.35.0, `kube-apiserver` has never been able to compact, and nothing
+    compacts the keyspace once etcd's auto-compaction is disabled by this release.
+    The keyspace then keeps growing until etcd reaches its backend quota and stops
+    accepting writes.  Grant the role **before** upgrading to this release:
+
+    ```console
+    $ etcdctl user get kube-apiserver               # "root" must be in Roles
+    $ etcdctl user grant-role kube-apiserver root   # grant it if missing
+    ```
+
+    Note also that etcd members are restarted one by one to apply the new
+    parameters.  Read [docs/etcd.md](docs/etcd.md#compaction) about compaction.
 - **BREAKING** `ckecli kubernetes issue` now issues certificates for `cke:user:admin` instead of `admin`, so that audit logs can tell operators from CKE itself (pass `--user=admin` to restore the old name) in [#911](https://github.com/cybozu-go/cke/pull/911)
+
 
 ## [1.35.3]
 
