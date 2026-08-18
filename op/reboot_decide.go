@@ -3,11 +3,11 @@ package op
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cybozu-go/log"
-	"github.com/cybozu-go/well"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -400,37 +400,20 @@ func CheckRebootCancelled(ctx context.Context, c *cke.Cluster, rqEntries []*cke.
 }
 
 func rebootCompleted(ctx context.Context, c *cke.Cluster, entry *cke.RebootQueueEntry) bool {
-	if c.Reboot.CommandTimeoutSeconds != nil && *c.Reboot.CommandTimeoutSeconds != 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(*c.Reboot.CommandTimeoutSeconds))
-		defer cancel()
+	var timeout int
+	if c.Reboot.CommandTimeoutSeconds != nil {
+		timeout = *c.Reboot.CommandTimeoutSeconds
 	}
 
-	result := false
-
-	env := well.NewEnvironment(ctx)
-	env.Go(func(ctx context.Context) error {
-		args := append(c.Reboot.BootCheckCommand[1:], entry.Node, fmt.Sprintf("%d", entry.LastTransitionTime.Unix()))
-		command := well.CommandContext(ctx, c.Reboot.BootCheckCommand[0], args...)
-		stdout, err := command.Output()
-		if err != nil {
-			return err
-		}
-
-		if strings.TrimSuffix(string(stdout), "\n") == "true" {
-			result = true
-		}
-		return nil
-	})
-	env.Stop()
-	err := env.Wait()
+	stdout, err := runCommand(ctx, timeout, append(c.Reboot.BootCheckCommand, entry.Node, strconv.FormatInt(entry.LastTransitionTime.Unix(), 10)))
 	if err != nil {
 		log.Warn("failed to check boot", map[string]any{
-			"name": entry.Node,
+			log.FnError: err,
+			"name":      entry.Node,
 		})
 		return false
 	}
-	return result
+	return strings.TrimSpace(stdout) == "true"
 }
 
 func checkVolumesInUse(ctx context.Context, cs kubernetes.Interface, node string) (bool, error) {

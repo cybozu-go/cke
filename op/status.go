@@ -10,10 +10,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cybozu-go/log"
-	"github.com/cybozu-go/well"
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
@@ -651,19 +649,12 @@ func isRepairTargetHealthy(ctx context.Context, entry *cke.RepairQueueEntry, clu
 	if op.CommandTimeoutSeconds != nil {
 		timeout = *op.CommandTimeoutSeconds
 	}
-	if timeout != 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(timeout))
-		defer cancel()
-	}
 
-	args := append(op.HealthCheckCommand[1:], entry.Address)
-	command := well.CommandContext(ctx, op.HealthCheckCommand[0], args...)
-	stdout, err := command.Output()
+	stdout, err := runCommand(ctx, timeout, append(op.HealthCheckCommand, entry.Address))
 	if err != nil {
 		return false, err
 	}
-	return strings.TrimSpace(string(stdout)) == "true", nil
+	return strings.TrimSpace(stdout) == "true", nil
 }
 
 func GetRebootQueueStatus(ctx context.Context, inf cke.Infrastructure, n *cke.Node, cluster *cke.Cluster, apiServers map[string]bool) (cke.RebootQueueStatus, error) {
