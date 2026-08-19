@@ -27,10 +27,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
     Note also that etcd members are restarted one by one to apply the new
     parameters.  Read [docs/etcd.md](docs/etcd.md#compaction) about compaction.
+- Add `ckecli repair-queue wait` command in [#910](https://github.com/cybozu-go/cke/pull/910)
 - **BREAKING** `ckecli kubernetes issue` now issues certificates for `cke:user:admin` instead of `admin`, so that audit logs can tell operators from CKE itself (pass `--user=admin` to restore the old name) in [#911](https://github.com/cybozu-go/cke/pull/911)
 - Replace custom-checker with golangci-lint in [#905](https://github.com/cybozu-go/cke/pull/905)
 - Replace well.CommandContext to local exec helper in [#912](https://github.com/cybozu-go/cke/pull/912)
-
 
 ## [1.35.3]
 
