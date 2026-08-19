@@ -87,16 +87,8 @@ The command exits successfully when no entries remain in the repair queue.`,
 }
 
 func init() {
-	repairQueueWaitCmd.Flags().Int64(
-		"timeout-seconds",
-		defaultRepairQueueWaitTimeoutSeconds,
-		"the number of seconds to wait before giving up; zero means check once and don't wait",
-	)
-	repairQueueWaitCmd.Flags().Int64(
-		"interval-seconds",
-		defaultRepairQueueWaitIntervalSeconds,
-		"the number of seconds between repair queue checks",
-	)
+	repairQueueWaitCmd.Flags().Int64("timeout-seconds", defaultRepairQueueWaitTimeoutSeconds, "the number of seconds to wait before giving up; zero means check once and don't wait")
+	repairQueueWaitCmd.Flags().Int64("interval-seconds", defaultRepairQueueWaitIntervalSeconds, "the number of seconds between repair queue checks")
 
 	repairQueueCmd.AddCommand(repairQueueWaitCmd)
 }
