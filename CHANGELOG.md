@@ -6,6 +6,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.35.4]
+
 ### Changed
 
 - stop etcd compaction itself in [#913](https://github.com/cybozu-go/cke/pull/913)
@@ -26,6 +28,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
     Note also that etcd members are restarted one by one to apply the new
     parameters.  Read [docs/etcd.md](docs/etcd.md#compaction) about compaction.
 - **BREAKING** `ckecli kubernetes issue` now issues certificates for `cke:user:admin` instead of `admin`, so that audit logs can tell operators from CKE itself (pass `--user=admin` to restore the old name) in [#911](https://github.com/cybozu-go/cke/pull/911)
+- Replace custom-checker with golangci-lint in [#905](https://github.com/cybozu-go/cke/pull/905)
+- Replace well.CommandContext to local exec helper in [#912](https://github.com/cybozu-go/cke/pull/912)
 
 
 ## [1.35.3]
@@ -86,7 +90,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.35.3...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.35.4...HEAD
+[1.35.4]: https://github.com/cybozu-go/cke/compare/v1.35.3...v1.35.4
 [1.35.3]: https://github.com/cybozu-go/cke/compare/v1.35.2...v1.35.3
 [1.35.2]: https://github.com/cybozu-go/cke/compare/v1.35.1...v1.35.2
 [1.35.1]: https://github.com/cybozu-go/cke/compare/v1.35.0...v1.35.1
