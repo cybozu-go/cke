@@ -741,7 +741,7 @@ func validateOptions(opts Options) error {
 		if !opts.APIServer.AuditLogEnabled {
 			return errors.New("audit_webhook_config requires audit_log_enabled to be true")
 		}
-		config := make(map[string]interface{})
+		config := make(map[string]any)
 		err = yaml.Unmarshal([]byte(opts.APIServer.AuditWebhookConfig), &config)
 		if err != nil {
 			return err

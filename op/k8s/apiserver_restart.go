@@ -11,8 +11,10 @@ import (
 	"github.com/cybozu-go/cke/op/common"
 )
 
-const auditPolicyBasePath = "/etc/kubernetes/apiserver/audit-policy-%x.yaml"
-const auditWebhookConfigBasePath = "/etc/kubernetes/apiserver/audit-webhook-%x.yaml"
+const (
+	auditPolicyBasePath        = "/etc/kubernetes/apiserver/audit-policy-%x.yaml"
+	auditWebhookConfigBasePath = "/etc/kubernetes/apiserver/audit-webhook-%x.yaml"
+)
 
 // admissionPlugins is our recommended list of admission plugins in addition to the default ones.
 // https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#is-there-a-recommended-set-of-admission-controllers-to-use
@@ -230,7 +232,7 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		if len(c.params.AuditWebhookConfig) != 0 {
 			err = c.files.AddFile(ctx, auditWebhookConfigFilePath(c.params.AuditWebhookConfig), func(context.Context, *cke.Node) ([]byte, error) {
 				return []byte(c.params.AuditWebhookConfig), nil
-			}, common.WithFileMode(0600))
+			}, common.WithFileMode(0o600))
 			if err != nil {
 				return err
 			}
