@@ -1,13 +1,11 @@
 package op
 
 import (
-	"bytes"
 	"context"
 	"strings"
 	"time"
 
 	"github.com/cybozu-go/log"
-	"github.com/cybozu-go/well"
 
 	"github.com/cybozu-go/cke"
 )
@@ -76,31 +74,18 @@ func (c repairExecuteCommand) Run(ctx context.Context, inf cke.Infrastructure, _
 	}
 RETRY:
 	for i := 0; i < attempts; i++ {
-		var stderr bytes.Buffer
-		err := func() error {
-			ctx := ctx
-			timeout := cke.DefaultRepairCommandTimeoutSeconds
-			if c.timeoutSeconds != nil {
-				timeout = *c.timeoutSeconds
-			}
-			if timeout != 0 {
-				var cancel context.CancelFunc
-				ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(timeout))
-				defer cancel()
-			}
-
-			args := append(c.command[1:], c.entry.Address)
-			command := well.CommandContext(ctx, c.command[0], args...)
-			command.Stderr = &stderr
-			return command.Run()
-		}()
+		timeout := cke.DefaultRepairCommandTimeoutSeconds
+		if c.timeoutSeconds != nil {
+			timeout = *c.timeoutSeconds
+		}
+		_, err := runCommand(ctx, timeout, append(c.command, c.entry.Address))
 		if err == nil {
 			return nil
 		}
 
 		log.Warn("failed on executing repair command", map[string]any{
 			log.FnError: err,
-			"stderr":    stderr.String(),
+			"index":     c.entry.Index,
 			"address":   c.entry.Address,
 			"command":   strings.Join(c.command, " "),
 			"attempts":  i,
@@ -116,6 +101,7 @@ RETRY:
 
 	// The failure of a repair command should not be considered as a serious error of CKE.
 	log.Warn("given up repairing machine", map[string]any{
+		"index":   c.entry.Index,
 		"address": c.entry.Address,
 		"command": strings.Join(c.command, " "),
 	})

@@ -2631,6 +2631,14 @@ func TestDecideOps(t *testing.T) {
 			ExpectedPhase: cke.PhaseEtcdMaintain,
 		},
 		{
+			Name: "EtcdRestartByParams",
+			Input: newData().withAllServices().with(func(d testData) {
+				d.NodeStatus(d.ControlPlane()[0]).Etcd.BuiltInParams.ExtraArguments = []string{"foo"}
+			}),
+			ExpectedOps:   []opData{{"etcd-restart", 1}},
+			ExpectedPhase: cke.PhaseEtcdMaintain,
+		},
+		{
 			Name: "Clean",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				for _, node := range []string{"10.0.0.14", "10.0.0.15"} {

@@ -1,12 +1,10 @@
 package op
 
 import (
-	"bytes"
 	"context"
 	"time"
 
 	"github.com/cybozu-go/log"
-	"github.com/cybozu-go/well"
 
 	"github.com/cybozu-go/cke"
 )
@@ -69,7 +67,6 @@ func repairFinish(ctx context.Context, inf cke.Infrastructure, entry *cke.Repair
 	if succeeded {
 		entry.Status = cke.RepairStatusSucceeded
 		// execute Success command
-		var stderr bytes.Buffer
 		err := func() error {
 			op, err := entry.GetMatchingRepairOperation(cluster)
 			if err != nil {
@@ -78,26 +75,17 @@ func repairFinish(ctx context.Context, inf cke.Infrastructure, entry *cke.Repair
 			if op.SuccessCommand == nil {
 				return nil
 			}
-			ctx := ctx
 			timeout := cke.DefaultRepairSuccessCommandTimeoutSeconds
 			if op.SuccessCommandTimeout != nil {
 				timeout = *op.SuccessCommandTimeout
 			}
-			if timeout != 0 {
-				var cancel context.CancelFunc
-				ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(timeout))
-				defer cancel()
-			}
-			args := append(op.SuccessCommand[1:], entry.Address)
-			command := well.CommandContext(ctx, op.SuccessCommand[0], args...)
-			command.Stderr = &stderr
-			return command.Run()
+			_, err = runCommand(ctx, timeout, append(op.SuccessCommand, entry.Address))
+			return err
 		}()
 		if err != nil {
 			entry.Status = cke.RepairStatusFailed
 			log.Warn("SuccessCommand failed", map[string]any{
 				log.FnError: err,
-				"stderr":    stderr.String(),
 				"index":     entry.Index,
 				"address":   entry.Address,
 			})
