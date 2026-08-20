@@ -61,7 +61,7 @@ func scpSubMain(ctx context.Context, args []string) error {
 			})
 		}
 	}()
-	defer func() { _ = killSshAgent(ctx) }()
+	defer killSshAgent()
 
 	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
 		log.Error("failed to write the named pipe", map[string]any{

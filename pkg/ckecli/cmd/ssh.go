@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/cybozu-go/log"
 	"github.com/spf13/cobra"
@@ -131,19 +132,23 @@ func startSshAgent(ctx context.Context, privateKeyFile string) (map[string]strin
 	return myEnv, nil
 }
 
-func killSshAgent(ctx context.Context) error {
+func killSshAgent() {
+	// Use an independent context so cleanup still runs even when the
+	// caller's context is already canceled (e.g. by a signal).
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	cmd := exec.CommandContext(ctx, "ssh-agent", "-k")
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Error("failed to run ssh-agent -k", map[string]any{
 			log.FnError: err,
 		})
-		return err
+		return
 	}
 	log.Debug("killed ssh-agent", map[string]any{
 		"stdout_stderr": string(stdoutStderr),
 	})
-	return nil
 }
 
 func writeToFifo(fifo string, data string) error {
@@ -185,7 +190,7 @@ func sshSubMain(ctx context.Context, args []string) error {
 			})
 		}
 	}()
-	defer func() { _ = killSshAgent(ctx) }()
+	defer killSshAgent()
 
 	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
 		log.Error("failed to write the named pipe", map[string]any{
