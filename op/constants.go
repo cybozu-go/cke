@@ -77,6 +77,13 @@ const (
 	ControllerManagerKubeConfigPath = "/etc/kubernetes/controller-manager/kubeconfig"
 )
 
+const (
+	// fnTypeReboot is the log.FnType value for reboot operation logs.
+	fnTypeReboot = "reboot"
+	// fnTypeRepair is the log.FnType value for repair operation logs.
+	fnTypeRepair = "repair"
+)
+
 // EtcdPKIPath returns a certificate file path for k8s.
 func EtcdPKIPath(p string) string {
 	return filepath.Join(etcdPKIPath, p)

@@ -79,12 +79,13 @@ func repairFinish(ctx context.Context, inf cke.Infrastructure, entry *cke.Repair
 			if op.SuccessCommandTimeout != nil {
 				timeout = *op.SuccessCommandTimeout
 			}
-			_, err = runCommand(ctx, timeout, append(op.SuccessCommand, entry.Address))
+			_, err = runCommand(ctx, timeout, fnTypeRepair, append(op.SuccessCommand, entry.Address))
 			return err
 		}()
 		if err != nil {
 			entry.Status = cke.RepairStatusFailed
 			log.Warn("SuccessCommand failed", map[string]any{
+				log.FnType:  fnTypeRepair,
 				log.FnError: err,
 				"index":     entry.Index,
 				"address":   entry.Address,
