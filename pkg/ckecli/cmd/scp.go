@@ -45,7 +45,7 @@ func scpSubMain(ctx context.Context, args []string) error {
 		return err
 	}
 
-	pirvateKey, err := getPrivateKey(node)
+	pirvateKey, err := getPrivateKey(ctx, node)
 	if err != nil {
 		log.Error("failed to get the private key for scp", map[string]any{
 			log.FnError: err,
@@ -63,7 +63,7 @@ func scpSubMain(ctx context.Context, args []string) error {
 	}()
 	defer killSshAgent()
 
-	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
+	if err = writeToFifo(ctx, pipeFilename, pirvateKey); err != nil {
 		log.Error("failed to write the named pipe", map[string]any{
 			log.FnError: err,
 			"pipe":      pipeFilename,
