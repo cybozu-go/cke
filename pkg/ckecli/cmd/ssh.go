@@ -193,7 +193,7 @@ func sshSubMain(ctx context.Context, args []string) error {
 	defer os.Remove(pipeFilename)
 
 	node := detectSSHNode(args[0])
-	pirvateKey, err := getPrivateKey(ctx, node)
+	privateKey, err := getPrivateKey(ctx, node)
 	if err != nil {
 		log.Error("failed to get the private key for ssh", map[string]any{
 			log.FnError: err,
@@ -211,7 +211,7 @@ func sshSubMain(ctx context.Context, args []string) error {
 	}()
 	defer killSshAgent()
 
-	if err = writeToFifo(ctx, pipeFilename, pirvateKey); err != nil {
+	if err = writeToFifo(ctx, pipeFilename, privateKey); err != nil {
 		log.Error("failed to write the named pipe", map[string]any{
 			log.FnError: err,
 			"pipe":      pipeFilename,
