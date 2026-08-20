@@ -2,11 +2,9 @@ package cmd
 
 import (
 	"bufio"
-	"context"
 	"io"
 	"os"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
 	"github.com/cybozu-go/cke"
@@ -36,28 +34,24 @@ Note that resources in Kubernetes will not be removed automatically.`,
 			r = f
 		}
 
-		well.Go(func(ctx context.Context) error {
-			y := k8sYaml.NewYAMLReader(bufio.NewReader(r))
-			for {
-				data, err := y.Read()
-				if err == io.EOF {
-					break
-				} else if err != nil {
-					return err
-				}
-				key, err := cke.ParseResource(data)
-				if err != nil {
-					return err
-				}
-				err = storage.DeleteResource(ctx, key)
-				if err != nil {
-					return err
-				}
+		y := k8sYaml.NewYAMLReader(bufio.NewReader(r))
+		for {
+			data, err := y.Read()
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				return err
 			}
-			return nil
-		})
-		well.Stop()
-		return well.Wait()
+			key, err := cke.ParseResource(data)
+			if err != nil {
+				return err
+			}
+			err = storage.DeleteResource(cmd.Context(), key)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
 	},
 }
 

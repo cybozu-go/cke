@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
 	"github.com/cybozu-go/cke"
@@ -36,18 +34,16 @@ PREFIX limits the user's privilege to keys having the prefix.`,
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+
 		username := args[0]
 		prefix := args[1]
 
-		well.Go(func(ctx context.Context) error {
-			etcd, err := inf.NewEtcdClient(ctx, nil)
-			if err != nil {
-				return err
-			}
-			return cke.AddUserRole(ctx, etcd, username, prefix)
-		})
-		well.Stop()
-		return well.Wait()
+		etcd, err := inf.NewEtcdClient(ctx, nil)
+		if err != nil {
+			return err
+		}
+		return cke.AddUserRole(ctx, etcd, username, prefix)
 	},
 }
 

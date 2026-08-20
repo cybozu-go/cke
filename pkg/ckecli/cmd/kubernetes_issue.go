@@ -1,13 +1,11 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net"
 	"os"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -27,6 +25,8 @@ var kubernetesIssueCmd = &cobra.Command{
 	Long:  `Issue TLS client certificates for k8s user.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+
 		// TODO: delete this notice after CKE 1.35.5.
 		if !cmd.Flags().Changed("user") {
 			// stderr, because stdout carries the kubeconfig.
@@ -36,40 +36,36 @@ var kubernetesIssueCmd = &cobra.Command{
 				kubernetesIssueOpts.UserName, cke.RoleAdmin)
 		}
 
-		well.Go(func(ctx context.Context) error {
-			cluster, err := storage.GetCluster(ctx)
-			if err != nil {
-				return err
-			}
-
-			server := "https://kubernetes.default.svc"
-			if _, err := net.LookupHost("kubernetes.default.svc"); err != nil {
-				cpNodes := cke.ControlPlanes(cluster.Nodes)
-				if len(cpNodes) == 0 {
-					return errors.New("no control plane")
-				}
-				server = "https://" + cpNodes[0].Address + ":6443"
-			}
-
-			cacert, err := storage.GetCACertificate(ctx, cke.CAKubernetes)
-			if err != nil {
-				return err
-			}
-
-			cert, key, err := cke.KubernetesCA{}.IssueUserCert(ctx, inf, kubernetesIssueOpts.UserName, kubernetesIssueOpts.GroupName, kubernetesIssueOpts.TTL)
-			if err != nil {
-				return err
-			}
-			cfg := cke.UserKubeconfig(cluster.Name, kubernetesIssueOpts.UserName, cacert, cert, key, server)
-			src, err := clientcmd.Write(*cfg)
-			if err != nil {
-				return err
-			}
-			_, err = fmt.Println(string(src))
+		cluster, err := storage.GetCluster(ctx)
+		if err != nil {
 			return err
-		})
-		well.Stop()
-		return well.Wait()
+		}
+
+		server := "https://kubernetes.default.svc"
+		if _, err := net.LookupHost("kubernetes.default.svc"); err != nil {
+			cpNodes := cke.ControlPlanes(cluster.Nodes)
+			if len(cpNodes) == 0 {
+				return errors.New("no control plane")
+			}
+			server = "https://" + cpNodes[0].Address + ":6443"
+		}
+
+		cacert, err := storage.GetCACertificate(ctx, cke.CAKubernetes)
+		if err != nil {
+			return err
+		}
+
+		cert, key, err := cke.KubernetesCA{}.IssueUserCert(ctx, inf, kubernetesIssueOpts.UserName, kubernetesIssueOpts.GroupName, kubernetesIssueOpts.TTL)
+		if err != nil {
+			return err
+		}
+		cfg := cke.UserKubeconfig(cluster.Name, kubernetesIssueOpts.UserName, cacert, cert, key, server)
+		src, err := clientcmd.Write(*cfg)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Println(string(src))
+		return err
 	},
 }
 

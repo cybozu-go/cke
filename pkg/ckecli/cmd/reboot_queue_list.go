@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,7 +8,6 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
 
@@ -25,36 +23,32 @@ var rebootQueueListCmd = &cobra.Command{
 The output is a list of RebootQueueEntry formatted in JSON.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			if rebootQueueListOptions.Output != "json" && rebootQueueListOptions.Output != "simple" {
-				return errors.New("invalid output format")
-			}
-			entries, err := storage.GetRebootsEntries(ctx)
-			if err != nil {
+		if rebootQueueListOptions.Output != "json" && rebootQueueListOptions.Output != "simple" {
+			return errors.New("invalid output format")
+		}
+		entries, err := storage.GetRebootsEntries(cmd.Context())
+		if err != nil {
+			return err
+		}
+		if rebootQueueListOptions.Output == "simple" {
+			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 1, 1, ' ', 0)
+			if _, err := w.Write([]byte("Index\tNode\tStatus\tLastTransitionTime\tDrainBackOffCount\tDrainBackOffExpire\n")); err != nil {
 				return err
 			}
-			if rebootQueueListOptions.Output == "simple" {
-				w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 1, 1, ' ', 0)
-				if _, err := w.Write([]byte("Index\tNode\tStatus\tLastTransitionTime\tDrainBackOffCount\tDrainBackOffExpire\n")); err != nil {
-					return err
-				}
-				for _, entry := range entries {
-					if _, err := fmt.Fprintf(w, "%v\t%v\t%v\t%v\t%v\t%v\t\n", entry.Index, entry.Node, entry.Status, entry.LastTransitionTime.Format(time.RFC3339), entry.DrainBackOffCount, entry.DrainBackOffExpire.Format(time.RFC3339)); err != nil {
-						return err
-					}
-				}
-				return w.Flush()
-			} else {
-				enc := json.NewEncoder(os.Stdout)
-				enc.SetIndent("", "    ")
-				if err := enc.Encode(entries); err != nil {
+			for _, entry := range entries {
+				if _, err := fmt.Fprintf(w, "%v\t%v\t%v\t%v\t%v\t%v\t\n", entry.Index, entry.Node, entry.Status, entry.LastTransitionTime.Format(time.RFC3339), entry.DrainBackOffCount, entry.DrainBackOffExpire.Format(time.RFC3339)); err != nil {
 					return err
 				}
 			}
-			return nil
-		})
-		well.Stop()
-		return well.Wait()
+			return w.Flush()
+		} else {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "    ")
+			if err := enc.Encode(entries); err != nil {
+				return err
+			}
+		}
+		return nil
 	},
 }
 

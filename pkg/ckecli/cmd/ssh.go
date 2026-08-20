@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/cybozu-go/log"
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
 	"github.com/cybozu-go/cke"
@@ -54,13 +54,13 @@ func createFifo() (string, error) {
 	return fifoFilePath, err
 }
 
-func getPrivateKey(nodeName string) (string, error) {
+func getPrivateKey(ctx context.Context, nodeName string) (string, error) {
 	vc, err := inf.Vault()
 	if err != nil {
 		return "", err
 	}
 
-	secret, err := vc.Logical().Read(cke.SSHSecret)
+	secret, err := vc.Logical().ReadWithContext(ctx, cke.SSHSecret)
 	if err != nil {
 		return "", err
 	}
@@ -132,28 +132,51 @@ func startSshAgent(ctx context.Context, privateKeyFile string) (map[string]strin
 	return myEnv, nil
 }
 
-func killSshAgent(ctx context.Context) error {
+func killSshAgent() {
+	// Use an independent context so cleanup still runs even when the
+	// caller's context is already canceled (e.g. by a signal).
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	cmd := exec.CommandContext(ctx, "ssh-agent", "-k")
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Error("failed to run ssh-agent -k", map[string]any{
 			log.FnError: err,
 		})
-		return err
+		return
 	}
 	log.Debug("killed ssh-agent", map[string]any{
 		"stdout_stderr": string(stdoutStderr),
 	})
-	return nil
 }
 
-func writeToFifo(fifo string, data string) error {
-	f, err := os.OpenFile(fifo, os.O_WRONLY|os.O_APPEND, os.ModeNamedPipe)
-	if err != nil {
-		return err
+func writeToFifo(ctx context.Context, fifo string, data string) error {
+	// Opening a FIFO for writing blocks until a reader appears, so do it in
+	// a goroutine and let this function return as soon as ctx is done.
+	type result struct {
+		f   *os.File
+		err error
+	}
+	openDone := make(chan result, 1)
+	go func() {
+		f, err := os.OpenFile(fifo, os.O_WRONLY|os.O_APPEND, os.ModeNamedPipe)
+		openDone <- result{f, err}
+	}()
+
+	var f *os.File
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case r := <-openDone:
+		if r.err != nil {
+			return r.err
+		}
+		f = r.f
 	}
 	defer f.Close()
-	if _, err = f.Write([]byte(data)); err != nil {
+
+	if _, err := f.Write([]byte(data)); err != nil {
 		return err
 	}
 	return nil
@@ -170,7 +193,7 @@ func sshSubMain(ctx context.Context, args []string) error {
 	defer os.Remove(pipeFilename)
 
 	node := detectSSHNode(args[0])
-	pirvateKey, err := getPrivateKey(node)
+	privateKey, err := getPrivateKey(ctx, node)
 	if err != nil {
 		log.Error("failed to get the private key for ssh", map[string]any{
 			log.FnError: err,
@@ -186,9 +209,9 @@ func sshSubMain(ctx context.Context, args []string) error {
 			})
 		}
 	}()
-	defer func() { _ = killSshAgent(ctx) }()
+	defer killSshAgent()
 
-	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
+	if err = writeToFifo(ctx, pipeFilename, privateKey); err != nil {
 		log.Error("failed to write the named pipe", map[string]any{
 			log.FnError: err,
 			"pipe":      pipeFilename,
@@ -222,11 +245,7 @@ If COMMAND is specified, it will be executed on the node.
 
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			return sshSubMain(ctx, args)
-		})
-		well.Stop()
-		return well.Wait()
+		return sshSubMain(cmd.Context(), args)
 	},
 }
 

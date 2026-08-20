@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"context"
 	"os"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
@@ -39,11 +37,7 @@ just one control-plane node and one non contorl-plane node.`,
 			return err
 		}
 
-		well.Go(func(ctx context.Context) error {
-			return storage.SetSabakanTemplate(ctx, tmpl)
-		})
-		well.Stop()
-		return well.Wait()
+		return storage.SetSabakanTemplate(cmd.Context(), tmpl)
 	},
 }
 

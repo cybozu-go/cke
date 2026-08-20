@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
 
@@ -14,16 +12,12 @@ var sabakanIsEnabledCmd = &cobra.Command{
 	Long:  `Show whether sabakan integration is enabled or not.  "true" if enabled.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			disabled, err := storage.IsSabakanDisabled(ctx)
-			if err != nil {
-				return err
-			}
-			fmt.Println(!disabled)
-			return nil
-		})
-		well.Stop()
-		return well.Wait()
+		disabled, err := storage.IsSabakanDisabled(cmd.Context())
+		if err != nil {
+			return err
+		}
+		fmt.Println(!disabled)
+		return nil
 	},
 }
 

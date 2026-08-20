@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/log"
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +45,7 @@ func scpSubMain(ctx context.Context, args []string) error {
 		return err
 	}
 
-	pirvateKey, err := getPrivateKey(node)
+	privateKey, err := getPrivateKey(ctx, node)
 	if err != nil {
 		log.Error("failed to get the private key for scp", map[string]any{
 			log.FnError: err,
@@ -62,9 +61,9 @@ func scpSubMain(ctx context.Context, args []string) error {
 			})
 		}
 	}()
-	defer func() { _ = killSshAgent(ctx) }()
+	defer killSshAgent()
 
-	if err = writeToFifo(pipeFilename, pirvateKey); err != nil {
+	if err = writeToFifo(ctx, pipeFilename, privateKey); err != nil {
 		log.Error("failed to write the named pipe", map[string]any{
 			log.FnError: err,
 			"pipe":      pipeFilename,
@@ -104,11 +103,7 @@ NODE is IP address or hostname of the node.
 
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			return scpSubMain(ctx, args)
-		})
-		well.Stop()
-		return well.Wait()
+		return scpSubMain(cmd.Context(), args)
 	},
 }
 

@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"os"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
 
@@ -33,17 +31,13 @@ NAME is one of:
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			pem, err := storage.GetCACertificate(ctx, args[0])
-			if err != nil {
-				return err
-			}
-
-			_, err = os.Stdout.WriteString(pem)
+		pem, err := storage.GetCACertificate(cmd.Context(), args[0])
+		if err != nil {
 			return err
-		})
-		well.Stop()
-		return well.Wait()
+		}
+
+		_, err = os.Stdout.WriteString(pem)
+		return err
 	},
 }
 

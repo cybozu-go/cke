@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"context"
-
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
 
@@ -13,11 +10,7 @@ var sabakanEnableCmd = &cobra.Command{
 	Long:  `Enable sabakan integration.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			return storage.EnableSabakan(ctx, true)
-		})
-		well.Stop()
-		return well.Wait()
+		return storage.EnableSabakan(cmd.Context(), true)
 	},
 }
 

@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
 	"github.com/cybozu-go/cke/sabakan"
@@ -49,11 +47,7 @@ FILE should contain a JSON object like this:
 			return err
 		}
 
-		well.Go(func(ctx context.Context) error {
-			return storage.SetAutoRepairQueryVariables(ctx, string(data))
-		})
-		well.Stop()
-		return well.Wait()
+		return storage.SetAutoRepairQueryVariables(cmd.Context(), string(data))
 	},
 }
 

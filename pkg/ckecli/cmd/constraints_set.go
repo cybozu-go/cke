@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"strconv"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
 	"github.com/cybozu-go/cke"
@@ -66,21 +64,19 @@ VALUE is an integer.`,
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			cstr, err := storage.GetConstraints(ctx)
-			switch err {
-			case cke.ErrNotFound:
-				cstr = cke.DefaultConstraints()
-			case nil:
-			default:
-				return err
-			}
+		ctx := cmd.Context()
 
-			cstrSet(cstr)
-			return storage.PutConstraints(ctx, cstr)
-		})
-		well.Stop()
-		return well.Wait()
+		cstr, err := storage.GetConstraints(ctx)
+		switch err {
+		case cke.ErrNotFound:
+			cstr = cke.DefaultConstraints()
+		case nil:
+		default:
+			return err
+		}
+
+		cstrSet(cstr)
+		return storage.PutConstraints(ctx, cstr)
 	},
 }
 

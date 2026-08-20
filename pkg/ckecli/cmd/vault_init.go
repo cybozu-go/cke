@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/cybozu-go/well"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -315,9 +314,7 @@ This command will ask username and password for Vault authentication
 when VAULT_TOKEN environment variable is not set.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(initVault)
-		well.Stop()
-		return well.Wait()
+		return initVault(cmd.Context())
 	},
 }
 

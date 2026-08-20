@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 
 	"github.com/cybozu-go/cke"
@@ -49,11 +47,7 @@ If the argument is "-", the JSON is read from stdin.`,
 			return err
 		}
 
-		well.Go(func(ctx context.Context) error {
-			return storage.PutVaultConfig(ctx, cfg)
-		})
-		well.Stop()
-		return well.Wait()
+		return storage.PutVaultConfig(cmd.Context(), cfg)
 	},
 }
 

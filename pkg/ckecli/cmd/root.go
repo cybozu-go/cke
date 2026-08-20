@@ -1,7 +1,11 @@
 package cmd
 
 import (
+	"context"
+	"errors"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
@@ -79,7 +83,16 @@ with etcd.  CKE server watches etcd to receive any updates.`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	err := rootCmd.ExecuteContext(ctx)
+	switch {
+	case err == nil:
+		return
+	case ctx.Err() != nil:
+		log.ErrorExit(errors.New("interrupted"))
+	default:
 		log.ErrorExit(err)
 	}
 }

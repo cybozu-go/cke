@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
 
@@ -15,16 +13,12 @@ var sabakanGetURLCmd = &cobra.Command{
 	Long:  `get stored URL of sabakan server.`,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			u, err := storage.GetSabakanURL(ctx)
-			if err != nil {
-				return err
-			}
-			fmt.Println(u)
-			return nil
-		})
-		well.Stop()
-		return well.Wait()
+		u, err := storage.GetSabakanURL(cmd.Context())
+		if err != nil {
+			return err
+		}
+		fmt.Println(u)
+		return nil
 	},
 }
 

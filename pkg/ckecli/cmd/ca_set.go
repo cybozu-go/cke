@@ -1,13 +1,11 @@
 package cmd
 
 import (
-	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"os"
 
-	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 )
 
@@ -54,11 +52,7 @@ In fact, these CA should be created in Vault.`,
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		well.Go(func(ctx context.Context) error {
-			return storage.PutCACertificate(ctx, args[0], string(caData))
-		})
-		well.Stop()
-		return well.Wait()
+		return storage.PutCACertificate(cmd.Context(), args[0], string(caData))
 	},
 }
 
