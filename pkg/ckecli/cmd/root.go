@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"os"
 	"os/signal"
 	"syscall"
@@ -83,34 +83,18 @@ with etcd.  CKE server watches etcd to receive any updates.`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	defer signal.Stop(sigCh)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	received := make(chan os.Signal, 1)
-	go func() {
-		select {
-		case s := <-sigCh:
-			received <- s
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	err := rootCmd.ExecuteContext(ctx)
-	if err == nil {
+	switch {
+	case err == nil:
 		return
-	}
-
-	select {
-	case s := <-received:
-		err = fmt.Errorf("signaled: %s", s)
+	case ctx.Err() != nil:
+		log.ErrorExit(errors.New("interrupted"))
 	default:
+		log.ErrorExit(err)
 	}
-	log.ErrorExit(err)
 }
 
 func init() {
