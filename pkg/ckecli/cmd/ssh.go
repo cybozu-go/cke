@@ -124,7 +124,7 @@ func startSshAgent(ctx context.Context, privateKeyFile string) (map[string]strin
 		})
 		return nil, err
 	}
-	log.Debug("Successfuly added the private key", map[string]any{
+	log.Debug("Successfully added the private key", map[string]any{
 		"env": kvPair1[0],
 		"val": kvPair1[1],
 	})
