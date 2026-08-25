@@ -29,12 +29,6 @@ The upstream server is selected at random.
         Timeout for dial to an upstream server (default "10s")
   -listen string
         Listen address and port (address:port)
-  -logfile string
-        Log filename
-  -logformat string
-        Log format [plain,logfmt,json]
-  -loglevel string
-        Log level [critical,error,warning,info,debug]
   -shutdown-timeout string
         Timeout for server shutting-down gracefully (disabled if specified "0") (default "10s")
   -upstreams string

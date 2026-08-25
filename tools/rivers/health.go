@@ -3,27 +3,25 @@ package main
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net"
 	"sync"
 	"time"
-
-	"github.com/cybozu-go/log"
-	"github.com/cybozu-go/well"
 )
 
 // HealthCheckerConfig represents configuration for health checker
 type HealthCheckerConfig struct {
-	CheckInterval time.Duration
-	Logger        *log.Logger
 	Dialer        Dialer
+	Logger        *slog.Logger
+	CheckInterval time.Duration
 }
 
 // HealthChecker represents upstream health checker
 type HealthChecker struct {
+	dialer        Dialer
+	logger        *slog.Logger
 	upstreams     []*Upstream
 	checkInterval time.Duration
-	logger        *log.Logger
-	dialer        Dialer
 }
 
 // NewHealthChecker creates a new health checker
@@ -34,67 +32,65 @@ func NewHealthChecker(upstreams []*Upstream, cfg HealthCheckerConfig) *HealthChe
 	}
 	logger := cfg.Logger
 	if logger == nil {
-		logger = log.DefaultLogger()
+		logger = slog.Default()
 	}
 
 	return &HealthChecker{
-		upstreams:     upstreams,
-		checkInterval: cfg.CheckInterval,
-		logger:        logger,
 		dialer:        dialer,
+		logger:        logger,
+		checkInterval: cfg.CheckInterval,
+		upstreams:     upstreams,
 	}
 }
 
-// Start starts health checking
-func (hc *HealthChecker) Start() {
-	well.Go(func(ctx context.Context) error {
-		hc.doHealthCheck(ctx, true)
-		ticker := time.NewTicker(hc.checkInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return nil
-			case <-ticker.C:
-				hc.doHealthCheck(ctx, false)
-			}
+// Run runs health checking until ctx is canceled. It always returns nil.
+func (hc *HealthChecker) Run(ctx context.Context) error {
+	hc.doHealthCheck(ctx, true)
+	ticker := time.NewTicker(hc.checkInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			hc.doHealthCheck(ctx, false)
 		}
-	})
+	}
 }
 
 // doHealthCheck do actual health checking at each interval
 func (hc *HealthChecker) doHealthCheck(ctx context.Context, first bool) {
 	var wg sync.WaitGroup
-	for _, tu := range hc.upstreams {
-		wg.Add(1)
 
-		go func(u *Upstream) {
-			defer wg.Done()
-
+	for _, u := range hc.upstreams {
+		wg.Go(func() {
 			conn, err := hc.dialer.DialContext(ctx, "tcp", u.address)
 			if errors.Is(err, context.Canceled) {
 				return
 			}
 
-			if err == nil {
-				conn.Close()
-				if first || !u.IsHealthy() {
-					hc.logger.Info("an upstream becomes healthy", map[string]any{
-						"address": u.address,
-					})
-					u.SetHealthy(true)
+			if err != nil {
+				switch {
+				case first:
+					hc.logger.Error("initial health check: upstream is unhealthy", "address", u.address, "error", err)
+					u.SetHealthy(false)
+				case u.IsHealthy():
+					hc.logger.Error("upstream health changed: now unhealthy", "address", u.address, "error", err)
+					u.SetHealthy(false)
 				}
 				return
 			}
 
-			if first || u.IsHealthy() {
-				hc.logger.Error("an upstream becomes unhealthy", map[string]any{
-					log.FnError: err.Error(),
-					"address":   u.address,
-				})
-				u.SetHealthy(false)
+			conn.Close()
+			switch {
+			case first:
+				hc.logger.Info("initial health check: upstream is healthy", "address", u.address)
+				u.SetHealthy(true)
+			case !u.IsHealthy():
+				hc.logger.Info("upstream health changed: now healthy", "address", u.address)
+				u.SetHealthy(true)
 			}
-		}(tu)
+		})
 	}
 
 	wg.Wait()
