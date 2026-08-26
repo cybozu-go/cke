@@ -40,7 +40,11 @@ func subMain(prefix string) error {
 		return fmt.Errorf("invalid mode %s: %w", options.mode, err)
 	}
 
-	r := tar.NewReader(os.Stdin)
+	return extract(prefix, os.Stdin, os.FileMode(modeBits))
+}
+
+func extract(prefix string, in io.Reader, defaultMode os.FileMode) error {
+	r := tar.NewReader(in)
 	for {
 		hdr, err := r.Next()
 		if err == io.EOF {
@@ -59,7 +63,12 @@ func subMain(prefix string) error {
 			return fmt.Errorf("failed to mkdir %s: %w", dir, err)
 		}
 
-		if err := copyFile(dest, r, os.FileMode(modeBits)); err != nil {
+		mode := defaultMode
+		if hdr.Mode != 0 {
+			mode = os.FileMode(hdr.Mode).Perm()
+		}
+
+		if err := copyFile(dest, r, mode); err != nil {
 			return err
 		}
 	}

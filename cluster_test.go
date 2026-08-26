@@ -252,6 +252,20 @@ rules:
 ` {
 		t.Errorf(`wrong c.Options.APIServer.AuditLogPolicy: %s`, c.Options.APIServer.AuditLogPolicy)
 	}
+	if c.Options.APIServer.AuditWebhookConfig != `apiVersion: v1
+kind: Config
+clusters:
+- name: audit-webhook
+  cluster:
+    server: https://audit-webhook.example.com/webhook
+contexts:
+- name: audit-webhook
+  context:
+    cluster: audit-webhook
+current-context: audit-webhook
+` {
+		t.Errorf(`wrong c.Options.APIServer.AuditWebhookConfig: %s`, c.Options.APIServer.AuditWebhookConfig)
+	}
 	if c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1" {
 		t.Error(`c.Options.ControllerManager.ExtraEnvvar["env1"] != "val1"`)
 	}
@@ -497,6 +511,48 @@ func testClusterValidate(t *testing.T) {
 kind: Policy
 rules:
 - level: Metadata
+`,
+					},
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
+			},
+			false,
+		},
+		{
+			"invalid webhook config",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Options: Options{
+					APIServer: APIServerParams{
+						AuditLogEnabled:    true,
+						AuditLogPolicy:     "apiVersion: audit.k8s.io/v1\nkind: Policy\n",
+						AuditWebhookConfig: "\tinvalid",
+					},
+					Kubelet: KubeletParams{
+						CRIEndpoint: "/var/run/k8s-containerd.sock",
+					},
+				},
+			},
+			true,
+		},
+		{
+			"valid webhook config",
+			Cluster{
+				Name:          "testcluster",
+				ServiceSubnet: "10.0.0.0/14",
+				Options: Options{
+					APIServer: APIServerParams{
+						AuditLogEnabled: true,
+						AuditLogPolicy:  "apiVersion: audit.k8s.io/v1\nkind: Policy\n",
+						AuditWebhookConfig: `apiVersion: v1
+kind: Config
+clusters:
+- name: audit-webhook-config
+  cluster:
+    server: https://audit-webhook.example.com/webhook
 `,
 					},
 					Kubelet: KubeletParams{

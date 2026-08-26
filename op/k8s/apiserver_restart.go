@@ -11,7 +11,10 @@ import (
 	"github.com/cybozu-go/cke/op/common"
 )
 
-const auditPolicyBasePath = "/etc/kubernetes/apiserver/audit-policy-%x.yaml"
+const (
+	auditPolicyBasePath        = "/etc/kubernetes/apiserver/audit-policy-%x.yaml"
+	auditWebhookConfigBasePath = "/etc/kubernetes/apiserver/audit-webhook-%x.yaml"
+)
 
 // admissionPlugins is our recommended list of admission plugins in addition to the default ones.
 // https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#is-there-a-recommended-set-of-admission-controllers-to-use
@@ -73,7 +76,7 @@ func (o *apiServerRestartOp) NextCommand() cke.Commander {
 		}
 		paramsMap := make(map[string]cke.ServiceParams)
 		for _, n := range o.nodes {
-			paramsMap[n.Address] = APIServerParams(n.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy, o.params.AuditLogPath, o.clusterDomain)
+			paramsMap[n.Address] = APIServerParams(n.Address, o.serviceSubnet, o.params.AuditLogEnabled, o.params.AuditLogPolicy, o.params.AuditLogPath, o.params.AuditWebhookConfig, o.clusterDomain)
 		}
 		return common.RunContainerCommand(o.nodes,
 			op.KubeAPIServerContainerName, cke.KubernetesImage,
@@ -217,11 +220,23 @@ func (c prepareAPIServerFilesCommand) Run(ctx context.Context, inf cke.Infrastru
 		return err
 	}
 
-	// audit log policy
+	// audit log policy and webhook config
 	if c.params.AuditLogEnabled {
-		return c.files.AddFile(ctx, auditPolicyFilePath(c.params.AuditLogPolicy), func(context.Context, *cke.Node) ([]byte, error) {
+		err = c.files.AddFile(ctx, auditPolicyFilePath(c.params.AuditLogPolicy), func(context.Context, *cke.Node) ([]byte, error) {
 			return []byte(c.params.AuditLogPolicy), nil
 		})
+		if err != nil {
+			return err
+		}
+
+		if len(c.params.AuditWebhookConfig) != 0 {
+			err = c.files.AddFile(ctx, auditWebhookConfigFilePath(c.params.AuditWebhookConfig), func(context.Context, *cke.Node) ([]byte, error) {
+				return []byte(c.params.AuditWebhookConfig), nil
+			}, common.WithFileMode(0o600))
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -237,8 +252,12 @@ func auditPolicyFilePath(policy string) string {
 	return fmt.Sprintf(auditPolicyBasePath, md5.Sum([]byte(policy)))
 }
 
+func auditWebhookConfigFilePath(config string) string {
+	return fmt.Sprintf(auditWebhookConfigBasePath, md5.Sum([]byte(config)))
+}
+
 // APIServerParams returns parameters for API server.
-func APIServerParams(advertiseAddress, serviceSubnet string, auditLogEnabled bool, auditLogPolicy, auditLogPath string, clusterDomain string) cke.ServiceParams {
+func APIServerParams(advertiseAddress, serviceSubnet string, auditLogEnabled bool, auditLogPolicy, auditLogPath, auditWebhookConfig string, clusterDomain string) cke.ServiceParams {
 	args := []string{
 		"kube-apiserver",
 		"--allow-privileged",
@@ -294,6 +313,9 @@ func APIServerParams(advertiseAddress, serviceSubnet string, auditLogEnabled boo
 		}
 		args = append(args, "--audit-log-path="+logPath)
 		args = append(args, "--audit-policy-file="+auditPolicyFilePath(auditLogPolicy))
+		if auditWebhookConfig != "" {
+			args = append(args, "--audit-webhook-config-file="+auditWebhookConfigFilePath(auditWebhookConfig))
+		}
 	}
 
 	return cke.ServiceParams{

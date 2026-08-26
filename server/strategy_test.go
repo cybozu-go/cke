@@ -267,7 +267,7 @@ func (d testData) withAPIServer(serviceSubnet, domain string) testData {
 		st.Running = true
 		st.IsHealthy = true
 		st.Image = cke.KubernetesImage.Name()
-		st.BuiltInParams = k8s.APIServerParams(n.Address, serviceSubnet, false, "", "", domain)
+		st.BuiltInParams = k8s.APIServerParams(n.Address, serviceSubnet, false, "", "", "", domain)
 	}
 	return d
 }
