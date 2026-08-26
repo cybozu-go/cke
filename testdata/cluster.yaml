@@ -71,6 +71,18 @@ options:
       kind: Policy
       rules:
       - level: Metadata
+    audit_webhook_config: |
+      apiVersion: v1
+      kind: Config
+      clusters:
+      - name: audit-webhook
+        cluster:
+          server: https://audit-webhook.example.com/webhook
+      contexts:
+      - name: audit-webhook
+        context:
+          cluster: audit-webhook
+      current-context: audit-webhook
   kube-controller-manager:
     extra_env:
       env1: val1
