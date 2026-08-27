@@ -1,6 +1,6 @@
 module github.com/cybozu-go/cke
 
-go 1.25.7
+go 1.26.5
 
 require (
 	github.com/99designs/gqlgen v0.17.86
