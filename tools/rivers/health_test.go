@@ -10,9 +10,7 @@ import (
 )
 
 func TestHealthChecker(t *testing.T) {
-	upstreams := []*Upstream{{
-		address: "0",
-	}}
+	upstreams := []*Upstream{NewUpstream("0")}
 	dialer := &testDialer{}
 	buf := gbytes.NewBuffer()
 	logger := slog.New(slog.NewTextHandler(buf, nil))

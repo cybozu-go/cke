@@ -35,10 +35,7 @@ func main() {
 	upstreamAddrs := strings.Split(*flgUpstreams, ",")
 	upstreams := make([]*Upstream, len(upstreamAddrs))
 	for i, a := range upstreamAddrs {
-		upstreams[i] = &Upstream{
-			address: a,
-			conns:   make(map[net.Conn]func()),
-		}
+		upstreams[i] = NewUpstream(a)
 	}
 
 	dialer := &net.Dialer{}

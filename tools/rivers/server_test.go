@@ -17,9 +17,7 @@ func TestEmptyServer(t *testing.T) {
 }
 
 func TestServerWithUnhealthyUpstream(t *testing.T) {
-	upstreams := []*Upstream{{
-		address: "0",
-	}}
+	upstreams := []*Upstream{NewUpstream("0")}
 	buf := &bytes.Buffer{}
 	logger := slog.New(slog.NewTextHandler(buf, nil))
 	cfg := ServerConfig{
@@ -37,9 +35,7 @@ func TestServerWithUnhealthyUpstream(t *testing.T) {
 }
 
 func TestServerWithUnconnectableUpstream(t *testing.T) {
-	upstreams := []*Upstream{{
-		address: "0",
-	}}
+	upstreams := []*Upstream{NewUpstream("0")}
 	upstreams[0].SetHealthy(true)
 	buf := &bytes.Buffer{}
 	logger := slog.New(slog.NewTextHandler(buf, nil))
@@ -61,15 +57,9 @@ func TestServerWithUnconnectableUpstream(t *testing.T) {
 
 func TestServerRandomUpstream(t *testing.T) {
 	upstreams := []*Upstream{
-		{
-			address: "0",
-		},
-		{
-			address: "1",
-		},
-		{
-			address: "2",
-		},
+		NewUpstream("0"),
+		NewUpstream("1"),
+		NewUpstream("2"),
 	}
 	for _, u := range upstreams {
 		u.SetHealthy(true)

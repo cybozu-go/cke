@@ -9,11 +9,14 @@ import (
 // Upstream represents upstream server
 type Upstream struct {
 	address string
+	health  atomic.Int32 // must be accessed through SetHealthy / IsHealthy
+	m       sync.Mutex
+	conns   map[net.Conn]func()
+}
 
-	health atomic.Int32 // must be accessed through SetHealthy / IsHealthy
-
-	m     sync.Mutex
-	conns map[net.Conn]func()
+// NewUpstream creates an Upstream for the given address.
+func NewUpstream(address string) *Upstream {
+	return &Upstream{address: address}
 }
 
 func (u *Upstream) SetHealthy(b bool) {
