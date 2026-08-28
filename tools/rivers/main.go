@@ -1,16 +1,19 @@
 package main
 
 import (
-	"errors"
+	"context"
 	"flag"
+	"fmt"
+	"log/slog"
 	"net"
+	"os"
+	"os/signal"
 	"strings"
 	"sync"
-	"sync/atomic"
+	"syscall"
 	"time"
 
-	"github.com/cybozu-go/log"
-	"github.com/cybozu-go/well"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -22,111 +25,96 @@ var (
 	flgCheckInterval   = flag.String("check-interval", "20s", "Interval for health check")
 )
 
-// Upstream represents upstream server
-type Upstream struct {
-	address string
+func main() {
+	flag.Parse()
 
-	health atomic.Int32 // must be accessed through SetHealthy / IsHealthy
-
-	m     sync.Mutex
-	conns map[net.Conn]func()
-}
-
-func (u *Upstream) SetHealthy(b bool) {
-	if b {
-		u.health.Store(1)
-		return
-	}
-
-	u.health.Store(0)
-	u.m.Lock()
-	conns := u.conns
-	u.conns = make(map[net.Conn]func())
-	u.m.Unlock()
-
-	for _, c := range conns {
-		c()
-	}
-}
-
-func (u *Upstream) IsHealthy() bool {
-	return u.health.Load() != 0
-}
-
-func (u *Upstream) AddConn(conn net.Conn, cancelFunc func()) {
-	u.m.Lock()
-	defer u.m.Unlock()
-
-	u.conns[conn] = cancelFunc
-}
-
-func (u *Upstream) RemoveConn(conn net.Conn) {
-	u.m.Lock()
-	defer u.m.Unlock()
-
-	delete(u.conns, conn)
-}
-
-func run() error {
 	if len(*flgUpstreams) == 0 {
-		return errors.New("--upstreams is blank")
+		slog.Error("rivers exited with an error", "error", "--upstreams is blank")
+		os.Exit(1)
 	}
-	upstreamAddresses := strings.Split(*flgUpstreams, ",")
-	upstreams := make([]*Upstream, len(upstreamAddresses))
-	for i, a := range upstreamAddresses {
-		upstreams[i] = &Upstream{
-			address: a,
-			conns:   make(map[net.Conn]func()),
-		}
+	upstreamAddrs := strings.Split(*flgUpstreams, ",")
+	upstreams := make([]*Upstream, len(upstreamAddrs))
+	for i, a := range upstreamAddrs {
+		upstreams[i] = NewUpstream(a)
 	}
 
 	dialer := &net.Dialer{}
 	var err error
 	dialer.Timeout, err = time.ParseDuration(*flgDialTimeout)
 	if err != nil {
-		return err
+		slog.Error("rivers exited with an error", "error", fmt.Errorf("--dial-timeout: %w", err))
+		os.Exit(1)
 	}
 	dialer.KeepAlive, err = time.ParseDuration(*flgDialKeepAlive)
 	if err != nil {
-		return err
+		slog.Error("rivers exited with an error", "error", fmt.Errorf("--dial-keep-alive: %w", err))
+		os.Exit(1)
 	}
 
-	cfg := Config{Dialer: dialer}
-	cfg.ShutdownTimeout, err = time.ParseDuration(*flgShutdownTimeout)
+	serverCfg := ServerConfig{Dialer: dialer}
+	serverCfg.ShutdownTimeout, err = time.ParseDuration(*flgShutdownTimeout)
 	if err != nil {
-		return err
+		slog.Error("rivers exited with an error", "error", fmt.Errorf("--shutdown-timeout: %w", err))
+		os.Exit(1)
 	}
 
-	hcConfig := HealthCheckerConfig{Dialer: dialer}
-	hcConfig.CheckInterval, err = time.ParseDuration(*flgCheckInterval)
+	healthCfg := HealthCheckerConfig{Dialer: dialer}
+	healthCfg.CheckInterval, err = time.ParseDuration(*flgCheckInterval)
 	if err != nil {
-		return err
+		slog.Error("rivers exited with an error", "error", fmt.Errorf("--check-interval: %w", err))
+		os.Exit(1)
 	}
 
 	if len(*flgListen) == 0 {
-		return errors.New("--listen is blank")
+		slog.Error("rivers exited with an error", "error", "--listen is blank")
+		os.Exit(1)
 	}
-	listen, err := net.Listen("tcp", *flgListen)
+
+	slog.Info("rivers started", "listen", *flgListen, "upstreams", upstreamAddrs)
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	waitSignalLog := logReceivedSignal(ctx)
+
+	err = run(ctx, upstreams, healthCfg, *flgListen, serverCfg)
+
+	// Stop and wait for the log output goroutine to finish.
+	stop()
+	waitSignalLog()
+
+	if err != nil {
+		slog.Error("rivers exited with an error", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("rivers stopped")
+}
+
+// logReceivedSignal starts a goroutine that logs a received signal.
+// It returns a function that blocks until that goroutine has finished.
+func logReceivedSignal(ctx context.Context) (wait func()) {
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		<-ctx.Done()
+		if cause := context.Cause(ctx); cause != context.Canceled {
+			slog.Warn("received signal, shutting down", "cause", cause)
+		}
+	})
+	return wg.Wait
+}
+
+// run runs rivers until ctx is canceled or an unrecoverable error occurs.
+func run(ctx context.Context, upstreams []*Upstream, healthCfg HealthCheckerConfig, listenAddr string, serverCfg ServerConfig) error {
+	listen, err := (&net.ListenConfig{}).Listen(ctx, "tcp", listenAddr)
 	if err != nil {
 		return err
 	}
 
-	hc := NewHealthChecker(upstreams, hcConfig)
-	hc.Start()
+	hc := NewHealthChecker(upstreams, healthCfg)
+	s := NewServer(upstreams, serverCfg)
 
-	s := NewServer(upstreams, cfg)
-	s.Serve(listen)
-
-	well.Stop()
-	return well.Wait()
-}
-
-func main() {
-	flag.Parse()
-	well.LogConfig{}.Apply()
-
-	err := run()
-	if err != nil && !well.IsSignaled(err) {
-		log.ErrorExit(err)
-	}
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.Go(func() error { return hc.Run(ctx) })
+	eg.Go(func() error { return s.Serve(ctx, listen) })
+	return eg.Wait()
 }

@@ -2,18 +2,14 @@ package main
 
 import (
 	"bytes"
+	"io"
+	"log/slog"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/cybozu-go/log"
 )
 
 func TestEmptyServer(t *testing.T) {
-	cfg := Config{
-		ShutdownTimeout: time.Second,
-	}
-	s := NewServer(nil, cfg)
+	s := NewServer(nil, ServerConfig{})
 	_, _, err := s.randomUpstream()
 	if err == nil {
 		t.Errorf("empty server should return error for randomUpstream()\n")
@@ -21,16 +17,12 @@ func TestEmptyServer(t *testing.T) {
 }
 
 func TestServerWithUnhealthyUpstream(t *testing.T) {
-	upstreams := []*Upstream{{
-		address: "0",
-	}}
-	logger := log.NewLogger()
+	upstreams := []*Upstream{NewUpstream("0")}
 	buf := &bytes.Buffer{}
-	logger.SetOutput(buf)
-	cfg := Config{
-		ShutdownTimeout: time.Second,
-		Dialer:          &testDialer{},
-		Logger:          logger,
+	logger := slog.New(slog.NewTextHandler(buf, nil))
+	cfg := ServerConfig{
+		Dialer: &testDialer{},
+		Logger: logger,
 	}
 	s := NewServer(upstreams, cfg)
 	_, _, err := s.randomUpstream()
@@ -43,15 +35,11 @@ func TestServerWithUnhealthyUpstream(t *testing.T) {
 }
 
 func TestServerWithUnconnectableUpstream(t *testing.T) {
-	upstreams := []*Upstream{{
-		address: "0",
-	}}
+	upstreams := []*Upstream{NewUpstream("0")}
 	upstreams[0].SetHealthy(true)
-	logger := log.NewLogger()
 	buf := &bytes.Buffer{}
-	logger.SetOutput(buf)
-	cfg := Config{
-		ShutdownTimeout: time.Second,
+	logger := slog.New(slog.NewTextHandler(buf, nil))
+	cfg := ServerConfig{
 		Dialer: &testDialer{
 			errorAddress: "0",
 		},
@@ -62,30 +50,22 @@ func TestServerWithUnconnectableUpstream(t *testing.T) {
 	if err == nil {
 		t.Errorf("unconnectable upstream server should return error for randomUpstream()\n")
 	}
-	if !strings.Contains(buf.String(), "warning: \"failed to connect") {
+	if !strings.Contains(buf.String(), "level=WARN") || !strings.Contains(buf.String(), "failed to connect") {
 		t.Errorf("unconnectable upstream server should output warning log\n")
 	}
 }
 
 func TestServerRandomUpstream(t *testing.T) {
 	upstreams := []*Upstream{
-		{
-			address: "0",
-		},
-		{
-			address: "1",
-		},
-		{
-			address: "2",
-		},
+		NewUpstream("0"),
+		NewUpstream("1"),
+		NewUpstream("2"),
 	}
 	for _, u := range upstreams {
 		u.SetHealthy(true)
 	}
-	logger := log.NewLogger()
-	logger.SetOutput(nil)
-	cfg := Config{
-		ShutdownTimeout: time.Second,
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	cfg := ServerConfig{
 		Dialer: &testDialer{
 			errorAddress: "1",
 		},
