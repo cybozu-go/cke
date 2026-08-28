@@ -8,17 +8,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/metrics"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/metrics"
 )
 
-var (
-	errCommandFailure = errors.New("command failed")
-)
+var errCommandFailure = errors.New("command failed")
 
 // Controller manage operations
 type Controller struct {
@@ -61,7 +60,7 @@ func (c Controller) Run(ctx context.Context) error {
 	}
 
 	leaderKey := e.Key()
-	log.Info("I am the leader", map[string]interface{}{
+	log.Info("I am the leader", map[string]any{
 		"session": c.session.Lease(),
 	})
 	metrics.UpdateLeader(true)
@@ -77,7 +76,7 @@ func (c Controller) Run(ctx context.Context) error {
 			defer cancel()
 			err := e.Resign(ctxWithTimeout)
 			if err != nil {
-				log.Error("failed to resign", map[string]interface{}{
+				log.Error("failed to resign", map[string]any{
 					log.FnError: err,
 				})
 			}
@@ -202,7 +201,7 @@ func (c Controller) checkLastOp(ctx context.Context, leaderKey string) error {
 		return nil
 	}
 
-	log.Warn("cancel the orphaned operation", map[string]interface{}{
+	log.Warn("cancel the orphaned operation", map[string]any{
 		"id": r.ID,
 		"op": r.Operation,
 	})
@@ -244,7 +243,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 
 	err = cluster.Validate(false)
 	if err != nil {
-		log.Error("invalid cluster configuration", map[string]interface{}{
+		log.Error("invalid cluster configuration", map[string]any{
 			log.FnError: err,
 		})
 		wait = true
@@ -257,14 +256,14 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		// When the vault token is revoked, the following error will be returned. In this case, CKE can not continue any operations.
 		// Error: "Error making API request.\n\nURL: GET <<URL>>\nCode: 403. Errors:\n\n* permission denied"
 		if strings.Contains(err.Error(), "403") {
-			log.Error("vault token was revoked", map[string]interface{}{
+			log.Error("vault token was revoked", map[string]any{
 				log.FnError: err,
 			})
 			return err
 		}
 
 		wait = true
-		log.Error("failed to initialize infrastructure", map[string]interface{}{
+		log.Error("failed to initialize infrastructure", map[string]any{
 			log.FnError: err,
 		})
 		// lint:ignore nilerr  Try again.
@@ -292,7 +291,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	status, err := c.GetClusterStatus(ctx, cluster, inf)
 	if err != nil {
 		wait = true
-		log.Warn("failed to get cluster status", map[string]interface{}{
+		log.Warn("failed to get cluster status", map[string]any{
 			log.FnError: err,
 		})
 		// lint:ignore nilerr  Try again.
@@ -375,7 +374,7 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 	if err != nil {
 		return err
 	}
-	log.Info("begin new operation", map[string]interface{}{
+	log.Info("begin new operation", map[string]any{
 		"op": op.Name(),
 	})
 
@@ -393,14 +392,14 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 			if err != nil {
 				return err
 			}
-			log.Info("interrupt the operation due to cancellation", map[string]interface{}{
+			log.Info("interrupt the operation due to cancellation", map[string]any{
 				"op": op.Name(),
 			})
 			return nil
 		default:
 		}
 
-		log.Info("record targets", map[string]interface{}{
+		log.Info("record targets", map[string]any{
 			"op":      op.Name(),
 			"targets": strings.Join(op.Targets(), " "),
 		})
@@ -410,7 +409,7 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		if err != nil {
 			return err
 		}
-		log.Info("execute a command", map[string]interface{}{
+		log.Info("execute a command", map[string]any{
 			"op":      op.Name(),
 			"command": commander.Command().String(),
 		})
@@ -418,7 +417,7 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		if err == nil {
 			continue
 		}
-		log.Error("command failed", map[string]interface{}{
+		log.Error("command failed", map[string]any{
 			log.FnError: err,
 			"op":        op.Name(),
 			"command":   commander.Command().String(),
@@ -443,7 +442,7 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 	if err != nil {
 		return err
 	}
-	log.Info("operation completed", map[string]interface{}{
+	log.Info("operation completed", map[string]any{
 		"op": op.Name(),
 	})
 	return nil
@@ -456,7 +455,7 @@ func (c Controller) runTidyExpiredCertificates(ctx context.Context) error {
 
 	cfg, err := storage.GetVaultConfig(ctx)
 	if err != nil {
-		log.Warn("failed to get vault config. skip tidy", map[string]interface{}{
+		log.Warn("failed to get vault config. skip tidy", map[string]any{
 			log.FnError: err,
 		})
 		// lint:ignore nilerr  Tidy is not mandatory.
@@ -470,7 +469,7 @@ func (c Controller) runTidyExpiredCertificates(ctx context.Context) error {
 
 	for _, ca := range cke.CAKeys {
 		if err := c.TidyExpiredCertificates(ctx, client, cke.VaultPKIKey(ca)); err != nil {
-			log.Warn("failed to tidy expired certificates", map[string]interface{}{
+			log.Warn("failed to tidy expired certificates", map[string]any{
 				log.FnError: err,
 				"ca":        ca,
 			})

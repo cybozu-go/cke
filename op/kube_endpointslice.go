@@ -4,9 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/cybozu-go/cke"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/cybozu-go/cke"
 )
 
 type kubeEndpointSliceCreateOp struct {

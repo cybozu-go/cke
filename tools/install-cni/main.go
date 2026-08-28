@@ -64,5 +64,5 @@ func copyFile(name string) error {
 		return fmt.Errorf("failed to fsync %s: %w", dest, err)
 	}
 
-	return o.Chmod(0755)
+	return o.Chmod(0o755)
 }

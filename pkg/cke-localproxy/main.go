@@ -4,13 +4,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/localproxy"
 	"github.com/cybozu-go/etcdutil"
 	"github.com/cybozu-go/log"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/pflag"
 	"sigs.k8s.io/yaml"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/localproxy"
 )
 
 var (

@@ -6,15 +6,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/op"
 )
 
 func getRebootEntries() ([]*cke.RebootQueueEntry, error) {
@@ -91,9 +91,9 @@ func nodesShouldBeSchedulable(nodes ...string) {
 func rebootQueueCancelAllAndWait() {
 	// Due to race condition between cke and `ckecli reboot-queue cancel/cancel-all`,
 	// we need do it several times for stable test
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		// ignore error because the entry may have been deleted
-		ckecli("reboot-queue", "cancel-all")
+		_, _, _ = ckecli("reboot-queue", "cancel-all")
 		time.Sleep(time.Second)
 	}
 	waitRebootCompletion()
@@ -411,7 +411,7 @@ func testRebootOperations() {
 			Expect(pods.Items).Should(HaveLen(1), "pod is not created")
 			pod := &pods.Items[0]
 			Expect(pod.Status.Phase).Should(Equal(corev1.PodRunning), "pod is not running")
-			creationTime[name] = pod.ObjectMeta.CreationTimestamp.Time
+			creationTime[name] = pod.CreationTimestamp.Time
 			nodeName = pod.Spec.NodeName // all pods run on the same node
 		}
 
@@ -435,7 +435,7 @@ func testRebootOperations() {
 		for _, name := range deploymentNames {
 			Eventually(func(g Gomega) {
 				deploymentPods := getPodListGomega(g, "reboot-test", "-l=reboot-app="+name)
-				g.Expect(deploymentPods.Items).Should(HaveLen(0), "Pod does not terminate")
+				g.Expect(deploymentPods.Items).Should(BeEmpty(), "Pod does not terminate")
 			}).Should(Succeed())
 		}
 	})
@@ -501,14 +501,14 @@ func testRebootOperations() {
 
 		Eventually(func(g Gomega) {
 			deploymentPods := getPodListGomega(g, "reboot-test", "-l=reboot-app=slow")
-			g.Expect(deploymentPods.Items).Should(HaveLen(0), "Pod does not terminate")
+			g.Expect(deploymentPods.Items).Should(BeEmpty(), "Pod does not terminate")
 		}).Should(Succeed())
 	})
 
 	It("checks parallel reboot behavior", func() {
 		// Note: this test is incomplete if rq entries are processed in random order
 		By("Modifying cluster configuration for this test")
-		cluster.Reboot.MaxConcurrentReboots = ptr.To(2)
+		cluster.Reboot.MaxConcurrentReboots = new(2)
 		originalBootCheckCommand := cluster.Reboot.BootCheckCommand
 		cluster.Reboot.BootCheckCommand = []string{"bash", "-c", "if [ $0 = 10.0.0.104 ]; then echo false; else echo true; fi"}
 		cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
@@ -539,7 +539,7 @@ func testRebootOperations() {
 			if len(re) > 1 {
 				continue
 			}
-			Expect(re).ShouldNot(HaveLen(0), "reboot should not complete yet")
+			Expect(re).ShouldNot(BeEmpty(), "reboot should not complete yet")
 			Expect(re[0].Node).Should(Equal(node4), "unexpected node remains")
 
 			break
@@ -561,7 +561,7 @@ func testRebootOperations() {
 	It("checks API server reboot behavior", func() {
 		// Note: this test is incomplete if rq entries are processed in random order
 		By("Modifying cluster configuration for this test")
-		cluster.Reboot.MaxConcurrentReboots = ptr.To(2)
+		cluster.Reboot.MaxConcurrentReboots = new(2)
 		originalRebootCommand := cluster.Reboot.RebootCommand
 		cluster.Reboot.ProtectedNamespaces = &metav1.LabelSelector{
 			// avoid eviction failure due to cluster-dns in kube-system NS
@@ -674,7 +674,7 @@ func testRebootOperations() {
 				out, _, err := kubectl("get", "endpoints", "-n", epName.namespace, epName.name, "-o=json")
 				Expect(err).ShouldNot(HaveOccurred())
 
-				//lint:ignore SA1019 code for Endpoints will be removed later
+				//nolint:staticcheck // code for Endpoints will be removed later
 				var ep corev1.Endpoints
 				err = json.Unmarshal(out, &ep)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -805,7 +805,7 @@ func testRebootOperations() {
 
 		Eventually(func(g Gomega) {
 			deploymentPods := getPodListGomega(g, "reboot-test", "-l=reboot-app=worker")
-			g.Expect(deploymentPods.Items).Should(HaveLen(0), "Pod does not terminate")
+			g.Expect(deploymentPods.Items).Should(BeEmpty(), "Pod does not terminate")
 		}).Should(Succeed())
 	})
 }

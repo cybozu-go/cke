@@ -13,9 +13,10 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/cybozu-go/cke"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/yaml"
+
+	"github.com/cybozu-go/cke"
 )
 
 func main() {
@@ -143,7 +144,7 @@ var Resources = []cke.ResourceDefinition{
 `))
 
 func renderResources(res []cke.ResourceDefinition) error {
-	f, err := os.OpenFile("resources.go", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	f, err := os.OpenFile("resources.go", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		return err
 	}

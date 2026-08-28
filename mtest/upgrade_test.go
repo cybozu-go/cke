@@ -16,11 +16,12 @@ func testUpgrade() {
 	})
 
 	It("reboots all nodes", func() {
-		stopCKE()
+		Expect(stopCKE()).To(Succeed())
 
 		nodes := []string{node1, node2, node3, node4, node5, node6}
 		for _, n := range nodes {
-			execAt(n, "sudo", "systemd-run", "reboot", "-f", "-f")
+			_, _, err := execAt(n, "sudo", "systemd-run", "reboot", "-f", "-f")
+			Expect(err).NotTo(HaveOccurred())
 		}
 		time.Sleep(10 * time.Second)
 		Eventually(func() error {
@@ -37,7 +38,7 @@ func testUpgrade() {
 	})
 
 	It("runs new CKE", func() {
-		runCKE(ckeImageURL)
+		Expect(runCKE(ckeImageURL)).To(Succeed())
 		waitServerStatusCompletion()
 	})
 

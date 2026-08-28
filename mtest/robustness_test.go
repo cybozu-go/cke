@@ -9,21 +9,21 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	"k8s.io/utils/ptr"
 )
 
 func testRobustness() {
 	It("should stop control plane nodes", func() {
 		// stop CKE temporarily to avoid hang-up in SSH session due to node2 shutdown
-		stopCKE()
+		Expect(stopCKE()).To(Succeed())
 
-		execAt(node2, "sudo", "systemd-run", "halt", "-f", "-f")
+		_, _, err := execAt(node2, "sudo", "systemd-run", "halt", "-f", "-f")
+		Expect(err).NotTo(HaveOccurred())
 		Eventually(func(g Gomega) {
 			_, err := execAtLocal("ping", "-c", "1", "-W", "1", node2)
 			g.Expect(err).To(HaveOccurred())
 		}).Should(Succeed())
 
-		runCKE(ckeImageURL)
+		Expect(runCKE(ckeImageURL)).To(Succeed())
 
 		waitServerStatusCompletion()
 	})
@@ -40,15 +40,15 @@ func testRobustness() {
 			g.Expect(eps.Endpoints).To(ConsistOf(
 				discoveryv1.Endpoint{
 					Addresses:  []string{node1},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+					Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 				},
 				discoveryv1.Endpoint{
 					Addresses:  []string{node2},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(false)},
+					Conditions: discoveryv1.EndpointConditions{Ready: new(false)},
 				},
 				discoveryv1.Endpoint{
 					Addresses:  []string{node3},
-					Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+					Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 				},
 			))
 		}).Should(Succeed())
@@ -79,7 +79,7 @@ func testRobustness() {
 		By("stopping kubelet")
 		Eventually(func(g Gomega) {
 			// To ensure idempotency, do not perform error checking.
-			execAt(node5, "docker", "stop", "kubelet")
+			_, _, _ = execAt(node5, "docker", "stop", "kubelet")
 
 			stdout, stderr, err := kubectl("get", "-o=json", "node", node5)
 			g.Expect(err).NotTo(HaveOccurred(), "stderr: %s", stderr)
@@ -110,13 +110,13 @@ func testRobustness() {
 	})
 
 	It("can kick out the stopped control plane node", func() {
-		stopCKE()
+		Expect(stopCKE()).To(Succeed())
 		ckecliSafe("constraints", "set", "control-plane-count", "2")
 		cluster := getCluster(0, 1, 2)
 		cluster.Nodes = slices.Delete(cluster.Nodes, 1, 2)
 		err := ckecliClusterSet(cluster)
 		Expect(err).NotTo(HaveOccurred())
-		runCKE(ckeImageURL)
+		Expect(runCKE(ckeImageURL)).To(Succeed())
 		waitServerStatusCompletion()
 	})
 
@@ -131,11 +131,11 @@ func testRobustness() {
 		Expect(eps.Endpoints).To(ConsistOf(
 			discoveryv1.Endpoint{
 				Addresses:  []string{node1},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 			discoveryv1.Endpoint{
 				Addresses:  []string{node3},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+				Conditions: discoveryv1.EndpointConditions{Ready: new(true)},
 			},
 		))
 	})

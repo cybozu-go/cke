@@ -20,15 +20,13 @@ const (
 	DefaultRunTimeout = 10 * time.Minute
 )
 
-var (
-	// When KeepAlive is > 0, the dialer returns TCP connections
-	// with keep-alive enabled.  With the default 5 second duration,
-	// the implementation can detect dead peer in around 50 seconds.
-	agentDialer = &net.Dialer{
-		Timeout:   defaultDialTimeout,
-		KeepAlive: defaultKeepAlive,
-	}
-)
+// When KeepAlive is > 0, the dialer returns TCP connections
+// with keep-alive enabled.  With the default 5 second duration,
+// the implementation can detect dead peer in around 50 seconds.
+var agentDialer = &net.Dialer{
+	Timeout:   defaultDialTimeout,
+	KeepAlive: defaultKeepAlive,
+}
 
 // Agent is the interface to run commands on a node.
 type Agent interface {
@@ -59,7 +57,7 @@ type sshAgent struct {
 func SSHAgent(node *Node, privkey string) (Agent, error) {
 	conn, err := agentDialer.Dial("tcp", node.Address+":22")
 	if err != nil {
-		log.Error("failed to dial: ", map[string]interface{}{
+		log.Error("failed to dial: ", map[string]any{
 			log.FnError: err,
 			"address":   node.Address,
 		})
@@ -131,12 +129,12 @@ func (a *sshAgent) RunWithTimeout(command, input string, timeout time.Duration) 
 			return nil, nil, err
 		}
 
-		defer a.conn.SetDeadline(time.Time{})
+		defer func() { _ = a.conn.SetDeadline(time.Time{}) }()
 	}
 
 	session, err := a.client.NewSession()
 	if err != nil {
-		log.Error("failed to create session: ", map[string]interface{}{
+		log.Error("failed to create session: ", map[string]any{
 			log.FnError: err,
 		})
 		return nil, nil, err
@@ -162,7 +160,7 @@ func (a *sshAgent) RunWithTimeout(command, input string, timeout time.Duration) 
 	stdout := stdoutBuff.Bytes()
 	stderr := stderrBuff.Bytes()
 	if err != nil {
-		log.Error("failed to run command: ", map[string]interface{}{
+		log.Error("failed to run command: ", map[string]any{
 			log.FnError: err,
 			"command":   command,
 			"stderr":    string(stderr),

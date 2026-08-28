@@ -4,11 +4,12 @@ import (
 	"context"
 	"os"
 
-	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/sabakan"
 	"github.com/cybozu-go/well"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
+
+	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/sabakan"
 )
 
 // sabakanSetTemplateCmd represents the "sabakan set-template" command

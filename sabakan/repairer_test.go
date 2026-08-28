@@ -3,9 +3,10 @@ package sabakan
 import (
 	"testing"
 
-	"github.com/cybozu-go/cke"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+
+	"github.com/cybozu-go/cke"
 )
 
 func TestRepairer(t *testing.T) {

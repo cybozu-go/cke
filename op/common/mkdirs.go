@@ -5,8 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/well"
+
+	"github.com/cybozu-go/cke"
 )
 
 type makeDirsCommand struct {

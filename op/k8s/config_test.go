@@ -4,14 +4,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	schedulerv1 "k8s.io/kube-scheduler/config/v1"
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
-	"k8s.io/utils/ptr"
+
+	"github.com/cybozu-go/cke"
 )
 
 func TestGenerateSchedulerConfiguration(t *testing.T) {
@@ -19,7 +19,7 @@ func TestGenerateSchedulerConfiguration(t *testing.T) {
 
 	cfg := &unstructured.Unstructured{}
 	cfg.SetGroupVersionKind(schedulerv1.SchemeGroupVersion.WithKind("KubeSchedulerConfiguration"))
-	cfg.Object["leaderElection"] = map[string]interface{}{
+	cfg.Object["leaderElection"] = map[string]any{
 		"leaderElect": false,
 	}
 	cfg.Object["podMaxBackoffSeconds"] = 100
@@ -29,9 +29,9 @@ func TestGenerateSchedulerConfiguration(t *testing.T) {
 	}
 
 	expected := &schedulerv1.KubeSchedulerConfiguration{}
-	expected.LeaderElection.LeaderElect = ptr.To(true)
+	expected.LeaderElection.LeaderElect = new(true)
 	expected.ClientConnection.Kubeconfig = "/etc/kubernetes/scheduler/kubeconfig"
-	expected.PodMaxBackoffSeconds = ptr.To(int64(100))
+	expected.PodMaxBackoffSeconds = new(int64(100))
 
 	conf := GenerateSchedulerConfiguration(input)
 	if !cmp.Equal(conf, expected) {
@@ -51,7 +51,7 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 		TLSPrivateKeyFile:     "/etc/kubernetes/pki/kubelet.key",
 		Authentication: kubeletv1beta1.KubeletAuthentication{
 			X509:    kubeletv1beta1.KubeletX509Authentication{ClientCAFile: "/etc/kubernetes/pki/ca.crt"},
-			Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: ptr.To(true)},
+			Webhook: kubeletv1beta1.KubeletWebhookAuthentication{Enabled: new(true)},
 		},
 		Authorization: kubeletv1beta1.KubeletAuthorization{
 			Mode: kubeletv1beta1.KubeletAuthorizationModeWebhook,
@@ -60,7 +60,7 @@ func TestGenerateKubeletConfiguration(t *testing.T) {
 	}
 
 	expected := baseExpected.DeepCopy()
-	expected.FailSwapOn = ptr.To(false)
+	expected.FailSwapOn = new(false)
 	expected.ContainerLogMaxSize = "100Mi"
 	expected.CgroupDriver = "systemd"
 	expected.RegisterWithTaints = []corev1.Taint{

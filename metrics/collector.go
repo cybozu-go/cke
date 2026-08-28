@@ -8,15 +8,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/cybozu-go/cke"
 )
 
 type logger struct{}
 
-func (l logger) Println(v ...interface{}) {
+func (l logger) Println(v ...any) {
 	log.Error(fmt.Sprint(v...), nil)
 }
 
@@ -51,7 +52,6 @@ type storage interface {
 
 // NewCollector returns a new prometheus.Collector.
 func NewCollector(storage storage) prometheus.Collector {
-
 	return &collector{
 		metrics: map[string]metricGroup{
 			"leader": {
@@ -111,7 +111,7 @@ func (c collector) Collect(ch chan<- prometheus.Metric) {
 			defer wg.Done()
 			available, err := metric.isAvailable(ctx, c.storage)
 			if err != nil {
-				log.Warn("unable to decide whether metrics are available", map[string]interface{}{
+				log.Warn("unable to decide whether metrics are available", map[string]any{
 					"name":      key,
 					log.FnError: err,
 				})
@@ -160,7 +160,7 @@ func (c nodeMetricsCollector) collectReboot(ch chan<- prometheus.Metric) {
 
 	disabled, err := c.storage.IsRebootQueueDisabled(ctx)
 	if err != nil {
-		log.Error("failed to get if reboot queue is enabled", map[string]interface{}{
+		log.Error("failed to get if reboot queue is enabled", map[string]any{
 			log.FnError: err,
 		})
 		return
@@ -172,7 +172,7 @@ func (c nodeMetricsCollector) collectReboot(ch chan<- prometheus.Metric) {
 
 	running, err := c.storage.IsRebootQueueRunning(ctx)
 	if err != nil {
-		log.Error("failed to get if reboot queue is running", map[string]interface{}{
+		log.Error("failed to get if reboot queue is running", map[string]any{
 			log.FnError: err,
 		})
 		return
@@ -184,7 +184,7 @@ func (c nodeMetricsCollector) collectReboot(ch chan<- prometheus.Metric) {
 
 	rqEntries, err := c.storage.GetRebootsEntries(ctx)
 	if err != nil {
-		log.Error("failed to get reboots entries", map[string]interface{}{
+		log.Error("failed to get reboots entries", map[string]any{
 			log.FnError: err,
 		})
 		return
@@ -192,7 +192,7 @@ func (c nodeMetricsCollector) collectReboot(ch chan<- prometheus.Metric) {
 
 	cluster, err := c.storage.GetCluster(ctx)
 	if err != nil {
-		log.Error("failed to get cluster", map[string]interface{}{
+		log.Error("failed to get cluster", map[string]any{
 			log.FnError: err,
 		})
 		return
@@ -246,7 +246,7 @@ func (c nodeMetricsCollector) collectRepair(ch chan<- prometheus.Metric) {
 
 	repairQueueDisabled, err := c.storage.IsRepairQueueDisabled(ctx)
 	if err != nil {
-		log.Error("failed to get if repair queue is enabled", map[string]interface{}{
+		log.Error("failed to get if repair queue is enabled", map[string]any{
 			log.FnError: err,
 		})
 		return
@@ -258,7 +258,7 @@ func (c nodeMetricsCollector) collectRepair(ch chan<- prometheus.Metric) {
 
 	autoRepairDisabled, err := c.storage.IsAutoRepairDisabled(ctx)
 	if err != nil {
-		log.Error("failed to get if auto repair is disabled", map[string]interface{}{
+		log.Error("failed to get if auto repair is disabled", map[string]any{
 			log.FnError: err,
 		})
 		return
@@ -270,7 +270,7 @@ func (c nodeMetricsCollector) collectRepair(ch chan<- prometheus.Metric) {
 
 	entries, err := c.storage.GetRepairsEntries(ctx)
 	if err != nil {
-		log.Error("failed to get repairs entries", map[string]interface{}{
+		log.Error("failed to get repairs entries", map[string]any{
 			log.FnError: err,
 		})
 		return
@@ -278,7 +278,7 @@ func (c nodeMetricsCollector) collectRepair(ch chan<- prometheus.Metric) {
 
 	cluster, err := c.storage.GetCluster(ctx)
 	if err != nil {
-		log.Error("failed to get cluster", map[string]interface{}{
+		log.Error("failed to get cluster", map[string]any{
 			log.FnError: err,
 		})
 		return

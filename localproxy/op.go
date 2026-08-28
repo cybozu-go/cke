@@ -37,7 +37,7 @@ func (o *unboundBootOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(ckeNodes, cke.UnboundImage)
 	case 1:
 		files := common.NewFilesBuilder(ckeNodes)
-		files.AddFile(context.Background(), "/etc/unbound/unbound.conf", func(context.Context, *cke.Node) ([]byte, error) {
+		_ = files.AddFile(context.Background(), "/etc/unbound/unbound.conf", func(context.Context, *cke.Node) ([]byte, error) {
 			return o.conf, nil
 		})
 		return files
@@ -87,7 +87,7 @@ func (o *unboundRestartOp) NextCommand() cke.Commander {
 		return common.ImagePullCommand(ckeNodes, cke.UnboundImage)
 	case 1:
 		files := common.NewFilesBuilder(ckeNodes)
-		files.AddFile(context.Background(), "/etc/unbound/unbound.conf", func(context.Context, *cke.Node) ([]byte, error) {
+		_ = files.AddFile(context.Background(), "/etc/unbound/unbound.conf", func(context.Context, *cke.Node) ([]byte, error) {
 			return o.conf, nil
 		})
 		return files

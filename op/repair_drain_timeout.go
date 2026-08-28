@@ -6,8 +6,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/log"
+
+	"github.com/cybozu-go/cke"
 )
 
 type repairDrainTimeoutOp struct {
@@ -57,7 +58,7 @@ func (c repairDrainTimeoutCommand) Command() cke.Command {
 }
 
 func repairDrainBackOff(ctx context.Context, inf cke.Infrastructure, entry *cke.RepairQueueEntry, err error) error {
-	log.Warn("failed to drain node for repair", map[string]interface{}{
+	log.Warn("failed to drain node for repair", map[string]any{
 		"address":   entry.Address,
 		log.FnError: err,
 	})
