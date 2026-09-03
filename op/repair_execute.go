@@ -2,7 +2,6 @@ package op
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/cybozu-go/log"
@@ -78,16 +77,16 @@ RETRY:
 		if c.timeoutSeconds != nil {
 			timeout = *c.timeoutSeconds
 		}
-		_, err := runCommand(ctx, timeout, append(c.command, c.entry.Address))
+		_, err := runCommand(ctx, timeout, fnTypeRepair, append(c.command, c.entry.Address))
 		if err == nil {
 			return nil
 		}
 
 		log.Warn("failed on executing repair command", map[string]any{
+			log.FnType:  fnTypeRepair,
 			log.FnError: err,
 			"index":     c.entry.Index,
 			"address":   c.entry.Address,
-			"command":   strings.Join(c.command, " "),
 			"attempts":  i,
 		})
 		if c.interval != nil && *c.interval != 0 {
@@ -101,9 +100,9 @@ RETRY:
 
 	// The failure of a repair command should not be considered as a serious error of CKE.
 	log.Warn("given up repairing machine", map[string]any{
-		"index":   c.entry.Index,
-		"address": c.entry.Address,
-		"command": strings.Join(c.command, " "),
+		log.FnType: fnTypeRepair,
+		"index":    c.entry.Index,
+		"address":  c.entry.Address,
 	})
 	return repairFinish(ctx, inf, c.entry, false, c.cluster)
 }

@@ -92,18 +92,24 @@ func (c repairDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 		}
 
 		log.Info("start eviction dry-run", map[string]any{
-			"address": c.entry.Address,
+			log.FnType: fnTypeRepair,
+			"index":    c.entry.Index,
+			"address":  c.entry.Address,
 		})
 		err = dryRunEvictOrDeleteNodePod(ctx, cs, c.entry.Nodename, protected, c.protectedJobPods)
 		if err != nil {
 			log.Warn("eviction dry-run failed", map[string]any{
-				"address":   c.entry.Address,
+				log.FnType:  fnTypeRepair,
 				log.FnError: err,
+				"index":     c.entry.Index,
+				"address":   c.entry.Address,
 			})
 			return err
 		}
 		log.Info("eviction dry-run succeeded", map[string]any{
-			"address": c.entry.Address,
+			log.FnType: fnTypeRepair,
+			"index":    c.entry.Index,
+			"address":  c.entry.Address,
 		})
 
 		// Note: The annotation name is shared with reboot operations.
@@ -124,18 +130,24 @@ func (c repairDrainStartCommand) Run(ctx context.Context, inf cke.Infrastructure
 	}
 
 	log.Info("start eviction", map[string]any{
-		"address": c.entry.Address,
+		log.FnType: fnTypeRepair,
+		"index":    c.entry.Index,
+		"address":  c.entry.Address,
 	})
 	err = evictOrDeleteNodePod(ctx, cs, c.entry.Nodename, protected, c.protectedJobPods, c.evictAttempts, c.evictInterval)
 	if err != nil {
 		log.Warn("eviction failed", map[string]any{
-			"address":   c.entry.Address,
+			log.FnType:  fnTypeRepair,
 			log.FnError: err,
+			"index":     c.entry.Index,
+			"address":   c.entry.Address,
 		})
 		return repairDrainBackOff(ctx, inf, c.entry, err)
 	}
 	log.Info("eviction succeeded", map[string]any{
-		"address": c.entry.Address,
+		log.FnType: fnTypeRepair,
+		"index":    c.entry.Index,
+		"address":  c.entry.Address,
 	})
 
 	return nil
