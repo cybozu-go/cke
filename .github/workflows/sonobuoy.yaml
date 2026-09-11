@@ -1,6 +1,8 @@
 name: sonobuoy
 on:
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   sonobuoy:
     name: Run sonobuoy
