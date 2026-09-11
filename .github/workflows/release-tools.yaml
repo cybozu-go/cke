@@ -3,10 +3,15 @@ on:
   push:
     tags:
       - 'tools-*'
+permissions:
+  contents: read
 jobs:
   release-cke-tools:
     name: Release CKE tools image
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write # push to ghcr.io
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6

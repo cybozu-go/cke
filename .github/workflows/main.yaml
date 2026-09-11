@@ -6,6 +6,8 @@ on:
       - 'main'
 env:
   filename: "main.yaml"
+permissions:
+  contents: read
 jobs:
   build:
     name: Build CKE
