@@ -36,6 +36,8 @@ chmod 1777 /var/scratch
 # Run mtest
 GOPATH=\$HOME/go
 export GOPATH
+GOPROXY=https://golang.flatt.tech
+export GOPROXY
 PATH=/usr/local/go/bin:\$GOPATH/bin:\$PATH
 export PATH
 
