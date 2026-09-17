@@ -60,6 +60,8 @@ $GCLOUD compute scp --zone=${ZONE} ./gcp_rsa cybozu@${INSTANCE_NAME}-0:
 cat >run.sh <<EOF
 #!/bin/sh -ex
 
+export GOPROXY=https://golang.flatt.tech
+
 # Install essential tools
 curl -fsSL -o docker.gpg https://download.docker.com/linux/ubuntu/gpg
 apt-key add docker.gpg
