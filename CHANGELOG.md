@@ -6,6 +6,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Update Kubernetes version to 1.35.9 in [#926](https://github.com/cybozu-go/cke/pull/926)
+
 ## [1.35.4]
 
 ### Changed
