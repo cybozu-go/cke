@@ -35,7 +35,7 @@ func subMain() error {
 
 	images := make(map[string]string)
 	for _, img := range cke.AllImages() {
-		id := strings.SplitN(path.Base(img), ":", 2)[0]
+		id, _, _ := strings.Cut(path.Base(img), ":")
 		images[id] = img
 	}
 
