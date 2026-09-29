@@ -34,11 +34,5 @@ install:
 	go install ./pkg/...
 
 .PHONY: static
-static: goimports
+static:
 	go generate ./static
-
-.PHONY: goimports
-goimports:
-	if ! which goimports >/dev/null; then \
-		env GOFLAGS= go install golang.org/x/tools/cmd/goimports@latest; \
-	fi
