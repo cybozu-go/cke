@@ -3,13 +3,70 @@ package cke
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"os/exec"
 	"testing"
 	"time"
 
+	"github.com/cybozu-go/etcdutil"
 	"github.com/google/go-cmp/cmp"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 )
+
+const (
+	etcdClientURL = "http://localhost:12379"
+	etcdPeerURL   = "http://localhost:12380"
+)
+
+func startEtcd(t *testing.T) {
+	t.Helper()
+
+	cmd := exec.Command("./testbin/etcd",
+		"--data-dir", t.TempDir(),
+		"--initial-cluster", "default="+etcdPeerURL,
+		"--listen-peer-urls", etcdPeerURL,
+		"--initial-advertise-peer-urls", etcdPeerURL,
+		"--listen-client-urls", etcdClientURL,
+		"--advertise-client-urls", etcdClientURL)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	})
+
+	// Wait for etcd to be ready.
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		resp, err := http.Get(etcdClientURL + "/health")
+		if err == nil {
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				return
+			}
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("etcd did not become ready")
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+func newEtcdClient(t *testing.T) *clientv3.Client {
+	cfg := etcdutil.NewConfig(t.Name() + "/")
+	cfg.Endpoints = []string{etcdClientURL}
+
+	etcd, err := etcdutil.NewClient(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return etcd
+}
 
 func testConfigVersion(t *testing.T) {
 	client := newEtcdClient(t)
@@ -1055,6 +1112,8 @@ func testStatus(t *testing.T) {
 }
 
 func TestStorage(t *testing.T) {
+	startEtcd(t)
+
 	t.Run("ConfigVersion", testConfigVersion)
 	t.Run("Cluster", testStorageCluster)
 	t.Run("Constraints", testStorageConstraints)
