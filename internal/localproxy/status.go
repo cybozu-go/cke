@@ -13,8 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op/k8s"
-	"github.com/cybozu-go/cke/op/nodedns"
+	"github.com/cybozu-go/cke/internal/op/k8s"
+	"github.com/cybozu-go/cke/internal/op/nodedns"
 )
 
 // the current status for running local proxy

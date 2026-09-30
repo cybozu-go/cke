@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op/common"
+	"github.com/cybozu-go/cke/internal/op/common"
 )
 
 type riversBootOp struct {

@@ -6,7 +6,7 @@ import (
 	"slices"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op/k8s"
+	"github.com/cybozu-go/cke/internal/op/k8s"
 )
 
 func decideOps(c *cke.Cluster, currentAP string, st *status) (newAP string, ops []cke.Operator) {

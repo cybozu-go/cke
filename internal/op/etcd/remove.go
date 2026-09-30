@@ -9,7 +9,7 @@ import (
 	"go.etcd.io/etcd/api/v3/etcdserverpb"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/internal/op"
 )
 
 type removeMemberOp struct {

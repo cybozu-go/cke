@@ -6,8 +6,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
-	"github.com/cybozu-go/cke/op/common"
+	"github.com/cybozu-go/cke/internal/op"
+	"github.com/cybozu-go/cke/internal/op/common"
 )
 
 type controllerManagerBootOp struct {

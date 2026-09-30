@@ -15,7 +15,7 @@ import (
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/internal/op"
 )
 
 var (

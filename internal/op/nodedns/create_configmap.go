@@ -1,4 +1,4 @@
-package clusterdns
+package nodedns
 
 import (
 	"context"
@@ -7,27 +7,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/internal/op"
 )
 
 type createConfigMapOp struct {
 	apiserver  *cke.Node
+	clusterIP  string
 	domain     string
 	dnsServers []string
 	finished   bool
 }
 
-// CreateConfigMapOp returns an Operator to create ConfigMap for CoreDNS.
-func CreateConfigMapOp(apiserver *cke.Node, domain string, dnsServers []string) cke.Operator {
+// CreateConfigMapOp returns an Operator to create ConfigMap for unbound daemonset.
+func CreateConfigMapOp(apiserver *cke.Node, clusterIP, domain string, dnsServers []string) cke.Operator {
 	return &createConfigMapOp{
 		apiserver:  apiserver,
+		clusterIP:  clusterIP,
 		domain:     domain,
 		dnsServers: dnsServers,
 	}
 }
 
 func (o *createConfigMapOp) Name() string {
-	return "create-cluster-dns-configmap"
+	return "create-node-dns-configmap"
 }
 
 func (o *createConfigMapOp) NextCommand() cke.Commander {
@@ -35,7 +37,7 @@ func (o *createConfigMapOp) NextCommand() cke.Commander {
 		return nil
 	}
 	o.finished = true
-	return createConfigMapCommand{o.apiserver, o.domain, o.dnsServers}
+	return createConfigMapCommand{o.apiserver, o.clusterIP, o.domain, o.dnsServers}
 }
 
 func (o *createConfigMapOp) Targets() []string {
@@ -44,15 +46,9 @@ func (o *createConfigMapOp) Targets() []string {
 	}
 }
 
-func (c createConfigMapCommand) Command() cke.Command {
-	return cke.Command{
-		Name:   "createConfigMapCommand",
-		Target: "kube-system",
-	}
-}
-
 type createConfigMapCommand struct {
 	apiserver  *cke.Node
+	clusterIP  string
 	domain     string
 	dnsServers []string
 }
@@ -65,11 +61,12 @@ func (c createConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure,
 
 	// ConfigMap
 	configs := cs.CoreV1().ConfigMaps("kube-system")
-	_, err = configs.Get(ctx, op.ClusterDNSAppName, metav1.GetOptions{})
+	_, err = configs.Get(ctx, op.NodeDNSAppName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 	case errors.IsNotFound(err):
-		_, err = configs.Create(ctx, ConfigMap(c.domain, c.dnsServers), metav1.CreateOptions{})
+		configMap := ConfigMap(c.clusterIP, c.domain, c.dnsServers, true)
+		_, err = configs.Create(ctx, configMap, metav1.CreateOptions{})
 		if err != nil {
 			return err
 		}
@@ -78,4 +75,11 @@ func (c createConfigMapCommand) Run(ctx context.Context, inf cke.Infrastructure,
 	}
 
 	return nil
+}
+
+func (c createConfigMapCommand) Command() cke.Command {
+	return cke.Command{
+		Name:   "createConfigMapCommand",
+		Target: "kube-system",
+	}
 }

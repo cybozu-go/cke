@@ -11,8 +11,8 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
-	"github.com/cybozu-go/cke/op/common"
+	"github.com/cybozu-go/cke/internal/op"
+	"github.com/cybozu-go/cke/internal/op/common"
 )
 
 func etcdEndpoints(nodes []*cke.Node) []string {

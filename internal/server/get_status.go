@@ -9,7 +9,7 @@ import (
 	"github.com/cybozu-go/well"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/internal/op"
 )
 
 // GetClusterStatus consults the whole cluster and constructs *ClusterStatus.

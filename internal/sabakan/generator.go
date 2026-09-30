@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
+	"github.com/cybozu-go/cke/internal/op"
 )
 
 var (

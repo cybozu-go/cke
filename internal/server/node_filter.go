@@ -11,9 +11,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/op"
-	"github.com/cybozu-go/cke/op/etcd"
-	"github.com/cybozu-go/cke/op/k8s"
+	"github.com/cybozu-go/cke/internal/op"
+	"github.com/cybozu-go/cke/internal/op/etcd"
+	"github.com/cybozu-go/cke/internal/op/k8s"
 )
 
 // NodeFilter filters nodes to
