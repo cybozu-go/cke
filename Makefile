@@ -33,6 +33,10 @@ fmt:
 install:
 	go install ./pkg/...
 
+.PHONY: images
+images:
+	go run ./hack/update-images
+
 .PHONY: static
 static:
 	go generate ./static
