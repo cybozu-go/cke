@@ -16,12 +16,12 @@ import (
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/internal/static"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/clusterdns"
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/op/nodedns"
-	"github.com/cybozu-go/cke/static"
 )
 
 const (

@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/server"
+	"github.com/cybozu-go/cke/internal/server"
 )
 
 const (

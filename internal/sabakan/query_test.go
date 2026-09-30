@@ -9,7 +9,7 @@ import (
 	"github.com/cybozu-go/well"
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/cybozu-go/cke/sabakan/mock"
+	"github.com/cybozu-go/cke/internal/sabakan/mock"
 )
 
 func testMachine(t *testing.T, m Machine) {

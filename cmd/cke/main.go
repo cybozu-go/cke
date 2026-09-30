@@ -15,9 +15,9 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/metrics"
-	"github.com/cybozu-go/cke/sabakan"
-	"github.com/cybozu-go/cke/server"
+	"github.com/cybozu-go/cke/internal/metrics"
+	"github.com/cybozu-go/cke/internal/sabakan"
+	"github.com/cybozu-go/cke/internal/server"
 )
 
 var (

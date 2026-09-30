@@ -9,8 +9,8 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/metrics"
-	"github.com/cybozu-go/cke/server"
+	"github.com/cybozu-go/cke/internal/metrics"
+	"github.com/cybozu-go/cke/internal/server"
 )
 
 type sabakanContextKey string

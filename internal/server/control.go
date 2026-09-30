@@ -14,7 +14,7 @@ import (
 	"go.etcd.io/etcd/client/v3/concurrency"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/metrics"
+	"github.com/cybozu-go/cke/internal/metrics"
 )
 
 var errCommandFailure = errors.New("command failed")

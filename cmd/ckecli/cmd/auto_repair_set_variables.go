@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/cybozu-go/cke/sabakan"
+	"github.com/cybozu-go/cke/internal/sabakan"
 )
 
 // autoRepairSetVariablesCmd represents the "auto-repair set-variables" command

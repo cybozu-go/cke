@@ -10,12 +10,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/cybozu-go/cke"
+	"github.com/cybozu-go/cke/internal/static"
 	"github.com/cybozu-go/cke/op"
 	"github.com/cybozu-go/cke/op/clusterdns"
 	"github.com/cybozu-go/cke/op/etcd"
 	"github.com/cybozu-go/cke/op/k8s"
 	"github.com/cybozu-go/cke/op/nodedns"
-	"github.com/cybozu-go/cke/static"
 )
 
 // DecideOps returns the next operations to do and the operation phase.

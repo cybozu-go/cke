@@ -533,7 +533,7 @@ func (ec *executionContext) field_Query_searchMachines_args(ctx context.Context,
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "having",
 		func(ctx context.Context, v any) (*MachineParams, error) {
-			return ec.unmarshalOMachineParams2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineParams(ctx, v)
+			return ec.unmarshalOMachineParams2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineParams(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -541,7 +541,7 @@ func (ec *executionContext) field_Query_searchMachines_args(ctx context.Context,
 	args["having"] = arg0
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "notHaving",
 		func(ctx context.Context, v any) (*MachineParams, error) {
-			return ec.unmarshalOMachineParams2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineParams(ctx, v)
+			return ec.unmarshalOMachineParams2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineParams(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -719,7 +719,7 @@ func (ec *executionContext) _Machine_spec(ctx context.Context, field graphql.Col
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *MachineSpec) graphql.Marshaler {
-			return ec.marshalNMachineSpec2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineSpec(ctx, selections, v)
+			return ec.marshalNMachineSpec2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineSpec(ctx, selections, v)
 		},
 		true,
 		true,
@@ -751,7 +751,7 @@ func (ec *executionContext) _Machine_status(ctx context.Context, field graphql.C
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *MachineStatus) graphql.Marshaler {
-			return ec.marshalNMachineStatus2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineStatus(ctx, selections, v)
+			return ec.marshalNMachineStatus2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineStatus(ctx, selections, v)
 		},
 		true,
 		true,
@@ -806,7 +806,7 @@ func (ec *executionContext) _MachineSpec_labels(ctx context.Context, field graph
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*Label) graphql.Marshaler {
-			return ec.marshalOLabel2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐLabelᚄ(ctx, selections, v)
+			return ec.marshalOLabel2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐLabelᚄ(ctx, selections, v)
 		},
 		true,
 		false,
@@ -976,7 +976,7 @@ func (ec *executionContext) _MachineSpec_bmc(ctx context.Context, field graphql.
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *Bmc) graphql.Marshaler {
-			return ec.marshalNBMC2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐBmc(ctx, selections, v)
+			return ec.marshalNBMC2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐBmc(ctx, selections, v)
 		},
 		true,
 		true,
@@ -1008,7 +1008,7 @@ func (ec *executionContext) _MachineStatus_state(ctx context.Context, field grap
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v MachineState) graphql.Marshaler {
-			return ec.marshalNMachineState2githubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineState(ctx, selections, v)
+			return ec.marshalNMachineState2githubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineState(ctx, selections, v)
 		},
 		true,
 		true,
@@ -1078,7 +1078,7 @@ func (ec *executionContext) _Query_machine(ctx context.Context, field graphql.Co
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *Machine) graphql.Marshaler {
-			return ec.marshalNMachine2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachine(ctx, selections, v)
+			return ec.marshalNMachine2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachine(ctx, selections, v)
 		},
 		true,
 		true,
@@ -1122,7 +1122,7 @@ func (ec *executionContext) _Query_searchMachines(ctx context.Context, field gra
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*Machine) graphql.Marshaler {
-			return ec.marshalNMachine2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineᚄ(ctx, selections, v)
+			return ec.marshalNMachine2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineᚄ(ctx, selections, v)
 		},
 		true,
 		true,
@@ -2344,7 +2344,7 @@ func (ec *executionContext) unmarshalInputMachineParams(ctx context.Context, obj
 		switch k {
 		case "labels":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("labels"))
-			data, err := ec.unmarshalOLabelInput2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐLabelInputᚄ(ctx, v)
+			data, err := ec.unmarshalOLabelInput2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐLabelInputᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2365,7 +2365,7 @@ func (ec *executionContext) unmarshalInputMachineParams(ctx context.Context, obj
 			it.Roles = data
 		case "states":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("states"))
-			data, err := ec.unmarshalOMachineState2ᚕgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineStateᚄ(ctx, v)
+			data, err := ec.unmarshalOMachineState2ᚕgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineStateᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -3076,7 +3076,7 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
-func (ec *executionContext) marshalNBMC2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐBmc(ctx context.Context, sel ast.SelectionSet, v *Bmc) graphql.Marshaler {
+func (ec *executionContext) marshalNBMC2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐBmc(ctx context.Context, sel ast.SelectionSet, v *Bmc) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -3212,7 +3212,7 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) marshalNLabel2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐLabel(ctx context.Context, sel ast.SelectionSet, v *Label) graphql.Marshaler {
+func (ec *executionContext) marshalNLabel2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐLabel(ctx context.Context, sel ast.SelectionSet, v *Label) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -3222,20 +3222,20 @@ func (ec *executionContext) marshalNLabel2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋ
 	return ec._Label(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNLabelInput2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐLabelInput(ctx context.Context, v any) (*LabelInput, error) {
+func (ec *executionContext) unmarshalNLabelInput2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐLabelInput(ctx context.Context, v any) (*LabelInput, error) {
 	res, err := ec.unmarshalInputLabelInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNMachine2githubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachine(ctx context.Context, sel ast.SelectionSet, v Machine) graphql.Marshaler {
+func (ec *executionContext) marshalNMachine2githubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachine(ctx context.Context, sel ast.SelectionSet, v Machine) graphql.Marshaler {
 	return ec._Machine(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNMachine2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineᚄ(ctx context.Context, sel ast.SelectionSet, v []*Machine) graphql.Marshaler {
+func (ec *executionContext) marshalNMachine2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineᚄ(ctx context.Context, sel ast.SelectionSet, v []*Machine) graphql.Marshaler {
 	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
 		fc := graphql.GetFieldContext(ctx)
 		fc.Result = &v[i]
-		return ec.marshalNMachine2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachine(ctx, sel, v[i])
+		return ec.marshalNMachine2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachine(ctx, sel, v[i])
 	})
 
 	for _, e := range ret {
@@ -3247,7 +3247,7 @@ func (ec *executionContext) marshalNMachine2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋc
 	return ret
 }
 
-func (ec *executionContext) marshalNMachine2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachine(ctx context.Context, sel ast.SelectionSet, v *Machine) graphql.Marshaler {
+func (ec *executionContext) marshalNMachine2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachine(ctx context.Context, sel ast.SelectionSet, v *Machine) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -3257,7 +3257,7 @@ func (ec *executionContext) marshalNMachine2ᚖgithubᚗcomᚋcybozuᚑgoᚋcke�
 	return ec._Machine(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNMachineSpec2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineSpec(ctx context.Context, sel ast.SelectionSet, v *MachineSpec) graphql.Marshaler {
+func (ec *executionContext) marshalNMachineSpec2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineSpec(ctx context.Context, sel ast.SelectionSet, v *MachineSpec) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -3267,17 +3267,17 @@ func (ec *executionContext) marshalNMachineSpec2ᚖgithubᚗcomᚋcybozuᚑgoᚋ
 	return ec._MachineSpec(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNMachineState2githubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineState(ctx context.Context, v any) (MachineState, error) {
+func (ec *executionContext) unmarshalNMachineState2githubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineState(ctx context.Context, v any) (MachineState, error) {
 	var res MachineState
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNMachineState2githubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineState(ctx context.Context, sel ast.SelectionSet, v MachineState) graphql.Marshaler {
+func (ec *executionContext) marshalNMachineState2githubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineState(ctx context.Context, sel ast.SelectionSet, v MachineState) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) marshalNMachineStatus2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineStatus(ctx context.Context, sel ast.SelectionSet, v *MachineStatus) graphql.Marshaler {
+func (ec *executionContext) marshalNMachineStatus2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineStatus(ctx context.Context, sel ast.SelectionSet, v *MachineStatus) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -3528,14 +3528,14 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return res
 }
 
-func (ec *executionContext) marshalOLabel2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐLabelᚄ(ctx context.Context, sel ast.SelectionSet, v []*Label) graphql.Marshaler {
+func (ec *executionContext) marshalOLabel2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐLabelᚄ(ctx context.Context, sel ast.SelectionSet, v []*Label) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
 		fc := graphql.GetFieldContext(ctx)
 		fc.Result = &v[i]
-		return ec.marshalNLabel2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐLabel(ctx, sel, v[i])
+		return ec.marshalNLabel2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐLabel(ctx, sel, v[i])
 	})
 
 	for _, e := range ret {
@@ -3547,7 +3547,7 @@ func (ec *executionContext) marshalOLabel2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋcke
 	return ret
 }
 
-func (ec *executionContext) unmarshalOLabelInput2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐLabelInputᚄ(ctx context.Context, v any) ([]*LabelInput, error) {
+func (ec *executionContext) unmarshalOLabelInput2ᚕᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐLabelInputᚄ(ctx context.Context, v any) ([]*LabelInput, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -3557,7 +3557,7 @@ func (ec *executionContext) unmarshalOLabelInput2ᚕᚖgithubᚗcomᚋcybozuᚑg
 	res := make([]*LabelInput, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNLabelInput2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐLabelInput(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNLabelInput2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐLabelInput(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -3565,7 +3565,7 @@ func (ec *executionContext) unmarshalOLabelInput2ᚕᚖgithubᚗcomᚋcybozuᚑg
 	return res, nil
 }
 
-func (ec *executionContext) unmarshalOMachineParams2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineParams(ctx context.Context, v any) (*MachineParams, error) {
+func (ec *executionContext) unmarshalOMachineParams2ᚖgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineParams(ctx context.Context, v any) (*MachineParams, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -3573,7 +3573,7 @@ func (ec *executionContext) unmarshalOMachineParams2ᚖgithubᚗcomᚋcybozuᚑg
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalOMachineState2ᚕgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineStateᚄ(ctx context.Context, v any) ([]MachineState, error) {
+func (ec *executionContext) unmarshalOMachineState2ᚕgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineStateᚄ(ctx context.Context, v any) ([]MachineState, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -3583,7 +3583,7 @@ func (ec *executionContext) unmarshalOMachineState2ᚕgithubᚗcomᚋcybozuᚑgo
 	res := make([]MachineState, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNMachineState2githubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineState(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNMachineState2githubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineState(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -3591,14 +3591,14 @@ func (ec *executionContext) unmarshalOMachineState2ᚕgithubᚗcomᚋcybozuᚑgo
 	return res, nil
 }
 
-func (ec *executionContext) marshalOMachineState2ᚕgithubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineStateᚄ(ctx context.Context, sel ast.SelectionSet, v []MachineState) graphql.Marshaler {
+func (ec *executionContext) marshalOMachineState2ᚕgithubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineStateᚄ(ctx context.Context, sel ast.SelectionSet, v []MachineState) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
 		fc := graphql.GetFieldContext(ctx)
 		fc.Result = &v[i]
-		return ec.marshalNMachineState2githubᚗcomᚋcybozuᚑgoᚋckeᚋsabakanᚋmockᚐMachineState(ctx, sel, v[i])
+		return ec.marshalNMachineState2githubᚗcomᚋcybozuᚑgoᚋckeᚋinternalᚋsabakanᚋmockᚐMachineState(ctx, sel, v[i])
 	})
 
 	for _, e := range ret {

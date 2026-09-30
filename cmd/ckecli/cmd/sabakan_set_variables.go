@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/cybozu-go/cke/sabakan"
+	"github.com/cybozu-go/cke/internal/sabakan"
 )
 
 // sabakanSetVariablesCmd represents the "sabakan set-variables" command

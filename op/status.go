@@ -28,7 +28,7 @@ import (
 	kubeletv1beta1 "k8s.io/kubelet/config/v1beta1"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/static"
+	"github.com/cybozu-go/cke/internal/static"
 )
 
 var decUnstructured = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)

@@ -49,8 +49,8 @@ images:
 .PHONY: gqlgen
 gqlgen:
 	# gqlgen needs additional dependencies that does not exist in go.mod.
-	cd sabakan/mock; go run github.com/99designs/gqlgen@"$$(go list -f '{{.Version}}' -m github.com/99designs/gqlgen)" generate
+	cd internal/sabakan/mock; go run github.com/99designs/gqlgen@"$$(go list -f '{{.Version}}' -m github.com/99designs/gqlgen)" generate
 
 .PHONY: static
 static:
-	go generate ./static
+	go generate ./internal/static

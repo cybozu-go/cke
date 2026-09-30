@@ -7,7 +7,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/sabakan"
+	"github.com/cybozu-go/cke/internal/sabakan"
 )
 
 // sabakanSetTemplateCmd represents the "sabakan set-template" command
