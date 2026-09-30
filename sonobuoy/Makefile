@@ -37,7 +37,7 @@ all:
 
 bin/cke bin/ckecli:
 	mkdir -p bin
-	GOBIN=$(shell pwd)/bin go install ../pkg/$(notdir $@)
+	GOBIN=$(shell pwd)/bin go install ../cmd/$(notdir $@)
 
 bin/kubectl:
 	mkdir -p bin

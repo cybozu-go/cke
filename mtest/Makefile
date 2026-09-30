@@ -114,7 +114,7 @@ $(DATA_DIR)/vault: $(VAULT_ARCHIVE)
 $(OUTPUT)/cke $(OUTPUT)/ckecli $(OUTPUT)/cke-localproxy: FORCE
 	mkdir -p $(OUTPUT)
 	cd ..; gofail enable op/etcd && \
-		if CGO_ENABLED=0 GOBIN=$(realpath $(OUTPUT)) go install ./pkg/$(notdir $@); then \
+		if CGO_ENABLED=0 GOBIN=$(realpath $(OUTPUT)) go install ./cmd/$(notdir $@); then \
 			gofail disable op/etcd; \
 		else \
 			gofail disable op/etcd; \

@@ -40,7 +40,7 @@ fmt:
 
 .PHONY: install
 install:
-	go install ./pkg/...
+	go install ./cmd/...
 
 .PHONY: images
 images:
