@@ -39,7 +39,7 @@ It should look like:
     $ VERSION=x.y.z
     $ echo $VERSION
     # Set BASE. This is "main" in most cases.
-    # When you release a new patch version in an older minor version series of CKE, use `release-x.y` branch. You should have pushed backporting commits to `release-x.y` branch.
+    # When you release a new patch version in an older minor version series of CKE, use `release-x.y` branch. You should have merged backporting pull requests to `release-x.y` branch.
     $ BASE=main
     $ echo $BASE
     ```
@@ -64,7 +64,7 @@ It should look like:
 
 6. When updating to `x.y.0` or its RC, run Sonobuoy test manually and make sure that it has been passed.
 7. Merge the pull request.
-8. Add a git tag to the main HEAD, then push it.
+8. Add a git tag to the HEAD of `$BASE`, then push it.
 
     ```console
     # Set VERSION and BASE again.
