@@ -15,12 +15,11 @@ $(TESTBIN)/etcd: go.mod
 	curl -fsL https://github.com/etcd-io/etcd/releases/download/$${v}/etcd-$${v}-linux-amd64.tar.gz | tar -xzf - --strip-components=1 -C $(TESTBIN) etcd-$${v}-linux-amd64/etcd etcd-$${v}-linux-amd64/etcdctl
 	touch $@
 
-.PHONY: check-generate
-check-generate:
-	# gqlgen needs additional dependencies that does not exist in go.mod.
-	cd sabakan/mock; go run github.com/99designs/gqlgen@"$$(go list -f '{{.Version}}' -m github.com/99designs/gqlgen)" generate
-	go mod tidy
+.PHONY: check-generated
+check-generated:
+	$(MAKE) gqlgen
 	$(MAKE) static
+	go mod tidy
 	git diff --exit-code --name-only
 
 .PHONY: test
@@ -30,6 +29,10 @@ test: setup
 .PHONY: lint
 lint:
 	go tool golangci-lint run
+
+.PHONY: lint-fix
+lint-fix:
+	go tool golangci-lint run --fix
 
 .PHONY: fmt
 fmt:
@@ -42,6 +45,11 @@ install:
 .PHONY: images
 images:
 	go run ./hack/update-images
+
+.PHONY: gqlgen
+gqlgen:
+	# gqlgen needs additional dependencies that does not exist in go.mod.
+	cd sabakan/mock; go run github.com/99designs/gqlgen@"$$(go list -f '{{.Version}}' -m github.com/99designs/gqlgen)" generate
 
 .PHONY: static
 static:
