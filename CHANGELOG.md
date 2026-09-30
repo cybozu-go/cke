@@ -6,6 +6,14 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Add update-images tool in [#929](https://github.com/cybozu-go/cke/pull/929)
+- Move compile_resources to hack/compile-resources and improve validation in [#930](https://github.com/cybozu-go/cke/pull/930)
+- Use the same etcd setup for unit tests locally and in CI in [#931](https://github.com/cybozu-go/cke/pull/931)
+- Clean up Makefile targets and CI steps in [#932](https://github.com/cybozu-go/cke/pull/932)
+- Refresh development and release procedures in [#934](https://github.com/cybozu-go/cke/pull/934)
+
 ## [1.35.5]
 
 ### Added
