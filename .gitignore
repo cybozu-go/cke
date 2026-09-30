@@ -8,6 +8,9 @@
 .glide/
 vendor/
 
+# Binaries for testing, installed by `make setup`
+/testbin/
+
 # Editors
 *~
 .*.swp
