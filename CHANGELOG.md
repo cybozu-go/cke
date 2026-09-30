@@ -6,11 +6,16 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
-## [1.34.11]
+## [1.34.12]
 
 ### Changed
 
 - Update Kubernetes version to 1.34.12 in [#925](https://github.com/cybozu-go/cke/pull/925)
+- ci: declare GITHUB_TOKEN permissions in all workflows [#933](https://github.com/cybozu-go/cke/pull/933)
+
+## [1.34.11]
+
+This release was canceled because the release workflow was failed.
 
 ## [1.34.10]
 
@@ -103,7 +108,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.34.11...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.34.12...HEAD
+[1.34.12]: https://github.com/cybozu-go/cke/compare/v1.34.10...v1.34.12
 [1.34.11]: https://github.com/cybozu-go/cke/compare/v1.34.10...v1.34.11
 [1.34.10]: https://github.com/cybozu-go/cke/compare/v1.34.9...v1.34.10
 [1.34.9]: https://github.com/cybozu-go/cke/compare/v1.34.8...v1.34.9
