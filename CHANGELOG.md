@@ -13,6 +13,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Use the same etcd setup for unit tests locally and in CI in [#931](https://github.com/cybozu-go/cke/pull/931)
 - Clean up Makefile targets and CI steps in [#932](https://github.com/cybozu-go/cke/pull/932)
 - Refresh development and release procedures in [#934](https://github.com/cybozu-go/cke/pull/934)
+- Reorganize directories into cmd/ and internal/ in [#936](https://github.com/cybozu-go/cke/pull/936)
 
 ## [1.35.5]
 
