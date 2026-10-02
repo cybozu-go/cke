@@ -36,7 +36,7 @@ If the log is sent to journal log, you can see it using `journalctl` as follows:
 $ sudo journalctl CONTAINER_NAME=kube-apiserver -p 6..6
 ```
 
-Container names are defined in [op/constants.go](../op/constants.go).
+Container names are defined in [internal/op/constants.go](../internal/op/constants.go).
 
 Ref: https://docs.docker.com/config/containers/logging/journald/#retrieve-log-messages-with-journalctl
 

@@ -20,7 +20,7 @@ Maintenance strategy
 --------------------
 
 The exact strategy of how CKE constructs and maintains its Kubernetes cluster
-is coded in `DecideOps` in [`server/strategy.go`](../server/strategy.go).
+is coded in `DecideOps` in [`internal/server/strategy.go`](../internal/server/strategy.go).
 
 <a name="config-version"></a>
 ### Automatic update
