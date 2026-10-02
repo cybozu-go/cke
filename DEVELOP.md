@@ -3,7 +3,7 @@ How to develop CKE
 
 ## Go environment
 
-Use Go 1.23 or higher.
+Use the Go version specified in [`go.mod`](go.mod).
 
 ## Starting development for a new Kubernetes minor release
 
@@ -12,29 +12,42 @@ For example, CKE 1.16.x corresponds to Kubernetes 1.16.x.
 
 When we start development for a new Kubernetes minor release on the `main` branch,
 create a maintenance branch for the previous Kubernetes minor release.
-For example, when we start development for Kuberntes 1._17_, create and push `release-1.16`
+For example, when we start development for Kubernetes 1._17_, create and push `release-1.16`
 branch as follows:
 
 ```console
+$ MINOR_VERSION=1.16
 $ git fetch origin
-$ git checkout -b release-1.16 origin/main
-$ git push -u origin release-1.16
+$ git checkout -b release-${MINOR_VERSION} origin/main
+$ git push -u origin release-${MINOR_VERSION}
 ```
 
-Then, clear the change log entries in `CHANGELOG.md`.
+Then, clear the change log entries in `CHANGELOG.md` on the `main` branch,
+and add a link to the change log of the maintenance branch to the "Ancient changes" section as follows:
+
+```markdown
+## Ancient changes
+
+- See [release-1.16/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.16/CHANGELOG.md) for changes in CKE 1.16.
+```
 
 ### Update `k8s.io` modules
 
-CKE uses `k8s.io/client-go`.
-
-Modules under `k8s.io` are compatible with Go modules.
-Therefore, when `k8s.io/client-go` is updated as follows, dependent modules are also updated.
+CKE depends on several modules under `k8s.io`, such as `k8s.io/client-go` and `k8s.io/api`.
+These modules are released together, and `v0.X.Y` corresponds to Kubernetes `1.X.Y`.
+Update all of them to the same version as follows:
 
 ```console
-$ VERSION=v0.17.4
-$ go get -d k8s.io/client-go@${VERSION} k8s.io/api@${VERSION} k8s.io/apimachinery@${VERSION} \
-            k8s.io/apiserver@${VERSION} k8s.io/kube-scheduler@${VERSION} k8s.io/kubelet@${VERSION} \
-            k8s.io/kube-proxy@${VERSION}
+$ MODULE_VERSION=0.17.4
+$ go get \
+    k8s.io/api@v${MODULE_VERSION} \
+    k8s.io/apimachinery@v${MODULE_VERSION} \
+    k8s.io/apiserver@v${MODULE_VERSION} \
+    k8s.io/client-go@v${MODULE_VERSION} \
+    k8s.io/kube-proxy@v${MODULE_VERSION} \
+    k8s.io/kube-scheduler@v${MODULE_VERSION} \
+    k8s.io/kubelet@v${MODULE_VERSION}
+$ go mod tidy
 ```
 
 ### Update container images
@@ -62,8 +75,8 @@ This rewrites only `images.go`.
 
 ### Update the Kubernetes resource definitions embedded in CKE
 
-The Kubernetes resource definitions embedded in CKE is defined in `./static/resource.go`.
-This needs to be updated by `make static` whenever `images.go` updates.
+The Kubernetes resource definitions embedded in CKE are defined in `./static/resources.go`.
+This needs to be updated by `make static` whenever `images.go` or `./static/*.yml` updates.
 
 ### Update `cke-tools`
 
@@ -75,10 +88,23 @@ Read [`tools/RELEASE.md`](tools/RELEASE.md) for details.
 
 ## Back-porting fixes
 
-When vulnerabilities or critical issues are found in the main branch, 
+When vulnerabilities or critical issues are found in the main branch,
 consider back-porting the fixes to older branches as follows:
 
+```console
+$ MINOR_VERSION=1.16
+$ PR_NUMBER=123 # The number of the pull request to back-port
+
+$ MERGE_COMMIT=$(gh pr view ${PR_NUMBER} --json mergeCommit -q .mergeCommit.oid)
+$ PR_TITLE=$(gh pr view ${PR_NUMBER} --json title -q .title)
+$ git fetch origin
+$ git checkout -b backport-${PR_NUMBER}-${MINOR_VERSION} origin/release-${MINOR_VERSION}
+$ git cherry-pick -m 1 ${MERGE_COMMIT}
+$ git push -u origin backport-${PR_NUMBER}-${MINOR_VERSION}
+$ gh pr create --base release-${MINOR_VERSION} \
+    --title "[release-${MINOR_VERSION}] ${PR_TITLE} (backport of #${PR_NUMBER})" \
+    --body "Backport of #${PR_NUMBER}"
 ```
-$ git checkout release-1.16
-$ git cherry-pick <commit from main>
-```
+
+After the pull request is merged, release a new patch version from the `release-${MINOR_VERSION}` branch
+following [RELEASE.md](RELEASE.md).
