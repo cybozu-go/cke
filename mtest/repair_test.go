@@ -83,7 +83,7 @@ func testRepairOperations() {
 	// - RepairDequeueOp
 
 	// This test examines status gathering and CLI commands as well as operations.
-	// It is not necessary to test the behaviors examined in "server/strategy_test.go".
+	// It is not necessary to test the behaviors examined in "internal/server/strategy_test.go".
 
 	// This test uses "touch" and "test -f" for repair_command and health_check_command.
 	// "true" and "echo true" are insufficient for repair queue test because

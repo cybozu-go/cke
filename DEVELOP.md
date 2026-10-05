@@ -71,12 +71,12 @@ $ make images
 ```
 
 This rewrites only `images.go`.
-`static/resources.go` is not updated automatically; update it manually as described in the next section.
+`internal/static/resources.go` is not updated automatically; update it manually as described in the next section.
 
 ### Update the Kubernetes resource definitions embedded in CKE
 
-The Kubernetes resource definitions embedded in CKE are defined in `./static/resources.go`.
-This needs to be updated by `make static` whenever `images.go` or `./static/*.yml` updates.
+The Kubernetes resource definitions embedded in CKE are defined in `./internal/static/resources.go`.
+This needs to be updated by `make static` whenever `images.go` or `./internal/static/*.yml` updates.
 
 ### Update `cke-tools`
 
