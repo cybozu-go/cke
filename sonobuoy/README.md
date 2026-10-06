@@ -23,13 +23,13 @@ $ git checkout vX.Y.Z
 
 ## Write down your GCP/GCE information
 
-Edit the following lines in `bin/env-sonobuoy` to give information about your GCP account and GCE configuration.
+Edit the following lines in `bin/env-sonobuoy` to give information about your GCP project and GCE configuration.
+`gcloud` runs as the currently active account.
 Please choose an appropriate ZONE to run C2 machine family VMs.
 
 ```
 PROJECT=neco-test
 ZONE=asia-northeast1-b
-SERVICE_ACCOUNT=neco-test@neco-test.iam.gserviceaccount.com
 ```
 
 ## Run Sonobuoy

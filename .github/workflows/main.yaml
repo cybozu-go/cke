@@ -69,14 +69,10 @@ jobs:
         run: cat cke-service.log
       - name: Set the instance lifetime
         if: ${{ failure() }}
-        run: |
-          . ./bin/env
-          $GCLOUD compute instances add-metadata ${INSTANCE_NAME} --zone ${ZONE} \
-          --metadata shutdown-at=$(date -Iseconds -d+30minutes)
+        run: ./bin/set-lifetime.sh
       - name: Notify to Slack
         if: ${{ failure() }}
         run: |
-          . ./bin/env
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
               BRANCH_NAME=${GITHUB_HEAD_REF}
           else
@@ -119,9 +115,7 @@ jobs:
           }" ${{ secrets.SLACK_WEBHOOK_URL }}
       - name: Delete CI instance
         if: ${{ success() }}
-        run: |
-          . ./bin/env
-          $GCLOUD compute instances delete ${INSTANCE_NAME} --zone ${ZONE}
+        run: ./bin/delete-instance.sh
   compose:
     name: Compose test
     runs-on: ubuntu-24.04
@@ -133,10 +127,6 @@ jobs:
       - uses: flatt-security/setup-takumi-guard-golang@1c8aa7498f7f635fbd6ad6a0f436d03092b3502d # v1.1.0
         with:
           bot-id: ${{ vars.TAKUMI_GUARD_BOT_ID }}
-      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
-        with:
-          credentials_json: ${{ secrets.NECO_TEST_SERVICE_ACCOUNT }}
-      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
       - name: Check image consistency
         run: |
           REV=$(awk '/const Version/ {print $4}' ../version.go | sed -E 's/^"(1.[[:digit:]]+).*/\1/')

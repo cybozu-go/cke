@@ -14,7 +14,10 @@ $GCLOUD compute instances create ${INSTANCE_NAME} \
   --boot-disk-type ${DISK_TYPE} \
   --boot-disk-size ${BOOT_DISK_SIZE} \
   --local-ssd interface=nvme \
-  --local-ssd interface=nvme
+  --local-ssd interface=nvme \
+  --metadata block-project-ssh-keys=TRUE \
+  --no-service-account \
+  --no-scopes
 
 # Run multi-host test
 for i in $(seq 300); do
