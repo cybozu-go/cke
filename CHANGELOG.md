@@ -14,6 +14,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Clean up Makefile targets and CI steps in [#932](https://github.com/cybozu-go/cke/pull/932)
 - Refresh development and release procedures in [#934](https://github.com/cybozu-go/cke/pull/934)
 - Reorganize directories into cmd/ and internal/ in [#936](https://github.com/cybozu-go/cke/pull/936)
+- Clean up GCP settings in mtest in [#938](https://github.com/cybozu-go/cke/pull/938)
 
 ## [1.35.5]
 

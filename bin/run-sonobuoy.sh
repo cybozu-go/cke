@@ -23,7 +23,9 @@ $GCLOUD compute instances create ${INSTANCE_NAME}-0 \
   --image-family ubuntu-2404-lts-amd64 \
   --boot-disk-type ${DISK_TYPE} \
   --boot-disk-size ${BOOT_DISK_SIZE} \
-  --metadata shutdown-at=$(date -Iseconds -d+4hours)
+  --metadata shutdown-at=$(date -Iseconds -d+4hours),block-project-ssh-keys=TRUE \
+  --no-service-account \
+  --no-scopes
 
 cd $(dirname $0)/../sonobuoy
 make worker.ign
@@ -40,7 +42,9 @@ for i in $(seq 3); do
     --boot-disk-type ${DISK_TYPE} \
     --boot-disk-size ${BOOT_DISK_SIZE} \
     --metadata-from-file user-data=/tmp/worker.ign \
-    --metadata shutdown-at=$(date -Iseconds -d+4hours)
+    --metadata shutdown-at=$(date -Iseconds -d+4hours),block-project-ssh-keys=TRUE \
+    --no-service-account \
+    --no-scopes
 done
 
 trap delete_instance INT QUIT TERM 0
