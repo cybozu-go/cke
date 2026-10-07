@@ -38,12 +38,13 @@ func subMain() error {
 	}
 
 	images := make(map[string]string)
-	for _, img := range cke.AllImages() {
-		id, _, _ := strings.Cut(path.Base(img), ":")
+	for _, img := range cke.AllImages {
+		ref := img.FullRef()
+		id, _, _ := strings.Cut(path.Base(ref), ":")
 		if prev, ok := images[id]; ok {
-			return fmt.Errorf("image name %q is ambiguous: %s and %s", id, prev, img)
+			return fmt.Errorf("image name %q is ambiguous: %s and %s", id, prev, ref)
 		}
-		images[id] = img
+		images[id] = ref
 	}
 
 	var allResources []cke.ResourceDefinition
