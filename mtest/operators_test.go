@@ -93,12 +93,11 @@ func testOperators() {
 		By("Checking images are tagged with expected digest")
 		fullRefs := make([]string, 0, len(cke.AllImages))
 		digestRefs := make([]string, 0, len(cke.AllImages))
-		expectedTags := make(map[string]string, len(cke.AllImages)) // digest -> tagRef
+		tagRefs := make([]string, 0, len(cke.AllImages))
 		for _, img := range cke.AllImages {
 			fullRefs = append(fullRefs, img.FullRef())
 			digestRefs = append(digestRefs, img.DigestRef())
-			digest := strings.SplitN(img.DigestRef(), "@", 2)[1]
-			expectedTags[digest] = img.TagRef()
+			tagRefs = append(tagRefs, img.TagRef())
 		}
 		for _, n := range []string{node1, node2, node3, node4, node5} {
 			out := execSafeAt(n, "docker", "image", "list", "--digests", "--format={{.Repository}}:{{.Tag}}@{{.Digest}}")
@@ -125,22 +124,29 @@ func testOperators() {
 					"node %s: unexpected image pull: %s", n, pulled)
 			}
 
-			// All CKE images should have been tagged from the correct digest
+			// All tag events should create a CKE tag reference
 			out = execSafeAt(n, "docker", "system", "events",
 				"--since", "2020-01-01T00:00:00Z",
 				"--until", time.Now().UTC().Format(time.RFC3339),
 				"--filter", "type=image",
 				"--filter", "event=tag",
-				"--format", "{{.Actor.ID}} {{.Actor.Attributes.name}}") // <sha256:digest> <repo:tag>
-			for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
-				if line == "" {
+				"--format", "{{.Actor.Attributes.name}}") // <repo:tag>
+			for tagged := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
+				if tagged == "" {
 					continue
 				}
-				parts := strings.SplitN(line, " ", 2)
-				Expect(parts).To(HaveLen(2))
-				digest := parts[0]
-				actualTag := parts[1]
-				Expect(actualTag).To(Equal(expectedTags[digest]))
+				Expect(tagged).To(BeElementOf(tagRefs),
+					"node %s: unexpected image tag: %s", n, tagged)
+			}
+
+			// Every CKE tag reference present on the node should carry the pinned digest
+			for _, img := range cke.AllImages {
+				out, _, err := execAt(n, "docker", "image", "inspect", "--format", "'{{join .RepoDigests \",\"}}'", img.TagRef())
+				if err != nil {
+					continue // not pulled on this node
+				}
+				Expect(strings.Split(strings.TrimSpace(string(out)), ",")).To(ContainElement(img.DigestRef()),
+					"node %s: %s does not carry %s", n, img.TagRef(), img.DigestRef())
 			}
 		}
 

@@ -46,9 +46,9 @@ Loading an OCI layout archive with `ctr images import` and adding that name with
 Running containers
 ------------------
 
-All `docker run` invocations use:
+Every `docker run` invocation first calls `PullImage` for its image, and then uses:
 
-- `--pull=never` — prevents Docker from attempting a pull at run time; the image must already be present from `PullImage`.
+- `--pull=never` — prevents Docker from pulling by tag at run time; the image is present from `PullImage`.
 - `TagRef` as the image argument — works for both registry-pulled images (which have the tag) and `docker load` images (which lack a RepoDigest and cannot be addressed by digest).
 
 Air-gap environments

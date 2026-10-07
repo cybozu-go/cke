@@ -139,6 +139,10 @@ func (l localDocker) PullImage(img cke.Image) error {
 
 // Run runs a container as a foreground process.
 func (l localDocker) Run(img cke.Image, binds []cke.Mount, command string, args ...string) error {
+	if err := l.PullImage(img); err != nil {
+		return err
+	}
+
 	runArgs := []string{
 		"run",
 		"--log-driver=journald",
@@ -167,6 +171,10 @@ func (l localDocker) Run(img cke.Image, binds []cke.Mount, command string, args 
 
 // RunWithInput runs a container as a foreground process with stdin as a string.
 func (l localDocker) RunWithInput(img cke.Image, binds []cke.Mount, command, input string, args ...string) error {
+	if err := l.PullImage(img); err != nil {
+		return err
+	}
+
 	runArgs := []string{
 		"run",
 		"--log-driver=journald",
@@ -199,6 +207,10 @@ func (l localDocker) RunWithInput(img cke.Image, binds []cke.Mount, command, inp
 
 // RunWithOutput runs a container as a foreground process and get stdout and stderr.
 func (l localDocker) RunWithOutput(img cke.Image, binds []cke.Mount, command string, args ...string) ([]byte, []byte, error) {
+	if err := l.PullImage(img); err != nil {
+		return nil, nil, err
+	}
+
 	runArgs := []string{
 		"run",
 		"--log-driver=journald",
@@ -229,6 +241,10 @@ func (l localDocker) RunWithOutput(img cke.Image, binds []cke.Mount, command str
 
 // RunSystem runs the named container as a system service.
 func (l localDocker) RunSystem(name string, img cke.Image, opts []string, params cke.ServiceParams, extra cke.ServiceParams) error {
+	if err := l.PullImage(img); err != nil {
+		return err
+	}
+
 	args := []string{
 		"run",
 		"--rm",

@@ -89,6 +89,10 @@ func (c docker) PullImage(img Image) error {
 }
 
 func (c docker) Run(img Image, binds []Mount, command string, args ...string) error {
+	if err := c.PullImage(img); err != nil {
+		return err
+	}
+
 	runArgs := []string{
 		"docker",
 		"run",
@@ -114,6 +118,10 @@ func (c docker) Run(img Image, binds []Mount, command string, args ...string) er
 }
 
 func (c docker) RunWithInput(img Image, binds []Mount, command, input string, args ...string) error {
+	if err := c.PullImage(img); err != nil {
+		return err
+	}
+
 	runArgs := []string{
 		"docker",
 		"run",
@@ -139,6 +147,10 @@ func (c docker) RunWithInput(img Image, binds []Mount, command, input string, ar
 }
 
 func (c docker) RunWithOutput(img Image, binds []Mount, command string, args ...string) ([]byte, []byte, error) {
+	if err := c.PullImage(img); err != nil {
+		return nil, nil, err
+	}
+
 	runArgs := []string{
 		"docker",
 		"run",
@@ -165,6 +177,10 @@ func (c docker) RunWithOutput(img Image, binds []Mount, command string, args ...
 }
 
 func (c docker) RunSystem(name string, img Image, opts []string, params, extra ServiceParams) error {
+	if err := c.PullImage(img); err != nil {
+		return err
+	}
+
 	id, err := c.getID(name)
 	if err != nil {
 		return err
