@@ -1,5 +1,7 @@
 package cke
 
+import "strings"
+
 //go:generate go run ./hack/update-images
 
 // Image is a container image reference pinned to a digest.
@@ -26,4 +28,14 @@ func (i Image) TagRef() string {
 // DigestRef returns "repository@digest".
 func (i Image) DigestRef() string {
 	return i.repository + "@" + i.digest
+}
+
+// MatchesRunning reports whether running, the image recorded for a running
+// container, is this image. Containers started by older CKE record
+// "repository:tag" only and match by tag.
+func (i Image) MatchesRunning(running string) bool {
+	if strings.Contains(running, "@") {
+		return running == i.FullRef()
+	}
+	return running == i.TagRef()
 }

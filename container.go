@@ -52,6 +52,9 @@ type ContainerEngine interface {
 type ckeLabel struct {
 	BuiltInParams ServiceParams `json:"builtin"`
 	ExtraParams   ServiceParams `json:"extra"`
+	// Image is the digest-pinned reference the container was started with.
+	// docker reports only the tag reference given to docker run.
+	Image string `json:"image,omitempty"`
 }
 
 // Docker is an implementation of ContainerEngine.
@@ -234,6 +237,7 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 	label := ckeLabel{
 		BuiltInParams: params,
 		ExtraParams:   extra,
+		Image:         img.FullRef(),
 	}
 	data, err := json.Marshal(label)
 	if err != nil {
@@ -391,9 +395,13 @@ RETRY:
 		if err != nil {
 			return nil, err
 		}
+		image := params.Image
+		if image == "" {
+			image = dj.Config.Image
+		}
 		statuses[name] = ServiceStatus{
 			Running:       dj.State.Running,
-			Image:         dj.Config.Image,
+			Image:         image,
 			BuiltInParams: params.BuiltInParams,
 			ExtraParams:   params.ExtraParams,
 		}

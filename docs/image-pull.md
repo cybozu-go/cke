@@ -51,6 +51,13 @@ Every `docker run` invocation first calls `PullImage` for its image, and then us
 - `--pull=never` — prevents Docker from pulling by tag at run time; the image is present from `PullImage`.
 - `TagRef` as the image argument — works for both registry-pulled images (which have the tag) and `docker load` images (which lack a RepoDigest and cannot be addressed by digest).
 
+Outdated containers
+-------------------
+
+`RunSystem` records `FullRef` in the CKE label of the container, because docker reports only the reference given to `docker run`.
+CKE compares that label with the desired image, so a container is restarted when the pinned digest changes even if the tag does not.
+A container started by an older CKE has no such label and is compared by `TagRef`.
+
 Air-gap environments
 --------------------
 

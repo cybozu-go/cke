@@ -91,7 +91,7 @@ func (nf *NodeFilter) RiversOutdated(targets []*cke.Node) (nodes []*cke.Node) {
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
-		case cke.ToolsImage.TagRef() != st.Image:
+		case !cke.ToolsImage.MatchesRunning(st.Image):
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
@@ -122,7 +122,7 @@ func (nf *NodeFilter) EtcdRiversOutdated(targets []*cke.Node) (nodes []*cke.Node
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
-		case cke.ToolsImage.TagRef() != st.Image:
+		case !cke.ToolsImage.MatchesRunning(st.Image):
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
@@ -328,7 +328,7 @@ func (nf *NodeFilter) EtcdOutdatedMembers() (nodes []*cke.Node) {
 		}
 		currentBuiltIn := etcd.BuiltInParams(n, []string{}, "new")
 		switch {
-		case cke.EtcdImage.TagRef() != st.Image:
+		case !cke.EtcdImage.MatchesRunning(st.Image):
 			fallthrough
 		case !etcdEqualParams(st.BuiltInParams, currentBuiltIn):
 			fallthrough
@@ -393,7 +393,7 @@ func (nf *NodeFilter) APIServerOutdated(targets []*cke.Node) (nodes []*cke.Node)
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
-		case cke.KubernetesImage.TagRef() != st.Image:
+		case !cke.KubernetesImage.MatchesRunning(st.Image):
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
@@ -424,7 +424,7 @@ func (nf *NodeFilter) ControllerManagerOutdated(targets []*cke.Node) (nodes []*c
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
-		case cke.KubernetesImage.TagRef() != st.Image:
+		case !cke.KubernetesImage.MatchesRunning(st.Image):
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
@@ -458,7 +458,7 @@ func (nf *NodeFilter) SchedulerOutdated(targets []*cke.Node, params cke.Schedule
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
-		case cke.KubernetesImage.TagRef() != st.Image:
+		case !cke.KubernetesImage.MatchesRunning(st.Image):
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
@@ -525,7 +525,7 @@ func (nf *NodeFilter) KubeletOutdated(targets []*cke.Node) (nodes []*cke.Node) {
 			// stopped nodes are excluded
 		case kubeletRuntimeChanged(st.BuiltInParams, currentBuiltIn):
 			log.Warn("kubelet's container runtime cannot be changed", nil)
-		case cke.KubernetesImage.TagRef() != st.Image:
+		case !cke.KubernetesImage.MatchesRunning(st.Image):
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
@@ -649,7 +649,7 @@ func (nf *NodeFilter) ProxyOutdated(targets []*cke.Node, params cke.ProxyParams)
 		switch {
 		case !st.Running:
 			// stopped nodes are excluded
-		case cke.KubernetesImage.TagRef() != st.Image:
+		case !cke.KubernetesImage.MatchesRunning(st.Image):
 			fallthrough
 		case !currentBuiltIn.Equal(st.BuiltInParams):
 			fallthrough
