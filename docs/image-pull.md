@@ -21,7 +21,7 @@ All image definitions (e.g. `EtcdImage`, `KubernetesImage`) use this format and 
 PullImage behaviour
 -------------------
 
-Before pulling an image, CKE checks whether a suitable image is already present on the node using `docker image list --format '{{.Repository}}:{{.Tag}}@{{.Digest}}'`.
+Before pulling an image, CKE checks whether a suitable image is already present on the node using `docker image list --digests --format '{{.Repository}}:{{.Tag}}@{{.Digest}}'`.
 
 Each line of the output is compared against two conditions:
 
