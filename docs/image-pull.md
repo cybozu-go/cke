@@ -10,7 +10,7 @@ CKE manages container images using digest-pinned references in the form:
 repository:tag@sha256:<digest>
 ```
 
-All image constants (e.g. `EtcdImage`, `KubernetesImage`) are defined in this format and provide three accessors:
+All image definitions (e.g. `EtcdImage`, `KubernetesImage`) use this format and provide three accessors:
 
 | Method | Returns |
 |--------|---------|
