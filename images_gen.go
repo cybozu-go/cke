@@ -12,8 +12,7 @@ var (
 	UnboundExporterImage = newImage("ghcr.io/cybozu/unbound_exporter", "0.5.0.4", "sha256:a7d46220f43bf2ae0c81bbcb0b68801de2d60e87df298db4691ea0dd39b25593")
 )
 
-// AllImages is the list of all container images used by CKE.
-var AllImages = []Image{
+var allImages = []Image{
 	EtcdImage,
 	KubernetesImage,
 	ToolsImage,

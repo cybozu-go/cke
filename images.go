@@ -1,6 +1,9 @@
 package cke
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 //go:generate go run ./hack/update-images
 
@@ -28,6 +31,11 @@ func (i Image) TagRef() string {
 // DigestRef returns "repository@digest".
 func (i Image) DigestRef() string {
 	return i.repository + "@" + i.digest
+}
+
+// AllImages returns the list of all container images used by CKE.
+func AllImages() []Image {
+	return slices.Clone(allImages)
 }
 
 // MatchesRunning reports whether running, the image recorded for a running

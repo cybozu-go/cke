@@ -44,8 +44,7 @@ var (
 {{- end}}
 )
 
-// AllImages is the list of all container images used by CKE.
-var AllImages = []Image{
+var allImages = []Image{
 {{- range .}}
 	{{.Name}},
 {{- end}}

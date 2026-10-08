@@ -91,10 +91,11 @@ func testOperators() {
 		))
 
 		By("Checking images are tagged with expected digest")
-		fullRefs := make([]string, 0, len(cke.AllImages))
-		digestRefs := make([]string, 0, len(cke.AllImages))
-		tagRefs := make([]string, 0, len(cke.AllImages))
-		for _, img := range cke.AllImages {
+		allImages := cke.AllImages()
+		fullRefs := make([]string, 0, len(allImages))
+		digestRefs := make([]string, 0, len(allImages))
+		tagRefs := make([]string, 0, len(allImages))
+		for _, img := range allImages {
 			fullRefs = append(fullRefs, img.FullRef())
 			digestRefs = append(digestRefs, img.DigestRef())
 			tagRefs = append(tagRefs, img.TagRef())
@@ -140,7 +141,7 @@ func testOperators() {
 			}
 
 			// Every CKE tag reference present on the node should carry the pinned digest
-			for _, img := range cke.AllImages {
+			for _, img := range cke.AllImages() {
 				out, _, err := execAt(n, "docker", "image", "inspect", "--format", "'{{join .RepoDigests \",\"}}'", img.TagRef())
 				if err != nil {
 					continue // not pulled on this node

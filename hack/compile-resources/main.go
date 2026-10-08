@@ -38,7 +38,7 @@ func subMain() error {
 	}
 
 	images := make(map[string]string)
-	for _, img := range cke.AllImages {
+	for _, img := range cke.AllImages() {
 		ref := img.FullRef()
 		id, _, _ := strings.Cut(path.Base(ref), ":")
 		if prev, ok := images[id]; ok {
