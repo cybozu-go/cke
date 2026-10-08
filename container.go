@@ -52,6 +52,9 @@ type ContainerEngine interface {
 type ckeLabel struct {
 	BuiltInParams ServiceParams `json:"builtin"`
 	ExtraParams   ServiceParams `json:"extra"`
+	// Image is the digest-pinned reference the container was started with.
+	// docker reports only the tag reference given to docker run.
+	Image string `json:"image,omitempty"`
 }
 
 // Docker is an implementation of ContainerEngine.
@@ -64,27 +67,40 @@ type docker struct {
 }
 
 func (c docker) PullImage(img Image) error {
-	stdout, stderr, err := c.agent.Run("docker image list --format '{{.Repository}}:{{.Tag}}'")
+	stdout, stderr, err := c.agent.Run("docker image list --digests --format '{{.Repository}}:{{.Tag}}@{{.Digest}}'")
 	if err != nil {
 		return fmt.Errorf("%w, stdout: %s, stderr: %s", err, stdout, stderr)
 	}
 
-	if slices.Contains(strings.Split(string(stdout), "\n"), img.Name()) {
-		return nil
+	noDigest := img.TagRef() + "@<none>"
+	for line := range strings.SplitSeq(strings.TrimSpace(string(stdout)), "\n") {
+		// Accept if FullRef matches (registry pull) or image has no digest (docker load).
+		if line == img.FullRef() || line == noDigest {
+			return nil
+		}
 	}
 
-	stdout, stderr, err = c.agent.Run("docker image pull " + img.Name())
+	stdout, stderr, err = c.agent.Run("docker image pull " + img.DigestRef())
 	if err != nil {
-		return fmt.Errorf("%w, stdout: %s, stderr: %s", err, stdout, stderr)
+		return fmt.Errorf("docker image pull %s: %w, stdout: %s, stderr: %s", img.DigestRef(), err, stdout, stderr)
+	}
+	stdout, stderr, err = c.agent.Run("docker image tag " + img.DigestRef() + " " + img.TagRef())
+	if err != nil {
+		return fmt.Errorf("docker image tag %s %s: %w, stdout: %s, stderr: %s", img.DigestRef(), img.TagRef(), err, stdout, stderr)
 	}
 	return nil
 }
 
 func (c docker) Run(img Image, binds []Mount, command string, args ...string) error {
+	if err := c.PullImage(img); err != nil {
+		return err
+	}
+
 	runArgs := []string{
 		"docker",
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"--rm",
 		"--network=host",
 		"--uts=host",
@@ -97,7 +113,7 @@ func (c docker) Run(img Image, binds []Mount, command string, args ...string) er
 		}
 		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, img.TagRef(), command)
 	runArgs = append(runArgs, args...)
 
 	_, _, err := c.agent.Run(strings.Join(runArgs, " "))
@@ -105,10 +121,15 @@ func (c docker) Run(img Image, binds []Mount, command string, args ...string) er
 }
 
 func (c docker) RunWithInput(img Image, binds []Mount, command, input string, args ...string) error {
+	if err := c.PullImage(img); err != nil {
+		return err
+	}
+
 	runArgs := []string{
 		"docker",
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"--rm",
 		"-i",
 		"--network=host",
@@ -122,17 +143,22 @@ func (c docker) RunWithInput(img Image, binds []Mount, command, input string, ar
 		}
 		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, img.TagRef(), command)
 	runArgs = append(runArgs, args...)
 
 	return c.agent.RunWithInput(strings.Join(runArgs, " "), input)
 }
 
 func (c docker) RunWithOutput(img Image, binds []Mount, command string, args ...string) ([]byte, []byte, error) {
+	if err := c.PullImage(img); err != nil {
+		return nil, nil, err
+	}
+
 	runArgs := []string{
 		"docker",
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"--rm",
 		"--network=host",
 		"--uts=host",
@@ -145,7 +171,7 @@ func (c docker) RunWithOutput(img Image, binds []Mount, command string, args ...
 		}
 		runArgs = append(runArgs, fmt.Sprintf("--volume=%s:%s:%s", m.Source, m.Destination, o))
 	}
-	runArgs = append(runArgs, img.Name(), command)
+	runArgs = append(runArgs, img.TagRef(), command)
 	runArgs = append(runArgs, args...)
 
 	stdout, stderr, err := c.agent.Run(strings.Join(runArgs, " "))
@@ -154,6 +180,10 @@ func (c docker) RunWithOutput(img Image, binds []Mount, command string, args ...
 }
 
 func (c docker) RunSystem(name string, img Image, opts []string, params, extra ServiceParams) error {
+	if err := c.PullImage(img); err != nil {
+		return err
+	}
+
 	id, err := c.getID(name)
 	if err != nil {
 		return err
@@ -170,6 +200,7 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 		"docker",
 		"run",
 		"--log-driver=journald",
+		"--pull=never",
 		"-d",
 		"--name=" + name,
 		"--read-only",
@@ -206,6 +237,7 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 	label := ckeLabel{
 		BuiltInParams: params,
 		ExtraParams:   extra,
+		Image:         img.FullRef(),
 	}
 	data, err := json.Marshal(label)
 	if err != nil {
@@ -217,7 +249,7 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 	}
 	args = append(args, "--label-file="+labelFile)
 
-	args = append(args, img.Name())
+	args = append(args, img.TagRef())
 
 	args = append(args, params.ExtraArguments...)
 	args = append(args, extra.ExtraArguments...)
@@ -363,9 +395,13 @@ RETRY:
 		if err != nil {
 			return nil, err
 		}
+		image := params.Image
+		if image == "" {
+			image = dj.Config.Image
+		}
 		statuses[name] = ServiceStatus{
 			Running:       dj.State.Running,
-			Image:         dj.Config.Image,
+			Image:         image,
 			BuiltInParams: params.BuiltInParams,
 			ExtraParams:   params.ExtraParams,
 		}

@@ -24,7 +24,7 @@ func decideOps(c *cke.Cluster, currentAP string, st *status) (newAP string, ops 
 	if !st.proxyRunning {
 		ops = append(ops, k8s.KubeProxyBootOp(ckeNodes, c.Name, apURL, c.Options.Proxy))
 	} else {
-		if newAP != currentAP || st.proxyImage != cke.KubernetesImage.Name() {
+		if newAP != currentAP || !cke.KubernetesImage.MatchesRunning(st.proxyImage) {
 			ops = append(ops, k8s.KubeProxyRestartOp(ckeNodes, c.Name, apURL, c.Options.Proxy))
 		}
 	}
@@ -34,7 +34,7 @@ func decideOps(c *cke.Cluster, currentAP string, st *status) (newAP string, ops 
 		return
 	}
 
-	if !bytes.Equal(st.unboundConf, st.desiredUnboundConf) || st.unboundImage != cke.UnboundImage.Name() {
+	if !bytes.Equal(st.unboundConf, st.desiredUnboundConf) || !cke.UnboundImage.MatchesRunning(st.unboundImage) {
 		ops = append(ops, &unboundRestartOp{conf: st.desiredUnboundConf})
 	}
 

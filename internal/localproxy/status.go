@@ -2,6 +2,7 @@ package localproxy
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -33,19 +34,30 @@ var dialer = &net.Dialer{
 	Timeout: 5 * time.Second,
 }
 
+// isRunning returns whether the container named name is running and its image.
+// The image is the digest-pinned reference recorded in the CKE label when the
+// container was started by this version, or the tag reference otherwise.
 func isRunning(name string) (bool, string, error) {
-	stdout, err := exec.Command("docker", "ps", "--format={{.Names}} {{.Image}}").Output()
+	stdout, err := exec.Command("docker", "ps", "--format={{.Names}}\t{{.Image}}\t{{.Label \""+cke.CKELabelName+"\"}}").Output()
 	if err != nil {
 		return false, "", fmt.Errorf("failed to run docker ps: %w", err)
 	}
 
 	for line := range strings.SplitSeq(string(stdout), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) != 2 {
+		fields := strings.SplitN(line, "\t", 3)
+		if len(fields) != 3 || fields[0] != name {
 			continue
 		}
-		if fields[0] != name {
-			continue
+		var label struct {
+			Image string `json:"image"`
+		}
+		if fields[2] != "" {
+			if err := json.Unmarshal([]byte(fields[2]), &label); err != nil {
+				return false, "", fmt.Errorf("failed to parse the CKE label of %s: %w", name, err)
+			}
+		}
+		if label.Image != "" {
+			return true, label.Image, nil
 		}
 		return true, fields[1], nil
 	}
