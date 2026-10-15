@@ -40,8 +40,12 @@ Kubernetes resources
 --------------------
 
 Pods deployed by CKE (cluster-dns, node-dns) reference images by `FullRef`.
-containerd resolves such a reference by digest only, so an image pre-loaded on a node is used only when it is named `repository@sha256:<digest>` with the registry digest.
-Loading an OCI layout archive with `ctr images import` and adding that name with `ctr images tag` satisfies this; a Docker legacy archive does not keep the registry digest.
+containerd resolves such a reference by digest only.
+
+CKE does not load images onto nodes.
+If users pre-load images onto nodes, an image is used only when containerd stores it under the name `<repository>@sha256:<digest>` with the registry digest.
+Otherwise, the image is pulled from the registry.
+A Docker legacy archive does not keep the registry digest, while an OCI image layout does.
 
 Running containers
 ------------------
@@ -61,7 +65,7 @@ A container started by an older CKE has no such label and is compared by `TagRef
 Air-gap environments
 --------------------
 
-In air-gapped environments, images are pre-loaded onto nodes via `docker load` from a tar archive. These images have a tag but no RepoDigest.
+Users may pre-load images onto nodes with `docker load`, for example in air-gapped environments. These images have a tag but no RepoDigest.
 
 This holds for the classic (graphdriver) image store. With the containerd image store, `docker load` assigns a digest computed from the loaded archive, which differs from the registry digest. Such an image matches neither condition above and is pulled again from the registry.
 
