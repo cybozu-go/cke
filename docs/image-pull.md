@@ -7,16 +7,16 @@ Image reference format
 CKE manages container images using digest-pinned references in the form:
 
 ```
-repository:tag@sha256:<digest>
+<repository>:<tag>@sha256:<digest>
 ```
 
 All image definitions (e.g. `EtcdImage`, `KubernetesImage`) use this format and provide three accessors:
 
 | Method | Returns |
 |--------|---------|
-| `FullRef()` | `repository:tag@sha256:<digest>` |
-| `TagRef()` | `repository:tag` |
-| `DigestRef()` | `repository@sha256:<digest>` |
+| `FullRef()` | `<repository>:<tag>@sha256:<digest>` |
+| `TagRef()` | `<repository>:<tag>` |
+| `DigestRef()` | `<repository>@sha256:<digest>` |
 
 PullImage behaviour
 -------------------
