@@ -70,9 +70,7 @@ func testLocalProxy() {
 
 			// docker run is given the tag reference; the pinned reference is recorded in the CKE label.
 			Expect(inspect.Config.Image).To(Equal(img.TagRef()), "container %s", inspect.Name)
-			var label struct {
-				Image string `json:"image"`
-			}
+			var label cke.CKELabel
 			Expect(json.Unmarshal([]byte(inspect.Config.Labels[cke.CKELabelName]), &label)).To(Succeed(), "container %s", inspect.Name)
 			Expect(label.Image).To(Equal(img.FullRef()), "container %s", inspect.Name)
 		}

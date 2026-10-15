@@ -280,13 +280,7 @@ func (l localDocker) RunSystem(name string, img cke.Image, opts []string, params
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
 
-	type ckeLabel struct {
-		BuiltInParams cke.ServiceParams `json:"builtin"`
-		ExtraParams   cke.ServiceParams `json:"extra"`
-		Image         string            `json:"image,omitempty"`
-	}
-
-	label := ckeLabel{
+	label := cke.CKELabel{
 		BuiltInParams: params,
 		ExtraParams:   extra,
 		Image:         img.FullRef(),

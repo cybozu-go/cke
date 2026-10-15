@@ -48,9 +48,7 @@ func isRunning(name string) (bool, string, error) {
 		if len(fields) != 3 || fields[0] != name {
 			continue
 		}
-		var label struct {
-			Image string `json:"image"`
-		}
+		var label cke.CKELabel
 		if fields[2] != "" {
 			if err := json.Unmarshal([]byte(fields[2]), &label); err != nil {
 				return false, "", fmt.Errorf("failed to parse the CKE label of %s: %w", name, err)

@@ -49,7 +49,8 @@ type ContainerEngine interface {
 	VolumeExists(name string) (bool, error)
 }
 
-type ckeLabel struct {
+// CKELabel is the value of the CKELabelName label of a container run by CKE.
+type CKELabel struct {
 	BuiltInParams ServiceParams `json:"builtin"`
 	ExtraParams   ServiceParams `json:"extra"`
 	// Image is the digest-pinned reference the container was started with.
@@ -234,7 +235,7 @@ func (c docker) RunSystem(name string, img Image, opts []string, params, extra S
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
 
-	label := ckeLabel{
+	label := CKELabel{
 		BuiltInParams: params,
 		ExtraParams:   extra,
 		Image:         img.FullRef(),
@@ -388,7 +389,7 @@ RETRY:
 	for _, dj := range djs {
 		name := strings.TrimPrefix(dj.Name, "/")
 
-		var params ckeLabel
+		var params CKELabel
 		label := dj.Config.Labels[CKELabelName]
 
 		err = json.Unmarshal([]byte(label), &params)
