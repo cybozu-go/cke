@@ -18,7 +18,7 @@ var imagesCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {},
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, img := range cke.AllImages() {
-			fmt.Println(img)
+			fmt.Println(img.FullRef())
 		}
 	},
 }

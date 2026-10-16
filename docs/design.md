@@ -85,6 +85,7 @@ Implementation policies
 * CKE does not install any tools onto node OS other than containers.
 
     * `kubelet` or other system services run by `docker run`.
+    * Images are identified by digest-pinned references (`repository:tag@sha256:...`). Before running a container, CKE pulls the image if not already present. See [image pull specification](image-pull.md) for details.
 
 * CKE employs CNI network plugins.
 
