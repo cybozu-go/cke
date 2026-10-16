@@ -168,6 +168,7 @@ Show operation history.
 ## `ckecli images`
 
 List container image names used by `cke`.
+Each line has the form `<repository>:<tag>@<digest>`.
 
 ## `ckecli etcd`
 
