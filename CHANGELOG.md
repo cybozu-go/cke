@@ -6,6 +6,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.35.6]
+
 ### Changed
 
 - Add update-images tool in [#929](https://github.com/cybozu-go/cke/pull/929)
@@ -15,6 +17,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Refresh development and release procedures in [#934](https://github.com/cybozu-go/cke/pull/934)
 - Reorganize directories into cmd/ and internal/ in [#936](https://github.com/cybozu-go/cke/pull/936)
 - Clean up GCP settings in mtest in [#938](https://github.com/cybozu-go/cke/pull/938)
+- **BREAKING** Pin container images to digest and automate updates; `ckecli images` now prints `<repository>:<tag>@<digest>` instead of `<repository>:<tag>` in [#884](https://github.com/cybozu-go/cke/pull/884)
 
 ## [1.35.5]
 
@@ -115,7 +118,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.35.5...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.35.6...HEAD
+[1.35.6]: https://github.com/cybozu-go/cke/compare/v1.35.5...v1.35.6
 [1.35.5]: https://github.com/cybozu-go/cke/compare/v1.35.4...v1.35.5
 [1.35.4]: https://github.com/cybozu-go/cke/compare/v1.35.3...v1.35.4
 [1.35.3]: https://github.com/cybozu-go/cke/compare/v1.35.2...v1.35.3
