@@ -12,6 +12,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Run mtest on draft pull requests in [#943](https://github.com/cybozu-go/cke/pull/943)
 - Use constants for the API server and etcd ports and resource names in [#944](https://github.com/cybozu-go/cke/pull/944)
 - Update dependencies to fix vulnerabilities in [#946](https://github.com/cybozu-go/cke/pull/946)
+- Update etcd, kubernetes, pause and coredns images in [#941](https://github.com/cybozu-go/cke/pull/941)
 
 ## [1.35.6]
 
