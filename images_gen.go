@@ -8,7 +8,7 @@ var (
 	ToolsImage           = newImage("ghcr.io/cybozu-go/cke-tools", "1.35.0", "sha256:3f0365cf68834dc9e2e082ec901495cae41c8cfc5dcaa9c3a2062d4b50a66f82")
 	PauseImage           = newImage("ghcr.io/cybozu/pause", "3.10.1.5", "sha256:3565a5a085d941c10ef86aaf2bfdaabc8c0f8677d55b2371dce472eb79a79d08")
 	CoreDNSImage         = newImage("ghcr.io/cybozu/coredns", "1.14.2.1", "sha256:e29066d55b9455fdba973ceb6f77232677de15263cc1c78f63707935adc01a14")
-	UnboundImage         = newImage("ghcr.io/cybozu/unbound", "1.25.2.1", "sha256:1a99957ea245ee81dfc1aa8e98bc063913151f48e3cc364a7bf6f9dd1b882577")
+	UnboundImage         = newImage("ghcr.io/cybozu/unbound", "1.25.2.1", "sha256:30d6af94b4243bf0b1d2a559d44cf14a0cc8fb5f8c1551988bf8d55b8fa266b7")
 	UnboundExporterImage = newImage("ghcr.io/cybozu/unbound_exporter", "0.5.0.4", "sha256:a7d46220f43bf2ae0c81bbcb0b68801de2d60e87df298db4691ea0dd39b25593")
 )
 
