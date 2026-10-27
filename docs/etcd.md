@@ -61,14 +61,12 @@ Since CKE automatically adds or removes etcd members, applications need
 to change the list of etcd endpoints.  To help applications running on
 Kubernetes, CKE exports the endpoint list as a Kubernetes resource.
 
-[`Endpoints`][Endpoints] is a Kubernetes resource to list service endpoints.
-CKE creates and maintains an `Endpoints` resource named `cke-etcd` in `kube-system` namespace.
-It also maintains an [`EndpointSlice`][EndpointSlice] resource with the same name in the same namespace.
+CKE creates and maintains an [`EndpointSlice`][EndpointSlice] resource named `cke-etcd` in `kube-system` namespace.
+Since CKE 1.36.0, CKE does not maintain the deprecated `Endpoints` resource, and deletes the one created by CKE 1.35.x or earlier.
 
 To view the contents, use `kubectl` as follows:
 
 ```console
-$ kubectl -n kube-system get endpoints/cke-etcd -o yaml
 $ kubectl -n kube-system get endpointslices/cke-etcd -o yaml
 ```
 
@@ -122,5 +120,4 @@ Read [ckecli.md](ckecli.md##ckecli-etcd-local-backup) about the usage.
 [etcd]: https://github.com/etcd-io/etcd
 [RBAC]: https://github.com/etcd-io/etcd/blob/master/Documentation/op-guide/authentication.md
 [DataCorruption]: https://etcd.io/docs/v3.6/op-guide/data_corruption/
-[Endpoints]: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
 [EndpointSlice]: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/

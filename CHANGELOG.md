@@ -11,6 +11,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Remove admissionregistration v1beta1 support from CA injection in [#942](https://github.com/cybozu-go/cke/pull/942)
 - Run mtest on draft pull requests in [#943](https://github.com/cybozu-go/cke/pull/943)
 - Use constants for the API server and etcd ports and resource names in [#944](https://github.com/cybozu-go/cke/pull/944)
+- **BREAKING** Stop maintaining `default/kubernetes` and `kube-system/cke-etcd` Endpoints and delete existing ones; use EndpointSlices instead in [#945](https://github.com/cybozu-go/cke/pull/945)
 
 ## [1.35.6]
 

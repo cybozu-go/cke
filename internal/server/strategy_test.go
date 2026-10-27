@@ -407,26 +407,6 @@ func (d testData) withK8sReady() testData {
 }
 
 func (d testData) withMasterEndpoint() testData {
-	//nolint:staticcheck // code for Endpoints will be removed later
-	d.Status.Kubernetes.MasterEndpoints = &corev1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				"endpointslice.kubernetes.io/skip-mirror": "true",
-			},
-		},
-		//nolint:staticcheck // code for Endpoints will be removed later
-		Subsets: []corev1.EndpointSubset{
-			{
-				Addresses: []corev1.EndpointAddress{
-					{IP: "10.0.0.11"},
-					{IP: "10.0.0.12"},
-					{IP: "10.0.0.13"},
-				},
-				Ports: []corev1.EndpointPort{{Name: "https", Port: 6443}},
-			},
-		},
-	}
-
 	d.Status.Kubernetes.MasterEndpointSlice = &discoveryv1.EndpointSlice{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
@@ -464,26 +444,6 @@ func (d testData) withEtcdEndpoint() testData {
 		},
 	}
 
-	//nolint:staticcheck // code for Endpoints will be removed later
-	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				"endpointslice.kubernetes.io/skip-mirror": "true",
-			},
-		},
-		//nolint:staticcheck // code for Endpoints will be removed later
-		Subsets: []corev1.EndpointSubset{
-			{
-				Addresses: []corev1.EndpointAddress{
-					{IP: "10.0.0.11"},
-					{IP: "10.0.0.12"},
-					{IP: "10.0.0.13"},
-				},
-				Ports: []corev1.EndpointPort{{Port: 2379}},
-			},
-		},
-	}
-
 	d.Status.Kubernetes.EtcdEndpointSlice = &discoveryv1.EndpointSlice{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
@@ -514,18 +474,12 @@ func (d testData) withEtcdEndpoint() testData {
 
 func (d testData) withNotReadyMasterEndpoint(i int) testData {
 	// No need to check the range of `i`. If it's invalid, just panic.
-	origAddrs := d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses
-	d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = slices.Delete(slices.Clone(origAddrs), i, i+1)
-	d.Status.Kubernetes.MasterEndpoints.Subsets[0].NotReadyAddresses = origAddrs[i : i+1]
 	d.Status.Kubernetes.MasterEndpointSlice.Endpoints[i].Conditions.Ready = new(false)
 	return d
 }
 
 func (d testData) withNotReadyEtcdEndpoint(i int) testData {
 	// No need to check the range of `i`. If it's invalid, just panic.
-	origAddrs := d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses
-	d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = slices.Delete(slices.Clone(origAddrs), i, i+1)
-	d.Status.Kubernetes.EtcdEndpoints.Subsets[0].NotReadyAddresses = origAddrs[i : i+1]
 	d.Status.Kubernetes.EtcdEndpointSlice.Endpoints[i].Conditions.Ready = new(false)
 	return d
 }
@@ -891,8 +845,7 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withRivers().withEtcdRivers().withHealthyEtcd().
 				withAPIServer(testServiceSubnet, testDefaultDNSDomain),
 			ExpectedOps: []opData{
-				// When all kube-apiservers are healthy, create the kubernetes endpoint and start other components.
-				{"create-kubernetes-endpoints", 1},
+				// When all kube-apiservers are healthy, create the kubernetes endpointslice and start other components.
 				{"create-kubernetes-endpointslice", 1},
 				{"kube-controller-manager-bootstrap", 3},
 				{"kube-scheduler-bootstrap", 3},
@@ -920,8 +873,7 @@ func TestDecideOps(t *testing.T) {
 				withAPIServer(testServiceSubnet, testDefaultDNSDomain).withMasterEndpoint().
 				withSSHNotConnectedCP(1),
 			ExpectedOps: []opData{
-				// When an unreachable control plane node exists, update the kubernetes endpoint.
-				{"update-kubernetes-endpoints", 1},
+				// When an unreachable control plane node exists, update the kubernetes endpointslice.
 				{"update-kubernetes-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
@@ -954,7 +906,6 @@ func TestDecideOps(t *testing.T) {
 			ExpectedOps: []opData{
 				// In this case, all kube-apiservers will be updated.
 				// But only one running kube-apiserver is updated per operation.
-				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
 				{"kube-apiserver-restart", 1}, // just one
 			},
@@ -977,7 +928,6 @@ func TestDecideOps(t *testing.T) {
 				d.NodeStatus(d.ControlPlane()[2]).APIServer.ExtraParams.ExtraArguments = []string{"foo"} // outdated params
 			}).withNotReadyMasterEndpoint(0),
 			ExpectedOps: []opData{
-				{"update-kubernetes-endpoints", 1}, // CP[0]: NotReady -> Ready, CP[1]: Ready -> NotReady
 				{"update-kubernetes-endpointslice", 1},
 				{"kube-apiserver-restart", 1}, // CP[1]
 			},
@@ -993,7 +943,6 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []opData{
 				// Start all stopped kube-apiservers at once.
-				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
 				{"kube-apiserver-restart", 2}, // CP[1], CP[2]
 			},
@@ -1009,7 +958,6 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []opData{
 				// Update all outdated and unhealhy kube-apiservers at once.
-				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
 				{"kube-apiserver-restart", 2}, // CP[0], CP[1]
 			},
@@ -1024,7 +972,6 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []opData{
 				// Don't update healthy kube-apiservers, when stopped exists.
-				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
 				{"kube-apiserver-restart", 1}, // CP[0](stopped)
 			},
@@ -1473,7 +1420,6 @@ func TestDecideOps(t *testing.T) {
 				{"resource-apply", 1},
 				{"create-cluster-dns-configmap", 1},
 				{"create-etcd-service", 1},
-				{"create-cke-etcd-endpoints", 1},
 				{"create-cke-etcd-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sMaintain,
@@ -1498,7 +1444,6 @@ func TestDecideOps(t *testing.T) {
 			}),
 			ExpectedOps: []opData{
 				// In this case, all apiservers must be updated. But only one running CP is updated per operation.
-				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
 				{"kube-apiserver-restart", 1},
 			},
@@ -1550,29 +1495,27 @@ func TestDecideOps(t *testing.T) {
 			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
-			Name: "MasterEndpointsUpdate",
+			Name: "MasterEndpointsDelete",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				//nolint:staticcheck // code for Endpoints will be removed later
-				d.Status.Kubernetes.MasterEndpoints.Subsets = []corev1.EndpointSubset{}
+				d.Status.Kubernetes.MasterEndpoints = &corev1.Endpoints{}
 			}),
-			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
-			ExpectedPhase: cke.PhaseK8sStart,
+			ExpectedOps:   []opData{{"delete-kubernetes-endpoints", 1}},
+			ExpectedPhase: cke.PhaseUpgrade,
 		},
 		{
-			Name: "MasterEndpointsUpdate2",
+			Name: "EndpointsDeleteBoth",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
-				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Ports = []corev1.EndpointPort{}
+				//nolint:staticcheck // code for Endpoints will be removed later
+				d.Status.Kubernetes.MasterEndpoints = &corev1.Endpoints{}
+				//nolint:staticcheck // code for Endpoints will be removed later
+				d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{}
 			}),
-			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
-			ExpectedPhase: cke.PhaseK8sStart,
-		},
-		{
-			Name: "MasterEndpointsUpdate3",
-			Input: newData().withK8sResourceReady().with(func(d testData) {
-				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
-			}),
-			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
-			ExpectedPhase: cke.PhaseK8sStart,
+			ExpectedOps: []opData{
+				{"delete-kubernetes-endpoints", 1},
+				{"delete-cke-etcd-endpoints", 1},
+			},
+			ExpectedPhase: cke.PhaseUpgrade,
 		},
 		{
 			Name: "MasterEndpointSliceUpdate",
@@ -1599,29 +1542,13 @@ func TestDecideOps(t *testing.T) {
 			ExpectedPhase: cke.PhaseK8sMaintain,
 		},
 		{
-			Name: "EtcdEndpointsUpdate",
+			Name: "EtcdEndpointsDelete",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				//nolint:staticcheck // code for Endpoints will be removed later
-				d.Status.Kubernetes.EtcdEndpoints.Subsets = []corev1.EndpointSubset{}
+				d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{}
 			}),
-			ExpectedOps:   []opData{{"update-cke-etcd-endpoints", 1}},
-			ExpectedPhase: cke.PhaseK8sMaintain,
-		},
-		{
-			Name: "EtcdEndpointsUpdate2",
-			Input: newData().withK8sResourceReady().with(func(d testData) {
-				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Ports = []corev1.EndpointPort{}
-			}),
-			ExpectedOps:   []opData{{"update-cke-etcd-endpoints", 1}},
-			ExpectedPhase: cke.PhaseK8sMaintain,
-		},
-		{
-			Name: "EtcdEndpointsUpdate3",
-			Input: newData().withK8sResourceReady().with(func(d testData) {
-				d.Status.Kubernetes.EtcdEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{}
-			}),
-			ExpectedOps:   []opData{{"update-cke-etcd-endpoints", 1}},
-			ExpectedPhase: cke.PhaseK8sMaintain,
+			ExpectedOps:   []opData{{"delete-cke-etcd-endpoints", 1}},
+			ExpectedPhase: cke.PhaseUpgrade,
 		},
 		{
 			Name: "EtcdEndpointSliceUpdate",
@@ -1645,7 +1572,6 @@ func TestDecideOps(t *testing.T) {
 				{Index: 1, Node: nodeNames[0], Status: cke.RebootStatusDraining},
 			}),
 			ExpectedOps: []opData{
-				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
@@ -1656,7 +1582,6 @@ func TestDecideOps(t *testing.T) {
 				{Index: 1, Node: nodeNames[0], Status: cke.RebootStatusDraining},
 			}).withNotReadyMasterEndpoint(0),
 			ExpectedOps: []opData{
-				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sMaintain,
@@ -1677,7 +1602,6 @@ func TestDecideOps(t *testing.T) {
 				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
 			}),
 			ExpectedOps: []opData{
-				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
@@ -1690,7 +1614,6 @@ func TestDecideOps(t *testing.T) {
 				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
 			}).withNotReadyMasterEndpoint(2),
 			ExpectedOps: []opData{
-				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sMaintain,
@@ -1739,7 +1662,6 @@ func TestDecideOps(t *testing.T) {
 			Name:  "RestoreEndpoints",
 			Input: newData().withK8sResourceReady().withNotReadyMasterEndpoint(1),
 			ExpectedOps: []opData{
-				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
@@ -1748,7 +1670,6 @@ func TestDecideOps(t *testing.T) {
 			Name:  "RestoreEndpoints2",
 			Input: newData().withK8sResourceReady().withNotReadyEtcdEndpoint(2),
 			ExpectedOps: []opData{
-				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sMaintain,
@@ -1761,9 +1682,7 @@ func TestDecideOps(t *testing.T) {
 				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusCancelled},
 			}).withNotReadyMasterEndpoint(2),
 			ExpectedOps: []opData{
-				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
-				// {"update-cke-etcd-endpoints", 1},
 				// {"update-cke-etcd-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
@@ -1776,7 +1695,6 @@ func TestDecideOps(t *testing.T) {
 				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusCancelled},
 			}).withNotReadyEtcdEndpoint(2),
 			ExpectedOps: []opData{
-				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sMaintain,
@@ -1787,7 +1705,6 @@ func TestDecideOps(t *testing.T) {
 				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusRebooting},
 			}).withNotReadyMasterEndpoint(2).withRebootDisabled(),
 			ExpectedOps: []opData{
-				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
@@ -1798,7 +1715,6 @@ func TestDecideOps(t *testing.T) {
 				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusRebooting},
 			}).withNotReadyEtcdEndpoint(2).withRebootDisabled(),
 			ExpectedOps: []opData{
-				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sMaintain,
@@ -1811,7 +1727,6 @@ func TestDecideOps(t *testing.T) {
 				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
 			}).withNotReadyMasterEndpoint(2).withRebootDisabled(),
 			ExpectedOps: []opData{
-				{"update-kubernetes-endpoints", 1},
 				{"update-kubernetes-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sStart,
@@ -1824,7 +1739,6 @@ func TestDecideOps(t *testing.T) {
 				{Index: 1, Node: nodeNames[2], Status: cke.RebootStatusQueued},
 			}).withNotReadyEtcdEndpoint(2).withRebootDisabled(),
 			ExpectedOps: []opData{
-				{"update-cke-etcd-endpoints", 1},
 				{"update-cke-etcd-endpointslice", 1},
 			},
 			ExpectedPhase: cke.PhaseK8sMaintain,

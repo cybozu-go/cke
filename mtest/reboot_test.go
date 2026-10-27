@@ -656,7 +656,7 @@ func testRebootOperations() {
 
 			Expect(apiServerInProgress).Should(BeNumerically("<=", 1), "API servers should be processed one by one")
 
-			// Both default/kubernetes and kube-system/cke-etcd Endpoints should have no less than two endpoints during API server reboots.
+			// Both default/kubernetes and kube-system/cke-etcd EndpointSlices should have no less than two endpoints during API server reboots.
 			epNames := []struct {
 				name      string
 				namespace string
@@ -666,20 +666,9 @@ func testRebootOperations() {
 					namespace: metav1.NamespaceDefault,
 				},
 				{
-					name:      op.EtcdEndpointsName,
+					name:      op.EtcdEndpointSliceName,
 					namespace: metav1.NamespaceSystem,
 				},
-			}
-			for _, epName := range epNames {
-				out, _, err := kubectl("get", "endpoints", "-n", epName.namespace, epName.name, "-o=json")
-				Expect(err).ShouldNot(HaveOccurred())
-
-				//nolint:staticcheck // code for Endpoints will be removed later
-				var ep corev1.Endpoints
-				err = json.Unmarshal(out, &ep)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(ep.Subsets).Should(HaveLen(1))
-				Expect(len(ep.Subsets[0].Addresses)).Should(BeNumerically(">=", 2))
 			}
 			for _, epName := range epNames {
 				out, _, err := kubectl("get", "endpointslices", "-n", epName.namespace, epName.name, "-o=json")
