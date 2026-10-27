@@ -26,6 +26,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
         - sonobuoy 0.57.5
         - docker compose 5.7.0
         - cilium 1.20.4
+- **BREAKING** Stop maintaining `default/kubernetes` and `kube-system/cke-etcd` Endpoints and delete existing ones; use EndpointSlices instead in [#945](https://github.com/cybozu-go/cke/pull/945)
 
 ## Ancient changes
 

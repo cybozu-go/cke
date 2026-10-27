@@ -14,8 +14,8 @@ a Kubernetes cluster bootstrapped by CKE.
 - [Pre-installed Kubernetes resources](#pre-installed-kubernetes-resources)
   - [Service accounts](#service-accounts)
   - [RBAC roles](#rbac-roles)
-  - [Kubernetes Endpoints](#kubernetes-endpoints)
-  - [Etcd Endpoints](#etcd-endpoints)
+  - [Kubernetes EndpointSlice](#kubernetes-endpointslice)
+  - [Etcd EndpointSlice](#etcd-endpointslice)
 - [Unchangeable features](#unchangeable-features)
 - [Default settings](#default-settings)
 
@@ -138,14 +138,14 @@ CKE installs and maintains following Kubernetes resources other than DNS ones.
 
 `psp:cluster-dns` is a Role in `kube-system` to associate pod security policy with `cluster-dns` service account.
 
-### Kubernetes Endpoints
+### Kubernetes EndpointSlice
 
-`kubernetes` Endpoints object and `kubernetes` EndpointSlice object, both in `default` namespace, represent the endpoints of the API servers.
-CKE maintains these objects on behalf of the API servers.
+`kubernetes` EndpointSlice object in `default` namespace represents the endpoints of the API servers.
+CKE maintains this object on behalf of the API servers.
 
-### Etcd Endpoints
+### Etcd EndpointSlice
 
-`cke-etcd` in `kube-system` namespace is a headless [Service](https://kubernetes.io/docs/concepts/services-networking/service/), [Endpoints](https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors) and [EndpointSlice](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/) to help applications find endpoints of CKE maintained etcd cluster.
+`cke-etcd` in `kube-system` namespace is a headless [Service](https://kubernetes.io/docs/concepts/services-networking/service/) and [EndpointSlice](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/) to help applications find endpoints of CKE maintained etcd cluster.
 
 ## Unchangeable features
 
