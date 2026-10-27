@@ -6,6 +6,10 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Remove admissionregistration v1beta1 support from CA injection in [#942](https://github.com/cybozu-go/cke/pull/942)
+
 ## [1.35.6]
 
 ### Changed
