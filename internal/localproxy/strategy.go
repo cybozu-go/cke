@@ -2,7 +2,6 @@ package localproxy
 
 import (
 	"bytes"
-	"fmt"
 	"slices"
 
 	"github.com/cybozu-go/cke"
@@ -19,7 +18,7 @@ func decideOps(c *cke.Cluster, currentAP string, st *status) (newAP string, ops 
 		newAP = currentAP
 	}
 
-	apURL := fmt.Sprintf("https://%s:6443", newAP)
+	apURL := cke.APIServerURL(newAP)
 
 	if !st.proxyRunning {
 		ops = append(ops, k8s.KubeProxyBootOp(ckeNodes, c.Name, apURL, c.Options.Proxy))

@@ -111,19 +111,19 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 func riversOps(c *cke.Cluster, nf *NodeFilter, maxConcurrentUpdates int) (ops []cke.Operator) {
 	if nodes := nf.SSHConnected(nf.RiversStopped(nf.AllNodes())); len(nodes) > 0 {
 		max := min(len(nodes), maxConcurrentUpdates)
-		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
+		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, cke.APIServerPort, cke.RiversListenPort))
 	}
 	if nodes := nf.SSHConnected(nf.RiversOutdated(nf.AllNodes())); len(nodes) > 0 {
 		max := min(len(nodes), maxConcurrentUpdates)
-		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, op.RiversUpstreamPort, op.RiversListenPort))
+		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.Rivers, op.RiversContainerName, cke.APIServerPort, cke.RiversListenPort))
 	}
 	if nodes := nf.SSHConnected(nf.EtcdRiversStopped(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		max := min(len(nodes), maxConcurrentUpdates)
-		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
+		ops = append(ops, op.RiversBootOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, cke.EtcdClientPort, cke.EtcdRiversListenPort))
 	}
 	if nodes := nf.SSHConnected(nf.EtcdRiversOutdated(nf.ControlPlaneNodes())); len(nodes) > 0 {
 		max := min(len(nodes), maxConcurrentUpdates)
-		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort))
+		ops = append(ops, op.RiversRestartOp(nodes[:max], nf.ControlPlaneNodes(), c.Options.EtcdRivers, op.EtcdRiversContainerName, cke.EtcdClientPort, cke.EtcdRiversListenPort))
 	}
 	return ops
 }
@@ -377,12 +377,12 @@ func masterEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter, ma
 
 	ep := &endpointParams{}
 	ep.namespace = metav1.NamespaceDefault
-	ep.name = "kubernetes"
+	ep.name = op.KubernetesEndpointsName
 	ep.readyIPs = readyIPs
 	ep.notReadyIPs = notReadyIPs
 	ep.portName = "https"
-	ep.port = 6443
-	ep.serviceName = "kubernetes"
+	ep.port = cke.APIServerPort
+	ep.serviceName = op.KubernetesServiceName
 
 	return decideEpEpsOps(ep, cs.Kubernetes.MasterEndpoints, cs.Kubernetes.MasterEndpointSlice, nf.HealthyAPIServer())
 }
@@ -410,7 +410,7 @@ func etcdEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter, mark
 	ep.name = op.EtcdEndpointsName
 	ep.readyIPs = readyIPs
 	ep.notReadyIPs = notReadyIPs
-	ep.port = 2379
+	ep.port = cke.EtcdClientPort
 	ep.serviceName = op.EtcdServiceName
 
 	ops = append(ops, decideEpEpsOps(ep, cs.Kubernetes.EtcdEndpoints, cs.Kubernetes.EtcdEndpointSlice, nf.HealthyAPIServer())...)
@@ -615,7 +615,7 @@ func decideEtcdServiceOps(apiServer *cke.Node, svc *corev1.Service) cke.Operator
 	if len(svc.Spec.Ports) != 1 {
 		return updateOp
 	}
-	if svc.Spec.Ports[0].Port != 2379 {
+	if svc.Spec.Ports[0].Port != cke.EtcdClientPort {
 		return updateOp
 	}
 	if svc.Spec.Type != corev1.ServiceTypeClusterIP {

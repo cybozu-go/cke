@@ -86,7 +86,7 @@ func (c createEtcdServiceCommand) Run(ctx context.Context, inf cke.Infrastructur
 			Name: EtcdServiceName,
 		},
 		Spec: corev1.ServiceSpec{
-			Ports:     []corev1.ServicePort{{Port: 2379}},
+			Ports:     []corev1.ServicePort{{Port: cke.EtcdClientPort}},
 			Type:      corev1.ServiceTypeClusterIP,
 			ClusterIP: corev1.ClusterIPNone,
 		},
@@ -116,7 +116,7 @@ func (c updateEtcdServiceCommand) Run(ctx context.Context, inf cke.Infrastructur
 			Name: EtcdServiceName,
 		},
 		Spec: corev1.ServiceSpec{
-			Ports:     []corev1.ServicePort{{Port: 2379}},
+			Ports:     []corev1.ServicePort{{Port: cke.EtcdClientPort}},
 			Type:      corev1.ServiceTypeClusterIP,
 			ClusterIP: corev1.ClusterIPNone,
 		},

@@ -113,7 +113,7 @@ func proxyKubeconfig(cluster, ca, clientCrt, clientKey, server string) *api.Conf
 func kubeletKubeconfig(cluster string, n *cke.Node, caPath, certPath, keyPath string) *api.Config {
 	cfg := api.NewConfig()
 	c := api.NewCluster()
-	c.Server = "https://localhost:16443"
+	c.Server = cke.RiversURL("localhost")
 	c.CertificateAuthority = caPath
 	cfg.Clusters[cluster] = c
 

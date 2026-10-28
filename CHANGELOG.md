@@ -10,6 +10,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 - Remove admissionregistration v1beta1 support from CA injection in [#942](https://github.com/cybozu-go/cke/pull/942)
 - Run mtest on draft pull requests in [#943](https://github.com/cybozu-go/cke/pull/943)
+- Use constants for the API server and etcd ports and resource names in [#944](https://github.com/cybozu-go/cke/pull/944)
 
 ## [1.35.6]
 

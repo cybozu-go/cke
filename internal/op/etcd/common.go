@@ -18,7 +18,7 @@ import (
 func etcdEndpoints(nodes []*cke.Node) []string {
 	endpoints := make([]string, len(nodes))
 	for i, n := range nodes {
-		endpoints[i] = "https://" + n.Address + ":2379"
+		endpoints[i] = cke.EtcdClientURL(n.Address)
 	}
 	return endpoints
 }
@@ -47,8 +47,8 @@ func BuiltInParams(node *cke.Node, initialCluster []string, state string) cke.Se
 	args := []string{
 		"--name=" + node.Address,
 		"--listen-peer-urls=https://0.0.0.0:2380",
-		"--listen-client-urls=https://0.0.0.0:2379",
-		"--advertise-client-urls=https://" + node.Address + ":2379",
+		"--listen-client-urls=" + cke.EtcdClientURL("0.0.0.0"),
+		"--advertise-client-urls=" + cke.EtcdClientURL(node.Address),
 		"--cert-file=" + op.EtcdPKIPath("server.crt"),
 		"--key-file=" + op.EtcdPKIPath("server.key"),
 		"--client-cert-auth=true",

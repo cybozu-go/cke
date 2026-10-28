@@ -89,7 +89,7 @@ func (i *localInfra) K8sClient(ctx context.Context, n *cke.Node) (kubernetes.Int
 		CAData:   []byte(kubeHTTP.CACert()),
 	}
 	cfg := &rest.Config{
-		Host:            "https://" + n.Address + ":6443",
+		Host:            cke.APIServerURL(n.Address),
 		TLSClientConfig: tlsCfg,
 		Timeout:         5 * time.Second,
 	}

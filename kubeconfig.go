@@ -8,7 +8,7 @@ import (
 func Kubeconfig(cluster, user, ca, clientCrt, clientKey string) *api.Config {
 	cfg := api.NewConfig()
 	c := api.NewCluster()
-	c.Server = "https://localhost:16443"
+	c.Server = RiversURL("localhost")
 	c.CertificateAuthorityData = []byte(ca)
 	cfg.Clusters[cluster] = c
 

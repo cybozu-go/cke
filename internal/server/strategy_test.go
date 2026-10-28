@@ -193,7 +193,7 @@ func (d testData) withRivers() testData {
 	for _, v := range d.Status.NodeStatuses {
 		v.Rivers.Running = true
 		v.Rivers.Image = cke.ToolsImage.TagRef()
-		v.Rivers.BuiltInParams = op.RiversParams(d.ControlPlane(), op.RiversUpstreamPort, op.RiversListenPort)
+		v.Rivers.BuiltInParams = op.RiversParams(d.ControlPlane(), cke.APIServerPort, cke.RiversListenPort)
 	}
 	return d
 }
@@ -203,7 +203,7 @@ func (d testData) withEtcdRivers() testData {
 		st := &d.NodeStatus(n).EtcdRivers
 		st.Running = true
 		st.Image = cke.ToolsImage.TagRef()
-		st.BuiltInParams = op.RiversParams(d.ControlPlane(), op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)
+		st.BuiltInParams = op.RiversParams(d.ControlPlane(), cke.EtcdClientPort, cke.EtcdRiversListenPort)
 	}
 	return d
 }

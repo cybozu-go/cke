@@ -83,7 +83,7 @@ func (nf *NodeFilter) RiversStopped(targets []*cke.Node) (nodes []*cke.Node) {
 
 // RiversOutdated filters nodes that are running rivers with outdated image or params.
 func (nf *NodeFilter) RiversOutdated(targets []*cke.Node) (nodes []*cke.Node) {
-	currentBuiltIn := op.RiversParams(nf.ControlPlaneNodes(), op.RiversUpstreamPort, op.RiversListenPort)
+	currentBuiltIn := op.RiversParams(nf.ControlPlaneNodes(), cke.APIServerPort, cke.RiversListenPort)
 	currentExtra := nf.cluster.Options.Rivers
 
 	for _, n := range targets {
@@ -114,7 +114,7 @@ func (nf *NodeFilter) EtcdRiversStopped(targets []*cke.Node) (nodes []*cke.Node)
 
 // EtcdRiversOutdated filters nodes that are running rivers with outdated image or params.
 func (nf *NodeFilter) EtcdRiversOutdated(targets []*cke.Node) (nodes []*cke.Node) {
-	currentBuiltIn := op.RiversParams(nf.ControlPlaneNodes(), op.EtcdRiversUpstreamPort, op.EtcdRiversListenPort)
+	currentBuiltIn := op.RiversParams(nf.ControlPlaneNodes(), cke.EtcdClientPort, cke.EtcdRiversListenPort)
 	currentExtra := nf.cluster.Options.EtcdRivers
 
 	for _, n := range targets {

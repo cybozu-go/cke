@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -74,7 +75,7 @@ func getStatus(ctx context.Context, inf cke.Infrastructure) (*status, error) {
 		if !n.ControlPlane {
 			continue
 		}
-		conn, err := dialer.DialContext(ctx, "tcp", n.Address+":6443")
+		conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(n.Address, strconv.Itoa(cke.APIServerPort)))
 		if err != nil {
 			continue
 		}
