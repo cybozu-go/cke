@@ -11,7 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -502,7 +502,7 @@ metadata:
 		By("checking ValidatingWebhookConfiguration")
 		stdout, _, err := kubectl("get", "validatingwebhookconfigurations/test", "-o", "json")
 		Expect(err).ShouldNot(HaveOccurred())
-		vwh := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
+		vwh := &admissionregistrationv1.ValidatingWebhookConfiguration{}
 		err = json.Unmarshal(stdout, vwh)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(vwh.Webhooks).Should(HaveLen(2))
@@ -515,7 +515,7 @@ metadata:
 		By("checking MutatingWebhookConfiguration")
 		stdout, _, err = kubectl("get", "mutatingwebhookconfigurations/test", "-o", "json")
 		Expect(err).ShouldNot(HaveOccurred())
-		mwh := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
+		mwh := &admissionregistrationv1.MutatingWebhookConfiguration{}
 		err = json.Unmarshal(stdout, mwh)
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(mwh.Webhooks).Should(HaveLen(1))

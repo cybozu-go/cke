@@ -10,7 +10,6 @@ import (
 
 	"github.com/cybozu-go/log"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,39 +139,9 @@ func injectCA(ctx context.Context, st Storage, obj *unstructured.Unstructured, g
 		}
 		obj.UnstructuredContent()["webhooks"] = mutated["webhooks"]
 		return nil
-
-	case gvk.Version == "v1beta1" && gvk.Kind == KindValidatingWebhookConfiguration:
-		typed := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
-		if err := cvt.FromUnstructured(obj.UnstructuredContent(), typed); err != nil {
-			return fmt.Errorf("failed to convert validating webhook %s: %w", obj.GetName(), err)
-		}
-		for i := range typed.Webhooks {
-			typed.Webhooks[i].ClientConfig.CABundle = certData
-		}
-		mutated, err := cvt.ToUnstructured(typed)
-		if err != nil {
-			return err
-		}
-		obj.UnstructuredContent()["webhooks"] = mutated["webhooks"]
-		return nil
-
-	case gvk.Version == "v1beta1" && gvk.Kind == KindMutatingWebhookConfiguration:
-		typed := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
-		if err := cvt.FromUnstructured(obj.UnstructuredContent(), typed); err != nil {
-			return fmt.Errorf("failed to convert mutating webhook %s: %w", obj.GetName(), err)
-		}
-		for i := range typed.Webhooks {
-			typed.Webhooks[i].ClientConfig.CABundle = certData
-		}
-		mutated, err := cvt.ToUnstructured(typed)
-		if err != nil {
-			return err
-		}
-		obj.UnstructuredContent()["webhooks"] = mutated["webhooks"]
-		return nil
 	}
 
-	panic(gvk)
+	return fmt.Errorf("unsupported webhook configuration: %s", gvk.String())
 }
 
 func issueCert(ctx context.Context, inf Infrastructure, obj *unstructured.Unstructured, svcName string) error {
