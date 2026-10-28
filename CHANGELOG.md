@@ -27,6 +27,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
         - docker compose 5.7.0
         - cilium 1.20.4
 - **BREAKING** Stop maintaining `default/kubernetes` and `kube-system/cke-etcd` Endpoints and delete existing ones; use EndpointSlices instead in [#945](https://github.com/cybozu-go/cke/pull/945)
+- Simplify the REST API server of cke in [#954](https://github.com/cybozu-go/cke/pull/954)
+    - Replace well.HTTPServer with net/http.Server
+    - Stop outputting access logs
+    - Return 405 Method Not Allowed for non-GET requests
+    - Use a fixed 2s timeout for /health instead of the etcd timeout in the config file
 
 ## Ancient changes
 
