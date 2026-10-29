@@ -32,6 +32,11 @@ func DecideOps(c *cke.Cluster, cs *cke.ClusterStatus, constraints *cke.Constrain
 		}
 		return []cke.Operator{op.UpgradeOp(cs.ConfigVersion, nf.ControlPlaneNodes())}, cke.PhaseUpgrade
 	}
+	// Delete Endpoints left by CKE 1.35.x or earlier.
+	// CKE 1.36.0 and later maintain only EndpointSlices.
+	if ops := deleteEndpointsOps(cs, nf); len(ops) > 0 {
+		return ops, cke.PhaseUpgrade
+	}
 
 	// 1. Run or restart rivers.  This guarantees:
 	// - CKE tools image is pulled on all nodes.
@@ -377,20 +382,18 @@ func masterEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter, ma
 
 	ep := &endpointParams{}
 	ep.namespace = metav1.NamespaceDefault
-	ep.name = op.KubernetesEndpointsName
+	ep.name = op.KubernetesEndpointSliceName
 	ep.readyIPs = readyIPs
 	ep.notReadyIPs = notReadyIPs
 	ep.portName = "https"
 	ep.port = cke.APIServerPort
 	ep.serviceName = op.KubernetesServiceName
 
-	return decideEpEpsOps(ep, cs.Kubernetes.MasterEndpoints, cs.Kubernetes.MasterEndpointSlice, nf.HealthyAPIServer())
+	return decideEndpointSliceOps(ep, cs.Kubernetes.MasterEndpointSlice, nf.HealthyAPIServer())
 }
 
 func etcdEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter, markedAsNotReadyIPs []string) (ops []cke.Operator) {
-	// Endpoints needs a corresponding Service.
-	// If an Endpoints lacks such a Service, it will be removed.
-	// https://github.com/kubernetes/kubernetes/blob/b7c2d923ef4e166b9572d3aa09ca72231b59b28b/pkg/controller/endpoint/endpoints_controller.go#L392-L397
+	// The EndpointSlice refers to this headless Service via the kubernetes.io/service-name label.
 	svcOp := decideEtcdServiceOps(nf.HealthyAPIServer(), cs.Kubernetes.EtcdService)
 	if svcOp != nil {
 		ops = append(ops, svcOp)
@@ -407,58 +410,35 @@ func etcdEndpointOps(c *cke.Cluster, cs *cke.ClusterStatus, nf *NodeFilter, mark
 
 	ep := &endpointParams{}
 	ep.namespace = metav1.NamespaceSystem
-	ep.name = op.EtcdEndpointsName
+	ep.name = op.EtcdEndpointSliceName
 	ep.readyIPs = readyIPs
 	ep.notReadyIPs = notReadyIPs
 	ep.port = cke.EtcdClientPort
 	ep.serviceName = op.EtcdServiceName
 
-	ops = append(ops, decideEpEpsOps(ep, cs.Kubernetes.EtcdEndpoints, cs.Kubernetes.EtcdEndpointSlice, nf.HealthyAPIServer())...)
+	ops = append(ops, decideEndpointSliceOps(ep, cs.Kubernetes.EtcdEndpointSlice, nf.HealthyAPIServer())...)
 
 	return ops
 }
 
-//nolint:staticcheck // code for Endpoints will be removed later
-func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEPS *discoveryv1.EndpointSlice, apiserver *cke.Node) []cke.Operator {
+// deleteEndpointsOps returns operators to delete Endpoints created by older versions.
+// CKE now maintains only EndpointSlices.
+func deleteEndpointsOps(cs *cke.ClusterStatus, nf *NodeFilter) (ops []cke.Operator) {
+	apiServer := nf.HealthyAPIServer()
+	if apiServer == nil {
+		return nil
+	}
+	if cs.Kubernetes.MasterEndpoints != nil {
+		ops = append(ops, op.KubeEndpointsDeleteOp(apiServer, metav1.NamespaceDefault, op.KubernetesEndpointsName))
+	}
+	if cs.Kubernetes.EtcdEndpoints != nil {
+		ops = append(ops, op.KubeEndpointsDeleteOp(apiServer, metav1.NamespaceSystem, op.EtcdEndpointsName))
+	}
+	return ops
+}
+
+func decideEndpointSliceOps(expect *endpointParams, actualEPS *discoveryv1.EndpointSlice, apiserver *cke.Node) []cke.Operator {
 	var ops []cke.Operator
-
-	readyAddresses := make([]corev1.EndpointAddress, len(expect.readyIPs))
-	for i, ip := range expect.readyIPs {
-		readyAddresses[i] = corev1.EndpointAddress{
-			IP: ip,
-		}
-	}
-	notReadyAddresses := make([]corev1.EndpointAddress, len(expect.notReadyIPs))
-	for i, ip := range expect.notReadyIPs {
-		notReadyAddresses[i] = corev1.EndpointAddress{
-			IP: ip,
-		}
-	}
-
-	//nolint:staticcheck // code for Endpoints will be removed later
-	ep := &corev1.Endpoints{}
-	ep.Namespace = expect.namespace
-	ep.Name = expect.name
-	ep.Labels = map[string]string{
-		"endpointslice.kubernetes.io/skip-mirror": "true",
-	}
-	//nolint:staticcheck // code for Endpoints will be removed later
-	ep.Subsets = []corev1.EndpointSubset{
-		{
-			Addresses:         readyAddresses,
-			NotReadyAddresses: notReadyAddresses,
-			Ports: []corev1.EndpointPort{
-				{
-					Name: expect.portName,
-					Port: expect.port,
-				},
-			},
-		},
-	}
-	epOp := decideEpOp(ep, actualEP, apiserver)
-	if epOp != nil {
-		ops = append(ops, epOp)
-	}
 
 	ready := make(map[string]bool)
 	for _, ip := range expect.readyIPs {
@@ -498,55 +478,6 @@ func decideEpEpsOps(expect *endpointParams, actualEP *corev1.Endpoints, actualEP
 	}
 
 	return ops
-}
-
-//nolint:staticcheck // code for Endpoints will be removed later
-func decideEpOp(expect, actual *corev1.Endpoints, apiServer *cke.Node) cke.Operator {
-	if actual == nil {
-		return op.KubeEndpointsCreateOp(apiServer, expect)
-	}
-
-	updateOp := op.KubeEndpointsUpdateOp(apiServer, expect)
-	if len(actual.Subsets) != 1 {
-		return updateOp
-	}
-
-	for k, v := range expect.Labels {
-		if actual.Labels[k] != v {
-			return updateOp
-		}
-	}
-
-	subset := actual.Subsets[0]
-	if len(subset.Ports) != 1 || subset.Ports[0].Port != expect.Subsets[0].Ports[0].Port {
-		return updateOp
-	}
-
-	if len(subset.Addresses) != len(expect.Subsets[0].Addresses) || len(subset.NotReadyAddresses) != len(expect.Subsets[0].NotReadyAddresses) {
-		return updateOp
-	}
-
-	endpoints := make(map[string]bool)
-	for _, a := range expect.Subsets[0].Addresses {
-		endpoints[a.IP] = true
-	}
-	for _, a := range subset.Addresses {
-		if !endpoints[a.IP] {
-			return updateOp
-		}
-	}
-
-	endpoints = make(map[string]bool)
-	for _, a := range expect.Subsets[0].NotReadyAddresses {
-		endpoints[a.IP] = true
-	}
-	for _, a := range subset.NotReadyAddresses {
-		if !endpoints[a.IP] {
-			return updateOp
-		}
-	}
-
-	return nil
 }
 
 func decideEpsOp(expect, actual *discoveryv1.EndpointSlice, apiServer *cke.Node) cke.Operator {

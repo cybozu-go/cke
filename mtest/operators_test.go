@@ -34,7 +34,6 @@ func testOperators() {
 		// - KubeRBACRoleInstallOp
 		// - KubeClusterDNSCreateOp
 		// - KubeEtcdServiceCreateOp
-		// - KubeEndpointsCreateOp
 
 		By("Testing control plane node labels")
 		for _, n := range []string{node1, node2, node3} {
@@ -54,23 +53,13 @@ func testOperators() {
 			Expect(node.Labels).ShouldNot(HaveKey("cke.cybozu.com/master"))
 		}
 
-		By("Testing default/kubernetes Endpoints")
-		out, _, err := kubectl("get", "-o=json", "endpoints/kubernetes")
-		Expect(err).ShouldNot(HaveOccurred())
-		//nolint:staticcheck // code for Endpoints will be removed later
-		var ep corev1.Endpoints
-		err = json.Unmarshal(out, &ep)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(ep.Subsets).Should(HaveLen(1))
-		Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-			corev1.EndpointAddress{IP: node1},
-			corev1.EndpointAddress{IP: node2},
-			corev1.EndpointAddress{IP: node3},
-		))
-		Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
+		By("Testing default/kubernetes Endpoints does not exist")
+		_, stderr, err := kubectl("get", "endpoints/kubernetes")
+		Expect(err).Should(HaveOccurred())
+		Expect(string(stderr)).Should(ContainSubstring("NotFound"))
 
 		By("Testing default/kubernetes EndpointSlices")
-		out, _, err = kubectl("get", "-o=json", "endpointslices/kubernetes")
+		out, _, err := kubectl("get", "-o=json", "endpointslices/kubernetes")
 		Expect(err).NotTo(HaveOccurred())
 		var eps discoveryv1.EndpointSlice
 		err = json.Unmarshal(out, &eps)
@@ -196,8 +185,16 @@ func testOperators() {
 		// - RiversRestartOp
 		// - EtcdRiversRestartOp
 		// - APIServerRestartOp
-		// - KubeEndpointsUpdateOp
+		// - KubeEndpointsDeleteOp
 		Expect(stopCKE()).To(Succeed())
+		// Endpoints created by older CKE versions should be deleted.
+		_, stderr, err = kubectlWithInput([]byte(`apiVersion: v1
+kind: Endpoints
+metadata:
+  name: kubernetes
+  namespace: default
+`), "apply", "-f", "-")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		ckecliSafe("constraints", "set", "control-plane-count", "2")
 		cluster := getCluster(0, 1, 2)
 		cluster.Nodes = append(cluster.Nodes[:1], cluster.Nodes[2:]...)
@@ -206,19 +203,10 @@ func testOperators() {
 		Expect(runCKE(ckeImageURL)).To(Succeed())
 		waitServerStatusCompletion()
 
-		By("Testing default/kubernetes Endpoints")
-		out, _, err = kubectl("get", "-o=json", "endpoints/kubernetes")
-		Expect(err).ShouldNot(HaveOccurred())
-		//nolint:staticcheck // code for Endpoints will be removed later
-		ep = corev1.Endpoints{}
-		err = json.Unmarshal(out, &ep)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(ep.Subsets).Should(HaveLen(1))
-		Expect(ep.Subsets[0].Addresses).Should(ConsistOf(
-			corev1.EndpointAddress{IP: node1},
-			corev1.EndpointAddress{IP: node3},
-		))
-		Expect(ep.Subsets[0].NotReadyAddresses).Should(BeEmpty())
+		By("Testing default/kubernetes Endpoints is deleted")
+		_, stderr, err = kubectl("get", "endpoints/kubernetes")
+		Expect(err).Should(HaveOccurred())
+		Expect(string(stderr)).Should(ContainSubstring("NotFound"))
 
 		By("Testing default/kubernetes EndpointSlices")
 		out, _, err = kubectl("get", "-o=json", "endpointslices/kubernetes")
