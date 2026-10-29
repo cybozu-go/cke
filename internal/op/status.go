@@ -200,7 +200,7 @@ func GetEtcdClusterStatus(ctx context.Context, inf cke.Infrastructure, nodes []*
 	var endpoints []string
 	for _, n := range nodes {
 		if n.ControlPlane {
-			endpoints = append(endpoints, fmt.Sprintf("https://%s:2379", n.Address))
+			endpoints = append(endpoints, cke.EtcdClientURL(n.Address))
 		}
 	}
 
@@ -272,7 +272,7 @@ func GuessMemberName(m *etcdserverpb.Member) (string, error) {
 }
 
 func getEtcdMemberInSync(ctx context.Context, inf cke.Infrastructure, address string, clusterRev int64) bool {
-	endpoints := []string{fmt.Sprintf("https://%s:2379", address)}
+	endpoints := []string{cke.EtcdClientURL(address)}
 	cli, err := inf.NewEtcdClient(ctx, endpoints)
 	if err != nil {
 		return false
@@ -339,7 +339,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	}
 
 	epAPI := clientset.CoreV1().Endpoints
-	ep, err := epAPI(metav1.NamespaceDefault).Get(ctx, "kubernetes", metav1.GetOptions{})
+	ep, err := epAPI(metav1.NamespaceDefault).Get(ctx, KubernetesEndpointsName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.MasterEndpoints = ep
@@ -349,7 +349,7 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 	}
 
 	epsAPI := clientset.DiscoveryV1().EndpointSlices
-	eps, err := epsAPI(metav1.NamespaceDefault).Get(ctx, "kubernetes", metav1.GetOptions{})
+	eps, err := epsAPI(metav1.NamespaceDefault).Get(ctx, KubernetesEndpointSliceName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		s.MasterEndpointSlice = eps

@@ -261,7 +261,7 @@ func APIServerParams(advertiseAddress, serviceSubnet string, auditLogEnabled boo
 	args := []string{
 		"kube-apiserver",
 		"--allow-privileged",
-		"--etcd-servers=https://127.0.0.1:12379",
+		"--etcd-servers=" + cke.EtcdRiversURL("127.0.0.1"),
 		"--etcd-cafile=" + op.K8sPKIPath("etcd-ca.crt"),
 		"--etcd-certfile=" + op.K8sPKIPath("apiserver-etcd-client.crt"),
 		"--etcd-keyfile=" + op.K8sPKIPath("apiserver-etcd-client.key"),

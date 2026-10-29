@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -70,7 +69,7 @@ func (i *cliInfrastructure) NewEtcdClient(ctx context.Context, _ []string) (*cli
 	endpoints := []string{}
 	for _, n := range cluster.Nodes {
 		if n.ControlPlane {
-			endpoints = append(endpoints, fmt.Sprintf("https://%s:2379", n.Address))
+			endpoints = append(endpoints, cke.EtcdClientURL(n.Address))
 		}
 	}
 	if len(endpoints) == 0 {
@@ -121,7 +120,7 @@ func (i *cliInfrastructure) K8sClient(ctx context.Context, n *cke.Node) (kuberne
 		CAData:   []byte(ca),
 	}
 	cfg := &rest.Config{
-		Host:            "https://" + n.Address + ":6443",
+		Host:            cke.APIServerURL(n.Address),
 		TLSClientConfig: tlsCfg,
 		Timeout:         5 * time.Second,
 	}

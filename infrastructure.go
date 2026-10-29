@@ -303,7 +303,7 @@ func (i *ckeInfrastructure) K8sConfig(ctx context.Context, n *Node) (*rest.Confi
 	}
 
 	return &rest.Config{
-		Host: "https://" + n.Address + ":6443",
+		Host: APIServerURL(n.Address),
 		TLSClientConfig: rest.TLSClientConfig{
 			CertData: i.kubeCert,
 			KeyData:  i.kubeKey,

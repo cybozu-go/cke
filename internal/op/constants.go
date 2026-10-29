@@ -5,18 +5,27 @@ import (
 	"time"
 )
 
+// Resources for the API servers in the default namespace
 const (
-	// EtcdEndpointsName is the resource name for CKE-managed etcd
-	EtcdEndpointsName = "cke-etcd"
-	// EtcdEndpointSliceName is the resource name for CKE-managed etcd
-	EtcdEndpointSliceName = EtcdEndpointsName
-	// EtcdServiceName is the resource name for CKE-managed etcd
-	EtcdServiceName = EtcdEndpointsName
-
-	etcdPKIPath = "/etc/etcd/pki"
-	k8sPKIPath  = "/etc/kubernetes/pki"
+	// KubernetesServiceName is the name of the Service for the API servers
+	KubernetesServiceName = "kubernetes"
+	// KubernetesEndpointsName is the name of the Endpoints for the API servers
+	KubernetesEndpointsName = KubernetesServiceName
+	// KubernetesEndpointSliceName is the name of the EndpointSlice for the API servers
+	KubernetesEndpointSliceName = KubernetesServiceName
 )
 
+// Resources for CKE-managed etcd in the kube-system namespace
+const (
+	// EtcdServiceName is the name of the Service for CKE-managed etcd
+	EtcdServiceName = "cke-etcd"
+	// EtcdEndpointsName is the name of the Endpoints for CKE-managed etcd
+	EtcdEndpointsName = EtcdServiceName
+	// EtcdEndpointSliceName is the name of the EndpointSlice for CKE-managed etcd
+	EtcdEndpointSliceName = EtcdServiceName
+)
+
+// Container names
 const (
 	// EtcdContainerName is container name of etcd
 	EtcdContainerName = "etcd"
@@ -34,16 +43,23 @@ const (
 	RiversContainerName = "rivers"
 	// EtcdRiversContainerName is container name of etcd-rivers
 	EtcdRiversContainerName = "etcd-rivers"
+)
 
-	// RiversUpstreamPort is upstream port of rivers container
-	RiversUpstreamPort = 6443
-	// RiversListenPort is listen port of rivers container
-	RiversListenPort = 16443
-	// EtcdRiversUpstreamPort is upstream port of etcd-rivers container
-	EtcdRiversUpstreamPort = 2379
-	// EtcdRiversListenPort is listen port of etcd-rivers container
-	EtcdRiversListenPort = 12379
+// File paths
+const (
+	etcdPKIPath = "/etc/etcd/pki"
+	k8sPKIPath  = "/etc/kubernetes/pki"
 
+	// SchedulerConfigPath is a path for scheduler extender config
+	SchedulerConfigPath = "/etc/kubernetes/scheduler/config.yml"
+	// SchedulerKubeConfigPath is a path for scheduler kubeconfig
+	SchedulerKubeConfigPath = "/etc/kubernetes/scheduler/kubeconfig"
+
+	// ControllerManagerKubeConfigPath is a path for controller-manager kubeconfig
+	ControllerManagerKubeConfigPath = "/etc/kubernetes/controller-manager/kubeconfig"
+)
+
+const (
 	// ClusterDNSAppName is app name of cluster DNS
 	ClusterDNSAppName = "cluster-dns"
 	// NodeDNSAppName is app name of node-dns
@@ -53,9 +69,6 @@ const (
 	DefaultEtcdVolumeName = "etcd-cke"
 	// EtcdAddedMemberVolumeName is volume name for flag of add-etcd-member has completed or not
 	EtcdAddedMemberVolumeName = "etcd-added-member"
-
-	// TimeoutDuration is default timeout duration
-	TimeoutDuration = 5 * time.Second
 
 	// CKELabelMaster is the label name added to control plane nodes
 	CKELabelMaster = "cke.cybozu.com/master"
@@ -68,13 +81,8 @@ const (
 	// CKEAnnotationReboot is the annotation to mark reboot targets
 	CKEAnnotationReboot = "cke.cybozu.com/reboot"
 
-	// SchedulerConfigPath is a path for scheduler extender config
-	SchedulerConfigPath = "/etc/kubernetes/scheduler/config.yml"
-	// SchedulerKubeConfigPath is a path for scheduler kubeconfig
-	SchedulerKubeConfigPath = "/etc/kubernetes/scheduler/kubeconfig"
-
-	// ControllerManagerKubeConfigPath is a path for controller-manager kubeconfig
-	ControllerManagerKubeConfigPath = "/etc/kubernetes/controller-manager/kubeconfig"
+	// TimeoutDuration is default timeout duration
+	TimeoutDuration = 5 * time.Second
 )
 
 const (

@@ -47,7 +47,7 @@ var kubernetesIssueCmd = &cobra.Command{
 			if len(cpNodes) == 0 {
 				return errors.New("no control plane")
 			}
-			server = "https://" + cpNodes[0].Address + ":6443"
+			server = cke.APIServerURL(cpNodes[0].Address)
 		}
 
 		cacert, err := storage.GetCACertificate(ctx, cke.CAKubernetes)
