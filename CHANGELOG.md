@@ -13,6 +13,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Use constants for the API server and etcd ports and resource names in [#944](https://github.com/cybozu-go/cke/pull/944)
 - Update dependencies to fix vulnerabilities in [#946](https://github.com/cybozu-go/cke/pull/946)
 - Update etcd, kubernetes, pause and coredns images in [#941](https://github.com/cybozu-go/cke/pull/941)
+- Restrict the modes of the kube-proxy kubeconfig and etcd backups in [#948](https://github.com/cybozu-go/cke/pull/948)
 
 ## [1.35.6]
 
