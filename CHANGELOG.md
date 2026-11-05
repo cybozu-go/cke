@@ -6,6 +6,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.35.7]
+
 ### Changed
 
 - Remove admissionregistration v1beta1 support from CA injection in [#942](https://github.com/cybozu-go/cke/pull/942)
@@ -126,7 +128,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.35.6...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.35.7...HEAD
+[1.35.7]: https://github.com/cybozu-go/cke/compare/v1.35.6...v1.35.7
 [1.35.6]: https://github.com/cybozu-go/cke/compare/v1.35.5...v1.35.6
 [1.35.5]: https://github.com/cybozu-go/cke/compare/v1.35.4...v1.35.5
 [1.35.4]: https://github.com/cybozu-go/cke/compare/v1.35.3...v1.35.4
