@@ -34,7 +34,7 @@ func testLocalProxy() {
 	})
 
 	It("should write the kubeconfig of kube-proxy readable only by root", func() {
-		out := execSafeAt(host1, "stat", "-c", "%a %U", "/etc/kubernetes/proxy/kubeconfig")
+		out := execSafeAt(host1, "stat", "-c", "'%a %U'", "/etc/kubernetes/proxy/kubeconfig")
 		Expect(strings.TrimSpace(string(out))).To(Equal("600 root"))
 	})
 
