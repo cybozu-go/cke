@@ -67,7 +67,7 @@ func backup(ctx context.Context, etcd *clientv3.Client) error {
 			return fmt.Errorf("%s is not a directory", config.dir)
 		}
 	case os.IsNotExist(err):
-		if err := os.MkdirAll(config.dir, 0o755); err != nil {
+		if err := os.MkdirAll(config.dir, 0o700); err != nil {
 			return err
 		}
 	default:
@@ -76,7 +76,7 @@ func backup(ctx context.Context, etcd *clientv3.Client) error {
 
 	fname := backupFilename(time.Now())
 	fullName := filepath.Join(config.dir, fname)
-	w, err := os.Create(fullName)
+	w, err := os.OpenFile(fullName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}

@@ -56,6 +56,8 @@ func testCKECLI() {
 		Expect(names).To(HaveLen(1))
 		oldest := names[0]
 		Expect(oldest).To(HavePrefix("etcd-"))
+		out = execSafeAt(host1, "stat", "-c", "%a", dir+"/"+oldest)
+		Expect(strings.TrimSpace(string(out))).To(Equal("600"))
 
 		time.Sleep(2 * time.Second)
 		ckecliSafe("etcd", "local-backup", "--dir="+dir, "--max-backups=2")

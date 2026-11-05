@@ -103,7 +103,7 @@ func (c prepareProxyFilesCommand) Run(ctx context.Context, inf cke.Infrastructur
 		cfg := proxyKubeconfig(c.cluster, ca, crt, key, c.ap)
 		return clientcmd.Write(*cfg)
 	}
-	if err := c.files.AddFile(ctx, proxyKubeconfigPath, g); err != nil {
+	if err := c.files.AddFile(ctx, proxyKubeconfigPath, g, common.WithFileMode(0o600)); err != nil {
 		return err
 	}
 
