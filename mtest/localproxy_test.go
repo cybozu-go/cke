@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,6 +31,11 @@ func testLocalProxy() {
 			}
 			return errors.New("kube-proxy has not configured proxy rules yet")
 		}).Should(Succeed())
+	})
+
+	It("should write the kubeconfig of kube-proxy readable only by root", func() {
+		out := execSafeAt(host1, "stat", "-c", "'%a %U'", "/etc/kubernetes/proxy/kubeconfig")
+		Expect(strings.TrimSpace(string(out))).To(Equal("600 root"))
 	})
 
 	It("should run unbound", func() {

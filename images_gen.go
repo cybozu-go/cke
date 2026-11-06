@@ -5,7 +5,7 @@ package cke
 var (
 	EtcdImage            = newImage("ghcr.io/cybozu/etcd", "3.6.11.2", "sha256:7021f2fc220abce7545c37da212885db2673745f2f93c8085557b43cd14afdb3")
 	KubernetesImage      = newImage("ghcr.io/cybozu/kubernetes", "1.35.9.2", "sha256:0237ff15544230b5aecb6f4f4bacbbd9f5c52cf6ad1daa1b158bdb226d3f4b0a")
-	ToolsImage           = newImage("ghcr.io/cybozu-go/cke-tools", "1.35.0", "sha256:3f0365cf68834dc9e2e082ec901495cae41c8cfc5dcaa9c3a2062d4b50a66f82")
+	ToolsImage           = newImage("ghcr.io/cybozu-go/cke-tools", "1.35.1", "sha256:3ea3b02438cc07c4edb159335228461a56849045bb3491c6d494f4e19b8a6866")
 	PauseImage           = newImage("ghcr.io/cybozu/pause", "3.10.1.6", "sha256:340baca5b208fcda4d979c172fb3ed00e33e1a9fa7f82daecb2891177fde5ef0")
 	CoreDNSImage         = newImage("ghcr.io/cybozu/coredns", "1.14.2.2", "sha256:0756462faef5e4680a35c4daa281344fa48ab35cbe1efe7b0dd71af4b1554825")
 	UnboundImage         = newImage("ghcr.io/cybozu/unbound", "1.25.1.1", "sha256:b84ce87568ed11859891747650a46d8431bac6d1ddda38b542e4d16cd36e0b86")
