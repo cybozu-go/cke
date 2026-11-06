@@ -2,6 +2,12 @@
 
 cke-tools related changes.
 
+## 1.35.1 - 2026-11-06
+
+- rivers: Drop cybozu-go/log and cybozu-go/well dependencies in [#919](https://github.com/cybozu-go/cke/pull/919)
+- write_files: Use the mode of each file in the archive in [#902](https://github.com/cybozu-go/cke/pull/902)
+- write_files: Set the mode of a leftover temporary file
+
 ## 1.35.0 - 2026-05-12
 
 - Update Go modules and GitHub Actions in [#871](https://github.com/cybozu-go/cke/pull/871)
