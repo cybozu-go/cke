@@ -66,3 +66,48 @@ func TestExtract(t *testing.T) {
 		}
 	}
 }
+
+func TestExtractOverwrite(t *testing.T) {
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "etc/secret.yaml")
+	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{dest, dest + ".tmp"} {
+		if err := os.WriteFile(name, []byte("old"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+	data := "secret"
+	if err := tw.WriteHeader(&tar.Header{Name: "etc/secret.yaml", Mode: 0o600, Size: int64(len(data))}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tw.Write([]byte(data)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := extract(dir, buf, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	fi, err := os.Stat(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi.Mode().Perm() != 0o600 {
+		t.Errorf("unexpected mode: expected=600 actual=%o", fi.Mode().Perm())
+	}
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != data {
+		t.Errorf("unexpected contents: expected=%q actual=%q", data, string(got))
+	}
+}

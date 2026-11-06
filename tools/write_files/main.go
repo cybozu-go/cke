@@ -83,6 +83,11 @@ func copyFile(dest string, r io.Reader, mode os.FileMode) error {
 	}
 	defer f.Close()
 
+	// OpenFile does not change the mode of a leftover temporary file.
+	if err := f.Chmod(mode); err != nil {
+		return fmt.Errorf("failed to chmod %s: %w", t, err)
+	}
+
 	if _, err := io.Copy(f, r); err != nil {
 		return fmt.Errorf("failed to write contents of %s: %w", t, err)
 	}
