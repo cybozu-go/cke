@@ -76,7 +76,7 @@ func backup(ctx context.Context, etcd *clientv3.Client) error {
 
 	fname := backupFilename(time.Now())
 	fullName := filepath.Join(config.dir, fname)
-	w, err := os.OpenFile(fullName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	w, err := os.OpenFile(fullName, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
 	}
