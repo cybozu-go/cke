@@ -6,6 +6,12 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+## [1.35.8]
+
+### Changed
+
+- Restrict the modes of the kube-proxy kubeconfig and etcd backups, and update cke-tools to 1.35.1 in [#948](https://github.com/cybozu-go/cke/pull/948)
+
 ## [1.35.7]
 
 ### Changed
@@ -15,7 +21,6 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - Use constants for the API server and etcd ports and resource names in [#944](https://github.com/cybozu-go/cke/pull/944)
 - Update dependencies to fix vulnerabilities in [#946](https://github.com/cybozu-go/cke/pull/946)
 - Update etcd, kubernetes, pause and coredns images in [#941](https://github.com/cybozu-go/cke/pull/941)
-- Restrict the modes of the kube-proxy kubeconfig and etcd backups, and update cke-tools to 1.35.1 in [#948](https://github.com/cybozu-go/cke/pull/948)
 
 ## [1.35.6]
 
@@ -129,7 +134,8 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 - See [release-1.13/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.13/CHANGELOG.md) for changes in CKE 1.13.
 - See [release-1.12/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.12/CHANGELOG.md) for changes in CKE 1.12.
 
-[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.35.7...HEAD
+[Unreleased]: https://github.com/cybozu-go/cke/compare/v1.35.8...HEAD
+[1.35.8]: https://github.com/cybozu-go/cke/compare/v1.35.7...v1.35.8
 [1.35.7]: https://github.com/cybozu-go/cke/compare/v1.35.6...v1.35.7
 [1.35.6]: https://github.com/cybozu-go/cke/compare/v1.35.5...v1.35.6
 [1.35.5]: https://github.com/cybozu-go/cke/compare/v1.35.4...v1.35.5
