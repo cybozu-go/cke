@@ -5,7 +5,6 @@ import (
 	"text/template"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/cybozu-go/cke/internal/op"
 )
@@ -128,10 +127,8 @@ func ConfigMap(clusterIP, domain string, dnsServers []string, localControl bool)
 		panic(err)
 	}
 	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      op.NodeDNSAppName,
-			Namespace: "kube-system",
-		},
+		Name:      op.NodeDNSAppName,
+		Namespace: "kube-system",
 		Data: map[string]string{
 			"unbound.conf": unboundConf.String(),
 		},

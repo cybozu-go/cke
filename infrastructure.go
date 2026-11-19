@@ -303,13 +303,11 @@ func (i *ckeInfrastructure) K8sConfig(ctx context.Context, n *Node) (*rest.Confi
 	}
 
 	return &rest.Config{
-		Host: APIServerURL(n.Address),
-		TLSClientConfig: rest.TLSClientConfig{
-			CertData: i.kubeCert,
-			KeyData:  i.kubeKey,
-			CAData:   []byte(kubeHTTP.CACert()),
-		},
-		Timeout: 5 * time.Second,
+		Host:     APIServerURL(n.Address),
+		CertData: i.kubeCert,
+		KeyData:  i.kubeKey,
+		CAData:   []byte(kubeHTTP.CACert()),
+		Timeout:  5 * time.Second,
 	}, nil
 }
 

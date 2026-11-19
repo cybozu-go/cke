@@ -82,9 +82,7 @@ func (c createEtcdServiceCommand) Run(ctx context.Context, inf cke.Infrastructur
 	}
 
 	_, err = cs.CoreV1().Services(metav1.NamespaceSystem).Create(ctx, &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: EtcdServiceName,
-		},
+		Name: EtcdServiceName,
 		Spec: corev1.ServiceSpec{
 			Ports:     []corev1.ServicePort{{Port: cke.EtcdClientPort}},
 			Type:      corev1.ServiceTypeClusterIP,
@@ -112,9 +110,7 @@ func (c updateEtcdServiceCommand) Run(ctx context.Context, inf cke.Infrastructur
 	}
 
 	_, err = cs.CoreV1().Services(metav1.NamespaceSystem).Update(ctx, &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: EtcdServiceName,
-		},
+		Name: EtcdServiceName,
 		Spec: corev1.ServiceSpec{
 			Ports:     []corev1.ServicePort{{Port: cke.EtcdClientPort}},
 			Type:      corev1.ServiceTypeClusterIP,
