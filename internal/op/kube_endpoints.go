@@ -5,6 +5,9 @@ import (
 
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
 
 	"github.com/cybozu-go/cke"
 )
@@ -52,12 +55,12 @@ type deleteEndpointsCommand struct {
 }
 
 func (c deleteEndpointsCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	cs, err := inf.K8sClient(ctx, c.apiserver)
+	epAPI, err := legacyEndpointsAPI(ctx, inf, c.apiserver)
 	if err != nil {
 		return err
 	}
 
-	err = cs.CoreV1().Endpoints(c.namespace).Delete(ctx, c.name, metav1.DeleteOptions{})
+	err = epAPI(c.namespace).Delete(ctx, c.name, metav1.DeleteOptions{})
 	if k8serr.IsNotFound(err) {
 		return nil
 	}
@@ -70,4 +73,18 @@ func (c deleteEndpointsCommand) Command() cke.Command {
 		Name:   "deleteEndpointsCommand",
 		Target: c.namespace + "/" + c.name,
 	}
+}
+
+// legacyEndpointsAPI returns the Endpoints API that discards deprecation warnings.
+func legacyEndpointsAPI(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (func(namespace string) corev1client.EndpointsInterface, error) {
+	cfg, err := inf.K8sConfig(ctx, n)
+	if err != nil {
+		return nil, err
+	}
+	cfg.WarningHandler = rest.NoWarnings{}
+	cs, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return cs.CoreV1().Endpoints, nil
 }
