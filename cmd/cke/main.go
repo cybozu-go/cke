@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"net/http"
 	"os"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/cybozu-go/cke"
-	"github.com/cybozu-go/cke/internal/metrics"
 	"github.com/cybozu-go/cke/internal/sabakan"
 	"github.com/cybozu-go/cke/internal/server"
 )
@@ -106,11 +104,6 @@ func main() {
 		}
 	}()
 
-	timeout, err := time.ParseDuration(cfg.Timeout)
-	if err != nil {
-		log.ErrorExit(err)
-	}
-
 	maxConcurrentUpdates := *flgMaxConcurrentUpdates
 	if maxConcurrentUpdates <= 0 {
 		log.ErrorExit(errors.New("max-concurrent-updates must be greater than 0"))
@@ -125,29 +118,9 @@ func main() {
 	well.Go(controller.Run)
 
 	// API server
-	mux := http.NewServeMux()
-	// Metrics
-	storage := &cke.Storage{Client: etcd}
-	collector := metrics.NewCollector(storage)
-	metricsHandler := metrics.GetHandler(collector)
-	mux.Handle("/metrics", metricsHandler)
-	// REST API
-	server := server.Server{
-		EtcdClient: etcd,
-		Timeout:    timeout,
-	}
-	mux.Handle("/", server)
-	s := &well.HTTPServer{
-		Server: &http.Server{
-			Addr:    *flgHTTP,
-			Handler: mux,
-		},
-		ShutdownTimeout: 3 * time.Minute,
-	}
-	err = s.ListenAndServe()
-	if err != nil {
-		log.ErrorExit(err)
-	}
+	well.Go(func(ctx context.Context) error {
+		return runHTTPServer(ctx, *flgHTTP, etcd)
+	})
 	err = well.Wait()
 	if err != nil && !well.IsSignaled(err) {
 		log.ErrorExit(err)
