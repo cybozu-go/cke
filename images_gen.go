@@ -3,13 +3,13 @@
 package cke
 
 var (
-	EtcdImage            = newImage("ghcr.io/cybozu/etcd", "3.6.11.2", "sha256:7021f2fc220abce7545c37da212885db2673745f2f93c8085557b43cd14afdb3")
-	KubernetesImage      = newImage("ghcr.io/cybozu/kubernetes", "1.35.9.2", "sha256:0237ff15544230b5aecb6f4f4bacbbd9f5c52cf6ad1daa1b158bdb226d3f4b0a")
+	EtcdImage            = newImage("ghcr.io/cybozu/etcd", "3.6.11.3", "sha256:246584ad99bc1a5687a04c58743f876ae5ce65e6f15f06875f9bfac78347b90d")
+	KubernetesImage      = newImage("ghcr.io/cybozu/kubernetes", "1.36.6.1", "sha256:802959cfc07ce693c9a6436acf25d01a5fc707f595a4ea61528236a9c88d4dce")
 	ToolsImage           = newImage("ghcr.io/cybozu-go/cke-tools", "1.35.1", "sha256:3ea3b02438cc07c4edb159335228461a56849045bb3491c6d494f4e19b8a6866")
-	PauseImage           = newImage("ghcr.io/cybozu/pause", "3.10.1.6", "sha256:340baca5b208fcda4d979c172fb3ed00e33e1a9fa7f82daecb2891177fde5ef0")
+	PauseImage           = newImage("ghcr.io/cybozu/pause", "3.10.2.1", "sha256:b825f289b0bd957362446d74bc5770d95d8ee0f1fed61785600d988506c22d90")
 	CoreDNSImage         = newImage("ghcr.io/cybozu/coredns", "1.14.2.2", "sha256:0756462faef5e4680a35c4daa281344fa48ab35cbe1efe7b0dd71af4b1554825")
-	UnboundImage         = newImage("ghcr.io/cybozu/unbound", "1.25.1.1", "sha256:b84ce87568ed11859891747650a46d8431bac6d1ddda38b542e4d16cd36e0b86")
-	UnboundExporterImage = newImage("ghcr.io/cybozu/unbound_exporter", "0.5.0.4", "sha256:a7d46220f43bf2ae0c81bbcb0b68801de2d60e87df298db4691ea0dd39b25593")
+	UnboundImage         = newImage("ghcr.io/cybozu/unbound", "1.26.2.2", "sha256:05d72228d5645a837a10d0d2c3a85ab702bcc03192428794630162a0464dced0")
+	UnboundExporterImage = newImage("ghcr.io/cybozu/unbound_exporter", "0.6.0.1", "sha256:1b606b5d74fe8df0eb1bf0cc9dfddd24c1aa95e177dcf9f39a28ad83674dbd8d")
 )
 
 var allImages = []Image{
