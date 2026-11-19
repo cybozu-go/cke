@@ -22,7 +22,7 @@ services:
       - /entrypoint.sh
   setup:
     container_name: setup
-    image: ghcr.io/cybozu/ubuntu-debug:24.04
+    image: ghcr.io/cybozu/ubuntu-debug:26.04
     networks:
       app_net:
         ipv4_address: 172.30.0.12

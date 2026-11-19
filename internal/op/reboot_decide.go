@@ -163,7 +163,7 @@ func doEvictOrDeleteNodePod(ctx context.Context, cs kubernetes.Interface, node s
 			"dry":       dry,
 		})
 		err := cs.CoreV1().Pods(pod.Namespace).EvictV1(ctx, &policyv1.Eviction{
-			ObjectMeta:    metav1.ObjectMeta{Name: pod.Name, Namespace: pod.Namespace},
+			Name: pod.Name, Namespace: pod.Namespace,
 			DeleteOptions: deleteOptions,
 		})
 		evictCount++

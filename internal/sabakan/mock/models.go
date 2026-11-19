@@ -114,7 +114,7 @@ func (e *MachineState) UnmarshalGQL(v any) error {
 }
 
 func (e MachineState) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
+	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 func (e *MachineState) UnmarshalJSON(b []byte) error {

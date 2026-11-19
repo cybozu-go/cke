@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
       - name: ubuntu
-        image: ghcr.io/cybozu/ubuntu:24.04
+        image: ghcr.io/cybozu/ubuntu:26.04
         command: ["sleep", "3600"]
       restartPolicy: Never
   backoffLimit: 1

@@ -2,6 +2,11 @@
 
 cke-tools related changes.
 
+## Unreleased
+
+- Update Go modules and GitHub Actions in [#952](https://github.com/cybozu-go/cke/pull/952)
+- Update CNI plugins to 1.10.0 in [#952](https://github.com/cybozu-go/cke/pull/952)
+
 ## 1.35.1 - 2026-11-06
 
 - rivers: Drop cybozu-go/log and cybozu-go/well dependencies in [#919](https://github.com/cybozu-go/cke/pull/919)

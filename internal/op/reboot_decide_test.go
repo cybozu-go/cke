@@ -6,7 +6,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -15,13 +14,13 @@ import (
 
 func cleanNode(name string) *corev1.Node {
 	return &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Name: name,
 	}
 }
 
 func nodeWithVolumes(name string) *corev1.Node {
 	return &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Name: name,
 		Status: corev1.NodeStatus{
 			VolumesInUse: []corev1.UniqueVolumeName{"volume1"},
 		},
@@ -30,8 +29,8 @@ func nodeWithVolumes(name string) *corev1.Node {
 
 func podOnNode(nodeName string) *corev1.Pod {
 	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{Name: "pod1", Namespace: "default"},
-		Spec:       corev1.PodSpec{NodeName: nodeName},
+		Name: "pod1", Namespace: "default",
+		Spec: corev1.PodSpec{NodeName: nodeName},
 	}
 }
 

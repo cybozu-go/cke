@@ -6,6 +6,27 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ## [Unreleased]
 
+### Changed
+
+- Update dependencies for Kubernetes 1.36 in [#952](https://github.com/cybozu-go/cke/pull/952)
+    - Go 1.27.4
+    - Go modules (k8s.io/* v0.36.6, go.etcd.io/etcd/* v3.7.3, etc.)
+    - GitHub Actions
+    - Ubuntu 26.04
+    - Container images
+        - kubernetes 1.36.6.1
+        - etcd 3.6.11.3
+        - pause 3.10.2.1
+        - unbound 1.26.2.2
+        - unbound_exporter 0.6.0.1
+    - Tools for mtest and sonobuoy
+        - kubectl 1.36.6
+        - crictl 1.36.0
+        - containerd 2.4.2
+        - sonobuoy 0.57.5
+        - docker compose 5.7.0
+        - cilium 1.20.4
+
 ## Ancient changes
 
 - See [release-1.35/CHANGELOG.md](https://github.com/cybozu-go/cke/blob/release-1.35/CHANGELOG.md) for changes in CKE 1.35.

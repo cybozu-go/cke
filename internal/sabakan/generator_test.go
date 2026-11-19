@@ -10,7 +10,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/internal/op"
@@ -198,8 +197,9 @@ func testNewGenerator(t *testing.T) {
 		newTestMachineWithIP(0, testFuture250, StateUnhealthy, "10.0.0.3", "ss"),
 		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4", "ss"),
 	}
-	k8sNode := corev1.Node{}
-	k8sNode.Name = "10.0.0.1"
+	k8sNode := corev1.Node{
+		Name: "10.0.0.1",
+	}
 	k8sNode.Spec.Taints = []corev1.Taint{{Key: "key", Value: "value", Effect: corev1.TaintEffectNoExecute}}
 	clusterStatus := &cke.ClusterStatus{Kubernetes: cke.KubernetesClusterStatus{Nodes: []corev1.Node{k8sNode}}}
 	type args struct {
@@ -393,8 +393,9 @@ func testRegenerate(t *testing.T) {
 		newTestMachineWithIP(1, testFuture250, StateHealthy, "10.0.0.4", "ss"),
 	}
 
-	k8sNode := corev1.Node{}
-	k8sNode.Name = "10.0.0.4"
+	k8sNode := corev1.Node{
+		Name: "10.0.0.4",
+	}
 	k8sNode.Spec.Taints = []corev1.Taint{{Key: "regenerate_will_not_care_about_taints", Value: "even_for_control_plane_node", Effect: corev1.TaintEffectNoExecute}}
 	clusterStatus := &cke.ClusterStatus{Kubernetes: cke.KubernetesClusterStatus{Nodes: []corev1.Node{k8sNode}}}
 
@@ -532,8 +533,9 @@ func testUpdate(t *testing.T) {
 
 	var k8sSystemTaintedNodes, k8sUserTaintedNodes []corev1.Node
 	for _, m := range machines {
-		n := corev1.Node{}
-		n.Name = m.Spec.IPv4[0]
+		n := corev1.Node{
+			Name: m.Spec.IPv4[0],
+		}
 		n.Spec.Taints = []corev1.Taint{
 			{Key: corev1.TaintNodeNotReady, Effect: corev1.TaintEffectNoSchedule},
 			{Key: op.CKETaintMaster, Effect: corev1.TaintEffectNoSchedule},
@@ -681,9 +683,7 @@ func testUpdate(t *testing.T) {
 				Kubernetes: cke.KubernetesClusterStatus{
 					Nodes: []corev1.Node{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: workers[6].Address,
-							},
+							Name: workers[6].Address,
 							Spec: corev1.NodeSpec{
 								Taints: []corev1.Taint{
 									{
@@ -715,9 +715,7 @@ func testUpdate(t *testing.T) {
 				Kubernetes: cke.KubernetesClusterStatus{
 					Nodes: []corev1.Node{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: workers[6].Address,
-							},
+							Name: workers[6].Address,
 							Spec: corev1.NodeSpec{
 								Taints: []corev1.Taint{
 									{
@@ -749,9 +747,7 @@ func testUpdate(t *testing.T) {
 				Kubernetes: cke.KubernetesClusterStatus{
 					Nodes: []corev1.Node{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: workers[7].Address,
-							},
+							Name: workers[7].Address,
 							Spec: corev1.NodeSpec{
 								Taints: []corev1.Taint{
 									{

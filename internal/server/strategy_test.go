@@ -342,9 +342,7 @@ func (d testData) withK8sNodes() testData {
 	var nodeList []corev1.Node
 	for _, nodeName := range nodeNames {
 		nodeList = append(nodeList, corev1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: nodeName,
-			},
+			Name: nodeName,
 			Status: corev1.NodeStatus{
 				Conditions: []corev1.NodeCondition{
 					{
@@ -409,10 +407,8 @@ func (d testData) withK8sReady() testData {
 func (d testData) withMasterEndpoint() testData {
 	//nolint:staticcheck // code for Endpoints will be removed later
 	d.Status.Kubernetes.MasterEndpoints = &corev1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				"endpointslice.kubernetes.io/skip-mirror": "true",
-			},
+		Labels: map[string]string{
+			"endpointslice.kubernetes.io/skip-mirror": "true",
 		},
 		//nolint:staticcheck // code for Endpoints will be removed later
 		Subsets: []corev1.EndpointSubset{
@@ -428,11 +424,9 @@ func (d testData) withMasterEndpoint() testData {
 	}
 
 	d.Status.Kubernetes.MasterEndpointSlice = &discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				"endpointslice.kubernetes.io/managed-by": "cke.cybozu.com",
-				"kubernetes.io/service-name":             "kubernetes",
-			},
+		Labels: map[string]string{
+			"endpointslice.kubernetes.io/managed-by": "cke.cybozu.com",
+			"kubernetes.io/service-name":             "kubernetes",
 		},
 		AddressType: discoveryv1.AddressTypeIPv4,
 		Endpoints: []discoveryv1.Endpoint{
@@ -466,10 +460,8 @@ func (d testData) withEtcdEndpoint() testData {
 
 	//nolint:staticcheck // code for Endpoints will be removed later
 	d.Status.Kubernetes.EtcdEndpoints = &corev1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				"endpointslice.kubernetes.io/skip-mirror": "true",
-			},
+		Labels: map[string]string{
+			"endpointslice.kubernetes.io/skip-mirror": "true",
 		},
 		//nolint:staticcheck // code for Endpoints will be removed later
 		Subsets: []corev1.EndpointSubset{
@@ -485,11 +477,9 @@ func (d testData) withEtcdEndpoint() testData {
 	}
 
 	d.Status.Kubernetes.EtcdEndpointSlice = &discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				"endpointslice.kubernetes.io/managed-by": "cke.cybozu.com",
-				"kubernetes.io/service-name":             "cke-etcd",
-			},
+		Labels: map[string]string{
+			"endpointslice.kubernetes.io/managed-by": "cke.cybozu.com",
+			"kubernetes.io/service-name":             "cke-etcd",
 		},
 		AddressType: discoveryv1.AddressTypeIPv4,
 		Endpoints: []discoveryv1.Endpoint{
@@ -1881,10 +1871,8 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeLabel1",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "10.0.0.14",
-					Annotations: map[string]string{"annotation1": "value"},
-				},
+				Name:        "10.0.0.14",
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -1905,11 +1893,9 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeLabel2",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "10.0.0.14",
-					Labels:      map[string]string{"label1": "wrongvalue"},
-					Annotations: map[string]string{"annotation1": "value"},
-				},
+				Name:        "10.0.0.14",
+				Labels:      map[string]string{"label1": "wrongvalue"},
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -1930,14 +1916,12 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeLabel3",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "10.0.0.14",
-					Labels: map[string]string{
-						"label1":             "value",
-						"cke.cybozu.com/foo": "bar",
-					},
-					Annotations: map[string]string{"annotation1": "value"},
+				Name: "10.0.0.14",
+				Labels: map[string]string{
+					"label1":             "value",
+					"cke.cybozu.com/foo": "bar",
 				},
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -1958,14 +1942,12 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeLabel4",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "10.0.0.14",
-					Labels: map[string]string{
-						"label1":                     "value",
-						"sabakan.cke.cybozu.com/foo": "bar",
-					},
-					Annotations: map[string]string{"annotation1": "value"},
+				Name: "10.0.0.14",
+				Labels: map[string]string{
+					"label1":                     "value",
+					"sabakan.cke.cybozu.com/foo": "bar",
 				},
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -1986,14 +1968,12 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeLabel5",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "10.0.0.14",
-					Labels: map[string]string{
-						"label1":                         "value",
-						"node-role.kubernetes.io/worker": "false",
-					},
-					Annotations: map[string]string{"annotation1": "value"},
+				Name: "10.0.0.14",
+				Labels: map[string]string{
+					"label1":                         "value",
+					"node-role.kubernetes.io/worker": "false",
 				},
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2014,15 +1994,13 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeLabel6",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "10.0.0.14",
-					Labels: map[string]string{
-						"label1":                         "value",
-						"node-role.kubernetes.io/worker": "true",
-						"node-role.kubernetes.io/hoge":   "true",
-					},
-					Annotations: map[string]string{"annotation1": "value"},
+				Name: "10.0.0.14",
+				Labels: map[string]string{
+					"label1":                         "value",
+					"node-role.kubernetes.io/worker": "true",
+					"node-role.kubernetes.io/hoge":   "true",
 				},
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2043,10 +2021,8 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeLabelCP1",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.11",
-					Labels: map[string]string{},
-				},
+				Name:   "10.0.0.11",
+				Labels: map[string]string{},
 			}),
 			ExpectedOps:   []opData{{"update-node", 1}},
 			ExpectedPhase: cke.PhaseK8sMaintain,
@@ -2054,10 +2030,8 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeLabelCP2",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.14",
-					Labels: map[string]string{op.CKELabelMaster: "true"},
-				},
+				Name:   "10.0.0.14",
+				Labels: map[string]string{op.CKELabelMaster: "true"},
 			}),
 			ExpectedOps:   []opData{{"update-node", 1}},
 			ExpectedPhase: cke.PhaseK8sMaintain,
@@ -2065,10 +2039,8 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeLabelCP3",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.11",
-					Labels: map[string]string{op.CKELabelMaster: "hoge"},
-				},
+				Name:   "10.0.0.11",
+				Labels: map[string]string{op.CKELabelMaster: "hoge"},
 			}),
 			ExpectedOps:   []opData{{"update-node", 1}},
 			ExpectedPhase: cke.PhaseK8sMaintain,
@@ -2076,10 +2048,8 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeAnnotation1",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.14",
-					Labels: map[string]string{"label1": "value"},
-				},
+				Name:   "10.0.0.14",
+				Labels: map[string]string{"label1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2100,11 +2070,9 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeAnnotation2",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "10.0.0.14",
-					Labels:      map[string]string{"label1": "value"},
-					Annotations: map[string]string{"annotation1": "wrongvalue"},
-				},
+				Name:        "10.0.0.14",
+				Labels:      map[string]string{"label1": "value"},
+				Annotations: map[string]string{"annotation1": "wrongvalue"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2125,13 +2093,11 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeAnnotation3",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.14",
-					Labels: map[string]string{"label1": "value"},
-					Annotations: map[string]string{
-						"annotation1":        "value",
-						"cke.cybozu.com/foo": "bar",
-					},
+				Name:   "10.0.0.14",
+				Labels: map[string]string{"label1": "value"},
+				Annotations: map[string]string{
+					"annotation1":        "value",
+					"cke.cybozu.com/foo": "bar",
 				},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
@@ -2153,11 +2119,9 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeTaint1",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "10.0.0.14",
-					Labels:      map[string]string{"label1": "value"},
-					Annotations: map[string]string{"annotation1": "value"},
-				},
+				Name:        "10.0.0.14",
+				Labels:      map[string]string{"label1": "value"},
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2179,11 +2143,9 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeTaint2",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "10.0.0.14",
-					Labels:      map[string]string{"label1": "value"},
-					Annotations: map[string]string{"annotation1": "value"},
-				},
+				Name:        "10.0.0.14",
+				Labels:      map[string]string{"label1": "value"},
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2204,11 +2166,9 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeTaint3",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "10.0.0.14",
-					Labels:      map[string]string{"label1": "value"},
-					Annotations: map[string]string{"annotation1": "value"},
-				},
+				Name:        "10.0.0.14",
+				Labels:      map[string]string{"label1": "value"},
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2229,11 +2189,9 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeTaint4",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "10.0.0.14",
-					Labels:      map[string]string{"label1": "value"},
-					Annotations: map[string]string{"annotation1": "value"},
-				},
+				Name:        "10.0.0.14",
+				Labels:      map[string]string{"label1": "value"},
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2268,10 +2226,8 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Cluster.TaintCP = true
 			}).withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.11",
-					Labels: map[string]string{op.CKELabelMaster: "true"},
-				},
+				Name:   "10.0.0.11",
+				Labels: map[string]string{op.CKELabelMaster: "true"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2282,10 +2238,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}, corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.12",
-					Labels: map[string]string{op.CKELabelMaster: "true"},
-				},
+				Name:   "10.0.0.12",
+				Labels: map[string]string{op.CKELabelMaster: "true"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2296,10 +2250,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}, corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.13",
-					Labels: map[string]string{op.CKELabelMaster: "true"},
-				},
+				Name:   "10.0.0.13",
+				Labels: map[string]string{op.CKELabelMaster: "true"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2318,10 +2270,8 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Cluster.TaintCP = true
 			}).withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.11",
-					Labels: map[string]string{op.CKELabelMaster: "true"},
-				},
+				Name:   "10.0.0.11",
+				Labels: map[string]string{op.CKELabelMaster: "true"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2332,10 +2282,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}, corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.12",
-					Labels: map[string]string{op.CKELabelMaster: "true"},
-				},
+				Name:   "10.0.0.12",
+				Labels: map[string]string{op.CKELabelMaster: "true"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2346,10 +2294,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}, corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.13",
-					Labels: map[string]string{op.CKELabelMaster: "true"},
-				},
+				Name:   "10.0.0.13",
+				Labels: map[string]string{op.CKELabelMaster: "true"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2366,10 +2312,8 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeTaintCP4",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.11",
-					Labels: map[string]string{op.CKELabelMaster: "true"},
-				},
+				Name:   "10.0.0.11",
+				Labels: map[string]string{op.CKELabelMaster: "true"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2388,10 +2332,8 @@ func TestDecideOps(t *testing.T) {
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Cluster.TaintCP = true
 			}).withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.11",
-					Labels: map[string]string{op.CKELabelMaster: "true"},
-				},
+				Name:   "10.0.0.11",
+				Labels: map[string]string{op.CKELabelMaster: "true"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2402,10 +2344,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}, corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.12",
-					Labels: map[string]string{op.CKELabelMaster: "true"},
-				},
+				Name:   "10.0.0.12",
+				Labels: map[string]string{op.CKELabelMaster: "true"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2416,10 +2356,8 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}, corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "10.0.0.13",
-					Labels: map[string]string{op.CKELabelMaster: "true"},
-				},
+				Name:   "10.0.0.13",
+				Labels: map[string]string{op.CKELabelMaster: "true"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2430,9 +2368,7 @@ func TestDecideOps(t *testing.T) {
 					},
 				},
 			}, corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "10.0.0.15",
-				},
+				Name: "10.0.0.15",
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2449,17 +2385,15 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "NodeExtraAttrs",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "10.0.0.14",
-					Labels: map[string]string{
-						"label1":                         "value",
-						"node-role.kubernetes.io/worker": "true",
-						"acke.cybozu.com/foo":            "bar",
-					},
-					Annotations: map[string]string{
-						"annotation1":         "value",
-						"acke.cybozu.com/foo": "bar",
-					},
+				Name: "10.0.0.14",
+				Labels: map[string]string{
+					"label1":                         "value",
+					"node-role.kubernetes.io/worker": "true",
+					"acke.cybozu.com/foo":            "bar",
+				},
+				Annotations: map[string]string{
+					"annotation1":         "value",
+					"acke.cybozu.com/foo": "bar",
 				},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
@@ -2485,9 +2419,7 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "RemoveNonClusterNodes",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "10.0.0.20",
-				},
+				Name: "10.0.0.20",
 			}),
 			ExpectedOps:   []opData{{"remove-node", 1}},
 			ExpectedPhase: cke.PhaseK8sMaintain,
@@ -2495,14 +2427,12 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "AllGreen",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "10.0.0.14",
-					Labels: map[string]string{
-						"label1":                         "value",
-						"node-role.kubernetes.io/worker": "true",
-					},
-					Annotations: map[string]string{"annotation1": "value"},
+				Name: "10.0.0.14",
+				Labels: map[string]string{
+					"label1":                         "value",
+					"node-role.kubernetes.io/worker": "true",
 				},
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2664,11 +2594,9 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "Upgrade",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "10.0.0.14",
-					Labels:      map[string]string{"label1": "value"},
-					Annotations: map[string]string{"annotation1": "value"},
-				},
+				Name:        "10.0.0.14",
+				Labels:      map[string]string{"label1": "value"},
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
@@ -2691,11 +2619,9 @@ func TestDecideOps(t *testing.T) {
 		{
 			Name: "UpgradeAbort",
 			Input: newData().withNodes(corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "10.0.0.14",
-					Labels:      map[string]string{"label1": "value"},
-					Annotations: map[string]string{"annotation1": "value"},
-				},
+				Name:        "10.0.0.14",
+				Labels:      map[string]string{"label1": "value"},
+				Annotations: map[string]string{"annotation1": "value"},
 				Spec: corev1.NodeSpec{
 					Taints: []corev1.Taint{
 						{
