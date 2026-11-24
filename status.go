@@ -34,11 +34,11 @@ type KubernetesClusterStatus struct {
 	DNSService          *corev1.Service
 	ClusterDNS          ClusterDNSStatus
 	NodeDNS             NodeDNSStatus
-	//nolint:staticcheck // code for Endpoints will be removed later
+	//nolint:staticcheck // legacy Endpoints are kept only to be detected and deleted
 	MasterEndpoints     *corev1.Endpoints
 	MasterEndpointSlice *discoveryv1.EndpointSlice
 	EtcdService         *corev1.Service
-	//nolint:staticcheck // code for Endpoints will be removed later
+	//nolint:staticcheck // legacy Endpoints are kept only to be detected and deleted
 	EtcdEndpoints     *corev1.Endpoints
 	EtcdEndpointSlice *discoveryv1.EndpointSlice
 	ResourceStatuses  map[string]ResourceStatus

@@ -338,7 +338,10 @@ func GetKubernetesClusterStatus(ctx context.Context, inf cke.Infrastructure, n *
 		return cke.KubernetesClusterStatus{}, err
 	}
 
-	epAPI := clientset.CoreV1().Endpoints
+	epAPI, err := legacyEndpointsAPI(ctx, inf, n)
+	if err != nil {
+		return cke.KubernetesClusterStatus{}, err
+	}
 	ep, err := epAPI(metav1.NamespaceDefault).Get(ctx, KubernetesEndpointsName, metav1.GetOptions{})
 	switch {
 	case err == nil:
