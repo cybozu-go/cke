@@ -71,9 +71,17 @@ cat >run.sh <<EOF
 #!/bin/sh -ex
 
 # Install essential tools
-curl -fsSL -o docker.gpg https://download.docker.com/linux/ubuntu/gpg
-apt-key add docker.gpg
-add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable"
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL -o /etc/apt/keyrings/docker.asc https://download.docker.com/linux/ubuntu/gpg
+chmod a+r /etc/apt/keyrings/docker.asc
+cat > /etc/apt/sources.list.d/docker.sources <<'DOCKER'
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: resolute
+Components: stable
+Architectures: amd64
+Signed-By: /etc/apt/keyrings/docker.asc
+DOCKER
 
 apt-get update
 apt-get install -y --no-install-recommends \
