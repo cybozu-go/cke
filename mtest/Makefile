@@ -2,7 +2,7 @@
 
 # tool versions
 ## Make sure the binary is included in the GitHub release. The release of ct v0.9.4 does not include binary files.
-MANAGEMENT_ETCD_VERSION = 3.6.11
+MANAGEMENT_ETCD_VERSION = 3.6.17
 VAULT_VERSION = 1.21.4
 K8S_VERSION = 1.36.6
 CONTAINERD_VERSION = 2.4.2
