@@ -12,19 +12,20 @@ import (
 	"github.com/cybozu-go/cke"
 )
 
-// certsGCLoop runs the certificate GC every CertsGCInterval.
+// certsGCLoop runs the certificate GC right away.
+// Then it runs the GC every CertsGCInterval.
 // It returns nil when ctx is canceled.
 func (c Controller) certsGCLoop(ctx context.Context) error {
 	ticker := time.NewTicker(c.config.CertsGCInterval)
 	defer ticker.Stop()
 
 	for {
+		c.gcCerts(ctx)
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
 		}
-		c.gcCerts(ctx)
 	}
 }
 
