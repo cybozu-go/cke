@@ -2,9 +2,7 @@ package server
 
 import (
 	"context"
-	"errors"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/cybozu-go/log"
@@ -40,7 +38,7 @@ func (c Controller) gcCerts(ctx context.Context) error {
 
 	cfg, err := storage.GetVaultConfig(ctx)
 	if err != nil {
-		log.Warn("failed to get vault config. skip tidy", map[string]any{
+		log.Warn("failed to get vault config; skip certificate GC", map[string]any{
 			log.FnError: err,
 		})
 		// lint:ignore nilerr  Tidy is not mandatory.
@@ -53,54 +51,34 @@ func (c Controller) gcCerts(ctx context.Context) error {
 	}
 
 	for _, ca := range cke.CAKeys {
-		if err := c.TidyExpiredCertificates(ctx, client, cke.VaultPKIKey(ca)); err != nil {
-			log.Warn("failed to tidy expired certificates", map[string]any{
+		if err := tidyExpiredCertificates(ctx, client, cke.VaultPKIKey(ca)); err != nil {
+			log.Warn("failed to start certificate GC", map[string]any{
 				log.FnError: err,
 				"ca":        ca,
 			})
+			continue
 		}
+		log.Info("started certificate GC", map[string]any{
+			"ca": ca,
+		})
 	}
 
 	return nil
 }
 
-// TidyExpiredCertificates call tidy endpoints of Vault API
-func (c Controller) TidyExpiredCertificates(ctx context.Context, client *vault.Client, ca string) error {
-	tidyParams := make(map[string]any)
-	tidyParams["tidy_cert_store"] = true
-	tidyParams["tidy_revocation_list"] = true
-	tidyParams["safety_buffer"] = (time.Minute).String()
-	res, err := client.Logical().Write(path.Join(ca, "tidy"), tidyParams)
-	if err != nil {
-		return err
-	}
-
-	// TODO: More appropriate error detection.
-	// Vault client does not provide an interface to detect whether errors have occurred or not.
-	if len(res.Warnings) == 0 {
-		log.Warn("may be failed to tidy certs, since an empty message is returned", map[string]any{
-			"tidy_params": tidyParams,
-			"ca":          ca,
-			"res":         res,
-		})
-		return errors.New("may be failed to tidy certs, since an empty message is returned")
-	}
-	// TODO: More appropriate error detection.
-	// Currently, use this message. https://github.com/hashicorp/vault/blob/975db34faf38f5bf564d13da38e141975d9f0fe3/builtin/credential/approle/path_tidy_user_id.go#L240
-	if res.Warnings[0] != "Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs." {
-		log.Warn("may be failed to tidy certs, since the expected warning message is not found", map[string]any{
-			"tidy_params":         tidyParams,
-			"ca":                  ca,
-			"vault_resp_warnings": strings.Join(res.Warnings, ", "),
-		})
-		return errors.New("failed to tidy certs: " + strings.Join(res.Warnings, ", "))
-	}
-
-	log.Info("invoked vault tidy", map[string]any{
-		"tidy_params":         tidyParams,
-		"ca":                  ca,
-		"vault_resp_warnings": strings.Join(res.Warnings, ", "),
+// tidyExpiredCertificates starts the tidy operation of the PKI engine at pkiKey.
+// The operation runs in Vault asynchronously.
+// It removes expired and revoked certificates.
+//
+// Vault returns an error if it cannot start the operation.
+// If another tidy operation is running, Vault returns only a warning.
+// This function returns nil in that case.
+// The running operation removes the certificates instead.
+func tidyExpiredCertificates(ctx context.Context, client *vault.Client, pkiKey string) error {
+	_, err := client.Logical().WriteWithContext(ctx, path.Join(pkiKey, "tidy"), map[string]any{
+		"tidy_cert_store":      true,
+		"tidy_revocation_list": true,
+		"safety_buffer":        time.Minute.String(),
 	})
-
-	return nil
+	return err
 }
