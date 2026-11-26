@@ -12,6 +12,7 @@ import (
 	"github.com/cybozu-go/well"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
+	"k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/cybozu-go/cke"
 	"github.com/cybozu-go/cke/internal/metrics"
@@ -152,7 +153,8 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 				return nil
 			default:
 			}
-			err := c.runOnce(ctx, leaderKey, ticker.C, watchChan, addonChan)
+			reconcileID := rand.String(8)
+			err := c.runOnce(ctx, reconcileID, leaderKey, ticker.C, watchChan, addonChan)
 			if err != nil {
 				return err
 			}
@@ -209,9 +211,23 @@ func (c Controller) checkLastOp(ctx context.Context, leaderKey string) error {
 	return storage.UpdateRecord(ctx, leaderKey, r)
 }
 
-func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan time.Time, watchChan, addonChan <-chan struct{}) error {
+func (c Controller) runOnce(ctx context.Context, reconcileID, leaderKey string, tick <-chan time.Time, watchChan, addonChan <-chan struct{}) (err error) {
+	log.Info("start reconcile", map[string]any{
+		"reconcile_id": reconcileID,
+	})
+	startTime := time.Now()
+
 	wait := false
 	defer func() {
+		fields := map[string]any{
+			"reconcile_id": reconcileID,
+			"duration":     time.Since(startTime).Seconds(),
+		}
+		if err != nil {
+			fields[log.FnError] = err
+		}
+		log.Info("finish reconcile", fields)
+
 		if !wait {
 			return
 		}
@@ -244,7 +260,8 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	err = cluster.Validate(false)
 	if err != nil {
 		log.Error("invalid cluster configuration", map[string]any{
-			log.FnError: err,
+			"reconcile_id": reconcileID,
+			log.FnError:    err,
 		})
 		wait = true
 		// lint:ignore nilerr  Try again.
@@ -257,14 +274,16 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 		// Error: "Error making API request.\n\nURL: GET <<URL>>\nCode: 403. Errors:\n\n* permission denied"
 		if strings.Contains(err.Error(), "403") {
 			log.Error("vault token was revoked", map[string]any{
-				log.FnError: err,
+				"reconcile_id": reconcileID,
+				log.FnError:    err,
 			})
 			return err
 		}
 
 		wait = true
 		log.Error("failed to initialize infrastructure", map[string]any{
-			log.FnError: err,
+			"reconcile_id": reconcileID,
+			log.FnError:    err,
 		})
 		// lint:ignore nilerr  Try again.
 		return nil
@@ -292,7 +311,8 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	if err != nil {
 		wait = true
 		log.Warn("failed to get cluster status", map[string]any{
-			log.FnError: err,
+			"reconcile_id": reconcileID,
+			log.FnError:    err,
 		})
 		// lint:ignore nilerr  Try again.
 		return nil
@@ -349,7 +369,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	}
 
 	for _, op := range ops {
-		err := runOp(ctx, op, leaderKey, storage, inf)
+		err := runOp(ctx, reconcileID, op, leaderKey, storage, inf)
 		switch err {
 		case nil:
 		case errCommandFailure:
@@ -363,7 +383,7 @@ func (c Controller) runOnce(ctx context.Context, leaderKey string, tick <-chan t
 	return nil
 }
 
-func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.Storage, inf cke.Infrastructure) error {
+func runOp(ctx context.Context, reconcileID string, op cke.Operator, leaderKey string, storage cke.Storage, inf cke.Infrastructure) error {
 	// register operation record
 	id, err := storage.NextRecordID(ctx)
 	if err != nil {
@@ -375,7 +395,8 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		return err
 	}
 	log.Info("begin new operation", map[string]any{
-		"op": op.Name(),
+		"reconcile_id": reconcileID,
+		"op":           op.Name(),
 	})
 
 	for {
@@ -393,15 +414,17 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 				return err
 			}
 			log.Info("interrupt the operation due to cancellation", map[string]any{
-				"op": op.Name(),
+				"reconcile_id": reconcileID,
+				"op":           op.Name(),
 			})
 			return nil
 		default:
 		}
 
 		log.Info("record targets", map[string]any{
-			"op":      op.Name(),
-			"targets": strings.Join(op.Targets(), " "),
+			"reconcile_id": reconcileID,
+			"op":           op.Name(),
+			"targets":      strings.Join(op.Targets(), " "),
 		})
 
 		record.SetCommand(commander.Command())
@@ -410,17 +433,19 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 			return err
 		}
 		log.Info("execute a command", map[string]any{
-			"op":      op.Name(),
-			"command": commander.Command().String(),
+			"reconcile_id": reconcileID,
+			"op":           op.Name(),
+			"command":      commander.Command().String(),
 		})
 		err = commander.Run(ctx, inf, leaderKey)
 		if err == nil {
 			continue
 		}
 		log.Error("command failed", map[string]any{
-			log.FnError: err,
-			"op":        op.Name(),
-			"command":   commander.Command().String(),
+			"reconcile_id": reconcileID,
+			log.FnError:    err,
+			"op":           op.Name(),
+			"command":      commander.Command().String(),
 		})
 		record.SetError(err)
 		err2 := storage.UpdateRecord(ctx, leaderKey, record)
@@ -443,7 +468,8 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 		return err
 	}
 	log.Info("operation completed", map[string]any{
-		"op": op.Name(),
+		"reconcile_id": reconcileID,
+		"op":           op.Name(),
 	})
 	return nil
 }
