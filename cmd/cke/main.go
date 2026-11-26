@@ -67,6 +67,9 @@ func main() {
 	if err != nil {
 		log.ErrorExit(err)
 	}
+	if gcInterval <= 0 {
+		log.ErrorExit(errors.New("certs-gc-interval must be greater than 0"))
+	}
 
 	ttl, err := time.ParseDuration(*flgSessionTTL)
 	if err != nil {
