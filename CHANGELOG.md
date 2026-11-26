@@ -8,6 +8,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ### Changed
 
+- **BREAKING** Stop maintaining `default/kubernetes` and `kube-system/cke-etcd` Endpoints and delete existing ones; use EndpointSlices instead in [#945](https://github.com/cybozu-go/cke/pull/945)
 - Update dependencies for Kubernetes 1.36 in [#952](https://github.com/cybozu-go/cke/pull/952)
     - Go 1.27.4
     - Go modules (k8s.io/* v0.36.6, go.etcd.io/etcd/* v3.7.3, etc.)
@@ -26,7 +27,11 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
         - sonobuoy 0.57.5
         - docker compose 5.7.0
         - cilium 1.20.4
-- **BREAKING** Stop maintaining `default/kubernetes` and `kube-system/cke-etcd` Endpoints and delete existing ones; use EndpointSlices instead in [#945](https://github.com/cybozu-go/cke/pull/945)
+- Update etcd, cke-tools and coredns images in [#955](https://github.com/cybozu-go/cke/pull/955)
+    - etcd 3.6.17.1
+    - cke-tools 1.36.0
+    - coredns 1.15.0.1
+    - etcd 3.6.17 for mtest
 - Simplify the REST API server of cke in [#954](https://github.com/cybozu-go/cke/pull/954)
     - Replace well.HTTPServer with net/http.Server
     - Stop outputting access logs
