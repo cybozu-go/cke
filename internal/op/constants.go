@@ -9,7 +9,7 @@ import (
 const (
 	// KubernetesServiceName is the name of the Service for the API servers
 	KubernetesServiceName = "kubernetes"
-	// KubernetesEndpointsName is the name of the legacy Endpoints for the API servers, which CKE now deletes
+	// KubernetesEndpointsName is the name of the Endpoints for the API servers
 	KubernetesEndpointsName = KubernetesServiceName
 	// KubernetesEndpointSliceName is the name of the EndpointSlice for the API servers
 	KubernetesEndpointSliceName = KubernetesServiceName
@@ -19,7 +19,7 @@ const (
 const (
 	// EtcdServiceName is the name of the Service for CKE-managed etcd
 	EtcdServiceName = "cke-etcd"
-	// EtcdEndpointsName is the name of the legacy Endpoints for CKE-managed etcd, which CKE now deletes
+	// EtcdEndpointsName is the name of the Endpoints for CKE-managed etcd
 	EtcdEndpointsName = EtcdServiceName
 	// EtcdEndpointSliceName is the name of the EndpointSlice for CKE-managed etcd
 	EtcdEndpointSliceName = EtcdServiceName

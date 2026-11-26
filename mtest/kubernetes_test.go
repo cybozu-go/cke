@@ -312,8 +312,10 @@ func testKubernetes() {
 		}, time.Minute*5).Should(Succeed())
 	})
 
-	It("has kube-system/cke-etcd Service and EndpointSlice", func() {
+	It("has kube-system/cke-etcd Service and Endpoints", func() {
 		_, stderr, err := kubectl("-n", "kube-system", "get", "services/cke-etcd")
+		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
+		_, stderr, err = kubectl("-n", "kube-system", "get", "endpoints/cke-etcd")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
 		_, stderr, err = kubectl("-n", "kube-system", "get", "endpointslices/cke-etcd")
 		Expect(err).NotTo(HaveOccurred(), "stderr=%s", stderr)
