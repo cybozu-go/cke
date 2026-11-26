@@ -115,6 +115,9 @@ it updates Kubernetes cluster as follows.
 8. Update the operation record to mark as completed.
 9. If there are no more differences, done.  Otherwise, go to 1.
 
+Each iteration of this process is called a *reconcile*.  `cke` assigns a random ID
+to each reconcile and outputs it as `reconcile_id` field in its logs.
+
 For example, if the current Kubernetes cluster has the following differences from
 the desired configuration:
 
