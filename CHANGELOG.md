@@ -37,6 +37,7 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
     - Return 405 Method Not Allowed for non-GET requests
     - Use a fixed 2s timeout for /health instead of the etcd timeout in the config file
 - Suppress deprecation warnings for Endpoints API requests in [#957](https://github.com/cybozu-go/cke/pull/957)
+- Detect a wrong port name and duplicate addresses in Endpoints maintained by CKE in [#957](https://github.com/cybozu-go/cke/pull/957)
 
 ## Ancient changes
 

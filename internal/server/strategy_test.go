@@ -1565,6 +1565,26 @@ func TestDecideOps(t *testing.T) {
 			ExpectedPhase: cke.PhaseK8sStart,
 		},
 		{
+			Name: "MasterEndpointsUpdate4",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Ports[0].Name = ""
+			}),
+			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
+			Name: "MasterEndpointsUpdate5",
+			Input: newData().withK8sResourceReady().with(func(d testData) {
+				d.Status.Kubernetes.MasterEndpoints.Subsets[0].Addresses = []corev1.EndpointAddress{
+					{IP: "10.0.0.11"},
+					{IP: "10.0.0.11"},
+					{IP: "10.0.0.12"},
+				}
+			}),
+			ExpectedOps:   []opData{{"update-kubernetes-endpoints", 1}},
+			ExpectedPhase: cke.PhaseK8sStart,
+		},
+		{
 			Name: "MasterEndpointSliceUpdate",
 			Input: newData().withK8sResourceReady().with(func(d testData) {
 				d.Status.Kubernetes.MasterEndpointSlice.Endpoints[0].Addresses = []string{}

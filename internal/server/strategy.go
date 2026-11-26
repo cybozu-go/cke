@@ -518,35 +518,30 @@ func decideEpOp(expect, actual *corev1.Endpoints, apiServer *cke.Node) cke.Opera
 	}
 
 	subset := actual.Subsets[0]
-	if len(subset.Ports) != 1 || subset.Ports[0].Port != expect.Subsets[0].Ports[0].Port {
+	expectPort := expect.Subsets[0].Ports[0]
+	if len(subset.Ports) != 1 || subset.Ports[0].Name != expectPort.Name || subset.Ports[0].Port != expectPort.Port {
 		return updateOp
 	}
 
-	if len(subset.Addresses) != len(expect.Subsets[0].Addresses) || len(subset.NotReadyAddresses) != len(expect.Subsets[0].NotReadyAddresses) {
+	if !sameEndpointIPs(subset.Addresses, expect.Subsets[0].Addresses) ||
+		!sameEndpointIPs(subset.NotReadyAddresses, expect.Subsets[0].NotReadyAddresses) {
 		return updateOp
-	}
-
-	endpoints := make(map[string]bool)
-	for _, a := range expect.Subsets[0].Addresses {
-		endpoints[a.IP] = true
-	}
-	for _, a := range subset.Addresses {
-		if !endpoints[a.IP] {
-			return updateOp
-		}
-	}
-
-	endpoints = make(map[string]bool)
-	for _, a := range expect.Subsets[0].NotReadyAddresses {
-		endpoints[a.IP] = true
-	}
-	for _, a := range subset.NotReadyAddresses {
-		if !endpoints[a.IP] {
-			return updateOp
-		}
 	}
 
 	return nil
+}
+
+// sameEndpointIPs returns true if a and b have the same IPs, including duplicates.
+func sameEndpointIPs(a, b []corev1.EndpointAddress) bool {
+	ipsOf := func(addrs []corev1.EndpointAddress) []string {
+		ips := make([]string, len(addrs))
+		for i, addr := range addrs {
+			ips[i] = addr.IP
+		}
+		slices.Sort(ips)
+		return ips
+	}
+	return slices.Equal(ipsOf(a), ipsOf(b))
 }
 
 func decideEpsOp(expect, actual *discoveryv1.EndpointSlice, apiServer *cke.Node) cke.Operator {
