@@ -12,7 +12,7 @@ import (
 )
 
 // certsGCLoop runs the certificate GC every CertsGCInterval.
-// It stops when ctx is canceled.
+// It returns nil when ctx is canceled.
 func (c Controller) certsGCLoop(ctx context.Context) error {
 	ticker := time.NewTicker(c.config.CertsGCInterval)
 	defer ticker.Stop()
@@ -23,15 +23,15 @@ func (c Controller) certsGCLoop(ctx context.Context) error {
 			return nil
 		case <-ticker.C:
 		}
-		if err := c.gcCerts(ctx); err != nil {
-			return err
-		}
+		c.gcCerts(ctx)
 	}
 }
 
 // gcCerts starts removing expired and revoked certificates from Vault.
 // It does this for all CAs.
-func (c Controller) gcCerts(ctx context.Context) error {
+// It does not return errors because the GC is not mandatory.
+// Failures are logged as warnings.
+func (c Controller) gcCerts(ctx context.Context) {
 	storage := cke.Storage{
 		Client: c.session.Client(),
 	}
@@ -41,13 +41,15 @@ func (c Controller) gcCerts(ctx context.Context) error {
 		log.Warn("failed to get vault config; skip certificate GC", map[string]any{
 			log.FnError: err,
 		})
-		// lint:ignore nilerr  Tidy is not mandatory.
-		return nil
+		return
 	}
 
 	client, _, err := cke.VaultClient(cfg)
 	if err != nil {
-		return err
+		log.Warn("failed to connect to vault; skip certificate GC", map[string]any{
+			log.FnError: err,
+		})
+		return
 	}
 
 	for _, ca := range cke.CAKeys {
@@ -62,8 +64,6 @@ func (c Controller) gcCerts(ctx context.Context) error {
 			"ca": ca,
 		})
 	}
-
-	return nil
 }
 
 // tidyExpiredCertificates starts the tidy operation of the PKI engine at pkiKey.
