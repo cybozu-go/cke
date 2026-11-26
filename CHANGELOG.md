@@ -8,7 +8,6 @@ This project employs a versioning scheme described in [RELEASE.md](RELEASE.md#ve
 
 ### Changed
 
-- **BREAKING** Stop maintaining `default/kubernetes` and `kube-system/cke-etcd` Endpoints and delete existing ones; use EndpointSlices instead in [#945](https://github.com/cybozu-go/cke/pull/945)
 - Update dependencies for Kubernetes 1.36 in [#952](https://github.com/cybozu-go/cke/pull/952)
     - Go 1.27.4
     - Go modules (k8s.io/* v0.36.6, go.etcd.io/etcd/* v3.7.3, etc.)
