@@ -6,6 +6,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
 
 	"github.com/cybozu-go/cke"
 )
@@ -89,12 +92,12 @@ type createEndpointsCommand struct {
 }
 
 func (c createEndpointsCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	cs, err := inf.K8sClient(ctx, c.apiserver)
+	epAPI, err := legacyEndpointsAPI(ctx, inf, c.apiserver)
 	if err != nil {
 		return err
 	}
 
-	_, err = cs.CoreV1().Endpoints(c.endpoints.Namespace).Create(ctx, c.endpoints, metav1.CreateOptions{})
+	_, err = epAPI(c.endpoints.Namespace).Create(ctx, c.endpoints, metav1.CreateOptions{})
 
 	return err
 }
@@ -117,12 +120,12 @@ type updateEndpointsCommand struct {
 }
 
 func (c updateEndpointsCommand) Run(ctx context.Context, inf cke.Infrastructure, _ string) error {
-	cs, err := inf.K8sClient(ctx, c.apiserver)
+	epAPI, err := legacyEndpointsAPI(ctx, inf, c.apiserver)
 	if err != nil {
 		return err
 	}
 
-	_, err = cs.CoreV1().Endpoints(c.endpoints.Namespace).Update(ctx, c.endpoints, metav1.UpdateOptions{})
+	_, err = epAPI(c.endpoints.Namespace).Update(ctx, c.endpoints, metav1.UpdateOptions{})
 
 	return err
 }
@@ -136,4 +139,18 @@ func (c updateEndpointsCommand) Command() cke.Command {
 		Name:   "updateEndpointsCommand",
 		Target: strings.Join(endpoints, ","),
 	}
+}
+
+// legacyEndpointsAPI returns the Endpoints API that discards deprecation warnings.
+func legacyEndpointsAPI(ctx context.Context, inf cke.Infrastructure, n *cke.Node) (func(namespace string) corev1client.EndpointsInterface, error) {
+	cfg, err := inf.K8sConfig(ctx, n)
+	if err != nil {
+		return nil, err
+	}
+	cfg.WarningHandler = rest.NoWarnings{}
+	cs, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return cs.CoreV1().Endpoints, nil
 }
