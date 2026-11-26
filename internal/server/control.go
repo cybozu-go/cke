@@ -170,7 +170,16 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 		}
 	})
 
-	env.Go(c.certsGCLoop)
+	env.Go(func(ctx context.Context) error {
+		// Wait for the Vault watcher before the GC.
+		// Then no Vault client means that Vault is not configured.
+		select {
+		case <-vaultReady:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		return c.certsGCLoop(ctx)
+	})
 
 	env.Stop()
 	return env.Wait()

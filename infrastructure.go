@@ -25,6 +25,10 @@ var httpClient = &well.HTTPClient{
 
 var vaultClient atomic.Value
 
+// ErrVaultNotConnected is returned by GetVaultClient before Vault is connected.
+// For example, Vault may not be configured yet.
+var ErrVaultNotConnected = errors.New("vault is not connected")
+
 type certCache struct {
 	cert      []byte
 	key       []byte
@@ -116,10 +120,12 @@ func setVaultClient(client *vault.Client) {
 	vaultClient.Store(client)
 }
 
-func getVaultClient() (*vault.Client, error) {
+// GetVaultClient returns the Vault client connected by ConnectVault.
+// Its token is renewed automatically.
+func GetVaultClient() (*vault.Client, error) {
 	v := vaultClient.Load()
 	if v == nil {
-		return nil, errors.New("vault is not connected")
+		return nil, ErrVaultNotConnected
 	}
 	return v.(*vault.Client), nil
 }
@@ -183,7 +189,7 @@ func (i *ckeInfrastructure) init(ctx context.Context) error {
 
 // NewInfrastructure creates a new Infrastructure instance
 func NewInfrastructure(ctx context.Context, c *Cluster, s Storage) (Infrastructure, error) {
-	vc, err := getVaultClient()
+	vc, err := GetVaultClient()
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +257,7 @@ func (i *ckeInfrastructure) Engine(addr string) ContainerEngine {
 }
 
 func (i *ckeInfrastructure) Vault() (*vault.Client, error) {
-	return getVaultClient()
+	return GetVaultClient()
 }
 
 func (i *ckeInfrastructure) Storage() Storage {

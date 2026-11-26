@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"path"
 	"time"
 
@@ -32,21 +33,13 @@ func (c Controller) certsGCLoop(ctx context.Context) error {
 // It does not return errors because the GC is not mandatory.
 // Failures are logged as warnings.
 func (c Controller) gcCerts(ctx context.Context) {
-	storage := cke.Storage{
-		Client: c.session.Client(),
-	}
-
-	cfg, err := storage.GetVaultConfig(ctx)
-	if err != nil {
-		log.Warn("failed to get vault config; skip certificate GC", map[string]any{
-			log.FnError: err,
-		})
+	client, err := cke.GetVaultClient()
+	if errors.Is(err, cke.ErrVaultNotConnected) {
+		// Vault is not configured yet.  Nothing to do.
 		return
 	}
-
-	client, _, err := cke.VaultClient(cfg)
 	if err != nil {
-		log.Warn("failed to connect to vault; skip certificate GC", map[string]any{
+		log.Warn("failed to get vault client; skip certificate GC", map[string]any{
 			log.FnError: err,
 		})
 		return
