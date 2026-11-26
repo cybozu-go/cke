@@ -134,15 +134,26 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 		}
 	})
 
+	vaultReady := make(chan struct{})
 	env.Go(func(ctx context.Context) error {
-		return startWatcher(ctx, c.session.Client(), watchChan)
+		return startVaultWatcher(ctx, c.session.Client(), vaultReady)
+	})
+
+	configReady := make(chan struct{})
+	env.Go(func(ctx context.Context) error {
+		return startConfigWatcher(ctx, c.session.Client(), configReady, watchChan)
 	})
 
 	env.Go(func(ctx context.Context) error {
-		select {
-		case <-watchChan:
-		case <-ctx.Done():
-			return ctx.Err()
+		// Wait for both watchers before reconciling.
+		// Then the Vault client is ready if Vault is configured.
+		// Also, no configuration update is missed.
+		for _, ready := range []<-chan struct{}{vaultReady, configReady} {
+			select {
+			case <-ready:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		}
 		ticker := time.NewTicker(c.config.Interval)
 		defer ticker.Stop()
