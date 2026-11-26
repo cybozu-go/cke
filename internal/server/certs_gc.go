@@ -9,7 +9,60 @@ import (
 
 	"github.com/cybozu-go/log"
 	vault "github.com/hashicorp/vault/api"
+
+	"github.com/cybozu-go/cke"
 )
+
+// certsGCLoop runs the certificate GC every CertsGCInterval.
+// It stops when ctx is canceled.
+func (c Controller) certsGCLoop(ctx context.Context) error {
+	ticker := time.NewTicker(c.config.CertsGCInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+		}
+		if err := c.gcCerts(ctx); err != nil {
+			return err
+		}
+	}
+}
+
+// gcCerts starts removing expired and revoked certificates from Vault.
+// It does this for all CAs.
+func (c Controller) gcCerts(ctx context.Context) error {
+	storage := cke.Storage{
+		Client: c.session.Client(),
+	}
+
+	cfg, err := storage.GetVaultConfig(ctx)
+	if err != nil {
+		log.Warn("failed to get vault config. skip tidy", map[string]any{
+			log.FnError: err,
+		})
+		// lint:ignore nilerr  Tidy is not mandatory.
+		return nil
+	}
+
+	client, _, err := cke.VaultClient(cfg)
+	if err != nil {
+		return err
+	}
+
+	for _, ca := range cke.CAKeys {
+		if err := c.TidyExpiredCertificates(ctx, client, cke.VaultPKIKey(ca)); err != nil {
+			log.Warn("failed to tidy expired certificates", map[string]any{
+				log.FnError: err,
+				"ca":        ca,
+			})
+		}
+	}
+
+	return nil
+}
 
 // TidyExpiredCertificates call tidy endpoints of Vault API
 func (c Controller) TidyExpiredCertificates(ctx context.Context, client *vault.Client, ca string) error {

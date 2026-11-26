@@ -170,26 +170,7 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 		}
 	})
 
-	env.Go(func(ctx context.Context) error {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-		ticker := time.NewTicker(c.config.CertsGCInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return nil
-			case <-ticker.C:
-			}
-			err := c.runTidyExpiredCertificates(ctx)
-			if err != nil {
-				return err
-			}
-		}
-	})
+	env.Go(c.certsGCLoop)
 
 	env.Stop()
 	return env.Wait()
@@ -456,36 +437,5 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 	log.Info("operation completed", map[string]any{
 		"op": op.Name(),
 	})
-	return nil
-}
-
-func (c Controller) runTidyExpiredCertificates(ctx context.Context) error {
-	storage := cke.Storage{
-		Client: c.session.Client(),
-	}
-
-	cfg, err := storage.GetVaultConfig(ctx)
-	if err != nil {
-		log.Warn("failed to get vault config. skip tidy", map[string]any{
-			log.FnError: err,
-		})
-		// lint:ignore nilerr  Tidy is not mandatory.
-		return nil
-	}
-
-	client, _, err := cke.VaultClient(cfg)
-	if err != nil {
-		return err
-	}
-
-	for _, ca := range cke.CAKeys {
-		if err := c.TidyExpiredCertificates(ctx, client, cke.VaultPKIKey(ca)); err != nil {
-			log.Warn("failed to tidy expired certificates", map[string]any{
-				log.FnError: err,
-				"ca":        ca,
-			})
-		}
-	}
-
 	return nil
 }
