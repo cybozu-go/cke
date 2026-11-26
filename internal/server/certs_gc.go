@@ -76,9 +76,9 @@ func (c Controller) gcCerts(ctx context.Context) error {
 // The running operation removes the certificates instead.
 func tidyExpiredCertificates(ctx context.Context, client *vault.Client, pkiKey string) error {
 	_, err := client.Logical().WriteWithContext(ctx, path.Join(pkiKey, "tidy"), map[string]any{
-		"tidy_cert_store":      true,
-		"tidy_revocation_list": true,
-		"safety_buffer":        time.Minute.String(),
+		"tidy_cert_store":    true,
+		"tidy_revoked_certs": true,
+		"safety_buffer":      time.Minute.String(),
 	})
 	return err
 }
