@@ -83,13 +83,16 @@ EOF
 
 ### Tidy up expired certificates
 
-Expired certificates in cert_store and revoked_certs should be cleaned up by following command:
+Expired and revoked certificates should be removed from the PKI secrets engines.
+CKE runs the following command for all PKI secrets engines:
 
 ```console
-vault write <target> tidy_cert_store=true tidy_revoked_certs=true
+vault write <target>/tidy tidy_cert_store=true tidy_revoked_certs=true safety_buffer=1m
 ```
 
-CKE executes this command for all pki secret engines periodically.
+The leader of CKE runs it right after it is elected.
+After that, it runs the command every `--certs-gc-interval` (1h by default).
+If the command fails, CKE logs a warning and continues.
 
 
 [Vault]: https://www.vaultproject.io/

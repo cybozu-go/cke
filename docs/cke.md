@@ -11,7 +11,7 @@ Usage
 
 ```console
 Usage of ./cke:
-      --certs-gc-interval string     tidy interval for expired certificates (default "1h")  
+      --certs-gc-interval string     interval of the certificate GC (default "1h")
       --config string                configuration file path (default "/etc/cke/config.yml")
       --debug-sabakan                debug sabakan integration                              
       --http string                  <Listen IP>:<Port number> (default "0.0.0.0:10180")    

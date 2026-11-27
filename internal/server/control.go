@@ -134,15 +134,26 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 		}
 	})
 
+	vaultReady := make(chan struct{})
 	env.Go(func(ctx context.Context) error {
-		return startWatcher(ctx, c.session.Client(), watchChan)
+		return startVaultWatcher(ctx, c.session.Client(), vaultReady)
+	})
+
+	configReady := make(chan struct{})
+	env.Go(func(ctx context.Context) error {
+		return startConfigWatcher(ctx, c.session.Client(), configReady, watchChan)
 	})
 
 	env.Go(func(ctx context.Context) error {
-		select {
-		case <-watchChan:
-		case <-ctx.Done():
-			return ctx.Err()
+		// Wait for both watchers before reconciling.
+		// Then the Vault client is ready if Vault is configured.
+		// Also, no configuration update is missed.
+		for _, ready := range []<-chan struct{}{vaultReady, configReady} {
+			select {
+			case <-ready:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		}
 		ticker := time.NewTicker(c.config.Interval)
 		defer ticker.Stop()
@@ -160,24 +171,14 @@ func (c Controller) runLoop(ctx context.Context, leaderKey string) error {
 	})
 
 	env.Go(func(ctx context.Context) error {
+		// Wait for the Vault watcher before the GC.
+		// Then no Vault client means that Vault is not configured.
 		select {
+		case <-vaultReady:
 		case <-ctx.Done():
 			return ctx.Err()
-		default:
 		}
-		ticker := time.NewTicker(c.config.CertsGCInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return nil
-			case <-ticker.C:
-			}
-			err := c.runTidyExpiredCertificates(ctx)
-			if err != nil {
-				return err
-			}
-		}
+		return c.certsGCLoop(ctx)
 	})
 
 	env.Stop()
@@ -445,36 +446,5 @@ func runOp(ctx context.Context, op cke.Operator, leaderKey string, storage cke.S
 	log.Info("operation completed", map[string]any{
 		"op": op.Name(),
 	})
-	return nil
-}
-
-func (c Controller) runTidyExpiredCertificates(ctx context.Context) error {
-	storage := cke.Storage{
-		Client: c.session.Client(),
-	}
-
-	cfg, err := storage.GetVaultConfig(ctx)
-	if err != nil {
-		log.Warn("failed to get vault config. skip tidy", map[string]any{
-			log.FnError: err,
-		})
-		// lint:ignore nilerr  Tidy is not mandatory.
-		return nil
-	}
-
-	client, _, err := cke.VaultClient(cfg)
-	if err != nil {
-		return err
-	}
-
-	for _, ca := range cke.CAKeys {
-		if err := c.TidyExpiredCertificates(ctx, client, cke.VaultPKIKey(ca)); err != nil {
-			log.Warn("failed to tidy expired certificates", map[string]any{
-				log.FnError: err,
-				"ca":        ca,
-			})
-		}
-	}
-
 	return nil
 }

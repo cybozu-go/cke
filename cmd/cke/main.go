@@ -22,7 +22,7 @@ var (
 	flgHTTP                 = pflag.String("http", "0.0.0.0:10180", "<Listen IP>:<Port number>")
 	flgConfigPath           = pflag.String("config", "/etc/cke/config.yml", "configuration file path")
 	flgInterval             = pflag.String("interval", "1m", "check interval")
-	flgCertsGCInterval      = pflag.String("certs-gc-interval", "1h", "tidy interval for expired certificates")
+	flgCertsGCInterval      = pflag.String("certs-gc-interval", "1h", "interval of the certificate GC")
 	flgSessionTTL           = pflag.String("session-ttl", "60s", "leader session's TTL")
 	flgDebugSabakan         = pflag.Bool("debug-sabakan", false, "debug sabakan integration")
 	flgMaxConcurrentUpdates = pflag.Int("max-concurrent-updates", 10, "the maximum number of components that can be updated simultaneously")
@@ -66,6 +66,9 @@ func main() {
 	gcInterval, err := time.ParseDuration(*flgCertsGCInterval)
 	if err != nil {
 		log.ErrorExit(err)
+	}
+	if gcInterval <= 0 {
+		log.ErrorExit(errors.New("certs-gc-interval must be greater than 0"))
 	}
 
 	ttl, err := time.ParseDuration(*flgSessionTTL)
